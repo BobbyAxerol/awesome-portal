@@ -14179,5 +14179,103 @@ hook changed/bypassed. Preserve unrelated untracked feasibility review. This
 documentation continuation does not replace, rerun or amend historical535/failed
 test receipts. Enclosing local commit supplies revision; no push/merge requested.
 
+**Persistent-goal continuation17/10/2026,01:47Asia/Saigon — IN_PROGRESS:**
+Bobby requested finishing the full original10/11 connected objective; scope and
+approval above remain in force. Prior verification-only turn did not advance a
+binding. Fresh evidence now changes the next action: Research normal-hook retry
+is terminal PASS with clean committed`d92efc0e33d71d2d2f21f7f67cafa1cae946cb0b`,
+finished01:45:30Asia/Saigon, receipt`fa28054c…`, own resources0/runtime unchanged.
+Consume this actual return now, remove obsolete current hook-pending assertions,
+and check whether it supplies real authenticated client/trust/current read facts.
+Retain the first exit124 as historical; neither inherit peer counts as Edge PASS
+nor turn the human lease into field/command/native journal publisher authority.
+
+**This slice's owned work/gates:** inspect the committed protocol and its actual
+composition/export/config references; reconcile fresh TS/PM/DL/candidate source
+pins and genuinely live job/container handles, not lock-only waiting. Update the
+same handoff/receipt/index on changed facts; bind and run affected original tests
+only if a compatible actual return exists. Respect HK G12 live18container run
+and SGP lease/preflight; no peer edit, deploy/restart/schema/identity/key mutation
+or financial send. Evidence is bounded read-only hash/JSON/link/current-runtime
+checks when no product byte changes; old535and peer23stay separate. C4 inventories
+and exact retention remain mandatory; no source-qualified hook is connected PASS.
+
+**Consumed and reconciled01:56Asia/Saigon:** Research d92's12immutable committed
+receipt paths all match normal-hook source; fresh product bytes have no mismatch.
+An initial all-worktree assertion rejected one later peer journal edit, not a
+source/test failure; corrected evidence pins committed tested bytes and records
+the subsequent9line journal + commissioning-followthrough WIP rather than
+requiring a peer to freeze its plan. Normal-hook receipt`fa28054c…`, log hash
+`50f6b273…`; first timeout preserved. Research now independently implements its
+ELP2-10 actual client/current-provider/authority-writer commissioning; no such
+configured port has been returned yet. Do not duplicate that active peer work.
+
+PMf8 WIP financial projection now IMPLEMENTED_CURRENT_TESTS_PENDING (newr1
+document`591051fe…`, handoff`b33e0560…`), not unimplemented/not waiting r1 approval.
+First903case attempt902PASS/1FAIL inventory; second18:49–18:52UTC965cases,
+960PASS/5FAIL fixture HTTP expectations, corrected by PM owner. Exact containers
+`b947ca122347`/`8f1a4b026574` confirmed live, then both missing at01:53:02:
+authoritative removal, not permission to restart. Successor
+`e0b69977c77f`/`1c2d891caefd` genuinely running under owner's01:54–01:59 lease;
+no new PASS inferred before terminal result. No peer count is Edge acceptance.
+PMcandidate now49c45af8 docs-only return over qualified implementation0e7059cc.
+
+**Scope/requirement audit:** TS1dde708e/DL860b79ba writer/image-set commits do
+not change decisive publicationRust`13f21d53…`/SQL59`0115a6bc…`. Actual current
+client/trust/mapping/workload+field provider and normalized source B/delta/history
+port remain unmounted/unqualified; command mounts false, qualified runtime cells
+empty and retention unpublished. Human ENTER/resolve is not CurrentReadGrant.
+All10formal connected requirements are retained individually as NOT_MET in
+`latest_followup` of [same intake](evidence/execution-edge-v1_2/EPG10-11/round2-intake.json),
+with exact missing facts. There is no new OWNED Edge code/binding task exposed by
+these source-only returns; candidate-only fixtures would not close connected
+acceptance. Owned intake/status/ABI/metadata work is complete now, not moved to
+a new phase or hidden behind all-PM/N1/DL roadmap completion.
+
+**Verification/runtime/C4:**15bounded read-only consistency checks/0failures,
+605modified-Markdown file links resolve at final reconciliation;439public inputs and4helper hashes still
+match historical535qualification. New Edge product/integration/capacity tests0,
+new bound ports0; no production/peer mutation. Fresh01:51HK/SGP exact23protected
+Portal image/config/start/restart tuples unchanged; canonical manager54c6f5f3,
+stableSGP main53316263, Edge released8814cd2a/image d6aa7a51 remain separate from
+this feature03180552 plus enclosing commit. All7active Portal worktrees and
+active/named rollback/08PKI retained. Inventories in intake: HKfree208,668,975,104B;
+SGP167,793,295,360B, shared observations only. Own images/cache/containers/volumes/
+networks0, deleted0B, C4 NO_ACTION_NEEDED; no shared prune or runtime restart.
+HK G12 verified18running specific container/PID handles, not lock-only waiting;
+market-data publisher is not N03's publisher. `git diff --check` PASS; six owned
+tracking/return files only, unrelated feasibility note preserved. Bobby identity;
+normal commit, no push/merge or active hook change/bypass.
+
+**Goal disposition:** this first persistent-goal turn makes source-return progress
+(Research landing subgap closed, PM implementation state corrected), but the FULL
+connected objective is NOT_ACHIEVED/NOT_MET and stays active. Do not call it
+complete from source qualification. Recommended exact next action: inspect the
+actual Research commissioning return and any source/authority return; PM's
+verified successor has now finished and is consumed below. Bind any genuinely
+supplied compatible current-provider/source/command/
+release input immediately in original03/08/09/10/11 and run its dependent cases
+under the actual target/recovery/measurement facts. No repeated generic approval,
+unapproved new phase, fabricated identity/provider or replacement synthetic PASS.
+
+**PM terminal return consumed02:00Asia/Saigon:** the same successor handles are
+now absent, not restarted here. Actual owner controller
+`pma11-publisher-capture-20261016/sgp-evidence/attempt-185410/controller.json`
+SHA`71a9732be7b4d82588937c7ed72ec5827e729eb934425f19f1c92a88c7863a76`,
+JUnit`bcf356837b420196f2f1e80a756ad91160a9b97594e3fe12aecbd2e8828ad44a`:
+01:54:10–01:58:03Asia/Saigon, exit0/965pytest PASS/0FAIL/error/skip;
+offline exit0/25PASS separate. Protected owner runtime unchanged and cleanup
+complete. Bounded PM image inventory timed out10s; no image/build created by
+that executor and no root-owned resource to prune. Copy manifest2257entries,
+SHA`850582b0…`; the11relevant current financial/read/publisher/human modules and
+tests match exact tested copied hashes. This closes pending-current-tests for
+the consumed isolated source bytes, NOT actual provider/identity/export grants,
+native source publication, command runtime or full PM phase acceptance. Owner
+WIP/commit is not silently treated as a deployed revision. No foreign23or965/25
+count is added to historical Edge535; both failed PM attempts remain explicit.
+Fresh hashes and terminal scope are in intake `latest_followup.pm_terminal_return`.
+Final read-only reconciliation after that return:17checks/0failures,605file links
+resolve, bounded receipt49,675B; no fresh Edge product-test count or runtime change.
+
 
 

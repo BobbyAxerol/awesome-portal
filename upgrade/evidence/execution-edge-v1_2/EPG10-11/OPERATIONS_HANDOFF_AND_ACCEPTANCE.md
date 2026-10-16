@@ -67,7 +67,43 @@ until exact released scope has connected evidence, not a blanket stop on all wor
 
 ## Parallel source consumption and next action
 
-### Current round2 intake —17/10/2026,01:20 Asia/Saigon
+### Latest connected-goal follow-up —17/10/2026,01:51 Asia/Saigon
+
+Research retry is now **PASS_NORMAL_HOOK**, clean commit
+`d92efc0e33d71d2d2f21f7f67cafa1cae946cb0b`, finished01:45:30Asia/Saigon;
+receipt SHA256`fa28054cd12b20e35b7e5fe09f26790833badcba3bae5213aad8e1ed4e434c2c`.
+Its8protected runtime tuples are unchanged, own resources0. The first exit124
+below remains historical; no job restart or result fabrication by Edge.
+
+Consumed actual committed human protocol: strict signed issue/ENTER/resolve,
+drain/recovery and current-human snapshot. Search of production composition
+shows no CurrentHumanCandidate creation/mount in main/controller. It supplies
+no Edge CurrentReadGrant, independent workload/app/field provider, effective
+scope or qualified B/delta/history/export. Source hook PASS closes landing,
+not those independent authorities. Peer test counts are never added to535.
+
+PMf8 WIP now includes `linked_financial.py` and approved r1 attributed READ
+projection. First expanded suite was902PASS/1FAIL of903; second960PASS/5FAIL
+of965 fixtures. Owner corrected them; final01:54:10–01:58:03Asia/Saigon now has
+**965pytest PASS/0FAIL/error/skip and25offline PASS separately**. Actual controller
+`71a9732b…`/JUnit`bcf35683…`,11relevant current module/test byte pins match the
+tested copy manifest; runtime unchanged/cleanup complete. No failed attempt is
+hidden or peer count added to535. This is isolated-tested owner WIP, not runtime
+certification or an enabled actual provider. Full source/owner publication remains
+its own handoff. Real client/trust/mapping/transport/command mounts remain false.
+TS1dde708e/DL860b79ba
+writer/image-set progress is consumed; native publication fence bytes unchanged.
+HK G12 really runs18containers (specific handles in intake), not a lock-only wait;
+its market-data publisher is not the N03 trading change-journal publisher.
+
+Owned Edge code/binding does not become runnable by substituting human ENTER
+for current operation/field grants. PM composition and Research commissioning
+stay with their active owners; no duplicate candidate-only interoperability job
+is needed. Exact affected original10/11 connected cases remain NOT_RUN, full
+acceptance NOT_MET. See `latest_followup` in [the same intake](round2-intake.json)
+for fresh source/ABI/runtime/C4 evidence and the original six return actions.
+
+### Initial round2 intake —17/10/2026,01:20 Asia/Saigon
 
 [Bounded intake](round2-intake.json) pins the fresh source/dirty hashes, actual
 return availability, runtime/C4 metadata and exact owner/action for the SAME six

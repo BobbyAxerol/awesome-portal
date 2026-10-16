@@ -30,6 +30,17 @@ TS commit. Paper/sandbox/live are structural scopes; Canary is a live stage.
 
 ## Current round2 delta —17/10/2026, Asia/Saigon
 
+Latest follow-up01:51Asia/Saigon: Research normal-hook retry is terminal PASS,
+clean commit`d92efc0e33d71d2d2f21f7f67cafa1cae946cb0b`; first exit124 remains
+historical. Follow-up02:00: PM r1 financial/composition source now has965pytest
+PASS/25offline separate;11relevant tested WIP module/test hashes verified.
+It is not missing code/tests/policy approval, but no actual provider is mounted.
+The source candidate human lease
+is still unmounted and supplies no actual Edge operation/workload/field grant.
+Use `latest_followup` in the existing11 intake for fresh pins and the exact
+remaining provider/export/commissioning input. Earlier snapshot below is not a
+claim that Research is still staged or the financial projection is unimplemented.
+
 The [original10/11 intake](../EPG10-11/round2-intake.json) supersedes only stale
 dependency assertions below, not historical test receipts. PM candidate
 `0e7059cc968654d50e76fcc76f3a2d3aceababe3` now qualifies the genuine-human

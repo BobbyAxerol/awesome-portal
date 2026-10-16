@@ -41,7 +41,11 @@ Chúng không thay thế phase hoặc exit gate trong
   consumes PM current-human candidate0e7059cc (23 peer TEST_ONLY PASS) and
   owner-accepted field matrixr1; neither installs the real provider. Field-policy
   approval and human lifecycle source implementation are no longer missing.
-  Research normal-hook attempt timed out (exit124), not a new PASS or release.
+  Research retry now landed clean`d92efc0e` with normal-hook PASS; first exit124
+  remains historical, not a current blocker. PM r1 financial/composition source
+  now has965pytest PASS/25offline separate;11relevant byte pins match tested WIP.
+  This is isolated source, not runtime or another policy approval request.
+  Actual authenticated workload/field provider and source export remain unbound.
   Historical08 completion round after earlier deferral recorded PM
   `c401a023` still publishes no actual human/workload/COMMIT provider and Research
   `169195ca` remains unqualified/UNMAPPED. Single owner packet now specifies

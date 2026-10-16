@@ -742,7 +742,11 @@ deep-dive → ADR → slice → evidence discipline documented above.
   [Original10/11 round2 intake](evidence/execution-edge-v1_2/EPG10-11/round2-intake.json)
   consumes PM current-human candidate0e7059cc (23 peer TEST_ONLY PASS) and the
   owner-accepted r1 field matrix; neither is installed runtime authority.
-  Research normal-hook exit124 remains FAIL_OR_INCOMPLETE, not acceptance.
+  Research retry landed clean`d92efc0e`/normal-hook PASS; the earlier exit124 is
+  historical, not a current blocker or connected acceptance. PM financial/
+  composition source now965pytest PASS/25offline separate,11relevant hash pins
+  verified against tested WIP; no runtime certification. Actual authenticated
+  current provider/export/mapping remain unbound.
   Historical08 completion round after the earlier PM deferral recorded
   PM`c401a023` still explicitly NOT_PUBLISHED for runtime authority/COMMIT proof;
   Research`169195ca` has no production provider and UNMAPPED identity. The single
