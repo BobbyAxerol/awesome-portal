@@ -7,6 +7,12 @@ security/owner return, not another roadmap or permission to change a peer.
 
 Final recorded status: **IN_PROGRESS / TLS_RUNTIME_QUALIFIED /
 ACTUAL_AUTHORITY_PUBLICATION_MISSING** (completion request resumed12:55UTC).
+**Parallel-round disposition:** independent Edge implementation/tests/TLS/
+cleanup COMPLETE; **three integration debt items OPEN for round2**, tracked in
+main phase08: `08-READ-TRUST`, `08-RESEARCHER-POLICY`, `08-COMMAND-COMMIT`.
+Full08 NOT_MET does not prohibit independent09 implementation after09 approval.
+Recommended next action: approve09, execute all independent slices and accept
+real partner returns within the original08 scope when each becomes available.
 Final490automated PASS/0FAIL/ignored/skip; fmt/strict zero-warning Clippy PASS.
 **Full08 exit NOT_MET**; actual current security is not production-certified.
 Continuation:46repair tests PASS, actual6TLS +12positive/12denial PASS across

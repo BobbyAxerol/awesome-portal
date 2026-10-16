@@ -46,8 +46,10 @@
 > wire/providers/publication and dependent Edge binding/connected qualification.
 > Own7.365GB test copies/cache/logs cleaned;12HK+5SGP tuples unchanged/restarts0.
 > No actual TS effects or command runtime activation; single owner return in §23.16.
-> **08 approved/in progress (§23.17):** current read-policy adapter, bounded
-> JWT/JWKS, legacy SSE expiry, explicitCA TLS1.3 and selected-payload security
+> **08 approved/in progress (§23.17): independent round complete, three integration
+> debts OPEN for round2; recommend09 independent implementation after approval,
+> not waiting for full08.** Current read-policy adapter, bounded JWT/JWKS,
+> legacy SSE expiry, explicitCA TLS1.3 and selected-payload security
 > guards qualified source-dark: final490automated PASS,0FAIL/ignored/skip,
 > fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for actual current providers,
 > TS commit/business proof and researcher field matrix.

@@ -10128,6 +10128,9 @@ Owned7.365GB test copies/cache/logs removed;12HK+5SGP tuples unchanged/restarts0
 #### EPG10-08 Hoàn thiện revocation scope và TLS
 
 **Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED (2026-10-16).
+**Vòng triển khai độc lập:** COMPLETE — **Debt ghép nối/nghiệm thu vòng2:** OPEN.
+**Đi tiếp:** GO cho phần09 độc lập sau khi09 được duyệt; không đợi đóng toàn bộ08.
+Đây không phải COMPLETE toàn phase hoặc quyền mở runtime chưa được nghiệm thu.
 **Tests:** FINAL_IMMUTABLE_490_PASS + FINAL_REPAIR_46_PASS / 0_FAIL_IGNORED_SKIP / FMT_STRICT_CLIPPY_PASS; connected TLS6 + positive reads12 + denial12 PASS — **Exit:** NOT_MET — **Runtime authority activation:** NOT_AUTHORIZED; **named PKI repair:** QUALIFIED_VALID_FALLBACK_LOADED.
 **Continuation approval (2026-10-16):** Bobby explicitly requests completion of
 the three outstanding08 items, including the exact6Manager+3SourceProxy PKI
@@ -10196,6 +10199,20 @@ placeholders. Approved researcher fields block that restricted lane only;
 Stan mutation ceiling/native COMMIT proof block the command lane, not all-business
 read. Read acceptance need not wait for07-command or the whole PM13/P184 campaign.
 
+**Technical debt ghép nối vòng2 — OPEN, không chặn việc09 độc lập:**
+
+| Debt | Owner / đầu vào còn thiếu | Ghép nối và exit vòng2 | Chỉ chặn |
+|---|---|---|---|
+| 08-READ-TRUST | TS/PM: actual current-policy provider + verified identity/revisions; Research: concrete AccessTrust composition/mapping | Edge bind provider thật; chạy actual revoke/cache/cursor/export/SSE và unaffected-scope controls; T08-02/08/09 liên quan | Nghiệm thu/mở đường đọc phụ thuộc trust này, không chặn harness/fixtures/isolated recovery của09 |
+| 08-RESEARCHER-POLICY | Owner/Research/TS: exact accepted fields, precision/history/export/SSE và current linked identities | Ghép field/link policy; chạy restricted negative/positive controls và no-hidden-aggregate checks của T08-07/08/09 | Chỉ researcher lane, không chặn manager all-business read |
+| 08-COMMAND-COMMIT | TS/PM: actual workload/human lease xuyên outer COMMIT, protected-owner/Stan authority;07 trả command port hợp lệ | Ghép command authority; correlated revoke-first/COMMIT-first với native effect/receipt; T08-01/03 liên quan | Chỉ command activation/connected certification, không chặn read hoặc test status/ambiguity cô lập |
+
+Debt IDs ở bảng là tracking items, không phải phase con. Vòng2 tiếp tục chính08
+khi đầu vào tương ứng được publish; refresh source/contract/target, chạy impacted
+tests, ghi evidence và đóng từng debt. Đầu vào đã có thì phần bind/test trở thành
+owned runnable-now, không tiếp tục gọi là external debt. Lỗi code/test owned phải
+sửa ngay; không chuyển unfinished implementation sang debt để qua phase.
+
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
 source/runtime/retention tuple; remaining gate owner and next independently runnable
@@ -10222,6 +10239,28 @@ or product-security acceptance claimed;09…11 remain not started.
 
 **Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
 **Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+**Readiness:** READY_FOR_INDEPENDENT_IMPLEMENTATION; không cần chờ08 đóng toàn bộ.
+**Khuyến nghị:** duyệt và làm09 vòng triển khai độc lập ngay; giữ các debt ghép
+nối08 cùng owner/exit ở phase gốc và trả nghiệm thu vòng2 theo từng dependency.
+Guide§10.2 cho phép integrated harness/fixture/oracle chuẩn bị từ02, không chỉ
+sau khi mọi runtime dependency đã PASS. Đây là readiness assessment, chưa phải
+approval hoặc execution của09.
+
+**Phân việc khi09 được duyệt:**
+
+- Làm ngay toàn bộ phần owned độc lập: traceability21cases/XLC; harness nối các
+  Rust modules hiện hữu với isolated ports; real disposable-PG crash/restart/
+  replay/resync/digest checks; command durable-status/ambiguity/denied fixtures;
+  compatibility/scope tests và shared-oracle vectors hiện có. Không reimplement
+  Research calculator/UI; synthetic math và test authority phải có provenance.
+- Chạy connected cases nào đã có exact qualified input, target và authority;
+  không giả định mọi source đều unavailable. Refresh peer pins và measurement
+  locks trước mỗi round; không ghi isolated timing thành coexistence/capacity.
+- Tách connected acceptance phụ thuộc03publication/04real projection/06budgets/
+  08-read, command07/08-command và metric calibration thành exact integration
+  debt/return requirements của09 khi được xác minh, không blanket-block cả09.
+  Chưa có receipt thì NOT_RUN/BLOCKED_DEPENDENCY, không PASS; không mở route/
+  mutation để thay thế evidence thiếu. Scope runtime/rollback vẫn theo guide.
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-09](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-09-kiểm-thử-e2e-dữ-liệu-command-và-recovery);
 [BE §§14–17; ELP2-10/11 and exact partner test IDs](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§11–12 and numerical hardening appendix](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -13077,6 +13116,35 @@ names (initial string-only mismatch was not runtime drift);5SGP inspected
 read-only through existing sudo. These are metadata checks, not new application
 security tests or a new runtime/capacity qualification. Only6documentation/
 sanitized-evidence files changed; unrelated untracked feasibility review kept.
+
+**13:04 UTC owner clarification — parallel rounds, debt and recommendation:**
+Bobby explicitly asks to record missing cross-owner composition/acceptance as
+technical integration debt for a second round and keep progressing independent
+phase work. Correct prior communication: full08 NOT_MET is not NO_GO for09
+implementation.08owned independent implementation/test/TLS/cleanup is complete;
+three genuine producer/policy-dependent debt items are now tracked directly in
+08 with owners, exact unblock inputs, affected scopes and round2 exit. No new
+phase IDs, waived trust proof or unfinished-owned-code relabelling.
+
+Fresh read-only peer check: PM remains`c401a023` with both runtime provider/COMMIT
+proof NOT_PUBLISHED; Research remains`169195ca`, unqualified/null provider and
+UNMAPPED identity. TS`ba31e80882367f7591e05dbd3843a4d108eb3224` is an IDR docs-only
+advance, not that authority return. Preserve peer source/WIP. No runtime probe,
+restart, new application test/resource or cleanup in this documentation round.
+Prior source/runtime/release/rollback pins remain historical receipts, not a new
+deployed revision. Feature baseline`ae2feb56`; same canonical/release/worktrees.
+
+Rules/plan/indexes now distinguish independent implementation, real acceptance,
+integration debt and next-step recommendation.09 remains NOT_STARTED and has
+not been approved by this readiness question. **Recommended next action:
+approve09 and implement every independent slice now**, then integrate real
+returns in the original affected phases as soon as each is available. Shared
+trust/correctness/budget gates still block only their dependent runtime evidence
+and release. Docs-only verification executed: `git diff --check` PASS; bounded
+JSON/three-debt owner/exit/plan/packet consistency, three indexes, reporting
+rule,09readiness versus NOT_STARTED/approval and historical490/46/nine unaccepted
+runtime-family assertions PASS. No new application or capacity tests claimed;
+no CPU-heavy suite rerun for a status clarification. NO_ACTION_NEEDED cleanup.
 
 
 

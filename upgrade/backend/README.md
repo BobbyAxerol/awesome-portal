@@ -15,7 +15,9 @@ Chúng không thay thế phase hoặc exit gate trong
   `upgrade/upgrade_v1.2`, and links Edge, Portal contracts, scoring and PM R2 inputs.
   Goals, scope, source pins, invariants, tests, exit gates, rollback, resource and
   debt/owner tracking are recorded per phase. No product/runtime acceptance implied;
-  **08 (§23.17):** owned current-scope/JWT/SSE-expiry/strict-TLS/selected-field
+  **08 (§23.17): independent round complete; three explicit integration debts
+  retained for round2. Recommend09 independent implementation after approval,
+  without full08 wait.** Owned current-scope/JWT/SSE-expiry/strict-TLS/selected-field
   package qualified source-dark, final490automated PASS/0FAIL/ignored/skip,
   fmt/strict zero-warning Clippy PASS. Full08 NOT_MET: actual authority/TS native
   commit/researcher field policy remain exact scoped

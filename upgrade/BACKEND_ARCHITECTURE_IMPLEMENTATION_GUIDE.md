@@ -717,7 +717,9 @@ deep-dive → ADR → slice → evidence discipline documented above.
   providers/publication and connected Edge binding are absent. Own7.365GB test
   copies/cache/logs cleaned;12HK+5SGP tuples unchanged/restarts0. Evidence and
   one same-phase owner return are linked in §23.16; no runtime activation.
-  **08 approved/in progress (§23.17):** current-scope provider adapter over05,
+  **08 approved/in progress (§23.17): independent round complete, three integration
+  debt items OPEN for round2; recommend09 independent implementation after
+  approval, not waiting for full08.** Current-scope provider adapter over05,
   checked bounded JWT/JWKS, legacy SSE expiry fix, explicitCA-only TLS1.3,
   selected-payload secret defense qualified source-dark: final490automated PASS,
   0FAIL/ignored/skip, fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for

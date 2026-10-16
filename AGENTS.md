@@ -157,6 +157,15 @@ Rules for these agents:
 
 ## Owner-authorized phase closeout
 
+- Parallel campaigns report separate independent implementation and connected
+  acceptance rounds. When owned runnable work is complete, register genuine
+  cross-owner integration debt in the original phase with owner, exact input,
+  affected scope, evidence and second-round exit; continue approved independent
+  work instead of treating an unmet full-phase exit as a blanket next-phase ban.
+  An available input makes its owned binding/tests runnable immediately. Never
+  relabel unfinished code/failed tests as debt or infer runtime/phase approval.
+  Every final report must recommend the next concrete action and state whether
+  next-phase implementation may proceed versus connected acceptance/release.
 - Scope blockers to their actual dependencies. During an approved implementation
   turn, execute every safe, authorized, independently runnable item immediately;
   do not merely report it as a next step, wait for an unrelated return, ask for

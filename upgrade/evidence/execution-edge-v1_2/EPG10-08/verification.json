@@ -1,5 +1,41 @@
 {
   "schema": "epg10.security-verification.v1",
+  "parallel_round_disposition": {
+    "recorded_at_utc": "2026-10-16T13:04:51Z",
+    "basis": "Explicit owner clarification: record cross-owner integration debt, complete dependent binding/acceptance in round2 and progress independent phase work",
+    "independent_phase08_implementation": "COMPLETE",
+    "integration_round2": "OPEN",
+    "full_phase08_accepted": false,
+    "debt_register": "EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md phase08 Technical debt ghep noi vong2",
+    "debt_items": [
+      {"id": "08-READ-TRUST", "status": "OPEN", "owner": "TS/PM current authority + Research composition; Edge dependent binding", "blocks": "Actual current-policy read acceptance/activation", "exit": "Actual verified provider/mapping/current revisions bound; real revoke/cache/cursor/export/SSE and unaffected-scope controls pass"},
+      {"id": "08-RESEARCHER-POLICY", "status": "OPEN", "owner": "Owner policy decision + Research/TS facts; Edge dependent field enforcement", "blocks": "Restricted researcher lane only", "exit": "Accepted exact fields/precision/history/export/SSE + current verified links; restricted positives/negatives and no hidden aggregate leak"},
+      {"id": "08-COMMAND-COMMIT", "status": "OPEN", "owner": "TS/PM native authority +07 command port; Edge dependent qualification", "blocks": "Connected command acceptance/activation only", "exit": "Actual current human/workload lease through outer COMMIT; protected-owner/Stan authority and both transaction race orders proved"}
+    ],
+    "phase09": {
+      "implementation_readiness": "READY_FOR_INDEPENDENT_IMPLEMENTATION",
+      "approval": "AWAITING_BOBBY_APPROVAL",
+      "implementation_started": false,
+      "full_phase08_completion_required_for_independent_work": false,
+      "connected_read_requires": "Exact03/04source inputs,06budgets,08-read authority and approved target",
+      "connected_commands_require": "Additional07/08-command and impacted operation/native receipts",
+      "recommended_next_action": "Approve09; execute all independent harness/fixture/oracle/real disposable-PG recovery work; accept real owner returns in the original affected phase as available"
+    },
+    "fresh_read_only_peer_round": {
+      "pm_commit": "c401a02365bbe2ae341a7a135391ce3789aeb29d",
+      "pm_runtime_provider_and_commit_proof": "NOT_PUBLISHED",
+      "research_commit": "169195ca534462dd07376bcc5872b474ba366567",
+      "research_provider_mapping": "UNQUALIFIED_AND_UNMAPPED",
+      "ts_commit": "ba31e80882367f7591e05dbd3843a4d108eb3224",
+      "ts_latest_change": "IDR documentation only; no actual authority return"
+    },
+    "runtime_mutations": 0,
+    "application_tests_run": 0,
+    "resources_created": 0,
+    "documentation_checks": "PASS: git diff --check,JSON,3debt owners/exits and plan/packet consistency,3indexes,reporting rule,09readiness versus NOT_STARTED/approval,prior490/46 and9unaccepted runtime families preserved",
+    "cleanup": "NO_ACTION_NEEDED; no owned resources created or removed",
+    "canonical_runtime_release_retention": "Unchanged by this docs-only round; pinned in tls-continuation.json release/runtime_reconciliation, not a new runtime observation"
+  },
   "latest_authority_audit": {
     "recorded_at_utc": "2026-10-16T12:55:22Z",
     "provenance": "READ_ONLY_CURRENT_SOURCE_AND_RUNTIME_METADATA_NOT_NEW_SECURITY_QUALIFICATION",
