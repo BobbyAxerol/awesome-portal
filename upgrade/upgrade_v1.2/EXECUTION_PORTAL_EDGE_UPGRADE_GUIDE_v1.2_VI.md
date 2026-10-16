@@ -1040,6 +1040,15 @@ Fixture sử dụng dữ liệu giả/deterministic đã redact; không copy pro
 
 ### EPG10-09 Kiểm thử E2E dữ liệu command và recovery
 
+**Execution tracking (2026-10-16):** Bobby đã duyệt09. Round độc lập và connected
+acceptance được track riêng tại [main plan§23.18](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#2318-epg10-09-e2e-command-and-recovery-execution--2026-10-16)
+và [21case/11XLC owner return](../evidence/execution-edge-v1_2/EPG10-09/E2E_AND_OWNER_RETURN.md).
+Round độc lập COMPLETE:606PASS, fmt/strict Clippy PASS và cleanup xong;
+full connected gate NOT_MET với exact owner/input/exit cho vòng2. Có thể đề xuất
+10 independent preparation/drill; chưa có connected cutover/release approval.
+Isolated Rust/PG/shared-oracle evidence không thay các E2E requirements bên dưới;
+full connected gate vẫn cần exact source/authority/Research/budget returns.
+
 **Mục tiêu:** chứng minh ba hệ thống hoạt động cùng nhau, không chỉ isolated PASS. **Dependencies:** 04/05/06 + read portion của 08 cho read-only scope; thêm 07 + command portion của 08 và PM impacted authority receipts cho enabled commands. Portal impacted receipts bắt buộc theo released surface; offline suite có thể chuẩn bị từ 02.
 
 **Deliverables:** integrated fixture suite, cross-guide traceability, workload/fault evidence, failure triage và production-readiness gap register.

@@ -10237,14 +10237,19 @@ or product-security acceptance claimed;09…11 remain not started.
 <a id="epg10-09-plan"></a>
 #### EPG10-09 Kiểm thử E2E dữ liệu command và recovery
 
-**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
-**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
-**Readiness:** READY_FOR_INDEPENDENT_IMPLEMENTATION; không cần chờ08 đóng toàn bộ.
-**Khuyến nghị:** duyệt và làm09 vòng triển khai độc lập ngay; giữ các debt ghép
-nối08 cùng owner/exit ở phase gốc và trả nghiệm thu vòng2 theo từng dependency.
+**Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED (2026-10-16).
+**Tests:** PASS_INDEPENDENT_SCOPE (606 final tests;0FAIL/skip/ignored) —
+**Exit:** NOT_MET for full connected scope — **Runtime activation:** NOT_AUTHORIZED.
+**Vòng triển khai độc lập:** COMPLETE; không còn owned runnable defect/test/cleanup.
+**Vòng ghép nối:** OPEN;21T09/11XLC full connected cases NOT_RUN/BLOCKED_DEPENDENCY,
+không nâng isolated PASS thành full acceptance. Bốn nhóm return09-SOURCE/COMMAND/
+RESEARCH/LOAD có owner/input/exit trong [single packet](evidence/execution-edge-v1_2/EPG10-09/E2E_AND_OWNER_RETURN.md).
+**Khuyến nghị:** có thể duyệt10 để làm phần independent shadow/fenced-cutover/
+rollback preparation và isolated drill; chưa được actual connected cutover/release.
+Trả nghiệm thu09 vòng2 theo từng input có thật, không chờ unrelated owner.
 Guide§10.2 cho phép integrated harness/fixture/oracle chuẩn bị từ02, không chỉ
-sau khi mọi runtime dependency đã PASS. Đây là readiness assessment, chưa phải
-approval hoặc execution của09.
+sau khi mọi runtime dependency đã PASS. Latest named-phase approval supersedes
+the earlier readiness-only/NOT_STARTED entry; no repeat generic approval needed.
 
 **Phân việc khi09 được duyệt:**
 
@@ -10294,7 +10299,9 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 
 **Tests v1.1 bổ sung:** `EPG10-T09-07` approved QBTS/AlphaScore/PortfolioScore golden vectors cùng version/source-set/window cho report/BFF/UI, corrections invalidate đúng affected windows; `T09-08` regime run/stage/window binding và feature/reference cutoffs không lookahead hoặc trộn strategy versions; `T09-09` Archive paper watch respects cadence/retention/resource quota, không auto-unarchive/promote/live/TradeState/allocator mutation; `T09-10` formula đã chọn nhưng chưa approved runtime config trả policy_pending/UNAVAILABLE, nhưng certified independent read dataset không bị global-block vì metric/N1/command gate không liên quan; `T09-11` Archive/Paper-clone explicit authorized disposition giữ original history và scope/identity lineage, read/watch không tạo clone hoặc lifecycle side effect.
 
-**Tests v1.2 bổ sung — tất cả PLANNED / NOT RUN trong lần sửa tài liệu:**
+**Tests v1.2 bổ sung — normative assertions:** independent vectors đã chạy theo
+receipt/traceability bên dưới; full report/BFF/source acceptance của từng case
+vẫn NOT_RUN/BLOCKED_DEPENDENCY, không blanket PASS.
 
 | ID | Fixture / assertion bắt buộc |
 |---|---|
@@ -10316,12 +10323,24 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 **Resource/test execution boundary:** Run real PG crash/reconnect/replay and selected host coexistence; classify synthetic math, isolated source, integrated runtime and broker-authoritative evidence separately. N1 performance G2 never waived by optional mainnet G2. Shared-host lock, disposable
 namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
 
-**Technical debt / external gates:** Chưa tạo debt. Partner integration environment, exact source publication and metric calibration are external gates only for dependent cases. Any failed promised test/correctness gap remains open work. All 21 cases get explicit scope/status, not blanket PASS.
+**Technical integration debt, same09 round2:**09-SOURCE (TS fence + PM13 authenticated
+capture/export/retention),09-COMMAND (PM14 actual port/full outcome +08 current
+COMMIT authority),09-RESEARCH (actual provider/mapping/accepted fields/config and
+ELP2 returns),09-LOAD (real source/coexistence window; Edge binds/measures its
+01/06 production budgets on those inputs). Independent sizing/instrumentation/
+isolated target already prepared in06, not deferred or relabelled somebody else's
+debt. Exact owners, affected assertions and exits: [single packet](evidence/execution-edge-v1_2/EPG10-09/E2E_AND_OWNER_RETURN.md#integration-debt-same09-round2-not-new-subphases).
+Both owned failures were fixed/retested; no known defect left in tested scope.
 
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
 source/runtime/retention tuple; remaining gate owner and next independently runnable
-scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+scope. **Hiện tại:**606PASS, fmt/strict zero-warning Clippy PASS; all428 source
+hashes match final local bytes. Exact8,386,752,512B private test artifacts removed;
+23protected tuples unchanged. [Execution§23.18](#2318-epg10-09-e2e-command-and-recovery-execution--2026-10-16),
+[qualification](evidence/execution-edge-v1_2/EPG10-09/qualification.json),
+[shared oracle](evidence/execution-edge-v1_2/EPG10-09/shared-oracles.json),
+[runtime/cleanup/release](evidence/execution-edge-v1_2/EPG10-09/final-reconciliation.json).
 
 <a id="epg10-10-plan"></a>
 #### EPG10-10 Shadow fenced cutover và rollback drill
@@ -13145,6 +13164,211 @@ JSON/three-debt owner/exit/plan/packet consistency, three indexes, reporting
 rule,09readiness versus NOT_STARTED/approval and historical490/46/nine unaccepted
 runtime-family assertions PASS. No new application or capacity tests claimed;
 no CPU-heavy suite rerun for a status clarification. NO_ACTION_NEEDED cleanup.
+
+### 23.18 EPG10-09 E2E, command and recovery execution — 2026-10-16
+
+**Approval/start:** Bobby explicitly approves09; feature
+`feat/execution-edge-upgrade-v1_2@cfeeee7e6dc4680dd736ac4e4076ea997d9cbb87`,
+worktree `/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`.
+Preserve the unrelated untracked feasibility review. Goal and guides are the
+phase09 links above: EDGE09/§10.2/§12, BE§§14–17, SCORE§§11–12/AppendixA,
+REVIEW§§4–5/7–9; no authority, UI or second analytics engine implementation.
+
+**Approved implementation scope / boundary:** reuse the04…08 Rust bootstrap,
+read/history/realtime and durable command modules plus the existing bounded
+correctness runner; add09 cross-module recovery scenarios and exact21case/XLC
+traceability. Consume an actual shared Research oracle if present; numerical
+reference smoke may execute the exact pinned guide block, never runtime defaults
+or financial certification. No TS/PM/DL/Research source edit, schema alteration
+on shared DB, command effect on a real target, route activation or production
+restart. No arbitrary SQL/direct TS DB/Redis/CLI exposure.09 UI/browser evidence
+is a Research/FE return, not permission to implement UI in Edge.
+
+**Target and rollback:** source/contracts/test-only code in an exact private
+`/tmp/epg10-09-*` target on an available test host, reuse the pinned cached PG
+image, dynamic loopback port/no volume, finite PG/cargo/runner ceilings and owned
+measurement lease. Record exact target/envelope before test. Stop/rollback only
+the owned test process/container and remove exact copied source/build/cache;
+retain operational images/rollback/private PKI and all production state.
+HK currently has `claude-kafka-b` measurement lock until15:43:54Z: no HK build,
+pytest/container/load. Continue read-only review/code work; check SGP lock before
+choosing the independent executor, no bypass or premature blocked handoff.
+
+**Test/exit:** real disposable-PG multi-connection/rollback/reconnect/replay plus
+scope/current-policy and command same-key/status/restart invariants; strict
+fmt/Clippy and runner negative tests. Pin copied bytes and source peers each
+round. Every T09-01…21 gets expected/actual/scope/provenance/test evidence or
+named integration debt; no blanket PASS, ignored tests or isolated capacity/
+native/production claim. Existing08 integration debt remains in08 and blocks
+only its dependent connected cases. Complete all safe owned slices before
+reporting round1 complete; source availability is checked, not assumed absent.
+
+**Executor decision,13:39Z:** SGP lock absent; cached PG digest confirmed;
+free168,162,177,024B (25% root free). Exact private target
+`bobby@178.128.51.255:/tmp/epg10-09-pJye2Rpu`,0700. Profile09 inherits08's
+10lib packages/Edge binary/TLS/bootstrap/read/resource/manager/command suites;
+adds four cross-module PG read and three PG durable-command tests plus five
+runner safety regressions. Limits:1Cargo job/one CPU affinity/nice15;
+PG0.5CPU/768MiB,512MiB tmpfs,128pids/24connections, dynamic loopback port,
+no volume;1500s exclusive lease,1470s alarm, bounded stage logs8MiB. Reuse
+only426 explicitly manifested source/contract inputs from08 plus two09 child
+test files, runner/helpers and exact FINAL numerical guide. No private configs,
+market/account data, operational credentials or peer WIP copied. Runner
+acquires the actual fresh SGP lock before any compile/container; foreign lock
+fails closed. Release and23protected containers remain untouched.
+
+**Peer return round1:** TS `d48ee90f33dca0c7b7d4371e22107281bb571dfe`;
+PM `c401a02365bbe2ae341a7a135391ce3789aeb29d` with active PM13 WIP;
+Research `630eafc563159305727bab7c588a27da27df827f` with active commissioning
+WIP. PM13 currently50relations/12PM→42Edge families but BOOTSTRAP_ONLY and
+runtime_enabled=false; PM14 full-outcome seam is private/unmounted. Native
+publisher fence files match03's reproduced counterexample. Research shared
+calculator/vector hashes available; commissioning is IN_PROGRESS, not assumed
+permanently absent. Pin committed oracle bytes, repin all peers at closeout.
+
+**Slice1 implementation / run underway:** added four09 child read tests to the
+existing scoped-read binary and three09 child command tests to the existing
+command binary; no product runtime code/migration changed. Explicit09 runner
+profile keeps all ten lib gates plus strict TLS and finite counts. Children
+are also required/hash-bound whenever their parent binary is compiled by an
+older profile; no dangling compile input or silently dropped safety gate.
+First runner safety90/90 PASS on SGP; cold single-job compilation ongoing,
+not yet a Rust result. Runner source received a follow-up older-profile child
+hash-inventory safety fix during the run; final receipt must rerun all Python
+safety tests against final copied runner bytes and verify all428 Rust/contract
+inputs exactly equal the full run. This is a composite qualification: retain
+both original/final runner hashes, never relabel the first receipt as a full
+run against different Python bytes. No Rust/product bytes changed; no need to
+repeat the full cold Cargo suite merely for moving identical09 child paths
+into the inherited parent input lists.
+
+Detailed scope, all21case/11XLC expectations and four exact integration-return
+groups are indexed in [09 single owner packet](evidence/execution-edge-v1_2/EPG10-09/E2E_AND_OWNER_RETURN.md);
+[peer source review](evidence/execution-edge-v1_2/EPG10-09/source-review.json)
+records two read-only parallel rounds without adopting moving WIP.
+
+**Attempt1,14:03Z:** runner90, Rust libs250 and Edge42 PASS; fmt/compile/check
+PASS. TLS fixture10FAIL before any handshake because its TMPDIR assertion
+hardcoded08, correctly rejecting the09 target. Runner removed its owned PG and
+lock with zero cleanup errors; no product/runtime defect or external debt
+claimed. Fix this owned test-only root validator to exact08/09 direct children
+of/tmp (no broad prefix/descendant acceptance), add positive/negative root
+tests, then rerun full final profile with TLS expected12. Retain original
+failed receipt/summaries; do not hide it behind later PASS. Earlier unchanged-
+Rust composite optimization is superseded: TLS source changes require a full
+new run; cached dependencies stay private inside the same exact target.
+
+**Shared-oracle work, same exact target:** `scripts/epg10-09/oracles.py` consumes
+the four committed/hash-pinned Research inputs at630eafc5 (three calculator/test
+files plus FINAL guide). Execute only after the PG runner's lease is released,
+under a separate510s lease; exact47 guide reference tests and existing Vitest
+vectors, one worker/CPU/nice15, no new formula. Copy into target/oracle; existing
+Research dependencies are read-only references and Vite cache stays private.
+No test runs in the live peer checkout; no production anchors/config inferred.
+
+**Independent review correction before oracle execution:** reviewer found the
+new Vitest subprocess initially streamed to an unbounded private log and only
+postchecked its separate JSON file. Fixed before running it: remove
+`--outputFile`; JSON/diagnostics now share existing `run_logged`'s8MiB pipe,
+180s timeout/process-group termination, then require JSON<=1MiB. No runtime
+change or waived gate. Review found no P0/P1 in the Rust recovery scenarios,
+inherited input closure, TLS root validator or fixture/connected provenance.
+
+**Attempt2,14:14Z:** all504 expected tests PASS (runner90, libs250, Edge42,
+TLS12, PG bootstrap22/read42/resource8/manager11/command27), zero ignored or
+filtered tests. Final Clippy gate FAILS `doc_markdown` on the new test header
+`TEST_ONLY`; this is an owned test-source defect, not an external dependency.
+Backtick the identifier in both new child module headers; rerun full profile
+against final source hashes. Attempt2 still FAIL overall and retained in the
+attempt history. Its PG/lock cleanup succeeded with zero errors; no deployment.
+
+**Peer/review refresh,14:15…18Z:** TS/PM/DL heads unchanged. Research630eafc5
+now has29staged commissioning files, zero untracked, bounded consumer/Score
+wiring advanced; its owner recorded74/77 focused tests then fixture repairs,
+but terminal normal-hook retake receipt still absent, ELP2-10 NOT_MET and no
+ELP2-11. Actual default provider/mapping/publication/calibration not supplied.
+This progress is recorded, not misreported as a permanently missing consumer
+or a frozen PASS return. Committed calculator pins remain unchanged, usable
+now. Independent reviewer confirms bounded-log fix resolved the sole P2;
+no remaining source-review findings. Fresh whitelist inspection14:18Z:18HK
+and5SGP all running and all fields available in08 baseline unchanged; captured
+full23 ID/image/config/start/restart tuples for09 before/after comparison.
+
+**Final attempt3 + oracle,14:22…24Z — independent round COMPLETE:**
+`EPG10_TEST_PROFILE=09` with the exact expected counts/revision above,
+`python3 -B run.py` PASS_ISOLATED_CORRECTNESS_ONLY,412.268s observational.
+Final90runner +250libs (10binaries) +42Edge +12TLS +22bootstrap +42read +8resource
++11manager +27command =504PASS;0FAIL/ignored/filtered/skip. fmt, locked offline
+all-target compile/Edge check and strict Clippy `-D warnings` PASS, zero warnings.
+Includes real disposable writer-backend termination before COMMIT from04,
+multi-connection rollback/read visibility, seven new09 scenarios and current
+scope/strict TLS inherited controls. No actual TS/PM/Research crash or command
+effect claimed. Both earlier FAIL attempts remain [bounded history](evidence/execution-edge-v1_2/EPG10-09/attempt-history.json).
+
+`python3 -B oracles.py` after runner cleanup/lease release PASS: exact FINAL47,
+54existing Research Vitest4.1.11 cases and1rolling-peak-exit reference regression
+=102PASS/0FAIL/pending/skip. Repeated90helper safety PASS is not counted again;
+final qualification total606 tests, plus altered-guide hash guard denial.
+No new financial implementation/calibration. Actual Vitest1.393s/log23,026B
+within8MiB/180s cap. All428 Rust/contract hashes, manifest SHA, final four helper
+hashes and oracle runner SHA match current local source; oracle verifies the
+same full-run snapshot. No composite source-byte reuse or dependency update.
+[Full qualification](evidence/execution-edge-v1_2/EPG10-09/qualification.json),
+[shared oracle provenance](evidence/execution-edge-v1_2/EPG10-09/shared-oracles.json).
+CPU/RSS/IO/WAL/query timings are bounded shared-host observations, all explicitly
+tainted_for_capacity; not01/06 integrated budget or production/HA proof.
+
+**C4 cleanup/runtime/source reconciliation:** own PG removed and sampler/lease
+released on every attempt, no cleanup error. After exporting bounded receipts,
+fresh180s owned cleanup lease removed exactly SGP `/tmp/epg10-09-pJye2Rpu`:
+8,386,752,512 allocated bytes; free159,602,663,424→167,988,871,168B observational.
+No TLS test directories/keys or owned process/container/lock remain; peer Vitest
+dependency still exists.0image build/pull/removal,0BuildKit cache,0volumes/networks/
+operational resources changed. Only disposable source/compiler/cache/log state
+was deleted; source/tests/sanitized receipts retained in Git. Read-only HK/SGP
+Docker image/BuildKit inventories recorded; no shared prune during peer work.
+NO_ACTION_NEEDED in09 cleanup scope; shared cache maintenance needs its own quiet
+approved scope, not09 debt or permission to delete historical peer artifacts.
+
+Fresh14:26:54Z comparison: all23 protected ID/image/config/StartedAt/restart
+tuples identical to09 before snapshot, all running.18HK match all08 baseline
+fields;5SGP match its available image/config/running/restart fields (08 did not
+store SGP IDs/start times). No operational source requests, shared DB writes, financial
+commands, deploy, restart or gate activation. Canonical checkout remains
+`/home/bobby/.worktrees/portal-execution-manager-v2`,
+`feat/manager-v2-paper-read@54c6f5f3`; SGP stable
+`/home/bobby/portal-main-release main@53316263`; Edge release
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`,
+runtime revision8814cd2a/image d6aa7a51. Exact23 digests/configs, six active
+worktrees and retained operational/named08 private recovery set are in
+[final reconciliation](evidence/execution-edge-v1_2/EPG10-09/final-reconciliation.json).
+No operational rollback resource removed/requalified; no expired TLS rollback.
+
+**Disposition/recommendation:** all independently runnable09 work complete.
+Full09 exit NOT_MET,21T09 and11XLC full connected acceptance
+NOT_RUN/BLOCKED_DEPENDENCY, with executable boundary and four exact owner-return
+groups in the single packet. An actual return immediately enables its owned
+binding/measurement/test in the original phase; no new generic approval gate.
+Inherited08 debts remain scoped there.10 independent preparation/drill may
+proceed after Bobby names10; connected cutover/release requires applicable
+source/trust/command/budget/Research receipts.10/11 have not been started.
+
+**Final source/docs verification:** read-only14:30:15Z Research retake still
+absent, HEAD/diff/commissioning hashes unchanged;29staged/0unstaged/untracked,
+actual default provider uninstalled and mapping UNMAPPED. No available actual
+return was left unconsumed; local wiring progress is not denied. Final TS/PM
+heads unchanged; DL advanced to1dcf3ba7 at14:29Z. Reviewed its full
+17line plan-only delta: peer Kafka cleaner/B roll/coordinator-load observations,
+G12 final next. No Portal source/identity/authority change or09 load acceptance
+inferred; actual peer operations are not this Edge slice's runtime mutations.
+Metadata-only
+verification on HK (no cargo/pytest/host load under the foreign lock):
+`git diff --check` PASS; all428 local source/manifest/helper/oracle hashes,
+606counts, each21T09/11XLC status, four exact return groups, protected23 tuples,
+cleanup assertions, guide reference pin and packet evidence links PASS.
+No raw log/key/runtime/cache/data artifact added. Coherent09 commit uses verified
+`BobbyAxerol <vugioan11022002@gmail.com>`; preserve unrelated untracked
+feasibility review. No push/merge; canonical source/release/runtime unchanged.
 
 
 

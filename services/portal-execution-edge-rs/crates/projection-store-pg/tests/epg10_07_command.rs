@@ -1,4 +1,7 @@
 //! `TEST_ONLY` authority; real disposable `PostgreSQL`, never TS financial effects.
+#[path = "epg10_09/command_e2e.rs"]
+mod e2e;
+
 use std::{
     collections::BTreeMap,
     sync::{

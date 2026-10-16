@@ -26,13 +26,53 @@ use ts_adapter_v1::ReadOperation;
 use ts_transport::{BoundedSourceClient, SourceTransportConfig, TransportError, TransportLimits};
 use uuid::Uuid;
 
+fn owned_test_root(path: &Path) -> bool {
+    path.parent() == Some(Path::new("/tmp"))
+        && path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| {
+                ["epg10-08-", "epg10-09-"].iter().any(|prefix| {
+                    name.strip_prefix(prefix).is_some_and(|suffix| {
+                        !suffix.is_empty()
+                            && suffix
+                                .chars()
+                                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+                    })
+                })
+            })
+}
+
+#[test]
+fn test_root_accepts_only_explicit08_and09_names() {
+    for path in ["/tmp/epg10-08-private", "/tmp/epg10-09-private_1.X"] {
+        assert!(owned_test_root(Path::new(path)));
+    }
+}
+
+#[test]
+fn test_root_rejects_other_phases_nested_paths_and_operational_roots() {
+    for path in [
+        "/tmp/epg10-08-",
+        "/tmp/epg10-09-",
+        "/tmp/epg10-10-private",
+        "/tmp/epg10-09-private/child",
+        "/tmp/epg10-09-private/../foreign",
+        "/tmp/epg10-09-private bad",
+        "/home/bobby",
+        "/tmp",
+    ] {
+        assert!(!owned_test_root(Path::new(path)));
+    }
+}
+
 struct Certificates(PathBuf);
 impl Certificates {
     fn new() -> Self {
         assert_eq!(std::env::var("EPG10_TEST_ONLY").as_deref(), Ok("1"));
         let parent =
             fs::canonicalize(std::env::var("TMPDIR").expect("private test root required")).unwrap();
-        assert!(parent.to_str().unwrap().starts_with("/tmp/epg10-08-"));
+        assert!(owned_test_root(&parent));
         let dir = parent.join(format!("tls-{}", Uuid::now_v7()));
         fs::create_dir(&dir).unwrap();
         fs::set_permissions(&dir, fs::Permissions::from_mode(0o700)).unwrap();

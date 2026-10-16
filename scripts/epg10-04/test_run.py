@@ -25,20 +25,20 @@ class RunnerSafety(unittest.TestCase):
         source = Path(private.name) / 'source'
         names = ['Cargo.toml', 'Cargo.lock', *qualification.owned_rust(profile),
                  'crates/projection-store-pg/migrations/0019_scoped_bootstrap.sql']
-        if profile in ('07', '08'):
+        if profile in ('07', '08', '09'):
             names.append(qualification.COMMAND_MIGRATION)
         if profile != '04':
             names.append('crates/projection-store-pg/migrations/0020_scoped_read.sql')
             names = [qualification.RUST_WORKSPACE + '/' + name for name in names]
             names.append(qualification.SHARED_FIXTURE)
-        if profile in ('06', '07', '08'):
+        if profile in ('06', '07', '08', '09'):
             names.extend(qualification.RESOURCE_SHARED_FIXTURES)
             names.extend(qualification.RESOURCE_COMPILE_INPUTS)
             names.extend(qualification.RUST_WORKSPACE + '/' + name
                          for name in qualification.RESOURCE_BUILD_SCRIPTS)
-        if profile in ('07', '08'):
+        if profile in ('07', '08', '09'):
             names.extend(qualification.COMMAND_SHARED_FIXTURES)
-        if profile == '08':
+        if profile in ('08', '09'):
             names.extend(qualification.SECURITY_COMPILE_INPUTS)
         for name in names:
             path = source / name
@@ -46,12 +46,12 @@ class RunnerSafety(unittest.TestCase):
             path.write_text('TEST_ONLY\n')
         return source
 
-    def test_profile_defaults_to04_and_requires_exact_04_or05_or06_or07_or08(self):
+    def test_profile_defaults_to04_and_requires_exact_04_through09(self):
         with patch.dict(qualification.os.environ, {}, clear=True):
             self.assertEqual(qualification.test_profile(), '04')
-        for value in ('04', '05', '06', '07', '08'):
+        for value in ('04', '05', '06', '07', '08', '09'):
             self.assertEqual(qualification.test_profile(value), value)
-        for value in ('', '4', '5', '6', '7', '8', '09', '04,05', '05 ', '07 ', '08 ', 5, True):
+        for value in ('', '4', '5', '6', '7', '8', '9', '10', '04,05', '05 ', '07 ', '08 ', '09 ', 5, True):
             with self.subTest(profile=value):
                 with self.assertRaisesRegex(ValueError, 'EXPLICIT_TEST_PROFILE'):
                     qualification.test_profile(value)
@@ -890,9 +890,55 @@ class RunnerSafety(unittest.TestCase):
 
     def test_profile08_unit_timeout_stays_bounded_and_preserves_all_prior_profiles(self):
         self.assertEqual(qualification.UNIT_TEST_TIMEOUT_SECONDS,
-                         {'04': 240, '05': 240, '06': 240, '07': 600, '08': 600})
+                         {'04': 240, '05': 240, '06': 240, '07': 600, '08': 600, '09': 600})
         self.assertEqual(qualification.LOCK_SECONDS, 1500)
         self.assertLess(qualification.UNIT_TEST_TIMEOUT_SECONDS['08'], qualification.LOCK_SECONDS - 30)
+
+    def test_profile09_cleanup_names_and_paths_cannot_select08_or_runtime(self):
+        helper = qualification.load_cleanup_helpers(Path(__file__).resolve().parent, '09')
+        self.assertTrue(helper.PG.startswith('epg10-09-pg-'))
+        self.assertTrue(helper.OWNER.startswith('codex-epg10-09-'))
+        for path in ('/home/bobby/portal-main-release', '/tmp/epg10-08-test',
+                     '/tmp/epg10-09-', '/tmp/epg10-09-test/child'):
+            with self.subTest(path=path), self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
+                qualification.validate_base(Path(path), '09')
+
+    def test_profile09_inherits_ten_security_units_without_relaxing08(self):
+        self.assertEqual(qualification.package_arguments('09'), qualification.package_arguments('08'))
+        self.assertEqual(len(qualification.package_arguments('09')), 20)
+        self.assertEqual(qualification.owned_rust('09'), qualification.owned_rust('08'))
+        self.assertTrue(set(qualification.E2E_OWNED_RUST) <= set(qualification.owned_rust('09')))
+        self.assertLess(qualification.UNIT_TEST_TIMEOUT_SECONDS['09'], qualification.LOCK_SECONDS - 30)
+
+    def test_profile09_new_cross_module_inputs_are_required_and_hash_bound(self):
+        source = self.source_fixture('09')
+        before = qualification.source_hashes(source, '09')
+        for name in qualification.E2E_OWNED_RUST:
+            path = source / qualification.RUST_WORKSPACE / name
+            path.unlink()
+            with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+                qualification.source_hashes(source, '09')
+            path.write_text('TEST_ONLY changed\n')
+            relative = qualification.RUST_WORKSPACE + '/' + name
+            self.assertNotEqual(before[relative], qualification.source_hashes(source, '09')[relative])
+
+    def test_profile09_cannot_accept_missing_children_or_partial_test_counts(self):
+        source = self.source_fixture('09')
+        (source / qualification.RUST_WORKSPACE / qualification.E2E_OWNED_RUST[0]).unlink()
+        with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+            qualification.source_hashes(source, '09')
+        row = 'test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        for kind in ('READ', 'COMMAND', 'TLS'):
+            with self.subTest(kind=kind), self.assertRaisesRegex(ValueError, 'EXACT_' + kind):
+                qualification.parse_rust_results(row, 1, 2, count_kind=kind)
+
+    def test_profile09_nested_test_clippy_warnings_are_owned(self):
+        for path in qualification.E2E_OWNED_RUST:
+            warning = {'reason': 'compiler-message', 'message': {'level': 'warning',
+                'code': {'code': 'clippy::e2e'},
+                'spans': [{'is_primary': True, 'file_name': path}]}}
+            self.assertEqual(qualification.clippy_findings(json.dumps(warning), '09')['owned_warnings'],
+                             ['clippy::e2e'])
 
     @staticmethod
     def child_usage(user=1.0, system=0.5, rss=100, reads=2, writes=4):

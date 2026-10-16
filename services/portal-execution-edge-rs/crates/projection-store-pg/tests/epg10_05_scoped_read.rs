@@ -77,6 +77,9 @@ async fn governed_pg_cache_has_one_permit_and_reserves_control_before_pool_wait(
     assert_eq!(resources.stats().unwrap().bytes, 0);
 }
 
+#[path = "epg10_09/read_e2e.rs"]
+mod e2e;
+
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::{

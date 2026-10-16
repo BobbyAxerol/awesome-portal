@@ -718,8 +718,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
   copies/cache/logs cleaned;12HK+5SGP tuples unchanged/restarts0. Evidence and
   one same-phase owner return are linked in §23.16; no runtime activation.
   **08 approved/in progress (§23.17): independent round complete, three integration
-  debt items OPEN for round2; recommend09 independent implementation after
-  approval, not waiting for full08.** Current-scope provider adapter over05,
+  debt items OPEN for round2;09 independent round COMPLETE in§23.18:
+  606PASS, fmt/strict Clippy PASS, no runnable owned work left; full connected
+  gate NOT_MET with four scoped integration-return groups.** [09 evidence/owner return](evidence/execution-edge-v1_2/EPG10-09/E2E_AND_OWNER_RETURN.md)
+  maps all21cases/11XLC without upgrading isolated tests to connected acceptance.
+  Own8,386,752,512B test artifacts removed,23protected runtime tuples unchanged.
+  Recommend10 independent preparation/drill after phase approval, not connected
+  cutover/release;10/11 NOT_STARTED. No authority/route/runtime activation.
+  Current-scope provider adapter over05,
   checked bounded JWT/JWKS, legacy SSE expiry fix, explicitCA-only TLS1.3,
   selected-payload secret defense qualified source-dark: final490automated PASS,
   0FAIL/ignored/skip, fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for
@@ -738,7 +744,7 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Additional212,992B test targets removed; all23images/configs unchanged,
   only6approved Manager start times/counters changed; no Edge/DB restart.
   First incorrect method assertion and safe containment/recovery retained in
-  §23.17/TLS continuation. No authority activation or peer changes;09…11 await approval.
+  §23.17/TLS continuation. No authority activation or peer changes;10…11 await approval.
   01capacity exit remains unmet, not waived.
   No operational runtime/source/credential change, push or merge. Only owned
   test containers/private fixture/tempfiles removed; no image build/pull/prune.
