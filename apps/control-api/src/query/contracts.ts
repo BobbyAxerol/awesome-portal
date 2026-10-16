@@ -102,6 +102,19 @@ export interface SortDefinition {
   kind: QueryScalarKind;
 }
 
+/**
+ * Trusted-server, exact tuple visibility, not a browser filter or grant.
+ * The authority fingerprint must include the caller's current policy context;
+ * the query service additionally binds the exact columns and tuples to cursors.
+ * An empty tuple set means no rows, never an unconstrained query. Columns need
+ * not be selected: applying a predicate must not expose its private identifiers.
+ */
+export interface PostgresRowScope {
+  columns: readonly string[];
+  allowedTuples: readonly (readonly QueryScalar[])[];
+  fingerprint: string;
+}
+
 export interface PostgresListResource<TRow extends Record<string, unknown>, TItem> {
   resourceId: string;
   table: string;
@@ -123,6 +136,8 @@ export interface PostgresListResource<TRow extends Record<string, unknown>, TIte
     column: string;
     allowedValues: readonly QueryScalar[];
   };
+  /** Optional only for compatibility; Execution adapters must supply a minted scope. */
+  rowScope?: PostgresRowScope;
   statementTimeoutMs?: number;
   maxFilters?: number;
   mapRow: (row: TRow) => TItem;

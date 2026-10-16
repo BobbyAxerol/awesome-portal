@@ -1,45 +1,205 @@
 {
   "openapi": "3.1.0",
-  "info": {"title": "Portal retained Execution review metadata", "version": "1.0.0", "description": "Preview-only named read context; shared Core session/owner/access, no source connection, selector or mutation. Original source refusal and clocks are separate from older retained observations."},
+  "info": {
+    "title": "Portal retained Execution review metadata",
+    "version": "1.0.0",
+    "description": "Preview-only named read context; shared Core session/owner/access, no source connection, selector or mutation. Original source refusal and clocks are separate from older retained observations."
+  },
   "paths": {
     "/api/v1/execution/retained-review": {
       "get": {
         "operationId": "executionRetainedReviewV1",
-        "parameters": [{"name": "workspace_id", "in": "query", "required": false, "schema": {"type": "string", "minLength": 1, "maxLength": 128}}],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
         "responses": {
-          "200": {"description": "Private no-store effective permissions and per-profile retained coverage; does not grant Research/Governance authority.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RetainedReviewResponse"}}}},
-          "400": {"description": "Invalid or unknown query field"}, "401": {"description": "Session revoked/expired or user disabled"},
-          "404": {"description": "Profile not configured or current Core read access denied"}, "503": {"description": "Local read store unavailable; no upstream retry"}
+          "200": {
+            "description": "Private no-store effective permissions and per-profile retained coverage; does not grant Research/Governance authority.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RetainedReviewResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RetainedReviewScopedResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or unknown query field"
+          },
+          "401": {
+            "description": "Session revoked/expired or user disabled"
+          },
+          "404": {
+            "description": "Profile not configured or current Core read access denied"
+          },
+          "503": {
+            "description": "Local read store unavailable; no upstream retry"
+          }
         }
       }
     },
     "/api/v1/execution/profiles/{environment}/realtime-snapshot": {
       "get": {
-        "operationId":"executionRetainedRealtimeBootstrapV1",
-        "description":"Retained-review profile only: intentional absence of a realtime cursor. Consumers should read stream_enabled=false in executionRetainedReviewV1 and skip bootstrap. No SSE or resnapshot job is started.",
-        "parameters":[{"name":"environment","in":"path","required":true,"schema":{"enum":["paper","sandbox","live"]}}],
-        "responses":{"204":{"description":"Streaming disabled; no body or cursor.","headers":{"X-Portal-Realtime-State":{"schema":{"const":"UDB_RETAINED_STREAM_DISABLED"}},"Cache-Control":{"schema":{"const":"private, no-store"}}}},"401":{"description":"Session invalid"},"404":{"description":"Access denied or profile not configured"}}
+        "operationId": "executionRetainedRealtimeBootstrapV1",
+        "description": "Retained-review profile only: intentional absence of a realtime cursor. Consumers should read stream_enabled=false in executionRetainedReviewV1 and skip bootstrap. No SSE or resnapshot job is started.",
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Streaming disabled; no body or cursor.",
+            "headers": {
+              "X-Portal-Realtime-State": {
+                "schema": {
+                  "const": "UDB_RETAINED_STREAM_DISABLED"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "404": {
+            "description": "Access denied or profile not configured"
+          }
+        }
       }
     },
     "/api/v1/execution/manager/current/{operation_id}": {
       "get": {
-        "operationId":"executionRetainedNamedOperationPageV1",
-        "description":"Retained-review response of the existing 54 checked-in Portal aliases. This is not a generic Manager relation route: only the static operations manifest resolves aliases, unknown aliases return 404. Source/current runtime responses remain governed by their existing contract.",
-        "parameters":[
-          {"name":"operation_id","in":"path","required":true,"schema":{"type":"string","pattern":"^[a-z][a-z0-9-]{1,127}$"}},
-          {"name":"environment","in":"query","schema":{"enum":["paper","sandbox","live"],"default":"paper"}},
-          {"name":"workspace_id","in":"query","schema":{"type":"string","maxLength":96}},
-          {"name":"limit","in":"query","schema":{"type":"integer","minimum":1,"maximum":200,"default":100}},
-          {"name":"cursor","in":"query","schema":{"type":"string","maxLength":128}}
+        "operationId": "executionRetainedNamedOperationPageV1",
+        "description": "Retained-review response of the existing 54 checked-in Portal aliases. This is not a generic Manager relation route: only the static operations manifest resolves aliases, unknown aliases return 404. Source/current runtime responses remain governed by their existing contract.",
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{1,127}$"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ],
+              "default": "paper"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 96
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
         ],
-        "responses":{"200":{"description":"PARTIAL captured observations or UNAVAILABLE uncaptured panel; never authoritative empty or new source acceptance.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/RetainedNamedOperationPage"}}}},"400":{"description":"Invalid query or expired/tampered/cross-scope/revision cursor"},"401":{"description":"Invalid session"},"404":{"description":"Alias/workspace/read scope denied"},"503":{"description":"Missing local profile, invalid captured scalar/identity or local store failure; no upstream fallback"}}
+        "responses": {
+          "200": {
+            "description": "PARTIAL captured observations or UNAVAILABLE uncaptured panel; never authoritative empty or new source acceptance.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetainedNamedOperationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query or expired/tampered/cross-scope/revision cursor"
+          },
+          "401": {
+            "description": "Invalid session"
+          },
+          "404": {
+            "description": "Alias/workspace/read scope denied"
+          },
+          "503": {
+            "description": "Missing local profile, invalid captured scalar/identity or local store failure; no upstream fallback"
+          }
+        }
       }
     }
   },
-  "components": {"schemas": {
-    "RetainedReviewResponse": {"$ref": "../schemas/execution-retained-review.v1.schema.json"},
-    "RetainedReviewProfile": {"$ref": "../schemas/execution-retained-review.v1.schema.json#/$defs/Profile"},
-    "RetainedReviewPanel": {"$ref": "../schemas/execution-retained-review.v1.schema.json#/$defs/Panel"}
-    ,"RetainedNamedOperationPage": {"$ref": "../schemas/execution-retained-operation-page.v1.schema.json"}
-  }}
+  "components": {
+    "schemas": {
+      "RetainedReviewResponse": {
+        "$ref": "../schemas/execution-retained-review.v1.schema.json"
+      },
+      "RetainedReviewProfile": {
+        "$ref": "../schemas/execution-retained-review.v1.schema.json#/$defs/Profile"
+      },
+      "RetainedReviewPanel": {
+        "$ref": "../schemas/execution-retained-review.v1.schema.json#/$defs/Panel"
+      },
+      "RetainedNamedOperationPage": {
+        "$ref": "../schemas/execution-retained-operation-page.v1.schema.json"
+      },
+      "RetainedReviewScopedResponse": {
+        "$ref": "../schemas/execution-retained-review.v2.schema.json"
+      },
+      "RetainedReviewScopedProfile": {
+        "$ref": "../schemas/execution-retained-review.v2.schema.json#/$defs/Profile"
+      },
+      "RetainedReviewScopedPanel": {
+        "$ref": "../schemas/execution-retained-review.v2.schema.json#/$defs/Panel"
+      }
+    }
+  }
 }

@@ -1,0 +1,108 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "cases": [
+    {
+      "schema_version": "portal.execution.manager-scoped.v1",
+      "surface": "ALPHA_FLEET",
+      "workspace_id": "workspace_TEST_ONLY",
+      "environment": "paper",
+      "record_authority": "PORTAL_PROJECTION",
+      "source_authority": "TRADING_SYSTEM",
+      "read_at_ms": 1790812800000,
+      "read_scope": {
+        "visibility": "SCOPED",
+        "coverage": "AUTHORIZED_ONLY",
+        "totals_scope": "VISIBLE_ROWS_ONLY",
+        "policy_revisions": [
+          "TEST_ONLY-policy"
+        ]
+      },
+      "profile_dispositions": [
+        {
+          "environment": "paper",
+          "state": "PARTIAL",
+          "reason_code": null
+        }
+      ],
+      "completeness": "PARTIAL",
+      "reason_code": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
+      "page": {
+        "visible_count": 1,
+        "returned_count": 1,
+        "limit": 50,
+        "maximum_response_bytes": 1048576,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null
+      },
+      "items": [
+        {
+          "environment": "paper",
+          "identity": {
+            "alpha_id": "alpha_TEST_ONLY",
+            "alpha_version_id": "version_TEST_ONLY",
+            "portfolio_id": "portfolio_TEST_ONLY",
+            "name": "TEST_ONLY Alpha"
+          },
+          "instances": [],
+          "financial_facts": [
+            {
+              "kind": "ALLOCATION",
+              "facts": {
+                "currency": "USD",
+                "allocation": "100.1234567890123456789"
+              }
+            }
+          ],
+          "financial_totals": [
+            {
+              "currency": "USD",
+              "allocation": "100.1234567890123456789"
+            }
+          ],
+          "is_full_resource": false,
+          "financial_availability": {
+            "state": "PARTIAL",
+            "reason_code": "SCOPED_FINANCIAL_GRAIN_OR_FIELDS_UNAVAILABLE"
+          }
+        }
+      ]
+    },
+    {
+      "schema_version": "portal.execution.manager-scoped.v1",
+      "surface": "BINDINGS",
+      "workspace_id": "workspace_TEST_ONLY",
+      "environment": "paper",
+      "record_authority": "PORTAL_PROJECTION",
+      "source_authority": "TRADING_SYSTEM",
+      "read_at_ms": 1790812800000,
+      "read_scope": {
+        "visibility": "SCOPED",
+        "coverage": "AUTHORIZED_ONLY",
+        "totals_scope": "VISIBLE_ROWS_ONLY",
+        "policy_revisions": [
+          "TEST_ONLY-policy"
+        ]
+      },
+      "profile_dispositions": [
+        {
+          "environment": "paper",
+          "state": "PARTIAL",
+          "reason_code": null
+        }
+      ],
+      "completeness": "PARTIAL",
+      "reason_code": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
+      "page": {
+        "visible_count": 0,
+        "returned_count": 0,
+        "limit": 50,
+        "maximum_response_bytes": 1048576,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null
+      },
+      "items": []
+    }
+  ]
+}

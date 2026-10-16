@@ -344,6 +344,27 @@ function plan(row: PlanRow): PaperExitPlanRecord {
 export class PaperExitRepository {
   constructor(@Inject(CONTROL_API_POOL) readonly pool: Pool) {}
 
+  /** Existing Paper Exit read policy: current active workspace member.
+   * ADMIN is a decision constraint, not a read grant. This checks the user
+   * generation pin; HTTP remains responsible for the individual session lease.
+   */
+  async assertReadAuthority(actor: PortalUser, workspaceId: string): Promise<void> {
+    const result = await this.pool.query<{
+      status: string; archived_at: Date | null; session_version: number;
+      must_change_password: boolean; role: string; member: boolean;
+    }>(`SELECT u.status,u.archived_at,u.session_version,u.must_change_password,u.role,
+          EXISTS(SELECT 1 FROM workspace_members m
+            WHERE m.workspace_id=$2 AND m.user_id=u.user_id) AS member
+        FROM portal_users u WHERE u.user_id=$1`, [actor.userId, workspaceId]);
+    const current = result.rows[0];
+    if (!current || current.status !== "ACTIVE" || current.archived_at !== null
+      || current.session_version !== actor.sessionVersion || current.role !== actor.role) {
+      throw this.problem("SESSION_REQUIRED", 401);
+    }
+    if (current.must_change_password) throw this.problem("PASSWORD_CHANGE_REQUIRED", 403);
+    if (!current.member) throw this.problem("WORKSPACE_ACCESS_DENIED", 403);
+  }
+
   async assertActorAuthority(actor: PortalUser, workspaceId: string): Promise<void> {
     const client = await this.pool.connect();
     try {

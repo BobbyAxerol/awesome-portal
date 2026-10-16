@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   Inject,
   Param,
@@ -30,6 +31,7 @@ import { SandboxCertificationService } from "./sandbox-certification.service";
 interface SandboxRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession & { csrfSecretHash: string };
 }
 
@@ -43,13 +45,15 @@ export class SandboxCertificationController {
   ) {}
 
   @Get("/deployments/:deployment_id/certification")
+  @Header("Cache-Control", "private, no-store")
   async detail(
     @Req() request: SandboxRequest,
     @Param("deployment_id") deploymentId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.certifications.detail(request.portalUser, request.portalSession, workspaceId, deploymentId);
+    return this.certifications.detail(request.portalUser, request.portalSession, workspaceId, deploymentId,
+      request.portalViewerWorkspaceId ?? request.portalWorkspaceId);
   }
 
   @Post("/governance/sandbox-certifications")

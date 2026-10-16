@@ -1,4 +1,10 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { z } from "zod";
+import { scopedAdapterFieldsSchema, scopedAdapterGroupSchema, scopedAdapterResponseSchema } from "../execution-v2/profile-adapter.contract";
+export { scopedAdapterFieldsSchema, scopedAdapterResponseSchema } from "../execution-v2/profile-adapter.contract";
+import { ExecutionReadScopes, ExecutionReadScopeError, scopeAllowsField, scopeReadPopulation, type ReadScopePrincipal } from "../execution-v2/read-scope";
+import { projectionRowVisible, redactProjectionFields } from "../execution-v2/read-projection";
+import { fenceRetainedSnapshot } from "./retained-operation-page";
 import { ControlApiConfig } from "../config";
 import { projectionExpired } from "./retained-read-profile";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -51,6 +57,9 @@ const ADAPTERS = Object.freeze({
 
 type AdapterId = keyof typeof ADAPTERS;
 const MAXIMUM_ROWS_PER_RELATION = 200;
+const ADAPTER_FIELD_MAPPING: Readonly<Record<string, string>> = { total: "balance_total", free: "balance_free", locked: "balance_locked",
+  allocated_capital: "allocation", signed_qty: "quantity", position_qty: "quantity", avg_px_open: "price", mark_price: "price",
+  symbol: "instrument_id", trade_time: "occurred_at_ms", ts: "timestamp_ms" };
 const FILTER_FIELDS = Object.freeze({
   "admin.inspect": Object.freeze(["alpha_id", "account_id"]),
   "admin.performance": Object.freeze(["portfolio_id", "alpha_id", "account_id"]),
@@ -108,7 +117,103 @@ export class ExecutionProfileReadAdapterService {
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
+    @Optional() @Inject(ExecutionReadScopes) private readonly scopes?: ExecutionReadScopes,
   ) {}
+
+  /** R0 tasks are Core-owned requests over a separately authorized source
+   * workspace. Neither the viewer workspace nor the source workspace may be
+   * replaced by a caller-supplied filter. Audit awaits stay inside both fences. */
+  async readTaskAuthorized<T = unknown>(principal: ReadScopePrincipal, environment: ProjectionEnvironment,
+    capabilityId: string, rawFilters: Record<string, unknown> = {},
+    complete: (result: unknown) => Promise<T> = async result => result as T): Promise<T> {
+    if (!this.scopes) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    const core: ReadScopePrincipal = { user: { ...principal.user }, session: { ...principal.session },
+      workspaceId: principal.workspaceId, viewerWorkspaceId: principal.workspaceId };
+    const initialMode = await this.scopes.coreSelectionMode(core);
+    const fenceCore = async () => {
+      if (await this.scopes!.coreSelectionMode(core) !== initialMode)
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    };
+    const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    if (!workspaceId) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    const source: ReadScopePrincipal = { ...core, workspaceId, viewerWorkspaceId: core.workspaceId };
+    const result = await this.readAuthorized(source, environment, capabilityId, rawFilters, async value => {
+      await fenceCore();
+      const delivered = await complete(value);
+      await fenceCore();
+      return delivered;
+    });
+    await fenceCore();
+    return result;
+  }
+
+  /** Trusted-principal entry used by both the HTTP adapter and R0 task runner.
+   * complete remains inside the authority fence so an audit await cannot turn
+   * a revoked read into a delivered result. Legacy read() is an internal test/
+   * compatibility implementation and is never selected by browser version. */
+  async readAuthorized<T = unknown>(principal: ReadScopePrincipal, environment: ProjectionEnvironment,
+    capabilityId: string, rawFilters: Record<string, unknown> = {}, complete: (result: unknown) => Promise<T> = async result => result as T): Promise<T> {
+    if (!this.scopes) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    if (!Object.hasOwn(ADAPTERS, capabilityId)) throw new ProjectionAdapterError("N32_ADAPTER_NOT_ACCEPTED", 404);
+    const adapterId = capabilityId as AdapterId, adapter = ADAPTERS[adapterId], filters = projectionFilters(adapterId, rawFilters);
+    const limit = rawFilters.limit === undefined ? MAXIMUM_ROWS_PER_RELATION : rawFilters.limit;
+    if (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1 || limit > MAXIMUM_ROWS_PER_RELATION)
+      throw new ProjectionAdapterError("N32_ADAPTER_LIMIT_INVALID", 400);
+    if (!(adapter.profiles as readonly string[]).includes(environment)) throw new ProjectionAdapterError("N32_ADAPTER_PROFILE_NOT_ACCEPTED", 404);
+    const profileId = profile(this.config, environment), workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    if (!workspaceId || principal.workspaceId !== workspaceId) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    const metadata = await this.repository.snapshotMetadata(workspaceId, environment, profileId);
+    const scope = await this.scopes.authorize(principal, { environment, profileId }, {
+      action: adapterId === "admin.broker-read" ? "account.read" : "alpha.read",
+      dataset: { dataset_id: `adapter:${adapterId}`, source_revision: metadata?.payloadDigest ?? "SNAPSHOT_NOT_RECORDED",
+        projection_generation: metadata?.projectionEpoch ?? "PROJECTION_NOT_RECORDED", catalogue_revision: metadata?.sourceCatalogueSha256 ?? null, window: null },
+    });
+    if (scope.mode === "LEGACY_COMPATIBILITY") return this.scopes.deliver(scope, async () => complete(await this.read(scope.viewerWorkspaceId, environment, capabilityId, rawFilters)));
+    for (const [field] of filters) if (!scopeAllowsField(scope, field)) throw new ProjectionAdapterError("N32_ADAPTER_FILTER_NOT_AVAILABLE", 400);
+    return this.scopes.deliver(scope, async () => {
+      const client = await this.repository.pool.connect();
+      let snapshot;
+      try { snapshot = await this.repository.snapshot(workspaceId, environment, profileId, client); }
+      finally { client.release(); }
+      if (!snapshot) throw new ProjectionAdapterError("N32_PROJECTION_NOT_READY", 503);
+      if (snapshot.payloadDigest !== metadata?.payloadDigest || snapshot.projectionEpoch !== metadata.projectionEpoch ||
+        snapshot.sourceCatalogueSha256 !== metadata.sourceCatalogueSha256) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) throw new ProjectionAdapterError("N32_PROJECTION_STALE_CEILING_EXCEEDED", 503);
+      const strategies = new Map(scopeReadPopulation(scope).strategyPairs.map(pair => [pair.strategy_id, pair.alpha_id]));
+      const relations: Record<string, z.infer<typeof scopedAdapterGroupSchema>> = {};
+      for (const key of adapter.relations) {
+        const relation = snapshot.document.relations[key], group = publicGroupId(key);
+        const selected = relation?.availability === "AVAILABLE" ? relation.items.filter(row =>
+          row.lineage.workspace_id === workspaceId && row.lineage.profile_id === profileId && projectionRowVisible(scope, row.fields))
+          .map<Record<string, unknown>>(row => ({ ...row.fields, ...(typeof row.fields.strategy_id === "string" && strategies.has(row.fields.strategy_id) ?
+            { alpha_id: strategies.get(row.fields.strategy_id)! } : {}) }))
+          .filter(row => filters.every(([field, expected]) => typeof row[field] === "string" &&
+            (field === "venue" ? (row[field] as string).toUpperCase() === expected.toUpperCase() : row[field] === expected))) : [];
+        const items = selected.slice(0, limit).map(row => {
+          const mapped: Record<string, unknown> = { ...row };
+          for (const [from, to] of Object.entries(ADAPTER_FIELD_MAPPING)) if (row[from] !== undefined) mapped[to] = row[from];
+          for (const field of ["timestamp_ms", "occurred_at_ms", "created_at", "updated_at"])
+            if (typeof mapped[field] === "string") mapped[field] = Date.parse(mapped[field] as string);
+          const visible = redactProjectionFields(scope, mapped);
+          const dto = Object.fromEntries(Object.entries(visible).filter(([key]) => Object.hasOwn(scopedAdapterFieldsSchema.shape, key)));
+          const parsed = scopedAdapterFieldsSchema.safeParse(dto);
+          if (!parsed.success) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+          return parsed.data;
+        });
+        relations[group] = { state: !relation || relation.availability === "UNAVAILABLE" ? "UNAVAILABLE" : items.length ? "PARTIAL" : "EMPTY",
+          completeness: "PARTIAL", freshness: "UNKNOWN", as_of_ms: null, returned_count: items.length, truncated: selected.length > items.length,
+          reason_code: !relation || relation.availability === "UNAVAILABLE" ? "RETAINED_FACTS_NOT_PUBLISHED" : "AUTHORIZED_RETAINED_FACTS", items };
+      }
+      const response = scopedAdapterResponseSchema.parse({ schema_version: "portal.execution.profile-read-adapter.v2", capability_id: capabilityId,
+        authority: "PORTAL_SGP_PROJECTION", workspace_id: workspaceId, environment, profile_id: profileId,
+        visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", policy_revision: scope.policyRevision,
+        bounds: { maximum_rows_per_relation: MAXIMUM_ROWS_PER_RELATION, maximum_response_bytes: 1048576 }, relations });
+      if (Buffer.byteLength(JSON.stringify(response)) > 1048576) throw new ProjectionAdapterError("N32_ADAPTER_RESPONSE_TOO_LARGE", 503);
+      const result = await complete(response);
+      await fenceRetainedSnapshot(this.repository, workspaceId, environment, profileId, snapshot);
+      return result;
+    });
+  }
 
   async read(
     workspaceId: string,

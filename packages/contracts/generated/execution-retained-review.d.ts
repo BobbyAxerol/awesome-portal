@@ -62,6 +62,9 @@ export interface components {
         RetainedReviewProfile: components["schemas"]["Profile"];
         RetainedReviewPanel: components["schemas"]["Panel"];
         RetainedNamedOperationPage: components["schemas"]["execution-retained-operation-page.v1.schema"];
+        RetainedReviewScopedResponse: components["schemas"]["execution-retained-review.v2.schema"];
+        RetainedReviewScopedProfile: components["schemas"]["$defs-Profile"];
+        RetainedReviewScopedPanel: components["schemas"]["$defs-Panel"];
         Reason: string | null;
         UtcMs: number | null;
         Panel: {
@@ -197,6 +200,149 @@ export interface components {
                 };
             };
         };
+        "$defs-Reason": string | null;
+        "$defs-Panel": {
+            panel_id: string;
+            screen_id: string;
+            /** @enum {unknown} */
+            retained_state: "PARTIAL" | "UNAVAILABLE";
+            current_row_count: number | null;
+            history_row_count: string | null;
+            /** @enum {unknown} */
+            source_availability: "AVAILABLE" | "UNAVAILABLE" | "NOT_PUBLISHED";
+            source_reason_code: components["schemas"]["$defs-Reason"];
+            source_as_of_ms: components["schemas"]["UtcMs"];
+            /** @enum {unknown} */
+            source_freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
+            observed_at_ms: components["schemas"]["UtcMs"];
+            oldest_available_ms: components["schemas"]["UtcMs"];
+            newest_available_ms: components["schemas"]["UtcMs"];
+            reason_code: string;
+            /** @enum {unknown} */
+            metadata_state: "PARTIAL" | "NOT_PUBLISHED" | "DENIED";
+        };
+        "$defs-Profile": {
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+            profile_id: string;
+            source_as_of_ms: components["schemas"]["UtcMs"];
+            snapshot_observed_ms: components["schemas"]["UtcMs"];
+            source_payload_digest: string | null;
+            /** @constant */
+            freshness: "STALE";
+            /** @constant */
+            completeness: "PARTIAL";
+            panels: components["schemas"]["$defs-Panel"][];
+            /** @enum {unknown} */
+            metadata_state: "PARTIAL" | "NOT_PUBLISHED" | "DENIED";
+            metadata_reason_code: string;
+        };
+        /** @description Server-selected V2 scoped retained metadata. Null count/clock means not published, never zero. No global source revision, source digest or historical coverage is implied. V1 compatibility stays unchanged. */
+        "execution-retained-review.v2.schema": {
+            /** @constant */
+            schema_version: "portal.execution.retained-review.v2";
+            /** @constant */
+            read_profile: "retained_review_v1";
+            workspace_id: string;
+            /** @constant */
+            authority: "PORTAL_RETAINED_OBSERVATION";
+            /** @constant */
+            upstream_enabled: false;
+            /** @constant */
+            source_refresh_enabled: false;
+            /** @constant */
+            stream_enabled: false;
+            /** @constant */
+            mutation_enabled: false;
+            /** @constant */
+            live_eligibility: false;
+            /** @constant */
+            history_semantics: "BOUNDED_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_REPLAY";
+            permissions: {
+                /** @constant */
+                read: true;
+                /** @constant */
+                query: true;
+                /** @constant */
+                download: false;
+                /** @constant */
+                manage: false;
+                /** @constant */
+                command: false;
+                /** @constant */
+                stream: false;
+                /** @constant */
+                research_create: false;
+                /** @constant */
+                governance_decide: false;
+                is_owner: boolean;
+            };
+            revocation: {
+                /** @constant */
+                http: "EACH_REQUEST_CORE_SESSION_AND_ACCESS";
+                /** @constant */
+                permission_cache_seconds: 0;
+                /** @constant */
+                data_view_cache_milliseconds: 2000;
+                /**
+                 * @description Aggregate serialized retained snapshot data budget, not per entry, HTTP response, heap size or cached permission. Metadata has a separately bounded single entry; caller authority is rechecked on every request.
+                 * @constant
+                 */
+                data_view_cache_maximum_serialized_bytes: 16777216;
+                delegated_jwt_ttl_seconds: number;
+                /** @constant */
+                delegation_enabled: false;
+                /** @constant */
+                upstream_revocation: "SHORT_LIVED_TOKEN_EXPIRY_NOT_INSTANT_REVOCATION";
+            };
+            profiles: components["schemas"]["$defs-Profile"][];
+            future_resource_management: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "TS_RESOURCE_MANAGEMENT_CONTRACT_NOT_PUBLISHED";
+            };
+            $defs: {
+                UtcMs: number | null;
+                Reason: string | null;
+                Panel: {
+                    panel_id: string;
+                    screen_id: string;
+                    /** @enum {unknown} */
+                    retained_state: "PARTIAL" | "UNAVAILABLE";
+                    current_row_count: number | null;
+                    history_row_count: string | null;
+                    /** @enum {unknown} */
+                    source_availability: "AVAILABLE" | "UNAVAILABLE" | "NOT_PUBLISHED";
+                    source_reason_code: components["schemas"]["$defs-Reason"];
+                    source_as_of_ms: components["schemas"]["UtcMs"];
+                    /** @enum {unknown} */
+                    source_freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
+                    observed_at_ms: components["schemas"]["UtcMs"];
+                    oldest_available_ms: components["schemas"]["UtcMs"];
+                    newest_available_ms: components["schemas"]["UtcMs"];
+                    reason_code: string;
+                    /** @enum {unknown} */
+                    metadata_state: "PARTIAL" | "NOT_PUBLISHED" | "DENIED";
+                };
+                Profile: {
+                    /** @enum {unknown} */
+                    environment: "paper" | "sandbox" | "live";
+                    profile_id: string;
+                    source_as_of_ms: components["schemas"]["UtcMs"];
+                    snapshot_observed_ms: components["schemas"]["UtcMs"];
+                    source_payload_digest: string | null;
+                    /** @constant */
+                    freshness: "STALE";
+                    /** @constant */
+                    completeness: "PARTIAL";
+                    panels: components["schemas"]["$defs-Panel"][];
+                    /** @enum {unknown} */
+                    metadata_state: "PARTIAL" | "NOT_PUBLISHED" | "DENIED";
+                    metadata_reason_code: string;
+                };
+            };
+        };
         /**
          * Retained named operation page (existing EDS11R wire envelope)
          * @description Preview retained response only. Named Portal aliases, no source selectors. Availability in source_health is not requalification; records are separately labelled local observations. Null as_of is preserved. Partial rows never claim total source history.
@@ -225,7 +371,18 @@ export interface components {
             /** @constant */
             source_retention_semantics: "LOCAL_CAPTURE_ONLY_NO_TOTAL_HISTORY_CLAIM";
             /** @enum {unknown} */
-            reason_code: "UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE" | "UDB_RETAINED_PANEL_NOT_CAPTURED";
+            reason_code: "UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE" | "UDB_RETAINED_PANEL_NOT_CAPTURED" | "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY";
+            /** @constant */
+            visibility?: "SCOPED";
+            /** @constant */
+            coverage?: "AUTHORIZED_ONLY";
+            read_scope?: {
+                /** @constant */
+                visibility: "SCOPED";
+                /** @constant */
+                coverage: "AUTHORIZED_ONLY";
+                policy_revision: string;
+            };
             /** @enum {unknown} */
             state: "PARTIAL" | "UNAVAILABLE";
             source_health: {
@@ -264,7 +421,7 @@ export interface components {
                     [key: string]: string | number | boolean | null;
                 };
             }[];
-        };
+        } & unknown;
     };
     responses: never;
     parameters: never;
@@ -291,7 +448,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["execution-retained-review.v1.schema"];
+                    "application/json": components["schemas"]["execution-retained-review.v1.schema"] | components["schemas"]["execution-retained-review.v2.schema"];
                 };
             };
             /** @description Invalid or unknown query field */

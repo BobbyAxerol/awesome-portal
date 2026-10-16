@@ -18,11 +18,26 @@ import {
 import { durableMirrorReadEnabled } from "./durable-mirror-mode";
 import { retainedReview, RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES } from "./retained-read-profile";
 import { retainedSnapshot, retainedRevision } from "./retained-snapshot";
+import { withTransaction } from "../db/pool";
+import { projectionScopeSql } from "../execution-v2/read-projection";
+import { assertExecutionReadScope, ExecutionReadScopeError, scopeReadPopulation, scopeAllowsQueryField,
+  type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
 
 export type ProjectionEnvironment = "paper" | "sandbox" | "live";
 export type ProjectionCompleteness = "COMPLETE" | "PARTIAL" | "UNKNOWN";
 export type ProjectionFreshness = "FRESH" | "AGING" | "STALE" | "UNKNOWN";
 export type ProjectionScalar = string | number | boolean | null | readonly (string | number | boolean | null)[];
+
+export interface ProjectionHistoryQuery {
+  from?: string | null;
+  to?: string | null;
+  after?: { ts: string; rowId: string } | null;
+  entity?: { field: string; value: string } | null;
+  limit: number;
+  order?: "ASC" | "DESC";
+  /** Internal capability only; never deserialized from browser input. */
+  scope?: AuthorizedExecutionReadScope;
+}
 
 export interface ProjectionRow {
   lineage: {
@@ -378,24 +393,18 @@ export class ExecutionProfileProjectionRepository {
     environment: ProjectionEnvironment,
     profileId: string,
     relationKey: string,
-    query: {
-      from?: string | null;
-      to?: string | null;
-      after?: { ts: string; rowId: string } | null;
-      entity?: { field: string; value: string } | null;
-      limit: number;
-      /**
-       * Existing history callers keep ascending order.  Subject activity
-       * readers use descending order to give a live operator the newest
-       * retained records first; the cursor remains a Portal-local keyset.
-       */
-      order?: "ASC" | "DESC";
-    },
+    query: ProjectionHistoryQuery,
+    reader?: PoolClient,
   ): Promise<{ rows: Array<{ rowId: string; ts: string; fields: Record<string, ProjectionScalar> }>; hasMore: boolean }> {
     const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
     const values: unknown[] = [workspaceId, environment, profileId, relationKey];
+    if (query.scope) {
+      this.assertHistoryScope(query.scope, workspaceId, environment, profileId, relationKey, query);
+      const predicate = projectionScopeSql(query.scope, "fields", values.length + 1);
+      conditions.push(predicate.sql); values.push(...predicate.values);
+    }
     if (query.from) { values.push(query.from); conditions.push(`ts >= $${values.length}::timestamptz`); }
-    if (query.to) { values.push(query.to); conditions.push(`ts <= $${values.length}::timestamptz`); }
+    if (query.to) { values.push(query.to); conditions.push(`ts ${query.scope?.mode === "SCOPED_V2" ? "<" : "<="} $${values.length}::timestamptz`); }
     const order = query.order ?? "ASC";
     if (query.after) {
       values.push(query.after.ts, query.after.rowId);
@@ -406,19 +415,54 @@ export class ExecutionProfileProjectionRepository {
       conditions.push(`fields->>($${values.length - 1}) = $${values.length}`);
     }
     values.push(query.limit + 1);
-    const result = await this.retainedDataQuery<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
-      `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts, fields
+    const text = `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.${query.scope?.mode === "SCOPED_V2" ? "US" : "MS"}"Z"') AS ts, fields
          FROM ${this.historyTable()}
         WHERE ${conditions.join(" AND ")}
         ORDER BY ts ${order}, row_id ${order}
-        LIMIT $${values.length}`,
-      values,
-    );
+        LIMIT $${values.length}`;
+    const result = reader
+      ? await reader.query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(text, values)
+      : await this.retainedDataQuery<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(text, values);
     const hasMore = result.rows.length > query.limit;
     return {
       rows: result.rows.slice(0, query.limit).map((row) => ({ rowId: row.row_id, ts: row.ts, fields: row.fields })),
       hasMore,
     };
+  }
+
+  /** One SQL snapshot for authorized rows AND exact authorized count/bounds.
+   * No cross-scope completed-response cache or independent pooled-query race. */
+  async scopedTimeSeriesHistory(workspaceId: string, environment: ProjectionEnvironment, profileId: string,
+    relationKey: string, query: ProjectionHistoryQuery & { scope: AuthorizedExecutionReadScope }) {
+    return withTransaction(this.pool, async reader => {
+      await reader.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
+      await reader.query("SET LOCAL statement_timeout='5000ms'");
+      this.assertHistoryScope(query.scope, workspaceId, environment, profileId, relationKey, query);
+      if (query.scope.mode === "SCOPED_V2") {
+        const metadata = await this.snapshotMetadata(workspaceId, environment, profileId, reader);
+        const binding = scopeReadPopulation(query.scope).binding;
+        if (!metadata || !binding?.projection_generation || metadata.payloadDigest !== binding.source_revision ||
+            metadata.projectionEpoch !== binding.projection_generation || metadata.sourceCatalogueSha256 !== binding.catalogue_revision)
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      }
+      const page = await this.timeSeriesHistory(workspaceId, environment, profileId, relationKey, query, reader);
+      const coverage = await this.timeSeriesHistoryCoverage(workspaceId, environment, profileId, relationKey,
+        query.entity, query, reader);
+      return { page, coverage };
+    });
+  }
+
+  private assertHistoryScope(scope: AuthorizedExecutionReadScope, workspace: string, environment: ProjectionEnvironment,
+    profile: string, relation: string, range: { from?: string | null; to?: string | null }) {
+    assertExecutionReadScope(scope);
+    if (scope.workspaceId !== workspace || scope.environment !== environment || scope.profileId !== profile)
+      throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+    if (scope.mode === "LEGACY_COMPATIBILITY") return;
+    const binding = scopeReadPopulation(scope).binding;
+    const window = range.from && range.to ? { from_ms: Date.parse(range.from), to_ms: Date.parse(range.to) } : null;
+    if (!binding || binding.dataset_id !== `history:${relation}` ||
+      JSON.stringify(binding.window) !== JSON.stringify(window))
+      throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
   }
 
   /**
@@ -440,7 +484,9 @@ export class ExecutionProfileProjectionRepository {
       seriesField: string;
       valueField: string;
       targetPoints: number;
+      scope?: AuthorizedExecutionReadScope;
     },
+    reader?: PoolClient,
   ): Promise<{
     rows: Array<{ rowId: string; ts: string; fields: Record<string, ProjectionScalar> }>;
     sourceRows: number;
@@ -452,9 +498,22 @@ export class ExecutionProfileProjectionRepository {
       output_rows: number;
     } | null;
   }> {
+    if (query.scope && !reader) return withTransaction(this.pool, async client => {
+      await client.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
+      await client.query("SET LOCAL statement_timeout = '5s'");
+      return this.timeSeriesHistoryDownsampled(workspaceId, environment, profileId, relationKey, query, client);
+    });
     const base = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4", "ts >= $5::timestamptz"];
     const values: unknown[] = [workspaceId, environment, profileId, relationKey, query.from];
-    if (query.to) { values.push(query.to); base.push(`ts <= $${values.length}::timestamptz`); }
+    if (query.scope) {
+      this.assertHistoryScope(query.scope, workspaceId, environment, profileId, relationKey, query);
+      for (const field of [query.valueField, query.seriesField, ...(query.entity ? [query.entity.field] : [])])
+        if (query.scope.mode === "SCOPED_V2" && !scopeAllowsQueryField(query.scope, field))
+          throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+      const predicate = projectionScopeSql(query.scope, "fields", values.length + 1);
+      base.push(predicate.sql); values.push(...predicate.values);
+    }
+    if (query.to) { values.push(query.to); base.push(`ts ${query.scope?.mode === "SCOPED_V2" ? "<" : "<="} $${values.length}::timestamptz`); }
     if (query.entity) {
       values.push(query.entity.field, query.entity.value);
       base.push(`fields->>($${values.length - 1}) = $${values.length}`);
@@ -464,7 +523,7 @@ export class ExecutionProfileProjectionRepository {
     const valueParam = values.length;
     values.push(query.seriesField);
     const seriesParam = values.length;
-    const meta = await this.pool.query<{ n: string; k: string; t0: string | null; t1: string | null }>(
+    const meta = await (reader ?? this.pool).query<{ n: string; k: string; t0: string | null; t1: string | null }>(
       `SELECT count(*)::text AS n,
               count(DISTINCT fields->>($${seriesParam}))::text AS k,
               to_char(min(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS t0,
@@ -477,8 +536,8 @@ export class ExecutionProfileProjectionRepository {
     if (inputRows === 0) return { rows: [], sourceRows: 0, downsample: null };
     if (inputRows <= query.targetPoints) {
       const exact = await this.timeSeriesHistory(workspaceId, environment, profileId, relationKey, {
-        from: query.from, to: query.to ?? null, entity: query.entity ?? null, limit: query.targetPoints,
-      });
+        from: query.from, to: query.to ?? null, entity: query.entity ?? null, limit: query.targetPoints, scope: query.scope,
+      }, reader);
       return { rows: exact.rows, sourceRows: inputRows, downsample: null };
     }
     const spanSeconds = Math.max(1,
@@ -487,7 +546,7 @@ export class ExecutionProfileProjectionRepository {
     const bucketSeconds = Math.max(1, Math.ceil(spanSeconds / bucketsPerSeries));
     values.push(bucketSeconds);
     const bucketParam = values.length;
-    const result = await this.pool.query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
+    const result = await (reader ?? this.pool).query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
       `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts, fields FROM (
          SELECT row_id, ts, fields,
                 row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
@@ -525,8 +584,15 @@ export class ExecutionProfileProjectionRepository {
     environment: ProjectionEnvironment,
     profileId: string,
     relationKey: string,
-    query: { from: string; valueField: string; strategyIds?: readonly string[] },
+    query: { from: string; valueField: string; strategyIds?: readonly string[]; scope?: AuthorizedExecutionReadScope },
   ): Promise<Array<{ strategyId: string; accountId: string; day: string; value: string }>> {
+    if (query.scope) {
+      this.assertHistoryScope(query.scope, workspaceId, environment, profileId, relationKey, query);
+      for (const field of [query.valueField, "strategy_id", "account_id"])
+        if (query.scope.mode === "SCOPED_V2" && !scopeAllowsQueryField(query.scope, field))
+          throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+    }
+    const predicate = query.scope ? projectionScopeSql(query.scope, "fields", 8) : { sql: "TRUE", values: [] };
     const result = await this.retainedDataQuery<{ strategy_id: string; account_id: string; day: string; value: string }>(
       `SELECT DISTINCT ON (fields->>'strategy_id', fields->>'account_id', date_trunc('day', ts))
               fields->>'strategy_id' AS strategy_id,
@@ -536,11 +602,12 @@ export class ExecutionProfileProjectionRepository {
          FROM ${this.historyTable()}
         WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4
           AND ts >= $5::timestamptz
+          AND ${predicate.sql}
           AND fields->>'strategy_id' IS NOT NULL AND fields->>'account_id' IS NOT NULL
           AND ($7::text[] IS NULL OR fields->>'strategy_id' = ANY($7::text[]))
           AND fields->>($6) ~ '^-?[0-9]+(\\.[0-9]+)?$'
         ORDER BY fields->>'strategy_id', fields->>'account_id', date_trunc('day', ts), ts DESC, row_id DESC`,
-      [workspaceId, environment, profileId, relationKey, query.from, query.valueField, query.strategyIds ?? null],
+      [workspaceId, environment, profileId, relationKey, query.from, query.valueField, query.strategyIds ?? null, ...predicate.values],
     );
     return result.rows.map((row) => ({
       strategyId: row.strategy_id, accountId: row.account_id, day: row.day, value: row.value,
@@ -569,11 +636,19 @@ export class ExecutionProfileProjectionRepository {
     environment: ProjectionEnvironment,
     profileId: string,
     relationKey: string,
+    scope?: AuthorizedExecutionReadScope,
   ): Promise<Array<{
     portfolioId: string; currency: string | null;
     firstEquity: string; lastEquity: string; netPnl: string | null;
     points: number; firstTs: string; lastTs: string;
   }>> {
+    if (scope) {
+      this.assertHistoryScope(scope, workspaceId, environment, profileId, relationKey, {});
+      for (const field of ["portfolio_id", "currency", "equity", "net_pnl"])
+        if (scope.mode === "SCOPED_V2" && !scopeAllowsQueryField(scope, field))
+          throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+    }
+    const predicate = scope ? projectionScopeSql(scope, "fields", 5) : { sql: "TRUE", values: [] };
     const result = await this.retainedDataQuery<{
       portfolio_id: string; currency: string | null;
       first_equity: string; last_equity: string; net_pnl: string | null;
@@ -587,6 +662,7 @@ export class ExecutionProfileProjectionRepository {
                 ts, row_id
            FROM ${this.historyTable()}
           WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4
+            AND ${predicate.sql}
             AND fields->>'portfolio_id' IS NOT NULL
             AND fields->>'equity' ~ '^-?[0-9]+(\\.[0-9]+)?$'
        ),
@@ -610,7 +686,7 @@ export class ExecutionProfileProjectionRepository {
          JOIN newest ON newest.portfolio_id = counted.portfolio_id
                     AND newest.currency IS NOT DISTINCT FROM counted.currency
         ORDER BY counted.points DESC, counted.portfolio_id ASC, counted.currency ASC`,
-      [workspaceId, environment, profileId, relationKey],
+      [workspaceId, environment, profileId, relationKey, ...predicate.values],
     );
     return result.rows.map((row) => ({
       portfolioId: row.portfolio_id,
@@ -630,24 +706,30 @@ export class ExecutionProfileProjectionRepository {
     profileId: string,
     relationKey: string,
     entity: { field: string; value: string } | null = null,
-    range: { from?: string | null; to?: string | null } = {},
+    range: { from?: string | null; to?: string | null; scope?: AuthorizedExecutionReadScope } = {},
+    reader?: PoolClient,
   ): Promise<{ rowCount: number; oldestTs: string | null; newestTs: string | null }> {
     const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
     const values: unknown[] = [workspaceId, environment, profileId, relationKey];
+    if (range.scope) {
+      this.assertHistoryScope(range.scope, workspaceId, environment, profileId, relationKey, range);
+      const predicate = projectionScopeSql(range.scope, "fields", values.length + 1);
+      conditions.push(predicate.sql); values.push(...predicate.values);
+    }
     if (range.from) { values.push(range.from); conditions.push(`ts >= $${values.length}::timestamptz`); }
-    if (range.to) { values.push(range.to); conditions.push(`ts <= $${values.length}::timestamptz`); }
+    if (range.to) { values.push(range.to); conditions.push(`ts ${range.scope?.mode === "SCOPED_V2" ? "<" : "<="} $${values.length}::timestamptz`); }
     if (entity) {
       values.push(entity.field, entity.value);
       conditions.push(`fields->>($${values.length - 1}) = $${values.length}`);
     }
-    const result = await this.retainedDataQuery<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(
-      `SELECT count(*)::text AS row_count,
+    const text = `SELECT count(*)::text AS row_count,
               to_char(min(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS oldest_ts,
               to_char(max(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS newest_ts
          FROM ${this.historyTable()}
-        WHERE ${conditions.join(" AND ")}`,
-      values,
-    );
+        WHERE ${conditions.join(" AND ")}`;
+    const result = reader
+      ? await reader.query<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(text, values)
+      : await this.retainedDataQuery<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(text, values);
     const row = result.rows[0];
     return { rowCount: Number(row?.row_count ?? 0), oldestTs: row?.oldest_ts ?? null, newestTs: row?.newest_ts ?? null };
   }
@@ -928,6 +1010,17 @@ export class ExecutionProfileProjectionRepository {
     return [...this.retainedViews.values(),...this.retainedResources.values()].reduce((n,entry)=>n+entry.bytes,0);
   }
 
+  /** Persisted DATA only. V2 adapters bind this exact revision to a qualified
+   * publication; retained compatibility augmentation has a different identity
+   * and must not be substituted underneath that authority proof. */
+  async rawSnapshot(workspaceId:string,environment:ProjectionEnvironment,profileId:string):Promise<ProfileProjectionSnapshot|null> {
+    return withTransaction(this.pool,async reader=>{
+      await reader.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
+      await reader.query("SET LOCAL statement_timeout='5000ms'");
+      return this.readSnapshot(workspaceId,environment,profileId,reader);
+    });
+  }
+
   private async readSnapshot(
     workspaceId: string,
     environment: ProjectionEnvironment,
@@ -959,7 +1052,7 @@ export class ExecutionProfileProjectionRepository {
   }
 
   /** Hot tail: scalar columns only. Never de-TOAST/decode the profile JSONB. */
-  async snapshotMetadata(workspaceId: string, environment: ProjectionEnvironment, profileId: string) {
+  async snapshotMetadata(workspaceId: string, environment: ProjectionEnvironment, profileId: string, reader?: PoolClient) {
     const query = {
       text: `SELECT source_as_of,received_at,last_successful_refresh_at,completeness,
         projection_epoch::text,projection_sequence::text,payload_digest,source_catalogue_sha256
@@ -967,7 +1060,7 @@ export class ExecutionProfileProjectionRepository {
         WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`,
       values: [workspaceId,environment,profileId], query_timeout: 2_000,
     };
-    const result = await this.pool.query(query);
+    const result = await (reader ?? this.pool).query(query);
     const row = result.rows[0];
     return row ? {
       sourceAsOf: row.source_as_of as Date | null, receivedAt: row.received_at as Date,

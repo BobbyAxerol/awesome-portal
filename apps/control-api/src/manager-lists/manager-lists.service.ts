@@ -1,4 +1,7 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
+import { ExecutionReadScopes } from "../execution-v2/read-scope";
+import { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
+import { ScopedManagerReader } from "./scoped-manager.reader";
 import { freshnessPolicies } from "../execution/environment-parity";
 import { retainedReview } from "../execution/retained-read-profile";
 import { AuthSession, PortalUser } from "../domain";
@@ -23,6 +26,7 @@ export interface ManagerListPrincipal {
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
+  viewerWorkspaceId?: string;
 }
 
 const MAX_SOURCE_PAGES = 10;
@@ -87,6 +91,8 @@ export class ManagerListsService {
     @Inject(ManagerListsRepository) private readonly repository: ManagerListsRepository,
     @Inject(ExecutionProductReadSource) private readonly source: ExecutionProductReadSource,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
+    @Optional() @Inject(ExecutionProfileProjectionRepository) private readonly profiles?: ExecutionProfileProjectionRepository,
   ) {
     this.query = new ControlPlaneQueryService(
       repository.pool,
@@ -99,6 +105,12 @@ export class ManagerListsService {
   }
 
   async fleet(principal: ManagerListPrincipal, query: AlphaFleetQuery) {
+    if (this.readScopes && this.profiles) return new ScopedManagerReader(this.profiles, this.readScopes, this.config)
+      .read(principal, "ALPHA_FLEET", query, () => this.legacyFleet(principal, query));
+    return this.legacyFleet(principal, query);
+  }
+
+  private async legacyFleet(principal: ManagerListPrincipal, query: AlphaFleetQuery) {
     const snapshot = await this.ensureSnapshot(principal, query.environment, "ALPHA_FLEET", !query.after && !query.before);
     const page = await this.query.list(
       alphaFleetResource(),
@@ -112,6 +124,12 @@ export class ManagerListsService {
   }
 
   async bindings(principal: ManagerListPrincipal, query: BindingsQuery) {
+    if (this.readScopes && this.profiles) return new ScopedManagerReader(this.profiles, this.readScopes, this.config)
+      .read(principal, "BINDINGS", query, () => this.legacyBindings(principal, query));
+    return this.legacyBindings(principal, query);
+  }
+
+  private async legacyBindings(principal: ManagerListPrincipal, query: BindingsQuery) {
     const snapshot = await this.ensureSnapshot(principal, query.environment, "BINDINGS", !query.after && !query.before);
     const page = await this.query.list(
       bindingsResource(),
@@ -122,6 +140,12 @@ export class ManagerListsService {
   }
 
   async binding(principal: ManagerListPrincipal, environment: ManagerListEnvironment, bindingId: string) {
+    if (this.readScopes && this.profiles) return new ScopedManagerReader(this.profiles, this.readScopes, this.config)
+      .read(principal, "BINDING_DETAIL", { environment }, () => this.legacyBinding(principal, environment, bindingId), bindingId);
+    return this.legacyBinding(principal, environment, bindingId);
+  }
+
+  private async legacyBinding(principal: ManagerListPrincipal, environment: ManagerListEnvironment, bindingId: string) {
     const snapshot = await this.ensureSnapshot(principal, environment, "BINDINGS", true);
     const item = await this.repository.binding(scope(principal.workspaceId, environment), bindingId);
     if (!item) throw new ManagerListsError("BR72_BINDING_NOT_FOUND", 404);
@@ -166,6 +190,12 @@ export class ManagerListsService {
    * worker cadence, never browser refreshes.
    */
   async portfolios(principal: ManagerListPrincipal, query: PortfolioListQuery) {
+    if (this.readScopes && this.profiles) return new ScopedManagerReader(this.profiles, this.readScopes, this.config)
+      .read(principal, "PORTFOLIOS", query, () => this.legacyPortfolios(principal, query));
+    return this.legacyPortfolios(principal, query);
+  }
+
+  private async legacyPortfolios(principal: ManagerListPrincipal, query: PortfolioListQuery) {
     const snapshot = await this.ensureSnapshot(principal, query.environment, "PORTFOLIOS", true);
     const scope = `${principal.workspaceId}:${query.environment}`;
     const rows = await this.repository.portfolioRows(scope);

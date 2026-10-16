@@ -50,6 +50,7 @@ import { ResearchLineageError } from "./research/lineage.error";
 import { ResearchCompareError } from "./research/compare.error";
 import { ResearchReleaseCandidateError } from "./research/release-candidate.error";
 import {isReadStoreUnavailable} from "./db/read-unavailable";
+import { ExecutionReadScopeError } from "./execution-v2/read-scope";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -69,6 +70,7 @@ export class HttpErrorFilter implements ExceptionFilter {
 
     if (
       exception instanceof AuthError ||
+      exception instanceof ExecutionReadScopeError ||
       exception instanceof FacadeError ||
       exception instanceof GovernanceError ||
       exception instanceof QueryContractError ||

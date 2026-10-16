@@ -188,9 +188,12 @@ export class Portfolio360LocalService {
     if (!workspaceId || !profileId) {
       throw new AnalyticsProxyError("PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED", 503);
     }
-    const standings = await this.projections.portfolioEquityStandings(
-      workspaceId, environment, profileId, PORTFOLIO_EQUITY_RELATION,
-    );
+    const readStandings = (scope?: Parameters<ExecutionProfileProjectionRepository["portfolioEquityStandings"]>[4]) =>
+      this.projections.portfolioEquityStandings(workspaceId, environment, profileId, PORTFOLIO_EQUITY_RELATION, scope);
+    const standings = typeof this.analytics.withPortfolioHistory === "function"
+      ? await this.analytics.withPortfolioHistory(principal, environment, readStandings)
+      : await readStandings(); // Compatibility only for old manual test doubles.
+    await context.validateRead?.();
     return this.envelope({
       formulaVersion: "portfolio-cross-equity.v1",
       ...context,
@@ -227,6 +230,7 @@ export class Portfolio360LocalService {
     const context = await this.portfolioContext(principal, portfolioId, environment);
     const { version, readAt } = context;
     const { rows, hasMore, freshness, asOf, complete, reason } = await this.ledgerRows(principal, portfolioId, environment);
+    await context.validateRead?.();
 
     const buckets = new Map<string, {
       entries: Record<string, unknown>[];
@@ -374,7 +378,7 @@ export class Portfolio360LocalService {
   /** The portfolio's strategies and the fleet statistics, from one snapshot read. */
   private async portfolioContext(principal: Portfolio360Principal, portfolioId: string, environment: ProjectionEnvironment) {
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
-    const view = await this.analytics.portfolioView({ workspaceId: principal.workspaceId }, portfolioId, environment);
+    const view = await this.analytics.portfolioView(principal, portfolioId, environment);
     return { ...view, readAt: new Date().toISOString() };
   }
 

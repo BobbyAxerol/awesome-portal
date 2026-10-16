@@ -135,7 +135,7 @@ describe("UDB04 retained context bounded cost without cached authority",()=>{
     const c=new CanaryController({detail} as never,{isMember,canReadExecution} as never,f.cfg);
     await c.detail({portalUser:{userId:"viewer"},portalWorkspaceId:"ws_personal",portalSession:{}} as never,"dep","ws_research");
     expect(isMember).toHaveBeenCalledWith("ws_research","viewer");expect(canReadExecution).not.toHaveBeenCalled();
-    expect(detail).toHaveBeenCalledWith({userId:"viewer"},{},"ws_research","dep");
+    expect(detail).toHaveBeenCalledWith({userId:"viewer"},{},"ws_research","dep","ws_personal");
   });
   it("refuses a Core identity outage with a sanitized typed503 rather than cached authority",async()=>{
     for(const code of ["ECONNREFUSED","EAI_AGAIN"]){

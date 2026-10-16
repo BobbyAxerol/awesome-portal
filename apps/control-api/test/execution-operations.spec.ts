@@ -459,6 +459,12 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
 
   it("runs only the connected R0 subset from the bounded SGP projection and audits its digest", async () => {
     const sourceWorkspace = "ws_phase2_projection";
+    // Core command workspace and source data workspace are distinct. A
+    // projection row alone is not a workspace or a read-access grant.
+    await ctx.pool.query(`INSERT INTO workspaces(workspace_id,name,owner_user_id) VALUES($1,$2,$3)
+      ON CONFLICT (workspace_id) DO NOTHING`, [sourceWorkspace, "TEST_ONLY R0 source", bobby.userId]);
+    await ctx.pool.query(`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,'MEMBER')
+      ON CONFLICT (workspace_id,user_id) DO NOTHING`, [sourceWorkspace, bobby.userId]);
     const document = {
       schema_version: "portal.execution.profile-projection.v1",
       workspace_id: sourceWorkspace,
@@ -538,6 +544,28 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
       reason_code: "PHASE2_LOCAL_PROJECTION_TASK_ACTIVE",
       metadata_json: expect.objectContaining({ source_request_sent: false, transport: "SGP_LOCAL_PROJECTION" }),
     });
+  });
+
+  it("does not inherit source read access merely from an ADMIN Core task workspace", async () => {
+    const sourceWorkspace = "ws_phase2_projection";
+    await ctx.pool.query(`INSERT INTO workspaces(workspace_id,name,owner_user_id) VALUES($1,$2,$3)
+      ON CONFLICT (workspace_id) DO NOTHING`, [sourceWorkspace, "TEST_ONLY R0 source", bobby.userId]);
+    await ctx.pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [sourceWorkspace, bobby.userId]);
+    try {
+      const response = await mutation(bobby, "/api/v1/execution/commands/tasks/inspect/run", {
+        schema_version: "execution.command-run-request.v1", workspace_id: workspaceId,
+        request_key: "phase2:inspect:no-source-access", params: { mode: "paper", alpha_id: "alpha_42" },
+      });
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toMatchObject({ error: { code: "EXECUTION_READ_NOT_AVAILABLE" } });
+      expect(JSON.stringify(response.json())).not.toContain("Bounded alpha");
+      const audit = await ctx.pool.query(`SELECT result,reason_code FROM product_audit_events
+        WHERE idempotency_key='phase2:inspect:no-source-access'`);
+      expect(audit.rows[0]).toMatchObject({ result: "FAILURE", reason_code: "EXECUTION_READ_NOT_AVAILABLE" });
+    } finally {
+      await ctx.pool.query(`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,'MEMBER')
+        ON CONFLICT (workspace_id,user_id) DO NOTHING`, [sourceWorkspace, bobby.userId]);
+    }
   });
 
   it("classifies only the exact N16B current emergency-close primitive and keeps it dark", async () => {

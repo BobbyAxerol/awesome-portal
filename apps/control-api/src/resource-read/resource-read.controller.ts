@@ -11,6 +11,7 @@ import { RESOURCE_KINDS, ResourceKind, ResourceReadService } from "./resource-re
 interface ResourceReadRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -78,7 +79,8 @@ export class ResourceReadController {
       throw new ResourceReadError("WORKSPACE_NOT_FOUND", 404);
     }
     return this.resources.read(
-      { user: request.portalUser, session: request.portalSession, workspaceId },
+      { user: request.portalUser, session: request.portalSession, workspaceId,
+        viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       kind,
       resourceId,
       query.data.environment,

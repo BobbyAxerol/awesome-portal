@@ -19,6 +19,7 @@ function asQuery(raw: unknown): Record<string, unknown> {
 interface CompositionRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -128,6 +129,7 @@ export class OperationalCompositionController {
       : await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new PortalDerivationError("WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }
-    return { user: request.portalUser, session: request.portalSession, workspaceId };
+    return { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId };
   }
 }

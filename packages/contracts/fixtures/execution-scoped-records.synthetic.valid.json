@@ -1,0 +1,118 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "cases": [
+    {
+      "type": "ScopedAdapterResponse",
+      "value": {
+        "schema_version": "portal.execution.profile-read-adapter.v2",
+        "capability_id": "admin.inspect",
+        "authority": "PORTAL_SGP_PROJECTION",
+        "workspace_id": "workspace_TEST_ONLY",
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "visibility": "SCOPED",
+        "coverage": "AUTHORIZED_ONLY",
+        "policy_revision": "TEST_ONLY-policy",
+        "bounds": {
+          "maximum_rows_per_relation": 200,
+          "maximum_response_bytes": 1048576
+        },
+        "relations": {
+          "strategies": {
+            "state": "PARTIAL",
+            "completeness": "PARTIAL",
+            "freshness": "UNKNOWN",
+            "as_of_ms": null,
+            "returned_count": 1,
+            "truncated": false,
+            "reason_code": "AUTHORIZED_RETAINED_FACTS",
+            "items": [
+              {
+                "alpha_id": "alpha_TEST_ONLY",
+                "name": "TEST_ONLY Alpha"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "ScopedSubjectRecordsResponse",
+      "value": {
+        "schema_version": "portal.execution.subject-records.v2",
+        "logical_operation_id": "executionAlphaFillsV1",
+        "authority": "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
+        "source_authority": "TRADING_SYSTEM_CURRENT_SOURCE",
+        "history_semantics": "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "resource": {
+          "kind": "alpha",
+          "id": "alpha_TEST_ONLY"
+        },
+        "read_scope": {
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "policy_revision": "TEST_ONLY-policy"
+        },
+        "state": "PARTIAL",
+        "reason_code": "SCOPED_RETAINED_WINDOW_NOT_TOTAL_HISTORY",
+        "coverage": {
+          "retained_row_count": 1,
+          "oldest_observed_at_ms": 1790812800000,
+          "newest_observed_at_ms": 1790812800000
+        },
+        "page": {
+          "limit": 200,
+          "maximum_page_rows": 500,
+          "returned_count": 1,
+          "has_more": false,
+          "next_cursor": null
+        },
+        "records": [
+          {
+            "record_id": "fill_TEST_ONLY",
+            "observed_at_ms": 1790812800000,
+            "values": {
+              "fill_id": "fill_TEST_ONLY",
+              "price": "100.1234567890123456789",
+              "quantity": "0"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "TechnicalHealth",
+      "value": {
+        "schema_version": "portal.execution.technical-health.v1",
+        "read_scope": "TECHNICAL_AUTHORIZED",
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "component": "DURABLE_MIRROR",
+        "state": "PARTIAL",
+        "reason_code": "TEST_ONLY_INCOMPLETE",
+        "revision": null,
+        "observed_at": null
+      }
+    },
+    {
+      "type": "TechnicalDiagnostics",
+      "value": {
+        "schema_version": "portal.execution.technical-diagnostics.v1",
+        "read_scope": "TECHNICAL_AUTHORIZED",
+        "profiles": [
+          {
+            "environment": "paper",
+            "profile_id": "profile_TEST_ONLY",
+            "component": "LOCAL_PROJECTION",
+            "state": "TEST_ONLY_UNKNOWN",
+            "health": "NOT_PUBLISHED",
+            "lag_ms": null,
+            "last_error_code": null
+          }
+        ]
+      }
+    }
+  ]
+}

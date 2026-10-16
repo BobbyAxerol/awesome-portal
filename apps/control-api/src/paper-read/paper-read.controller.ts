@@ -15,6 +15,7 @@ import { PaperReadError, PaperReadService } from "./paper-read.service";
 interface PaperReadRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -103,7 +104,8 @@ export class PaperReadController {
   }
 
   private principal(request: PaperReadRequest, workspaceId: string) {
-    return { user: request.portalUser, session: request.portalSession, workspaceId };
+    return { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId };
   }
 }
 

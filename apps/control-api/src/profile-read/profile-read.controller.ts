@@ -10,6 +10,7 @@ import { ProfileReadService } from "./profile-read.service";
 interface ProfileReadRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -51,6 +52,7 @@ export class ProfileReadController {
       user: request.portalUser,
       session: request.portalSession,
       workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId,
     }, accountId, query.data.environment);
   }
 
@@ -88,6 +90,7 @@ export class ProfileReadController {
       user: request.portalUser,
       session: request.portalSession,
       workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId,
     }, environment);
   }
 }

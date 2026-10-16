@@ -2,12 +2,12 @@ import { createHash } from "crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { constantTimeEqual } from "../auth/argon";
 import { ControlApiConfig, governanceApplySigningKeys } from "../config";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { newUlid } from "../id";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { GovernanceApplyTokenSigner } from "./apply-token";
 import { PaperExitDecision } from "./contracts";
-import { computeEvidenceManifestHash, GovernanceError } from "./governance.service";
+import { computeEvidenceManifestHash, GovernanceError, assertGovernanceParentCompatibility } from "./governance.service";
 import { paperExitDecisionContext } from "./review-context";
 import {
   PaperExitEvaluationState,
@@ -222,8 +222,12 @@ export class PaperExitService {
     );
   }
 
-  async detail(user: PortalUser, workspaceId: string, reviewId: string) {
+  async detail(user: PortalUser, workspaceId: string, reviewId: string, session?: AuthSession) {
+    await this.assertReadAuthority(user, workspaceId, session);
     const snapshot = await this.verifiedSnapshot(workspaceId, reviewId);
+    // A membership/lifecycle change while the evidence was loading must not
+    // return the previously authorized snapshot. Preserve USER read access.
+    await this.assertReadAuthority(user, workspaceId, session);
     const evaluation = evaluatePaperExit(snapshot);
     const { approval, review } = snapshot;
     const expired = approval.expiresAt <= new Date();
@@ -493,6 +497,17 @@ export class PaperExitService {
       expires_at: plan.expiresAt.toISOString(), applied_at: plan.appliedAt?.toISOString() ?? null,
       receipt: plan.responseJson, external_side_effect_requested: false,
     };
+  }
+
+  async assertReadAuthority(user: PortalUser, workspaceId: string, session?: AuthSession): Promise<void> {
+    try {
+      await this.repository.assertReadAuthority(user, workspaceId);
+      await assertGovernanceParentCompatibility(this.repository.pool, user, workspaceId, "PAPER_EXIT", session);
+    } catch (error) {
+      const typed = error as { governanceCode?: string; status?: number };
+      if (!typed.governanceCode) throw error;
+      throw new GovernanceError(typed.governanceCode, "Access denied.", typed.status ?? 403);
+    }
   }
 
   private async assertActorAuthority(user: PortalUser, workspaceId: string): Promise<void> {

@@ -1,8 +1,12 @@
 import { canonicalOrderStatus } from "../paper-read/order-status-map";
 import { freshnessPolicies } from "./environment-parity";
 import { retainedReview, projectionExpired } from "./retained-read-profile";
-import { Inject, Injectable } from "@nestjs/common";
-import { ControlApiConfig } from "../config";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { ControlApiConfig, querySigningKeys } from "../config";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
+import { authorizeRetainedRelation, scopedRetainedRows, retainedFieldAllowed, retainedRelationAction, fenceRetainedSnapshot } from "./retained-operation-page";
+import { projectionRowVisible } from "../execution-v2/read-projection";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
   CurrentSourceEnvironment,
@@ -101,6 +105,7 @@ export class ExecutionProductReadSource {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
     @Inject(MaximumDataOperationService) private readonly namedOperations: MaximumDataOperationService,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
 
   async relation(
@@ -203,7 +208,16 @@ export class ExecutionProductReadSource {
     }
     try {
       validateBinding(requestedEnvironment, screenId, "manager.deployments", "strategy_deployments", { limit: 1 });
-      const { snapshot, environment } = await this.localSnapshot(requestedEnvironment);
+      const environment = maximumDataEnvironment(requestedEnvironment), profileId = profile(this.config, environment);
+      if (this.readScopes && principal.workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID)
+        throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+      const metadata = this.readScopes ? await this.repository.snapshotMetadata(principal.workspaceId, environment, profileId) : null;
+      const readScope = await authorizeRetainedRelation(this.readScopes, principal, environment, profileId,
+        "manager.deployments", "strategy_deployments", metadata ?? undefined, { kind: "DEPLOYMENT", id: deploymentId });
+      const read = async (): Promise<DeploymentScopeResolution> => {
+      const { snapshot } = await this.localSnapshot(requestedEnvironment, readScope?.mode === "SCOPED_V2");
+      if (readScope?.mode === "SCOPED_V2" && (snapshot.payloadDigest !== metadata?.payloadDigest || snapshot.projectionEpoch !== metadata?.projectionEpoch ||
+          snapshot.sourceCatalogueSha256 !== metadata?.sourceCatalogueSha256)) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
       const deployments = snapshot.document.relations["manager.deployments:strategy_deployments"];
       if (!deployments || deployments.availability === "UNAVAILABLE") {
         return {
@@ -211,7 +225,8 @@ export class ExecutionProductReadSource {
           reasonCode: deployments?.reason_code ?? "EDS03_DEPLOYMENT_RELATION_UNAVAILABLE",
         };
       }
-      const matches = deployments.items
+      const visibleDeployments = scopedRetainedRows(readScope, deployments.items);
+      const matches = visibleDeployments
         .map((row) => row.fields)
         .filter((fields) => fields.deployment_id === deploymentId);
       if (matches.length === 0) {
@@ -240,12 +255,12 @@ export class ExecutionProductReadSource {
           fields.mode === mode && fields.venue === venue);
       const accounts = snapshot.document.relations["manager.accounts:accounts"];
       const accountMatches = accounts?.availability === "AVAILABLE"
-        ? accounts.items.map((row) => row.fields).filter((fields) => fields.account_id === accountId)
+        ? scopedRetainedRows(readScope, accounts.items).map((row) => row.fields).filter((fields) => fields.account_id === accountId)
         : [];
       const externalRefs = [...new Set(accountMatches
         .map((fields) => textField(fields.external_account_ref))
         .filter((value): value is string => value !== null))];
-      return {
+      const result: DeploymentScopeResolution = {
         state: "FOUND",
         reasonCode: null,
         scope: {
@@ -260,7 +275,12 @@ export class ExecutionProductReadSource {
         },
         deployment,
       };
+      if (readScope?.mode === "SCOPED_V2") await fenceRetainedSnapshot(this.repository, principal.workspaceId, environment, profileId, snapshot);
+      return result;
+      };
+      return readScope && this.readScopes ? this.readScopes.deliver(readScope, read) : read();
     } catch (error) {
+      if (error instanceof ExecutionReadScopeError) throw error;
       const reasonCode = error instanceof CurrentSourceProxyError ? error.code : "EDS03_DEPLOYMENT_SCOPE_UNAVAILABLE";
       return { state: "UNAVAILABLE", reasonCode };
     }
@@ -278,34 +298,64 @@ export class ExecutionProductReadSource {
       limit: query.limit,
       ...(query.cursor ? { cursor: query.cursor } : {}),
     });
-    const { snapshot, environment, profileId, projectionWorkspaceId, ageMs } = await this.localSnapshot(requestedEnvironment);
+    const environment = maximumDataEnvironment(requestedEnvironment), profileId = profile(this.config, environment),
+      projectionWorkspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    if (!projectionWorkspaceId) throw new CurrentSourceProxyError("N31_PROJECTION_WORKSPACE_NOT_CONFIGURED", 503);
+    if (this.readScopes && principal.workspaceId !== projectionWorkspaceId)
+      throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    const metadata = this.readScopes ? await this.repository.snapshotMetadata(projectionWorkspaceId, environment, profileId) : null;
+    const readScope = await authorizeRetainedRelation(this.readScopes, principal, environment, profileId,
+      sourceId, relation, metadata ?? undefined, query.deploymentScope ? { kind: "DEPLOYMENT", id: query.deploymentScope.deploymentId } : undefined,
+      query.deploymentScope ? "alpha.read" : retainedRelationAction(relation));
+    const read = async () => {
+    const isScoped = readScope?.mode === "SCOPED_V2";
+    const { snapshot, ageMs } = await this.localSnapshot(requestedEnvironment, isScoped);
+    if (isScoped && (snapshot.payloadDigest !== metadata?.payloadDigest || snapshot.projectionEpoch !== metadata?.projectionEpoch ||
+      snapshot.sourceCatalogueSha256 !== metadata?.sourceCatalogueSha256)) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    if (isScoped) {
+      const fields = [query.status !== undefined || query.statuses !== undefined ? "status" : null,
+        query.venue !== undefined ? "venue" : null, query.symbol !== undefined ? "symbol" : null,
+        query.side !== undefined ? "side" : null,
+        screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders" ?
+          query.sort === "updated_at_desc" ? "updated_at" : "submitted_at" : null];
+      if (fields.some(field => field !== null && !retainedFieldAllowed(readScope, field)))
+        throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    }
     const projected = snapshot.document.relations[`${sourceId}:${relation}`];
     if (!projected) throw new CurrentSourceProxyError("N31_PROJECTED_RELATION_NOT_AVAILABLE", 503, {
       availability: "UNAVAILABLE", retryable: false,
     });
     if (projected.availability === "UNAVAILABLE") {
       throw new CurrentSourceProxyError("N31_PROJECTED_RELATION_UNAVAILABLE", 503, {
-        availability: "UNAVAILABLE", reason_code: projected.reason_code, retryable: false,
+        availability: "UNAVAILABLE", reason_code: isScoped ? "EXECUTION_READ_NOT_AVAILABLE" : projected.reason_code, retryable: false,
       });
     }
+    // Existing internal composers sometimes default absent money fields to zero.
+    // Do not feed them a silently stripped protected value: this whole relation
+    // remains unavailable until its purpose-built DTO can represent absence.
+    if (isScoped && projected.items.some(row => projectionRowVisible(readScope, row.fields) &&
+      Object.keys(row.fields).some(field => DECIMAL_FIELD.has(field) && !retainedFieldAllowed(readScope, field))))
+      throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+    const authorizedItems = scopedRetainedRows(readScope, projected.items);
     const scoped = query.deploymentScope
-      ? scopeRows(relation, projected.items, query.deploymentScope)
-      : { items: projected.items, state: "EXACT" as const, reasonCode: null };
+      ? scopeRows(relation, authorizedItems, query.deploymentScope)
+      : { items: authorizedItems, state: "EXACT" as const, reasonCode: null };
     const scopedItems = screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
       ? filterAndSort(scoped.items, query)
       : scoped.items;
     const limit = query.limit ?? 100;
-    const start = decodeCursor(query.cursor, snapshot.payloadDigest);
+    const cursorBinding = JSON.stringify([readScope?.fingerprint, requestedEnvironment, screenId, sourceId, relation,
+      { ...query, cursor: undefined }, snapshot.projectionEpoch, snapshot.payloadDigest]);
+    const start = isScoped ? decodeScopedCursor(this.config, query.cursor, cursorBinding) : decodeCursor(query.cursor, snapshot.payloadDigest);
     if (start > scopedItems.length) {
       throw new CurrentSourceProxyError("N31_PROJECTION_CURSOR_AHEAD", 409, {
         availability: "DEGRADED", retryable: false,
       });
     }
     const rows = scopedItems.slice(start, start + limit);
-    const next = start + rows.length < scopedItems.length
-      ? encodeCursor(start + rows.length, snapshot.payloadDigest) : null;
-    const previous = start > 0
-      ? encodeCursor(Math.max(0, start - limit), snapshot.payloadDigest) : null;
+    const cursor = (offset: number) => isScoped ? encodeScopedCursor(this.config, offset, cursorBinding) : encodeCursor(offset, snapshot.payloadDigest);
+    const next = start + rows.length < scopedItems.length ? cursor(start + rows.length) : null;
+    const previous = start > 0 ? cursor(Math.max(0, start - limit)) : null;
     /*
      * A hot projection is a current observation, not automatically a complete
      * population.  In particular, the worker marks a relation PARTIAL after
@@ -318,14 +368,16 @@ export class ExecutionProductReadSource {
      * historical Trading-System rows.
      */
     const exactCurrentProjection = screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders" &&
-      projected.completeness === "COMPLETE" && scoped.state === "EXACT";
+      projected.completeness === "COMPLETE" && scoped.state === "EXACT" &&
+      (!isScoped || ["status", "venue", "side"].every(field => retainedFieldAllowed(readScope, field)));
     // Existing non-Blotter resource pages use their local count purely as a
     // bounded page/navigation aid.  Blotter is the only consumer that labels
     // a count an exact query result, so its stricter proof must not silently
     // change those independent response contracts.
     const publishPageCounts = !(screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders") ||
       exactCurrentProjection;
-    return {
+    const visibleDigest = isScoped ? `sha256:${createHash("sha256").update(JSON.stringify(authorizedItems)).digest("hex")}` : snapshot.payloadDigest;
+    const result = {
       schema_version: "portal.execution.local-projection-bff.v1",
       authority: "PORTAL_CONTROL_API",
       requested_environment: requestedEnvironment,
@@ -335,9 +387,9 @@ export class ExecutionProductReadSource {
       viewer_workspace_id: principal.workspaceId,
       projection: {
         authority: "SGP_POSTGRESQL",
-        epoch: snapshot.projectionEpoch,
-        sequence: snapshot.projectionSequence,
-        payload_digest: snapshot.payloadDigest,
+        epoch: isScoped ? "AUTHORIZED_RETAINED_VIEW" : snapshot.projectionEpoch,
+        sequence: isScoped ? null : snapshot.projectionSequence,
+        payload_digest: visibleDigest,
         source_contract_revision: snapshot.document.source_contract_revision,
         source_catalogue_sha256: snapshot.sourceCatalogueSha256 ?? snapshot.document.source_catalogue_sha256 ?? null,
         // The raw Manager checkpoint stays only in the durable SGP mirror.
@@ -345,16 +397,16 @@ export class ExecutionProductReadSource {
         // this value would make a current-page BFF an accidental source
         // selector and violates the EDS-11 revalidation boundary.
         source_cursor: null,
-        received_at: snapshot.receivedAt.toISOString(),
-        last_successful_refresh_at: snapshot.lastSuccessfulRefreshAt.toISOString(),
+        received_at: isScoped ? null : snapshot.receivedAt.toISOString(),
+        last_successful_refresh_at: isScoped ? null : snapshot.lastSuccessfulRefreshAt.toISOString(),
       },
       source: {
         authority: "EXECUTION_CELL",
         profile_id: profileId,
         availability: "AVAILABLE",
         freshness: retainedReview(this.config) ? "STALE" : freshness(ageMs, this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS),
-        completeness: projected.completeness,
-        as_of: projected.as_of,
+        completeness: isScoped ? "PARTIAL" : projected.completeness,
+        as_of: isScoped ? null : projected.as_of,
         data: {
           relation: { schema: "public", relation },
           items: rows.map((row) => ({
@@ -367,7 +419,7 @@ export class ExecutionProductReadSource {
             // These are deliberately derived from the one committed current
             // projection, after the same server-owned filter used for rows.
             // Do not emit them for an incomplete relation or ambiguous scope.
-            projected_total_items: projected.items.length,
+            projected_total_items: authorizedItems.length,
             filtered_total_items: scopedItems.length,
             ...(exactCurrentProjection ? { window_aggregates: countByDimensions(scopedItems) } : {}),
           } : {}),
@@ -379,10 +431,15 @@ export class ExecutionProductReadSource {
           } : undefined,
         },
       },
+      ...(isScoped ? { visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", policy_revision: readScope.policyRevision } : {}),
     };
+    if (isScoped) await fenceRetainedSnapshot(this.repository, projectionWorkspaceId, environment, profileId, snapshot);
+    return result;
+    };
+    return readScope && this.readScopes ? this.readScopes.deliver(readScope, read) : read();
   }
 
-  private async localSnapshot(requestedEnvironment: CurrentSourceEnvironment): Promise<{
+  private async localSnapshot(requestedEnvironment: CurrentSourceEnvironment, raw = false): Promise<{
     snapshot: ProfileProjectionSnapshot;
     environment: ProjectionEnvironment;
     profileId: string;
@@ -395,7 +452,8 @@ export class ExecutionProductReadSource {
     if (!projectionWorkspaceId) {
       throw new CurrentSourceProxyError("N31_PROJECTION_WORKSPACE_NOT_CONFIGURED", 503);
     }
-    const snapshot = await this.repository.snapshot(projectionWorkspaceId, environment, profileId);
+    const snapshot = raw ? await this.repository.rawSnapshot(projectionWorkspaceId, environment, profileId)
+      : await this.repository.snapshot(projectionWorkspaceId, environment, profileId);
     if (!snapshot) throw new CurrentSourceProxyError("N31_PROJECTION_NOT_READY", 503, {
       availability: "UNAVAILABLE", retryable: true,
     });
@@ -719,6 +777,26 @@ function freshness(
 
 function encodeCursor(offset: number, digest: string): string {
   return `lp1:${offset}:${digest.slice("sha256:".length, "sha256:".length + 16)}`;
+}
+
+function encodeScopedCursor(config: ControlApiConfig, offset: number, binding: string): string {
+  const prefix = `lps2.${config.QUERY_CURSOR_ACTIVE_KEY_ID}.${offset}.${Math.floor(Date.now() / 1000) + config.QUERY_CURSOR_TTL_SECONDS}`;
+  const signature = createHmac("sha256", querySigningKeys(config)[config.QUERY_CURSOR_ACTIVE_KEY_ID])
+    .update(binding).update("\u0000" + prefix).digest("base64url");
+  return `${prefix}.${signature}`;
+}
+function decodeScopedCursor(config: ControlApiConfig, cursor: string | undefined, binding: string): number {
+  if (!cursor) return 0;
+  const match = /^lps2\.([A-Za-z0-9_-]{1,32})\.(\d{1,8})\.(\d{10})\.([A-Za-z0-9_-]{43})$(?![\s\S])/.exec(cursor);
+  const keys = querySigningKeys(config);
+  if (!match || !keys[match[1]] || Number(match[3]) <= Math.floor(Date.now() / 1000))
+    throw new CurrentSourceProxyError("N31_PROJECTION_CURSOR_INVALID", 400);
+  const expected = createHmac("sha256", keys[match[1]]).update(binding)
+    .update("\u0000" + cursor.slice(0, cursor.lastIndexOf("."))).digest();
+  const received = Buffer.from(match[4], "base64url");
+  if (received.length !== expected.length || !timingSafeEqual(received, expected))
+    throw new CurrentSourceProxyError("N31_PROJECTION_CURSOR_INVALID", 400);
+  return Number(match[2]);
 }
 
 function decodeCursor(cursor: string | undefined, digest: string): number {

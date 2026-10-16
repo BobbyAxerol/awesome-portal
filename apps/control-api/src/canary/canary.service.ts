@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
 import { AuthSession, PortalUser } from "../domain";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
@@ -56,6 +57,7 @@ export class CanaryService {
     @Inject(CanaryRepository) private readonly repository: CanaryRepository,
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
     @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
 
   /**
@@ -80,19 +82,26 @@ export class CanaryService {
     }
   }
 
-  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string) {
     await this.assertGovernance(user, "read", workspaceId);
+    const principal = { user, session, workspaceId, viewerWorkspaceId };
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) === "SCOPED_V2")
+      throw new GovernanceError("CANARY_SCOPED_PARENT_NOT_COMMISSIONED", "Canary parent evidence field authority is not commissioned.", 503);
     const envelope = await this.repository.latestByDeployment(workspaceId, deploymentId);
     const [lineage, currentSource] = await Promise.all([
       this.repository.lineageFor(envelope),
       this.profileReads.snapshot(
-        { user, session, workspaceId },
+        principal,
         "canary",
         "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
         deploymentId,
       ),
     ]);
-    return this.publicDetail(user, envelope, lineage, false, currentSource);
+    const result = this.publicDetail(user, envelope, lineage, false, currentSource);
+    await this.assertGovernance(user, "read", workspaceId);
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) !== "LEGACY_COMPATIBILITY")
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return result;
   }
 
   async create(user: PortalUser, input: CanaryEnvelopeCreateRequest, requestId: string) {

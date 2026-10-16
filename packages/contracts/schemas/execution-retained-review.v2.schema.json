@@ -1,0 +1,354 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.retained-review.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "read_profile",
+    "workspace_id",
+    "authority",
+    "upstream_enabled",
+    "source_refresh_enabled",
+    "stream_enabled",
+    "mutation_enabled",
+    "live_eligibility",
+    "history_semantics",
+    "permissions",
+    "revocation",
+    "profiles",
+    "future_resource_management"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.retained-review.v2"
+    },
+    "read_profile": {
+      "const": "retained_review_v1"
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "authority": {
+      "const": "PORTAL_RETAINED_OBSERVATION"
+    },
+    "upstream_enabled": {
+      "const": false
+    },
+    "source_refresh_enabled": {
+      "const": false
+    },
+    "stream_enabled": {
+      "const": false
+    },
+    "mutation_enabled": {
+      "const": false
+    },
+    "live_eligibility": {
+      "const": false
+    },
+    "history_semantics": {
+      "const": "BOUNDED_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_REPLAY"
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "read",
+        "query",
+        "download",
+        "manage",
+        "command",
+        "stream",
+        "research_create",
+        "governance_decide",
+        "is_owner"
+      ],
+      "properties": {
+        "read": {
+          "const": true
+        },
+        "query": {
+          "const": true
+        },
+        "download": {
+          "const": false
+        },
+        "manage": {
+          "const": false
+        },
+        "command": {
+          "const": false
+        },
+        "stream": {
+          "const": false
+        },
+        "research_create": {
+          "const": false
+        },
+        "governance_decide": {
+          "const": false
+        },
+        "is_owner": {
+          "type": "boolean"
+        }
+      }
+    },
+    "revocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "http",
+        "permission_cache_seconds",
+        "data_view_cache_milliseconds",
+        "data_view_cache_maximum_serialized_bytes",
+        "delegated_jwt_ttl_seconds",
+        "delegation_enabled",
+        "upstream_revocation"
+      ],
+      "properties": {
+        "http": {
+          "const": "EACH_REQUEST_CORE_SESSION_AND_ACCESS"
+        },
+        "permission_cache_seconds": {
+          "const": 0
+        },
+        "data_view_cache_milliseconds": {
+          "const": 2000
+        },
+        "data_view_cache_maximum_serialized_bytes": {
+          "const": 16777216,
+          "description": "Aggregate serialized retained snapshot data budget, not per entry, HTTP response, heap size or cached permission. Metadata has a separately bounded single entry; caller authority is rechecked on every request."
+        },
+        "delegated_jwt_ttl_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "delegation_enabled": {
+          "const": false
+        },
+        "upstream_revocation": {
+          "const": "SHORT_LIVED_TOKEN_EXPIRY_NOT_INSTANT_REVOCATION"
+        }
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/Profile"
+      }
+    },
+    "future_resource_management": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reason_code"
+      ],
+      "properties": {
+        "state": {
+          "const": "NOT_PUBLISHED"
+        },
+        "reason_code": {
+          "const": "TS_RESOURCE_MANAGEMENT_CONTRACT_NOT_PUBLISHED"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "UtcMs": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 8640000000000000
+    },
+    "Reason": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Panel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "panel_id",
+        "screen_id",
+        "retained_state",
+        "current_row_count",
+        "history_row_count",
+        "source_availability",
+        "source_reason_code",
+        "source_as_of_ms",
+        "source_freshness",
+        "observed_at_ms",
+        "oldest_available_ms",
+        "newest_available_ms",
+        "reason_code",
+        "metadata_state"
+      ],
+      "properties": {
+        "panel_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "screen_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "retained_state": {
+          "enum": [
+            "PARTIAL",
+            "UNAVAILABLE"
+          ]
+        },
+        "current_row_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "history_row_count": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(0|[1-9][0-9]*)$(?![\\s\\S])"
+        },
+        "source_availability": {
+          "enum": [
+            "AVAILABLE",
+            "UNAVAILABLE",
+            "NOT_PUBLISHED"
+          ]
+        },
+        "source_reason_code": {
+          "$ref": "#/$defs/Reason"
+        },
+        "source_as_of_ms": {
+          "$ref": "#/$defs/UtcMs"
+        },
+        "source_freshness": {
+          "enum": [
+            "FRESH",
+            "AGING",
+            "STALE",
+            "UNKNOWN"
+          ]
+        },
+        "observed_at_ms": {
+          "$ref": "#/$defs/UtcMs"
+        },
+        "oldest_available_ms": {
+          "$ref": "#/$defs/UtcMs"
+        },
+        "newest_available_ms": {
+          "$ref": "#/$defs/UtcMs"
+        },
+        "reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "metadata_state": {
+          "enum": [
+            "PARTIAL",
+            "NOT_PUBLISHED",
+            "DENIED"
+          ]
+        }
+      }
+    },
+    "Profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "environment",
+        "profile_id",
+        "source_as_of_ms",
+        "snapshot_observed_ms",
+        "source_payload_digest",
+        "freshness",
+        "completeness",
+        "panels",
+        "metadata_state",
+        "metadata_reason_code"
+      ],
+      "properties": {
+        "environment": {
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "profile_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "source_as_of_ms": {
+          "$ref": "#/$defs/UtcMs"
+        },
+        "snapshot_observed_ms": {
+          "$ref": "#/$defs/UtcMs"
+        },
+        "source_payload_digest": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "freshness": {
+          "const": "STALE"
+        },
+        "completeness": {
+          "const": "PARTIAL"
+        },
+        "panels": {
+          "type": "array",
+          "maxItems": 96,
+          "items": {
+            "$ref": "#/$defs/Panel"
+          }
+        },
+        "metadata_state": {
+          "enum": [
+            "PARTIAL",
+            "NOT_PUBLISHED",
+            "DENIED"
+          ]
+        },
+        "metadata_reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        }
+      }
+    }
+  },
+  "description": "Server-selected V2 scoped retained metadata. Null count/clock means not published, never zero. No global source revision, source digest or historical coverage is implied. V1 compatibility stays unchanged."
+}

@@ -1,4 +1,7 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionReadScopes, ExecutionReadScopeError, AuthorizedExecutionReadScope,
+  ReadScopeRequirement, scopeAllowsField, scopeReadPopulation } from "../execution-v2/read-scope";
+import { scopedRetainedRows, fenceRetainedSnapshot } from "./retained-operation-page";
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { localProfileReadable, projectionExpired } from "./retained-read-profile";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -37,7 +40,13 @@ interface LocalAnalyticsContext {
   readonly environment: ProjectionEnvironment;
   readonly workspaceId: string;
   readonly profileId: string;
+  readonly original: ProfileProjectionSnapshot;
+  readonly principal: AnalyticsPrincipal;
+  readonly requirement: ReadScopeRequirement;
+  readonly scopes: AuthorizedExecutionReadScope[];
 }
+
+type AnalyticsCaller = AnalyticsPrincipal | { workspaceId: string };
 
 const OBSERVED_TIMELINE_MAXIMUM_ROWS = 200;
 const OBSERVED_TIMELINE_MAXIMUM_BYTES = 1 * 1024 * 1024;
@@ -81,6 +90,7 @@ export class LocalQueryAnalyticsService {
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {
     this.observedTimelineCursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -112,18 +122,35 @@ export class LocalQueryAnalyticsService {
     }
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
     const environment: ProjectionEnvironment = options.environment ?? (subjectKind === "live-gate" ? "live" : "paper");
-    const context = await this.localContext(environment);
+    const context = await this.localContext(environment, principal, analyticsRequirement(subjectKind, subjectId));
     const depth = await this.subjectDepth(
-      context.snapshot, context.workspaceId, environment, context.profileId, subjectKind, subjectId, options.accountId,
+      context.snapshot, context.workspaceId, environment, context.profileId, subjectKind, subjectId, options.accountId, context,
     );
     const selectedStrategies = selectSubject(sourceFacts(context.snapshot), subjectKind, subjectId)
       .strategies.flatMap(row => typeof row.strategy_id === "string" ? [row.strategy_id] : []);
     const statistics = options.accountId || !selectedStrategies.length ? null : await this.portfolioStatistics(
       context.workspaceId, environment, context.profileId, projectionVersion(context.snapshot),
-      selectedStrategies,
+      selectedStrategies, context,
     );
     if (statistics && depth) depth.queries += 1;
-    return composeAnalytics(context.snapshot, context.workspaceId, subjectKind, subjectId, depth, statistics, options);
+    for (const relation of [SOURCE.orders, SOURCE.fills, SOURCE.positions]) {
+      if (!facts(context.snapshot, relation).length) continue;
+      const scope = context.scopes.find(item => scopeReadPopulation(item).binding?.dataset_id === `relation:${relation}`);
+      if (scope?.mode === "SCOPED_V2" &&
+        ["quantity", "notional", "realized_pnl"].some(field => !scopeAllowsField(scope, field))) {
+        // Legacy exact partitions have numeric sum fields, not nullable
+        // withheld totals. Refuse that computation instead of summing a
+        // redacted field as zero. Timeline still has nullable values.
+        throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+      }
+    }
+    if (context.scopes.some(scope => scope.mode === "SCOPED_V2") &&
+      facts(context.snapshot, SOURCE.sessions).some(row =>
+        ["submitted_count", "risk_rejected_count", "broker_rejected_count", "filled_count"].some(field => row[field] === undefined))) {
+      throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+    }
+    return this.finish(context, composeAnalytics(context.snapshot, context.workspaceId, subjectKind, subjectId, depth, statistics,
+      { ...options, scopedMetadata: context.scopes.some(scope => scope.mode === "SCOPED_V2") }));
   }
 
   /**
@@ -147,7 +174,8 @@ export class LocalQueryAnalyticsService {
     if (!Number.isInteger(limit) || limit < 1 || limit > OBSERVED_TIMELINE_MAXIMUM_ROWS) {
       throw new AnalyticsProxyError("EDS10_OBSERVED_TIMELINE_LIMIT_INVALID", 400);
     }
-    const context = await this.localContext(request.environment);
+    const context = await this.localContext(request.environment, principal, analyticsRequirement(request.subjectKind, request.subjectId));
+    const scopedMetadata = context.scopes.some(scope => scope.mode === "SCOPED_V2");
     const selected = selectSubject(sourceFacts(context.snapshot), request.subjectKind, request.subjectId);
     const timeline = composeObservedTimeline(
       context.snapshot,
@@ -156,6 +184,7 @@ export class LocalQueryAnalyticsService {
       selected,
       limit,
       this.pageOffset(principal, request, context.snapshot, limit),
+      scopedMetadata,
     );
     const nextCursor = timeline.nextOffset === null ? null : this.encodeNextPage(
       principal, request, context.snapshot, limit, timeline.nextOffset,
@@ -181,8 +210,8 @@ export class LocalQueryAnalyticsService {
         source_contract_revision: context.snapshot.document.source_contract_revision,
         source_catalogue_sha256: context.snapshot.sourceCatalogueSha256 ?? context.snapshot.document.source_catalogue_sha256 ?? null,
         source_as_of_ms: epochMs(context.snapshot.sourceAsOf),
-        received_at_ms: epochMs(context.snapshot.receivedAt),
-        last_successful_refresh_at_ms: epochMs(context.snapshot.lastSuccessfulRefreshAt),
+        received_at_ms: scopedMetadata ? null : epochMs(context.snapshot.receivedAt),
+        last_successful_refresh_at_ms: scopedMetadata ? null : epochMs(context.snapshot.lastSuccessfulRefreshAt),
         completeness: context.snapshot.completeness,
       },
       observed_timeline: timeline.panel,
@@ -191,6 +220,7 @@ export class LocalQueryAnalyticsService {
         request.subjectKind,
         request.subjectId,
         selected,
+        scopedMetadata,
       ),
       page: {
         limit,
@@ -199,10 +229,11 @@ export class LocalQueryAnalyticsService {
       },
     };
     assertObservedTimelineBytes(response);
-    return response;
+    return this.finish(context, response);
   }
 
-  private async localContext(environment: ProjectionEnvironment): Promise<LocalAnalyticsContext> {
+  private async localContext(environment: ProjectionEnvironment, caller: AnalyticsCaller,
+    requirement: ReadScopeRequirement = { action: "alpha.read" }): Promise<LocalAnalyticsContext> {
     if (!profileFeatureEnabled(this.config, environment)) {
       throw new AnalyticsProxyError("EXECUTION_PROFILE_READ_DISABLED", 404);
     }
@@ -211,12 +242,87 @@ export class LocalQueryAnalyticsService {
     if (!workspaceId || !profileId) {
       throw new AnalyticsProxyError("PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED", 503);
     }
-    const snapshot = await this.repository.snapshot(workspaceId, environment, profileId);
+    if (this.readScopes && (!("user" in caller) || !("session" in caller))) {
+      throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+    }
+    if (this.readScopes && caller.workspaceId !== workspaceId) {
+      throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    }
+    const principal = caller as AnalyticsPrincipal;
+    const metadata = this.readScopes ? await this.repository.snapshotMetadata(workspaceId, environment, profileId) : null;
+    const entryScope = await this.readScopes?.authorize(principal, { environment, profileId },
+      { ...requirement, ...(requirement.resource?.kind === "DEPLOYMENT" ? { resource: undefined } : {}),
+        ...(metadata ? { dataset: { dataset_id: `relation:${requirement.action === "portfolio.read" ? SOURCE.portfolios : SOURCE.strategies}`,
+          source_revision: metadata.payloadDigest, projection_generation: metadata.projectionEpoch,
+          catalogue_revision: metadata.sourceCatalogueSha256, window: null } } : {}) });
+    // Augmented retained views have a derived revision. V2 publications bind
+    // persisted data and must not accidentally compare that derived revision
+    // against raw metadata in the delivery fence.
+    const snapshot = entryScope?.mode === "SCOPED_V2"
+      ? await this.repository.rawSnapshot(workspaceId, environment, profileId)
+      : await this.repository.snapshot(workspaceId, environment, profileId);
     if (!snapshot) throw new AnalyticsProxyError("PHASE2_PROJECTION_NOT_READY", 503);
+    if (entryScope?.mode === "SCOPED_V2" && (!metadata || metadata.payloadDigest !== snapshot.payloadDigest ||
+      metadata.projectionEpoch !== snapshot.projectionEpoch || metadata.sourceCatalogueSha256 !== snapshot.sourceCatalogueSha256))
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
     if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
       throw new AnalyticsProxyError("PHASE2_PROJECTION_STALE_CEILING_EXCEEDED", 503);
     }
-    return { snapshot, environment, workspaceId, profileId };
+    const context: LocalAnalyticsContext = { snapshot, original: snapshot, environment, workspaceId, profileId,
+      principal, requirement, scopes: entryScope ? [entryScope] : [] };
+    if (!this.readScopes) return context;
+    const relations: ProfileProjectionSnapshot["document"]["relations"] = {};
+    for (const [key, relation] of Object.entries(snapshot.document.relations)) {
+      if (!(Object.values(SOURCE) as string[]).includes(key)) continue;
+      const scope = await this.authorizeDataset(context, `relation:${key}`);
+      const items = scopedRetainedRows(scope, relation.items);
+      relations[key] = scope.mode === "SCOPED_V2"
+        ? { ...relation, items, as_of: null, completeness: "PARTIAL", reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" }
+        : relation;
+    }
+    if (!Object.keys(relations).length) await this.authorizeDataset(context, "analytics:empty");
+    if (!context.scopes.some(scope => scope.mode === "SCOPED_V2")) return context;
+    // The revision binds the permitted view and the current authority/source
+    // fence. Peer financial values and population counts are never included.
+    const view = projectionDigest({ relations, scopes: context.scopes.map(scope => scope.fingerprint) });
+    return { ...context, snapshot: { ...snapshot, document: { ...snapshot.document, relations,
+      source_catalogue_sha256: undefined },
+      payloadDigest: view, projectionEpoch: view, projectionSequence: 0, sourceAsOf: null,
+      sourceCatalogueSha256: null, completeness: "PARTIAL" } };
+  }
+
+  private async authorizeDataset(context: LocalAnalyticsContext, datasetId: string): Promise<AuthorizedExecutionReadScope> {
+    const deployment = context.requirement.resource?.kind === "DEPLOYMENT" ? context.requirement.resource.id : undefined;
+    const scope = await this.readScopes!.authorize(context.principal,
+      { environment: context.environment, profileId: context.profileId }, { ...context.requirement,
+        ...(deployment ? { resource: undefined } : {}),
+        dataset: { dataset_id: datasetId, source_revision: context.original.payloadDigest,
+          projection_generation: context.original.projectionEpoch, catalogue_revision: context.original.sourceCatalogueSha256,
+          window: null } });
+    if (deployment && scope.mode === "SCOPED_V2" &&
+      !scopeReadPopulation(scope).allowedTuples.some(tuple => tuple.deployment_id === deployment))
+      throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    context.scopes.push(scope);
+    return scope;
+  }
+
+  private async historyScope(context: LocalAnalyticsContext | undefined, relation: string) {
+    if (!context || !this.readScopes) return undefined;
+    const scope = await this.authorizeDataset(context, `history:${relation}`);
+    if (scope.mode === "SCOPED_V2" && !scopeAllowsField(scope, "equity")) {
+      throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+    }
+    return scope;
+  }
+
+  private async finish<T>(context: LocalAnalyticsContext, result: T): Promise<T> {
+    if (!this.readScopes) return result;
+    for (const scope of context.scopes) await this.readScopes.deliver(scope, async () => undefined);
+    if (context.scopes.some(scope => scope.mode === "SCOPED_V2")) {
+      await fenceRetainedSnapshot(this.repository, context.workspaceId, context.environment, context.profileId, context.original);
+      for (const scope of context.scopes) await this.readScopes.deliver(scope, async () => undefined);
+    }
+    return result;
   }
 
   private pageOffset(
@@ -285,6 +391,7 @@ export class LocalQueryAnalyticsService {
     subjectKind: QueryAnalyticsSubjectKind,
     subjectId: string,
     accountId?: string,
+    context?: LocalAnalyticsContext,
   ): Promise<SubjectDepth | null> {
     if (subjectKind !== "deployment" && subjectKind !== "alpha") return null;
     if (typeof this.repository.timeSeriesHistoryDownsampled !== "function") return null;
@@ -298,6 +405,7 @@ export class LocalQueryAnalyticsService {
       ["performance", "performance_snapshots", "instrument_id"],
     ] as const;
     for (const [name, relation, seriesField] of bindings) {
+      const scope = await this.historyScope(context, `manager.performance:${relation}`);
       try {
         depth.queries += 2;
         // Full-range read: bucket extrema + closing row per series when the
@@ -306,10 +414,10 @@ export class LocalQueryAnalyticsService {
         const page = await this.repository.timeSeriesHistoryDownsampled(
           workspaceId, environment, profileId,
           `manager.performance:${relation}`,
-          { from, entity, seriesField, valueField: "equity", targetPoints: 2_000 },
+          { from, entity, seriesField, valueField: "equity", targetPoints: 2_000, scope },
         );
         if (page.rows.length > 0) {
-          depth[name] = page.rows.map((row) => row.fields);
+          depth[name] = scopedRetainedRows(scope, page.rows).map((row) => row.fields);
           depth.windows[name] = {
             days: 30,
             basis: "PORTAL_SGP_HISTORY_MIRROR",
@@ -319,7 +427,8 @@ export class LocalQueryAnalyticsService {
             ...(page.downsample ? { downsample: page.downsample } : {}),
           };
         }
-      } catch {
+      } catch (error) {
+        if (scope?.mode === "SCOPED_V2" || error instanceof ExecutionReadScopeError) throw error;
         // Depth is additive: on any mirror failure the snapshot rows serve.
       }
     }
@@ -357,16 +466,15 @@ export class LocalQueryAnalyticsService {
    * would download megabytes of facts to read a list of coefficients.
    */
   async portfolioView(
-    principal: { workspaceId: string },
+    principal: AnalyticsCaller,
     portfolioId: string,
     environment: ProjectionEnvironment = "paper",
   ) {
-    void principal;
     if (!/^[A-Za-z0-9._:-]{1,192}$/.test(portfolioId)) {
       throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
     }
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
-    const context = await this.localContext(environment);
+    const context = await this.localContext(environment, principal, analyticsRequirement("portfolio", portfolioId));
     const strategies = new Set<string>();
     if (!facts(context.snapshot, SOURCE.portfolios).some(row => row.portfolio_id === portfolioId) &&
       !facts(context.snapshot, SOURCE.deployments).some(row => row.portfolio_id === portfolioId)) {
@@ -379,17 +487,27 @@ export class LocalQueryAnalyticsService {
     }
     const version = projectionVersion(context.snapshot);
     const statistics = strategies.size ? await this.portfolioStatistics(
-      context.workspaceId, environment, context.profileId, version, [...strategies],
+      context.workspaceId, environment, context.profileId, version, [...strategies], context,
     ) : null;
-    return {
+    return this.finish(context, {
       statistics, strategies: [...strategies], version,
+      validateRead: () => this.finish(context, undefined),
       inputAsOf: context.snapshot.sourceAsOf?.toISOString() ?? null,
       inputFreshness: Date.now() - context.snapshot.lastSuccessfulRefreshAt.valueOf() >
         this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS * 2 ||
         Object.values(context.snapshot.document.relations).some(relation => relation.freshness === "STALE") ? "STALE"
         : Object.values(context.snapshot.document.relations).some(relation => relation.freshness === "UNKNOWN" || relation.availability === "UNAVAILABLE") ? "UNKNOWN" : "OK",
       inputCompleteness: context.snapshot.completeness,
-    };
+    });
+  }
+
+  /** Server-only aggregate callback; its query sees the authorized portfolio
+   * population before rank/count, never discovery-only portfolio shells. */
+  async withPortfolioHistory<T>(principal: AnalyticsCaller, environment: ProjectionEnvironment,
+    operation: (scope: AuthorizedExecutionReadScope | undefined) => Promise<T>): Promise<T> {
+    const context = await this.localContext(environment, principal, { action: "portfolio.read" });
+    const scope = await this.historyScope(context, SOURCE.portfolioEquity);
+    return this.finish(context, await operation(scope));
   }
 
   /**
@@ -406,20 +524,21 @@ export class LocalQueryAnalyticsService {
    * the figure the row's other columns are consistent with.
    */
   async equitySparklines(
-    principal: { workspaceId: string },
+    principal: AnalyticsCaller,
     environment: ProjectionEnvironment,
     days = 30,
   ): Promise<{ series: Record<string, number[]>; days: number; basis: string }> {
-    void principal;
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
     if (typeof this.repository.timeSeriesDailyCloses !== "function") {
       return { series: {}, days, basis: "PORTAL_SGP_HISTORY_MIRROR" };
     }
-    const context = await this.localContext(environment);
+    const context = await this.localContext(environment, principal);
+    const scope = context && this.readScopes
+      ? await this.historyScope(context, "manager.performance:account_equity_snapshots") : undefined;
     const closes = await this.repository.timeSeriesDailyCloses(
       context.workspaceId, environment, context.profileId,
       "manager.performance:account_equity_snapshots",
-      { from: new Date(Date.now() - days * 86_400_000).toISOString(), valueField: "equity" },
+      { from: new Date(Date.now() - days * 86_400_000).toISOString(), valueField: "equity", scope },
     );
     // One strategy can run on several accounts; the row's line is the strategy's
     // total for that day, which is what its equity column already reports.
@@ -437,7 +556,7 @@ export class LocalQueryAnalyticsService {
       // A single point draws no line; the row says so rather than showing a dot.
       if (points.length > 1) series[strategyId] = points;
     }
-    return { series, days, basis: "PORTAL_SGP_HISTORY_MIRROR" };
+    return this.finish(context, { series, days, basis: "PORTAL_SGP_HISTORY_MIRROR" });
   }
 
   /**
@@ -456,12 +575,11 @@ export class LocalQueryAnalyticsService {
    * because "no live deployment" and "live equity is zero" are different facts.
    */
   async stageDrift(
-    principal: { workspaceId: string },
+    principal: AnalyticsCaller,
     alphaId: string,
     /** Omitted means everything the history mirror holds — the charts' default. */
     days?: number,
   ): Promise<Record<string, unknown>> {
-    void principal;
     if (!/^[A-Za-z0-9._:-]{1,192}$/.test(alphaId)) {
       throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
     }
@@ -471,6 +589,7 @@ export class LocalQueryAnalyticsService {
       : new Date(Date.now() - days * 86_400_000).toISOString();
     const stages: Record<string, { days: Record<string, number>; deployed: boolean; reason: string | null }> = {};
     const calendar = new Set<string>();
+    const contexts: LocalAnalyticsContext[] = [];
 
     for (const environment of ["paper", "sandbox", "live"] as const) {
       const entry: { days: Record<string, number>; deployed: boolean; reason: string | null } =
@@ -478,8 +597,10 @@ export class LocalQueryAnalyticsService {
       stages[environment] = entry;
       let context;
       try {
-        context = await this.localContext(environment);
+        context = await this.localContext(environment, principal, analyticsRequirement("alpha", alphaId));
+        contexts.push(context);
       } catch (error) {
+        if (error instanceof ExecutionReadScopeError) throw error;
         // A profile that is not configured or not ready is named, not blanked:
         // "we did not look" and "we looked and found nothing" are different.
         entry.reason = error instanceof AnalyticsProxyError ? error.code : "PROFILE_UNAVAILABLE";
@@ -499,7 +620,8 @@ export class LocalQueryAnalyticsService {
       const closes = await this.repository.timeSeriesDailyCloses(
         context.workspaceId, environment, context.profileId,
         "manager.performance:account_equity_snapshots",
-        { from, valueField: "equity" },
+        { from, valueField: "equity", strategyIds: [strategyId],
+          scope: await this.historyScope(context, "manager.performance:account_equity_snapshots") },
       );
       for (const row of closes) {
         if (row.strategyId !== strategyId) continue;
@@ -512,6 +634,7 @@ export class LocalQueryAnalyticsService {
     }
 
     const grid = [...calendar].sort();
+    for (const context of contexts) await this.finish(context, undefined);
     return {
       schema_version: "portal.execution.alpha-stage-drift.v1",
       alpha_id: alphaId,
@@ -551,15 +674,18 @@ export class LocalQueryAnalyticsService {
     profileId: string,
     version: string,
     strategyIds?: readonly string[],
+    context?: LocalAnalyticsContext,
   ): Promise<PortfolioStatistics | null> {
     if (typeof this.repository.timeSeriesDailyCloses !== "function") return null;
-    const key = JSON.stringify([workspaceId,environment,profileId,version,strategyIds?.slice().sort() ?? null]);
+    const scope = context && this.readScopes
+      ? await this.historyScope(context, "manager.performance:account_equity_snapshots") : undefined;
+    const key = JSON.stringify([workspaceId,environment,profileId,version,strategyIds?.slice().sort() ?? null, scope?.fingerprint ?? null]);
     const cached = this.statisticsCache.get(key);
     if (cached && cached.until > Date.now()) return cached.value;
     const pending = this.statisticsFlights.get(key);
     if (pending) return pending;
     if (this.statisticsFlights.size >= 8) return null;
-    const read = this.loadStatistics(workspaceId,environment,profileId,strategyIds).then(value => {
+    const read = this.loadStatistics(workspaceId,environment,profileId,strategyIds,scope).then(value => {
       if (value) {
         if (this.statisticsCache.size >= 12) this.statisticsCache.delete(this.statisticsCache.keys().next().value!);
         this.statisticsCache.set(key,{until:Date.now()+60_000,value});
@@ -571,21 +697,29 @@ export class LocalQueryAnalyticsService {
   }
 
   private async loadStatistics(workspaceId: string, environment: ProjectionEnvironment, profileId: string,
-    strategyIds?: readonly string[]): Promise<PortfolioStatistics | null> {
+    strategyIds?: readonly string[], scope?: AuthorizedExecutionReadScope): Promise<PortfolioStatistics | null> {
     try {
       const closes = await this.repository.timeSeriesDailyCloses(
         workspaceId, environment, profileId,
         "manager.performance:account_equity_snapshots",
-        { from: new Date(Date.now() - 90 * 86_400_000).toISOString(), valueField: "equity", strategyIds },
+        { from: new Date(Date.now() - 90 * 86_400_000).toISOString(), valueField: "equity", strategyIds, scope },
       );
       const value = computePortfolioStatistics(closes);
       return value;
-    } catch {
+    } catch (error) {
+      if (scope?.mode === "SCOPED_V2" || error instanceof ExecutionReadScopeError) throw error;
       // A failure is not cached: the next read should try again rather than
       // inherit one bad minute for the life of the projection version.
       return null;
     }
   }
+}
+
+function analyticsRequirement(kind: QueryAnalyticsSubjectKind | "account", id: string): ReadScopeRequirement {
+  if (kind === "portfolio") return { action: "portfolio.read", resource: { kind: "PORTFOLIO", id } };
+  if (kind === "account") return { action: "account.read", resource: { kind: "ACCOUNT", id } };
+  if (kind === "live-gate") return { action: "business.read_all" };
+  return { action: "alpha.read", resource: { kind: kind === "deployment" ? "DEPLOYMENT" : "ALPHA", id } };
 }
 
 /**
@@ -620,7 +754,7 @@ function composeAnalytics(
   subjectId: string,
   depth: SubjectDepth | null = null,
   statistics: PortfolioStatistics | null = null,
-  options: { sourceFacts?: boolean; accountId?: string } = {},
+  options: { sourceFacts?: boolean; accountId?: string; scopedMetadata?: boolean } = {},
 ): Record<string, unknown> {
   const all = sourceFacts(snapshot);
   // The mirror rows carry the same ids the snapshot rows do, so the subject
@@ -673,8 +807,8 @@ function composeAnalytics(
     journal: selected.journal,
   };
   const flat = Object.values(sourceFactGroups).flat().slice(0, 20_000);
-  const asOf = latestTimestamp(flat) ?? snapshot.sourceAsOf?.toISOString()
-    ?? snapshot.lastSuccessfulRefreshAt.toISOString();
+  const asOf = latestTimestamp(flat) ?? (options.scopedMetadata ? null : snapshot.sourceAsOf?.toISOString()
+    ?? snapshot.lastSuccessfulRefreshAt.toISOString());
   const orderFunnel = counts(selected.orders, "status");
   const quality = executionQuality(selected.sessions);
   const chartSeries = equitySeries(selected, asOf, snapshot.completeness, subjectKind);
@@ -732,7 +866,7 @@ function composeAnalytics(
   const readAt = new Date().toISOString();
   const kind = ({ deployment: "DEPLOYMENT", alpha: "ALPHA", portfolio: "PORTFOLIO", "live-gate": "LIVE_GATE" } as const)[subjectKind];
   return {
-    schema_version: "execution.query-analytics-envelope.v1",
+    schema_version: options.scopedMetadata ? "execution.query-analytics-envelope.v2" : "execution.query-analytics-envelope.v1",
     runtime_active: true,
     source_side_effect_requested: false,
     epoch_id: snapshot.projectionEpoch,
@@ -741,7 +875,12 @@ function composeAnalytics(
     source_fact_digest: projectionDigest({ viewer_workspace_id: viewerWorkspaceId, subject_kind: kind, subject_id: subjectId, facts: sourceFactGroups }),
     source_fact_count: flat.length,
     repository_query_count: 1 + (depth?.queries ?? 0),
-    source_read_at: snapshot.lastSuccessfulRefreshAt.toISOString(),
+    source_read_at: options.scopedMetadata ? null : snapshot.lastSuccessfulRefreshAt.toISOString(),
+    ...(options.scopedMetadata ? { scoped_metadata: {
+      visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", global_observation_clocks: "NOT_PUBLISHED",
+      reason_code: "EXECUTION_GLOBAL_OBSERVATION_CLOCK_NOT_QUALIFIED",
+      as_of_basis: asOf === null ? "NOT_PUBLISHED" : "AUTHORIZED_RECORD_TIMESTAMP",
+    } } : {}),
     read_at: readAt,
     analytics: {
       schema_version: "execution.query-analytics.v1",
@@ -927,7 +1066,7 @@ function executionQuality(rows: readonly Fact[]) {
 
 function equitySeries(
   rows: { performance: Fact[]; accountEquity: Fact[]; portfolioEquity: Fact[]; equity: Fact[] },
-  asOf: string,
+  asOf: string | null,
   completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN",
   subjectKind?: QueryAnalyticsSubjectKind,
 ) {
@@ -995,7 +1134,7 @@ function equitySeries(
  */
 function derivedPortfolioEquitySeries(
   accountEquity: readonly Fact[],
-  asOf: string,
+  asOf: string | null,
   completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN",
   seriesId = "portfolio_equity_derived",
   formulaVersion = "portfolio-equity-derived.v1",
@@ -1172,6 +1311,7 @@ function composeObservedTimeline(
   selected: SelectedFacts,
   limit: number,
   offset: number,
+  scopedMetadata = false,
 ): ObservedTimelineComposition {
   const relationRows = [selected.orders, selected.fills, selected.sessions, selected.journal];
   const allEntries = [
@@ -1237,9 +1377,9 @@ function composeObservedTimeline(
       clocks: {
         event_time_ms: null,
         source_published_at_ms: sourceAsOfMs,
-        received_at_ms: epochMs(snapshot.receivedAt),
-        ingested_at_ms: epochMs(snapshot.receivedAt),
-        processed_at_ms: epochMs(snapshot.lastSuccessfulRefreshAt),
+        received_at_ms: scopedMetadata ? null : epochMs(snapshot.receivedAt),
+        ingested_at_ms: scopedMetadata ? null : epochMs(snapshot.receivedAt),
+        processed_at_ms: scopedMetadata ? null : epochMs(snapshot.lastSuccessfulRefreshAt),
         as_of_ms: sourceAsOfMs,
         read_at_ms: readAtMs,
       },
@@ -1277,6 +1417,7 @@ function composeMarkContext(
   subjectKind: ObservedTimelineSubjectKind,
   subjectId: string,
   selected: SelectedFacts,
+  scopedMetadata = false,
 ): PanelEnvelope<{
   label: "DERIVED · mark-context";
   authority: "DERIVED";
@@ -1349,9 +1490,9 @@ function composeMarkContext(
     clocks: {
       event_time_ms: null,
       source_published_at_ms: asOfMs,
-      received_at_ms: epochMs(snapshot.receivedAt),
-      ingested_at_ms: epochMs(snapshot.receivedAt),
-      processed_at_ms: epochMs(snapshot.lastSuccessfulRefreshAt),
+      received_at_ms: scopedMetadata ? null : epochMs(snapshot.receivedAt),
+      ingested_at_ms: scopedMetadata ? null : epochMs(snapshot.receivedAt),
+      processed_at_ms: scopedMetadata ? null : epochMs(snapshot.lastSuccessfulRefreshAt),
       as_of_ms: asOfMs,
       read_at_ms: utcEpochMs(Date.now()),
     },

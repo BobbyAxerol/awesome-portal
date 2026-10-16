@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, HttpCode, Inject, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
 import { constantTimeEqual, sha256 } from "../auth/argon";
 import { csrfCookieFrom, CSRF_HEADER, originAllowed } from "../auth/cookies";
@@ -14,6 +14,7 @@ import { CanaryService } from "./canary.service";
 interface CanaryRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession & { csrfSecretHash: string };
 }
 
@@ -27,13 +28,15 @@ export class CanaryController {
   ) {}
 
   @Get("/deployments/:deployment_id/canary")
+  @Header("Cache-Control", "private, no-store")
   async detail(
     @Req() request: CanaryRequest,
     @Param("deployment_id") deploymentId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.canary.detail(request.portalUser, request.portalSession, workspaceId, deploymentId);
+    return this.canary.detail(request.portalUser, request.portalSession, workspaceId, deploymentId,
+      request.portalViewerWorkspaceId ?? request.portalWorkspaceId);
   }
 
   @Post("/governance/canary-envelopes")

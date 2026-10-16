@@ -200,6 +200,94 @@ export interface components {
             summary: components["schemas"]["Summary"];
             page: components["schemas"]["AlphaPage"];
         };
+        ManagerScopedFacts: {
+            alpha_id?: string;
+            alpha_version_id?: string;
+            portfolio_id?: string;
+            deployment_id?: string;
+            account_id?: string;
+            binding_id?: string;
+            name?: string | null;
+            state?: string | null;
+            stage?: string | null;
+            venue?: string | null;
+            currency?: string | null;
+            base_currency?: string | null;
+            allocation?: string | null;
+            balance_total?: string | null;
+            balance_free?: string | null;
+            balance_locked?: string | null;
+            realized_pnl?: string | null;
+            unrealized_pnl?: string | null;
+            net_pnl?: string | null;
+            exposure?: string | null;
+            updated_at_ms?: number | null;
+        };
+        ManagerScopedItem: {
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+            identity: components["schemas"]["ManagerScopedFacts"];
+            instances: components["schemas"]["ManagerScopedFacts"][];
+            financial_facts: {
+                /** @enum {unknown} */
+                kind: "ALLOCATION" | "INTERNAL_ACCOUNT_BALANCE" | "POSITION_PNL";
+                facts: components["schemas"]["ManagerScopedFacts"];
+            }[];
+            financial_totals: components["schemas"]["ManagerScopedFacts"][];
+            is_full_resource: boolean;
+            financial_availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                /** @enum {unknown} */
+                reason_code: "AUTHORIZED_RETAINED_FACTS" | "SCOPED_FINANCIAL_GRAIN_OR_FIELDS_UNAVAILABLE" | "SOURCE_FACTS_NOT_PUBLISHED";
+            };
+        };
+        /** @description Server-selected scoped DTO, never selected by a browser toggle. Current authority before aggregation and delivery. Exact decimal strings; omitted means withheld/unpublished, null means explicit absence. Financial totals only sum authorized facts attributable to this item, partitioned by currency; not complete NAV. Runtime enforces page/count/cursor consistency and 1 MiB response cap. No global count or revision metadata. */
+        ManagerScopedResponse: {
+            /** @constant */
+            schema_version: "portal.execution.manager-scoped.v1";
+            /** @enum {unknown} */
+            surface: "ALPHA_FLEET" | "PORTFOLIOS" | "BINDINGS" | "BINDING_DETAIL";
+            workspace_id: string;
+            /** @enum {unknown} */
+            environment: "all" | "paper" | "sandbox" | "live";
+            /** @constant */
+            record_authority: "PORTAL_PROJECTION";
+            /** @constant */
+            source_authority: "TRADING_SYSTEM";
+            read_at_ms: number;
+            read_scope: {
+                /** @constant */
+                visibility: "SCOPED";
+                /** @constant */
+                coverage: "AUTHORIZED_ONLY";
+                /** @constant */
+                totals_scope: "VISIBLE_ROWS_ONLY";
+                policy_revisions: string[];
+            };
+            profile_dispositions: {
+                /** @enum {unknown} */
+                environment: "paper" | "sandbox" | "live";
+                /** @enum {unknown} */
+                state: "PARTIAL" | "DENIED" | "UNAVAILABLE";
+                reason_code: string | null;
+            }[];
+            /** @constant */
+            completeness: "PARTIAL";
+            /** @constant */
+            reason_code: "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY";
+            page: {
+                visible_count: number;
+                returned_count: number;
+                limit: number;
+                /** @constant */
+                maximum_response_bytes: 1048576;
+                has_more: boolean;
+                next_cursor: string | null;
+                previous_cursor: string | null;
+            };
+            items: components["schemas"]["ManagerScopedItem"][];
+        };
         EnvironmentBranch: {
             /** @enum {unknown} */
             state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
@@ -375,14 +463,56 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded enriched Fleet page and fleet-wide current-fact summary with exact counts. */
+            /** @description Legacy compatibility or scoped V2 selected solely by durable server policy. Scoped page counts and totals cover authorized rows only. private, no-store. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AlphaFleetResponse"];
+                    "application/json": components["schemas"]["AlphaFleetResponse"] | components["schemas"]["ManagerScopedResponse"];
                 };
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -391,6 +521,12 @@ export interface operations {
             query?: {
                 workspace_id?: components["parameters"]["Workspace"];
                 environment?: components["parameters"]["AlphaFleetEnvironment"];
+                /** @description Scoped V2 pagination only; supplying this on legacy authority is rejected, not ignored. */
+                after?: string;
+                /** @description Scoped V2 pagination only; supplying this on legacy authority is rejected, not ignored. */
+                before?: string;
+                /** @description Scoped V2 pagination only; supplying this on legacy authority is rejected, not ignored. */
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -398,14 +534,56 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded all-profile portfolio identity list with per-environment branch states, membership and exact allocated capital. */
+            /** @description Legacy compatibility or scoped V2 selected solely by durable server policy. Scoped page counts and totals cover authorized rows only. private, no-store. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PortfolioListResponse"];
+                    "application/json": components["schemas"]["PortfolioListResponse"] | components["schemas"]["ManagerScopedResponse"];
                 };
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -428,14 +606,56 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded binding page with exact counts and no credentials. */
+            /** @description Legacy compatibility or scoped V2 selected solely by durable server policy. Scoped page counts and totals cover authorized rows only. private, no-store. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BindingsResponse"];
+                    "application/json": components["schemas"]["BindingsResponse"] | components["schemas"]["ManagerScopedResponse"];
                 };
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -453,17 +673,52 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One narrow binding detail. */
+            /** @description Legacy compatibility or scoped V2 selected solely by durable server policy. Scoped page counts and totals cover authorized rows only. private, no-store. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BindingDetailResponse"];
+                    "application/json": components["schemas"]["BindingDetailResponse"] | components["schemas"]["ManagerScopedResponse"];
                 };
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Binding not found in this workspace/profile projection. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

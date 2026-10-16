@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   Inject,
   Param,
@@ -14,7 +15,7 @@ import { FastifyRequest } from "fastify";
 import { constantTimeEqual, sha256 } from "../auth/argon";
 import { csrfCookieFrom, CSRF_HEADER, originAllowed } from "../auth/cookies";
 import { ControlApiConfig } from "../config";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
@@ -35,7 +36,8 @@ import { IncidentService } from "./incident.service";
 interface IncidentRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
-  portalSession: { sessionId: string; csrfSecretHash: string };
+  portalSession: AuthSession & { csrfSecretHash: string };
+  portalViewerWorkspaceId?: string;
 }
 
 @UseGuards(SessionGuard)
@@ -64,13 +66,17 @@ export class IncidentController {
   }
 
   @Get(":incident_id")
+  @Header("Cache-Control", "private, no-store")
   async detail(
     @Req() request: IncidentRequest,
     @Param("incident_id") incidentId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.incidents.detail(request.portalUser, workspaceId, incidentId);
+    return this.incidents.detail(request.portalUser, workspaceId, incidentId, {
+      user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId,
+    });
   }
 
   @Post(":incident_id/acknowledge")

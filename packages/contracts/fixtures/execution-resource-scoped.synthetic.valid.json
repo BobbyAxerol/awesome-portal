@@ -1,0 +1,4000 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "cases": [
+    {
+      "schema_version": "execution.alpha-resource.v2",
+      "visibility": "SCOPED",
+      "coverage": "AUTHORIZED_ONLY",
+      "totals_scope": "VISIBLE_ROWS_ONLY",
+      "is_full_portfolio": false,
+      "read_scope": [
+        {
+          "environment": "paper",
+          "policy_revision": "TEST_ONLY-policy"
+        }
+      ],
+      "record_authority": "PORTAL_CONTROL",
+      "source_authority": "TRADING_SYSTEM",
+      "delivery_profile": "profile_TEST_ONLY",
+      "workspace_id": "workspace_TEST_ONLY",
+      "requested_environment": "paper",
+      "selected_environment": "paper",
+      "resource": {
+        "kind": "ALPHA",
+        "id": "alpha_TEST_ONLY",
+        "label": "TEST_ONLY Alpha"
+      },
+      "read_at_ms": 1790812800000,
+      "as_of_ms": null,
+      "read_at": "2026-10-01T00:00:00.000Z",
+      "as_of": null,
+      "state": "partial",
+      "freshness": "STALE",
+      "completeness": "PARTIAL",
+      "projection": [
+        {
+          "environment": "paper",
+          "epoch": null,
+          "sequence": null,
+          "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "last_successful_refresh_at": null
+        }
+      ],
+      "capabilities": [
+        {
+          "capability_id": "resource.alpha.identity",
+          "state": "AVAILABLE",
+          "relations": [],
+          "reason_code": null,
+          "retryable": false
+        }
+      ],
+      "panels": {
+        "deployments": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "deployment_id": "deployment_TEST_ONLY",
+                "strategy_id": "strategy_TEST_ONLY",
+                "account_id": "account_TEST_ONLY",
+                "mode": "paper"
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "account_id": "account_TEST_ONLY",
+                "currency": "USD",
+                "total": "1234567890123456789.1234567890123456789",
+                "free": "0",
+                "locked": null
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "margin_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_sync": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "broker_sync": {
+          "state": "UNAVAILABLE",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EXECUTION_CUSTODY_READ_NOT_COMMISSIONED",
+          "retryable": true
+        },
+        "venue_accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "portfolios": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "portfolio_allocations": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "positions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "sessions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "orders": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "fills": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "performance": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_equity": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "reconciliation": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "strategies": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "journal": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        }
+      },
+      "data": {
+        "deployments": [
+          {
+            "profile_environment": "paper",
+            "deployment_id": "deployment_TEST_ONLY",
+            "strategy_id": "strategy_TEST_ONLY",
+            "account_id": "account_TEST_ONLY",
+            "mode": "paper"
+          }
+        ],
+        "accounts": [],
+        "account_balances": [
+          {
+            "profile_environment": "paper",
+            "account_id": "account_TEST_ONLY",
+            "currency": "USD",
+            "total": "1234567890123456789.1234567890123456789",
+            "free": "0",
+            "locked": null
+          }
+        ],
+        "margin_balances": [],
+        "account_sync": [],
+        "broker_sync": [],
+        "venue_accounts": [],
+        "portfolios": [],
+        "portfolio_allocations": [],
+        "positions": [],
+        "sessions": [],
+        "orders": [],
+        "fills": [],
+        "performance": [],
+        "account_equity": [],
+        "reconciliation": [],
+        "strategies": [],
+        "journal": [],
+        "alpha": {
+          "kind": "ALPHA",
+          "id": "alpha_TEST_ONLY",
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "financial_summary": {
+            "state": "UNAVAILABLE",
+            "reason_code": "SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS"
+          },
+          "deployments": [
+            {
+              "profile_environment": "paper",
+              "deployment_id": "deployment_TEST_ONLY",
+              "strategy_id": "strategy_TEST_ONLY",
+              "account_id": "account_TEST_ONLY",
+              "mode": "paper"
+            }
+          ],
+          "portfolios": [],
+          "metrics_availability": {
+            "account_balance": {
+              "state": "PARTIAL",
+              "reason_code": "SOURCE_PARTIAL"
+            },
+            "current_position_pnl": {
+              "state": "UNAVAILABLE",
+              "reason_code": "SOURCE_PARTIAL"
+            },
+            "equity_series": {
+              "state": "UNAVAILABLE",
+              "reason_code": "SOURCE_PARTIAL"
+            }
+          }
+        },
+        "profile_coverage": {
+          "paper": {
+            "profile_id": "profile_TEST_ONLY",
+            "state": "FOUND",
+            "reason_code": null,
+            "projection_epoch": null,
+            "projection_sequence": null,
+            "source_as_of": null
+          }
+        }
+      },
+      "unavailable_branches": [],
+      "actor": {
+        "user_id": "user_TEST_ONLY",
+        "username": "TEST_ONLY",
+        "roles": [
+          "USER"
+        ]
+      }
+    },
+    {
+      "schema_version": "execution.portfolio-resource.v2",
+      "visibility": "SCOPED",
+      "coverage": "AUTHORIZED_ONLY",
+      "totals_scope": "VISIBLE_ROWS_ONLY",
+      "is_full_portfolio": false,
+      "read_scope": [
+        {
+          "environment": "paper",
+          "policy_revision": "TEST_ONLY-policy"
+        }
+      ],
+      "record_authority": "PORTAL_CONTROL",
+      "source_authority": "TRADING_SYSTEM",
+      "delivery_profile": "profile_TEST_ONLY",
+      "workspace_id": "workspace_TEST_ONLY",
+      "requested_environment": "paper",
+      "selected_environment": "paper",
+      "resource": {
+        "kind": "PORTFOLIO",
+        "id": "portfolio_TEST_ONLY",
+        "label": "TEST_ONLY Portfolio"
+      },
+      "read_at_ms": 1790812800000,
+      "as_of_ms": null,
+      "read_at": "2026-10-01T00:00:00.000Z",
+      "as_of": null,
+      "state": "partial",
+      "freshness": "STALE",
+      "completeness": "PARTIAL",
+      "projection": [
+        {
+          "environment": "paper",
+          "epoch": null,
+          "sequence": null,
+          "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "last_successful_refresh_at": null
+        }
+      ],
+      "capabilities": [
+        {
+          "capability_id": "resource.portfolio.identity",
+          "state": "AVAILABLE",
+          "relations": [],
+          "reason_code": null,
+          "retryable": false
+        }
+      ],
+      "panels": {
+        "deployments": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "deployment_id": "deployment_TEST_ONLY",
+                "strategy_id": "strategy_TEST_ONLY",
+                "account_id": "account_TEST_ONLY",
+                "mode": "paper"
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "account_id": "account_TEST_ONLY",
+                "currency": "USD",
+                "total": "1234567890123456789.1234567890123456789",
+                "free": "0",
+                "locked": null
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "margin_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_sync": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "broker_sync": {
+          "state": "UNAVAILABLE",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EXECUTION_CUSTODY_READ_NOT_COMMISSIONED",
+          "retryable": true
+        },
+        "venue_accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "portfolios": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "portfolio_allocations": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "positions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "sessions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "orders": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "fills": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "performance": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_equity": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "reconciliation": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "strategies": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "portfolio_equity": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        }
+      },
+      "data": {
+        "deployments": [
+          {
+            "profile_environment": "paper",
+            "deployment_id": "deployment_TEST_ONLY",
+            "strategy_id": "strategy_TEST_ONLY",
+            "account_id": "account_TEST_ONLY",
+            "mode": "paper"
+          }
+        ],
+        "accounts": [],
+        "account_balances": [
+          {
+            "profile_environment": "paper",
+            "account_id": "account_TEST_ONLY",
+            "currency": "USD",
+            "total": "1234567890123456789.1234567890123456789",
+            "free": "0",
+            "locked": null
+          }
+        ],
+        "margin_balances": [],
+        "account_sync": [],
+        "broker_sync": [],
+        "venue_accounts": [],
+        "portfolios": [],
+        "portfolio_allocations": [],
+        "positions": [],
+        "sessions": [],
+        "orders": [],
+        "fills": [],
+        "performance": [],
+        "account_equity": [],
+        "reconciliation": [],
+        "strategies": [],
+        "portfolio_equity": [],
+        "portfolio": {
+          "kind": "PORTFOLIO",
+          "id": "portfolio_TEST_ONLY",
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "financial_summary": {
+            "state": "UNAVAILABLE",
+            "reason_code": "SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS"
+          },
+          "deployments": [
+            {
+              "profile_environment": "paper",
+              "deployment_id": "deployment_TEST_ONLY",
+              "strategy_id": "strategy_TEST_ONLY",
+              "account_id": "account_TEST_ONLY",
+              "mode": "paper"
+            }
+          ],
+          "portfolios": [],
+          "metrics_availability": {
+            "account_balance": {
+              "state": "PARTIAL",
+              "reason_code": "SOURCE_PARTIAL"
+            },
+            "current_position_pnl": {
+              "state": "UNAVAILABLE",
+              "reason_code": "SOURCE_PARTIAL"
+            },
+            "equity_series": {
+              "state": "UNAVAILABLE",
+              "reason_code": "SOURCE_PARTIAL"
+            }
+          }
+        },
+        "profile_coverage": {
+          "paper": {
+            "profile_id": "profile_TEST_ONLY",
+            "state": "FOUND",
+            "reason_code": null,
+            "projection_epoch": null,
+            "projection_sequence": null,
+            "source_as_of": null
+          }
+        }
+      },
+      "unavailable_branches": [],
+      "actor": {
+        "user_id": "user_TEST_ONLY",
+        "username": "TEST_ONLY",
+        "roles": [
+          "USER"
+        ]
+      }
+    },
+    {
+      "schema_version": "execution.account-resource.v2",
+      "visibility": "SCOPED",
+      "coverage": "AUTHORIZED_ONLY",
+      "totals_scope": "VISIBLE_ROWS_ONLY",
+      "is_full_portfolio": false,
+      "read_scope": [
+        {
+          "environment": "paper",
+          "policy_revision": "TEST_ONLY-policy"
+        }
+      ],
+      "record_authority": "PORTAL_CONTROL",
+      "source_authority": "TRADING_SYSTEM",
+      "delivery_profile": "profile_TEST_ONLY",
+      "workspace_id": "workspace_TEST_ONLY",
+      "requested_environment": "paper",
+      "selected_environment": "paper",
+      "resource": {
+        "kind": "ACCOUNT",
+        "id": "account_TEST_ONLY",
+        "label": "TEST_ONLY Account"
+      },
+      "read_at_ms": 1790812800000,
+      "as_of_ms": null,
+      "read_at": "2026-10-01T00:00:00.000Z",
+      "as_of": null,
+      "state": "partial",
+      "freshness": "STALE",
+      "completeness": "PARTIAL",
+      "projection": [
+        {
+          "environment": "paper",
+          "epoch": null,
+          "sequence": null,
+          "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "last_successful_refresh_at": null
+        }
+      ],
+      "capabilities": [
+        {
+          "capability_id": "resource.account.identity",
+          "state": "AVAILABLE",
+          "relations": [],
+          "reason_code": null,
+          "retryable": false
+        }
+      ],
+      "panels": {
+        "deployments": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "deployment_id": "deployment_TEST_ONLY",
+                "strategy_id": "strategy_TEST_ONLY",
+                "account_id": "account_TEST_ONLY",
+                "mode": "paper"
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "account_id": "account_TEST_ONLY",
+                "currency": "USD",
+                "total": "1234567890123456789.1234567890123456789",
+                "free": "0",
+                "locked": null
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "margin_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_sync": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "broker_sync": {
+          "state": "UNAVAILABLE",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EXECUTION_CUSTODY_READ_NOT_COMMISSIONED",
+          "retryable": true
+        },
+        "venue_accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "portfolios": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "portfolio_allocations": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "positions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "sessions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "orders": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "fills": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "performance": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_equity": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "reconciliation": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "strategies": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        }
+      },
+      "data": {
+        "deployments": [
+          {
+            "profile_environment": "paper",
+            "deployment_id": "deployment_TEST_ONLY",
+            "strategy_id": "strategy_TEST_ONLY",
+            "account_id": "account_TEST_ONLY",
+            "mode": "paper"
+          }
+        ],
+        "accounts": [],
+        "account_balances": [
+          {
+            "profile_environment": "paper",
+            "account_id": "account_TEST_ONLY",
+            "currency": "USD",
+            "total": "1234567890123456789.1234567890123456789",
+            "free": "0",
+            "locked": null
+          }
+        ],
+        "margin_balances": [],
+        "account_sync": [],
+        "broker_sync": [],
+        "venue_accounts": [],
+        "portfolios": [],
+        "portfolio_allocations": [],
+        "positions": [],
+        "sessions": [],
+        "orders": [],
+        "fills": [],
+        "performance": [],
+        "account_equity": [],
+        "reconciliation": [],
+        "strategies": [],
+        "account": {
+          "kind": "ACCOUNT",
+          "id": "account_TEST_ONLY",
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "financial_summary": {
+            "state": "UNAVAILABLE",
+            "reason_code": "SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS"
+          },
+          "deployments": [
+            {
+              "profile_environment": "paper",
+              "deployment_id": "deployment_TEST_ONLY",
+              "strategy_id": "strategy_TEST_ONLY",
+              "account_id": "account_TEST_ONLY",
+              "mode": "paper"
+            }
+          ],
+          "portfolios": [],
+          "metrics_availability": {
+            "account_balance": {
+              "state": "PARTIAL",
+              "reason_code": "SOURCE_PARTIAL"
+            },
+            "current_position_pnl": {
+              "state": "UNAVAILABLE",
+              "reason_code": "SOURCE_PARTIAL"
+            },
+            "equity_series": {
+              "state": "UNAVAILABLE",
+              "reason_code": "SOURCE_PARTIAL"
+            }
+          }
+        },
+        "profile_coverage": {
+          "paper": {
+            "profile_id": "profile_TEST_ONLY",
+            "state": "FOUND",
+            "reason_code": null,
+            "projection_epoch": null,
+            "projection_sequence": null,
+            "source_as_of": null
+          }
+        }
+      },
+      "unavailable_branches": [],
+      "actor": {
+        "user_id": "user_TEST_ONLY",
+        "username": "TEST_ONLY",
+        "roles": [
+          "USER"
+        ]
+      }
+    },
+    {
+      "schema_version": "execution.binding-resource.v2",
+      "visibility": "SCOPED",
+      "coverage": "AUTHORIZED_ONLY",
+      "totals_scope": "VISIBLE_ROWS_ONLY",
+      "is_full_portfolio": false,
+      "read_scope": [
+        {
+          "environment": "paper",
+          "policy_revision": "TEST_ONLY-policy"
+        }
+      ],
+      "record_authority": "PORTAL_CONTROL",
+      "source_authority": "TRADING_SYSTEM",
+      "delivery_profile": "profile_TEST_ONLY",
+      "workspace_id": "workspace_TEST_ONLY",
+      "requested_environment": "paper",
+      "selected_environment": "paper",
+      "resource": {
+        "kind": "BINDING",
+        "id": "binding_TEST_ONLY",
+        "label": "TEST_ONLY Binding"
+      },
+      "read_at_ms": 1790812800000,
+      "as_of_ms": null,
+      "read_at": "2026-10-01T00:00:00.000Z",
+      "as_of": null,
+      "state": "partial",
+      "freshness": "STALE",
+      "completeness": "PARTIAL",
+      "projection": [
+        {
+          "environment": "paper",
+          "epoch": null,
+          "sequence": null,
+          "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "last_successful_refresh_at": null
+        }
+      ],
+      "capabilities": [
+        {
+          "capability_id": "resource.binding.identity",
+          "state": "AVAILABLE",
+          "relations": [],
+          "reason_code": null,
+          "retryable": false
+        }
+      ],
+      "panels": {
+        "deployments": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "deployment_id": "deployment_TEST_ONLY",
+                "strategy_id": "strategy_TEST_ONLY",
+                "account_id": "account_TEST_ONLY",
+                "mode": "paper"
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "account_id": "account_TEST_ONLY",
+                "currency": "USD",
+                "total": "1234567890123456789.1234567890123456789",
+                "free": "0",
+                "locked": null
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "margin_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_sync": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "broker_sync": {
+          "state": "UNAVAILABLE",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EXECUTION_CUSTODY_READ_NOT_COMMISSIONED",
+          "retryable": true
+        },
+        "venue_accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "portfolios": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "portfolio_allocations": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "positions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "sessions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "orders": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "fills": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "performance": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_equity": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "reconciliation": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "strategies": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        }
+      },
+      "data": {
+        "deployments": [
+          {
+            "profile_environment": "paper",
+            "deployment_id": "deployment_TEST_ONLY",
+            "strategy_id": "strategy_TEST_ONLY",
+            "account_id": "account_TEST_ONLY",
+            "mode": "paper"
+          }
+        ],
+        "accounts": [],
+        "account_balances": [
+          {
+            "profile_environment": "paper",
+            "account_id": "account_TEST_ONLY",
+            "currency": "USD",
+            "total": "1234567890123456789.1234567890123456789",
+            "free": "0",
+            "locked": null
+          }
+        ],
+        "margin_balances": [],
+        "account_sync": [],
+        "broker_sync": [],
+        "venue_accounts": [],
+        "portfolios": [],
+        "portfolio_allocations": [],
+        "positions": [],
+        "sessions": [],
+        "orders": [],
+        "fills": [],
+        "performance": [],
+        "account_equity": [],
+        "reconciliation": [],
+        "strategies": [],
+        "binding": {
+          "kind": "BINDING",
+          "id": "binding_TEST_ONLY",
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "financial_summary": {
+            "state": "UNAVAILABLE",
+            "reason_code": "SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS"
+          },
+          "deployments": [
+            {
+              "profile_environment": "paper",
+              "deployment_id": "deployment_TEST_ONLY",
+              "strategy_id": "strategy_TEST_ONLY",
+              "account_id": "account_TEST_ONLY",
+              "mode": "paper"
+            }
+          ],
+          "portfolios": [],
+          "metrics_availability": {
+            "account_balance": {
+              "state": "PARTIAL",
+              "reason_code": "SOURCE_PARTIAL"
+            },
+            "current_position_pnl": {
+              "state": "UNAVAILABLE",
+              "reason_code": "SOURCE_PARTIAL"
+            },
+            "equity_series": {
+              "state": "UNAVAILABLE",
+              "reason_code": "SOURCE_PARTIAL"
+            }
+          }
+        },
+        "profile_coverage": {
+          "paper": {
+            "profile_id": "profile_TEST_ONLY",
+            "state": "FOUND",
+            "reason_code": null,
+            "projection_epoch": null,
+            "projection_sequence": null,
+            "source_as_of": null
+          }
+        }
+      },
+      "unavailable_branches": [],
+      "actor": {
+        "user_id": "user_TEST_ONLY",
+        "username": "TEST_ONLY",
+        "roles": [
+          "USER"
+        ]
+      }
+    },
+    {
+      "schema_version": "execution.alpha-resource.v2",
+      "visibility": "SCOPED",
+      "coverage": "AUTHORIZED_ONLY",
+      "totals_scope": "VISIBLE_ROWS_ONLY",
+      "is_full_portfolio": false,
+      "read_scope": [
+        {
+          "environment": "paper",
+          "policy_revision": "TEST_ONLY-policy"
+        }
+      ],
+      "record_authority": "PORTAL_CONTROL",
+      "source_authority": "TRADING_SYSTEM",
+      "delivery_profile": "profile_TEST_ONLY",
+      "workspace_id": "workspace_TEST_ONLY",
+      "requested_environment": "paper",
+      "selected_environment": null,
+      "resource": {
+        "kind": "ALPHA",
+        "id": "empty_TEST_ONLY"
+      },
+      "read_at_ms": 1790812800000,
+      "as_of_ms": null,
+      "read_at": "2026-10-01T00:00:00.000Z",
+      "as_of": null,
+      "state": "empty",
+      "freshness": "UNKNOWN",
+      "completeness": "PARTIAL",
+      "projection": [],
+      "capabilities": [
+        {
+          "capability_id": "resource.alpha.identity",
+          "state": "EMPTY",
+          "relations": [],
+          "reason_code": null,
+          "retryable": false
+        }
+      ],
+      "panels": {
+        "deployments": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "accounts": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "account_balances": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "margin_balances": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "account_sync": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "broker_sync": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "venue_accounts": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "portfolios": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "portfolio_allocations": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "positions": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "sessions": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "orders": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "fills": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "performance": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "account_equity": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "reconciliation": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "strategies": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        },
+        "journal": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": null,
+          "retryable": false
+        }
+      },
+      "data": {},
+      "unavailable_branches": [],
+      "actor": {
+        "user_id": "user_TEST_ONLY",
+        "username": "TEST_ONLY",
+        "roles": [
+          "USER"
+        ]
+      }
+    },
+    {
+      "schema_version": "execution.alpha-resource.v2",
+      "visibility": "SCOPED",
+      "coverage": "AUTHORIZED_ONLY",
+      "totals_scope": "VISIBLE_ROWS_ONLY",
+      "is_full_portfolio": false,
+      "read_scope": [
+        {
+          "environment": "paper",
+          "policy_revision": "TEST_ONLY-policy"
+        }
+      ],
+      "record_authority": "PORTAL_CONTROL",
+      "source_authority": "TRADING_SYSTEM",
+      "delivery_profile": "profile_TEST_ONLY",
+      "workspace_id": "workspace_TEST_ONLY",
+      "requested_environment": "paper",
+      "selected_environment": "paper",
+      "resource": {
+        "kind": "ALPHA",
+        "id": "alpha_TEST_ONLY",
+        "label": "TEST_ONLY Alpha"
+      },
+      "read_at_ms": 1790812800000,
+      "as_of_ms": null,
+      "read_at": "2026-10-01T00:00:00.000Z",
+      "as_of": null,
+      "state": "partial",
+      "freshness": "STALE",
+      "completeness": "PARTIAL",
+      "projection": [
+        {
+          "environment": "paper",
+          "epoch": null,
+          "sequence": null,
+          "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "last_successful_refresh_at": null
+        }
+      ],
+      "capabilities": [
+        {
+          "capability_id": "resource.alpha.identity",
+          "state": "AVAILABLE",
+          "relations": [],
+          "reason_code": null,
+          "retryable": false
+        }
+      ],
+      "panels": {
+        "deployments": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "account_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "margin_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "account_sync": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "broker_sync": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "venue_accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "portfolios": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "portfolio_allocations": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "positions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "sessions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "orders": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "fills": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "performance": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "account_equity": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "reconciliation": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "strategies": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        },
+        "journal": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND",
+          "retryable": false
+        }
+      },
+      "data": {
+        "alpha": {
+          "id": "alpha_TEST_ONLY",
+          "state": "PARTIAL",
+          "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND"
+        },
+        "profile_coverage": {
+          "paper": {
+            "profile_id": "profile_TEST_ONLY",
+            "state": "FOUND",
+            "reason_code": null,
+            "projection_epoch": null,
+            "projection_sequence": null,
+            "source_as_of": null
+          }
+        }
+      },
+      "unavailable_branches": [],
+      "actor": {
+        "user_id": "user_TEST_ONLY",
+        "username": "TEST_ONLY",
+        "roles": [
+          "USER"
+        ]
+      }
+    }
+  ]
+}

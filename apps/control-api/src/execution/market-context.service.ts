@@ -1,4 +1,5 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionReadScopes } from "../execution-v2/read-scope";
 import { ControlApiConfig } from "../config";
 import { AuthSession, PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -27,6 +28,7 @@ export interface MarketContextPrincipal {
   readonly user: PortalUser;
   readonly session: AuthSession;
   readonly workspaceId: string;
+  readonly viewerWorkspaceId?: string;
 }
 
 export interface MarketContextLatestRequest extends MarketLatestQuery {
@@ -55,26 +57,39 @@ export class MarketContextService {
   constructor(
     @Inject(ExecutionCurrentSourceProxy) private readonly currentSource: ExecutionCurrentSourceProxy,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ExecutionReadScopes) private readonly scopes?: ExecutionReadScopes,
   ) {}
 
   async latest(principal: MarketContextPrincipal, request: MarketContextLatestRequest) {
+    await this.legacyTransport(principal);
     this.assertActivated("managerMarketContextLatestV1", request.environment);
     const response = await this.currentSource.fixedPathForNamedOperation(
       principal,
       request.environment,
       marketLatestPolicy(request.environment, request),
     );
+    await this.legacyTransport(principal, true);
     return translateMarketLatest(response, request);
   }
 
   async candles(principal: MarketContextPrincipal, request: MarketContextCandlesRequest) {
+    await this.legacyTransport(principal);
     this.assertActivated("managerMarketContextCandlesV1", request.environment);
     const response = await this.currentSource.fixedPathForNamedOperation(
       principal,
       request.environment,
       marketCandlesPolicy(request.environment, request),
     );
+    await this.legacyTransport(principal, true);
     return translateMarketCandles(response, request);
+  }
+
+  private async legacyTransport(principal:MarketContextPrincipal, delivery=false):Promise<void> {
+    // Private source transport has no accepted V2 market dataset/action
+    // mapping yet. Public venue candles are a separate data-only source; that
+    // permission must never silently authorize this private Data Layer path.
+    if(this.scopes&&await this.scopes.selectionMode(principal)==="SCOPED_V2")
+      throw new MarketContextError(delivery?"MARKET_CONTEXT_ACCESS_CHANGED":"MARKET_CONTEXT_SCOPED_TRANSPORT_NOT_COMMISSIONED",delivery?409:503);
   }
 
   private assertActivated(operationId: MarketContextOperationId, environment: MaximumDataEnvironment): void {

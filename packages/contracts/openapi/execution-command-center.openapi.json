@@ -220,6 +220,9 @@
         "additionalProperties": false,
         "required": ["schema_version", "record_authority", "delivery_profile", "workspace_id", "read_at", "actor", "mode", "snapshot", "panels", "warnings"],
         "properties": {
+          "read_scope": { "type": "object", "additionalProperties": false,
+            "required": ["visibility", "coverage", "totals_scope"],
+            "properties": {"visibility": {"const":"SCOPED"}, "coverage": {"const":"AUTHORIZED_ONLY"}, "totals_scope": {"const":"VISIBLE_DEPLOYMENTS_ONLY"}} },
           "schema_version": { "type": "string", "const": "execution.command-center-snapshot.v1" },
           "record_authority": { "type": "string", "const": "PORTAL" },
           "delivery_profile": { "type": "string", "const": "fixture" },

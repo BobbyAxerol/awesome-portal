@@ -15,7 +15,10 @@
     "source_contract_revision":{"type":"string"},"source_catalogue_sha256":{"type":["string","null"]},
     "source_history_semantics":{"const":"BOUNDED_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_REPLAY"},
     "source_retention_semantics":{"const":"LOCAL_CAPTURE_ONLY_NO_TOTAL_HISTORY_CLAIM"},
-    "reason_code":{"enum":["UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE","UDB_RETAINED_PANEL_NOT_CAPTURED"]},
+    "reason_code":{"enum":["UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE","UDB_RETAINED_PANEL_NOT_CAPTURED","AUTHORIZED_RETAINED_OBSERVATIONS_ONLY"]},
+    "visibility":{"const":"SCOPED"},"coverage":{"const":"AUTHORIZED_ONLY"},
+    "read_scope":{"type":"object","additionalProperties":false,"required":["visibility","coverage","policy_revision"],"properties":{
+      "visibility":{"const":"SCOPED"},"coverage":{"const":"AUTHORIZED_ONLY"},"policy_revision":{"type":"string","minLength":1,"maxLength":256}}},
     "state":{"enum":["PARTIAL","UNAVAILABLE"]},
     "source_health":{"type":"object","additionalProperties":false,
       "required":["availability","freshness","completeness","as_of_ms","global_sequence","retention_floor_ms","retention_floor_status","correction_observability","replay_eligible"],
@@ -35,5 +38,8 @@
         "resource_id":{"type":"string","pattern":"^por1_[0-9a-f]{64}$"},
         "values":{"type":"object","description":"Only operation allowlisted scalar fields. Decimal and integer strings are exact; timestamps are UTC milliseconds. No arbitrary JSON or source key.","additionalProperties":{"anyOf":[{"type":"string","maxLength":4096},{"type":"integer"},{"type":"boolean"},{"type":"null"}]}}
       }}}
-  }
+  },
+  "dependentRequired":{"read_scope":["visibility","coverage"],"visibility":["read_scope","coverage"],"coverage":["read_scope","visibility"]},
+  "allOf":[{"if":{"properties":{"reason_code":{"const":"AUTHORIZED_RETAINED_OBSERVATIONS_ONLY"}},"required":["reason_code"]},
+    "then":{"properties":{"read_scope":{},"visibility":{},"coverage":{}},"required":["read_scope","visibility","coverage"]}}]
 }

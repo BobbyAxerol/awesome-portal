@@ -23,6 +23,7 @@ interface MaximumDataRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalSession: AuthSession;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
 }
 
 /**
@@ -46,7 +47,8 @@ export class MaximumDataOperationController {
       throw new MaximumDataOperationError("WORKSPACE_NOT_FOUND", 404);
     }
     return this.operations.deploymentPage(
-      { user: request.portalUser, session: request.portalSession, workspaceId },
+      { user: request.portalUser, session: request.portalSession, workspaceId,
+        viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       {
         environment: query.data.environment,
         limit: query.data.limit,
@@ -85,7 +87,8 @@ export class MaximumDataOperationController {
       throw new MaximumDataOperationError("WORKSPACE_NOT_FOUND", 404);
     }
     return this.operations.relationPage(
-      { user: request.portalUser, session: request.portalSession, workspaceId },
+      { user: request.portalUser, session: request.portalSession, workspaceId,
+        viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       operationId,
       {
         environment: query.data.environment,

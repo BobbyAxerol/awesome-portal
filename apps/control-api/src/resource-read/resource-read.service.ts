@@ -1,4 +1,5 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import { ControlApiConfig } from "../config";
 import { utcEpochMs } from "../execution/contract-authority";
 import { projectionExpired, retainedReview } from "../execution/retained-read-profile";
@@ -16,6 +17,11 @@ import { stagePanels, type StageRelation, wireStageValue } from "../execution/st
 import type { AuthSession, PortalUser } from "../domain";
 import type { ManagerPage } from "../paper-read/manager-records";
 import { CONTROL_API_CONFIG } from "../tokens";
+import { ExecutionReadScopes, ExecutionReadScopeError, AuthorizedExecutionReadScope, scopeReadPopulation,
+  scopeResources, scopeAllowsField } from "../execution-v2/read-scope";
+import { projectionRowVisible } from "../execution-v2/read-projection";
+import { authorizeRetainedRelation, scopedRetainedRows, retainedFieldAllowed, fenceRetainedSnapshot } from "../execution/retained-operation-page";
+import { scopedResourceResponseSchemas } from "./scoped-resource.contract";
 
 export const RESOURCE_KINDS = ["ALPHA", "PORTFOLIO", "ACCOUNT", "BINDING"] as const;
 export type ResourceKind = (typeof RESOURCE_KINDS)[number];
@@ -25,6 +31,7 @@ export interface ResourceReadPrincipal {
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
+  viewerWorkspaceId?: string;
 }
 
 type CapabilityState = "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
@@ -108,6 +115,7 @@ interface LoadedProfile {
   readonly snapshot: ProfileProjectionSnapshot | null;
   readonly state: "AVAILABLE" | "UNAVAILABLE";
   readonly reasonCode: string | null;
+  readonly readScope?: AuthorizedExecutionReadScope;
 }
 
 interface ResourceSelection {
@@ -168,6 +176,7 @@ export class ResourceReadService {
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
 
   async read(
@@ -178,7 +187,114 @@ export class ResourceReadService {
   ): Promise<Record<string, unknown>> {
     const environments: readonly ResourceEnvironment[] = requestedEnvironment
       ? [requestedEnvironment] : ["paper", "sandbox", "live"];
+    if (this.readScopes) return this.readWithAuthority(principal, kind, resourceId, environments.map(environment => ({
+      environment, profileId: profileIdFor(environment, this.config), snapshot: null, state: "UNAVAILABLE", reasonCode: null,
+    })), requestedEnvironment);
     const loaded = await Promise.all(environments.map((environment) => this.load(environment)));
+    return this.readLegacyPrepared(principal, kind, resourceId, loaded, requestedEnvironment);
+  }
+
+  private async readWithAuthority(principal: ResourceReadPrincipal, kind: ResourceKind, resourceId: string,
+    loaded: readonly LoadedProfile[], requestedEnvironment?: ResourceEnvironment): Promise<Record<string, unknown>> {
+    if (loaded.every(profile => !profile.profileId) && await this.readScopes!.selectionMode(principal) === "LEGACY_COMPATIBILITY") {
+      // Compatibility for an unconfigured local projection is a NO-DATA
+      // shell, never a business read authorized by a routing probe.
+      const absent = loaded.map(profile => ({ ...profile, snapshot: null, state: "UNAVAILABLE" as const,
+        reasonCode: "EDS04_PROFILE_NOT_CONFIGURED" }));
+      const response = this.attachReader(this.prepare(absent, principal.workspaceId, kind, resourceId, requestedEnvironment), principal);
+      if (await this.readScopes!.selectionMode(principal) !== "LEGACY_COMPATIBILITY")
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      return { ...response, state: "unavailable", freshness: "UNKNOWN", completeness: "UNKNOWN" };
+    }
+    if (principal.workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID)
+      throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    const checks: Array<{ profile: LoadedProfile; scope: AuthorizedExecutionReadScope;
+      metadata: Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshotMetadata"]>>; excluded?: boolean }> = [];
+    const unavailableProfiles: LoadedProfile[] = [];
+    const isolateProfile = (profile: LoadedProfile, error: unknown): boolean => {
+      if (requestedEnvironment || !(error instanceof ExecutionReadScopeError) ||
+          !([403, 404].includes(error.status) || error.status === 503 &&
+            ["EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", "EXECUTION_READ_AUTHORITY_UNAVAILABLE"].includes(error.code))) return false;
+      // These are fixed environment slots, not a discovery API. No raw error,
+      // configured profile ID, policy revision or resource existence escapes.
+      unavailableProfiles.push({ environment: profile.environment, profileId: null, snapshot: null,
+        state: "UNAVAILABLE", reasonCode: "EXECUTION_READ_NOT_AVAILABLE" });
+      return true;
+    };
+    for (const profile of loaded) {
+      try {
+      if (!profile.profileId) throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+      const metadata = await this.repository.snapshotMetadata(principal.workspaceId, profile.environment, profile.profileId);
+      const action = kind === "ALPHA" ? "alpha.read" : kind === "PORTFOLIO" ? "portfolio.read" : kind === "ACCOUNT" ? "account.read" : "binding.read";
+      let scope: AuthorizedExecutionReadScope | undefined;
+      try {
+        scope = await authorizeRetainedRelation(this.readScopes, principal, profile.environment, profile.profileId,
+          "resource360", kind.toLowerCase(), metadata ?? undefined,
+          kind === "ALPHA" ? undefined : { kind, id: resourceId }, action);
+      } catch (error) {
+        if (kind !== "PORTFOLIO" || !(error instanceof ExecutionReadScopeError) || error.code !== "EXECUTION_READ_NOT_AVAILABLE") throw error;
+        // This is a distinct explicit capability, not a legacy/broad fallback.
+        scope = await authorizeRetainedRelation(this.readScopes, principal, profile.environment, profile.profileId,
+          "resource360", kind.toLowerCase(), metadata ?? undefined, { kind, id: resourceId }, "portfolio.read_restricted");
+      }
+      checks.push({ profile, scope: scope!, metadata });
+      } catch (error) { if (!isolateProfile(profile, error)) throw error; }
+    }
+    if (checks.length === 0) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    const read = async () => {
+      if (checks.every(check => check.scope.mode === "LEGACY_COMPATIBILITY"))
+        return this.readLegacyPrepared(principal, kind, resourceId,
+          await Promise.all(loaded.map(profile => this.load(profile.environment))), requestedEnvironment);
+      if (checks.some(check => check.scope.mode !== "SCOPED_V2")) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      for (const check of checks) {
+        try {
+        const snapshot = await this.repository.rawSnapshot(principal.workspaceId, check.profile.environment, check.profile.profileId!);
+        if (!snapshot) throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+        if (snapshot.payloadDigest !== check.metadata?.payloadDigest || snapshot.projectionEpoch !== check.metadata?.projectionEpoch ||
+            snapshot.sourceCatalogueSha256 !== check.metadata?.sourceCatalogueSha256)
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        if (snapshot.document.workspace_id !== principal.workspaceId || snapshot.document.environment !== check.profile.environment ||
+            snapshot.document.profile_id !== check.profile.profileId) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+        check.profile = { ...check.profile, snapshot, state: "AVAILABLE", reasonCode: null };
+        // Identity resolution belongs to the same profile-local authority;
+        // absence in Live must not hide an authorized Paper resource.
+        check.profile = scopedResourceProfile(check.profile, check.scope, kind, resourceId);
+        } catch (error) {
+          if (!isolateProfile(check.profile, error)) throw error;
+          check.excluded = true;
+        }
+      }
+      // Mixed-policy/profile projections never share a precomputed response.
+      const participating = checks.filter(check => !check.excluded);
+      if (participating.length === 0) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+      const scoped = [...participating.map(check => check.profile), ...unavailableProfiles]
+        .sort((left, right) => loaded.findIndex(profile => profile.environment === left.environment) - loaded.findIndex(profile => profile.environment === right.environment));
+      const template = this.prepare(scoped, principal.workspaceId, kind, resourceId, requestedEnvironment);
+      for (const check of participating) if (check.scope.mode === "SCOPED_V2" && check.profile.snapshot) {
+        // The detached scoped graph has a public digest; fence using the
+        // qualified raw source identity, never the derived public revision.
+        await fenceRetainedSnapshot(this.repository, principal.workspaceId, check.profile.environment, check.profile.profileId!,
+          { ...check.profile.snapshot, payloadDigest: check.metadata!.payloadDigest,
+            projectionEpoch: check.metadata!.projectionEpoch, sourceCatalogueSha256: check.metadata!.sourceCatalogueSha256 });
+      }
+      const response = this.attachReader(template, principal);
+      if (!scopedResourceResponseSchemas[kind].safeParse(response).success)
+        throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+      return response;
+    };
+    // Each actual profile is freshly fenced after the entire composition has
+    // awaited. Neither another profile nor an old template is an entitlement.
+    let delivery = read;
+    for (const check of checks) {
+      const next = delivery;
+      delivery = () => this.readScopes!.deliver(check.scope, next);
+    }
+    return delivery();
+  }
+
+  private async readLegacyPrepared(principal: ResourceReadPrincipal, kind: ResourceKind, resourceId: string,
+    loaded: readonly LoadedProfile[], requestedEnvironment?: ResourceEnvironment): Promise<Record<string, unknown>> {
     let template: Record<string, unknown>;
     if (retainedReview(this.config)) {
       // Coalesce DATA only while a bounded batch is pending. Exact document
@@ -214,6 +330,10 @@ export class ResourceReadService {
       else if (pending) { pending.readers++; template = await pending.promise; }
       else template = this.prepare(loaded, principal.workspaceId, kind, resourceId, requestedEnvironment);
     } else template = this.prepare(loaded, principal.workspaceId, kind, resourceId, requestedEnvironment);
+    return this.attachReader(template, principal);
+  }
+
+  private attachReader(template: Record<string, unknown>, principal: ResourceReadPrincipal) {
     const readAtMs = utcEpochMs(Date.now());
     return { ...template, read_at_ms: readAtMs, read_at: new Date(readAtMs).toISOString(),
       actor: { user_id: principal.user.userId, username: principal.user.username, roles: [principal.user.role] },
@@ -307,7 +427,7 @@ export class ResourceReadService {
         : resolution.state === "PARTIAL" ? "PARTIAL" : "UNAVAILABLE";
       return { alias, environment: profile.environment, state, reasonCode: resolution.reasonCode, page: null, truncated: false };
     }
-    return scopedRelation(profile.snapshot, profile.environment, alias, resolution.scope);
+    return scopedRelation(profile.snapshot, profile.environment, alias, resolution.scope, profile.readScope);
   }
 }
 
@@ -324,17 +444,82 @@ interface ResourceResponseInput {
   readonly wireMemo?: WeakMap<object, unknown>;
 }
 
+const SCOPED_FINANCIAL_FIELDS = new Set(["total", "free", "locked", "initial", "maintenance", "buying_power", "allocated_capital",
+  "max_capital", "quantity", "signed_qty", "notional", "price", "mark_price", "trigger_price", "commission", "fee_total",
+  "funding_pnl", "gross_pnl", "net_pnl", "realized_pnl", "unrealized_pnl", "equity", "drawdown", "return"]);
+
+/** Build a detached, authorized raw graph BEFORE legacy joins, count/page or
+ * summaries run. A graph is never written back to the retained store/cache. */
+function scopedResourceProfile(profile: LoadedProfile, scope: AuthorizedExecutionReadScope, kind: ResourceKind, resourceId: string): LoadedProfile {
+  const snapshot = profile.snapshot;
+  if (!snapshot) return { ...profile, readScope: scope };
+  const population = scopeReadPopulation(scope), visibleResources = scopeResources(scope);
+  const strategies = new Map(population.strategyPairs.map(pair => [pair.strategy_id, pair.alpha_id]));
+  if (kind === "ALPHA") {
+    const canonical = visibleResources.some(resource => resource.kind === "ALPHA" && resource.id === resourceId)
+      ? resourceId : strategies.get(resourceId);
+    if (!canonical || !population.allowedTuples.some(tuple => tuple.alpha_id === canonical))
+      throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+  }
+  const relations: Record<string, ProjectionRelation> = {};
+  for (const alias of RESOURCE_RELATIONS[kind]) {
+    const key = RELATION[alias], source = snapshot.document.relations[key];
+    if (!source) continue;
+    if (alias === "broker_sync") {
+      // Physical custody/sync totals require their own commissioned capability.
+      // All-business internal-account visibility alone cannot authorize them.
+      relations[key] = { ...source, as_of: null, completeness: "PARTIAL", availability: "UNAVAILABLE",
+        reason_code: "EXECUTION_CUSTODY_READ_NOT_COMMISSIONED", items: [] };
+      continue;
+    }
+    const normalized = source.items.map(row => {
+      const strategy = typeof row.fields.strategy_id === "string" ? strategies.get(row.fields.strategy_id) : undefined;
+      return strategy && row.fields.alpha_id === undefined ? { ...row, fields: { ...row.fields, alpha_id: strategy } } : row;
+    });
+    let rows = scopedRetainedRows(scope, normalized);
+    // Eligible Portfolio discovery is a field-limited identity shell, even
+    // when the financial Portfolio row spans a hidden peer Alpha.
+    if (alias === "portfolios") {
+      const eligible = new Set(visibleResources.filter(resource => resource.kind === "PORTFOLIO").map(resource => resource.id));
+      const present = new Set(rows.map(row => row.fields.portfolio_id));
+      const shells = normalized.filter(row => typeof row.fields.portfolio_id === "string" && eligible.has(row.fields.portfolio_id) &&
+        !present.has(row.fields.portfolio_id)).map(row => ({ ...row, fields: Object.fromEntries(
+          ["portfolio_id", "name", "display_name"].filter(field => retainedFieldAllowed(scope, field) && field in row.fields)
+            .map(field => [field, row.fields[field]])) }));
+      rows = [...rows, ...shells];
+    }
+    if (alias === "venue_accounts") rows = rows.filter(row => typeof row.fields.binding_id === "string");
+    const unsafeMoney = normalized.some(row => projectionRowVisible(scope, row.fields) &&
+      Object.keys(row.fields).some(field => SCOPED_FINANCIAL_FIELDS.has(field) && !retainedFieldAllowed(scope, field)));
+    relations[key] = { ...source, as_of: null, completeness: "PARTIAL", reason_code: unsafeMoney ? "EXECUTION_READ_FIELD_POLICY_PENDING" :
+      source.availability === "UNAVAILABLE" ? "EXECUTION_READ_NOT_AVAILABLE" : "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+      availability: unsafeMoney ? "UNAVAILABLE" : source.availability, items: unsafeMoney ? [] : rows };
+  }
+  // Source checkpoints, raw row lineage and peer/global relation metadata
+  // are not part of this public revision. Bind only the exact authorized
+  // public fields/availability that a reader can observe.
+  const visibleFacts = RESOURCE_RELATIONS[kind].flatMap(alias => {
+    const value = relations[RELATION[alias]];
+    return value ? [{ relation: alias, availability: value.availability, reason_code: value.reason_code,
+      rows: value.items.map(row => copyFact(alias, row.fields, profile.environment)) }] : [];
+  });
+  const visibleDigest = `sha256:${createHash("sha256").update(JSON.stringify(visibleFacts)).digest("hex")}`;
+  return { ...profile, readScope: scope, snapshot: { ...snapshot, payloadDigest: visibleDigest,
+    document: { ...snapshot.document, relations } } };
+}
+
 function composeResourceResponse(input: ResourceResponseInput): Record<string, unknown> {
   const { config, workspaceId, kind, resourceId, requestedEnvironment, selections, found, merged, readAtMs } = input;
   const state = productState(found.length > 0, selections, merged);
   const asOf = oldestAsOf(merged);
   const asOfMs = asOf ? Date.parse(asOf) : null;
   const selectedEnvironment = chosenEnvironment(found);
-  const derived = found.length === 0 ? {} : resourceDerivedData(kind, merged);
+  const scoped = selections.some(selection => selection.profile.readScope?.mode === "SCOPED_V2");
+  const derived = found.length === 0 || scoped ? {} : resourceDerivedData(kind, merged);
   const data = found.length === 0 ? {} : {
     ...Object.fromEntries([...merged.entries()].map(([alias, selection]) => [alias, selection.rows])),
     ...derived,
-    [resourceObjectKey(kind)]: resourceSummary(kind, resourceId, found, merged),
+    [resourceObjectKey(kind)]: scoped ? scopedResourceSummary(kind, resourceId, found, merged) : resourceSummary(kind, resourceId, found, merged),
     profile_coverage: profileCoverage(selections),
   };
   const stageRelations: StageRelation[] = [...merged.entries()].map(([alias, selection]) => ({
@@ -362,7 +547,10 @@ function composeResourceResponse(input: ResourceResponseInput): Record<string, u
     })),
   ];
   return {
-    schema_version: `execution.${kind.toLowerCase()}-resource.v1`,
+    schema_version: `execution.${kind.toLowerCase()}-resource.${scoped ? "v2" : "v1"}`,
+    ...(scoped ? { visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", totals_scope: "VISIBLE_ROWS_ONLY",
+      is_full_portfolio: false, read_scope: selections.map(selection => ({ environment: selection.profile.environment,
+        policy_revision: selection.profile.readScope?.policyRevision ?? null })) } : {}),
     record_authority: "PORTAL_CONTROL",
     source_authority: "TRADING_SYSTEM",
     delivery_profile: requestedEnvironment ? profileIdFor(requestedEnvironment, config) : "MULTI_EXECUTION_PROFILES",
@@ -375,8 +563,8 @@ function composeResourceResponse(input: ResourceResponseInput): Record<string, u
     read_at: new Date(readAtMs).toISOString(),
     as_of: asOf,
     state,
-    freshness: mergedFreshness(merged),
-    completeness: mergedCompleteness(merged),
+    freshness: scoped && found.length === 0 ? "UNKNOWN" : mergedFreshness(merged),
+    completeness: scoped ? "PARTIAL" : mergedCompleteness(merged),
     projection: projectionMetadata(found),
     capabilities: [
       {
@@ -407,8 +595,12 @@ function resourcePayloadBoundedShell(input: ResourceResponseInput): Record<strin
     key, state: "PARTIAL", reasonCode, page: null, truncated: true,
   }));
   const identityState = resourceIdentityState(selections);
+  const scoped = selections.some(selection => selection.profile.readScope?.mode === "SCOPED_V2");
   return {
-    schema_version: `execution.${kind.toLowerCase()}-resource.v1`,
+    schema_version: `execution.${kind.toLowerCase()}-resource.${scoped ? "v2" : "v1"}`,
+    ...(scoped ? { visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", totals_scope: "VISIBLE_ROWS_ONLY",
+      is_full_portfolio: false, read_scope: selections.map(selection => ({ environment: selection.profile.environment,
+        policy_revision: selection.profile.readScope?.policyRevision ?? null })) } : {}),
     record_authority: "PORTAL_CONTROL",
     source_authority: "TRADING_SYSTEM",
     delivery_profile: requestedEnvironment ? profileIdFor(requestedEnvironment, config) : "MULTI_EXECUTION_PROFILES",
@@ -675,6 +867,7 @@ function scopedRelation(
   environment: ResourceEnvironment,
   alias: RelationAlias,
   scope: ResourceScope,
+  readScope?: AuthorizedExecutionReadScope,
 ): RelationSelection {
   const source = relation(snapshot, alias);
   if (!source) return { alias, environment, state: "UNAVAILABLE", reasonCode: `EDS04_${alias.toUpperCase()}_RELATION_NOT_PROJECTED`, page: null, truncated: false };
@@ -702,7 +895,7 @@ function scopedRelation(
     exactTotal: scoped.rows.length,
     filteredTotal: scoped.rows.length,
     scope: { state: reasonCode ? "PARTIAL" : "EXACT", reasonCode },
-    projection: {
+    projection: readScope?.mode === "SCOPED_V2" ? null : {
       epoch: snapshot.projectionEpoch,
       sequence: snapshot.projectionSequence,
       // A Manager continuation is a server-side drain checkpoint, never a
@@ -996,9 +1189,9 @@ function profileCoverage(selections: readonly { readonly profile: LoadedProfile;
     profile_id: selection.profile.profileId,
     state: selection.resolution.state,
     reason_code: selection.resolution.reasonCode,
-    projection_epoch: selection.profile.snapshot?.projectionEpoch ?? null,
-    projection_sequence: selection.profile.snapshot?.projectionSequence ?? null,
-    source_as_of: selection.profile.snapshot?.sourceAsOf?.toISOString() ?? null,
+    projection_epoch: selection.profile.readScope?.mode === "SCOPED_V2" ? null : selection.profile.snapshot?.projectionEpoch ?? null,
+    projection_sequence: selection.profile.readScope?.mode === "SCOPED_V2" ? null : selection.profile.snapshot?.projectionSequence ?? null,
+    source_as_of: selection.profile.readScope?.mode === "SCOPED_V2" ? null : selection.profile.snapshot?.sourceAsOf?.toISOString() ?? null,
   }]));
 }
 
@@ -1026,10 +1219,10 @@ function resourceIdentityReason(selections: readonly { readonly resolution: Scop
 function projectionMetadata(found: readonly { readonly profile: LoadedProfile }[]) {
   return found.flatMap((selection) => selection.profile.snapshot ? [{
     environment: selection.profile.environment,
-    epoch: selection.profile.snapshot.projectionEpoch,
-    sequence: selection.profile.snapshot.projectionSequence,
+    epoch: selection.profile.readScope?.mode === "SCOPED_V2" ? null : selection.profile.snapshot.projectionEpoch,
+    sequence: selection.profile.readScope?.mode === "SCOPED_V2" ? null : selection.profile.snapshot.projectionSequence,
     payload_digest: selection.profile.snapshot.payloadDigest,
-    last_successful_refresh_at: selection.profile.snapshot.lastSuccessfulRefreshAt.toISOString(),
+    last_successful_refresh_at: selection.profile.readScope?.mode === "SCOPED_V2" ? null : selection.profile.snapshot.lastSuccessfulRefreshAt.toISOString(),
   }] : []);
 }
 
@@ -1048,6 +1241,33 @@ function resourceIdentity(
     id: resourceId,
     label: labelFor(kind, parent, resourceId),
   };
+}
+
+/** V2 has a separate schema: approved raw facts remain rich panels, while a
+ * missing financial input stays null rather than inheriting V1's zero defaults.
+ * No native-custody difference, participant count or global Portfolio total is
+ * reconstructed from a restricted view. */
+function scopedResourceSummary(kind: ResourceKind, resourceId: string, found: readonly ResourceSelection[],
+  relations: ReadonlyMap<RelationAlias, MergedRelation>): Record<string, unknown> {
+  const scopes = found.flatMap(selection => selection.profile.readScope ? [selection.profile.readScope] : []);
+  const allows = (field: string) => scopes.length > 0 && scopes.every(scope => scopeAllowsField(scope, field));
+  const parent = found[0]?.resolution.parent ?? {};
+  const data = (alias: RelationAlias) => relations.get(alias)?.rows ?? [];
+  const result: Record<string, unknown> = { kind, id: resourceId, visibility: "SCOPED", coverage: "AUTHORIZED_ONLY",
+    financial_summary: { state: "UNAVAILABLE", reason_code: "SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS" } };
+  for (const field of ["alpha_id", "portfolio_id", "account_id", "binding_id", "name", "display_name", "state", "base_currency"])
+    if (allows(field) && field in parent) result[field] = parent[field];
+  // Every child has already passed the tuple predicate and field policy. Keep
+  // facts as facts; do not generate missing owner/version/lifecycle values.
+  result.deployments = data("deployments");
+  result.portfolios = data("portfolios").map(row => Object.fromEntries(
+    ["portfolio_id", "name", "display_name"].filter(field => allows(field) && field in row).map(field => [field, row[field]])));
+  result.metrics_availability = {
+    account_balance: metricState(data("account_balances"), relations.get("account_balances")),
+    current_position_pnl: metricState(data("positions"), relations.get("positions")),
+    equity_series: metricState(data("account_equity"), relations.get("account_equity")),
+  };
+  return result;
 }
 
 function resourceSummary(

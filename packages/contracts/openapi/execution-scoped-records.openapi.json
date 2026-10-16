@@ -1,0 +1,1435 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Execution scoped adapters and retained subject records",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/api/v1/execution/adapters/{environment}/{capabilityId}": {
+      "get": {
+        "operationId": "executionScopedAdapterGet",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "capabilityId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "admin.inspect",
+                "admin.performance",
+                "admin.broker-read",
+                "event.order-lifecycle"
+              ]
+            }
+          }
+        ],
+        "description": "V2 alternative selected by durable server policy only. Existing legacy compatibility DTO is unchanged. No caller-provided scope, raw relation selector, credentials or global metadata. This document publishes scoped consumers; not a browser opt-in. HTTP private,no-store.",
+        "responses": {
+          "200": {
+            "description": "Scoped response on V2 authority",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScopedAdapterResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "401": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "403": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "404": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "409": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "503": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          }
+        }
+      }
+    },
+    "/api/v1/execution/resources/alphas/{alphaId}/{relation}": {
+      "get": {
+        "operationId": "executionScopedAlphaRecordsGet",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "alphaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "relation",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "orders",
+                "fills"
+              ]
+            }
+          }
+        ],
+        "description": "V2 alternative selected by durable server policy only. Existing legacy compatibility DTO is unchanged. No caller-provided scope, raw relation selector, credentials or global metadata. This document publishes scoped consumers; not a browser opt-in. HTTP private,no-store.",
+        "responses": {
+          "200": {
+            "description": "Scoped response on V2 authority",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScopedSubjectRecordsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "401": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "403": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "404": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "409": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "503": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          }
+        }
+      }
+    },
+    "/api/v1/execution/resources/accounts/{accountId}/{relation}": {
+      "get": {
+        "operationId": "executionScopedAccountRecordsGet",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "relation",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "orders",
+                "fills"
+              ]
+            }
+          }
+        ],
+        "description": "V2 alternative selected by durable server policy only. Existing legacy compatibility DTO is unchanged. No caller-provided scope, raw relation selector, credentials or global metadata. This document publishes scoped consumers; not a browser opt-in. HTTP private,no-store.",
+        "responses": {
+          "200": {
+            "description": "Scoped response on V2 authority",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScopedSubjectRecordsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "401": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "403": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "404": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "409": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "503": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          }
+        }
+      }
+    },
+    "/api/v1/execution/durable-mirror/integrity": {
+      "get": {
+        "operationId": "executionScopedTechnicalHealthGet",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          }
+        ],
+        "description": "V2 alternative selected by durable server policy only. Existing legacy compatibility DTO is unchanged. No caller-provided scope, raw relation selector, credentials or global metadata. This document publishes scoped consumers; not a browser opt-in. HTTP private,no-store.",
+        "responses": {
+          "200": {
+            "description": "Scoped response on V2 authority",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TechnicalHealth"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "401": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "403": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "404": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "409": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "503": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          }
+        }
+      }
+    },
+    "/api/v1/execution/realtime/diagnostics": {
+      "get": {
+        "operationId": "executionScopedTechnicalDiagnosticsGet",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [],
+        "description": "V2 alternative selected by durable server policy only. Existing legacy compatibility DTO is unchanged. No caller-provided scope, raw relation selector, credentials or global metadata. This document publishes scoped consumers; not a browser opt-in. HTTP private,no-store.",
+        "responses": {
+          "200": {
+            "description": "Scoped response on V2 authority",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TechnicalDiagnostics"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "401": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "403": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "404": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "409": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "503": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PortalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "schemas": {
+      "ScopedRecordFields": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "alpha_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "alpha_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "strategy_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portfolio_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "deployment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "binding_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "instrument_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "position_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fill_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "venue": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "base_currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notional": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "allocation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "balance_total": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "balance_free": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "balance_locked": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "realized_pnl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unrealized_pnl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "net_pnl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "equity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timestamp_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "occurred_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": []
+      },
+      "ScopedAdapterGroup": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "enum": [
+              "PARTIAL",
+              "EMPTY",
+              "UNAVAILABLE"
+            ]
+          },
+          "completeness": {
+            "const": "PARTIAL"
+          },
+          "freshness": {
+            "const": "UNKNOWN"
+          },
+          "as_of_ms": {
+            "type": "null"
+          },
+          "returned_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 200
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "reason_code": {
+            "enum": [
+              "AUTHORIZED_RETAINED_FACTS",
+              "RETAINED_FACTS_NOT_PUBLISHED"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "$ref": "#/components/schemas/ScopedRecordFields"
+            }
+          }
+        },
+        "required": [
+          "state",
+          "completeness",
+          "freshness",
+          "as_of_ms",
+          "returned_count",
+          "truncated",
+          "reason_code",
+          "items"
+        ]
+      },
+      "ScopedAdapterResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.profile-read-adapter.v2"
+          },
+          "capability_id": {
+            "enum": [
+              "admin.inspect",
+              "admin.performance",
+              "admin.broker-read",
+              "event.order-lifecycle"
+            ]
+          },
+          "authority": {
+            "const": "PORTAL_SGP_PROJECTION"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "visibility": {
+            "const": "SCOPED"
+          },
+          "coverage": {
+            "const": "AUTHORIZED_ONLY"
+          },
+          "policy_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "bounds": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "maximum_rows_per_relation": {
+                "const": 200
+              },
+              "maximum_response_bytes": {
+                "const": 1048576
+              }
+            },
+            "required": [
+              "maximum_rows_per_relation",
+              "maximum_response_bytes"
+            ]
+          },
+          "relations": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "strategies": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "deployments": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "accounts": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "positions": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "reconciliation": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "performance": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "account_equity": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "portfolio_equity": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "balances": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "margin": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "account_sync": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "broker_sync": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "venue_accounts": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "orders": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "fills": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "sessions": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "command_journal": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "conditional_order_groups": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              },
+              "conditional_order_group_legs": {
+                "$ref": "#/components/schemas/ScopedAdapterGroup"
+              }
+            },
+            "required": []
+          }
+        },
+        "required": [
+          "schema_version",
+          "capability_id",
+          "authority",
+          "workspace_id",
+          "environment",
+          "profile_id",
+          "visibility",
+          "coverage",
+          "policy_revision",
+          "bounds",
+          "relations"
+        ]
+      },
+      "ScopedSubjectRecordsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.subject-records.v2"
+          },
+          "logical_operation_id": {
+            "enum": [
+              "executionAlphaOrdersV1",
+              "executionAlphaFillsV1",
+              "executionAccountOrdersV1",
+              "executionAccountFillsV1"
+            ]
+          },
+          "authority": {
+            "const": "PORTAL_SGP_RETAINED_CURRENT_WINDOW"
+          },
+          "source_authority": {
+            "const": "TRADING_SYSTEM_CURRENT_SOURCE"
+          },
+          "history_semantics": {
+            "const": "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY"
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "alpha",
+                  "account"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              }
+            },
+            "required": [
+              "kind",
+              "id"
+            ]
+          },
+          "read_scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "visibility": {
+                "const": "SCOPED"
+              },
+              "coverage": {
+                "const": "AUTHORIZED_ONLY"
+              },
+              "policy_revision": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              }
+            },
+            "required": [
+              "visibility",
+              "coverage",
+              "policy_revision"
+            ]
+          },
+          "state": {
+            "enum": [
+              "EMPTY",
+              "PARTIAL"
+            ]
+          },
+          "reason_code": {
+            "const": "SCOPED_RETAINED_WINDOW_NOT_TOTAL_HISTORY"
+          },
+          "coverage": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "retained_row_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "oldest_observed_at_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "newest_observed_at_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "retained_row_count",
+              "oldest_observed_at_ms",
+              "newest_observed_at_ms"
+            ]
+          },
+          "page": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500
+              },
+              "maximum_page_rows": {
+                "const": 500
+              },
+              "returned_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 500
+              },
+              "has_more": {
+                "type": "boolean"
+              },
+              "next_cursor": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "pattern": "^[A-Za-z0-9._-]+$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "limit",
+              "maximum_page_rows",
+              "returned_count",
+              "has_more",
+              "next_cursor"
+            ]
+          },
+          "records": {
+            "type": "array",
+            "maxItems": 500,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "record_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                "observed_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "values": {
+                  "$ref": "#/components/schemas/ScopedRecordFields"
+                }
+              },
+              "required": [
+                "record_id",
+                "observed_at_ms",
+                "values"
+              ]
+            }
+          }
+        },
+        "required": [
+          "schema_version",
+          "logical_operation_id",
+          "authority",
+          "source_authority",
+          "history_semantics",
+          "environment",
+          "profile_id",
+          "resource",
+          "read_scope",
+          "state",
+          "reason_code",
+          "coverage",
+          "page",
+          "records"
+        ]
+      },
+      "TechnicalHealth": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.technical-health.v1"
+          },
+          "read_scope": {
+            "const": "TECHNICAL_AUTHORIZED"
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "component": {
+            "const": "DURABLE_MIRROR"
+          },
+          "state": {
+            "enum": [
+              "READY",
+              "PARTIAL",
+              "UNAVAILABLE"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "read_scope",
+          "environment",
+          "profile_id",
+          "component",
+          "state",
+          "reason_code",
+          "revision",
+          "observed_at"
+        ]
+      },
+      "TechnicalDiagnostics": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.technical-diagnostics.v1"
+          },
+          "read_scope": {
+            "const": "TECHNICAL_AUTHORIZED"
+          },
+          "profiles": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "environment": {
+                  "enum": [
+                    "paper",
+                    "sandbox",
+                    "live"
+                  ]
+                },
+                "profile_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                "component": {
+                  "const": "LOCAL_PROJECTION"
+                },
+                "state": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                "health": {
+                  "enum": [
+                    "OBSERVED",
+                    "NOT_PUBLISHED"
+                  ]
+                },
+                "lag_ms": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "last_error_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "environment",
+                "profile_id",
+                "component",
+                "state",
+                "health",
+                "lag_ms",
+                "last_error_code"
+              ]
+            }
+          }
+        },
+        "required": [
+          "schema_version",
+          "read_scope",
+          "profiles"
+        ]
+      }
+    }
+  }
+}

@@ -14,8 +14,20 @@ import {
   DurableMirrorWriter,
 } from "./durable-mirror.contract";
 import { ProjectionRelation, ProjectionRow, ProjectionScalar } from "./profile-projection.repository";
+import { projectionScopeSql } from "../execution-v2/read-projection";
+import { assertExecutionReadScope, ExecutionReadScopeError, scopeReadPopulation,
+  type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
 
 type MirrorState = "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
+function assertMirrorScope(authority:AuthorizedExecutionReadScope,scope:DurableMirrorScope,relation:string){
+  assertExecutionReadScope(authority);
+  if(authority.workspaceId!==scope.workspaceId||authority.environment!==scope.environment||authority.profileId!==scope.profileId)
+    throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+  if(authority.mode!=="SCOPED_V2")return;
+  const binding=scopeReadPopulation(authority).binding;
+  if(!binding||![`subject-activity:${relation}`,`history:${relation}`,`financial:${relation}`].includes(binding.dataset_id))
+    throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+}
 type ResourceKind = "strategy" | "deployment" | "account" | "portfolio" | "binding";
 type MirrorObservation = NonNullable<DurableMirrorCurrentPage["observation"]> & { reason_code: string | null };
 
@@ -383,12 +395,19 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
       entity?: { field: string; value: string } | null;
       after?: { ts: string; rowId: string } | null;
       limit: number;
+      authorizedScope?: AuthorizedExecutionReadScope;
     },
+    reader?: PoolClient,
   ): Promise<{ rows: Array<{ rowId: string; ts: string; fields: Record<string, ProjectionScalar> }>; hasMore: boolean }> {
     const shape = subjectStorageShape(relationKey, retainedReview(this.config));
     if (!shape) return { rows: [], hasMore: false };
     const values: unknown[] = [scope.workspaceId, scope.environment, scope.profileId, relationKey];
     const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
+    if(query.authorizedScope){
+      assertMirrorScope(query.authorizedScope,scope,relationKey);
+      const predicate=projectionScopeSql(query.authorizedScope,"fields",values.length+1);
+      conditions.push(predicate.sql);values.push(...predicate.values);
+    }
     const entityColumn = subjectEntityColumn(query.entity);
     if (entityColumn) {
       values.push(query.entity!.value);
@@ -400,9 +419,9 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
       conditions.push(`(${shape.tsExpression}, ${shape.rowIdColumn}) < ($${values.length - 1}::timestamptz, $${values.length})`);
     }
     values.push(query.limit + 1);
-    const result = await this.pool.query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
+    const result = await (reader??this.pool).query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
       `SELECT ${shape.rowIdColumn} AS row_id,
-              to_char(${shape.tsExpression} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts,
+              to_char(${shape.tsExpression} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.${query.authorizedScope?.mode==="SCOPED_V2"?"US":"MS"}"Z"') AS ts,
               fields
          FROM ${shape.table}
         WHERE ${conditions.join(" AND ")}
@@ -417,22 +436,39 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
   }
 
   /** The subject's retained coverage in the mirror, on the same contract as the rows above. */
+  async scopedSubjectRead(scope:DurableMirrorScope,relationKey:string,
+    query:{entity?:{field:string;value:string}|null;after?:{ts:string;rowId:string}|null;limit:number;authorizedScope:AuthorizedExecutionReadScope}) {
+    return this.stableRead(async reader=>{
+      await reader.query("SET LOCAL statement_timeout='5000ms'");
+      const page=await this.subjectRows(scope,relationKey,query,reader);
+      const coverage=await this.subjectCoverage(scope,relationKey,query.entity,query.authorizedScope,reader);
+      return {page,coverage};
+    });
+  }
+
   async subjectCoverage(
     scope: DurableMirrorScope,
     relationKey: string,
     entity: { field: string; value: string } | null = null,
+    authorizedScope?: AuthorizedExecutionReadScope,
+    reader?: PoolClient,
   ): Promise<{ rowCount: number; oldestTs: string | null; newestTs: string | null }> {
     const shape = subjectStorageShape(relationKey, retainedReview(this.config));
     if (!shape) return { rowCount: 0, oldestTs: null, newestTs: null };
     const values: unknown[] = [scope.workspaceId, scope.environment, scope.profileId, relationKey];
     const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
+    if(authorizedScope){
+      assertMirrorScope(authorizedScope,scope,relationKey);
+      const predicate=projectionScopeSql(authorizedScope,"fields",values.length+1);
+      conditions.push(predicate.sql);values.push(...predicate.values);
+    }
     const entityColumn = subjectEntityColumn(entity);
     if (entityColumn) {
       values.push(entity!.value);
       conditions.push(`${shape.table === "execution_timeseries_history" ? `fields->>'${entityColumn}'` : entityColumn} = $${values.length}`);
     }
     if (shape.kind === "CURRENT") conditions.push(`fields->>'${shape.timestampField}' ~ '${CASTABLE_TIMESTAMP}'`);
-    const result = await this.pool.query<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(
+    const result = await (reader??this.pool).query<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(
       `SELECT count(*)::text AS row_count,
               to_char(min(${shape.tsExpression}) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS oldest_ts,
               to_char(max(${shape.tsExpression}) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS newest_ts
@@ -451,6 +487,7 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
     to?: string | null;
     limit?: number;
     after?: string | null;
+    authorizedScope?: AuthorizedExecutionReadScope;
   }): Promise<DurableMirrorRangePage> {
     return this.stableRead(async (client) => {
     const revision = await this.currentRevision(client, input);
@@ -459,9 +496,11 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
     const retained = retainedReview(this.config);
     const table = retained ? "execution_timeseries_history" : "execution_durable_mirror_range_rows";
     if (retained) {
+      if(input.authorizedScope)assertMirrorScope(input.authorizedScope,input,input.relationKey);
+      const predicate=input.authorizedScope?projectionScopeSql(input.authorizedScope,"fields",5):{sql:"TRUE",values:[]};
       const captured = await client.query(`SELECT 1 FROM execution_timeseries_history
-        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4 LIMIT 1`,
-        [input.workspaceId,input.environment,input.profileId,input.relationKey]);
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4 AND ${predicate.sql} LIMIT 1`,
+        [input.workspaceId,input.environment,input.profileId,input.relationKey,...predicate.values]);
       if (captured.rowCount) observation = {availability:"AVAILABLE",reason_code:"UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE",
         freshness:"STALE",completeness:"PARTIAL",as_of:observation?.as_of??null};
     }
@@ -472,7 +511,9 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
     const limit = pageLimit(input.limit);
     const range = checkedTimeRange(input.from ?? null, input.to ?? null);
     const resource = input.resource ? checkedResource(input.resource) : null;
-    const cursorContext = rangeCursorContext(input, limit, resource, range);
+    if(input.authorizedScope)assertMirrorScope(input.authorizedScope,input,input.relationKey);
+    const baseCursorContext = rangeCursorContext(input, limit, resource, range);
+    const cursorContext=input.authorizedScope?createHash("sha256").update(baseCursorContext).update(input.authorizedScope.fingerprint).digest("hex"):baseCursorContext;
     const boundary = input.after
       ? this.cursorCodec.decode(input.after, {
         resourceId: `execution-durable-range-v1:${input.relationKey}`,
@@ -484,8 +525,12 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
       : null;
     const values: unknown[] = [input.workspaceId, input.environment, input.profileId, input.relationKey];
     const where = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
+    if(input.authorizedScope){
+      const predicate=projectionScopeSql(input.authorizedScope,"fields",values.length+1);
+      where.push(predicate.sql);values.push(...predicate.values);
+    }
     if (range.from) { values.push(range.from); where.push(`ts >= $${values.length}::timestamptz`); }
-    if (range.to) { values.push(range.to); where.push(`ts <= $${values.length}::timestamptz`); }
+    if (range.to) { values.push(range.to); where.push(`ts ${input.authorizedScope?.mode==="SCOPED_V2"?"<":"<="} $${values.length}::timestamptz`); }
     if (resource) { values.push(resource.id); where.push(`${retained ? `fields->>'${resource.column}'` : resource.column}=$${values.length}`); }
     const coverage = await client.query<{
       retained_total: string;

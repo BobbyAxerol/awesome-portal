@@ -4,7 +4,8 @@ import type { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { ExecutionProfileProjectionRepository } from "./profile-projection.repository";
 import { retainedReview } from "./retained-read-profile";
-import { retainedOperationPage } from "./retained-operation-page";
+import { retainedOperationPage, authorizeNamedRetainedRelation, retainedConfiguredProfile, retainedRelationAction } from "./retained-operation-page";
+import { ExecutionReadScopes, ExecutionReadScopeError, AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
 import { AuthSession, PortalUser } from "../domain";
 import { ExecutionCurrentSourceProxy } from "./current-source.proxy";
 import {
@@ -38,6 +39,7 @@ export interface MaximumDataOperationPrincipal {
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
+  viewerWorkspaceId?: string;
 }
 
 export interface MaximumDataDeploymentQuery {
@@ -68,6 +70,7 @@ export class MaximumDataOperationService {
     private readonly continuations: MaximumDataContinuationRepository,
     @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig,
     @Optional() @Inject(ExecutionProfileProjectionRepository) private readonly projection?: ExecutionProfileProjectionRepository,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
 
   async deploymentPage(
@@ -78,9 +81,11 @@ export class MaximumDataOperationService {
     if (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > operation.pageBounds.maximumRows) {
       throw new MaximumDataOperationError("EDS01_OPERATION_QUERY_INVALID", 400);
     }
-    if (retainedReview(this.config)) {
+    const operationScope = await this.authorizeOperation(principal, managerRelationOperationByRelation(operation.relation)!, query);
+    const read = async () => {
+    if (retainedReview(this.config) || operationScope?.mode === "SCOPED_V2") {
       const page = await retainedOperationPage(this.config!, this.projection!, principal,
-        managerRelationOperationByRelation(operation.relation)!, query);
+        managerRelationOperationByRelation(operation.relation)!, query, this.readScopes);
       return { ...page, schema_version: "portal.execution.maximum-data.deployment-page.v1",
         publication_revision: operation.publicationRevision, logical_operation_id: operation.logicalOperationId,
         field_id: operation.fieldId, records: page.records.map(row => row.values) };
@@ -101,6 +106,8 @@ export class MaximumDataOperationService {
       maximumDataDeploymentPolicy(query.environment),
     );
     return this.translateDeploymentPage(response, query, scope);
+    };
+    return operationScope && this.readScopes ? this.readScopes.deliver(operationScope, read) : read();
   }
 
   /**
@@ -118,7 +125,10 @@ export class MaximumDataOperationService {
     if (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > MAXIMUM_DATA_INTAKE_V1.pageBounds.maximumRows) {
       throw new MaximumDataOperationError("EDS11R_OPERATION_QUERY_INVALID", 400);
     }
-    if (retainedReview(this.config)) return retainedOperationPage(this.config!, this.projection!, principal, operation, query);
+    const operationScope = await this.authorizeOperation(principal, operation, query);
+    const read = async () => {
+    if (retainedReview(this.config) || operationScope?.mode === "SCOPED_V2")
+      return retainedOperationPage(this.config!, this.projection!, principal, operation, query, this.readScopes);
     const binding = managerRelationProfileBinding(query.environment);
     const scope = relationContinuationScope(principal, query.environment, operation);
     const sourceCursor = query.cursor
@@ -131,6 +141,36 @@ export class MaximumDataOperationService {
       { limit: query.limit, ...(sourceCursor ? { cursor: sourceCursor } : {}) },
     );
     return this.translateRelationPage(response, operation, query, scope, binding.profileId);
+    };
+    return operationScope && this.readScopes ? this.readScopes.deliver(operationScope, read) : read();
+  }
+
+  private async authorizeOperation(principal: MaximumDataOperationPrincipal, operation: ManagerRelationOperation,
+    query: MaximumDataRelationQuery): Promise<AuthorizedExecutionReadScope | undefined> {
+    if (!this.readScopes) return undefined;
+    if (!this.config) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    if (!retainedReview(this.config) && this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
+      // Explicit current-source legacy reads do not require a retained workspace
+      // or local snapshot. Mint current actor/membership authority, not a routing
+      // probe; deliver() rechecks it before and after source work. V2/sticky
+      // activation cannot mint this dataset-less collection capability and must
+      // fail before upstream (including after deletion of an activated policy).
+      const scope = await this.readScopes.authorize(principal,
+        { environment: query.environment, profileId: managerRelationProfileBinding(query.environment).profileId },
+        { action: retainedRelationAction(operation.relation) });
+      if (scope.mode !== "LEGACY_COMPATIBILITY")
+        throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+      return scope;
+    }
+    if (!this.projection) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    const profile = retainedConfiguredProfile(this.config, query.environment);
+    if (principal.workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID)
+      throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    const snapshot = await this.projection.snapshotMetadata(principal.workspaceId, query.environment, profile);
+    // A V2 caller without a qualified local population fails here. It never
+    // takes a source first-page path whose hidden population cannot be scoped.
+    return authorizeNamedRetainedRelation(this.readScopes, principal, query.environment, profile,
+      operation, snapshot ?? undefined);
   }
 
   private async translateDeploymentPage(

@@ -2,10 +2,23 @@
 
 Ngày ghi: 2026-10-15 (Asia/Saigon). Phạm vi onboarding ban đầu là đọc guide,
 đối chiếu source chỉ đọc và chuẩn hóa rules/handoff. **Current update2026-10-16:**
-ELP2-00 audit delivered;01/02 local backend checkpoints landed ở `700aa6a4` và
-`b448c0be`;03 có186/186 focused PASS trên snapshot trước review cuối, latest
-delta và normal-hook commit còn pending;04 preparation only. Xem
+ELP2-00 audit delivered;01/02/03 local backend checkpoints landed ở `700aa6a4`,
+`b448c0be` và `c1d6b2dc`;03 normal hook/PG restore PASS (contracts425,
+API2,758 PASS/3 skipped);04 has uncommitted scope/query and initial History
+wiring, not mounted-reader certified. Xem
 [điểm tiếp tục hiện hành](../UNIFIED_IMPLEMENTATION_PLAN.md#elp2-batch-current-resume).
+Latest cell D: build PASS,277/279 tests PASS; two History cases FAIL (authority/
+cursor404 and source-cutover500 vs expected409), restore/tracking NOT_RUN.
+History contract artifacts exist but the new contract suite is NOT_RUN; the
+post-copy History regex tightening has no D receipt. Next: diagnose those
+failures, run only impacted tests, then complete other reader/delivery surfaces
+and whole04 gates. This is not route or full04 acceptance. Drafts remain
+uncommitted. [Exact result](evidence/ELP2-04/README.md#elp2-04-history-cell-d).
+At the latest plan review the goal service reports no active goal; Bobby has
+asked to arrange the next assignment, not restart implementation. Use the
+[current four-phase assignment card](../UNIFIED_IMPLEMENTATION_PLAN.md#elp2-batch-next-assignment).
+Earlier ACTIVE/PLAN_ONLY paragraphs below are historical;01–03 are reused,04
+is unfinished, frontend is still unassigned.
 Frontend chưa được giao; không có shared-runtime/Edge activation. Các đoạn
 onboarding/PLAN_ONLY bên dưới giữ lịch sử, không ghi đè current return này.
 

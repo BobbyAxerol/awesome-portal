@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionReadScopes, ExecutionReadScopeError, type AuthorizedExecutionReadScope,
+  type ReadScopeRequirement, scopeReadPopulation } from "../execution-v2/read-scope";
+import { scopedRetainedRows, fenceRetainedSnapshot, retainedFieldAllowed } from "./retained-operation-page";
+import { projectionRowVisible } from "../execution-v2/read-projection";
 import { ControlApiConfig } from "../config";
 import { projectionExpired } from "./retained-read-profile";
 import type { AuthSession, PortalUser } from "../domain";
@@ -19,6 +23,7 @@ export interface PortalDerivationPrincipal {
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
+  viewerWorkspaceId?: string;
 }
 
 export class PortalDerivationError extends Error {
@@ -69,14 +74,20 @@ const PORTFOLIO_FIELDS = new Set(["portfolio_id", "name", "base_currency", "stat
  */
 @Injectable()
 export class PortalDerivationsService {
+  private readonly scopedSnapshots = new WeakMap<ProfileProjectionSnapshot, {
+    original: ProfileProjectionSnapshot; scopes: AuthorizedExecutionReadScope[];
+    workspace: string; environment: Environment; profile: string;
+  }>();
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
 
   async sourceHealth(principal: PortalDerivationPrincipal, requested?: Environment): Promise<Record<string, unknown>> {
     const readAt = new Date();
     const environments = requested ? [requested] : PROFILE_ORDER;
+    const snapshots: ProfileProjectionSnapshot[] = [];
     const profiles = await Promise.all(environments.map(async (environment) => {
       const profileId = profileIdFor(environment, this.config);
       if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
@@ -85,16 +96,15 @@ export class PortalDerivationsService {
       if (!this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID || !profileId) {
         return healthEntry(environment, profileId, null, "UNAVAILABLE", "EDS05_PROFILE_NOT_CONFIGURED", readAt);
       }
-      const snapshot = await this.repository.snapshot(
-        this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,
-        environment,
-        profileId,
-      );
+      const snapshot = await this.readSnapshot(principal, environment, profileId, { action: "alpha.read" });
       if (!snapshot) return healthEntry(environment, profileId, null, "UNAVAILABLE", "N31_PROJECTION_NOT_READY", readAt);
-      if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
-        return healthEntry(environment, profileId, snapshot, "UNAVAILABLE", "N31_PROJECTION_STALE_CEILING_EXCEEDED", readAt);
-      }
-      return healthEntry(environment, profileId, snapshot, healthState(snapshot), null, readAt);
+      snapshots.push(snapshot);
+      const expired = projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt);
+      const profile = healthEntry(environment, profileId, snapshot, expired ? "UNAVAILABLE" : healthState(snapshot),
+        expired ? "N31_PROJECTION_STALE_CEILING_EXCEEDED" : null, readAt);
+      return this.scopedSnapshots.get(snapshot)?.scopes.some(scope => scope.mode === "SCOPED_V2")
+        ? { ...profile, as_of: null, as_of_ms: null, freshness: "UNKNOWN",
+          reason_code: expired ? "N31_PROJECTION_STALE_CEILING_EXCEEDED" : "EXECUTION_AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" } : profile;
     }));
     const state = aggregateState(profiles.map((profile) => profile.state as PublishedState));
     const inputDigest = digest(profiles.map((profile) => ({
@@ -103,6 +113,7 @@ export class PortalDerivationsService {
       state: profile.state,
       reason_code: profile.reason_code,
     })));
+    for (const snapshot of snapshots) await this.finish(snapshot);
     return {
       schema_version: "execution.derivation.source-health.v1",
       logical_operation_id: "executionSourceHealthV1",
@@ -130,7 +141,9 @@ export class PortalDerivationsService {
     deploymentId: string,
     environment: Environment,
   ): Promise<Record<string, unknown>> {
-    const { snapshot, profileId, readAt } = await this.requiredSnapshot(environment);
+    const { snapshot, profileId, readAt } = await this.requiredSnapshot(principal, environment,
+      { action: "alpha.read", resource: { kind: "DEPLOYMENT", id: deploymentId } },
+      [RELATION.deployments, RELATION.sessions, RELATION.orders, RELATION.fills]);
     const deployments = facts(snapshot, RELATION.deployments);
     const selected = deployments.filter((row) => text(row, "deployment_id") === deploymentId);
     const deploymentRelation = relation(snapshot, RELATION.deployments);
@@ -209,7 +222,8 @@ export class PortalDerivationsService {
     groupId: string,
     environment: Environment,
   ): Promise<Record<string, unknown>> {
-    const { snapshot, profileId, readAt } = await this.requiredSnapshot(environment);
+    const { snapshot, profileId, readAt } = await this.requiredSnapshot(principal, environment,
+      { action: "alpha.read" }, [RELATION.conditionalGroups, RELATION.conditionalLegs]);
     const groupsInput = input(snapshot, RELATION.conditionalGroups);
     const legsInput = input(snapshot, RELATION.conditionalLegs);
     const groupRelation = relation(snapshot, RELATION.conditionalGroups);
@@ -251,7 +265,9 @@ export class PortalDerivationsService {
     portfolioId: string,
     environment: Environment,
   ): Promise<Record<string, unknown>> {
-    const { snapshot, profileId, readAt } = await this.requiredSnapshot(environment);
+    const { snapshot, profileId, readAt } = await this.requiredSnapshot(principal, environment,
+      { action: "portfolio.read", resource: { kind: "PORTFOLIO", id: portfolioId } },
+      [RELATION.portfolios, RELATION.allocations, RELATION.balances]);
     const portfolioInput = input(snapshot, RELATION.portfolios);
     const allocationInput = input(snapshot, RELATION.allocations);
     const balanceInput = input(snapshot, RELATION.balances);
@@ -300,7 +316,9 @@ export class PortalDerivationsService {
     alphaId: string,
     environment: Environment,
   ): Promise<Record<string, unknown>> {
-    const { snapshot, profileId, readAt } = await this.requiredSnapshot(environment);
+    const { snapshot, profileId, readAt } = await this.requiredSnapshot(principal, environment,
+      { action: "alpha.read", resource: { kind: "ALPHA", id: alphaId } },
+      [RELATION.strategies, RELATION.deployments, RELATION.sessions, RELATION.orders, RELATION.fills]);
     const strategyInput = input(snapshot, RELATION.strategies);
     const strategies = facts(snapshot, RELATION.strategies).filter((row) => text(row, "alpha_id") === alphaId);
     if (strategies.length !== 1) {
@@ -348,7 +366,8 @@ export class PortalDerivationsService {
     });
   }
 
-  private async requiredSnapshot(environment: Environment): Promise<{ snapshot: ProfileProjectionSnapshot; profileId: string; readAt: Date }> {
+  private async requiredSnapshot(principal: PortalDerivationPrincipal, environment: Environment,
+    requirement: ReadScopeRequirement, relations: string[]): Promise<{ snapshot: ProfileProjectionSnapshot; profileId: string; readAt: Date }> {
     if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
       throw new PortalDerivationError("EDS05_LOCAL_PROJECTION_REQUIRED", 404, "Local execution projection is not enabled.");
     }
@@ -357,7 +376,7 @@ export class PortalDerivationsService {
     if (!workspaceId || !profileId) {
       throw new PortalDerivationError("EDS05_PROFILE_NOT_CONFIGURED", 503, "Execution profile is not configured.");
     }
-    const snapshot = await this.repository.snapshot(workspaceId, environment, profileId);
+    const snapshot = await this.readSnapshot(principal, environment, profileId, requirement, relations);
     if (!snapshot) throw new PortalDerivationError("N31_PROJECTION_NOT_READY", 503, "Execution projection is not ready.");
     const readAt = new Date();
     if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
@@ -366,7 +385,98 @@ export class PortalDerivationsService {
     return { snapshot, profileId, readAt };
   }
 
-  private envelope(
+  private async readSnapshot(principal: PortalDerivationPrincipal, environment: Environment, profile: string,
+    requirement: ReadScopeRequirement, keys: string[] = Object.values(RELATION)) {
+    const workspace = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
+    if (this.readScopes && principal.workspaceId !== workspace) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    const deployment = requirement.resource?.kind === "DEPLOYMENT" ? requirement.resource.id : undefined;
+    const mintRequirement = deployment ? { ...requirement, resource: undefined } : requirement;
+    const metadata = this.readScopes ? await this.repository.snapshotMetadata(workspace, environment, profile) : null;
+    const entry = await this.readScopes?.authorize(principal, { environment, profileId: profile }, { ...mintRequirement,
+      ...(metadata ? { dataset: { dataset_id: `relation:${keys[0] ?? RELATION.strategies}`, source_revision: metadata.payloadDigest,
+        projection_generation: metadata.projectionEpoch, catalogue_revision: metadata.sourceCatalogueSha256, window: null } } : {}) });
+    const original = entry?.mode === "SCOPED_V2" ? await this.repository.rawSnapshot(workspace, environment, profile)
+      : await this.repository.snapshot(workspace, environment, profile);
+    if (!original) {
+      if (entry) await this.readScopes!.deliver(entry, async () => undefined);
+      return null;
+    }
+    if (!entry || entry.mode === "LEGACY_COMPATIBILITY") {
+      // Shared cached DATA must never become a cross-caller authority slot.
+      const snapshot = entry ? { ...original } : original;
+      if (entry) this.scopedSnapshots.set(snapshot, { original, scopes: [entry], workspace, environment, profile });
+      return snapshot;
+    }
+    if (!metadata || metadata.payloadDigest !== original.payloadDigest || metadata.projectionEpoch !== original.projectionEpoch ||
+      metadata.sourceCatalogueSha256 !== original.sourceCatalogueSha256) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    const scopes = [entry];
+    const relations: Record<string, ProjectionRelation> = {};
+    for (const key of keys) {
+      const source = original.document.relations[key];
+      if (!source) continue;
+      const scope = await this.readScopes!.authorize(principal, { environment, profileId: profile }, { ...mintRequirement,
+        dataset: { dataset_id: `relation:${key}`, source_revision: original.payloadDigest,
+          projection_generation: original.projectionEpoch, catalogue_revision: original.sourceCatalogueSha256, window: null } });
+      scopes.push(scope);
+      if (deployment && !scopeReadPopulation(scope).allowedTuples.some(tuple => tuple.deployment_id === deployment))
+        throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+      let sourceRows = source.items;
+      if (key === RELATION.conditionalLegs) {
+        // The child has no economic tuple of its own. Join only through an
+        // unambiguous parent from this same immutable source revision.
+        const parents = original.document.relations[RELATION.conditionalGroups]?.items ?? [];
+        sourceRows = sourceRows.flatMap(row => {
+          const matches = parents.filter(parent => parent.fields.group_id === row.fields.group_id);
+          if (matches.length !== 1) return [];
+          const parent = matches[0]!.fields;
+          const anchors = Object.fromEntries(["alpha_id", "alpha_version_id", "strategy_id", "deployment_id", "portfolio_id", "account_id"]
+            .filter(field => parent[field] !== undefined).map(field => [field, parent[field]]));
+          // A child's explicit contradictory anchor must never be replaced.
+          return [{ ...row, fields: { ...anchors, ...row.fields } }];
+        });
+      }
+      const allowedRows = sourceRows.filter(row => projectionRowVisible(scope, row.fields));
+      const required = key === RELATION.sessions && keys.includes(RELATION.deployments) && requirement.resource?.kind === "DEPLOYMENT"
+        ? ["submitted_count", "risk_rejected_count", "broker_rejected_count", "filled_count"]
+        : key === RELATION.allocations ? ["allocated_capital", "max_capital", "currency"]
+        : key === RELATION.balances ? ["total", "free", "locked", "currency"]
+        : key === RELATION.conditionalGroups ? ["group_id"]
+        : key === RELATION.conditionalLegs ? ["group_id", "leg_id", "sequence"] : [];
+      if (allowedRows.length && required.some(field => !retainedFieldAllowed(scope, field))) {
+        throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+      }
+      const items = scopedRetainedRows(scope, allowedRows);
+      relations[key] = { source_id: source.source_id, relation: source.relation, availability: source.availability,
+        reason_code: "EXECUTION_AUTHORIZED_RETAINED_OBSERVATIONS_ONLY", as_of: latestTime(items.map(row => row.fields)),
+        freshness: "UNKNOWN", completeness: "PARTIAL", items };
+    }
+    if (scopes.length === 1) {
+      const scope = await this.readScopes!.authorize(principal, { environment, profileId: profile }, { ...mintRequirement,
+        dataset: { dataset_id: "derivation:empty", source_revision: original.payloadDigest,
+          projection_generation: original.projectionEpoch, catalogue_revision: original.sourceCatalogueSha256, window: null } });
+      if (deployment && !scopeReadPopulation(scope).allowedTuples.some(tuple => tuple.deployment_id === deployment))
+        throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+      scopes.push(scope);
+    }
+    const revision = projectionDigest({ relations, scopes: scopes.map(scope => scope.fingerprint) });
+    const snapshot: ProfileProjectionSnapshot = { ...original, document: { ...original.document, relations,
+      source_catalogue_sha256: undefined }, sourceAsOf: null, sourceCatalogueSha256: null,
+      payloadDigest: revision, projectionEpoch: revision, projectionSequence: 0, completeness: "PARTIAL" };
+    this.scopedSnapshots.set(snapshot, { original, scopes, workspace, environment, profile });
+    return snapshot;
+  }
+
+  private async finish(snapshot: ProfileProjectionSnapshot) {
+    const context = this.scopedSnapshots.get(snapshot);
+    if (!context || !this.readScopes) return;
+    for (const scope of context.scopes) await this.readScopes.deliver(scope, async () => undefined);
+    if (context.scopes.some(scope => scope.mode === "SCOPED_V2")) {
+      await fenceRetainedSnapshot(this.repository, context.workspace, context.environment, context.profile, context.original);
+      for (const scope of context.scopes) await this.readScopes.deliver(scope, async () => undefined);
+    }
+  }
+
+  private async envelope(
     principal: PortalDerivationPrincipal,
     operationId: string,
     environment: Environment,
@@ -380,8 +490,10 @@ export class PortalDerivationsService {
       reasonCode: string | null;
       data: Record<string, unknown>;
     },
-  ): Record<string, unknown> {
-    const asOf = oldestInputAsOf(value.inputs) ?? snapshot.sourceAsOf?.toISOString() ?? snapshot.lastSuccessfulRefreshAt.toISOString();
+  ): Promise<Record<string, unknown>> {
+    await this.finish(snapshot);
+    const scoped = this.scopedSnapshots.get(snapshot)?.scopes.some(scope => scope.mode === "SCOPED_V2");
+    const asOf = oldestInputAsOf(value.inputs) ?? (scoped ? null : snapshot.sourceAsOf?.toISOString() ?? snapshot.lastSuccessfulRefreshAt.toISOString());
     return {
       schema_version: `execution.derivation.${operationId.replace(/^execution/, "").replace(/V1$/, "").replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`).replace(/^-/, "")}.v1`,
       logical_operation_id: operationId,
@@ -402,7 +514,7 @@ export class PortalDerivationsService {
         epoch: snapshot.projectionEpoch,
         sequence: snapshot.projectionSequence,
         payload_digest: snapshot.payloadDigest,
-        last_successful_refresh_at: snapshot.lastSuccessfulRefreshAt.toISOString(),
+        last_successful_refresh_at: scoped ? null : snapshot.lastSuccessfulRefreshAt.toISOString(),
       },
       formula: value.formula,
       input_population: value.inputs.map((entry) => ({

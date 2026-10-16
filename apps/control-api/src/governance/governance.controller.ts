@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   Inject,
+  Optional,
   Param,
   Post,
   Query,
@@ -45,6 +46,7 @@ import { GovernanceError, GovernanceService } from "./governance.service";
 import { PaperExitService } from "./paper-exit.service";
 import { GovernanceReviewCaptureService } from "./review-capture.service";
 import { R2CaptureSchema, PaperExitCreateSchema, SandboxReviewNoteSchema } from "./review-capture.contracts";
+import { ExecutionReadScopes } from "../execution-v2/read-scope";
 
 interface GovernanceRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -63,6 +65,7 @@ export class GovernanceController {
     @Inject(OperationsWorkflowService) private readonly operationWorkflow: OperationsWorkflowService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
 
   @Get("/governance/review-capture-capabilities")
@@ -108,7 +111,8 @@ export class GovernanceController {
       throw new GovernanceError("INVALID_OPERATION_QUEUE_QUERY", "Invalid operation queue query.", 400);
     }
     const workspaceId = await this.workspace(request, parsed.data.workspace_id);
-    return this.operationWorkflow.list(request.portalUser, workspaceId, parsed.data);
+    return this.compatibleOperationParent(request, workspaceId,
+      () => this.operationWorkflow.list(request.portalUser, workspaceId, parsed.data));
   }
 
   @Post("/operations/:operation_id/acknowledge")
@@ -201,6 +205,7 @@ export class GovernanceController {
       taskId,
       { ...parsed.data, workspace_id: workspaceId },
       this.requestId(request),
+      { user: request.portalUser, session: request.portalSession, workspaceId, viewerWorkspaceId: request.portalWorkspaceId },
     );
   }
 
@@ -231,7 +236,7 @@ export class GovernanceController {
     @Query() query: Record<string, unknown>,
   ) {
     const workspaceId = await this.workspace(request, query.workspace_id);
-    return this.governance.list(request.portalUser, workspaceId, approvalListQuery(query));
+    return this.governance.list(request.portalUser, workspaceId, approvalListQuery(query), request.portalSession);
   }
 
   @Post("/governance/approvals")
@@ -267,6 +272,7 @@ export class GovernanceController {
       request.portalUser,
       workspaceId,
       governanceConditionsQuery(query),
+      request.portalSession,
     );
   }
 
@@ -276,7 +282,7 @@ export class GovernanceController {
     @Query() query: Record<string, unknown>,
   ) {
     const workspaceId = await this.workspace(request, query.workspace_id);
-    return this.governance.history(request.portalUser, workspaceId, approvalHistoryQuery(query));
+    return this.governance.history(request.portalUser, workspaceId, approvalHistoryQuery(query), request.portalSession);
   }
 
   @Get("/governance/approvals/:approval_id/r1")
@@ -286,7 +292,7 @@ export class GovernanceController {
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.governance.detail(request.portalUser, workspaceId, approvalId);
+    return this.governance.detail(request.portalUser, workspaceId, approvalId, request.portalSession);
   }
 
   @Get("/governance/approvals/:approval_id/r2")
@@ -296,7 +302,7 @@ export class GovernanceController {
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.governance.r2Detail(request.portalUser, workspaceId, approvalId);
+    return this.governance.r2Detail(request.portalUser, workspaceId, approvalId, request.portalSession);
   }
 
   @Get("/governance/approvals/:approval_id/live")
@@ -321,7 +327,7 @@ export class GovernanceController {
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.paperExit.detail(request.portalUser, workspaceId, reviewId);
+    return this.paperExit.detail(request.portalUser, workspaceId, reviewId, request.portalSession);
   }
 
   @Post("/commands/plans")
@@ -458,19 +464,34 @@ export class GovernanceController {
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    const execution = await this.operations.operationOrNull(
-      request.portalUser,
-      workspaceId,
-      operationId,
-    );
-    if (execution) return execution;
-    const paperExit = await this.paperExit.operationOrNull(
-      request.portalUser,
-      workspaceId,
-      operationId,
-    );
-    if (paperExit) return paperExit;
-    return this.governance.operation(request.portalUser, workspaceId, operationId);
+    return this.compatibleOperationParent(request, workspaceId, async () => {
+      const execution = await this.operations.operationOrNull(
+        request.portalUser,
+        workspaceId,
+        operationId,
+      );
+      if (execution) return execution;
+      const paperExit = await this.paperExit.operationOrNull(
+        request.portalUser,
+        workspaceId,
+        operationId,
+      );
+      if (paperExit) return paperExit;
+      return this.governance.operation(request.portalUser, workspaceId, operationId);
+    });
+  }
+
+  private async compatibleOperationParent<T>(request: GovernanceRequest, workspaceId: string, read: () => Promise<T>): Promise<T> {
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalWorkspaceId };
+    const fence = async () => {
+      if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2")
+        throw new GovernanceError("OPERATIONS_SCOPED_PARENT_NOT_COMMISSIONED", "Scoped operation records are not commissioned.", 503);
+    };
+    await fence();
+    const result = await read();
+    await fence();
+    return result;
   }
 
   private async workspace(request: GovernanceRequest, raw: unknown): Promise<string> {

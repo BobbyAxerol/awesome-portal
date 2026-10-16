@@ -6,7 +6,7 @@ import {
 import fastifyCookie from "@fastify/cookie";
 import fastifyRateLimit from "@fastify/rate-limit";
 import { Pool } from "pg";
-import { AppModule } from "./app.module";
+import { AppModule, type ControlApiDependencies } from "./app.module";
 import { ControlApiConfig } from "./config";
 import { HttpErrorFilter } from "./http-error.filter";
 
@@ -14,9 +14,10 @@ export async function createControlApiApp(
   config: ControlApiConfig,
   pool: Pool,
   executionPool?: Pool,
+  dependencies?: ControlApiDependencies,
 ): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule.register(config, pool, executionPool),
+    AppModule.register(config, pool, executionPool, dependencies),
     new FastifyAdapter({ trustProxy: true }),
     // Route-discovery logs drown the actual Vitest result in CI. Production
     // keeps Nest logging; only the isolated test application is silent.

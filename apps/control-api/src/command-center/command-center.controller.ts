@@ -1,6 +1,6 @@
 import { Controller, Get, Inject, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { CommandCenterError, CommandCenterService } from "./command-center.service";
@@ -8,6 +8,8 @@ import { CommandCenterError, CommandCenterService } from "./command-center.servi
 interface CommandCenterRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalSession: AuthSession;
+  portalViewerWorkspaceId?: string;
 }
 @UseGuards(SessionGuard)
 @Controller("/api/v1/execution")
@@ -30,6 +32,7 @@ export class CommandCenterController {
     if (!workspaceId || !(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
       throw new CommandCenterError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
-    return this.service.snapshot(request.portalUser, workspaceId);
+    return this.service.snapshot(request.portalUser, workspaceId, { user: request.portalUser, session: request.portalSession,
+      workspaceId, viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId });
   }
 }

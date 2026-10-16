@@ -13,6 +13,7 @@ import {
   querySigningKeys,
 } from "../config";
 import { AuthSession, PortalUser } from "../domain";
+import type { Pool } from "pg";
 import { newUlid } from "../id";
 import { ControlPlaneQueryService, KeysetCursorCodec, RawKeysetQuery } from "../query";
 import { exactPageReadTruth } from "../query/read-truth";
@@ -53,6 +54,43 @@ export class GovernanceError extends Error {
     super(message);
     this.name = "GovernanceError";
   }
+}
+
+/** Portal identity/session/workspace fence only; gate grants are checked by
+ * their owning service. No role escalation or read→decision implication. */
+export async function assertGovernanceReadSession(pool: Pick<Pool, "query">, user: PortalUser,
+  session: AuthSession, workspaceId: string): Promise<void> {
+  if (!session?.sessionId || session.userId !== user.userId || session.sessionVersion !== user.sessionVersion)
+    throw new GovernanceError("SESSION_REQUIRED", "Authentication is required.", 401);
+  const current = await pool.query(`SELECT EXISTS(SELECT 1 FROM workspace_members m
+      WHERE m.workspace_id=$4 AND m.user_id=u.user_id) AS member
+    FROM portal_users u JOIN auth_sessions s ON s.user_id=u.user_id
+    WHERE u.user_id=$1 AND u.session_version=$2 AND u.role=$5
+      AND u.status='ACTIVE' AND u.archived_at IS NULL AND NOT u.must_change_password
+      AND s.session_id=$3 AND s.session_version=u.session_version AND s.state='ACTIVE'
+      AND s.idle_expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()`,
+    [user.userId, user.sessionVersion, session.sessionId, workspaceId, user.role]);
+  if (!current.rows[0]) throw new GovernanceError("SESSION_REQUIRED", "Authentication is required.", 401);
+  if (!current.rows[0].member) throw new GovernanceError("WORKSPACE_ACCESS_DENIED", "Access denied.", 403);
+}
+
+/** Refusal-only Core policy selector. Missing session on the internal Research
+ * mirror never grants V2 access and is not claimed as an exact-session proof. */
+export async function assertGovernanceParentCompatibility(pool: Pick<Pool, "query">, user: PortalUser,
+  workspaceId: string, branch: string, session?: AuthSession): Promise<void> {
+  if (session) await assertGovernanceReadSession(pool, user, session, workspaceId);
+  const policy = await pool.query(`SELECT (
+    EXISTS(SELECT 1 FROM portal_access_policy_state p WHERE p.workspace_id=$1)
+    OR EXISTS(SELECT 1 FROM portal_access_policy_events e WHERE e.workspace_id=$1)
+    OR EXISTS(SELECT 1 FROM portal_access_grants_v2 g WHERE g.workspace_id=$1)
+  ) AS policy_seen`, [workspaceId]);
+  if (typeof policy.rows[0]?.policy_seen !== "boolean")
+    throw new GovernanceError("GOVERNANCE_READ_AUTHORITY_UNAVAILABLE", "Review authority is unavailable.", 503);
+  if (policy.rows[0].policy_seen) throw new GovernanceError("ELP2_GOVERNANCE_PARENT_READ_NOT_COMMISSIONED",
+    "Scoped governance records are not commissioned.", 503, {
+      branch, dependency: "QUALIFIED_TARGET_LINEAGE_AND_FIELD_PUBLICATION_REQUIRED",
+    });
+  if (session) await assertGovernanceReadSession(pool, user, session, workspaceId);
 }
 
 type PortalDecisionCommand = "GOVERNANCE_R1_DECISION" | "GOVERNANCE_R2_DECISION" | "GOVERNANCE_LIVE_DECISION";
@@ -190,7 +228,8 @@ export class GovernanceService {
     );
   }
 
-  async list(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+  async list(user: PortalUser, workspaceId: string, raw: RawKeysetQuery, session?: AuthSession) {
+    await this.assertParentReadCommissioned(user, workspaceId, "APPROVAL_INBOX", session);
     /*
      * A4-D14 · read the caller's real authority before building the page.
      *
@@ -208,6 +247,8 @@ export class GovernanceService {
       }, raw),
       this.repository.counts(workspaceId, visibleGates),
     ]);
+    await this.assertParentListUnchanged(user, workspaceId, visibleGates);
+    await this.assertParentReadCommissioned(user, workspaceId, "APPROVAL_INBOX", session);
     return {
       schema_version: "governance.approval-inbox.v1",
       record_authority: "PORTAL",
@@ -232,7 +273,8 @@ export class GovernanceService {
     };
   }
 
-  async history(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+  async history(user: PortalUser, workspaceId: string, raw: RawKeysetQuery, session?: AuthSession) {
+    await this.assertParentReadCommissioned(user, workspaceId, "APPROVAL_HISTORY", session);
     const access = await this.ownerAccess.effectiveAccess(user.userId);
     const visibleGates = approvalReadGates(user, access, workspaceId);
     const page = await this.query.list(
@@ -240,6 +282,8 @@ export class GovernanceService {
       { actorId: user.userId, workspaceId, role: user.role },
       raw,
     );
+    await this.assertParentListUnchanged(user, workspaceId, visibleGates);
+    await this.assertParentReadCommissioned(user, workspaceId, "APPROVAL_HISTORY", session);
     return {
       schema_version: "governance.approval-history.v1",
       record_authority: "PORTAL",
@@ -251,7 +295,8 @@ export class GovernanceService {
     };
   }
 
-  async conditions(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+  async conditions(user: PortalUser, workspaceId: string, raw: RawKeysetQuery, session?: AuthSession) {
+    await this.assertParentReadCommissioned(user, workspaceId, "CONDITIONS_REGISTER", session);
     const access = await this.ownerAccess.effectiveAccess(user.userId);
     const visibleGates = approvalReadGates(user, access, workspaceId);
     const page = await this.query.list(
@@ -259,6 +304,8 @@ export class GovernanceService {
       { actorId: user.userId, workspaceId, role: user.role },
       raw,
     );
+    await this.assertParentListUnchanged(user, workspaceId, visibleGates);
+    await this.assertParentReadCommissioned(user, workspaceId, "CONDITIONS_REGISTER", session);
     return {
       schema_version: "governance.conditions-register.v1",
       record_authority: "PORTAL_CONTROL",
@@ -302,6 +349,33 @@ export class GovernanceService {
     const access = await this.ownerAccess.effectiveAccess(user.userId);
     const denial = governanceDenial({ access, gate, mode, workspaceId });
     if (denial) throw new GovernanceError(denial, GOVERNANCE_DENIAL_MESSAGE[denial], 403);
+  }
+
+  /** Final read fence for compositions that await other sources after this
+   * gate's detail. Read capability never inherits the decision capability. */
+  async assertReadAuthority(user: PortalUser, session: AuthSession, workspaceId: string,
+    gate: "r1" | "r2" | "live"): Promise<void> {
+    await this.assertParentReadCommissioned(user, workspaceId, gate.toUpperCase(), session);
+    await assertGovernanceReadSession(this.repository.pool, user, session, workspaceId);
+    await this.assertGovernance(user, gate, "read", workspaceId);
+    await assertGovernanceReadSession(this.repository.pool, user, session, workspaceId);
+  }
+
+  /** Core-owned parents are not qualified Execution tuples. This selector
+   * only refuses an uncommissioned V2 branch; it never mints a capability.
+   * An internal Research mirror currently has no session argument: retain its
+   * accepted legacy gate checks, but NEVER let missing session select legacy
+   * when durable policy/history exists. HTTP/composition callers pass session
+   * and receive an exact lease/role/Core-workspace fence as well. */
+  private async assertParentReadCommissioned(user: PortalUser, workspaceId: string, branch: string,
+    session?: AuthSession): Promise<void> {
+    await assertGovernanceParentCompatibility(this.repository.pool, user, workspaceId, branch, session);
+  }
+
+  private async assertParentListUnchanged(user: PortalUser, workspaceId: string, visibleGates: readonly string[]) {
+    const current = approvalReadGates(user, await this.ownerAccess.effectiveAccess(user.userId), workspaceId);
+    if (!sameStrings([...visibleGates].sort(), [...current].sort()))
+      throw new GovernanceError("GOVERNANCE_READ_ACCESS_CHANGED", "Review access changed.", 409);
   }
 
   /**
@@ -494,8 +568,9 @@ export class GovernanceService {
     }
   }
 
-  async detail(user: PortalUser, workspaceId: string, approvalId: string) {
+  async detail(user: PortalUser, workspaceId: string, approvalId: string, session?: AuthSession) {
     await this.assertGovernance(user, "r1", "read", workspaceId);
+    await this.assertParentReadCommissioned(user, workspaceId, "R1", session);
     const snapshot = await this.repository.detail(workspaceId, approvalId);
     if (!snapshot || snapshot.approval.gate !== "R1") {
       throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
@@ -520,7 +595,7 @@ export class GovernanceService {
     const mayDecideR1 = await this.governance(user, "r1", "decide", workspaceId);
     if (!mayDecideR1 || alreadyDecided) locks.push("NOT_ELIGIBLE");
 
-    return {
+    const response = {
       schema_version: "governance.r1-review.v1",
       record_authority: "PORTAL",
       workspace_id: workspaceId,
@@ -609,6 +684,9 @@ export class GovernanceService {
         ],
       },
     };
+    await this.assertGovernance(user, "r1", "read", workspaceId);
+    await this.assertParentReadCommissioned(user, workspaceId, "R1", session);
+    return response;
   }
 
   /**
@@ -616,9 +694,13 @@ export class GovernanceService {
    * issue a capital-preview request. This is a read model, not an R2 decision
    * or execution authorization.
    */
-  async r2Detail(user: PortalUser, workspaceId: string, approvalId: string) {
+  async r2Detail(user: PortalUser, workspaceId: string, approvalId: string, session?: AuthSession) {
     await this.assertGovernance(user, "r2", "read", workspaceId);
-    return this.r2Payload(user, workspaceId, approvalId);
+    await this.assertParentReadCommissioned(user, workspaceId, "R2", session);
+    const response = await this.r2Payload(user, workspaceId, approvalId);
+    await this.assertGovernance(user, "r2", "read", workspaceId);
+    await this.assertParentReadCommissioned(user, workspaceId, "R2", session);
+    return response;
   }
 
   /*
@@ -743,6 +825,7 @@ export class GovernanceService {
     approvalId: string,
   ) {
     await this.assertGovernance(user, "live", "read", workspaceId);
+    await this.assertParentReadCommissioned(user, workspaceId, "LIVE", session);
     const backbone = await this.r2Payload(user, workspaceId, approvalId, "LIVE_GATE") as Record<string, unknown>;
     const data = backbone.data as { approval?: { subject_id?: unknown } } | undefined;
     const subjectId = data?.approval?.subject_id;
@@ -764,7 +847,7 @@ export class GovernanceService {
       .reduce((count, key) => count + (Array.isArray(sourceData[key]) ? sourceData[key].length : 0), 0);
     const liveKpiState = currentSource.state === "unavailable" ? "UNAVAILABLE"
       : sourceFacts === 0 ? "EMPTY" : currentSource.completeness === "PARTIAL" ? "PARTIAL" : "AVAILABLE";
-    return {
+    const response = {
       schema_version: "governance.live-review.v1",
       record_authority: "PORTAL_CONTROL",
       workspace_id: workspaceId,
@@ -789,6 +872,8 @@ export class GovernanceService {
       source_side_effect_requested: false,
       production_command_active: false,
     };
+    await this.assertReadAuthority(user, session, workspaceId, "live");
+    return response;
   }
 
   async plan(user: PortalUser, input: PlanInput, requestId: string) {

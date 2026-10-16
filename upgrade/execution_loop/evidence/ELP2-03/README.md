@@ -1,11 +1,12 @@
 # ELP2-03 — Scoped policy, delegation and TS membership proposals
 
-Status: IN_PROGRESS / BACKEND_IMPLEMENTATION. Assigned in the active
-01→04 goal;02 preservation/landing checkpoint passed at
-`b448c0be655817dc49dd02f86aa2544e64c00d48` (normal hook21748 exit0,
-contracts388/API2,607 PASS; identity18/18, retained-review8/8, restore PASS).
-Frontend NOT_STARTED_BY_OWNER_DIRECTION. Current focused receipts are recorded
-below; neither implementation presence nor a disposable test is runtime activation.
+Status: LOCAL_TECHNICAL_CHECKPOINT_LANDED / EXTERNAL_GATES_OPEN. Assigned in
+the active01→04 goal;03 now landed at
+`c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64` through normal hook89719 exit0.
+See the [final gate and cleanup](#landed-technical-checkpoint--normal-hook89719).
+Original TS acceptance and reviewed preset/disclosure remain OPEN.
+Frontend NOT_STARTED_BY_OWNER_DIRECTION; a disposable test is not runtime
+activation. Earlier IN_PROGRESS/failed-hook records below are historical.
 
 ## Entry and scope
 
@@ -352,3 +353,49 @@ network, credentials, app config or runtime mounts. No test was removed or
 weakened. The next normal-hook attempt must certify the corrected packaging
 and final API/restore snapshot; the old focused186 result is not reused for
 these changed assertions.
+
+## Landed technical checkpoint — normal hook89719
+
+Observed2026-10-15T21:49Z (2026-10-16 Asia/Saigon). Supersedes the pending
+landing/failed packaging status above; historical attempts are not erased.
+
+- Commit `c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64`, parent02 `b448c0be`,
+  on `docs/research-loop-plan`;39 files,+8,974/−113. Includes generated
+  contracts/tests/docs and04 preparation inventory, not04 enforcement.
+- Normal commit session89719 exited0. Networkless contracts:52 files,
+  **425 tests PASS**. Clean Control API build PASS. Real disposable PostgreSQL
+  API suite:279 files PASS/2 skipped, **2,758 tests PASS/3 skipped**,755.80s.
+- Affected final suites: transactional70, policy63, legacy grants42,
+  identity18; all193 passed and are already included in2,758, not additive
+  coverage. Retained-review8 also passed; no previous snapshot is substituted.
+- Custom dump/restore matched all four nonempty access-store row digests and
+  the existing56-entry migration/history signature. Restore fixture is
+  TEST_ONLY, isolated to `portal_control_test`, not seeded runtime policy.
+- Official generation/snapshot,281-route census, capability/persistence
+  inventory, tracking, static release fail-closed checks and monorepo verify
+  passed. Historical N29/EDS-12 templates report runtime_effect NONE; these
+  checks do not qualify a new deployed release.
+
+Resources: one PG/one serial API worker, configured total4CPU/4GiB. Point
+sample only (not peaks): Node879.3MiB/3GiB and99.91%CPU; PG71.45MiB/1GiB
+and0.03%CPU. Existing contracts-cell CPU/RAM ceilings were not enforced by
+its historical script and peak usage is NOT_MEASURED; do not claim otherwise.
+No parallel heavy lane ran. Exact containers `control-api-test-node-1888374`,
+`control-api-test-postgres-1888374` and network `control-api-test-net-1888374`
+were absent after the script trap. Host closeout11,681MiB available/158GiB
+disk free (75% used). Cleanup **NO_ACTION_NEEDED**; no broad prune.
+
+**Verdict:** local03 technical dependency for04 is ready. Original mandatory
+actual TS acceptance/preset-field-policy reviews remain OPEN per canonical00
+requests002/003; qualified fixture receipt is not TS runtime acceptance.
+Consumer remains NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW.
+No new bidirectional request after this closeout; existing requests retain
+owners/done-when in00. See [contract handoff](contract-handoff.md).
+
+Backend next:04 read enforcement from the landed producer pin, preserving
+explicit legacy compatibility without denial fallback.05 is outside this
+batch. Claude next, only when assigned: M10 access preview/policy states using
+the eight generated operations; do not grant rights from UI or TEST_ONLY
+fixtures. No frontend/shared preview/HK/production changes or push occurred.
+This post-commit result journal is awaiting the next coherent normal-hook
+delivery; no second full hook is started solely for Markdown.

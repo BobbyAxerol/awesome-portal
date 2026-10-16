@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
+import { ExecutionReadScopeError, type ReadScopePrincipal } from "../execution-v2/read-scope";
 import {
   ExecutionProfileReadAdapterService,
   ProjectionAdapterError,
@@ -148,10 +149,13 @@ export class ExecutionOperationsService {
     // this type says so rather than leaving every use to guess.
     input: OperatorTaskRunRequest & { workspace_id: string },
     requestId: string,
+    trustedPrincipal?: ReadScopePrincipal,
   ) {
     if (user.role !== "ADMIN") {
       throw new GovernanceError("ADMIN_ROLE_REQUIRED", "Access denied.", 403);
     }
+    if (trustedPrincipal && (trustedPrincipal.user.userId !== user.userId || trustedPrincipal.workspaceId !== input.workspace_id))
+      throw new GovernanceError("WORKSPACE_NOT_FOUND", "The requested workspace is not available.", 404);
     const task = this.validatedTask(taskId, input.params);
     if (task.mode !== "READ") {
       throw new GovernanceError("COMMAND_RUN_READ_ONLY", "Run is available only for R0 tasks.", 409);
@@ -161,7 +165,7 @@ export class ExecutionOperationsService {
     if (classification.state === "CONNECTED" && adapter !== null) {
       const environment = localTaskEnvironment(task.taskId, input.params);
       try {
-        const result = await this.localReads.read(input.workspace_id, environment, adapter, input.params);
+        const complete = async (result: unknown) => {
         const resultDigest = digest(result);
         await this.audit.record({
           eventId: newUlid("audit"),
@@ -192,9 +196,12 @@ export class ExecutionOperationsService {
           response_digest: resultDigest,
           result,
         };
+        };
+        return await (trustedPrincipal ? this.localReads.readTaskAuthorized(trustedPrincipal, environment, adapter, input.params, complete)
+          : complete(await this.localReads.read(input.workspace_id, environment, adapter, input.params)));
       } catch (error) {
-        const code = error instanceof ProjectionAdapterError ? error.code : "PHASE2_LOCAL_TASK_FAILED";
-        const status = error instanceof ProjectionAdapterError ? error.status : 503;
+        const code = error instanceof ProjectionAdapterError || error instanceof ExecutionReadScopeError ? error.code : "PHASE2_LOCAL_TASK_FAILED";
+        const status = error instanceof ProjectionAdapterError || error instanceof ExecutionReadScopeError ? error.status : 503;
         await this.audit.record({
           eventId: newUlid("audit"), eventType: "execution.command.local_read_failed",
           actorUserId: user.userId, workspaceId: input.workspace_id, requestId,

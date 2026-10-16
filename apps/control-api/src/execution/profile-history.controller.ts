@@ -13,6 +13,7 @@ export class ExecutionProfileHistoryController {
   ) {}
 
   @Get("/:environment/:relationKey")
+  @Header("Cache-Control", "private, no-store")
   @Header("Deprecation", "true")
   @Header("Link", '</api/v1/execution/views/equity-chart>; rel="successor-version"')
   async read(
@@ -24,7 +25,11 @@ export class ExecutionProfileHistoryController {
     if (!(["paper", "sandbox", "live"] as const).includes(rawEnvironment as ProjectionEnvironment)) {
       throw new HistoryReadError("N33_PROFILE_ENVIRONMENT_INVALID", 404);
     }
-    await this.readAuthority.authorize(request, rawEnvironment as ProjectionEnvironment);
-    return this.history.read(rawEnvironment as ProjectionEnvironment, relationKey, query);
+    if (query.workspace_id !== undefined && typeof query.workspace_id !== "string")
+      throw new HistoryReadError("N33_HISTORY_QUERY_INVALID", 400);
+    const principal = await this.readAuthority.authorize(request, rawEnvironment as ProjectionEnvironment,
+      query.workspace_id as string | undefined);
+    const { workspace_id: _workspace, ...parameters } = query;
+    return this.history.readAuthorized(principal, rawEnvironment as ProjectionEnvironment, relationKey, parameters);
   }
 }

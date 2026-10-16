@@ -57,6 +57,7 @@ trap cleanup EXIT
 # application source are mounted later, read-only, in a networkless container.
 cp "${CONTRACTS_DIR}/package.json" "${CONTRACTS_DIR}/package-lock.json" "${DEPS_DIR}/"
 "${DOCKER[@]}" run --rm --network bridge --read-only \
+  --cpus 3 --memory 3g --pids-limit 512 \
   -u "${CONTAINER_USER}" \
   -v "${DEPS_DIR}:/deps" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
@@ -73,6 +74,8 @@ mkdir -p \
   "${WORKSPACE_DIR}/apps/control-api/src/research" \
   "${WORKSPACE_DIR}/apps/control-api/src/repos" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2" \
+  "${WORKSPACE_DIR}/apps/control-api/src/manager-lists" \
+  "${WORKSPACE_DIR}/apps/control-api/src/resource-read" \
   "${WORKSPACE_DIR}/apps/portal/backend/src/portal_api/domain" \
   "${WORKSPACE_DIR}/upgrade/research_loop/evidence/P02" \
   "${WORKSPACE_DIR}/upgrade/execution_loop/evidence/ELP2-01" \
@@ -101,7 +104,18 @@ cp -a \
 # credentials, node_modules or any runtime mount. The test cell stays networkless.
 cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/history.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/profile-adapter.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/subject-activity.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/technical-read.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/retained-context.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"
+# ELP2-04 parser parity stays pure; no Nest services or application runtime
+# dependencies are copied into the networkless contract verification cell.
+cp -a "${ROOT_DIR}/apps/control-api/src/manager-lists/scoped-manager.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/manager-lists/"
+cp -a "${ROOT_DIR}/apps/control-api/src/resource-read/scoped-resource.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/resource-read/"
 # Access validation reuses the finite capability vocabulary. Its PostgreSQL
 # imports are type-only: copying this explicit dependency opens no DB/runtime
 # access and keeps contract/parser parity in the networkless test cell.
@@ -155,6 +169,7 @@ mv "${DEPS_DIR}/node_modules" "${WORKSPACE_DIR}/node_modules"
 ln -s ../../node_modules "${WORKSPACE_DIR}/packages/contracts/node_modules"
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network none --read-only \
+  --cpus 3 --memory 3g --pids-limit 512 \
   --label "io.primus.contract-test.owner=${DEPS_DIR}" \
   -u "${CONTAINER_USER}" \
   -v "${WORKSPACE_DIR}:/repo" \

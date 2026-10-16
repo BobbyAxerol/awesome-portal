@@ -11,6 +11,7 @@ export interface ExecutionReadRequest {
   portalUser: PortalUser;
   portalSession: AuthSession;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
 }
 
 /** Authorizes the accepted mirror, never relabels it as a personal workspace. */
@@ -33,7 +34,8 @@ export class ExecutionLocalReadAuthority {
     if (environment !== undefined && !this.profileEnabled(environment)) {
       throw new LocalRealtimeError("EXECUTION_PROFILE_READ_DISABLED", 404);
     }
-    return { user: request.portalUser, session: request.portalSession, workspaceId };
+    return { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId };
   }
 
   profileEnabled(environment: ProjectionEnvironment): boolean {

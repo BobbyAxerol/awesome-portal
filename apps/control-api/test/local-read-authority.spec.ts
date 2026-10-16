@@ -82,7 +82,10 @@ describe("BE-R2-8 authenticated local read authority", () => {
     for (const route of routes) {
       const response = await get("ar01-outsider", route);
       expect(response.statusCode, route).toBe(404);
-      expect(response.json().error.code, route).toBe("WORKSPACE_NOT_FOUND");
+      // The scoped technical boundary intentionally uses the same opaque
+      // not-available refusal for missing workspace and missing authority.
+      expect(response.json().error.code, route).toBe(route === "/realtime/diagnostics"
+        ? "EXECUTION_READ_NOT_AVAILABLE" : "WORKSPACE_NOT_FOUND");
     }
     expect(read).not.toHaveBeenCalled();
   });

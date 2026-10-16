@@ -1,0 +1,119 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "cases": [
+    {
+      "type": "ScopedHistoryResponse",
+      "value": {
+        "schema_version": "portal.execution.timeseries-history.v2",
+        "authority": "PORTAL_SGP_HISTORY_MIRROR",
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "relation_key": "manager.performance:account_equity_snapshots",
+        "state": "AVAILABLE",
+        "completeness": "PARTIAL",
+        "reason_code": "N33_RETAINED_RANGE_NOT_AUTHORITATIVE_HISTORY",
+        "read_scope": {
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "policy_revision": "TEST_ONLY-r1"
+        },
+        "coverage": {
+          "basis": "EXACT_AUTHORIZED_RETAINED_RANGE",
+          "row_count": 2,
+          "oldest_ms": 1790812800000,
+          "newest_ms": 1790816400000,
+          "range": "START_INCLUSIVE_END_EXCLUSIVE"
+        },
+        "page": {
+          "returned_count": 2,
+          "limit": 500,
+          "maximum_response_bytes": 1048576,
+          "has_more": false,
+          "next_cursor": null
+        },
+        "items": [
+          {
+            "timestamp_ms": 1790812800000,
+            "alpha_id": "alpha_TEST_ONLY",
+            "equity": "100.1234567890123456789",
+            "realized_pnl": "0",
+            "currency": "USD"
+          },
+          {
+            "timestamp_ms": 1790816400000,
+            "alpha_id": "alpha_TEST_ONLY",
+            "equity": null,
+            "realized_pnl": "-0.001",
+            "currency": "USD"
+          }
+        ]
+      }
+    },
+    {
+      "type": "ScopedHistoryResponse",
+      "value": {
+        "schema_version": "portal.execution.timeseries-history.v2",
+        "authority": "PORTAL_SGP_HISTORY_MIRROR",
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "relation_key": "manager.performance:account_equity_snapshots",
+        "state": "EMPTY",
+        "completeness": "PARTIAL",
+        "reason_code": "N33_RETAINED_RANGE_NOT_AUTHORITATIVE_HISTORY",
+        "read_scope": {
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "policy_revision": "TEST_ONLY-r1"
+        },
+        "coverage": {
+          "basis": "EXACT_AUTHORIZED_RETAINED_RANGE",
+          "row_count": 0,
+          "oldest_ms": null,
+          "newest_ms": null,
+          "range": "START_INCLUSIVE_END_EXCLUSIVE"
+        },
+        "page": {
+          "returned_count": 0,
+          "limit": 500,
+          "maximum_response_bytes": 1048576,
+          "has_more": false,
+          "next_cursor": null
+        },
+        "items": []
+      }
+    },
+    {
+      "type": "LegacyHistoryResponse",
+      "value": {
+        "schema_version": "portal.execution.timeseries-history.v1",
+        "authority": "PORTAL_SGP_HISTORY_MIRROR",
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "relation_key": "manager.performance:account_equity_snapshots",
+        "state": "AVAILABLE",
+        "completeness": "PARTIAL",
+        "reason_code": "N33_RETAINED_RANGE_NOT_AUTHORITATIVE_HISTORY",
+        "coverage": {
+          "basis": "EXACT_REQUESTED_RETAINED_RANGE",
+          "row_count": 1,
+          "oldest_ts": "2026-10-01T00:00:00.000Z",
+          "newest_ts": "2026-10-01T00:00:00.000Z"
+        },
+        "page": {
+          "returned_count": 1,
+          "limit": 500,
+          "maximum_response_bytes": 1048576,
+          "has_more": false,
+          "next_after_ts": null,
+          "next_after_id": null
+        },
+        "items": [
+          {
+            "ts": "2026-10-01T00:00:00.000Z",
+            "equity": "100"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { Controller, Get, Header, Inject, Query, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, Header, Inject, Optional, Query, Req, UseGuards } from "@nestjs/common";
 import type { Pool } from "pg";
 import { z } from "zod";
 import type { ControlApiConfig } from "../config";
@@ -10,6 +10,11 @@ import type { ExecutionReadRequest } from "./local-read-authority";
 import { retainedReview, RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES } from "./retained-read-profile";
 import { profileProjectionCatalog } from "./profile-projection.catalog";
 import { LocalRealtimeError } from "./profile-realtime.service";
+import { ExecutionProfileProjectionRepository, type ProfileProjectionSnapshot } from "./profile-projection.repository";
+import { ExecutionReadScopes, ExecutionReadScopeError, type ReadScopePrincipal,
+  type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
+import { retainedContextV2Schema, type RetainedContextPanelV2, type RetainedContextProfileV2 } from "../execution-v2/retained-context.contract";
+import { scopedRetainedRows, fenceRetainedSnapshot } from "./retained-operation-page";
 
 export const RetainedReviewQuery = z.object({workspace_id:z.string().min(1).max(128).optional()}).strict();
 
@@ -20,7 +25,9 @@ export class ExecutionRetainedReviewController {
   constructor(@Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(EXECUTION_DATA_POOL) private readonly pool: Pool,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
-    @Inject(OwnerAccessService) private readonly owner: OwnerAccessService) {}
+    @Inject(OwnerAccessService) private readonly owner: OwnerAccessService,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
+    @Optional() @Inject(ExecutionProfileProjectionRepository) private readonly projections?: ExecutionProfileProjectionRepository) {}
 
   @Get("/retained-review")
   @Header("Cache-Control", "private, no-store")
@@ -31,12 +38,23 @@ export class ExecutionRetainedReviewController {
     const workspace=this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
     if((query.data.workspace_id!==undefined && query.data.workspace_id!==workspace) ||
       !await this.workspaces.canReadExecution(workspace,request.portalUser.userId)) throw new LocalRealtimeError("WORKSPACE_NOT_FOUND",404);
-    const profiles=await this.profileViews(workspace);
+    const principal: ReadScopePrincipal = { user: request.portalUser, session: request.portalSession, workspaceId: workspace,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId };
+    const mode = await this.readScopes?.selectionMode(principal);
+    const scoped = mode === "SCOPED_V2" ? await this.scopedProfileViews(principal) : undefined;
+    const profiles=scoped?.profiles ?? await this.profileViews(workspace);
     // A concurrent revoke while a cold data view was being computed must
     // not turn a shared immutable data read into cached caller authority.
     if(!await this.workspaces.canReadExecution(workspace,request.portalUser.userId)) throw new LocalRealtimeError("WORKSPACE_NOT_FOUND",404);
     const access=await this.owner.effectiveAccess(request.portalUser.userId);
-    return {schema_version:"portal.execution.retained-review.v1",read_profile:"retained_review_v1",workspace_id:workspace,
+    if (scoped) {
+      for (const scope of scoped.scopes) await this.readScopes!.deliver(scope, async () => undefined);
+      for (const item of scoped.snapshots) await fenceRetainedSnapshot(this.projections!, workspace, item.environment, item.profile, item.snapshot);
+      for (const scope of scoped.scopes) await this.readScopes!.deliver(scope, async () => undefined);
+    }
+    if (mode && await this.readScopes!.selectionMode(principal) !== mode)
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    const response={schema_version:scoped?"portal.execution.retained-review.v2":"portal.execution.retained-review.v1",read_profile:"retained_review_v1",workspace_id:workspace,
       authority:"PORTAL_RETAINED_OBSERVATION",upstream_enabled:false,source_refresh_enabled:false,stream_enabled:false,
       mutation_enabled:false,live_eligibility:false,history_semantics:"BOUNDED_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_REPLAY",
       permissions:{read:true,query:true,download:false,manage:false,command:false,stream:false,
@@ -46,6 +64,58 @@ export class ExecutionRetainedReviewController {
         delegated_jwt_ttl_seconds:this.config.EXECUTION_EDGE_DELEGATION_TTL_SECONDS,delegation_enabled:false,
         upstream_revocation:"SHORT_LIVED_TOKEN_EXPIRY_NOT_INSTANT_REVOCATION"},profiles,
       future_resource_management:{state:"NOT_PUBLISHED",reason_code:"TS_RESOURCE_MANAGEMENT_CONTRACT_NOT_PUBLISHED"}};
+    return scoped ? retainedContextV2Schema.parse(response) : response;
+  }
+
+  /** V2 never reuses the workspace-global metadata cache. Counts derive from
+   * qualified raw rows before aggregation. Historical metadata is a separate
+   * dataset; until qualified, null is absence, not the legacy global total. */
+  private async scopedProfileViews(principal: ReadScopePrincipal) {
+    if (!this.projections || !this.readScopes) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    const scopes: AuthorizedExecutionReadScope[] = [];
+    const snapshots: { environment: "paper" | "sandbox" | "live"; profile: string; snapshot: ProfileProjectionSnapshot }[] = [];
+    const profiles: RetainedContextProfileV2[] = [];
+    for (const environment of ["paper", "sandbox", "live"] as const) {
+      const profile = (environment === "paper" ? this.config.EXECUTION_EDGE_PAPER_PROFILE_ID
+        : environment === "sandbox" ? this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID : this.config.EXECUTION_EDGE_LIVE_PROFILE_ID)!;
+      const snapshot = await this.projections.rawSnapshot(principal.workspaceId, environment, profile);
+      if (snapshot) snapshots.push({ environment, profile, snapshot });
+      const panels: RetainedContextPanelV2[] = [];
+      for (const binding of profileProjectionCatalog(environment)) {
+        const key = `${binding.sourceId}:${binding.relation}`;
+        const source = snapshot?.document.relations[key];
+        const base: RetainedContextPanelV2 = { panel_id: binding.key, screen_id: binding.screenId,
+          retained_state: "UNAVAILABLE", metadata_state: "NOT_PUBLISHED", current_row_count: null, history_row_count: null,
+          source_availability: "NOT_PUBLISHED", source_reason_code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",
+          source_as_of_ms: null, source_freshness: "UNKNOWN", observed_at_ms: null,
+          oldest_available_ms: null, newest_available_ms: null, reason_code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED" };
+        if (!snapshot || !source) { panels.push(base); continue; }
+        try {
+          const scope = await this.readScopes.authorize(principal, { environment, profileId: profile }, { action: "alpha.read",
+            dataset: { dataset_id: `relation:${key}`, source_revision: snapshot.payloadDigest,
+              projection_generation: snapshot.projectionEpoch, catalogue_revision: snapshot.sourceCatalogueSha256, window: null } });
+          scopes.push(scope);
+          if (source.items.length > 10000) throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT", 503);
+          const rows = scopedRetainedRows(scope, source.items);
+          panels.push({ ...base, retained_state: "PARTIAL", metadata_state: "PARTIAL",
+            current_row_count: source.availability === "AVAILABLE" ? rows.length : null,
+            source_availability: source.availability,
+            source_reason_code: source.availability === "AVAILABLE" ? null : "EXECUTION_READ_SOURCE_NOT_PUBLISHED",
+            reason_code: "EXECUTION_READ_HISTORY_METADATA_NOT_PUBLISHED" });
+        } catch (error) {
+          if (!(error instanceof ExecutionReadScopeError) || !["EXECUTION_READ_NOT_AVAILABLE",
+            "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", "EXECUTION_READ_FIELD_POLICY_PENDING"].includes(error.code)) throw error;
+          panels.push({ ...base, metadata_state: error.code === "EXECUTION_READ_NOT_AVAILABLE" ? "DENIED" : "NOT_PUBLISHED",
+            source_reason_code: error.code, reason_code: error.code });
+        }
+      }
+      const hasScope = panels.some(panel => panel.metadata_state === "PARTIAL");
+      profiles.push({ environment, profile_id: profile, metadata_state: hasScope ? "PARTIAL" : "NOT_PUBLISHED",
+        metadata_reason_code: hasScope ? "EXECUTION_READ_HISTORY_METADATA_NOT_PUBLISHED" : "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",
+        source_as_of_ms: null, snapshot_observed_ms: null, source_payload_digest: null,
+        freshness: "STALE", completeness: "PARTIAL", panels });
+    }
+    return { profiles, scopes, snapshots };
   }
 
   // One configured source workspace. Cache only immutable metadata/data,

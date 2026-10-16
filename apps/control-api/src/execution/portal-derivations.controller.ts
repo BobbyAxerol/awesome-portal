@@ -11,6 +11,7 @@ import { PortalDerivationError, PortalDerivationsService } from "./portal-deriva
 interface DerivationRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -84,7 +85,8 @@ export class PortalDerivationsController {
       throw new PortalDerivationError("EDS05_ENVIRONMENT_REQUIRED", 400, "Environment is required.");
     }
     return {
-      principal: { user: request.portalUser, session: request.portalSession, workspaceId },
+      principal: { user: request.portalUser, session: request.portalSession, workspaceId,
+        viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       environment: parsed.data.environment,
     };
   }

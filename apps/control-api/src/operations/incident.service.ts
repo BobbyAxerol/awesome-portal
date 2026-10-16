@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionReadScopes, ExecutionReadScopeError, type ReadScopePrincipal } from "../execution-v2/read-scope";
 import { PortalUser } from "../domain";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
@@ -45,11 +46,21 @@ const SOURCE_PANELS = [
 
 @Injectable()
 export class IncidentService {
-  constructor(@Inject(IncidentRepository) private readonly repository: IncidentRepository) {}
+  constructor(@Inject(IncidentRepository) private readonly repository: IncidentRepository,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes) {}
 
-  async detail(user: PortalUser, workspaceId: string, incidentId: string) {
+  async detail(user: PortalUser, workspaceId: string, incidentId: string, principal?: ReadScopePrincipal) {
     this.assertAdmin(user);
-    return this.publicDetail(await this.repository.detail(workspaceId, incidentId), user);
+    if (this.readScopes) {
+      if (!principal || principal.user.userId !== user.userId || principal.workspaceId !== workspaceId)
+        throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+      if (await this.readScopes.coreSelectionMode(principal) === "SCOPED_V2")
+        throw new GovernanceError("INCIDENT_SCOPED_PARENT_NOT_COMMISSIONED", "Incident target and field publication is not commissioned.", 503);
+    }
+    const result = this.publicDetail(await this.repository.detail(workspaceId, incidentId), user);
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal!) !== "LEGACY_COMPATIBILITY")
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return result;
   }
 
   async create(user: PortalUser, input: IncidentCreateRequest, requestId: string) {

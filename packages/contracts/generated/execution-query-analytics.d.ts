@@ -502,15 +502,517 @@ export interface components {
                 ProjectionScalar: string | number | boolean | null | (string | number | boolean | null)[];
             };
         };
+        "$defs-Identifier": string;
+        "$defs-ChartMarker": {
+            timestamp: components["schemas"]["DateTime"];
+            marker_type: string;
+            journal_id: components["schemas"]["$defs-Identifier"];
+        };
+        "$defs-ReplayRow": {
+            timestamp: components["schemas"]["DateTime"];
+            journal_id: components["schemas"]["$defs-Identifier"];
+            event_type: string;
+            order_id: components["schemas"]["NullableString"];
+            fill_id: components["schemas"]["NullableString"];
+            price: components["schemas"]["NullableDecimal"];
+            quantity: components["schemas"]["NullableDecimal"];
+        };
+        HistoryStatisticsWindow: {
+            days: number;
+            /** @constant */
+            basis: "PORTAL_SGP_HISTORY_MIRROR";
+            /** @constant */
+            daily_basis: "LAST_CLOSE_FORWARD_FILLED_SUM";
+        };
+        "$defs-CorrelationPair": {
+            left_alpha: components["schemas"]["$defs-Identifier"];
+            right_alpha: components["schemas"]["$defs-Identifier"];
+            correlation: number;
+            overlapping_days: number;
+        };
+        "$defs-ChartSeries": {
+            /** @constant */
+            schema_version: "chart-series.rules.v1";
+            series_id: components["schemas"]["$defs-Identifier"];
+            /** @enum {unknown} */
+            kind: "LINE" | "BAR" | "CANDLESTICK" | "EPISODE";
+            /** @enum {unknown} */
+            unit: "MONEY" | "RATIO" | "PERCENT" | "BASIS_POINTS" | "COUNT" | "PRICE" | "QUANTITY";
+            currency: string | null;
+            authority: components["schemas"]["Authority"];
+            as_of: components["schemas"]["DateTime"] | null;
+            formula_version: string;
+            completeness: components["schemas"]["Completeness"];
+            join_digest: components["schemas"]["Digest"] | null;
+            ohlc_owner: components["schemas"]["Authority"] | null;
+            points: components["schemas"]["ChartPoint"][];
+            gaps: components["schemas"]["ChartGap"][];
+            markers: components["schemas"]["$defs-ChartMarker"][];
+            annotations: components["schemas"]["ChartAnnotation"][];
+            declared_total: components["schemas"]["NullableDecimal"];
+            downsample: components["schemas"]["Downsample"];
+        };
+        "$defs-Replay": {
+            state: components["schemas"]["CapabilityState"];
+            reason_code: components["schemas"]["NullableString"];
+            markers: components["schemas"]["$defs-ChartMarker"][];
+            trade_log: components["schemas"]["$defs-ReplayRow"][];
+            candles_state: components["schemas"]["CapabilityState"];
+            candles_reason_code: string;
+        };
+        "$defs-DrawdownOverlap": {
+            /** @constant */
+            formula_version: "drawdown_overlap.v1";
+            /** @constant */
+            state: "AVAILABLE";
+            window: components["schemas"]["HistoryStatisticsWindow"];
+            alphas: {
+                alpha_id: components["schemas"]["$defs-Identifier"];
+                max_drawdown: number;
+                max_drawdown_at: string | null;
+                series: {
+                    /** Format: date */
+                    timestamp: string;
+                    drawdown: number;
+                }[];
+            }[];
+            overlaps: {
+                /** Format: date */
+                from: string;
+                /** Format: date */
+                to: string;
+                alpha_ids: components["schemas"]["$defs-Identifier"][];
+            }[];
+        };
+        "$defs-ManagerCorrelation": {
+            /** @constant */
+            formula_version: "portfolio-correlation-returns.v1";
+            state: components["schemas"]["CapabilityState"];
+            reason_code: components["schemas"]["NullableString"];
+            alpha_ids: components["schemas"]["$defs-Identifier"][];
+            pairs: components["schemas"]["$defs-CorrelationPair"][];
+            window?: components["schemas"]["HistoryStatisticsWindow"];
+        };
+        "$defs-ManagerAnalytics": {
+            /** @constant */
+            schema_version: "execution.query-analytics.v1";
+            /** @constant */
+            formula_version: "manager-query-analytics.v1";
+            /** @enum {unknown} */
+            subject_kind: "DEPLOYMENT" | "ALPHA" | "PORTFOLIO" | "LIVE_GATE";
+            subject_id: components["schemas"]["$defs-Identifier"];
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+            profile_id: components["schemas"]["$defs-Identifier"];
+            /** @constant */
+            authority: "EXECUTION";
+            /** @constant */
+            derived_authority: "DERIVED";
+            as_of: components["schemas"]["DateTime"] | null;
+            completeness: components["schemas"]["Completeness"];
+            projection_state_digest: components["schemas"]["Digest"];
+            source_fact_count: number;
+            capabilities: components["schemas"]["Capability"][];
+            exact_currency_partitions: components["schemas"]["CurrencyPartition"][];
+            order_funnel: {
+                /** @constant */
+                formula_version: "order_funnel.v1";
+                total_orders: number;
+                status_counts: {
+                    [key: string]: number;
+                };
+            };
+            execution_quality: {
+                /** @constant */
+                formula_version: "execution_quality.v1";
+                submitted_count: number;
+                risk_rejected_count: number;
+                broker_rejected_count: number;
+                filled_count: number;
+                reject_rate: components["schemas"]["NullableDecimal"];
+                latency_state: components["schemas"]["CapabilityState"];
+                latency_reason_code: components["schemas"]["NullableString"];
+            };
+            chart_series: components["schemas"]["$defs-ChartSeries"][];
+            replay: components["schemas"]["$defs-Replay"];
+            drawdown_overlap: components["schemas"]["$defs-DrawdownOverlap"] | null;
+            correlation: components["schemas"]["$defs-ManagerCorrelation"];
+            positions: Record<string, never>[];
+            /** @description Optional backward-compatible, screen-ready facts selected from the same atomic local projection read. It never triggers a browser or BFF source read. */
+            source_facts?: {
+                strategies?: components["schemas"]["SourceFactRows"];
+                deployments?: components["schemas"]["SourceFactRows"];
+                accounts?: components["schemas"]["SourceFactRows"];
+                balances?: components["schemas"]["SourceFactRows"];
+                portfolios?: components["schemas"]["SourceFactRows"];
+                allocations?: components["schemas"]["SourceFactRows"];
+                positions?: components["schemas"]["SourceFactRows"];
+                reconciliation?: components["schemas"]["SourceFactRows"];
+                sessions?: components["schemas"]["SourceFactRows"];
+                orders?: components["schemas"]["SourceFactRows"];
+                fills?: components["schemas"]["SourceFactRows"];
+                performance?: components["schemas"]["SourceFactRows"];
+                accountEquity?: components["schemas"]["SourceFactRows"];
+                portfolioEquity?: components["schemas"]["SourceFactRows"];
+                journal?: components["schemas"]["SourceFactRows"];
+            };
+            history_windows?: {
+                accountEquity?: {
+                    /** @constant */
+                    days: 30;
+                    /** @constant */
+                    basis: "PORTAL_SGP_HISTORY_MIRROR";
+                    returned_rows: number;
+                    source_rows: number;
+                    /** @constant */
+                    truncated: false;
+                    downsample?: {
+                        /** @constant */
+                        method: "PER_SERIES_BUCKET_EXTREMA";
+                        bucket_seconds: number;
+                        series_count: number;
+                        input_rows: number;
+                        output_rows: number;
+                    };
+                };
+                performance?: {
+                    /** @constant */
+                    days: 30;
+                    /** @constant */
+                    basis: "PORTAL_SGP_HISTORY_MIRROR";
+                    returned_rows: number;
+                    source_rows: number;
+                    /** @constant */
+                    truncated: false;
+                    downsample?: {
+                        /** @constant */
+                        method: "PER_SERIES_BUCKET_EXTREMA";
+                        bucket_seconds: number;
+                        series_count: number;
+                        input_rows: number;
+                        output_rows: number;
+                    };
+                };
+            };
+        };
+        ScopedMetadata: {
+            /** @constant */
+            visibility: "SCOPED";
+            /** @constant */
+            coverage: "AUTHORIZED_ONLY";
+            /** @constant */
+            global_observation_clocks: "NOT_PUBLISHED";
+            /** @constant */
+            reason_code: "EXECUTION_GLOBAL_OBSERVATION_CLOCK_NOT_QUALIFIED";
+            /** @enum {unknown} */
+            as_of_basis: "AUTHORIZED_RECORD_TIMESTAMP" | "NOT_PUBLISHED";
+        };
+        /** Scoped Execution analytics, authorized-record clocks only */
+        "execution-query-analytics.v2.schema": {
+            /** @constant */
+            schema_version: "execution.query-analytics-envelope.v2";
+            /** @constant */
+            runtime_active: true;
+            /** @constant */
+            source_side_effect_requested: false;
+            epoch_id: components["schemas"]["Digest"];
+            catalogue_digest: components["schemas"]["Digest"];
+            projection_state_digest: components["schemas"]["Digest"];
+            source_fact_digest: components["schemas"]["Digest"];
+            source_fact_count: number;
+            repository_query_count: number;
+            source_read_at: null;
+            read_at: components["schemas"]["DateTime"];
+            analytics: components["schemas"]["$defs-ManagerAnalytics"];
+            scoped_metadata: components["schemas"]["ScopedMetadata"];
+            $defs: {
+                Identifier: string;
+                /** Format: date-time */
+                DateTime: string;
+                Decimal: string;
+                Digest: string;
+                /** @enum {string} */
+                Authority: "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED";
+                /** @enum {string} */
+                Completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+                /** @enum {string} */
+                CapabilityState: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
+                NullableDecimal: components["schemas"]["Decimal"] | null;
+                NullableString: string | null;
+                Capability: {
+                    capability_id: string;
+                    state: components["schemas"]["CapabilityState"];
+                    authority: components["schemas"]["Authority"];
+                    formula_version: components["schemas"]["NullableString"];
+                    source_relations: string[];
+                    reason_code: components["schemas"]["NullableString"];
+                };
+                CurrencyPartition: {
+                    relation: string;
+                    currency: string | null;
+                    row_count: number;
+                    quantity_count: number;
+                    quantity: components["schemas"]["Decimal"];
+                    notional_count: number;
+                    notional: components["schemas"]["Decimal"];
+                    realized_pnl_count: number;
+                    realized_pnl: components["schemas"]["Decimal"];
+                    invalid_numeric_count: number;
+                };
+                ChartPoint: {
+                    timestamp: components["schemas"]["DateTime"];
+                    value: components["schemas"]["NullableDecimal"];
+                };
+                ChartGap: {
+                    from: components["schemas"]["DateTime"];
+                    to: components["schemas"]["DateTime"];
+                    /** @enum {unknown} */
+                    reason: "SOURCE_GAP" | "RETENTION" | "VENUE_CLOSED" | "PROJECTION_DISCONTINUITY";
+                };
+                ChartMarker: {
+                    timestamp: components["schemas"]["DateTime"];
+                    marker_type: string;
+                    journal_id: components["schemas"]["$defs-Identifier"];
+                };
+                ChartAnnotation: {
+                    timestamp: components["schemas"]["DateTime"];
+                    value: components["schemas"]["Decimal"];
+                    label: string;
+                };
+                Downsample: {
+                    /** @enum {unknown} */
+                    method: "none" | "extrema_stride_v1";
+                    input_points: number;
+                    output_points: number;
+                    input_minimum: components["schemas"]["NullableDecimal"];
+                    input_maximum: components["schemas"]["NullableDecimal"];
+                };
+                ChartSeries: {
+                    /** @constant */
+                    schema_version: "chart-series.rules.v1";
+                    series_id: components["schemas"]["$defs-Identifier"];
+                    /** @enum {unknown} */
+                    kind: "LINE" | "BAR" | "CANDLESTICK" | "EPISODE";
+                    /** @enum {unknown} */
+                    unit: "MONEY" | "RATIO" | "PERCENT" | "BASIS_POINTS" | "COUNT" | "PRICE" | "QUANTITY";
+                    currency: string | null;
+                    authority: components["schemas"]["Authority"];
+                    as_of: components["schemas"]["DateTime"] | null;
+                    formula_version: string;
+                    completeness: components["schemas"]["Completeness"];
+                    join_digest: components["schemas"]["Digest"] | null;
+                    ohlc_owner: components["schemas"]["Authority"] | null;
+                    points: components["schemas"]["ChartPoint"][];
+                    gaps: components["schemas"]["ChartGap"][];
+                    markers: components["schemas"]["$defs-ChartMarker"][];
+                    annotations: components["schemas"]["ChartAnnotation"][];
+                    declared_total: components["schemas"]["NullableDecimal"];
+                    downsample: components["schemas"]["Downsample"];
+                };
+                ReplayRow: {
+                    timestamp: components["schemas"]["DateTime"];
+                    journal_id: components["schemas"]["$defs-Identifier"];
+                    event_type: string;
+                    order_id: components["schemas"]["NullableString"];
+                    fill_id: components["schemas"]["NullableString"];
+                    price: components["schemas"]["NullableDecimal"];
+                    quantity: components["schemas"]["NullableDecimal"];
+                };
+                Replay: {
+                    state: components["schemas"]["CapabilityState"];
+                    reason_code: components["schemas"]["NullableString"];
+                    markers: components["schemas"]["$defs-ChartMarker"][];
+                    trade_log: components["schemas"]["$defs-ReplayRow"][];
+                    candles_state: components["schemas"]["CapabilityState"];
+                    candles_reason_code: string;
+                };
+                DrawdownEpisode: {
+                    alpha_id: components["schemas"]["$defs-Identifier"];
+                    from: components["schemas"]["DateTime"];
+                    to: components["schemas"]["DateTime"];
+                    depth_pct: components["schemas"]["Decimal"];
+                    recovered: boolean;
+                };
+                JointWindow: {
+                    from: components["schemas"]["DateTime"];
+                    to: components["schemas"]["DateTime"];
+                    member_alpha_ids: components["schemas"]["$defs-Identifier"][];
+                };
+                DrawdownOverlap: {
+                    /** @constant */
+                    formula_version: "drawdown_overlap.v1";
+                    /** @constant */
+                    state: "AVAILABLE";
+                    window: components["schemas"]["HistoryStatisticsWindow"];
+                    alphas: {
+                        alpha_id: components["schemas"]["$defs-Identifier"];
+                        max_drawdown: number;
+                        max_drawdown_at: string | null;
+                        series: {
+                            /** Format: date */
+                            timestamp: string;
+                            drawdown: number;
+                        }[];
+                    }[];
+                    overlaps: {
+                        /** Format: date */
+                        from: string;
+                        /** Format: date */
+                        to: string;
+                        alpha_ids: components["schemas"]["$defs-Identifier"][];
+                    }[];
+                };
+                CorrelationPair: {
+                    left_alpha: components["schemas"]["$defs-Identifier"];
+                    right_alpha: components["schemas"]["$defs-Identifier"];
+                    correlation: number;
+                    overlapping_days: number;
+                };
+                ManagerCorrelation: {
+                    /** @constant */
+                    formula_version: "portfolio-correlation-returns.v1";
+                    state: components["schemas"]["CapabilityState"];
+                    reason_code: components["schemas"]["NullableString"];
+                    alpha_ids: components["schemas"]["$defs-Identifier"][];
+                    pairs: components["schemas"]["$defs-CorrelationPair"][];
+                    window?: components["schemas"]["HistoryStatisticsWindow"];
+                };
+                ManagerAnalytics: {
+                    /** @constant */
+                    schema_version: "execution.query-analytics.v1";
+                    /** @constant */
+                    formula_version: "manager-query-analytics.v1";
+                    /** @enum {unknown} */
+                    subject_kind: "DEPLOYMENT" | "ALPHA" | "PORTFOLIO" | "LIVE_GATE";
+                    subject_id: components["schemas"]["$defs-Identifier"];
+                    /** @enum {unknown} */
+                    environment: "paper" | "sandbox" | "live";
+                    profile_id: components["schemas"]["$defs-Identifier"];
+                    /** @constant */
+                    authority: "EXECUTION";
+                    /** @constant */
+                    derived_authority: "DERIVED";
+                    as_of: components["schemas"]["DateTime"] | null;
+                    completeness: components["schemas"]["Completeness"];
+                    projection_state_digest: components["schemas"]["Digest"];
+                    source_fact_count: number;
+                    capabilities: components["schemas"]["Capability"][];
+                    exact_currency_partitions: components["schemas"]["CurrencyPartition"][];
+                    order_funnel: {
+                        /** @constant */
+                        formula_version: "order_funnel.v1";
+                        total_orders: number;
+                        status_counts: {
+                            [key: string]: number;
+                        };
+                    };
+                    execution_quality: {
+                        /** @constant */
+                        formula_version: "execution_quality.v1";
+                        submitted_count: number;
+                        risk_rejected_count: number;
+                        broker_rejected_count: number;
+                        filled_count: number;
+                        reject_rate: components["schemas"]["NullableDecimal"];
+                        latency_state: components["schemas"]["CapabilityState"];
+                        latency_reason_code: components["schemas"]["NullableString"];
+                    };
+                    chart_series: components["schemas"]["$defs-ChartSeries"][];
+                    replay: components["schemas"]["$defs-Replay"];
+                    drawdown_overlap: components["schemas"]["$defs-DrawdownOverlap"] | null;
+                    correlation: components["schemas"]["$defs-ManagerCorrelation"];
+                    positions: Record<string, never>[];
+                    /** @description Optional backward-compatible, screen-ready facts selected from the same atomic local projection read. It never triggers a browser or BFF source read. */
+                    source_facts?: {
+                        strategies?: components["schemas"]["SourceFactRows"];
+                        deployments?: components["schemas"]["SourceFactRows"];
+                        accounts?: components["schemas"]["SourceFactRows"];
+                        balances?: components["schemas"]["SourceFactRows"];
+                        portfolios?: components["schemas"]["SourceFactRows"];
+                        allocations?: components["schemas"]["SourceFactRows"];
+                        positions?: components["schemas"]["SourceFactRows"];
+                        reconciliation?: components["schemas"]["SourceFactRows"];
+                        sessions?: components["schemas"]["SourceFactRows"];
+                        orders?: components["schemas"]["SourceFactRows"];
+                        fills?: components["schemas"]["SourceFactRows"];
+                        performance?: components["schemas"]["SourceFactRows"];
+                        accountEquity?: components["schemas"]["SourceFactRows"];
+                        portfolioEquity?: components["schemas"]["SourceFactRows"];
+                        journal?: components["schemas"]["SourceFactRows"];
+                    };
+                    history_windows?: {
+                        accountEquity?: {
+                            /** @constant */
+                            days: 30;
+                            /** @constant */
+                            basis: "PORTAL_SGP_HISTORY_MIRROR";
+                            returned_rows: number;
+                            source_rows: number;
+                            /** @constant */
+                            truncated: false;
+                            downsample?: {
+                                /** @constant */
+                                method: "PER_SERIES_BUCKET_EXTREMA";
+                                bucket_seconds: number;
+                                series_count: number;
+                                input_rows: number;
+                                output_rows: number;
+                            };
+                        };
+                        performance?: {
+                            /** @constant */
+                            days: 30;
+                            /** @constant */
+                            basis: "PORTAL_SGP_HISTORY_MIRROR";
+                            returned_rows: number;
+                            source_rows: number;
+                            /** @constant */
+                            truncated: false;
+                            downsample?: {
+                                /** @constant */
+                                method: "PER_SERIES_BUCKET_EXTREMA";
+                                bucket_seconds: number;
+                                series_count: number;
+                                input_rows: number;
+                                output_rows: number;
+                            };
+                        };
+                    };
+                };
+                SourceFactRows: {
+                    [key: string]: components["schemas"]["ProjectionScalar"];
+                }[];
+                ProjectionScalar: string | number | boolean | null | (string | number | boolean | null)[];
+                HistoryStatisticsWindow: {
+                    days: number;
+                    /** @constant */
+                    basis: "PORTAL_SGP_HISTORY_MIRROR";
+                    /** @constant */
+                    daily_basis: "LAST_CLOSE_FORWARD_FILLED_SUM";
+                };
+                ScopedMetadata: {
+                    /** @constant */
+                    visibility: "SCOPED";
+                    /** @constant */
+                    coverage: "AUTHORIZED_ONLY";
+                    /** @constant */
+                    global_observation_clocks: "NOT_PUBLISHED";
+                    /** @constant */
+                    reason_code: "EXECUTION_GLOBAL_OBSERVATION_CLOCK_NOT_QUALIFIED";
+                    /** @enum {unknown} */
+                    as_of_basis: "AUTHORIZED_RECORD_TIMESTAMP" | "NOT_PUBLISHED";
+                };
+            };
+        } & unknown;
     };
     responses: {
-        /** @description Bounded, exact and source-attributed analytics */
+        /** @description Legacy v1 or durable-policy-selected scoped v2; a client cannot opt into scope. V2 omits global observation clocks. Metadata absence is not zero or read time. */
         Analytics: {
             headers: {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["execution-query-analytics.v1.schema"];
+                "application/json": components["schemas"]["execution-query-analytics.v1.schema"] | components["schemas"]["execution-query-analytics.v2.schema"];
             };
         };
         /** @description Typed fail-closed error */

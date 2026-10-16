@@ -1,0 +1,531 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.primusspark.com/execution-manager-scoped.v1.schema.json",
+  "$defs": {
+    "ManagerScopedFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "alpha_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "alpha_version_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "portfolio_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "deployment_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "account_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "binding_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "venue": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "base_currency": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "allocation": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "balance_total": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "balance_free": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "balance_locked": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "realized_pnl": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unrealized_pnl": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "net_pnl": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exposure": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updated_at_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": []
+    },
+    "ManagerScopedItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "environment": {
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "identity": {
+          "$ref": "#/$defs/ManagerScopedFacts"
+        },
+        "instances": {
+          "type": "array",
+          "maxItems": 2000,
+          "items": {
+            "$ref": "#/$defs/ManagerScopedFacts"
+          }
+        },
+        "financial_facts": {
+          "type": "array",
+          "maxItems": 8000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "ALLOCATION",
+                  "INTERNAL_ACCOUNT_BALANCE",
+                  "POSITION_PNL"
+                ]
+              },
+              "facts": {
+                "$ref": "#/$defs/ManagerScopedFacts"
+              }
+            },
+            "required": [
+              "kind",
+              "facts"
+            ]
+          }
+        },
+        "financial_totals": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/ManagerScopedFacts"
+          }
+        },
+        "is_full_resource": {
+          "type": "boolean"
+        },
+        "financial_availability": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "enum": [
+                "AVAILABLE",
+                "PARTIAL",
+                "NOT_PUBLISHED"
+              ]
+            },
+            "reason_code": {
+              "enum": [
+                "AUTHORIZED_RETAINED_FACTS",
+                "SCOPED_FINANCIAL_GRAIN_OR_FIELDS_UNAVAILABLE",
+                "SOURCE_FACTS_NOT_PUBLISHED"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "reason_code"
+          ]
+        }
+      },
+      "required": [
+        "environment",
+        "identity",
+        "instances",
+        "financial_facts",
+        "financial_totals",
+        "is_full_resource",
+        "financial_availability"
+      ]
+    },
+    "ManagerScopedResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.manager-scoped.v1"
+        },
+        "surface": {
+          "enum": [
+            "ALPHA_FLEET",
+            "PORTFOLIOS",
+            "BINDINGS",
+            "BINDING_DETAIL"
+          ]
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "environment": {
+          "enum": [
+            "all",
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "record_authority": {
+          "const": "PORTAL_PROJECTION"
+        },
+        "source_authority": {
+          "const": "TRADING_SYSTEM"
+        },
+        "read_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "read_scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "visibility": {
+              "const": "SCOPED"
+            },
+            "coverage": {
+              "const": "AUTHORIZED_ONLY"
+            },
+            "totals_scope": {
+              "const": "VISIBLE_ROWS_ONLY"
+            },
+            "policy_revisions": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              }
+            }
+          },
+          "required": [
+            "visibility",
+            "coverage",
+            "totals_scope",
+            "policy_revisions"
+          ]
+        },
+        "profile_dispositions": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "environment": {
+                "enum": [
+                  "paper",
+                  "sandbox",
+                  "live"
+                ]
+              },
+              "state": {
+                "enum": [
+                  "PARTIAL",
+                  "DENIED",
+                  "UNAVAILABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "environment",
+              "state",
+              "reason_code"
+            ]
+          }
+        },
+        "completeness": {
+          "const": "PARTIAL"
+        },
+        "reason_code": {
+          "const": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY"
+        },
+        "page": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "visible_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "returned_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "maximum_response_bytes": {
+              "const": 1048576
+            },
+            "has_more": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096,
+                  "pattern": "^[A-Za-z0-9._-]+$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "previous_cursor": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096,
+                  "pattern": "^[A-Za-z0-9._-]+$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "visible_count",
+            "returned_count",
+            "limit",
+            "maximum_response_bytes",
+            "has_more",
+            "next_cursor",
+            "previous_cursor"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/ManagerScopedItem"
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "surface",
+        "workspace_id",
+        "environment",
+        "record_authority",
+        "source_authority",
+        "read_at_ms",
+        "read_scope",
+        "profile_dispositions",
+        "completeness",
+        "reason_code",
+        "page",
+        "items"
+      ],
+      "description": "Server-selected scoped DTO, never selected by a browser toggle. Current authority before aggregation and delivery. Exact decimal strings; omitted means withheld/unpublished, null means explicit absence. Financial totals only sum authorized facts attributable to this item, partitioned by currency; not complete NAV. Runtime enforces page/count/cursor consistency and 1 MiB response cap. No global count or revision metadata."
+    }
+  }
+}

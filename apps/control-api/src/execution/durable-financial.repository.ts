@@ -4,6 +4,8 @@ import { EXECUTION_DATA_POOL, CONTROL_API_CONFIG } from "../tokens";
 import type { ControlApiConfig } from "../config";
 import { retainedReview } from "./retained-read-profile";
 import { ProjectionEnvironment } from "./profile-projection.repository";
+import { projectionScopeSql } from "../execution-v2/read-projection";
+import { assertExecutionReadScope, ExecutionReadScopeError, scopeReadPopulation, type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
 
 export const FINANCIAL_SUBJECT_KINDS = ["alpha", "deployment", "account", "portfolio"] as const;
 export type FinancialSubjectKind = (typeof FINANCIAL_SUBJECT_KINDS)[number];
@@ -25,6 +27,7 @@ export interface DurableFinancialScope {
   workspaceId: string;
   environment: ProjectionEnvironment;
   profileId: string;
+  authorizedScope?: AuthorizedExecutionReadScope;
 }
 
 export interface DurableFinancialSeriesInput extends DurableFinancialScope {
@@ -103,6 +106,10 @@ export interface DurableFinancialSeriesRead {
 export class ExecutionDurableFinancialRepository {
   constructor(@Inject(EXECUTION_DATA_POOL) private readonly pool: Pool,
     @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig) {}
+
+  async revision(input: DurableFinancialScope): Promise<DurableFinancialRevision | null> {
+    return this.stableRead(client => loadCurrentRevision(client, input));
+  }
 
   async series(input: DurableFinancialSeriesInput): Promise<DurableFinancialSeriesRead> {
     validateInput(input);
@@ -307,6 +314,7 @@ export class ExecutionDurableFinancialRepository {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      await client.query("SET LOCAL statement_timeout='5000ms'");
       const result = await operation(client);
       await client.query("COMMIT");
       return result;
@@ -343,10 +351,14 @@ function buildBaseQuery(
   }
   if (input.toMs !== null) {
     values.push(new Date(input.toMs).toISOString());
-    where.push(`ts <= $${values.length}::timestamptz`);
+    where.push(`ts ${input.authorizedScope?.mode === "SCOPED_V2" ? "<" : "<="} $${values.length}::timestamptz`);
   }
   values.push(subject.id);
   where.push(`${subjectColumn}=$${values.length}`);
+  if (input.authorizedScope) {
+    const predicate = projectionScopeSql(input.authorizedScope, "fields", values.length + 1);
+    where.push(predicate.sql); values.push(...predicate.values);
+  }
   values.push(input.valueField, "currency");
   const valueParameter = `$${values.length - 1}`;
   const currencyParameter = `$${values.length}`;
@@ -377,6 +389,11 @@ async function loadContext(
 > {
   const current = await loadCurrentRevision(client, input);
   if (!current) return { kind: "MISSING_REVISION" };
+  if (input.authorizedScope?.mode === "SCOPED_V2") {
+    assertFinancialScope(input, current);
+    if (retained) return { kind: "READY", revision: current, reasonCode: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+      observation: { availability: "AVAILABLE", freshness: "STALE", completeness: "PARTIAL", asOf: null, receivedAt: current.receivedAt } };
+  }
   if (retained) {
     const coverage = await client.query(`SELECT count(*)::text AS n FROM execution_timeseries_history
       WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4`,
@@ -453,6 +470,13 @@ async function resolveSubject(
   revision: DurableFinancialRevision,
   retained = false,
 ): Promise<DurableFinancialSubjectResolution> {
+  if (scope.authorizedScope?.mode === "SCOPED_V2") {
+    assertFinancialScope(scope, revision);
+    if (subject.kind !== "alpha") return { state: "AVAILABLE", reasonCode: null, resource: { kind: subject.kind, id: subject.id } };
+    const ids = [...new Set(scopeReadPopulation(scope.authorizedScope).strategyPairs.filter(pair => pair.alpha_id === subject.id).map(pair => pair.strategy_id))];
+    return ids.length === 1 ? { state: "AVAILABLE", reasonCode: null, resource: { kind: "strategy", id: ids[0] } } :
+      { state: "UNAVAILABLE", reasonCode: ids.length ? "EDS07_ALPHA_SUBJECT_AMBIGUOUS" : "EDS07_ALPHA_SUBJECT_UNRESOLVED_PARTIAL", resource: null };
+  }
   if (subject.kind !== "alpha") {
     return { state: "AVAILABLE", reasonCode: null, resource: { kind: subject.kind, id: subject.id } };
   }
@@ -500,6 +524,18 @@ async function resolveSubject(
       : "EDS07_ALPHA_SUBJECT_UNRESOLVED_PARTIAL",
     resource: null,
   };
+}
+
+function assertFinancialScope(input: DurableFinancialScope & { relationKey?: string; fromMs?: number | null; toMs?: number | null }, revision: DurableFinancialRevision) {
+  const scope = input.authorizedScope!; assertExecutionReadScope(scope);
+  const binding = scopeReadPopulation(scope).binding;
+  if (scope.workspaceId !== input.workspaceId || scope.environment !== input.environment || scope.profileId !== input.profileId ||
+    !binding || binding.source_revision !== revision.payloadDigest || binding.projection_generation !== revision.projectionEpoch ||
+    binding.catalogue_revision !== revision.sourceCatalogueSha256 ||
+    input.relationKey !== undefined && binding.dataset_id !== `financial:${input.relationKey}` ||
+    binding.window !== null && input.relationKey !== undefined &&
+      (binding.window.from_ms !== input.fromMs || binding.window.to_ms !== input.toMs))
+    throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
 }
 
 function unavailable(

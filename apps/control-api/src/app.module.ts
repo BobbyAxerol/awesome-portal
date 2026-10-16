@@ -8,6 +8,8 @@ import { AuthController } from "./auth/auth.controller";
 import { ProfileController } from "./auth/profile.controller";
 import { ExecutionAccessController } from "./execution-v2/access.controller";
 import { ExecutionAccessService } from "./execution-v2/access.service";
+import type { AccessTrustProvider } from "./execution-v2/access-trust";
+import { ExecutionReadScopes } from "./execution-v2/read-scope";
 import { AuthService } from "./auth/auth.service";
 import { Argon2CredentialService } from "./auth/argon";
 import { AdminService } from "./admin/admin.service";
@@ -199,9 +201,19 @@ import { ResearchReleaseCandidatePublicationRepository } from "./research/releas
 import { ResearchReleaseCandidatePublicationService } from "./research/release-candidate-publication.service";
 import { P22PublicationBridgeService } from "./research/p22-publication-bridge.service";
 
+/** Internal composition seam, never populated from request headers/body or
+ * runtime environment flags. TEST_ONLY authority cannot enter a non-test app. */
+export interface ControlApiDependencies {
+  executionAccessTrust?: AccessTrustProvider;
+  allowTestOnlyExecutionAccess?: boolean;
+}
+
 @Module({})
 export class AppModule {
-  static register(config: ControlApiConfig, pool: Pool, executionPool?: Pool): DynamicModule {
+  static register(config: ControlApiConfig, pool: Pool, executionPool?: Pool,
+    dependencies: ControlApiDependencies = {}): DynamicModule {
+    if (dependencies.allowTestOnlyExecutionAccess && config.NODE_ENV !== "test")
+      throw new Error("TEST_ONLY Execution authority requires an isolated test application.");
     const ownsExecutionPool = !executionPool && !!config.EXECUTION_DATABASE_URL;
     const domainPool = executionPool ?? (config.EXECUTION_DATABASE_URL ? buildExecutionPool(config) : pool);
     return {
@@ -320,8 +332,15 @@ export class AppModule {
         },
         {
           provide: ExecutionAccessService,
-          useFactory: (db:Pool,auth:AuthService)=>new ExecutionAccessService(db,auth),
+          useFactory: (db:Pool,auth:AuthService)=>new ExecutionAccessService(db,auth,
+            dependencies.executionAccessTrust, dependencies.allowTestOnlyExecutionAccess === true),
           inject: [CONTROL_API_POOL,AuthService],
+        },
+        {
+          // Identity/policy stay in Core even when Execution data is isolated.
+          provide: ExecutionReadScopes,
+          useFactory: (db:Pool,access:ExecutionAccessService,cfg:ControlApiConfig)=>new ExecutionReadScopes(db,access,cfg),
+          inject: [CONTROL_API_POOL,ExecutionAccessService,CONTROL_API_CONFIG],
         },
         {
           provide: AccountLifecycleService,
@@ -466,8 +485,8 @@ export class AppModule {
         },
         {
           provide: ExecutionAnalyticsProxy,
-          useFactory: (cfg: ControlApiConfig) => ExecutionAnalyticsProxy.create(cfg),
-          inject: [CONTROL_API_CONFIG],
+          useFactory: (cfg: ControlApiConfig, scopes: ExecutionReadScopes) => ExecutionAnalyticsProxy.create(cfg, scopes),
+          inject: [CONTROL_API_CONFIG, ExecutionReadScopes],
         },
         {
           provide: ExecutionCurrentSourceProxy,

@@ -4,6 +4,9 @@ import { retainedReview } from "../execution/retained-read-profile";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { OwnerAccessService } from "../auth/owner-access.service";
 import { approvalReadGates } from "../governance/governance.service";
+import { ExecutionReadScopes, ExecutionReadScopeError, scopeAllowsField, type ReadScopePrincipal,
+  type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
+import { projectionRowVisible, redactProjectionFields } from "../execution-v2/read-projection";
 import { Pool, PoolClient } from "pg";
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
@@ -124,21 +127,145 @@ export class CommandCenterRepository {
     @Optional() @Inject(ExecutionProfileProjectionRepository) private readonly projections?: ExecutionProfileProjectionRepository,
     @Optional() @Inject(WorkspacesRepository) private readonly workspaces?: WorkspacesRepository,
     @Optional() @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService = new OwnerAccessService(pool),
+    @Optional() @Inject(ExecutionReadScopes) private readonly scopes?: ExecutionReadScopes,
   ) {}
 
-  async read(workspaceId: string, actor: PortalUser, readAt: Date): Promise<CommandCenterInputs> {
+  requiresTrustedPrincipal(): boolean { return this.scopes !== undefined; }
+
+  /** Composition never promotes a workspace-wide cache to V2 authority. */
+  async readAuthorized<T>(principal: ReadScopePrincipal, readAt: Date,
+    complete: (input: CommandCenterInputs, scoped: boolean) => T | Promise<T>): Promise<T> {
+    if (!this.scopes) return complete(await this.read(principal.workspaceId, principal.user, readAt), false);
+    const core: ReadScopePrincipal = { user: { ...principal.user }, session: { ...principal.session },
+      workspaceId: principal.workspaceId, viewerWorkspaceId: principal.workspaceId };
+    const coreMode = await this.scopes.coreSelectionMode(core);
+    const sourceWorkspace = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    const source: ReadScopePrincipal = { ...core, workspaceId: sourceWorkspace ?? "", viewerWorkspaceId: core.workspaceId };
+    const selectSource = async () => {
+      if (!sourceWorkspace) return "DENIED" as const;
+      try { return await this.scopes!.selectionMode(source); }
+      catch (error) {
+        // A current Core member may still read Core cards after retained
+        // source access is revoked. This is not a fallback to source bytes.
+        if (error instanceof ExecutionReadScopeError && error.code === "EXECUTION_READ_NOT_AVAILABLE") return "DENIED" as const;
+        throw error;
+      }
+    };
+    const sourceMode = await selectSource();
+    const fence = async () => {
+      if (await this.scopes!.coreSelectionMode(core) !== coreMode || await selectSource() !== sourceMode)
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    };
+    if (sourceMode !== "SCOPED_V2") {
+      const inputs = await this.read(core.workspaceId, core.user, readAt, {
+        omitProjection: sourceMode === "DENIED", omitCore: coreMode === "SCOPED_V2",
+      });
+      await fence();
+      const result = await complete(inputs, coreMode === "SCOPED_V2");
+      await fence();
+      return result;
+    }
+    // Scope datasets against source authority, never the caller's Core
+    // workspace. The response/Portal workflow identity remains Core-owned.
+    principal = source;
+    if (!this.projections) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    const branches: Array<{ scope: AuthorizedExecutionReadScope; digest: string; epoch: string; catalogue: string | null }> = [];
+    const missing = new Map<string, string>();
+    for (const environment of ["paper", "sandbox", "live"] as const) {
+      const profileId = environment === "paper" ? this.config.EXECUTION_EDGE_PAPER_PROFILE_ID :
+        environment === "sandbox" ? this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID : this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;
+      if (!profileId) { missing.set(environment, "PROFILE_NOT_CONFIGURED"); continue; }
+      const metadata = await this.projections.snapshotMetadata(principal.workspaceId, environment, profileId);
+      try {
+        const scope = await this.scopes.authorize(principal, { environment, profileId }, { action: "alpha.read",
+          dataset: { dataset_id: "command-center:projection", source_revision: metadata?.payloadDigest ?? "NOT_RECORDED",
+            projection_generation: metadata?.projectionEpoch ?? "NOT_RECORDED", catalogue_revision: metadata?.sourceCatalogueSha256 ?? null, window: null } });
+        if (scope.mode !== "SCOPED_V2") throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        if (!metadata) { missing.set(environment, "PROFILE_NOT_RECORDED"); continue; }
+        branches.push({ scope, digest: metadata.payloadDigest, epoch: metadata.projectionEpoch, catalogue: metadata.sourceCatalogueSha256 });
+      } catch (error) {
+        if (!(error instanceof ExecutionReadScopeError) || error.status === 409) throw error;
+        missing.set(environment, error.code);
+      }
+    }
+    if (!branches.length) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    const read = async () => {
+      const rows: ProjectionSnapshotRow[] = [];
+      const fieldMissing = new Set<string>();
+      for (const branch of branches) {
+        const { scope } = branch;
+        const snapshot = await this.projections!.rawSnapshot(principal.workspaceId, scope.environment, scope.profileId);
+        if (!snapshot || snapshot.payloadDigest !== branch.digest || snapshot.projectionEpoch !== branch.epoch ||
+          snapshot.sourceCatalogueSha256 !== branch.catalogue || snapshot.document.workspace_id !== sourceWorkspace ||
+          snapshot.document.environment !== scope.environment || snapshot.document.profile_id !== scope.profileId)
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        const relation = snapshot.document.relations["manager.deployments:strategy_deployments"];
+        const allowed = ["deployment_id", "state"].every(field => scopeAllowsField(scope, field));
+        if (!allowed || relation?.availability !== "AVAILABLE") fieldMissing.add(scope.environment);
+        const items = allowed && relation?.availability === "AVAILABLE" ? relation.items
+          .filter(item => item.lineage.workspace_id === principal.workspaceId && item.lineage.profile_id === scope.profileId && projectionRowVisible(scope, item.fields))
+          .map(item => ({ fields: redactProjectionFields(scope, item.fields) })) : [];
+        rows.push({ environment: scope.environment, profile_id: scope.profileId, source_cursor: "",
+          source_as_of: null, received_at: readAt, last_successful_refresh_at: readAt, completeness: "PARTIAL",
+          projection_epoch: "", projection_sequence: "0",
+          payload: { relations: { "manager.deployments:strategy_deployments": { availability: "AVAILABLE", items } } } });
+      }
+      const fleet = this.projectionFleet({ rows, reason: fieldMissing.size === branches.length
+        ? "SCOPED_DEPLOYMENT_FIELDS_NOT_PUBLISHED" : null, ageMs: 0 }, readAt);
+      // Only the authorized deployment population contributes to totals. A
+      // missing profile/field is not an observed zero. Technical/reconciliation
+      // relations need their own purpose contract before aggregate disclosure.
+      for (const cell of fleet.items[0]?.cells ?? []) {
+        const environment = cell.code === "PAPER" ? "paper" : cell.code === "SANDBOX" ? "sandbox" : "live";
+        if (["BROKER_SYNC_ISSUES", "OPEN_FINDINGS"].includes(cell.code) || missing.has(environment) || fieldMissing.has(environment)) cell.value = null;
+      }
+      fleet.status = { ...fleet.status, reason: fleet.status.reason ?? "AUTHORIZED_DEPLOYMENT_SLICE_NOT_GLOBAL_TOTAL", as_of: null,
+        source_cursor: null, projection_epoch: null, projection_sequence: null, freshness_state: "UNKNOWN", age_seconds: null, lag_ms: null };
+      const unknown = "PORTAL_WORKFLOW_TARGET_LINEAGE_NOT_PUBLISHED";
+      const inputs: CommandCenterInputs = { workspaceId: core.workspaceId, actor: core.user, readAt, fleet,
+        triageSources: [unavailableSource("PORTAL_GOVERNANCE", "PORTAL", unknown),
+          unavailableSource("EXECUTION_INCIDENTS", "PORTAL", unknown), unavailableSource("EXECUTION_OPERATIONS", "PORTAL", unknown),
+          unavailableSource("EXECUTION_RECONCILIATION", "EXECUTION", "SCOPED_RECONCILIATION_FIELDS_NOT_PUBLISHED")],
+        todaySources: [unavailableSource("PORTAL_GOVERNANCE", "PORTAL", unknown),
+          unavailableSource("EXECUTION_JOURNAL", "EXECUTION", "SCOPED_COMMAND_JOURNAL_FIELDS_NOT_PUBLISHED")] };
+      await fence();
+      const result = await complete(inputs, true);
+      for (const branch of branches) {
+        const current = await this.projections!.snapshotMetadata(principal.workspaceId, branch.scope.environment, branch.scope.profileId);
+        if (!current || current.payloadDigest !== branch.digest || current.projectionEpoch !== branch.epoch ||
+          current.sourceCatalogueSha256 !== branch.catalogue) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      }
+      return result;
+    };
+    const fenced = (index: number): Promise<T> => index === branches.length ? read() :
+      this.scopes!.deliver(branches[index].scope, () => fenced(index + 1));
+    const result = await fenced(0);
+    await fence();
+    return result;
+  }
+
+  async read(workspaceId: string, actor: PortalUser, readAt: Date,
+    options: { omitProjection?: boolean; omitCore?: boolean } = {}): Promise<CommandCenterInputs> {
     // Domain reads and Core authorization must not run while holding a Core
     // transaction/connection. Twenty mounts can otherwise exhaust the pool
     // waiting for their own nested canReadExecution query (and starve Research).
     // The independent domain snapshot is deliberately not cross-DB atomic.
-    const retainedAccess = !retainedReview(this.config) || (!!this.workspaces &&
+    const retainedAccess = !options.omitProjection && (!retainedReview(this.config) || (!!this.workspaces &&
       !!this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
-        await this.workspaces.canReadExecution(this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,actor.userId));
+        await this.workspaces.canReadExecution(this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,actor.userId)));
     let projection: ProjectionState = retainedAccess ? await this.projectionState(this.executionPool, readAt)
       : {rows:[],reason:"WORKSPACE_NOT_FOUND",ageMs:0};
     if(retainedAccess && retainedReview(this.config) && !await this.workspaces!.canReadExecution(
       this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!,actor.userId))
       projection={rows:[],reason:"WORKSPACE_NOT_FOUND",ageMs:0};
+    if (options.omitCore) {
+      const unknown = "PORTAL_WORKFLOW_TARGET_LINEAGE_NOT_PUBLISHED";
+      return { workspaceId, actor, readAt, fleet: this.projectionFleet(projection, readAt),
+        triageSources: [unavailableSource("PORTAL_GOVERNANCE", "PORTAL", unknown),
+          unavailableSource("EXECUTION_INCIDENTS", "PORTAL", unknown), unavailableSource("EXECUTION_OPERATIONS", "PORTAL", unknown),
+          this.reconciliationTriage(projection, readAt)],
+        todaySources: [unavailableSource("PORTAL_GOVERNANCE", "PORTAL", unknown), this.journalToday(projection, readAt)] };
+    }
     const visibleGates=approvalReadGates(actor,await this.ownerAccess.effectiveAccess(actor.userId),workspaceId);
     const client = await this.pool.connect();
     try {

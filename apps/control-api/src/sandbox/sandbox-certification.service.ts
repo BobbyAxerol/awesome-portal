@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
 import { AuthSession, PortalUser } from "../domain";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
@@ -143,11 +144,22 @@ export class SandboxCertificationService {
   constructor(
     @Inject(SandboxCertificationRepository) private readonly repository: SandboxCertificationRepository,
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
 
-  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string) {
+    const principal = { user, session, workspaceId, viewerWorkspaceId };
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) === "SCOPED_V2")
+      throw new GovernanceError("SANDBOX_SCOPED_PARENT_NOT_COMMISSIONED", "Sandbox certification parent field authority is not commissioned.", 503);
+    const result = await this.detailLegacy(user, session, workspaceId, deploymentId, viewerWorkspaceId);
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) !== "LEGACY_COMPATIBILITY")
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return result;
+  }
+
+  private async detailLegacy(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string) {
     const currentSource = await this.profileReads.snapshot(
-      { user, session, workspaceId },
+      { user, session, workspaceId, viewerWorkspaceId },
       "sandbox",
       "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
       deploymentId,

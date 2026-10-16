@@ -1,4 +1,5 @@
 import { performance } from "perf_hooks";
+import { createHash } from "crypto";
 import { Pool, PoolClient, QueryResultRow } from "pg";
 import {
   AppliedSort,
@@ -6,6 +7,7 @@ import {
   NormalizedFilter,
   NormalizedKeysetQuery,
   PostgresListResource,
+  PostgresRowScope,
   QueryActorContext,
   QueryContractError,
   QueryScalar,
@@ -19,6 +21,10 @@ import { normalizeKeysetQuery } from "./request";
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
 const DEFAULT_STATEMENT_TIMEOUT_MS = 2_000;
 const MAX_STATEMENT_TIMEOUT_MS = 10_000;
+const MAX_SCOPE_COLUMNS = 8;
+const MAX_SCOPE_TUPLES = 2_000;
+const MAX_SCOPE_STRING_BYTES = 4_096;
+const MAX_SCOPE_BYTES = 1_048_576;
 
 interface SqlPart {
   sql: string;
@@ -90,6 +96,70 @@ function rowVisibilitySql<TRow extends Record<string, unknown>, TItem>(
   const column = identifier(visibility.column);
   const placeholders = visibility.allowedValues.map((value) => bindings.add(value));
   return `${column} IN (${placeholders.join(", ")})`;
+}
+
+/** Validate and detach mutable caller input before a pool/query await. */
+function normalizeRowScope(input: unknown): PostgresRowScope {
+  const invalid = (): never => { throw new Error("query row scope is invalid"); };
+  if (!input || typeof input !== "object" || Array.isArray(input)) return invalid();
+  const prototype = Object.getPrototypeOf(input);
+  if (prototype !== Object.prototype && prototype !== null) return invalid();
+  const scope = input as Record<string, unknown>;
+  if (Object.keys(scope).length !== 3 ||
+      !Object.hasOwn(scope, "columns") || !Object.hasOwn(scope, "allowedTuples") ||
+      !Object.hasOwn(scope, "fingerprint")) return invalid();
+  if (!Array.isArray(scope.columns) || scope.columns.length < 1 ||
+      scope.columns.length > MAX_SCOPE_COLUMNS ||
+      Array.from(scope.columns).some((column) => typeof column !== "string" || column.length > 63 || !IDENTIFIER.test(column)) ||
+      new Set(scope.columns).size !== scope.columns.length) return invalid();
+  if (!Array.isArray(scope.allowedTuples) || scope.allowedTuples.length > MAX_SCOPE_TUPLES ||
+      typeof scope.fingerprint !== "string" || !/^[!-~]{1,256}$/.test(scope.fingerprint)) return invalid();
+
+  // Canonicalize column order with its corresponding values, then the tuple
+  // set. Reordering the same authority set is not an authority revision.
+  const sourceColumns = Array.from(scope.columns) as string[];
+  const order = sourceColumns.map((column, index) => ({ column, index }))
+    .sort((left, right) => left.column < right.column ? -1 : left.column > right.column ? 1 : 0);
+  const tuples = new Map<string, readonly QueryScalar[]>();
+  let bytes = Buffer.byteLength(JSON.stringify({ columns: sourceColumns, allowedTuples: [], fingerprint: scope.fingerprint }), "utf8");
+  for (const raw of scope.allowedTuples) {
+    if (!Array.isArray(raw) || raw.length !== sourceColumns.length) return invalid();
+    // Array holes are not valid scalar values; Array.every/some would skip them.
+    const values: unknown[] = Array.from(raw);
+    for (const value of values) {
+      if (typeof value === "string") {
+        if (value.includes("\0") || Buffer.byteLength(value, "utf8") > MAX_SCOPE_STRING_BYTES) return invalid();
+      } else if (typeof value === "number") {
+        if (!Number.isFinite(value) || (Number.isInteger(value) && !Number.isSafeInteger(value))) return invalid();
+      } else if (typeof value !== "boolean") return invalid();
+    }
+    const tuple = Object.freeze(order.map(({ index }) => values[index] as QueryScalar));
+    const key = JSON.stringify(tuple);
+    bytes += Buffer.byteLength(key, "utf8") + 1;
+    if (bytes > MAX_SCOPE_BYTES) return invalid();
+    tuples.set(key, tuple);
+  }
+  return Object.freeze({
+    columns: Object.freeze(order.map(({ column }) => column)),
+    allowedTuples: Object.freeze([...tuples.entries()]
+      .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+      .map(([, tuple]) => tuple)),
+    fingerprint: scope.fingerprint,
+  });
+}
+
+/** Composite equality, not independent IN sets that admit a cross-product. */
+function rowScopeSql<TRow extends Record<string, unknown>, TItem>(
+  resource: PostgresListResource<TRow, TItem>,
+  bindings: Bindings,
+): string | null {
+  const scope = resource.rowScope;
+  if (!scope) return null;
+  if (scope.allowedTuples.length === 0) return "FALSE";
+  const columns = scope.columns.map(identifier).join(", ");
+  const tuples = scope.allowedTuples.map((tuple) =>
+    `(${tuple.map((value) => bindings.add(value)).join(", ")})`);
+  return `(${columns}) IN (${tuples.join(", ")})`;
 }
 
 function keysetSql<TRow extends Record<string, unknown>, TItem>(
@@ -193,6 +263,8 @@ function countQuery<TRow extends Record<string, unknown>, TItem>(
   const where = [`${identifier(resource.workspaceColumn)} = ${bindings.add(workspaceId)}`];
   const visibility = rowVisibilitySql(resource, bindings);
   if (visibility) where.push(visibility);
+  const scope = rowScopeSql(resource, bindings);
+  if (scope) where.push(scope);
   where.push(...filterSql(resource, filters, bindings));
   return {
     sql: `SELECT COUNT(*)::text AS count FROM ${tableIdentifier(resource.table)} WHERE ${where.join(" AND ")}`,
@@ -213,6 +285,8 @@ function pageQuery<TRow extends Record<string, unknown>, TItem>(input: {
   ];
   const visibility = rowVisibilitySql(input.resource, bindings);
   if (visibility) where.push(visibility);
+  const scope = rowScopeSql(input.resource, bindings);
+  if (scope) where.push(scope);
   where.push(...filterSql(input.resource, input.query.filters, bindings));
   if (input.direction !== "initial" && input.boundary) {
     where.push(
@@ -247,6 +321,8 @@ function edgeExistenceQuery<TRow extends Record<string, unknown>, TItem>(input: 
   ];
   const visibility = rowVisibilitySql(input.resource, bindings);
   if (visibility) where.push(visibility);
+  const scope = rowScopeSql(input.resource, bindings);
+  if (scope) where.push(scope);
   where.push(
     ...filterSql(input.resource, input.query.filters, bindings),
     keysetSql(input.resource, input.query.sort, input.direction, input.boundary, bindings),
@@ -269,6 +345,11 @@ export class ControlPlaneQueryService {
     actor: QueryActorContext,
     raw: RawKeysetQuery,
   ): Promise<KeysetPage<TItem>> {
+    // Clone only this new optional server-owned policy field. Existing callers
+    // without rowScope retain their previous request and cursor semantics.
+    if (resource.rowScope !== undefined) {
+      resource = { ...resource, rowScope: normalizeRowScope(resource.rowScope) };
+    }
     validateResource(resource);
     if (!resource.allowedRoles.includes(actor.role)) {
       throw new QueryContractError("QUERY_FORBIDDEN", "Access denied.", 403);
@@ -277,13 +358,18 @@ export class ControlPlaneQueryService {
       throw new QueryContractError("QUERY_SCOPE_REQUIRED", "Authenticated workspace scope is required.", 403);
     }
     const query = normalizeKeysetQuery(resource, raw);
-    const fingerprint = queryFingerprint({
+    const queryContextFingerprint = queryFingerprint({
       resourceId: resource.resourceId,
       limit: query.limit,
       filters: query.filters,
       sort: query.sort,
       rowVisibility: resource.rowVisibility ?? null,
     });
+    const fingerprint = resource.rowScope
+      ? createHash("sha256").update("portal-control-query-row-scope-v1\0")
+        .update(queryContextFingerprint).update("\0")
+        .update(JSON.stringify(resource.rowScope)).digest("base64url")
+      : queryContextFingerprint;
     const direction = query.after ? "after" : query.before ? "before" : "initial";
     const token = query.after ?? query.before;
     const boundary = token && direction !== "initial"

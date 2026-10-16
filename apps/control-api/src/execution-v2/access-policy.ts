@@ -65,6 +65,9 @@ export interface AccessEvaluationContext {
   active_principals: ReadonlySet<string>;
   relationsFor: (userId: string) => AccessRelations;
   allow_test_only?: boolean;
+  /** Internal read-snapshot proof, never a browser-supplied entitlement. */
+  authority_fingerprint?: string;
+  actor_role?: "ADMIN"|"USER";
 }
 export function policyReady(context: AccessEvaluationContext): boolean {
   const policy = context.policy;
@@ -113,6 +116,15 @@ function ancestorDelegationDenied(grant: ScopedAccessGrant, context: AccessEvalu
   }
   return false;
 }
+function matchingGrants(context:AccessEvaluationContext,action:AccessAction,resource:AccessResource,
+  environment:"paper"|"sandbox"|"live") {
+  return context.grants.filter(grant=>grant.subject_user_id===context.principal_id&&grant.action===action&&
+    grant.environments.includes(environment)&&grantCurrent(grant,context)&&
+    !ancestorDelegationDenied(grant,context,resource,environment)).filter(grant=>{
+      try{return resolvedResources(grant.selector,context.relationsFor(context.principal_id)).some(r=>resourceKey(r)===resourceKey(resource));}
+      catch{return false;}
+    });
+}
 export function evaluateAccess(context: AccessEvaluationContext, action: AccessAction, resource: AccessResource,
   environment: "paper"|"sandbox"|"live"): AccessDecision {
   const chainProof = (grant: ScopedAccessGrant) => {
@@ -134,17 +146,40 @@ export function evaluateAccess(context: AccessEvaluationContext, action: AccessA
   if (!context.actor_current || !context.active_principals.has(context.principal_id)) return decide(false,"CURRENT_ACTOR_AUTHORITY_REQUIRED");
   if (action === "owner.recovery") return decide(false,"OWNER_RECOVERY_NOT_APPROVED");
   if (!policyReady(context)) return decide(false,"POLICY_PENDING");
-  const matches = context.grants.filter(grant => grant.subject_user_id === context.principal_id && grant.action === action &&
-    grant.environments.includes(environment) && grantCurrent(grant,context) &&
-    !ancestorDelegationDenied(grant,context,resource,environment)).filter(grant => {
-      try { return resolvedResources(grant.selector,context.relationsFor(context.principal_id)).some(r => resourceKey(r) === resourceKey(resource)); }
-      catch { return false; }
-    });
+  const matches = matchingGrants(context,action,resource,environment);
   if (matches.some(grant => grant.effect === "DENY")) return decide(false,"ACCESS_DENIED",matches);
   if (!matches.some(grant => grant.effect === "ALLOW")) return decide(false,"ACCESS_DENIED");
   if (action === "portfolio.read_restricted" && context.policy!.researcher_fields.state !== "QUALIFIED")
     return decide(false,"RESEARCHER_FIELD_POLICY_PENDING",matches);
   return decide(true,null,matches);
+}
+
+/** Full business read implies a business read, never technical, export or
+ * mutation. A narrower current DENY still wins; no cross-action bypass. */
+export function evaluateBusinessRead(context:AccessEvaluationContext,
+  action:"business.read_all"|"alpha.read"|"portfolio.read"|"portfolio.read_restricted"|"portfolio.discover_linked"|"account.read"|"binding.read",
+  resource:AccessResource,environment:"paper"|"sandbox"|"live"):AccessDecision {
+  const direct=evaluateAccess(context,action,resource,environment);
+  if(!policyReady(context)||!context.actor_current||!context.active_principals.has(context.principal_id))return direct;
+  const relevant:AccessAction[]=["business.read_all",action];
+  if(action==="business.read_all") relevant.push(...({
+    ROOT:[],ALPHA:["alpha.read"],ALPHA_VERSION:["alpha.read"],DEPLOYMENT:["alpha.read"],
+    PORTFOLIO:["portfolio.read","portfolio.read_restricted","portfolio.discover_linked"],
+    ACCOUNT:["account.read"],BINDING:["binding.read"],USER:[],
+  } satisfies Record<AccessResource["kind"],AccessAction[]>)[resource.kind]);
+  for(const candidate of new Set(relevant))if(matchingGrants(context,candidate,resource,environment).some(g=>g.effect==="DENY"))
+    return {...evaluateAccess(context,candidate,resource,environment),allowed:false,reason_code:"ACCESS_DENIED",field_policy_ref:null};
+  return direct.allowed?direct:evaluateAccess(context,"business.read_all",resource,environment);
+}
+
+/** A correlated row must not retain a denied lineage component merely because
+ * the parent Alpha/Portfolio is readable. This is a DENY check, not a grant of
+ * child finance or technical access. */
+export function businessReadDenied(context:AccessEvaluationContext,resource:AccessResource,
+  environment:"paper"|"sandbox"|"live"):boolean {
+  const actions:AccessAction[]=["business.read_all","alpha.read","portfolio.read","portfolio.read_restricted",
+    "portfolio.discover_linked","account.read","binding.read"];
+  return actions.some(action=>matchingGrants(context,action,resource,environment).some(g=>g.effect==="DENY"));
 }
 
 /** One ceiling supplies action+scope+onward rights; never union fragmented grants. */

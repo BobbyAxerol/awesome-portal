@@ -1,4 +1,5 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
 import { CanaryEnvelopeRow, CanaryLineage, CanaryRepository } from "../canary/canary.repository";
 import { AuthSession, PortalUser } from "../domain";
 import { ProfileReadService } from "../profile-read/profile-read.service";
@@ -55,9 +56,28 @@ export class LiveOperationsService {
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
 
-  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string) {
+    await this.assertReadAccess(user, workspaceId);
+    const principal = { user, session, workspaceId, viewerWorkspaceId };
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) === "SCOPED_V2")
+      throw new GovernanceError("LIVE_SCOPED_PARENT_NOT_COMMISSIONED", "Live parent evidence field authority is not commissioned.", 503);
+    const result = await this.detailLegacy(user, session, workspaceId, deploymentId, viewerWorkspaceId);
+    await this.assertReadAccess(user, workspaceId);
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) !== "LEGACY_COMPATIBILITY")
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return result;
+  }
+
+  private async assertReadAccess(user: PortalUser, workspaceId: string): Promise<void> {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const denial = governanceDenial({ access, gate: "live", mode: "read", workspaceId });
+    if (denial) throw new GovernanceError(denial, GOVERNANCE_DENIAL_MESSAGE[denial], 403);
+  }
+
+  private async detailLegacy(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string) {
     /*
      * A4-3 · the Live gate, decided from a capability.
      *
@@ -66,11 +86,6 @@ export class LiveOperationsService {
      * reach the workspace could read it; §20.3 makes it `governance.live.read`,
      * which the owner holds and anybody else holds only by explicit grant.
      */
-    const access = await this.ownerAccess.effectiveAccess(user.userId);
-    const denial = governanceDenial({ access, gate: "live", mode: "read", workspaceId });
-    if (denial) {
-      throw new GovernanceError(denial, GOVERNANCE_DENIAL_MESSAGE[denial], 403);
-    }
     let canary: CanaryEnvelopeRow;
     try {
       canary = await this.canaries.latestByDeployment(workspaceId, deploymentId);
@@ -80,7 +95,7 @@ export class LiveOperationsService {
       // read behind a generic unavailable page.
       if (error instanceof GovernanceError && error.code === "CANARY_ENVELOPE_NOT_FOUND") {
         const currentSource = await this.profileReads.snapshot(
-          { user, session, workspaceId },
+          { user, session, workspaceId, viewerWorkspaceId },
           "live",
           "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
           deploymentId,
@@ -108,7 +123,7 @@ export class LiveOperationsService {
     const [lineage, currentSource] = await Promise.all([
       this.canaries.lineageFor(canary),
       this.profileReads.snapshot(
-        { user, session, workspaceId },
+        { user, session, workspaceId, viewerWorkspaceId },
         "live",
         "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
         deploymentId,

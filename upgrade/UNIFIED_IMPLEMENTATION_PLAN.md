@@ -9363,7 +9363,7 @@ Không copy lại toàn guide hoặc mở implementation từ việc nhận tài
 
 | Track | Detailed authority | Disposition hiện tại |
 | --- | --- | --- |
-| Portal ELP2-00…11 | [BE guide v1.2](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | 00 audit delivered;01/02 local backend checkpoints landed;03 focused186/186 PASS on prior working snapshot, latest review deltas and normal-hook commit pending;04 preparation only;05…11 NOT_STARTED. [Current resume point](#elp2-batch-current-resume); no shared-runtime activation |
+| Portal ELP2-00…11 | [BE guide v1.2](./execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md) | 00 audit delivered;01/02/03 local backend checkpoints landed;04 scoped reader/contract repairs implemented, History26/26 and Manager+analytics35/35/restore PASS, [coherent landing gate and remaining source/consumer dependencies](./execution_loop/evidence/ELP2-04/closeout-2026-10-16.md);05…11 NOT_STARTED. No shared-runtime activation |
 | Edge EPG10-00…11 | [Edge guide v1.2](./execution_loop/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md) | GUIDE_READ; HK inspection READ_ONLY; no Edge source/runtime changes |
 | Claude UXM-00…10 | [UX guide v1.1](./execution_loop/EXECUTION_LOOP_MANAGER_UX_DESIGN_GUIDE_v1.1_VI.md) | RULES_READY; browser audit/new design/implementation not performed in this package |
 | Shared score / Regime | [FINAL v1.1](./execution_loop/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md) | Formula/weights/bands selected; runtime calibration/config still pending; no new calculator/test run |
@@ -9535,10 +9535,11 @@ block only dependent activation. Existing Research/Governance evidence preserved
 
 ### ELP2-03 — Capability delegation và TS membership proposal
 
-- **Current backend return2026-10-16:** IN_PROGRESS after02 checkpoint at
-  `b448c0be655817dc49dd02f86aa2544e64c00d48`; [entry/task map](./execution_loop/evidence/ELP2-03/README.md).
-  Local evaluator/proposals and legacy grant repairs only; no production policy,
-  pending ceiling/disclosure or TS acceptance is authorized by test fixtures.
+- **Current backend return2026-10-16:** local technical checkpoint landed at
+  `c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64`; [entry/task map and final gate](./execution_loop/evidence/ELP2-03/README.md#landed-technical-checkpoint--normal-hook89719).
+  Normal hook89719 exit0: contracts425/API2,758 PASS,3 API tests skipped;
+  four-store row-digest dump/restore PASS. Original TS acceptance and approved
+  ceiling/disclosure gates remain OPEN; no test fixture grants runtime rights.
 - **Goal/dependency:** 01 cho design, 02 current identity cho runtime; một policy evaluator, app authority khác TS authority.
 - **To-do:** resource×mode capability/ceiling/current revision; grants/revoke audit; Stan delegation không self-elevate; TS proposal pending/accepted/rejected; approved researcher field matrix, không dùng owner-only guard để cản mọi delegated action hoặc bỏ guard toàn bộ.
 - **Claude:** access preview, pending TS acceptance, deny reason và reviewable grant diff.
@@ -9549,6 +9550,20 @@ block only dependent activation. Existing Research/Governance evidence preserved
 
 ### ELP2-04 — Áp quyền trên mọi read surface
 
+- **Current entry:** [implementation packet](./execution_loop/evidence/ELP2-04/README.md)
+  pinned to03 `c1d6b2dc`. Bobby's approved closeout is now implementing the
+  remaining readers, finite contracts and delivery fences; see the
+  [current closeout receipt](./execution_loop/evidence/ELP2-04/closeout-2026-10-16.md)
+  for exact test/landing status, superseding historical D only where proved.
+  History26/26 passed on G; J's12 unaffected suites passed and K's Manager23
+  plus analytics12 passed with separate Core/Execution databases and restore.
+  Post-K controller/cache regression and normal hook are recorded separately,
+  not implied by those results. The
+  [census](./execution_loop/evidence/ELP2-04/route-census-closeout.md) reconciles
+  112 mounted patterns,54 aliases and10 adjacent policy routes. Typed refusals
+  close unsafe fallback paths, not positive source commissioning. No runtime
+  activation or next phase. [Claude handoff](./execution_loop/evidence/ELP2-04/contract-handoff.md)
+  is AWAITING_CONSUMER_REVIEW; frontend remains unassigned.
 - **Goal/dependency:** 02/03 proof và 01 schemas; scope trước query/aggregation, không frontend hide.
 - **To-do:** list/detail/search/join/count/group/rank/export/cache/SSE field policy; linked-portfolio minimal discovery; no peer/physical/denominator leakage; current membership kiểm cả historical reads.
 - **Claude:** manager/researcher variants; denied khác authorized-empty; preserved workspace/deep links.
@@ -9784,7 +9799,17 @@ decisions/owners and5 new requests are canonical in the ELP2-00 packet.
 
 <a id="elp2-backend-batch-01-04"></a>
 
-## 14.9 Proposed backend goal — ELP2-01 → 02 → 03 → 04
+## 14.9 Backend batch — ELP2-01 → 02 → 03 → 04
+
+**Current checkpoint — reviewed2026-10-16T02:51Z:** keep this four-phase batch;
+01–03 are landed local technical checkpoints and04 has uncommitted work, not
+a passing exit. The goal service currently reports **no active goal**. Bobby's
+latest request is plan review before a new goal assignment, not permission to
+resume implementation. Use [the current resume point](#elp2-batch-current-resume)
+and [the current assignment card](#elp2-batch-next-assignment), not a restart
+from01 or four replacement phases. Earlier ACTIVE/NOT_STARTED statements below
+are historical. Frontend remains NOT_STARTED_BY_OWNER_DIRECTION; this return
+adds only documentation and reconciles the already-finished test cell.
 
 Bobby yêu cầu sắp xếp ngày2026-10-16 (Asia/Saigon): chuẩn bị một goal gồm
 **bốn phase backend liên tục**, frontend chưa bắt đầu. **PLAN_ONLY /
@@ -10082,8 +10107,18 @@ change or production policy/TS authority is authorized by these local results.
 
 ### 14.9.8 Current resume point — rà lại batch, không chạy lại phần đã đạt
 
-Đối chiếu tại `b448c0be655817dc49dd02f86aa2544e64c00d48`,
-2026-10-15T20:43Z /2026-10-16 Asia/Saigon. Mục này cập nhật điểm bắt đầu thực
+**Later approved closeout,2026-10-16:** the table below is the historical
+02:51Z checkpoint, not today's final test verdict. Follow the
+[closeout journal and request disposition](./execution_loop/evidence/ELP2-04/closeout-2026-10-16.md)
+and [published consumer handoff](./execution_loop/evidence/ELP2-04/contract-handoff.md).
+History failures have a passing retake; Manager/analytics retake and restore
+also pass. The normal-hook pin belongs to the coherent commit containing this
+addendum, contingent on hook success; exact logs and limitations are in the packet.
+Original external policy/source gates and consumer acceptance remain distinct.
+No goal or ELP2-05+ is started by this approved repair package.
+
+Đối chiếu tại `c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64`,
+2026-10-16T02:51Z. Mục này cập nhật điểm bắt đầu thực
 tế, thắng các dòng planning/pending lịch sử ở trên; không xóa receipt cũ,
 không mở thêm phase, frontend hay runtime authority. Lượt rà kế hoạch này chỉ
 sửa Markdown; giữ nguyên code đang dở, không chạy build/DB/hook/push.
@@ -10092,8 +10127,8 @@ sửa Markdown; giữ nguyên code đang dở, không chạy build/DB/hook/push.
 | --- | --- | --- |
 | **01 — contracts** | Landed `700aa6a4`; contract/generation checkpoint PASS, external review còn OPEN | Reuse schema/FX receipts nếu dependency không đổi; không regenerate/build lại chỉ để khởi động goal. Nếu03 cần thêm schema thì additive versioned contract và impacted tests ở03 |
 | **02 — identity** | Landed `b448c0be`; identity18/18, retained8/8, normal hook/PG restore PASS | Reuse preservation/current-session proof; không làm lại login/lifecycle. Verified TS mapping chưa qualified vẫn typed pending, không coi checkpoint này là TS acceptance |
-| **03 — policy/delegation** | **UNCOMMITTED**. Focused isolated PG/API cell27826:186/186 PASS trên snapshot trước delta preview/review cuối; migration và mounted API đã kiểm trong cell, không phải runtime chung | Đồng bộ8 operation/preview-revoke và review fixes → normal hook gồm latest PG/API/restore → packet/handoff/commit. Không cộng receipt snapshot cũ thành PASS cho diff mới. Chưa đạt gate03 thì04 chỉ được chuẩn bị read-only |
-| **04 — read enforcement** | Chỉ có route/test design;112 baseline patterns và54 aliases chưa được implementation-certified | Sau03: inventory delta → server-minted scope/query predicates → fields/totals/metadata/cursor/cache/export/stream enforcement → T04-01…12 direct-API negative/revoke/in-flight → complete dispositions, packet/handoff/normal-hook commit |
+| **03 — policy/delegation** | Landed `c1d6b2dc`; normal hook89719 exit0, contracts425/API2,758 PASS,3 API tests skipped; four-store row-digest restore PASS. Final affected suites70+63+42+18 are included in the API total, not extra coverage | Reuse local current-session/evaluator/revoke proof for04. Actual TS acceptance/approved preset and field policies remain gated; TEST_ONLY fixtures are not production authority. Failed packaging attempt86478 is retained in the packet |
+| **04 — read enforcement** | UNCOMMITTED. Cell D build PASS;277 PASS/2 FAIL across279 cases: scope95, projection106, local alignment5 and profile compatibility50 PASS; History21/23. Restore/tracking NOT_RUN. Generated History artifacts exist but their new68-case contract suite is NOT_RUN; later History-only regex tightening is outside D's copied snapshot.112 patterns/54 aliases remain uncertified. [Exact receipt](./execution_loop/evidence/ELP2-04/README.md#elp2-04-history-cell-d) | Diagnose the two History failures without weakening refusal semantics; run the new contract suite and retake changed History dependencies only. Then finish remaining reader families → delivery surfaces → T04-01…12/census → journal/handoff/normal-hook commit. Do not repeat passing profile fanout or01–03 gates without impact. One History reader or foundation PASS cannot close04 |
 
 **03 chia bốn gói nội bộ, không tạo phase mới:** (a) một pure evaluator + finite
 capability/ceiling registry; (b) persistence/CAS/idempotent immutable receipts,
@@ -10114,8 +10149,9 @@ export/stream phải có disabled proof, không bật chúng để lấy positiv
 
 Mỗi phase vẫn kết thúc riêng theo §14.9.4 và rules §7.4: **journal + gate matrix
 + commit + handoff + debt/owner + backend-next + Claude-next + request/ack**.
-Hai phase01/02 đã landed không thành hai phase mới để chạy lại; goal tiếp tục
-từ03 sau review working tree.03/04 chưa được gọi COMPLETE; whole-runtime/owner
+Ba phase01/02/03 đã landed không thành ba phase mới để chạy lại; backend next
+là04 theo ordered scope, từ producer pin `c1d6b2dc`.04 chưa COMPLETE; original
+external gates của01/03 và whole-runtime/owner
 acceptance vẫn riêng. Frontend `NOT_STARTED_BY_OWNER_DIRECTION`, handoff
 `AWAITING_CONSUMER_REVIEW`; không giao Claude triển khai lúc này.
 
@@ -10127,5 +10163,219 @@ chứng minh TS đã chấp nhận. Nếu mục bắt buộc bị chặn thì b�
 done-when; không sửa exit gate hoặc chuyển cả batch thành blanket PASS.
 
 Khi dùng prompt §14.9.5, thêm: **“Tiếp tục từ checkpoint đã ghi ở §14.9.8;
-không chạy lại01/02 đã PASS nếu dependency không đổi. Review toàn bộ diff03
-chưa commit trước khi triển khai tiếp. Giữ nguyên frontend và shared runtime.”**
+không chạy lại01/02/03 đã PASS nếu dependency không đổi. Bắt đầu04 từ producer
+pin `c1d6b2dc`, giữ nguyên frontend và shared runtime.”**
+
+**Closeout of the already-running03 landing,2026-10-15T21:49Z:**39 files,
++8,974/−113; normal commit `c1d6b2dc`, no frontend changes. Exact disposable
+containers/network1888374 absent after trap; host11,681MiB available and158GiB
+disk free (75% used), cleanup NO_ACTION_NEEDED. Contract/API build/restore and
+tracking checks are actual local evidence, not deployed or TS/consumer proof.
+This journal update is documentation-only and uncommitted until the next
+coherent normal-hook delivery; no duplicate full suite is run for it.
+Planning validation:5 updated Markdown files,39 local links/anchors resolved,
+0 errors; `git diff --check` exit0. No additional build/DB/browser test ran
+for the journal update; no new application code or runtime change was made.
+
+<a id="elp2-four-phase-execution-order"></a>
+
+### 14.9.9 Reviewed execution order and exact resume — backend only
+
+Bobby's latest request is a plan review for four consecutive backend phases,
+not a new frontend/runtime assignment. Preserve the existing active goal and
+all owned dirty code; this review itself adds only documentation. Current
+checkpoint overrides historical NOT_STARTED/preparation wording above.
+
+**Keep the four original phases, do not invent four replacements:**
+01 contracts →02 identity →03 policy/delegation →04 complete read enforcement.
+01–03 are landed local technical checkpoints, not full runtime/TS acceptance.
+Continue from04; only reopen earlier code when an actual04 dependency changes,
+with its impacted regression. No repeat of unchanged full suites or restore
+drills just to make the batch look sequential again.
+
+| Execution step within04 (not new phase/package IDs) | Deliverable / exit before the dependent step |
+| --- | --- |
+| 1 — security foundation (packet package04-A) | Close the [canonical draft review](./execution_loop/evidence/ELP2-04/README.md#elp2-04-prelanding-review). Cell C fixed the test fixture and passed93/93 projection cases, build and restore. The later qualified strategy→Alpha mapping changes require impacted retakes; do not repeat the fixed-password task or treat C as proof for changed code. Current pairs, exact purpose, complete-tuple DENYs, qualified binding/strategy lineage, finite fields, sticky mode and authorized-empty behavior remain prerequisites |
+| 2 — query integration (packet packages04-B/C/D) | Finish the UNCOMMITTED History integration and versioned generated contract, then test its actual controller/service/repository with current scope. Preserve legacy v1; V2 has UTC-ms public values, private microsecond keysets, end-exclusive ranges and page/count on one scoped snapshot. Continue lists/detail/composition/named adapters before claiming coverage. Correlate tuples before count/sort/page/aggregation; shared-account/portfolio totals need grain-safe visibility, not a filter over global totals. Restrict query and response fields; preserve Research/Planning defaults |
+| 3 — complete delivery surfaces (packet packages04-E/F) | Scope summaries, bounds/coverage/provenance and errors; bind cursors/cache to current authority; recheck in-flight/cache followers; keep uncommissioned export/stream disabled with direct proof. Preserve gate-specific Governance authorization |
+| 4 — acceptance and landing (whole04 exit) | Complete112 baseline routes/54 aliases plus new/adjacent route dispositions and T04-01…12 receipts. Publish generated contracts/fixtures only where changed, real disposable DB/API proof, resource cleanup, per-phase journal/handoff and coherent normal-hook commit. Original external gates stay explicitly OPEN |
+
+The packet's existing04-A…04-F package names remain canonical; the four rows
+above are execution checkpoints, not a conflicting second04-A…04-D naming
+scheme. The latest [cell C receipt](./execution_loop/evidence/ELP2-04/README.md#elp2-04-foundation-cell-c)
+supersedes the older password-setup blocker for its exact source pins only;
+the later helper/History changes remain unverified. This review starts no
+retake or additional implementation.
+
+Primary owns shared schema/generated outputs, integration and Unified. Once
+implementation resumes, independent query/test/review work may use bounded
+agents with disjoint files; no parallel heavy build/DB suites. One isolated
+cell, total4CPU/4GiB,8GiB transient,≤2workers; no shared data or public port.
+
+**Planning reconciliation2026-10-16T02:03Z:** HEAD remains `c1d6b2dc`;
+01–03 are the three existing commits, not three new assignments. Current04
+scope/linkage and projection-helper drafts plus their new test definitions
+remain UNCOMMITTED / RETAKE_NOT_RUN. Independent review found a final topology
+race, an unenforced whole-population postcondition and missing binding-grain
+representation; these extend canonical04 requests001/002/004, not a new phase
+or duplicate ledger. All agents have returned/stopped; no new implementation,
+test cell, hook or runtime operation is started by this plan review. Preserve
+their files and review them at04-A; do not describe cell A's older282/284 result
+as certification of the changed snapshot. No need to create a duplicate goal.
+
+**Every phase return remains mandatory:** commit and changed-line stats;
+requirement→receipt and actual gate result; backend-next; unresolved debt with
+owner/done-when; Claude-ready contracts/consumer tasks; requests and ack;
+cleanup/rollback. Write these before the next dependent phase, not once at the
+end. Frontend stays NOT_STARTED_BY_OWNER_DIRECTION and its handoff
+AWAITING_CONSUMER_REVIEW; Claude's absence does not block independent backend
+tests or become a false consumer acceptance.
+
+**Suggested continuation:** “Tiếp tục goal backend ELP2-01→04 từ checkpoint
+§14.9.8/§14.9.9. Reuse01–03 đã landed; đóng review và hoàn thiện04 theo guide,
+T04-01…12, journal/handoff/normal commit. Không frontend, push, dev/main merge,
+shared runtime activation hoặc05+; pending authority/config không tự cấp.”
+
+**Validation:** the earlier23-link result remains historical. This planning
+reconciliation checked33 local links/anchors across the batch index and two
+entry/phase documents,0errors; `git diff --check` exit0. No application test,
+build or runtime operation was run for these three Markdown edits. Documentation
+remains UNCOMMITTED for the next coherent normal-hook delivery; no hook bypass,
+new push or branch operation.
+
+**Historical bounded reconciliation (before cell C / History changes):** cell B's terminal result and cleanup were
+linked above; its six frozen source/test hashes still match the working tree.
+Documentation validation:35 local links/anchors checked,0errors;
+`git diff --check` exit0. No application suite/build/DB retake was run for this
+review. The previously assigned History HTTP-test agent was stopped after its
+new draft file appeared; it is UNCOMMITTED/NOT_RUN and not independently
+reviewed as complete. Dependency injection and reader wiring are not yet
+implemented, so it grants no route proof. All source drafts remain preserved
+for the next approved implementation continuation.
+
+**Current planning return2026-10-16T02:35Z:** retain the four original phases
+and the existing goal; do not create four replacement phases or restart01–03.
+The current table/checkpoints above now include cell C and the later untested
+History/strategy-lineage drafts. Next implementation is the affected04
+contract/reader/test package, not another password retake. This return changes
+only Markdown; all21 dirty non-Markdown files are preserved. No application
+test/build/hook, new agent, push, merge or runtime change is started here.
+Journal/handoff and individual gate/commit returns remain mandatory even while
+Claude is not assigned. Documentation awaits the next coherent normal-hook
+delivery; no hook bypass or fabricated consumer acknowledgement.
+Validation for this return:39 local Markdown links/anchors resolved,0errors;
+`git diff --check` exit0. The21 dirty non-Markdown files have the same aggregate
+SHA256 before/after (`fbdcc8c75807c1b0abec48688ad757aef17345468fabc95e0797529be880ebb4`);
+no implementation changes are attributed to this documentation review.
+
+<a id="elp2-batch-next-assignment"></a>
+
+### 14.9.10 Current assignment card — bốn phase backend, chưa giao frontend
+
+**Plan review2026-10-16T02:51Z; supersedes current-status wording above.**
+Goal service: no active goal at this observation. This request arranges the
+next assignment only. Preserve all local commits/drafts; no new implementation,
+test cell, frontend work, push, merge or shared runtime change starts here.
+The already-running cell D has ended; its FAIL receipt is reconciled, not rerun.
+
+**Ordered scope stays01 →02 →03 →04.** This is one backend batch with four
+separate returns, not four fresh implementations: reuse01–03 at `700aa6a4`,
+`b448c0be`, `c1d6b2dc` after dependency-impact review; resume unfinished04.
+Do not substitute05–08 to manufacture four unstarted phases. Full TS/Edge,
+consumer and runtime acceptance are separate from these local checkpoints.
+
+| Order / checkpoint | Next assignment must do | Before dependent work / closeout |
+| --- | --- | --- |
+| 01 — contract baseline | Verify delivered schema/FX pins and compatibility against04's changed dependencies; change only a proven gap | Keep existing receipt/commit; any schema delta needs generation, fixture, impacted test and updated handoff, not a full01 restart |
+| 02 — identity preservation | Reuse landed issuer/subject, owner/lifecycle/session proof; review only actual04 impact | No user/grant reset or recovery activation; affected identity regression required only if its code/dependency changes |
+| 03 — policy/delegation | Reuse landed evaluator/current-session/CAS/revoke proof; preserve actual-vs-TEST_ONLY distinction | Approved ceiling/field matrix and actual TS acceptance remain separately gated; no fixture policy seed or local-only business grant |
+| 04 — all read surfaces | First diagnose D's two failures and run pending History contract cases; finish History, Manager lists/compositions/named reads, remaining history readers, then cache/cursor/export/stream/audit boundaries | Scope raw rows before aggregation; every112-route/54-alias/adjacent/new surface gets an explicit disposition and direct-API proof. T04-01…12, normal hook, coherent commit, journal and handoff before04 technical exit |
+
+**04 retake policy:** triage the404 current-authority test to distinguish a
+legitimate non-disclosing refusal from a broken cursor harness; diagnose the500
+source-cutover case before deciding production versus fixture repair. Do not
+accept arbitrary statuses or relax assertions simply to pass. Then run only
+affected History/contract/security dependencies; D's unchanged50-case profile
+compatibility suite (including its60s fanout) need not repeat. Full hook still
+runs when the coherent change is committed; never bypass it. A broad04 exit
+cannot be inferred from the History-only retake.
+
+**Per-phase return, including reused phases:** entry/producer SHA and dependency
+hashes; requirement→code/type→receipt and actual verdict; owned diff/line stats;
+contract/schema/migration impact; normal-hook commit or explicit uncommitted
+state; cleanup/rollback; debt owner/done-when; backend-next; Claude-ready tasks;
+new/delivered requests and acknowledgement. Reuse existing packets instead of
+creating duplicate journals. Update Unified in the same delivery, not only at
+the end. Mandatory external gates remain OPEN, not silently deferred.
+
+**Frontend hold:** no Claude/UXM assignment or frontend edits in this batch.
+Each backend phase still publishes its pinned operation/type/fixture/field,
+absence/permission/pagination mapping and consumer acceptance instructions.
+Frontend `NOT_STARTED_BY_OWNER_DIRECTION`; handoff `AWAITING_CONSUMER_REVIEW`.
+Write what Claude can do after Bobby assigns it, not “Claude has accepted”.
+
+**Budget/authority unchanged:** one private PG, total4CPU/4GiB,8GiB transient,
+≤2workers and one heavy lane; independent audit/tests may delegate with disjoint
+files. Primary owns schema/generated/migrations/Unified/integration. No shared
+preview/dev/stable/HK writes, source/SSE/TLS activation or new policy grants.
+No05+, push, dev/main merge, signing or release. External blockers gate only
+their dependent feature; report them honestly while continuing approved
+independent backend work.
+
+**Prompt for Bobby's next assignment:**
+
+> Bật goal tiếp tục batch backend ELP2-01→02→03→04 theo Unified §14.9.10.
+> Reuse01–03 đã landed nếu dependency không đổi; tiếp tục04 từ checkpoint cell D,
+> sửa hai History failures, hoàn thiện toàn bộ read surfaces và gates theo guide.
+> Duyệt local backend/contracts, isolated tests và budget §14.9.2; không frontend,
+> shared runtime/HK writes hoặc quyền/config còn pending. Journal, test receipts,
+> handoff, debt/next-step và normal-hook commit riêng từng phase/coherent slice.
+> Không hỏi lại các bước đúng scope; không gọi full completion khi mandatory
+> gates còn mở. Không push, merge dev/main, release/deploy hoặc tự mở05+.
+
+This card is a proposed assignment, not a goal activation or implementation
+receipt. The current review changes Markdown only; finished cell D remains
+277 PASS/2 FAIL, not green. Documentation commit awaits a normal-hook delivery;
+do not run a full application gate solely for this plan clarification.
+
+Planning validation:38 local Markdown links/anchors resolved,0 errors;
+`git diff --check` PASS. All29 dirty non-Markdown paths retain their pre-review
+aggregate SHA256 `3e8eefc119c878604c4a976b6c4b3ac536f6f405f7bd23beefae426467a6b580`.
+This return edits only Unified, campaign entry and04 result packet; it does not
+attribute the earlier source/test work or cell D run to this planning request.
+No new application tests/build/DB/hook ran. Documentation remains UNCOMMITTED;
+normal-hook landing is pending, not bypassed. Backend next is04 after Bobby's
+assignment; Claude next remains a pinned handoff for later owner assignment.
+
+### 14.9.11 Approved closeout return — current implementation, 2026-10-16
+
+Bobby subsequently approved closing existing01–04 gaps, not a new goal or05+.
+This supersedes the planning-only current-status text in14.9.10; historical
+failures and receipts above stay intact. Source is still
+`docs/research-loop-plan`, with no frontend/runtime/remote changes.
+
+- History's two failures have a real isolated HTTP/PostgreSQL passing retake;
+  scoped Fleet/Portfolio/Binding, named/resource/analytics and delivery fences
+  are implemented. Manager/analytics35/35 and scoped-policy restore PASS.
+- Full normal-hook attempt1: contracts574/574 PASS; API build PASS;
+  API3,281 PASS/3 FAIL/3 existing SKIP. Failed commit did not land. The three
+  compatibility regressions concern Core/source workspace routing and legacy
+  dark-profile reads; fixes and final terminal gate belong in the
+  [closeout receipt](./execution_loop/evidence/ELP2-04/closeout-2026-10-16.md).
+  Do not interpret a working-tree fix as a passing retake.
+- Subsequent L build and all six affected integration suites PASS86/86;
+  L's new synthetic context fixture separately failed10 setup checks and was
+  corrected without changing production guards. Pure context+adapter retake
+  PASS25/25; adapter15 overlap L. Source is stable for the final normal hook;
+  logs/hashes and non-additive coverage are recorded in the same receipt.
+- [112-pattern/54-alias census](./execution_loop/evidence/ELP2-04/route-census-closeout.md)
+  distinguishes implementation, typed refusal, source qualification and actual
+  test coverage. It is not112 positive runtime receipts. Parent/technical
+  publication008/009 and consumer010 remain separately owned and gated.
+- [Claude handoff](./execution_loop/evidence/ELP2-04/contract-handoff.md) contains
+  generated types, fixtures, state/cursor/permission mappings and acceptance.
+  Claude remains NOT_STARTED_BY_OWNER_DIRECTION; no acknowledgement invented.
+- Backend stays on this approved repair package until normal-hook landing;
+  ELP2-05 catalogue/publication is the proposed next dependency step, only
+  after Bobby assigns it. No source/SSE/Live/policy activation, push, dev/main
+  merge or release accompanies this closeout.

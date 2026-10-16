@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, Header, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
 import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
@@ -12,6 +12,7 @@ import { ManagerListsError, ManagerListsService } from "./manager-lists.service"
 interface ManagerListRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -24,30 +25,34 @@ export class ManagerListsController {
   ) {}
 
   @Get("/alphas")
+  @Header("Cache-Control", "private, no-store")
   async fleet(@Req() request: ManagerListRequest, @Query() raw: unknown) {
     const parsed = AlphaFleetQuerySchema.safeParse(raw);
     if (!parsed.success) throw new ManagerListsError("BR72_FLEET_QUERY_INVALID", 400);
     const workspaceId = await this.workspace(request, parsed.data.workspace_id);
-    return this.lists.fleet({ user: request.portalUser, session: request.portalSession, workspaceId }, parsed.data);
+    return this.lists.fleet({ user: request.portalUser, session: request.portalSession, workspaceId, viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId }, parsed.data);
   }
 
   @Get("/portfolios")
+  @Header("Cache-Control", "private, no-store")
   async portfolios(@Req() request: ManagerListRequest, @Query() raw: unknown) {
     const parsed = PortfolioListQuerySchema.safeParse(raw);
     if (!parsed.success) throw new ManagerListsError("BR76_PORTFOLIO_QUERY_INVALID", 400);
     const workspaceId = await this.workspace(request, parsed.data.workspace_id);
-    return this.lists.portfolios({ user: request.portalUser, session: request.portalSession, workspaceId }, parsed.data);
+    return this.lists.portfolios({ user: request.portalUser, session: request.portalSession, workspaceId, viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId }, parsed.data);
   }
 
   @Get("/broker-bindings")
+  @Header("Cache-Control", "private, no-store")
   async bindings(@Req() request: ManagerListRequest, @Query() raw: unknown) {
     const parsed = BindingsQuerySchema.safeParse(raw);
     if (!parsed.success) throw new ManagerListsError("BR72_BINDINGS_QUERY_INVALID", 400);
     const workspaceId = await this.workspace(request, parsed.data.workspace_id);
-    return this.lists.bindings({ user: request.portalUser, session: request.portalSession, workspaceId }, parsed.data);
+    return this.lists.bindings({ user: request.portalUser, session: request.portalSession, workspaceId, viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId }, parsed.data);
   }
 
   @Get("/broker-bindings/:binding_id")
+  @Header("Cache-Control", "private, no-store")
   async binding(
     @Req() request: ManagerListRequest,
     @Param("binding_id") bindingId: string,
@@ -61,7 +66,7 @@ export class ManagerListsController {
     }
     const workspaceId = await this.workspace(request, rawWorkspaceId);
     return this.lists.binding(
-      { user: request.portalUser, session: request.portalSession, workspaceId },
+      { user: request.portalUser, session: request.portalSession, workspaceId, viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       environment as "paper" | "sandbox" | "live",
       bindingId,
     );

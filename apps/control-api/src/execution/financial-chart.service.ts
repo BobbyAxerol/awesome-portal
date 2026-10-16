@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionReadScopes, ExecutionReadScopeError, scopeAllowsField, scopeReadPopulation,
+  type AuthorizedExecutionReadScope, type ReadScopeRequirement } from "../execution-v2/read-scope";
+import { accessDigest } from "../execution-v2/access-policy";
 import { ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -58,6 +61,7 @@ interface FinancialPrincipal {
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
+  viewerWorkspaceId?: string;
 }
 
 export interface FinancialChartQuery {
@@ -163,9 +167,17 @@ export class ExecutionFinancialChartService {
     @Inject(ExecutionDurableFinancialRepository) private readonly financial: ExecutionDurableFinancialRepository,
     @Inject(ExecutionDurableMirrorRepository) private readonly mirror: ExecutionDurableMirrorRepository,
     @Inject(ExecutionFinancialQueryCursorRepository) private readonly cursors: ExecutionFinancialQueryCursorRepository,
+    @Optional() @Inject(ExecutionReadScopes) private readonly scopes?: ExecutionReadScopes,
   ) {}
 
   async chart(principal: FinancialPrincipal, query: FinancialChartQuery) {
+    validateChartQuery(query);
+    const binding = metricBinding(query.subject.kind, query.metric);
+    return this.authorized(principal, query, binding?.relationKey ?? "unsupported-financial-metric", [metricPermission(query.metric), "currency", "account_id", "timestamp_ms"],
+      scope => this.chartRead(principal, query, scope));
+  }
+
+  private async chartRead(principal: FinancialPrincipal, query: FinancialChartQuery, authorizedScope?: AuthorizedExecutionReadScope) {
     validateChartQuery(query);
     const profileId = profileIdFor(this.config, query.environment);
     const operationId = "executionFinancialChartV1";
@@ -196,13 +208,26 @@ export class ExecutionFinancialChartService {
       fromMs: query.fromMs,
       toMs: query.toMs,
       targetPoints,
+      authorizedScope,
     });
-    const result = this.chartResponse(principal, query, profileId, operationId, metric, read, targetPoints);
+    const scopedRead = authorizedScope?.mode === "SCOPED_V2" ? { ...read, revision: null, observation: null } : read;
+    const result = this.chartResponse(principal, query, profileId, operationId, metric, scopedRead, targetPoints);
+    if (authorizedScope?.mode === "SCOPED_V2") {
+      result.panel.clocks = clocks(null);
+      result.panel.reason_code = "AUTHORIZED_RETAINED_FINANCIAL_RANGE";
+    }
     assertResponseBytes(result);
     return result;
   }
 
   async decisionRecords(principal: FinancialPrincipal, query: RiskDecisionQuery) {
+    validateDecisionQuery(query);
+    return this.authorized(principal, query, query.decisionKind === "risk_grants" ? "manager.risk:risk_grants" : "manager.risk:sizing_decisions",
+      [query.decisionKind === "risk_grants" ? "risk_grant_id" : "decision_id", "strategy_id", "account_id", "venue", "environment", "created_at"],
+      scope => this.decisionRead(principal, query, scope));
+  }
+
+  private async decisionRead(principal: FinancialPrincipal, query: RiskDecisionQuery, authorizedScope?: AuthorizedExecutionReadScope) {
     validateDecisionQuery(query);
     const profileId = profileIdFor(this.config, query.environment);
     const operationId = query.decisionKind === "risk_grants"
@@ -234,7 +259,7 @@ export class ExecutionFinancialChartService {
       );
     }
     const subject = await this.financial.resolveSubject(
-      { workspaceId: principal.workspaceId, environment: query.environment, profileId },
+      { workspaceId: principal.workspaceId, environment: query.environment, profileId, authorizedScope },
       query.subject,
     );
     if (subject.state === "UNAVAILABLE" || subject.resource === null) {
@@ -247,6 +272,7 @@ export class ExecutionFinancialChartService {
       ? "manager.risk:risk_grants"
       : "manager.risk:sizing_decisions";
     const cursorScope = financialCursorScope(principal, query, profileId, operationId);
+    if (authorizedScope?.mode === "SCOPED_V2") cursorScope.queryFingerprint = accessDigest([cursorScope.queryFingerprint, authorizedScope.fingerprint]);
     const durableCursor = query.after ? await this.cursors.resolve(cursorScope, query.after) : null;
     const page = await this.mirror.rangePage({
       workspaceId: principal.workspaceId,
@@ -258,6 +284,7 @@ export class ExecutionFinancialChartService {
       to: query.toMs === null ? null : new Date(query.toMs).toISOString(),
       limit: query.limit,
       after: durableCursor,
+      authorizedScope,
     });
     if (page.state === "UNAVAILABLE") {
       return this.decisionUnavailable(principal, query, profileId, operationId, page.reason_code ?? "EDS07_RELATION_UNAVAILABLE");
@@ -282,7 +309,7 @@ export class ExecutionFinancialChartService {
     const envelope = panelEnvelope<RiskDecisionData>({
       state,
       data: state === "EMPTY" ? null : data,
-      clocks: clocks(page.observation ? {
+      clocks: clocks(authorizedScope?.mode !== "SCOPED_V2" && page.observation ? {
         asOf: page.observation.as_of === null ? null : new Date(page.observation.as_of),
         receivedAt: page.revision === null ? null : new Date(page.revision.received_at),
       } : null),
@@ -299,14 +326,14 @@ export class ExecutionFinancialChartService {
         gaps: [],
       },
       source_history_semantics: decisionHistorySemantics(query.decisionKind),
-      formula: {
+      formula: authorizedScope?.mode === "SCOPED_V2" ? null : {
         formula_id: "eds07.decision-record-safe-projection",
         formula_version: "v1",
         input_revision: page.revision?.read_model_revision ?? null,
         input_digest: page.revision?.payload_digest ?? null,
         composite_read_revision: page.revision?.read_model_revision ?? null,
       },
-      reason_code: page.reason_code,
+      reason_code: authorizedScope?.mode === "SCOPED_V2" ? "AUTHORIZED_RETAINED_DECISION_RANGE" : page.reason_code,
       retryable: false,
     });
     const result = {
@@ -321,6 +348,36 @@ export class ExecutionFinancialChartService {
     };
     assertResponseBytes(result);
     return result;
+  }
+
+  private async authorized<T>(principal: FinancialPrincipal, query: FinancialChartQuery | RiskDecisionQuery,
+    relationKey: string, fields: string[], read: (scope?: AuthorizedExecutionReadScope) => Promise<T>): Promise<T> {
+    if (!this.scopes) return read(); // Explicit old manual constructors only; mounted service injects scopes.
+    const profileId = profileIdFor(this.config, query.environment);
+    if (!profileId) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    const revision = await this.financial.revision({ workspaceId: principal.workspaceId, environment: query.environment, profileId });
+    const action: ReadScopeRequirement["action"] = query.subject.kind === "portfolio" ? "portfolio.read" : query.subject.kind === "account" ? "account.read" : "alpha.read";
+    const scope = await this.scopes.authorize(principal, { environment: query.environment, profileId }, { action,
+      ...(query.subject.kind === "deployment" ? {} : { resource: { kind: query.subject.kind.toUpperCase() as "ALPHA" | "ACCOUNT" | "PORTFOLIO", id: query.subject.id } }),
+      dataset: { dataset_id: `financial:${relationKey}`, source_revision: revision?.payloadDigest ?? "MIRROR_NOT_RECORDED",
+        projection_generation: revision?.projectionEpoch ?? "PROJECTION_NOT_RECORDED", catalogue_revision: revision?.sourceCatalogueSha256 ?? null,
+        window: query.fromMs !== null && query.toMs !== null && query.fromMs < query.toMs ? { from_ms: query.fromMs, to_ms: query.toMs } : null },
+    });
+    if (scope.mode === "SCOPED_V2") {
+      if (query.fromMs !== null && query.toMs !== null && query.fromMs >= query.toMs) throw new FinancialChartError("EDS07_FINANCIAL_QUERY_INVALID", 400);
+      if (query.subject.kind === "deployment" && !scopeReadPopulation(scope).allowedTuples.some(tuple => tuple.deployment_id === query.subject.id))
+        throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+      if (fields.some(field => !scopeAllowsField(scope, field))) throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+    }
+    return this.scopes.deliver(scope, async () => {
+      const result = await read(scope);
+      if (scope.mode === "SCOPED_V2") {
+        const latest = await this.financial.revision({ workspaceId: principal.workspaceId, environment: query.environment, profileId });
+        if (accessDigest(latest) !== accessDigest(revision)) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        return { ...result, read_scope: { visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", policy_revision: scope.policyRevision } };
+      }
+      return result;
+    });
   }
 
   private chartResponse(
@@ -438,6 +495,10 @@ export class ExecutionFinancialChartService {
       panel: emptyEnvelope(reasonCode),
     };
   }
+}
+
+function metricPermission(metric: Eds07FinancialMetric): string {
+  return ({ cash_total: "balance_total", cash_free: "balance_free", cash_locked: "balance_locked", allocated_capital: "allocation" } as Partial<Record<Eds07FinancialMetric, string>>)[metric] ?? metric;
 }
 
 function metricBinding(kind: FinancialSubjectKind, metric: Eds07FinancialMetric): FinancialMetricBinding | null {

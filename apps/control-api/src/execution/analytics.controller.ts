@@ -20,10 +20,12 @@ import {
 } from "./local-query-analytics.service";
 import { Portfolio360LocalService } from "./portfolio360-local.service";
 import { ExecutionLocalReadAuthority } from "./local-read-authority";
+import { ExecutionReadScopeError } from "../execution-v2/read-scope";
 
 interface AnalyticsRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -226,7 +228,7 @@ export class ExecutionAnalyticsController {
     try {
       return await operation();
     } catch (error) {
-      if (error instanceof AnalyticsProxyError) throw error;
+      if (error instanceof AnalyticsProxyError || error instanceof ExecutionReadScopeError) throw error;
       // The typed 502 stays; the operator gets the failure class and a bounded message in the log.
       ExecutionAnalyticsController.log.warn(JSON.stringify({ event: "analytics_upstream_error", error_class: error instanceof Error ? error.constructor.name : typeof error, message: error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200) }));
       throw new AnalyticsProxyError("ANALYTICS_UPSTREAM_UNAVAILABLE", 502);
@@ -379,5 +381,6 @@ function principal(request: AnalyticsRequest) {
     user: request.portalUser,
     session: request.portalSession,
     workspaceId: request.portalWorkspaceId,
+    viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId,
   };
 }

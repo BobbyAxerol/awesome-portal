@@ -3,8 +3,10 @@
 Frontend `NOT_STARTED_BY_OWNER_DIRECTION`; acknowledgement
 `AWAITING_CONSUMER_REVIEW`. This packet is not an instruction to start UI.
 Producer branch `docs/research-loop-plan`, entry
-`b448c0be655817dc49dd02f86aa2544e64c00d48`. Delivery is currently a working
-diff, not a landed or deployed release; final receipt/commit belongs in README.
+`b448c0be655817dc49dd02f86aa2544e64c00d48`. Producer code now landed at
+`c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64` through normal hook89719 exit0;
+the final gate/cleanup is recorded in [README](README.md#landed-technical-checkpoint--normal-hook89719).
+Local contract/code delivery is not a deployed or consumer-accepted release.
 
 ## Operations and generation
 

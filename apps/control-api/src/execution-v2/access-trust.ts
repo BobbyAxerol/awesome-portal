@@ -1,5 +1,6 @@
 import { ReviewedAccessPolicy, ScopedAccessGrant, TsMembershipAcceptance } from "./access.contract";
 import { AccessRelations, unqualifiedAccessRelations } from "./access-policy";
+import type { ExecutionReadPublication, ExecutionReadPublicationRequest } from "./read-publication";
 
 export interface ReviewedPolicyArtifact {
   policy:ReviewedAccessPolicy;
@@ -13,6 +14,8 @@ export interface AccessTrustProvider {
   verifyReceipt(input:unknown):Promise<TsMembershipAcceptance|null>;
   relations(userId:string,workspaceId:string):Promise<AccessRelations>;
   verifiedHumanMapping(portalUserId:string,workspaceId:string):Promise<null|{ts_user_id:string;revision:string}>;
+  /** Separate qualified proof: flat current IDs do not attest historical populations/joins. */
+  readPublication?(request:ExecutionReadPublicationRequest):Promise<ExecutionReadPublication|null>;
 }
 export const unqualifiedAccessTrust:AccessTrustProvider={
   verifyPolicy:async()=>null,verifyReceipt:async()=>null,

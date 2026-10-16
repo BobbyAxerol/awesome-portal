@@ -20,6 +20,7 @@ export class ExecutionProfileReadAdapterController {
 
   @Get("/:environment/:capabilityId")
   @Header("Deprecation", "true")
+  @Header("Cache-Control", "private, no-store")
   @Header("Link", '</api/v1/execution/screens/contracts>; rel="successor-version"')
   async read(
     @Req() request: AdapterRequest,
@@ -32,6 +33,6 @@ export class ExecutionProfileReadAdapterController {
     }
     const principal = await this.readAuthority.authorize(request, rawEnvironment as ProjectionEnvironment);
     if (Object.keys(query).length) throw new ProjectionAdapterError("N32_QUERY_NOT_SUPPORTED", 400);
-    return this.adapters.read(principal.workspaceId, rawEnvironment as ProjectionEnvironment, capabilityId);
+    return this.adapters.readAuthorized(principal, rawEnvironment as ProjectionEnvironment, capabilityId);
   }
 }

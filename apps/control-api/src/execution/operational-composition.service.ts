@@ -3,7 +3,7 @@ import { Inject, Injectable, Optional } from "@nestjs/common";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { CommandCenterError, CommandCenterService } from "../command-center/command-center.service";
 import { ControlApiConfig } from "../config";
-import { GovernanceService } from "../governance/governance.service";
+import { GovernanceError, GovernanceService } from "../governance/governance.service";
 import { governanceConditionsQuery } from "../governance/contracts";
 import { PaperExitService } from "../governance/paper-exit.service";
 import { IncidentService } from "../operations/incident.service";
@@ -11,10 +11,13 @@ import { ExecutionOperationsService } from "../operations/operations.service";
 import { OperationsWorkflowService } from "../operations/workflow.service";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { retainedReview } from "./retained-read-profile";
+import { ExecutionReadScopes, ExecutionReadScopeError, type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
+import { scopedRetainedRows, fenceRetainedSnapshot } from "./retained-operation-page";
 import {
   ExecutionProfileProjectionRepository,
   type ProjectionEnvironment,
   type ProjectionScalar,
+  type ProfileProjectionSnapshot,
   projectionDigest,
 } from "./profile-projection.repository";
 import {
@@ -59,6 +62,7 @@ export class OperationalCompositionService {
     @Inject(CommandCenterService) private readonly commandCenter: CommandCenterService,
     @Inject(ExecutionOperationsService) private readonly operations: ExecutionOperationsService,
     @Optional() @Inject(WorkspacesRepository) private readonly workspaces?: WorkspacesRepository,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
 
   async approval(
@@ -67,8 +71,14 @@ export class OperationalCompositionService {
     view: "r1" | "r2" | "live",
   ): Promise<Record<string, unknown>> {
     const governance = view === "r1"
-      ? await this.governance.detail(principal.user, principal.workspaceId, approvalId)
-      : await this.governance.r2Detail(principal.user, principal.workspaceId, approvalId);
+      ? await this.governance.detail(principal.user, principal.workspaceId, approvalId, principal.session)
+      : view === "r2"
+        ? await this.governance.r2Detail(principal.user, principal.workspaceId, approvalId, principal.session)
+        // Live has its own grant and stored approval gate. Preserve this
+        // composition's backbone shape without authorizing Live through R2.
+        : (await this.governance.liveDetail(
+          principal.user, principal.session, principal.workspaceId, approvalId,
+        )).governance_backbone;
     let acceptedFacts: Record<string, unknown> | null = null;
     if (view === "live") {
       const deploymentId = deploymentIdFromGovernance(governance);
@@ -79,7 +89,7 @@ export class OperationalCompositionService {
         acceptedFacts = unavailable("EDS05_LIVE_REVIEW_DEPLOYMENT_NOT_RESOLVED");
       } else {
         try {
-          acceptedFacts = await this.derivations.deploymentQuality(principal, deploymentId, "live");
+          acceptedFacts = await this.derivations.deploymentQuality(this.sourcePrincipal(principal), deploymentId, "live");
         } catch (error) {
           acceptedFacts = unavailable(error instanceof PortalDerivationError ? error.code : "EDS05_LIVE_REVIEW_FACTS_UNAVAILABLE");
         }
@@ -88,13 +98,13 @@ export class OperationalCompositionService {
     return this.compose(principal, view === "r1" ? "approval_r1" : view === "r2" ? "approval_r2" : "live_review", {
       governance,
       accepted_manager_facts: acceptedFacts,
-    });
+    }, () => this.governance.assertReadAuthority(principal.user, principal.session, principal.workspaceId, view));
   }
 
   async exitReview(principal: PortalDerivationPrincipal, reviewId: string): Promise<Record<string, unknown>> {
     return this.compose(principal, "paper_exit_review", {
-      exit_review: await this.paperExit.detail(principal.user, principal.workspaceId, reviewId),
-    });
+      exit_review: await this.paperExit.detail(principal.user, principal.workspaceId, reviewId, principal.session),
+    }, () => this.paperExit.assertReadAuthority(principal.user, principal.workspaceId, principal.session));
   }
 
   /**
@@ -113,6 +123,7 @@ export class OperationalCompositionService {
         principal.user,
         principal.workspaceId,
         governanceConditionsQuery({ limit: 50, ...query }),
+        principal.session,
       ),
     });
   }
@@ -122,25 +133,32 @@ export class OperationalCompositionService {
     principal: PortalDerivationPrincipal,
     query: Record<string, unknown> = {},
   ): Promise<Record<string, unknown>> {
-    return this.compose(principal, "operations_queue", {
-      operations_queue: await this.workflows.list(principal.user, principal.workspaceId, {
-        limit: 50,
-        sort: "created_at:desc",
-        ...query,
-      }),
+    const fence = async () => {
+      if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2")
+        throw new GovernanceError("OPERATIONS_SCOPED_PARENT_NOT_COMMISSIONED", "Scoped operation records are not commissioned.", 503);
+    };
+    await fence();
+    const queue = await this.workflows.list(principal.user, principal.workspaceId, {
+      limit: 50,
+      sort: "created_at:desc",
+      ...query,
     });
+    await fence();
+    return this.compose(principal, "operations_queue", {
+      operations_queue: queue,
+    }, fence);
   }
 
   async incidentDetail(principal: PortalDerivationPrincipal, incidentId: string): Promise<Record<string, unknown>> {
     return this.compose(principal, "incident_detail", {
-      incident: await this.incidents.detail(principal.user, principal.workspaceId, incidentId),
+      incident: await this.incidents.detail(principal.user, principal.workspaceId, incidentId, principal),
     });
   }
 
   async commandCenterSnapshot(principal: PortalDerivationPrincipal): Promise<Record<string, unknown>> {
     let commandCenter: Record<string, unknown>;
     try {
-      commandCenter = await this.commandCenter.snapshot(principal.user, principal.workspaceId);
+      commandCenter = await this.commandCenter.snapshot(principal.user, principal.workspaceId, principal);
     } catch (error) {
       if (!(error instanceof CommandCenterError)) throw error;
       commandCenter = unavailable(error.code);
@@ -151,6 +169,8 @@ export class OperationalCompositionService {
   async adminActionDrawer(principal: PortalDerivationPrincipal): Promise<Record<string, unknown>> {
     // This publishes the existing catalogue only.  No operation plan/apply is
     // invoked and the command relay remains governed by its existing flag.
+    // Static task metadata is NOT an effective V2 grant or a parent record;
+    // actual execution still evaluates its own current capability and scope.
     return this.compose(principal, "admin_action_drawer", {
       task_catalogue: this.operations.taskCatalogue(principal.user, principal.workspaceId),
       command_authority: {
@@ -165,14 +185,17 @@ export class OperationalCompositionService {
     principal: PortalDerivationPrincipal,
     surface: OperationalSurface,
     body: Record<string, unknown>,
+    validateBody?: () => Promise<void>,
   ): Promise<Record<string, unknown>> {
     const readAt = new Date();
     const allowed = !retainedReview(this.config) || !this.workspaces || (!!this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
       await this.workspaces.canReadExecution(this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,principal.user.userId));
-    const sourceHealth = allowed ? await this.derivations.sourceHealth(principal)
+    const sourcePrincipal = this.sourcePrincipal(principal);
+    const sourceHealth = allowed ? await this.derivations.sourceHealth(sourcePrincipal)
       : {input_digest:digest("WORKSPACE_NOT_FOUND"),...unavailable("WORKSPACE_NOT_FOUND")};
-    const journal = allowed ? await this.redactedCommandJournal()
+    const journal = allowed ? await this.redactedCommandJournal(sourcePrincipal)
       : {digest:digest("WORKSPACE_NOT_FOUND"),...unavailable("WORKSPACE_NOT_FOUND")};
+    await validateBody?.();
     const lineage = {
       source_health_input_digest: sourceHealth.input_digest,
       command_journal_digest: journal.digest,
@@ -200,33 +223,49 @@ export class OperationalCompositionService {
     };
   }
 
-  private async redactedCommandJournal(): Promise<Record<string, unknown>> {
+  private sourcePrincipal(principal: PortalDerivationPrincipal): PortalDerivationPrincipal {
+    return { ...principal, workspaceId: this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ?? principal.workspaceId,
+      viewerWorkspaceId: principal.viewerWorkspaceId ?? principal.workspaceId };
+  }
+
+  private async redactedCommandJournal(principal: PortalDerivationPrincipal): Promise<Record<string, unknown>> {
     const entries: Array<Record<string, unknown>> = [];
     const profileRevisions: Array<Record<string, unknown>> = [];
+    const contexts: { scope: AuthorizedExecutionReadScope; snapshot: ProfileProjectionSnapshot;
+      environment: ProjectionEnvironment; profileId: string }[] = [];
     for (const environment of ENVIRONMENTS) {
       const profileId = profileIdFor(environment, this.config);
       if (!profileId || !this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) continue;
-      const snapshot = await this.projections.snapshot(
-        this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,
-        environment,
-        profileId,
-      );
+      const metadata = this.readScopes ? await this.projections.snapshotMetadata(principal.workspaceId, environment, profileId) : null;
+      const scope = await this.readScopes?.authorize(principal, { environment, profileId }, { action: "alpha.read",
+        ...(metadata ? { dataset: { dataset_id: `relation:${JOURNAL_RELATION}`, source_revision: metadata.payloadDigest,
+          projection_generation: metadata.projectionEpoch, catalogue_revision: metadata.sourceCatalogueSha256, window: null } } : {}) });
+      const snapshot = scope?.mode === "SCOPED_V2"
+        ? await this.projections.rawSnapshot(principal.workspaceId, environment, profileId)
+        : await this.projections.snapshot(principal.workspaceId, environment, profileId);
       if (!snapshot) continue;
+      if (scope?.mode === "SCOPED_V2" && (!metadata || metadata.payloadDigest !== snapshot.payloadDigest ||
+        metadata.projectionEpoch !== snapshot.projectionEpoch || metadata.sourceCatalogueSha256 !== snapshot.sourceCatalogueSha256))
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      if (scope) contexts.push({ scope, snapshot, environment, profileId });
+      const relation = snapshot.document.relations[JOURNAL_RELATION];
+      const items = scopedRetainedRows(scope, relation?.items ?? []);
+      const scopedRevision = scope?.mode === "SCOPED_V2"
+        ? projectionDigest({ fields: items.map(item => redactJournal(item.fields)), scope: scope.fingerprint }) : null;
       profileRevisions.push({
         environment,
         profile_id: profileId,
-        projection_epoch: snapshot.projectionEpoch,
-        projection_sequence: snapshot.projectionSequence,
-        payload_digest: snapshot.payloadDigest,
+        projection_epoch: scopedRevision ?? snapshot.projectionEpoch,
+        projection_sequence: scopedRevision ? 0 : snapshot.projectionSequence,
+        payload_digest: scopedRevision ?? snapshot.payloadDigest,
       });
-      const relation = snapshot.document.relations[JOURNAL_RELATION];
       if (!relation || relation.availability !== "AVAILABLE") continue;
-      for (const item of relation.items) {
+      for (const item of items) {
         const fields = redactJournal(item.fields);
         entries.push({
           environment,
-          relation_state: relation.completeness,
-          as_of: relation.as_of,
+          relation_state: scope?.mode === "SCOPED_V2" ? "PARTIAL" : relation.completeness,
+          as_of: scope?.mode === "SCOPED_V2" ? null : relation.as_of,
           ...fields,
         });
       }
@@ -235,6 +274,13 @@ export class OperationalCompositionService {
       .sort((left, right) => String(right.updated_at ?? right.created_at ?? "").localeCompare(String(left.updated_at ?? left.created_at ?? ""))
         || String(left.command_id ?? "").localeCompare(String(right.command_id ?? "")))
       .slice(0, 100);
+    for (const context of contexts) {
+      await this.readScopes!.deliver(context.scope, async () => undefined);
+      if (context.scope.mode === "SCOPED_V2") {
+        await fenceRetainedSnapshot(this.projections, principal.workspaceId, context.environment, context.profileId, context.snapshot);
+        await this.readScopes!.deliver(context.scope, async () => undefined);
+      }
+    }
     return {
       schema_version: "execution.redacted-command-journal.v1",
       state: profileRevisions.length === 0 ? "UNAVAILABLE" : entries.length === 0 ? "EMPTY" : "AVAILABLE",

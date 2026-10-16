@@ -41,6 +41,10 @@ export class SessionGuard implements CanActivate {
 
   private async authorize(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
+    // Current actor/grant/source fences also protect negative responses.
+    // Neither scoped nor legacy Execution payloads may be shared by HTTP caches.
+    const executionRead = (request.url ?? "").split("?")[0].startsWith("/api/v1/execution/");
+    if (executionRead) context.switchToHttp().getResponse().header("Cache-Control", "private, no-store");
     const token = sessionTokenFrom(request);
     if (!token) {
       throw new UnauthorizedException("Invalid session.");
@@ -54,9 +58,9 @@ export class SessionGuard implements CanActivate {
       throw new UnauthorizedException("Invalid session.");
     }
     let workspaceId = await this.workspaces.ensurePersonal(user.userId, user.username);
-    if (retainedReview(this.config) && request.url.split("?")[0].startsWith("/api/v1/execution/")) {
+    const viewerWorkspaceId = workspaceId;
+    if (retainedReview(this.config) && executionRead) {
       if (request.method !== "GET" && request.method !== "HEAD") throw new ForbiddenException("UDB_RETAINED_REVIEW_MUTATION_DISABLED");
-      context.switchToHttp().getResponse().header("Cache-Control", "private, no-store");
       const query = request.query as Record<string, unknown>;
       const configured = this.config!.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
       if (!coreExecutionRead(request.url.split("?")[0]) && ((query.workspace_id !== undefined && query.workspace_id !== configured) ||
@@ -69,10 +73,12 @@ export class SessionGuard implements CanActivate {
     const state = request as unknown as {
       portalUser: PortalUser;
       portalWorkspaceId: string;
+      portalViewerWorkspaceId: string;
       portalSession: typeof session;
     };
     state.portalUser = user;
     state.portalWorkspaceId = workspaceId;
+    state.portalViewerWorkspaceId = viewerWorkspaceId;
     state.portalSession = session;
     return true;
   }

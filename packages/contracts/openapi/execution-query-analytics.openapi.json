@@ -5,23 +5,231 @@
     "version": "1.1.0",
     "description": "N25 source-attributed analytics over the immutable N24 Manager projection. Read-only; unavailable source semantics remain typed."
   },
-  "servers": [{ "url": "/" }],
-  "security": [{ "portalSession": [] }],
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
   "paths": {
-    "/api/v1/execution/deployments/{subjectId}/query-analytics": { "get": { "operationId": "executionDeploymentQueryAnalytics", "parameters": [{ "$ref": "#/components/parameters/SubjectId" }, { "$ref": "#/components/parameters/Environment" }, { "$ref": "#/components/parameters/AccountId" }, { "$ref": "#/components/parameters/SourceFacts" }], "responses": { "200": { "$ref": "#/components/responses/Analytics" }, "default": { "$ref": "#/components/responses/Problem" } } } },
-    "/api/v1/execution/alphas/{subjectId}/query-analytics": { "get": { "operationId": "executionAlphaQueryAnalytics", "parameters": [{ "$ref": "#/components/parameters/SubjectId" }, { "$ref": "#/components/parameters/Environment" }, { "$ref": "#/components/parameters/AccountId" }, { "$ref": "#/components/parameters/SourceFacts" }], "responses": { "200": { "$ref": "#/components/responses/Analytics" }, "default": { "$ref": "#/components/responses/Problem" } } } },
-    "/api/v1/execution/portfolios/{subjectId}/query-analytics": { "get": { "operationId": "executionPortfolioQueryAnalytics", "parameters": [{ "$ref": "#/components/parameters/SubjectId" }, { "$ref": "#/components/parameters/Environment" }, { "$ref": "#/components/parameters/AccountId" }, { "$ref": "#/components/parameters/SourceFacts" }], "responses": { "200": { "$ref": "#/components/responses/Analytics" }, "default": { "$ref": "#/components/responses/Problem" } } } },
-    "/api/v1/execution/live-gates/{subjectId}/query-analytics": { "get": { "operationId": "executionLiveGateQueryAnalytics", "parameters": [{ "$ref": "#/components/parameters/SubjectId" }, { "$ref": "#/components/parameters/Environment" }, { "$ref": "#/components/parameters/AccountId" }, { "$ref": "#/components/parameters/SourceFacts" }], "responses": { "200": { "$ref": "#/components/responses/Analytics" }, "default": { "$ref": "#/components/responses/Problem" } } } }
+    "/api/v1/execution/deployments/{subjectId}/query-analytics": {
+      "get": {
+        "operationId": "executionDeploymentQueryAnalytics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SubjectId"
+          },
+          {
+            "$ref": "#/components/parameters/Environment"
+          },
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/SourceFacts"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Analytics"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/alphas/{subjectId}/query-analytics": {
+      "get": {
+        "operationId": "executionAlphaQueryAnalytics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SubjectId"
+          },
+          {
+            "$ref": "#/components/parameters/Environment"
+          },
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/SourceFacts"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Analytics"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/portfolios/{subjectId}/query-analytics": {
+      "get": {
+        "operationId": "executionPortfolioQueryAnalytics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SubjectId"
+          },
+          {
+            "$ref": "#/components/parameters/Environment"
+          },
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/SourceFacts"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Analytics"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/live-gates/{subjectId}/query-analytics": {
+      "get": {
+        "operationId": "executionLiveGateQueryAnalytics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SubjectId"
+          },
+          {
+            "$ref": "#/components/parameters/Environment"
+          },
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/SourceFacts"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Analytics"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    }
   },
   "components": {
-    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
-    "parameters": {"SubjectId":{"name":"subjectId","in":"path","required":true,"schema":{"type":"string","pattern":"^[A-Za-z0-9._:-]{1,192}$"}},"Environment":{"name":"environment","in":"query","schema":{"type":"string","enum":["paper","sandbox","live"]},"description":"Local profile. Defaults Paper except live-gate Live. Unsupported remote fallback fails typed, never silently switches profile."},"AccountId":{"name":"account_id","in":"query","schema":{"type":"string","pattern":"^[A-Za-z0-9._:-]{1,192}$"},"description":"Narrow the selected subject to this account. A nonmember account returns 404."},"SourceFacts":{"name":"source_facts","in":"query","schema":{"type":"boolean","default":true},"description":"False omits broad source fact groups; derived result stays scoped."}},
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
+    },
+    "parameters": {
+      "SubjectId": {
+        "name": "subjectId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        }
+      },
+      "Environment": {
+        "name": "environment",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "description": "Local profile. Defaults Paper except live-gate Live. Unsupported remote fallback fails typed, never silently switches profile."
+      },
+      "AccountId": {
+        "name": "account_id",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "description": "Narrow the selected subject to this account. A nonmember account returns 404."
+      },
+      "SourceFacts": {
+        "name": "source_facts",
+        "in": "query",
+        "schema": {
+          "type": "boolean",
+          "default": true
+        },
+        "description": "False omits broad source fact groups; derived result stays scoped."
+      }
+    },
     "responses": {
-      "Analytics": { "description": "Bounded, exact and source-attributed analytics", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-query-analytics.v1.schema.json" } } } },
-      "Problem": { "description": "Typed fail-closed error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+      "Analytics": {
+        "description": "Legacy v1 or durable-policy-selected scoped v2; a client cannot opt into scope. V2 omits global observation clocks. Metadata absence is not zero or read time.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "../schemas/execution-query-analytics.v1.schema.json"
+                },
+                {
+                  "$ref": "../schemas/execution-query-analytics.v2.schema.json"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "Problem": {
+        "description": "Typed fail-closed error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
     },
     "schemas": {
-      "Problem": { "type": "object", "additionalProperties": false, "required": ["error"], "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } } }
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

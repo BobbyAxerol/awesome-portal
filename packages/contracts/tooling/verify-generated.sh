@@ -8,7 +8,7 @@ contracts_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 repo_root=$(CDPATH= cd -- "$contracts_dir/../.." && pwd)
 cd "$contracts_dir"
 
-./node_modules/.bin/vitest run --no-cache
+./node_modules/.bin/vitest run --no-cache --maxWorkers=2
 node tooling/generate-execution-command-catalog.mjs --check
 
 generate_and_compare() {
@@ -26,6 +26,15 @@ node tooling/generate-portal-profile.mjs --check
 generate_and_compare openapi/portal-profile.openapi.json generated/portal-profile.d.ts
 node tooling/generate-execution-access.mjs --check
 generate_and_compare openapi/execution-access.openapi.json generated/execution-access.d.ts
+node tooling/generate-execution-history.mjs --check
+node tooling/generate-execution-manager-scoped.mjs --check
+node tooling/generate-execution-scoped-records.mjs --check
+node tooling/generate-execution-resource-scoped.mjs --check
+node tooling/generate-execution-retained-scoped.mjs --check
+node tooling/generate-execution-analytics-scoped.mjs --check
+generate_and_compare openapi/execution-resource-scoped.openapi.json generated/execution-resource-scoped.d.ts
+generate_and_compare openapi/execution-scoped-records.openapi.json generated/execution-scoped-records.d.ts
+generate_and_compare openapi/execution-history.openapi.json generated/execution-history.d.ts
 generate_and_compare openapi/execution-analytics.openapi.json generated/execution-analytics.d.ts
 generate_and_compare openapi/execution-query-analytics.openapi.json generated/execution-query-analytics.d.ts
 generate_and_compare openapi/execution-analytics-series.openapi.json generated/execution-analytics-series.d.ts

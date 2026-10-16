@@ -43,7 +43,10 @@ export type BindingsQuery = z.infer<typeof BindingsQuerySchema>;
 export const PortfolioListQuerySchema = z.object({
   workspace_id: z.string().min(1).max(128).optional(),
   environment: z.enum(ALPHA_FLEET_ENVIRONMENTS).default("all"),
-}).strict();
+  after: z.string().min(1).max(4096).optional(),
+  before: z.string().min(1).max(4096).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+}).strict().superRefine(assertCursorDirection);
 export type PortfolioListQuery = z.infer<typeof PortfolioListQuerySchema>;
 
 export interface PortfolioListItem {
