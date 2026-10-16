@@ -25,6 +25,9 @@ use uuid::Uuid;
 #[path = "epg10_04_bootstrap/edge_cases.rs"]
 mod edge_cases;
 
+#[path = "epg10_10/rollout.rs"]
+mod rollout;
+
 const NOW: i64 = 1_792_100_000_000;
 
 fn limits() -> Limits {

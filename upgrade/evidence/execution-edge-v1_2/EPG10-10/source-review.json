@@ -1,0 +1,162 @@
+{
+  "schema": "epg10.cutover-source-review.v1",
+  "provenance": "BOUNDED_READ_ONLY_PEER_METADATA_NOT_RUNTIME_ACCEPTANCE",
+  "at_utc": "2026-10-16T16:06:00+00:00",
+  "ts": {
+    "worktree": "/home/bobby/.worktrees/trading-system-next-upgrade",
+    "branch": "feat/v2-rust-first-okx-demo",
+    "commit": "fa64bc1668f2abfca530675988b74300fe36d5fd",
+    "unstaged_diff_sha256": "38ff438ef817ed8da4363d6cf43337620de740c463589fbcc217bb81d0c9aa01",
+    "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_path_list_sha256": "b5b9433a17437c5e4c2525c2e29d67e64e957ce91ef34b94f56ad0a17f7eaae2",
+    "tracked_modified": 5,
+    "untracked": 1,
+    "publication_rs_sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+    "migration59_sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+    "native_publication_fence_return": "UNCHANGED_FROM_03_COUNTEREXAMPLE"
+  },
+  "pm": {
+    "worktree": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+    "branch": "feat/portfolio-account-v1_1-parallel",
+    "commit": "98dbfd8c545b6d132a3c9fd4bbe709ea8ee88144",
+    "unstaged_diff_sha256": "22d91c1d58dfe048cc9357081cfed06a12fa38c9cb55bb315b013574edfd2087",
+    "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_path_list_sha256": "e6cd4f45b20d66a5b1c532cb20c60ef701f1c4cc1310dcd0831edf1775a5a1e2",
+    "tracked_modified": 16,
+    "untracked": 5,
+    "packets": {
+      "pma11-13-publication-evidence.json": {
+        "sha256": "87070cb6be539dc63785722961d91e5dc8876938b159ad8725b551f3d94dd518",
+        "status": "PASS_ISOLATED_BOOTSTRAP_SOURCE_PACKAGE_FULL_PHASE_OPEN"
+      },
+      "pma11-14-edge-command-handoff.json": {
+        "sha256": "7b62d7e17198347c85adc5267a319a175733adc2cb3b540d167a35135ed04a0b",
+        "status": "ISOLATED_PACKAGE_QUALIFIED_SOURCE_DARK"
+      },
+      "pma11-03-04-current-read-handoff.json": {
+        "sha256": "06a689b32ad10eaaa535413366440233e94b88bacb64283a623a782e3d4d65bf",
+        "status": "ISOLATED_SOURCE_PACKAGE_QUALIFIED_FULL_PHASES_OPEN"
+      },
+      "pma11-03-04-current-read-evidence.json": {
+        "sha256": "ecac9ec750f70463d8e864dcc6aa1fbc7b7914cb9ccf627708ab553c35c07004",
+        "passed": 729,
+        "pg_http_passed": 215,
+        "unit_passed": 514,
+        "provenance": "PEER_TEST_ONLY_REAL_PG_ASGI_NOT_EDGE_COUNTS",
+        "runtime_enabled": false
+      }
+    },
+    "wip_adopted": false,
+    "runtime_export_and_current_authority": "NOT_MOUNTED_OR_QUALIFIED",
+    "consumed_compatibility": {
+      "boundary": "Fresh verified principal/workload/current-policy; explicit scope/operation/field witness <=60s",
+      "non_equivalences": [
+        "PM hashes are not Edge principal/effective/ingest digests",
+        "Business-page cursor is not source/delta/checkpoint",
+        "STREAM current-frame is not Replay/history",
+        "Empty linked fields must deny, never widen",
+        "PM page cap does not override Edge200rows/1MiB"
+      ],
+      "existing_rust_gates": [
+        "query-api/src/scoped/authority.rs::each_read_operation_is_independent_not_implied_by_read_all",
+        "query-api/src/scoped/tests.rs::scope_validation_requires_bounded_exact_history_and_field_policy"
+      ],
+      "actual_binding": "NOT_RUN_MISSING_AUTHENTICATED_PROVIDER_ENDPOINT_AND_IDENTITY_SOURCE_MAPPING",
+      "native_command_authority": "NOT_IMPLIED_BY_READ_WITNESS"
+    }
+  },
+  "dl": {
+    "worktree": "/home/bobby/.worktrees/data-layer-p184-closure",
+    "branch": "fix/p184-dl-closure",
+    "commit": "696fa3d4b618550052cd53e4cc12087f3c7b83c7",
+    "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_path_list_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked_modified": 0,
+    "untracked": 0,
+    "portal_authority_delta": false,
+    "observed_delta": "Clean G12/release tooling update; not Portal publication/authority."
+  },
+  "peer_mutations": 0,
+  "research": {
+    "host": "SGP",
+    "worktree": "/home/bobby/portal-research",
+    "at_utc": "2026-10-16T16:08:58+00:00",
+    "branch": "docs/research-loop-plan",
+    "commit": "fa857b8538c1dd38ab61af94700c71c911d81424",
+    "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_path_list_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "owner_receipt_ref": "/home/bobby/.local/state/portal-execution-elp210/20261016/root-intake-terminal.json",
+    "owner_receipt_sha256": "aec3ae24eca60cfa17060ad2927215c6641fe68df71370a35d00d33611aa93e3",
+    "owner_receipt_status": "LOCAL_IMPLEMENTATION_LANDED_NORMAL_HOOK_PASS",
+    "source_connected_acceptance": false,
+    "actual_provider_mapping": "NOT_INSTALLED_UNMAPPED_PER_LANDED_SOURCE_OWNER_RETURN",
+    "elp2_11": "NOT_PUBLISHED",
+    "receipt_consumed": "LOCAL_IMPLEMENTATION_LANDED_NORMAL_HOOK_PASS_CONTRACTS678_API4016_3_EXISTING_SKIPS_NOT_EDGE_TEST_COUNTS",
+    "index_manifest_sha256": "67493a56922c0aaabb331cbd1b8be2e8e8f4e6ea65bfe7445b9a630a2410fd2c",
+    "provider_continuation_sha256": "c239652252dd0a91e37c659c1fcde04cb9f869df3af6a7129db98b73783bd9a1",
+    "final_audit": "UNCHANGED_PROVIDER_UNINSTALLED_MAPPINGS_UNMAPPED_NO_ELP2_11"
+  },
+  "rounds": [
+    "14:39Z round1; exact inputs in main-plan23.19",
+    "14:51Z round2 PM13 isolated package consumed",
+    "15:18:59Z round3 PM13 committed; PM current-read WIP",
+    "15:45Z round4 exact source/receipt refresh",
+    "16:04–16:06Z round5 PM729PASS source return consumed; source semantics matched existing Rust denial gates, actual provider/mapping unbound",
+    "16:21:18Z primary read-only final source snapshot; PM handoff wording updated, actual source/provider/transport remain unbound"
+  ],
+  "final_source_snapshot": {
+    "at_utc": "2026-10-16T16:21:18.680498+00:00",
+    "digest_basis": "git diff --binary; git diff --cached --binary; git ls-files --others --exclude-standard (newline output), SHA256 exact stdout",
+    "ts": {
+      "worktree": "/home/bobby/.worktrees/trading-system-next-upgrade",
+      "branch": "feat/v2-rust-first-okx-demo",
+      "commit": "fa64bc1668f2abfca530675988b74300fe36d5fd",
+      "unstaged_diff_sha256": "9d8774937ad65d80078408edde0cd9eb3603542794afa4efa0bcf169a26d8ec5",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_path_list_sha256": "b5b9433a17437c5e4c2525c2e29d67e64e957ce91ef34b94f56ad0a17f7eaae2",
+      "tracked_modified": 6,
+      "untracked": 1,
+      "publication_rs_sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+      "migration59_sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96"
+    },
+    "pm": {
+      "worktree": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+      "branch": "feat/portfolio-account-v1_1-parallel",
+      "commit": "98dbfd8c545b6d132a3c9fd4bbe709ea8ee88144",
+      "unstaged_diff_sha256": "620efb05853aba45e68b4b86f7afd8e039ec9a49e30915b82cec201e9b09cf06",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_path_list_sha256": "e6cd4f45b20d66a5b1c532cb20c60ef701f1c4cc1310dcd0831edf1775a5a1e2",
+      "tracked_modified": 16,
+      "untracked": 5,
+      "packets": {
+        "pma11-13-publication-evidence.json": {
+          "sha256": "87070cb6be539dc63785722961d91e5dc8876938b159ad8725b551f3d94dd518",
+          "status": "PASS_ISOLATED_BOOTSTRAP_SOURCE_PACKAGE_FULL_PHASE_OPEN"
+        },
+        "pma11-14-edge-command-handoff.json": {
+          "sha256": "7b62d7e17198347c85adc5267a319a175733adc2cb3b540d167a35135ed04a0b",
+          "status": "ISOLATED_PACKAGE_QUALIFIED_SOURCE_DARK"
+        },
+        "pma11-03-04-current-read-handoff.json": {
+          "sha256": "e458239a82265f195dbbe59c13128a13ebac1d93baa9bee55aad09e6b02d11dc",
+          "status": "ISOLATED_SOURCE_PACKAGE_QUALIFIED_FULL_PHASES_OPEN"
+        },
+        "pma11-03-04-current-read-evidence.json": {
+          "sha256": "ecac9ec750f70463d8e864dcc6aa1fbc7b7914cb9ccf627708ab553c35c07004",
+          "status": "PASS_ISOLATED_CURRENT_READ_SOURCE_PACKAGE_FULL_PHASES_OPEN"
+        }
+      }
+    },
+    "dl": {
+      "worktree": "/home/bobby/.worktrees/data-layer-p184-closure",
+      "branch": "fix/p184-dl-closure",
+      "commit": "696fa3d4b618550052cd53e4cc12087f3c7b83c7",
+      "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_path_list_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tracked_modified": 0,
+      "untracked": 0
+    }
+  }
+}

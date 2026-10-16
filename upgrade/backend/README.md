@@ -8,7 +8,7 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
-  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…09 approved/in progress;10…11 approval pending**. Six offline
+  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…10 approved/in progress;11 approval pending**. Six offline
   metadata cases PASS, with source/runtime/TLS and owned unknowns recorded in
   §23.9 and its manifest. No activation/runtime acceptance. The campaign starts
   from current `origin/dev`, keeps the complete four-file owner guide bundle under
@@ -21,8 +21,13 @@ Chúng không thay thế phase hoặc exit gate trong
   OPEN, no owned runnable work left.** See [09 E2E/owner return](../evidence/execution-edge-v1_2/EPG10-09/E2E_AND_OWNER_RETURN.md)
   for exact21case/11XLC traceability and scoped round2 inputs; not full connected acceptance.
   Own8,386,752,512B private test artifacts removed;23protected runtime tuples
-  unchanged, no activation/peer edit.10 independent preparation/drill may be
-  approved next; no actual connected cutover/release yet.10/11 NOT_STARTED.
+  unchanged, no activation/peer edit. **10 independent round COMPLETE/full connected NOT_MET (§23.19):**
+  additive Rust held-shadow/CAS/read-rollback/status + source-dark release
+  template/runbook qualified519PASS/fmt/strict Clippy;8,416,370,688B private
+  artifacts removed,23protected tuples unchanged. Single
+  [10 packet](../evidence/execution-edge-v1_2/EPG10-10/SHADOW_CUTOVER_AND_OWNER_RETURN.md)
+  tracks six scoped round2 returns, not connected acceptance; no runnable owned
+  work left. Recommend11 independent handoff after named approval;11 NOT_STARTED.
   Owned current-scope/JWT/SSE-expiry/strict-TLS/selected-field
   package qualified source-dark, final490automated PASS/0FAIL/ignored/skip,
   fmt/strict zero-warning Clippy PASS. Full08 NOT_MET: actual authority/TS native
@@ -40,7 +45,7 @@ Chúng không thay thế phase hoặc exit gate trong
   images/configs unchanged, only6Manager approved restart timestamps/counters
   changed. Additional212,992B test targets cleaned. No authority activation.
   Single owner packet and verification
-  linked in §23.17;09…11 are not started.
+  linked in §23.17; its historical09…11 status is superseded above.
   01 available-source continuation now has53offline tests
   plus six00metadata PASS, both-host120s observations, two real+two isolated
   retained repository runs (20subcases PASS), native schema idempotency and

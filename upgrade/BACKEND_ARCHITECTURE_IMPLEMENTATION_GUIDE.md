@@ -723,8 +723,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
   gate NOT_MET with four scoped integration-return groups.** [09 evidence/owner return](evidence/execution-edge-v1_2/EPG10-09/E2E_AND_OWNER_RETURN.md)
   maps all21cases/11XLC without upgrading isolated tests to connected acceptance.
   Own8,386,752,512B test artifacts removed,23protected runtime tuples unchanged.
-  Recommend10 independent preparation/drill after phase approval, not connected
-  cutover/release;10/11 NOT_STARTED. No authority/route/runtime activation.
+  **10 independent round COMPLETE/full connected NOT_MET (§23.19):** additive Rust held-shadow/CAS/
+  read-rollback/status and source-dark release template/runbook implemented;
+  final519tests/fmt/strict Clippy PASS;8,416,370,688B private test artifacts
+  removed,23protected tuples unchanged. Single [10 packet](evidence/execution-edge-v1_2/EPG10-10/SHADOW_CUTOVER_AND_OWNER_RETURN.md)
+  records six scoped round2 returns; no runnable owned work left. Recommend11
+  independent handoff after named approval;11 NOT_STARTED. No actual connected cutover,
+  authority/route/runtime activation.
   Current-scope provider adapter over05,
   checked bounded JWT/JWKS, legacy SSE expiry fix, explicitCA-only TLS1.3,
   selected-payload secret defense qualified source-dark: final490automated PASS,
@@ -744,7 +749,8 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Additional212,992B test targets removed; all23images/configs unchanged,
   only6approved Manager start times/counters changed; no Edge/DB restart.
   First incorrect method assertion and safe containment/recovery retained in
-  §23.17/TLS continuation. No authority activation or peer changes;10…11 await approval.
+  §23.17/TLS continuation. No authority activation or peer changes; historical
+  phase approval status is superseded above (10 approved,11 not started).
   01capacity exit remains unmet, not waived.
   No operational runtime/source/credential change, push or merge. Only owned
   test containers/private fixture/tempfiles removed; no image build/pull/prune.

@@ -1,8 +1,12 @@
-"""Pure safety tests; mocks only, no Docker, network, Cargo or source queries."""
+"""Safety checks, mocks and one local pipe/signal; no Docker/network/Cargo/source queries."""
 import json
+import os
 from pathlib import Path
+import selectors
+import signal
 import subprocess
 import tempfile
+import threading
 from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, patch
@@ -11,6 +15,41 @@ import run as qualification
 
 
 class RunnerSafety(unittest.TestCase):
+    def test_foreign_research_cells_are_detected_and_own_pg_is_excluded(self):
+        helper = SimpleNamespace(PG='epg10-10-pg-owned', docker=MagicMock())
+        helper.docker.return_value = subprocess.CompletedProcess([], 0, stdout=(
+            b'a epg10-10-pg-owned\nb control-api-test-node-elp210-root\n'
+            b'c elp210-focused-pg\nd production-control-api\n'))
+        self.assertEqual(qualification.peer_test_metadata(helper),
+                         ['b control-api-test-node-elp210-root', 'c elp210-focused-pg'])
+        with self.assertRaisesRegex(RuntimeError, 'FOREIGN_TEST_JOB_ACTIVE_RUN_TAINTED'):
+            qualification.require_no_peer_tests(helper)
+        helper.docker.return_value.stdout = b'a epg10-10-pg-owned\nd production-control-api\n'
+        qualification.require_no_peer_tests(helper)
+
+    def test_foreign_test_inventory_overflow_fails_closed(self):
+        helper = SimpleNamespace(PG='own', docker=MagicMock())
+        helper.docker.return_value.stdout = b'x' * (128 * 1024 + 1)
+        with self.assertRaisesRegex(ValueError, 'BOUNDED_PEER_TEST_METADATA_REQUIRED'):
+            qualification.require_no_peer_tests(helper)
+
+    def test_stop_signal_cannot_be_swallowed_as_selector_eintr(self):
+        read_fd, write_fd = os.pipe()
+        previous = signal.signal(signal.SIGUSR1, qualification.qualification_stop)
+        timer = threading.Timer(0.05, os.kill, (os.getpid(), signal.SIGUSR1))
+        try:
+            with selectors.DefaultSelector() as selector:
+                selector.register(read_fd, selectors.EVENT_READ)
+                timer.start()
+                with self.assertRaisesRegex(RuntimeError, 'QUALIFICATION_STOP'):
+                    selector.select(timeout=1)
+        finally:
+            timer.cancel()
+            timer.join()
+            signal.signal(signal.SIGUSR1, previous)
+            os.close(read_fd)
+            os.close(write_fd)
+
     @classmethod
     def setUpClass(cls):
         cls.helper = qualification.load_cleanup_helpers(Path(__file__).resolve().parent, '04')
@@ -25,20 +64,20 @@ class RunnerSafety(unittest.TestCase):
         source = Path(private.name) / 'source'
         names = ['Cargo.toml', 'Cargo.lock', *qualification.owned_rust(profile),
                  'crates/projection-store-pg/migrations/0019_scoped_bootstrap.sql']
-        if profile in ('07', '08', '09'):
+        if profile in ('07', '08', '09', '10'):
             names.append(qualification.COMMAND_MIGRATION)
         if profile != '04':
             names.append('crates/projection-store-pg/migrations/0020_scoped_read.sql')
             names = [qualification.RUST_WORKSPACE + '/' + name for name in names]
             names.append(qualification.SHARED_FIXTURE)
-        if profile in ('06', '07', '08', '09'):
+        if profile in ('06', '07', '08', '09', '10'):
             names.extend(qualification.RESOURCE_SHARED_FIXTURES)
             names.extend(qualification.RESOURCE_COMPILE_INPUTS)
             names.extend(qualification.RUST_WORKSPACE + '/' + name
                          for name in qualification.RESOURCE_BUILD_SCRIPTS)
-        if profile in ('07', '08', '09'):
+        if profile in ('07', '08', '09', '10'):
             names.extend(qualification.COMMAND_SHARED_FIXTURES)
-        if profile in ('08', '09'):
+        if profile in ('08', '09', '10'):
             names.extend(qualification.SECURITY_COMPILE_INPUTS)
         for name in names:
             path = source / name
@@ -46,12 +85,12 @@ class RunnerSafety(unittest.TestCase):
             path.write_text('TEST_ONLY\n')
         return source
 
-    def test_profile_defaults_to04_and_requires_exact_04_through09(self):
+    def test_profile_defaults_to04_and_requires_exact_04_through10(self):
         with patch.dict(qualification.os.environ, {}, clear=True):
             self.assertEqual(qualification.test_profile(), '04')
-        for value in ('04', '05', '06', '07', '08', '09'):
+        for value in ('04', '05', '06', '07', '08', '09', '10'):
             self.assertEqual(qualification.test_profile(value), value)
-        for value in ('', '4', '5', '6', '7', '8', '9', '10', '04,05', '05 ', '07 ', '08 ', '09 ', 5, True):
+        for value in ('', '4', '5', '6', '7', '8', '9', '11', '04,05', '05 ', '07 ', '08 ', '09 ', '10 ', 5, True):
             with self.subTest(profile=value):
                 with self.assertRaisesRegex(ValueError, 'EXPLICIT_TEST_PROFILE'):
                     qualification.test_profile(value)
@@ -890,7 +929,7 @@ class RunnerSafety(unittest.TestCase):
 
     def test_profile08_unit_timeout_stays_bounded_and_preserves_all_prior_profiles(self):
         self.assertEqual(qualification.UNIT_TEST_TIMEOUT_SECONDS,
-                         {'04': 240, '05': 240, '06': 240, '07': 600, '08': 600, '09': 600})
+                         {'04': 240, '05': 240, '06': 240, '07': 600, '08': 600, '09': 600, '10': 600})
         self.assertEqual(qualification.LOCK_SECONDS, 1500)
         self.assertLess(qualification.UNIT_TEST_TIMEOUT_SECONDS['08'], qualification.LOCK_SECONDS - 30)
 
@@ -939,6 +978,41 @@ class RunnerSafety(unittest.TestCase):
                 'spans': [{'is_primary': True, 'file_name': path}]}}
             self.assertEqual(qualification.clippy_findings(json.dumps(warning), '09')['owned_warnings'],
                              ['clippy::e2e'])
+
+    def test_profile10_inherits_all09_gates_with_explicit_isolated_target(self):
+        self.assertEqual(qualification.package_arguments('10'), qualification.package_arguments('09'))
+        self.assertEqual(qualification.owned_rust('10'), qualification.owned_rust('09'))
+        helper = qualification.load_cleanup_helpers(Path(__file__).resolve().parent, '10')
+        self.assertTrue(helper.OWNER.startswith('codex-epg10-10-'))
+        self.assertTrue(helper.PG.startswith('epg10-10-pg-'))
+        with self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
+            qualification.validate_base(Path('/tmp/epg10-09-foreign'), '10')
+
+    def test_rollout_module_migration_and_child_are_required_for_embedded_store(self):
+        names = ('crates/projection-store-pg/src/bootstrap_rollout.rs',
+                 'crates/projection-store-pg/migrations/0022_bootstrap_rollout.sql',
+                 'crates/projection-store-pg/tests/epg10_10/rollout.rs')
+        for profile in ('04', '09', '10'):
+            source = self.source_fixture(profile)
+            before = qualification.source_hashes(source, profile)
+            for name in names:
+                relative = (qualification.RUST_WORKSPACE + '/' + name if profile != '04' else name)
+                path = source / relative
+                path.unlink()
+                with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+                    qualification.source_hashes(source, profile)
+                path.write_text('TEST_ONLY changed\n')
+                self.assertNotEqual(before[relative], qualification.source_hashes(source, profile)[relative])
+
+    def test_profile10_rollout_clippy_warnings_and_partial_counts_fail_closed(self):
+        name = 'crates/projection-store-pg/src/bootstrap_rollout.rs'
+        warning = {'reason': 'compiler-message', 'message': {'level': 'warning',
+            'code': {'code': 'clippy::rollout'}, 'spans': [{'is_primary': True, 'file_name': name}]}}
+        self.assertEqual(qualification.clippy_findings(json.dumps(warning), '10')['owned_warnings'],
+                         ['clippy::rollout'])
+        row = 'test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        with self.assertRaisesRegex(ValueError, 'EXACT_BOOTSTRAP'):
+            qualification.parse_rust_results(row, 1, 30)
 
     @staticmethod
     def child_usage(user=1.0, system=0.5, rss=100, reads=2, writes=4):

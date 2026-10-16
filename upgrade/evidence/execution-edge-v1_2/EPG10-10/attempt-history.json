@@ -1,0 +1,585 @@
+{
+  "schema": "epg10.shadow-cutover-attempt-history.v1",
+  "attempt1": {
+    "at_utc": "2026-10-16T14:55:51.940585+00:00",
+    "status": "FAIL",
+    "failed_stage": "compile",
+    "error_type": "CalledProcessError",
+    "elapsed_seconds_observational": 343.319,
+    "input_manifest_sha256": "73d875639cb93347978bfc3ddcb0ba737348df970c0a3efa24c3188c989990d6",
+    "runner_hashes": {
+      "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+      "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+      "run.py": "f602e693203b7cc60da4f29f8585f2eab7c040c8b570464755beb11b6bae6459",
+      "test_run.py": "73023acfd31b23b25e0f6531594e46d4f8fb15015e40df9bdca0e97fb5352541"
+    },
+    "runner_safety_tests": {
+      "failed": 0,
+      "passed": 93,
+      "skipped": 0
+    },
+    "rustfmt": "PASS",
+    "cleanup": {
+      "errors": [],
+      "images_built": 0,
+      "images_pulled": 0,
+      "owned_container_removed": false,
+      "private_build_dir_pending_removal": "/tmp/epg10-10-3Lp5VygB",
+      "resource_sampler_stopped_before_container_cleanup": true,
+      "volumes_created": 0,
+      "volumes_removed": 0
+    },
+    "stages": {
+      "compile": {
+        "child_resource_observation": {
+          "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+          "block_input_operations": 90128,
+          "block_output_operations": 5155240,
+          "limitations": [
+            "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+            "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+            "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+          ],
+          "maxrss_after_kib": 474260,
+          "maxrss_before_kib": 54928,
+          "maxrss_cumulative_highwater_delta_kib": 419332,
+          "system_cpu_seconds": 37.582961000000005,
+          "tainted_for_capacity": true,
+          "user_cpu_seconds": 261.32660500000003
+        },
+        "elapsed_seconds": 339.9,
+        "private_log_bytes": 16245,
+        "returncode": -15
+      },
+      "runner_safety_tests": {
+        "child_resource_observation": {
+          "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+          "block_input_operations": 136,
+          "block_output_operations": 25360,
+          "limitations": [
+            "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+            "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+            "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+          ],
+          "maxrss_after_kib": 41032,
+          "maxrss_before_kib": 29932,
+          "maxrss_cumulative_highwater_delta_kib": 11100,
+          "system_cpu_seconds": 0.468051,
+          "tainted_for_capacity": true,
+          "user_cpu_seconds": 1.0553080000000001
+        },
+        "elapsed_seconds": 1.553,
+        "private_log_bytes": 8944,
+        "returncode": 0
+      },
+      "rustfmt": {
+        "child_resource_observation": {
+          "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+          "block_input_operations": 1616,
+          "block_output_operations": 0,
+          "limitations": [
+            "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+            "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+            "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+          ],
+          "maxrss_after_kib": 54928,
+          "maxrss_before_kib": 41032,
+          "maxrss_cumulative_highwater_delta_kib": 13896,
+          "system_cpu_seconds": 0.04696200000000006,
+          "tainted_for_capacity": true,
+          "user_cpu_seconds": 1.119263
+        },
+        "elapsed_seconds": 1.177,
+        "private_log_bytes": 0,
+        "returncode": 0
+      }
+    },
+    "disk_before": 167930720256,
+    "disk_after_container": 165983416320,
+    "production_mutations": 0,
+    "source_requests": 0,
+    "runtime_activation": false,
+    "disposition": "TAINTED_CANCELLED_NO_PASS_EVIDENCE",
+    "reason": "FOREIGN_RESEARCH_TEST_STARTED_AFTER_OWN_LEASE",
+    "foreign_container": {
+      "name": "control-api-test-node-elp210-root-20261016",
+      "id": "1df4219f04b64bed1012a02ec713601f6b98a8c57c8d132f31657b53365c9fdf",
+      "started_at": "2026-10-16T14:56:49.131414112Z"
+    },
+    "private_receipt_sha256": "78a68910b42420cf3a95b26ec8c602890ccef72c428c57ff02c7562c78e69ba8",
+    "preflight": {
+      "passed": 92,
+      "failed": 1,
+      "total": 93,
+      "failure": "STALE_TIMEOUT_MAP_ASSERTION_FIXED"
+    }
+  },
+  "attempt2": {
+    "at_utc": "2026-10-16T15:30:28.223256+00:00",
+    "cleanup": {
+      "errors": [],
+      "images_built": 0,
+      "images_pulled": 0,
+      "owned_container_removed": true,
+      "private_build_dir_pending_removal": "/tmp/epg10-10-3Lp5VygB",
+      "resource_sampler_stopped_before_container_cleanup": true,
+      "volumes_created": 0,
+      "volumes_removed": 0
+    },
+    "edge_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 42,
+      "passed_per_binary": [
+        42
+      ],
+      "test_binaries": 1
+    },
+    "elapsed_seconds_observational": 1016.475,
+    "error_type": "CalledProcessError",
+    "failed_stage": "bootstrap_tests",
+    "foreign_test_metadata_before": [],
+    "input_manifest_sha256": "f373880c7d49e5fefd9c176342e6738ba539c6813e591cedd12a56a615a5e706",
+    "production_mutations": 0,
+    "runner_hashes": {
+      "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+      "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+      "run.py": "83b54defa0a489726e68265774bd51cb0832849286c877671133e04e70814d5b",
+      "test_run.py": "9546cba1cc29a1d55a97504316a9e483c85889235390d73757b3d842d0ab2279"
+    },
+    "runner_safety_tests": {
+      "failed": 0,
+      "passed": 96,
+      "skipped": 0
+    },
+    "runtime_activation": false,
+    "rustfmt": "PASS",
+    "source_requests": 0,
+    "status": "FAIL",
+    "tls_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 12,
+      "passed_per_binary": [
+        12
+      ],
+      "test_binaries": 1
+    },
+    "unit_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 250,
+      "passed_per_binary": [
+        31,
+        61,
+        15,
+        16,
+        9,
+        26,
+        20,
+        36,
+        30,
+        6
+      ],
+      "test_binaries": 10
+    },
+    "stages": {
+      "bootstrap_tests": {
+        "returncode": 101,
+        "elapsed_seconds": 125.688,
+        "private_log_bytes": 5718
+      },
+      "compile": {
+        "returncode": 0,
+        "elapsed_seconds": 162.675,
+        "private_log_bytes": 5468
+      },
+      "compile_edge_service": {
+        "returncode": 0,
+        "elapsed_seconds": 266.344,
+        "private_log_bytes": 8894
+      },
+      "edge_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 70.935,
+        "private_log_bytes": 4438
+      },
+      "runner_safety_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 1.635,
+        "private_log_bytes": 9206
+      },
+      "rustfmt": {
+        "returncode": 0,
+        "elapsed_seconds": 1.227,
+        "private_log_bytes": 0
+      },
+      "tls_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 70.121,
+        "private_log_bytes": 2825
+      },
+      "unit_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 307.871,
+        "private_log_bytes": 27134
+      }
+    },
+    "private_receipt_sha256": "b99888eb7b4c12bd646296e94aca0fa3d063229b4c812b4019d887f417866555",
+    "bootstrap_observed": {
+      "passed": 30,
+      "failed": 1,
+      "ignored": 0,
+      "filtered_out": 0,
+      "failure_case": "rollout::t10_04_read_rollback_preserves_new_facts_and_full_command_receipt",
+      "error": "UNGOVERNED_TEST_COMMAND_POOL_FIXED_WITH_07_RESOURCE_ENVELOPE"
+    }
+  },
+  "attempt3": {
+    "at_utc": "2026-10-16T15:52:39.663362+00:00",
+    "status": "FAIL",
+    "failed_stage": "read_tests",
+    "error_type": "CalledProcessError",
+    "elapsed_seconds_observational": 359.643,
+    "input_manifest_sha256": "634b89cd78a519fec6240c847ffb2d69d08d7eac4871aa12e8840277a8cf43f2",
+    "runner_hashes": {
+      "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+      "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+      "run.py": "83b54defa0a489726e68265774bd51cb0832849286c877671133e04e70814d5b",
+      "test_run.py": "9546cba1cc29a1d55a97504316a9e483c85889235390d73757b3d842d0ab2279"
+    },
+    "runner_safety_tests": {
+      "failed": 0,
+      "passed": 96,
+      "skipped": 0
+    },
+    "unit_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 250,
+      "passed_per_binary": [
+        31,
+        61,
+        15,
+        16,
+        9,
+        26,
+        20,
+        36,
+        30,
+        6
+      ],
+      "test_binaries": 10
+    },
+    "edge_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 42,
+      "passed_per_binary": [
+        42
+      ],
+      "test_binaries": 1
+    },
+    "tls_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 12,
+      "passed_per_binary": [
+        12
+      ],
+      "test_binaries": 1
+    },
+    "bootstrap_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 31,
+      "passed_per_binary": [
+        31
+      ],
+      "test_binaries": 1
+    },
+    "rustfmt": "PASS",
+    "cleanup": {
+      "errors": [],
+      "images_built": 0,
+      "images_pulled": 0,
+      "owned_container_removed": true,
+      "private_build_dir_pending_removal": "/tmp/epg10-10-3Lp5VygB",
+      "resource_sampler_stopped_before_container_cleanup": true,
+      "volumes_created": 0,
+      "volumes_removed": 0
+    },
+    "foreign_test_metadata_before": [],
+    "production_mutations": 0,
+    "source_requests": 0,
+    "runtime_activation": false,
+    "stages": {
+      "bootstrap_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 35.129,
+        "private_log_bytes": 4352
+      },
+      "compile": {
+        "returncode": 0,
+        "elapsed_seconds": 81.725,
+        "private_log_bytes": 5344
+      },
+      "compile_edge_service": {
+        "returncode": 0,
+        "elapsed_seconds": 9.538,
+        "private_log_bytes": 3432
+      },
+      "edge_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 30.552,
+        "private_log_bytes": 4225
+      },
+      "read_tests": {
+        "returncode": 101,
+        "elapsed_seconds": 27.056,
+        "private_log_bytes": 4405
+      },
+      "runner_safety_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 1.843,
+        "private_log_bytes": 9206
+      },
+      "rustfmt": {
+        "returncode": 0,
+        "elapsed_seconds": 1.192,
+        "private_log_bytes": 0
+      },
+      "tls_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 10.439,
+        "private_log_bytes": 1982
+      },
+      "unit_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 151.767,
+        "private_log_bytes": 25837
+      }
+    },
+    "private_receipt_sha256": "52ecd2b19dcd18cf3028ae431c2cddb4f87fb4bd38fe56e59b6d010f6686f849",
+    "read_observed": {
+      "passed": 41,
+      "failed": 1,
+      "ignored": 0,
+      "filtered_out": 0,
+      "failure_case": "history_backfill_has_no_phantom_live_notice_and_survives_new_store",
+      "cause": "LIVE_REVISION_OVERLOADED_BY_HISTORY_FIXED_WITH_SEPARATE_HISTORY_REVISION_COUNTER_NO_READ_ASSERTION_WEAKENED"
+    }
+  },
+  "attempt4": {
+    "at_utc": "2026-10-16T16:01:04.002830+00:00",
+    "status": "FAIL",
+    "failed_stage": "clippy",
+    "error_type": "ValueError",
+    "elapsed_seconds_observational": 475.655,
+    "runner_safety_tests": {
+      "failed": 0,
+      "passed": 96,
+      "skipped": 0
+    },
+    "unit_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 250,
+      "passed_per_binary": [
+        31,
+        61,
+        15,
+        16,
+        9,
+        26,
+        20,
+        36,
+        30,
+        6
+      ],
+      "test_binaries": 10
+    },
+    "edge_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 42,
+      "passed_per_binary": [
+        42
+      ],
+      "test_binaries": 1
+    },
+    "tls_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 12,
+      "passed_per_binary": [
+        12
+      ],
+      "test_binaries": 1
+    },
+    "bootstrap_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 31,
+      "passed_per_binary": [
+        31
+      ],
+      "test_binaries": 1
+    },
+    "read_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 42,
+      "passed_per_binary": [
+        42
+      ],
+      "test_binaries": 1
+    },
+    "resource_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 8,
+      "passed_per_binary": [
+        8
+      ],
+      "test_binaries": 1
+    },
+    "manager_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 11,
+      "passed_per_binary": [
+        11
+      ],
+      "test_binaries": 1
+    },
+    "command_tests": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 27,
+      "passed_per_binary": [
+        27
+      ],
+      "test_binaries": 1
+    },
+    "clippy": {
+      "owned_warnings": [],
+      "upstream_advisory_warnings": 0
+    },
+    "cleanup": {
+      "errors": [],
+      "images_built": 0,
+      "images_pulled": 0,
+      "owned_container_removed": true,
+      "private_build_dir_pending_removal": "/tmp/epg10-10-3Lp5VygB",
+      "resource_sampler_stopped_before_container_cleanup": true,
+      "volumes_created": 0,
+      "volumes_removed": 0
+    },
+    "input_manifest_sha256": "e72304feb45bf28fb986ba5087af74a5dcd033baeb76150c477e8bbb0fbadedd",
+    "runner_hashes": {
+      "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+      "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+      "run.py": "83b54defa0a489726e68265774bd51cb0832849286c877671133e04e70814d5b",
+      "test_run.py": "9546cba1cc29a1d55a97504316a9e483c85889235390d73757b3d842d0ab2279"
+    },
+    "private_receipt_sha256": "6aadc49e23fd934d344f52e17920361fde24c62a437854d8a856b328ba117187",
+    "cause": "ONE_NEW_TEST_DOC_COMMENT_DOC_MARKDOWN_FIXED_BACKTICKS_NO_LINT_RELAXATION",
+    "stages": {
+      "bootstrap_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 36.099
+      },
+      "clippy": {
+        "returncode": 101,
+        "elapsed_seconds": 58.298
+      },
+      "command_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 14.839
+      },
+      "compile": {
+        "returncode": 0,
+        "elapsed_seconds": 84.725
+      },
+      "compile_edge_service": {
+        "returncode": 0,
+        "elapsed_seconds": 9.685
+      },
+      "edge_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 47.288
+      },
+      "manager_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 19.377
+      },
+      "read_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 22.514
+      },
+      "resource_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 10.023
+      },
+      "runner_safety_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 1.505
+      },
+      "rustfmt": {
+        "returncode": 0,
+        "elapsed_seconds": 1.229
+      },
+      "tls_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 10.441
+      },
+      "unit_tests": {
+        "returncode": 0,
+        "elapsed_seconds": 146.36
+      }
+    }
+  },
+  "final_attempt": {
+    "attempt": 5,
+    "status": "PASS_ISOLATED_CORRECTNESS_ONLY",
+    "qualification_ref": "qualification.json",
+    "private_receipt_sha256": "a9486576448198fc7aebaf1ce0b249aae6b2f8dd1053ab76e01b08a9fed7ddd5",
+    "input_manifest_sha256": "b9c07fbd02f5c1eab797fc8f927ba9efd612c97534dc65d73f2bbd77fe3f9e97",
+    "passed": 519,
+    "failed_skipped_ignored_filtered": 0,
+    "clippy": "PASS_STRICT_ZERO_WARNINGS",
+    "rustfmt": "PASS",
+    "elapsed_seconds_observational": 463.036
+  }
+}

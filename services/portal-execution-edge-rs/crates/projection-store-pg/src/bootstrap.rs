@@ -50,8 +50,8 @@ pub enum BootstrapError {
 /// Private fields: a writer handle comes only from an authenticated manifest.
 #[derive(Clone)]
 pub struct BootstrapHandle {
-    manifest: Manifest,
-    limits: Limits,
+    pub(super) manifest: Manifest,
+    pub(super) limits: Limits,
 }
 
 impl BootstrapHandle {
@@ -99,7 +99,7 @@ pub struct BootstrapView {
     pub next: Option<BootstrapReadPin>,
 }
 
-type Tx<'a> = Transaction<'a, Postgres>;
+pub(super) type Tx<'a> = Transaction<'a, Postgres>;
 
 fn digest(value: &impl Serialize) -> Result<String, BootstrapError> {
     canonical_digest(value).map_err(|_| BootstrapError::Serialization)
@@ -123,7 +123,7 @@ fn row_byte_bound(bytes: i32, maximum: usize) -> Result<(), BootstrapError> {
     Ok(())
 }
 
-async fn begin_tx(store: &PgProjectionStore) -> Result<Tx<'_>, BootstrapError> {
+pub(super) async fn begin_tx(store: &PgProjectionStore) -> Result<Tx<'_>, BootstrapError> {
     let mut tx = store.pool.begin().await?;
     // Safety ceilings for this unbound protocol, not measured production budgets.
     sqlx::query("SET LOCAL statement_timeout='2s'")
@@ -138,7 +138,7 @@ async fn begin_tx(store: &PgProjectionStore) -> Result<Tx<'_>, BootstrapError> {
     Ok(tx)
 }
 
-async fn bounded<T>(
+pub(super) async fn bounded<T>(
     work: impl Future<Output = Result<T, BootstrapError>>,
 ) -> Result<T, BootstrapError> {
     // Includes pool wait, statements and COMMIT. Timeout during COMMIT is
@@ -148,7 +148,7 @@ async fn bounded<T>(
         .map_err(|_| BootstrapError::Deadline)?
 }
 
-fn control_binding(
+pub(super) fn control_binding(
     input: &Verified<Binding>,
     binding: &Binding,
     now: i64,
@@ -161,7 +161,7 @@ fn control_binding(
 }
 
 /// Locks/revalidates the durable writer fence in the SAME transaction as data.
-async fn fence(tx: &mut Tx<'_>, h: &BootstrapHandle) -> Result<String, BootstrapError> {
+pub(super) async fn fence(tx: &mut Tx<'_>, h: &BootstrapHandle) -> Result<String, BootstrapError> {
     let slot = h.manifest.binding.slot_key()?;
     let row = sqlx::query(
         "SELECT binding_digest,writer_generation FROM portal_projection.bootstrap_streams
@@ -223,6 +223,30 @@ impl PgProjectionStore {
         limits: Limits,
         now: i64,
     ) -> Result<BootstrapHandle, BootstrapError> {
+        self.bootstrap_begin_mode(input, limits, now, false).await
+    }
+
+    /// Opt-in operator-held candidate; readiness never switches the read pointer.
+    /// This internal port is not a network authorization or source activation.
+    ///
+    /// # Errors
+    /// Same trusted-manifest, fence and bounded database checks as AUTO bootstrap.
+    pub async fn bootstrap_begin_shadow(
+        &self,
+        input: &Verified<Manifest>,
+        limits: Limits,
+        now: i64,
+    ) -> Result<BootstrapHandle, BootstrapError> {
+        self.bootstrap_begin_mode(input, limits, now, true).await
+    }
+
+    async fn bootstrap_begin_mode(
+        &self,
+        input: &Verified<Manifest>,
+        limits: Limits,
+        now: i64,
+        shadow: bool,
+    ) -> Result<BootstrapHandle, BootstrapError> {
         bounded(async {
         let manifest = input.value();
         input.check(&manifest.binding, "MANIFEST", now)?;
@@ -244,10 +268,11 @@ impl PgProjectionStore {
              WHERE slot_key=$1 FOR UPDATE",
         ).bind(&slot).fetch_one(&mut *tx).await?;
         if let Some(old) = sqlx::query(
-            "SELECT manifest_digest,limits_digest,state FROM portal_projection.bootstrap_generations WHERE generation=$1",
+            "SELECT manifest_digest,limits_digest,state,rollout_state FROM portal_projection.bootstrap_generations WHERE generation=$1",
         ).bind(manifest.generation).fetch_optional(&mut *tx).await? {
             if old.try_get::<String, _>("manifest_digest")? != md
                 || old.try_get::<String, _>("limits_digest")? != digest(&limits)?
+                || (old.try_get::<String, _>("rollout_state")? != "AUTO") != shadow
                 || root.try_get::<Uuid, _>("writer_generation")? != manifest.generation {
                 return Err(BootstrapError::Resync);
             }
@@ -261,10 +286,11 @@ impl PgProjectionStore {
             sqlx::query(
                 "INSERT INTO portal_projection.bootstrap_generations
                  (generation,slot_key,manifest_digest,limits_digest,manifest,state,checkpoint_cursor,
-                  rollback_until_ms,updated_at_ms) VALUES ($1,$2,$3,$4,$5,'INITIALIZING',$6,$7,$8)",
+                  rollback_until_ms,updated_at_ms,rollout_state) VALUES ($1,$2,$3,$4,$5,'INITIALIZING',$6,$7,$8,$9)",
             ).bind(manifest.generation).bind(&slot).bind(md).bind(digest(&limits)?)
                 .bind(serde_json::to_value(manifest).map_err(|_| BootstrapError::Serialization)?)
                 .bind(&manifest.delta_start).bind(manifest.rollback_until_ms).bind(now)
+                .bind(if shadow { "SHADOW" } else { "AUTO" })
                 .execute(&mut *tx).await?;
             for dataset in manifest.binding.datasets.keys() {
                 sqlx::query(
@@ -679,6 +705,11 @@ impl PgProjectionStore {
             return Err(BootstrapError::FreshPending);
         }
         for event in &chunk.events { append_fact(&mut tx, h, event, false).await?; }
+        // History participates in shadow equality even when CURRENT is unchanged.
+        // Invalidate comparison pins in the SAME commit, without inventing a
+        // live group/replay revision or invalidating CURRENT-only continuations.
+        sqlx::query("UPDATE portal_projection.bootstrap_generations SET history_revision=history_revision+1,updated_at_ms=$2 WHERE generation=$1")
+            .bind(h.manifest.generation).bind(now).execute(&mut *tx).await?;
         tx.commit().await?;
         Ok(())
         }).await
@@ -814,6 +845,25 @@ impl PgProjectionStore {
 }
 
 async fn activate(tx: &mut Tx<'_>, h: &BootstrapHandle, now: i64) -> Result<(), BootstrapError> {
+    let mode: String = sqlx::query_scalar(
+        "SELECT rollout_state FROM portal_projection.bootstrap_generations WHERE generation=$1",
+    )
+    .bind(h.manifest.generation)
+    .fetch_one(&mut **tx)
+    .await?;
+    if mode != "AUTO" {
+        sqlx::query("UPDATE portal_projection.bootstrap_generations SET state='READY',updated_at_ms=$2 WHERE generation=$1")
+            .bind(h.manifest.generation).bind(now).execute(&mut **tx).await?;
+        return Ok(());
+    }
+    select_active(tx, h, now).await
+}
+
+pub(super) async fn select_active(
+    tx: &mut Tx<'_>,
+    h: &BootstrapHandle,
+    now: i64,
+) -> Result<(), BootstrapError> {
     // Every dataset checkpoint/pointer and readiness marker shares this COMMIT.
     sqlx::query(
         "UPDATE portal_projection.bootstrap_generations SET state='RETAINED',rollback_until_ms=$3
