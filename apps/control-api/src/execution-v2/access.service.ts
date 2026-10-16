@@ -16,6 +16,7 @@ import { AccessTrustProvider, unqualifiedAccessTrust } from "./access-trust";
 import { KeysetCursorCodec } from "../query/cursor";
 import { querySigningKeys } from "../config";
 import type { ExecutionReadPublicationRequest } from "./read-publication";
+import { acceptRootMembershipReceipt } from "./access-root-receipt";
 
 type Tx={db:PoolClient;repo:AccessRepository;context:AccessEvaluationContext;recheck:(check:()=>void)=>void};
 type OperationResult={receipt:AccessReceipt;replayed:boolean};
@@ -458,8 +459,16 @@ export class ExecutionAccessService {
         decided_at_ms:await this.now(db),ts_authority:"NOT_REQUIRED"};
       await repo.event({event_id:receipt.operation_id,workspace_id:artifact.policy.workspace_id,actor_user_id:anchor,subject_user_id:null,
         operation:"POLICY_INSTALL",key_digest:null,request_digest:accessDigest(artifact),policy_revision:artifact.policy.revision,
-        grant_id:null,proposal_id:null,source:null,source_receipt_id:null,before_fact:old,after_fact:{policy:artifact.policy,provenance_ref:artifact.provenance_ref},receipt});
+        grant_id:null,proposal_id:null,source:null,source_receipt_id:null,before_fact:old,
+        after_fact:{policy:artifact.policy,provenance_ref:artifact.provenance_ref,
+          root_grant_digests:artifact.root_grants.map(grant=>({grant_id:grant.grant_id,grant_digest:accessDigest(grant)}))},receipt});
     });
+  }
+
+  /** Independently verified reviewed roots have no delegation proposal. This
+   * private path does not waive TS acceptance, owner policy or current grants. */
+  async acceptRootTsReceipt(input:unknown):Promise<OperationResult> {
+    return acceptRootMembershipReceipt(this.pool,this.trust.verifyRootReceipt?.bind(this.trust),input,this.allowTestOnly);
   }
 
   /** Qualified internal TS adapter only; pending/rejected/unknown cannot create accepted authority. */

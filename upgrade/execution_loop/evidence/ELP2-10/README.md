@@ -1,5 +1,14 @@
 # ELP2-10 — Performance, quality và coexistence
 
+**Provider continuation2026-10-16, newest:**
+[exact source/current-human audit, protected-root fix and minimal approval package](provider-continuation.md)
+supersedes earlier source pins/locks, not their historical receipts. The local
+root-grant acceptance dead end is fixed through a private independently verified
+intake, not by granting ADMIN or mounting a source provider. Actual test/commit
+disposition is in that return. Whole phase still **NOT_MET**; current provider,
+approved capacity/calibration, coexistence and assigned browser proof remain
+distinct gates.
+
 **Latest commissioning return2026-10-16:**
 [implementation, tests, current source pins and consolidated action packet](commissioning.md)
 supersedes the historical “unmounted consumer / no Score runtime DTO” statements

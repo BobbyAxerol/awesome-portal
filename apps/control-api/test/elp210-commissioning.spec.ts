@@ -109,7 +109,22 @@ describe("ELP2-10 private commissioning and real registered constructors (synthe
       {purpose:"BUSINESS",commissioning:c.handle,now:()=>now});
     expect(await trust.verifiedHumanMapping("bobby",scope.workspace_id)).toBeNull();
     expect(await trust.verifyPolicy({role:"ADMIN"})).toBeNull();
+    expect(await trust.verifyRootReceipt!({role:"ADMIN"})).toBeNull();
     expect(await trust.readPublication!({...scope,binding:d.publication.authority.binding})).toEqual(d.publication.authority);
+  });
+  it("preserves the independently qualified root verifier across both private compositions",async()=>{
+    const c=commissioning(),token=Object.freeze({SYNTHETIC_NOT_A_RECEIPT:true});
+    const verifyRootReceipt=vi.fn(async()=>null),base={...unqualifiedAccessTrust,verifyRootReceipt};
+    const composed=withCataloguePublications(base,async()=>null,{purpose:"BUSINESS",commissioning:c.handle,now:()=>now});
+    await expect(composed.verifyRootReceipt!(token)).resolves.toBeNull();
+    const runtime=new ExecutionManagerRuntime({options:{connectionTimeoutMillis:2000,query_timeout:4000}} as Pool,
+      {trust:composed,cadence_ms:1000,maximum_publication_reads:1,partitions:[{scope,commissioning:c.handle,bounds,
+        publication:async()=>null,source:{read:async()=>null,recheck:async()=>({}),acknowledge:async()=>{}}}]});
+    try {await expect(runtime.accessTrust()!.verifyRootReceipt!(token)).resolves.toBeNull();}
+    finally {await runtime.beforeApplicationShutdown();}
+    expect(verifyRootReceipt).toHaveBeenCalledTimes(2);
+    expect(verifyRootReceipt).toHaveBeenNthCalledWith(1,token);
+    expect(verifyRootReceipt).toHaveBeenNthCalledWith(2,token);
   });
   it("refuses expired commissioning before lease or source I/O",async()=>{
     const c=commissioning(),d=input(),query=vi.fn(),read=vi.fn(),publication=vi.fn();

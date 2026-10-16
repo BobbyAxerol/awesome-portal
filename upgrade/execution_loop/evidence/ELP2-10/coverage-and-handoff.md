@@ -1,5 +1,22 @@
 # ELP2-10 — quality/performance consumer handoff and open ledger
 
+## Provider continuation2026-10-16, newest
+
+[Protected-root fix / independent review / actual source repins / next approval package](provider-continuation.md).
+The earlier local commissioning landed **12a6412b** with terminal normal hook
+PASS; do not rerun or sum its unchanged tests as new provider coverage. New
+private root receipt intake closes a real local bootstrap dead end; it does not
+create a PM/Edge source wire or install a real provider. No public DTO, generated
+contract, HTTP route, frontend binding or source enable changes in this slice.
+
+PM source-only publication proof is now286/286PASS, explicitly TEST_ONLY /
+BOOTSTRAP_ONLY. Exact Edge and PM current-human/runtime providers remain absent.
+All14source budget approval fields remain null; approved runtime Score anchors
+were not found. Existing05-001/06-002/00-005/10-002 remain canonical for those
+dependencies; see the exact coordinated approval package, not a duplicate
+request for a generic owner return. Claude next stays six named Manager/360
+consumers when assigned; no consumer acknowledgement or browser proof inferred.
+
 ## Latest additive commissioning handoff — 2026-10-16
 
 [Full implementation/source/test return](commissioning.md) supersedes the
@@ -86,6 +103,7 @@ no live DB migration occurred. Do not copy private lease table into Core identit
 | --- | --- | --- |
 |ELP2-REQ-10-001 Codex→Claude|This handoff; UXM-08/10 Manager dependent absence and capacity. Fixture delivered, FE on owner hold|When assigned acknowledge producer SHA/type/fixture, bind null/zero/methodology states, independently measure approved build at1280/660, keyboard/overflow/a11y/context/error/idle fanout. **AWAITING_CONSUMER_REVIEW**, not consumer-complete|
 |ELP2-REQ-10-002 Codex→Portal/Edge operations and capacity owner|Manifest per-family42×3 budgets null, source14groups null; fresh10Qrepin confirms no paired B0/B1/B2 or actual shared-host resource/coexistence receipt. TLS repaired by source owner; foreign lock absent, neither supplies a new load allocation. Affects full10/11, not independent local backend delivery|Freeze approved numeric/profile/workload/placement envelope and test window after exact source qualification; measure source/BFF/TS/DL/Research and applicable performanceG2. **BLOCKED_BUDGET_AND_SOURCE_EVIDENCE**. Portal adapter/writer/Score work is specifically06-002/00-005, not hidden in this external request; see qualification-continuation§5|
+|ELP2-REQ-10-003 Codex internal review→Codex|Actual installed business owner roots could not receive their TS acceptance via the ordinary proposal path. Earlier tests seeded accepted grants directly|**LOCAL_IMPLEMENTATION_DELIVERED**, private exact reviewed-root acceptance with held current mapping/membership fence, immutable dedup, expiry and no regrant replay. Actual test/commit disposition in provider-continuation.md. Real provider commissioning still belongs to05-001/06-002; no public API/FE work introduced|
 
 Inherited canonical dependencies, **not new duplicate requests**:
 

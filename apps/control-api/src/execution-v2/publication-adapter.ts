@@ -140,6 +140,7 @@ export function withCataloguePublications(base: AccessTrustProvider,
   const now = options.now ?? Date.now;
   return {
     verifyPolicy: input => base.verifyPolicy(input), verifyReceipt: input => base.verifyReceipt(input),
+    verifyRootReceipt: input => base.verifyRootReceipt?.(input) ?? Promise.resolve(null),
     relations: (user, workspace) => base.relations(user, workspace),
     verifiedHumanMapping: (user, workspace) => base.verifiedHumanMapping(user, workspace),
     readPublication: async request => {
