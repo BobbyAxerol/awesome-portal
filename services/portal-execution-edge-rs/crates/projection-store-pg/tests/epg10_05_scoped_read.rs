@@ -1233,6 +1233,422 @@ fn cache() -> ScopedCache {
     .unwrap()
 }
 
+//08 reuses this exact disposable bootstrap/read fixture, never a second source
+//or a runtime identity. Provider facts are TEST_ONLY, not mounted TS authority.
+use query_api::scoped::authority::{
+    CurrentReadAuthorizer, CurrentReadError, CurrentReadGrant, CurrentReadGrantProvider,
+};
+#[derive(Clone)]
+struct CurrentPolicy {
+    scope: Arc<Mutex<Option<ReadScope>>>,
+    operations: Vec<Operation>,
+    expires: i64,
+    calls: Arc<AtomicUsize>,
+    revoke_at: Arc<AtomicUsize>,
+}
+impl CurrentPolicy {
+    fn new(scope: &ReadScope, operations: &[Operation]) -> Self {
+        Self {
+            scope: Arc::new(Mutex::new(Some(scope.clone()))),
+            operations: operations.to_vec(),
+            expires: NOW + 60_000,
+            calls: Arc::new(AtomicUsize::new(0)),
+            revoke_at: Arc::new(AtomicUsize::new(usize::MAX)),
+        }
+    }
+    fn revoke(&self) {
+        *self.scope.lock().unwrap() = None;
+    }
+}
+impl CurrentReadGrantProvider for CurrentPolicy {
+    fn current(
+        &self,
+        _: &ReadScope,
+        _: Operation,
+        _: i64,
+    ) -> Result<CurrentReadGrant, CurrentReadError> {
+        let call = self.calls.fetch_add(1, Ordering::SeqCst) + 1;
+        if call >= self.revoke_at.load(Ordering::SeqCst) {
+            self.revoke();
+        }
+        let guard = self.scope.lock().unwrap();
+        let scope = guard.as_ref().ok_or(CurrentReadError::Revoked)?;
+        CurrentReadGrant::from_current_authority(
+            scope,
+            &scope.principal_digest,
+            "TEST_ONLY.current-workload",
+            &self.operations,
+            NOW,
+            self.expires,
+        )
+    }
+}
+fn service_with<'a>(f: &'a Fixture, authorizer: &'a dyn ReadAuthorizer) -> ScopedReadService<'a> {
+    let mut service = f.service();
+    service.authorizer = authorizer;
+    service
+}
+fn current_read(
+    scope: &ReadScope,
+    operation: Operation,
+    authorizer: &dyn ReadAuthorizer,
+) -> AuthorizedRead {
+    AuthorizedRead::authorize(scope.clone(), operation, authorizer, NOW).unwrap()
+}
+
+#[tokio::test]
+async fn t08_manager_full_business_read_is_not_export_or_command_authority() {
+    let f = Fixture::new(3).await;
+    for principal in ["TEST_ONLY.owner", "TEST_ONLY.manager"] {
+        let mut scope = f.scope(None);
+        scope.principal_digest = hash(&principal);
+        let auth = CurrentReadAuthorizer::new(CurrentPolicy::new(&scope, &[Operation::Current]));
+        let read = current_read(&scope, Operation::Current, &auth);
+        let page = service_with(&f, &auth)
+            .page(&read, &Fixture::query(Operation::Current, 200), None)
+            .await
+            .unwrap();
+        assert_eq!(page.rows.len(), 3);
+        let body = serde_json::to_string(&page).unwrap();
+        assert!(!body.contains("hidden_balance") && !body.contains("private_account"));
+        assert!(AuthorizedRead::authorize(scope, Operation::Export, &auth, NOW).is_err());
+        // CurrentReadGrant has only read operations; it cannot construct the
+        // separate07 VerifiedAuthority needed by the durable command port.
+        assert_eq!(Operation::Current, read.operation());
+    }
+}
+
+#[tokio::test]
+async fn t08_linked_slice_filters_before_paging_cache_and_replay_rights() {
+    let f = Fixture::new(3).await;
+    let mut scope = f.scope(Some(&["order_0001"]));
+    scope.principal_digest = hash(&"TEST_ONLY.researcher");
+    scope.allowed_fields = fields(&["amount"]);
+    let auth = CurrentReadAuthorizer::new(CurrentPolicy::new(&scope, &[Operation::Current]));
+    let read = current_read(&scope, Operation::Current, &auth);
+    let cache = cache();
+    let bytes = service_with(&f, &auth)
+        .cached_first_page(&cache, &read, &Fixture::query(Operation::Current, 200))
+        .await
+        .unwrap();
+    let page: Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(page["rows"].as_array().unwrap().len(), 1);
+    assert_eq!(page["rows"][0]["entity_id"], "order_0001");
+    let wire = String::from_utf8(bytes.as_ref().clone()).unwrap();
+    for hidden in [
+        "order_0000",
+        "order_0002",
+        "hidden_balance",
+        "private_account",
+        "hidden_count",
+        "total_count",
+        "weight",
+        "denominator",
+    ] {
+        assert!(!wire.contains(hidden));
+    }
+    assert!(AuthorizedRead::authorize(scope.clone(), Operation::Export, &auth, NOW).is_err());
+    assert!(ScopedRealtimeHub::new(
+        scope.clone(),
+        f.h.manifest().generation.to_string(),
+        None,
+        config(),
+        &auth,
+        NOW
+    )
+    .is_err());
+    let mut foreign = Fixture::query(Operation::Current, 200);
+    foreign.entity_id = Some("order_0000".into());
+    assert!(service_with(&f, &auth)
+        .page(&read, &foreign, None)
+        .await
+        .is_err());
+}
+
+#[tokio::test]
+async fn t08_revoke_hits_continuations_export_and_cache_but_not_independent_scope() {
+    let f = Fixture::new(3).await;
+    let scope = f.scope(None);
+    let policy = CurrentPolicy::new(&scope, &[Operation::Current, Operation::Export]);
+    let auth = CurrentReadAuthorizer::new(policy.clone());
+    let read = current_read(&scope, Operation::Current, &auth);
+    let export = current_read(&scope, Operation::Export, &auth);
+    let q = Fixture::query(Operation::Current, 1);
+    let eq = Fixture::query(Operation::Export, 1);
+    let c = cache();
+    let page = service_with(&f, &auth).page(&read, &q, None).await.unwrap();
+    service_with(&f, &auth)
+        .cached_first_page(&c, &read, &q)
+        .await
+        .unwrap();
+    let prepared = service_with(&f, &auth)
+        .page(&export, &eq, None)
+        .await
+        .unwrap();
+    let mut other = scope.clone();
+    other.principal_digest = hash(&"TEST_ONLY.unaffected");
+    let other_auth = CurrentReadAuthorizer::new(CurrentPolicy::new(&other, &[Operation::Current]));
+    let other_read = current_read(&other, Operation::Current, &other_auth);
+    policy.revoke();
+    for (r, query, cursor) in [
+        (&read, &q, page.next_cursor.as_deref()),
+        (&export, &eq, prepared.next_cursor.as_deref()),
+    ] {
+        assert!(matches!(
+            service_with(&f, &auth).page(r, query, cursor).await,
+            Err(ReadError::Scope(ScopedError::AccessDenied))
+        ));
+    }
+    assert!(matches!(
+        service_with(&f, &auth)
+            .cached_first_page(&c, &read, &q)
+            .await,
+        Err(ReadError::Scope(ScopedError::AccessDenied))
+    ));
+    assert_eq!(
+        service_with(&f, &other_auth)
+            .page(&other_read, &q, None)
+            .await
+            .unwrap()
+            .rows
+            .len(),
+        1
+    );
+    assert!(service_with(&f, &other_auth)
+        .page(&other_read, &q, page.next_cursor.as_deref())
+        .await
+        .is_err());
+}
+
+#[tokio::test]
+async fn t08_revoke_purges_buffered_sse_and_records_isolated_timeline() {
+    let mut f = Fixture::new(1).await;
+    let scope = f.scope(None);
+    let policy = CurrentPolicy::new(&scope, &[Operation::Replay]);
+    let auth = Arc::new(CurrentReadAuthorizer::new(policy.clone()));
+    let hub = ScopedRealtimeHub::new(
+        scope,
+        f.h.manifest().generation.to_string(),
+        None,
+        config(),
+        auth.as_ref(),
+        NOW,
+    )
+    .unwrap();
+    let mut client = hub.subscribe(auth.as_ref(), NOW).unwrap();
+    let source = PgScopedReplaySource {
+        store: f.store.clone(),
+        authorizer: auth.clone(),
+        clock: f.clock.clone(),
+        codec: f.codec.clone(),
+        limits: f.service().limits,
+    };
+    hub.poll(&source, auth.as_ref(), NOW).await.unwrap();
+    f.append(vec![f.event(1, "order_0000", 2)]).await;
+    hub.hint().unwrap();
+    hub.poll(&source, auth.as_ref(), NOW).await.unwrap();
+    assert!(hub.metrics().unwrap().charged_bytes > 0);
+    let started_utc = chrono::Utc::now().to_rfc3339();
+    let start = std::time::Instant::now();
+    policy.revoke();
+    assert_eq!(
+        client.next(auth.as_ref(), NOW).unwrap(),
+        ScopedDelivery::Stopped(StreamStop::AccessDenied)
+    );
+    let micros = start.elapsed().as_micros();
+    assert_eq!(hub.metrics().unwrap().charged_bytes, 0);
+    assert_eq!(
+        client.next(auth.as_ref(), NOW).unwrap(),
+        ScopedDelivery::Closed
+    );
+    assert!(hub.resume(&source, None, auth.as_ref(), NOW).await.is_err());
+    println!("TEST_ONLY_REVOCATION_TIMELINE {{\"started_utc\":\"{started_utc}\",\"post_revoke_delivery_check_us\":{micros},\"restricted_notices_after_revoke\":0,\"production_bound\":null}}");
+}
+
+#[tokio::test]
+async fn t08_expired_current_facts_deny_idle_sse_and_prepared_export() {
+    let f = Fixture::new(2).await;
+    let scope = f.scope(None);
+    let mut policy = CurrentPolicy::new(&scope, &[Operation::Replay, Operation::Export]);
+    policy.expires = NOW + 1;
+    let auth = CurrentReadAuthorizer::new(policy);
+    let export = current_read(&scope, Operation::Export, &auth);
+    let q = Fixture::query(Operation::Export, 1);
+    let page = service_with(&f, &auth)
+        .page(&export, &q, None)
+        .await
+        .unwrap();
+    let hub = ScopedRealtimeHub::new(
+        scope,
+        f.h.manifest().generation.to_string(),
+        None,
+        config(),
+        &auth,
+        NOW,
+    )
+    .unwrap();
+    let mut client = hub.subscribe(&auth, NOW).unwrap();
+    f.clock.0.store(NOW + 1, Ordering::SeqCst);
+    assert_eq!(
+        client.next(&auth, NOW + 1).unwrap(),
+        ScopedDelivery::Stopped(StreamStop::AccessDenied)
+    );
+    assert!(service_with(&f, &auth)
+        .page(&export, &q, page.next_cursor.as_deref())
+        .await
+        .is_err());
+}
+
+#[tokio::test]
+async fn t08_current_authority_revisions_invalidate_every_cached_old_scope() {
+    let f = Fixture::new(2).await;
+    let scope = f.scope(None);
+    let policy = CurrentPolicy::new(&scope, &[Operation::Current]);
+    let auth = CurrentReadAuthorizer::new(policy.clone());
+    let read = current_read(&scope, Operation::Current, &auth);
+    let q = Fixture::query(Operation::Current, 1);
+    let c = cache();
+    service_with(&f, &auth)
+        .cached_first_page(&c, &read, &q)
+        .await
+        .unwrap();
+    for revision in [
+        "app",
+        "fields",
+        "model",
+        "membership",
+        "session",
+        "workload",
+    ] {
+        let mut changed = scope.clone();
+        match revision {
+            "app" => changed.app_policy_revision = "TEST_ONLY.new-app".into(),
+            "fields" => changed.field_policy_revision = "TEST_ONLY.new-fields".into(),
+            "model" => changed.model_revision = "TEST_ONLY.new-model".into(),
+            _ => changed.effective_scope_digest = hash(&revision),
+        }
+        *policy.scope.lock().unwrap() = Some(changed);
+        assert!(service_with(&f, &auth)
+            .cached_first_page(&c, &read, &q)
+            .await
+            .is_err());
+        assert!(service_with(&f, &auth).page(&read, &q, None).await.is_err());
+    }
+}
+
+#[tokio::test]
+async fn t08_final_disclosure_rechecks_current_provider_after_pg_and_cache_io() {
+    let f = Fixture::new(2).await;
+    let scope = f.scope(None);
+    let policy = CurrentPolicy::new(&scope, &[Operation::Current]);
+    let auth = CurrentReadAuthorizer::new(policy.clone());
+    let read = current_read(&scope, Operation::Current, &auth);
+    let q = Fixture::query(Operation::Current, 1);
+    let c = cache();
+    service_with(&f, &auth)
+        .cached_first_page(&c, &read, &q)
+        .await
+        .unwrap();
+    policy.calls.store(0, Ordering::SeqCst);
+    service_with(&f, &auth)
+        .cached_first_page(&c, &read, &q)
+        .await
+        .unwrap();
+    let calls = policy.calls.swap(0, Ordering::SeqCst);
+    assert!(calls > 1);
+    policy.revoke_at.store(calls, Ordering::SeqCst);
+    assert!(matches!(
+        service_with(&f, &auth)
+            .cached_first_page(&c, &read, &q)
+            .await,
+        Err(ReadError::Scope(ScopedError::AccessDenied))
+    ));
+    assert!(service_with(&f, &auth).page(&read, &q, None).await.is_err());
+}
+
+#[tokio::test]
+async fn t08_secret_shaped_selected_fields_fail_closed_without_hidden_value_or_error_leaks() {
+    let mut f = Fixture::new(1).await;
+    let mut scope = f.scope(None);
+    scope.allowed_fields = fields(&["metadata"]);
+    let auth = CurrentReadAuthorizer::new(CurrentPolicy::new(
+        &scope,
+        &[Operation::Current, Operation::Export],
+    ));
+    let read = current_read(&scope, Operation::Current, &auth);
+    for (index, injected) in [
+        json!({"metadata":{"Api_Key":"TEST_ONLY_SECRET"}}),
+        json!({"metadata":[{"authorization":"Bearer TEST_ONLY_SECRET"}]}),
+        json!({"metadata":{"nested":"bearer TEST_ONLY_SECRET"}}),
+        json!({"metadata":{"nested":"  bEaReR TEST_ONLY_SECRET"}}),
+        json!({"metadata":{"nested":"-----BEGIN PRIVATE KEY-----"}}),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let error = read.project_payload(&injected).unwrap_err();
+        assert!(!format!("{error:?}:{error}").contains("TEST_ONLY_SECRET"));
+        // Also persist captured TEST_ONLY bytes and exercise the actual PG
+        // field projection, cached loader and bounded export disclosure path.
+        let index = u64::try_from(index).unwrap();
+        let mut event = f.event(index * 2 + 1, "order_0000", index + 2);
+        event.event.payload["metadata"] = injected["metadata"].clone();
+        event.event.payload_digest = canonical_value_digest(&event.event.payload);
+        f.append(vec![event]).await;
+        for operation in [Operation::Current, Operation::Export] {
+            let selected = current_read(&scope, operation, &auth);
+            let error = service_with(&f, &auth)
+                .page(&selected, &Fixture::query(operation, 1), None)
+                .await
+                .unwrap_err();
+            assert!(!format!("{error:?}:{error}").contains("TEST_ONLY_SECRET"));
+        }
+        assert!(service_with(&f, &auth)
+            .cached_first_page(&cache(), &read, &Fixture::query(Operation::Current, 1))
+            .await
+            .is_err());
+    }
+    assert_eq!(
+        read.project_payload(
+            &json!({"metadata":{"source_revision":"12"},"secret":"TEST_ONLY_SECRET"})
+        )
+        .unwrap(),
+        json!({"metadata":{"source_revision":"12"}})
+    );
+    scope.allowed_fields = fields(&["private_key"]);
+    assert!(scope.validate().is_err());
+    let mut deep = Value::Null;
+    for _ in 0..20 {
+        deep = json!({"nested": deep});
+    }
+    assert!(read.project_payload(&json!({"metadata":deep})).is_err());
+}
+
+#[tokio::test]
+async fn t08_revoking_human_does_not_stop_committed_facts_or_service_ingestion() {
+    let mut f = Fixture::new(1).await;
+    let scope = f.scope(None);
+    let policy = CurrentPolicy::new(&scope, &[Operation::Current]);
+    let auth = CurrentReadAuthorizer::new(policy.clone());
+    let read = current_read(&scope, Operation::Current, &auth);
+    policy.revoke();
+    f.append(vec![f.event(1, "late_fact", 1)]).await;
+    assert!(service_with(&f, &auth)
+        .page(&read, &Fixture::query(Operation::Current, 200), None)
+        .await
+        .is_err());
+    let current = f.read(&scope, Operation::Current);
+    assert_eq!(
+        f.service()
+            .page(&current, &Fixture::query(Operation::Current, 200), None)
+            .await
+            .unwrap()
+            .rows
+            .len(),
+        2
+    );
+}
+
 #[tokio::test]
 async fn cached_page_relabels_stale_when_replacement_bootstrap_starts() {
     let f = Fixture::new(2).await;

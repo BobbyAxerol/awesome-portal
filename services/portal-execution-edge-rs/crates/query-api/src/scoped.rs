@@ -3,6 +3,8 @@
 //! The current-policy adapter is a trusted boundary, not a browser-supplied
 //! assertion. These APIs never widen an absent scope to a workspace-wide read.
 
+pub mod authority;
+
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::future::Future;
@@ -137,6 +139,9 @@ impl ReadScope {
         }
         for field in &self.allowed_fields {
             opaque(field)?;
+            if secret_field(field) {
+                return Err(ScopedError::Invalid);
+            }
         }
         if let Some(ids) = &self.entity_ids {
             for id in ids {
@@ -228,14 +233,86 @@ impl AuthorizedRead {
     /// Rejects non-object data instead of returning an unredacted raw payload.
     pub fn project_payload(&self, payload: &Value) -> Result<Value, ScopedError> {
         let object = payload.as_object().ok_or(ScopedError::Integrity)?;
-        Ok(Value::Object(
+        let projected = Value::Object(
             object
                 .iter()
                 .filter(|(field, _)| self.scope.allowed_fields.contains(*field))
                 .map(|(field, value)| (field.clone(), value.clone()))
                 .collect(),
-        ))
+        );
+        let mut nodes = 0;
+        safe_publication(&projected, 0, &mut nodes)?;
+        Ok(projected)
     }
+}
+
+// Defense in depth over an already owner-reviewed schema/field allowlist, NOT
+// a substitute for it or a promise to recognize arbitrary secret values. Never
+// inspect excluded fields: hidden values must not become an error side channel.
+fn secret_field(field: &str) -> bool {
+    let normalized: String = field
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .flat_map(char::to_lowercase)
+        .collect();
+    matches!(
+        normalized.as_str(),
+        "password"
+            | "passwd"
+            | "secret"
+            | "clientsecret"
+            | "apisecret"
+            | "apikey"
+            | "privatekey"
+            | "signingkey"
+            | "credential"
+            | "credentials"
+            | "authorization"
+            | "cookie"
+            | "setcookie"
+            | "token"
+            | "accesstoken"
+            | "refreshtoken"
+            | "sessiontoken"
+            | "idtoken"
+            | "jwt"
+            | "bearertoken"
+            | "dbpassword"
+            | "connectionstring"
+    )
+}
+
+fn safe_publication(value: &Value, depth: usize, nodes: &mut usize) -> Result<(), ScopedError> {
+    *nodes += 1;
+    if depth > 16 || *nodes > 4096 {
+        return Err(ScopedError::Bounds);
+    }
+    match value {
+        Value::Object(fields) => {
+            for (field, value) in fields {
+                if secret_field(field) {
+                    return Err(ScopedError::Integrity);
+                }
+                safe_publication(value, depth + 1, nodes)?;
+            }
+        }
+        Value::Array(values) => {
+            for value in values {
+                safe_publication(value, depth + 1, nodes)?;
+            }
+        }
+        Value::String(text)
+            if text.contains("-----BEGIN ") && text.contains("PRIVATE KEY-----")
+                || text
+                    .trim_start()
+                    .get(..7)
+                    .is_some_and(|prefix| prefix.eq_ignore_ascii_case("Bearer ")) =>
+        {
+            return Err(ScopedError::Integrity)
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

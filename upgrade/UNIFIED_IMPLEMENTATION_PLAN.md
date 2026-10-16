@@ -46,7 +46,14 @@
 > wire/providers/publication and dependent Edge binding/connected qualification.
 > Own7.365GB test copies/cache/logs cleaned;12HK+5SGP tuples unchanged/restarts0.
 > No actual TS effects or command runtime activation; single owner return in §23.16.
->08…11 await named approval. Evidence/action packet linked in §23.15/§23.16.
+> **08 approved/in progress (§23.17):** current read-policy adapter, bounded
+> JWT/JWKS, legacy SSE expiry, explicitCA TLS1.3 and selected-payload security
+> guards qualified source-dark: final490automated PASS,0FAIL/ignored/skip,
+> fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for actual current providers,
+> TS commit/business proof, researcher field matrix and expired Manager TLS.
+> Own8.388GB artifacts removed;17original +6Manager runtime tuples unchanged.
+> No mounted authority or runtime activation inferred.09…11 await named approval. Evidence/action packets
+> linked in §23.15/§23.16/§23.17.
 > 01capacity is still pending;
 > logical02 closure does not waive it.
 > No runtime activation. Four owner-supplied guides

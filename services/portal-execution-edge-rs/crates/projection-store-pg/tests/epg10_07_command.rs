@@ -403,6 +403,8 @@ struct TestAuthority {
     revoked: Arc<AtomicBool>,
     stale: Arc<AtomicBool>,
     unpublished: Arc<AtomicBool>,
+    calls: Arc<AtomicUsize>,
+    revoke_at: Arc<AtomicUsize>,
 }
 impl AuthorityProvider for TestAuthority {
     fn current(
@@ -411,6 +413,12 @@ impl AuthorityProvider for TestAuthority {
         _: Action,
         now: i64,
     ) -> Result<CurrentAuthority, AuthorityError> {
+        let call = self.calls.fetch_add(1, Ordering::SeqCst) + 1;
+        if self.revoke_at.load(Ordering::SeqCst) != 0
+            && call >= self.revoke_at.load(Ordering::SeqCst)
+        {
+            self.revoked.store(true, Ordering::SeqCst);
+        }
         let fence = || RevisionFence {
             asserted: "1".into(),
             current: "1".into(),
@@ -456,10 +464,16 @@ struct TestPort {
     ack_only: bool,
     hang: bool,
     started: Arc<AtomicBool>,
+    revoke_before_commit: Option<Arc<AtomicBool>>,
 }
 impl CommandPort for TestPort {
     fn send<'a>(&'a self, intent: &'a CommandIntent) -> SourceFuture<'a> {
         Box::pin(async move {
+            // TEST_ONLY commit-side authority fence, not a real TS provider.
+            if let Some(revoked) = &self.revoke_before_commit {
+                revoked.store(true, Ordering::SeqCst);
+                return SourceReply::Unknown;
+            }
             if self.hang {
                 self.started.store(true, Ordering::SeqCst);
                 std::future::pending::<()>().await;
@@ -541,6 +555,79 @@ async fn t07_01_commit_response_loss_restart_same_key_one_effect() {
     assert_eq!(recovered.receipt.unwrap().state(), BusinessState::Applied);
     assert_eq!(port.effects.load(Ordering::SeqCst), 1);
     assert_eq!(port.lookups.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn t08_revoked_after_durable_prepare_or_claim_sends_no_effect() {
+    for point in [3, 4] {
+        let store = store().await;
+        let ledger = ledger();
+        store.configure_command_ledger(&ledger, 10).await.unwrap();
+        let authority = TestAuthority::default();
+        authority.revoke_at.store(point, Ordering::SeqCst);
+        let port = TestPort::default();
+        let relay = DurableCommandRelay::new(
+            store.clone(),
+            &ledger,
+            authority,
+            port.clone(),
+            4,
+            Duration::from_millis(100),
+        )
+        .unwrap();
+        relay.set_sends_enabled(true);
+        let intent = intent("TEST_ONLY.revoke-durable", "5");
+        assert!(matches!(
+            relay.submit(&intent).await,
+            Err(RelayError::Authority(_))
+        ));
+        assert_eq!(port.effects.load(Ordering::SeqCst), 0);
+        let durable = store.command_status(&ledger, &intent).await.unwrap();
+        // A won dispatch CAS is never reopened for automatic send, even when
+        // this process knows it denied before transport. Recovery stays safe.
+        assert_eq!(
+            durable.delivery,
+            if point == 3 {
+                "PREPARED"
+            } else {
+                "DELIVERY_UNKNOWN"
+            }
+        );
+        assert!(durable.receipt.is_none());
+    }
+}
+
+#[tokio::test]
+async fn t08_test_only_source_commit_fence_is_not_replaced_by_edge_dispatch_check() {
+    let store = store().await;
+    let ledger = ledger();
+    store.configure_command_ledger(&ledger, 10).await.unwrap();
+    let authority = TestAuthority::default();
+    let port = TestPort {
+        revoke_before_commit: Some(authority.revoked.clone()),
+        ..TestPort::default()
+    };
+    let relay = DurableCommandRelay::new(
+        store.clone(),
+        &ledger,
+        authority,
+        port.clone(),
+        4,
+        Duration::from_millis(100),
+    )
+    .unwrap();
+    relay.set_sends_enabled(true);
+    let intent = intent("TEST_ONLY.source-fence", "5");
+    assert!(matches!(
+        relay.submit(&intent).await,
+        Err(RelayError::Authority(_))
+    ));
+    assert_eq!(port.effects.load(Ordering::SeqCst), 0);
+    let durable = store.command_status(&ledger, &intent).await.unwrap();
+    assert_eq!(durable.delivery, "DELIVERY_UNKNOWN");
+    assert!(durable.receipt.is_none());
+    // No native TS transaction occurred; full T08-01 still needs actual owner
+    // commit-lease evidence. A post-send error is never rewritten to REJECTED.
 }
 #[tokio::test]
 async fn t07_02_relay_conflict_never_sends_another_payload() {

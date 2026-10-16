@@ -8,14 +8,21 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
-  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…07 approved/in progress;08…11 approval pending**. Six offline
+  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…08 approved/in progress;09…11 approval pending**. Six offline
   metadata cases PASS, with source/runtime/TLS and owned unknowns recorded in
   §23.9 and its manifest. No activation/runtime acceptance. The campaign starts
   from current `origin/dev`, keeps the complete four-file owner guide bundle under
   `upgrade/upgrade_v1.2`, and links Edge, Portal contracts, scoring and PM R2 inputs.
   Goals, scope, source pins, invariants, tests, exit gates, rollback, resource and
   debt/owner tracking are recorded per phase. No product/runtime acceptance implied;
-  08…11 are not started.01 available-source continuation now has53offline tests
+  **08 (§23.17):** owned current-scope/JWT/SSE-expiry/strict-TLS/selected-field
+  package qualified source-dark, final490automated PASS/0FAIL/ignored/skip,
+  fmt/strict zero-warning Clippy PASS. Full08 NOT_MET: actual authority/TS native
+  commit/researcher field policy and expired Manager TLS remain exact scoped
+  dependencies. Own8.388GB artifacts cleaned;17original +6Manager tuples
+  unchanged, no operational mutation. Single owner packet and verification
+  linked in §23.17;09…11 are not started.
+  01 available-source continuation now has53offline tests
   plus six00metadata PASS, both-host120s observations, two real+two isolated
   retained repository runs (20subcases PASS), native schema idempotency and
   six-table3,623row exact parity. Isolated target cleaned; narrow numeric

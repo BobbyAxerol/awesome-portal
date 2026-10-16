@@ -1,0 +1,292 @@
+{
+  "schema": "epg10.security-verification.v1",
+  "recorded_at_utc": "2026-10-16T11:58:00Z",
+  "phase": "EPG10-08",
+  "phase_status": "IN_PROGRESS_OWNED_ISOLATED_PACKAGE_QUALIFIED_SOURCE_DARK",
+  "approval": "BOBBY_APPROVED_2026_10_16",
+  "exit_gate": "NOT_MET",
+  "runtime_activation": false,
+  "production_authoritative": false,
+  "scope": "Revocation/current exact read scope, bounded pinned JWT/JWKS, strict TLS transports, selected-field defense, legacy SSE expiry, isolated read/queued-command security evidence; no UI or peer mutation.",
+  "source": {
+    "branch": "feat/execution-edge-upgrade-v1_2",
+    "baseline_commit": "f10c15f6bd6d7e30358af5946c2877b33b8fe4c2",
+    "tested_input_manifest_sha256": "7b8130d48037c0084fc3dffbb44954feecd49059915df4daafdc4f1637189197",
+    "input_hash_count": 426,
+    "runner_hash_count": 4,
+    "byte_parity": {
+      "source_files": 426,
+      "runner_files": 4,
+      "source_mismatches": [],
+      "runner_mismatches": [],
+      "manifest_matches": true,
+      "manifest_sha256": "7b8130d48037c0084fc3dffbb44954feecd49059915df4daafdc4f1637189197",
+      "local_candidate_matches_remote_tested_input": true
+    },
+    "qualification_receipt_sha256": "3fc50c53ffc41e57c5c6b1cdc1659cb3837710128020c0aaa071715f381ab4af"
+  },
+  "automated_tests": {
+    "total_passed": 490,
+    "failed": 0,
+    "ignored": 0,
+    "skipped": 0,
+    "filtered_out": 0,
+    "runner": 85,
+    "libraries": 250,
+    "edge_binary": 42,
+    "tls": 10,
+    "pg_bootstrap": 22,
+    "pg_scoped_read": 38,
+    "pg_resources": 8,
+    "pg_manager": 11,
+    "pg_commands": 24,
+    "fmt": "PASS",
+    "clippy": "PASS_STRICT_ZERO_WARNINGS",
+    "all_target_compile": {
+      "all_targets": true,
+      "basis": "COVERED_BY_08_ALL_TARGETS_NO_RUN",
+      "locked": true,
+      "no_run": true,
+      "package_count": 11
+    },
+    "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+    "performance_acceptance": false,
+    "tainted_for_capacity": true,
+    "qualification_elapsed_seconds_observational": 434.769
+  },
+  "formal_families": [
+    {
+      "id": "EPG10-T08-01",
+      "isolated_status": "PASS_ISOLATED_TEST_PORT_ONLY",
+      "executed": "Durable PG revoke after prepare/claim and TEST_ONLY commit fence yield zero effects; ambiguous key remains status-only.",
+      "actual_boundary": "Actual native TS current lease held through COMMIT and handler publication absent.",
+      "full_runtime_family_accepted": false
+    },
+    {
+      "id": "EPG10-T08-02",
+      "isolated_status": "PASS_ISOLATED",
+      "executed": "Current authority rechecked at cache/cursor/export/inflight/SSE delivery; queued restricted notices purged; expiry denies.",
+      "actual_boundary": "No commissioned provider or measured authority-commit to last network/framework write boundary.",
+      "full_runtime_family_accepted": false
+    },
+    {
+      "id": "EPG10-T08-03",
+      "isolated_status": "PARTIAL_ISOLATED_DENY_DEFAULT",
+      "executed": "No role/display-name elevation; unknown business authority denies.",
+      "actual_boundary": "Actual Stan mutation ceiling and protected-owner business model/identity receipts not published.",
+      "full_runtime_family_accepted": false
+    },
+    {
+      "id": "EPG10-T08-04",
+      "isolated_status": "PASS_ISOLATED_WITH_ACTUAL_UPSTREAM_TLS_FAILURE",
+      "executed": "JWT negative cases and strict mTLS chain/hostname/expiry/protocol/redirect tests pass; Edge and Proxy frontend TLS verify.",
+      "actual_boundary": "All six actual Manager facade/issuer endpoints and shared proxy client leaf expired 2026-09-27; actual workload/current-user binding unqualified.",
+      "full_runtime_family_accepted": false
+    },
+    {
+      "id": "EPG10-T08-05",
+      "isolated_status": "PASS_ISOLATED",
+      "executed": "Finite JWT kid and CA/client-certificate overlap/removal preserve exact identity/scope using new immutable configs.",
+      "actual_boundary": "No operational rotation performed; exact nine-service PKI window and valid rollback required.",
+      "full_runtime_family_accepted": false
+    },
+    {
+      "id": "EPG10-T08-06",
+      "isolated_status": "PASS_ISOLATED_SELECTED_FIELDS",
+      "executed": "Nested selected credential-shaped fields, PEM/Bearer values, depth/node bounds and PG/cache/export denial; coarse errors and no raw poller DB logging.",
+      "actual_boundary": "Defense over approved fields is not general DLP or evidence of real field-policy acceptance.",
+      "full_runtime_family_accepted": false
+    },
+    {
+      "id": "EPG10-T08-07",
+      "isolated_status": "PASS_ISOLATED",
+      "executed": "Business read grants do not imply export/replay/command/capital rights; hidden fields/counts/weights remain excluded.",
+      "actual_boundary": "Actual current grants/command business authority not mounted.",
+      "full_runtime_family_accepted": false
+    },
+    {
+      "id": "EPG10-T08-08",
+      "isolated_status": "PASS_ISOLATED",
+      "executed": "Policy/app/field/model/session/workload/effective-scope changes and generation/correction invalidate old contexts; independent scope positive.",
+      "actual_boundary": "Actual Research cache/stream trust and publication wiring not commissioned.",
+      "full_runtime_family_accepted": false
+    },
+    {
+      "id": "EPG10-T08-09",
+      "isolated_status": "PASS_ISOLATED_STABLE_PRINCIPAL_FIXTURES",
+      "executed": "Manager/owner full-business read and researcher exact approved slice positive controls; no name hardcoding, hidden aggregates or implied command/export.",
+      "actual_boundary": "Actual Bobby/Stan/Thanhvuong identity mappings and researcher field matrix require owner acceptance.",
+      "full_runtime_family_accepted": false
+    }
+  ],
+  "isolated_family_summary": {
+    "pass_with_declared_limitations": 8,
+    "partial_business_model_missing": 1,
+    "full_runtime_family_accepted": 0
+  },
+  "revocation_observation": {
+    "post_revoke_delivery_check_us": 206,
+    "production_bound": null,
+    "restricted_notices_after_revoke": 0,
+    "started_utc": "2026-10-16T11:48:49.386663086+00:00",
+    "basis": "TEST_ONLY_REAL_DISPOSABLE_POSTGRESQL_AND_LOCAL_PROVIDER; not production propagation SLA or TS native commit proof"
+  },
+  "actual_tls": {
+    "sgp_to_edge_tls13_chain_ip_pass": 3,
+    "edge_to_source_proxy_frontend_tls13_chain_ip_pass": true,
+    "manager_facade_issuer_tls_fail_expired": 6,
+    "shared_proxy_client_certificate_expired": true,
+    "expired_at_utc": "2026-09-27T03:40:51Z",
+    "manager_ca_expired": false,
+    "certificate_verification_bypassed": false,
+    "authenticated_application_health_inferred": false,
+    "operational_rotation_performed": false
+  },
+  "runtime": {
+    "hk_runtime_unchanged": true,
+    "sgp_runtime_unchanged": true,
+    "manager_runtime_unchanged": true,
+    "baseline_edge_proxy_projection_and_sgp_count": 17,
+    "additional_ts_manager_baseline_count": 6,
+    "zero_restart_counts_for_original17": true,
+    "manager_restart_counts_are_historical": [
+      {
+        "name": "/portal-manager-read-paper-v2-portal_manager_read-1",
+        "restarts": 3
+      },
+      {
+        "name": "/portal-manager-read-paper-v2-portal_manager_issuer-1",
+        "restarts": 0
+      },
+      {
+        "name": "/trading-system-manager-read-sandbox-portal_manager_read-1",
+        "restarts": 4
+      },
+      {
+        "name": "/trading-system-manager-read-sandbox-portal_manager_issuer-1",
+        "restarts": 0
+      },
+      {
+        "name": "/trading-system-manager-read-live-portal_manager_read-1",
+        "restarts": 4
+      },
+      {
+        "name": "/trading-system-manager-read-live-portal_manager_issuer-1",
+        "restarts": 0
+      }
+    ],
+    "production_mutations": 0,
+    "push": false,
+    "merge": false,
+    "deploy": false
+  },
+  "cleanup": {
+    "at_utc": "2026-10-16T11:51:28.870869+00:00",
+    "buildkit_cache_created_or_removed": 0,
+    "disk_available_after_bytes": 168109350912,
+    "disk_available_before_bytes": 159725641728,
+    "disk_delta_is_observational_shared_host": true,
+    "exact_removed_path": "/tmp/epg10-08-2o2e0k22",
+    "host": "SGP",
+    "images_built": 0,
+    "images_pulled": 0,
+    "images_removed": 0,
+    "networks_created_or_removed": 0,
+    "operational_resources_removed": 0,
+    "own_lock_absent": true,
+    "owned_test_containers_remaining": 0,
+    "raw_receipt_sha256": "3fc50c53ffc41e57c5c6b1cdc1659cb3837710128020c0aaa071715f381ab4af",
+    "recovery": "Source remains in feature Git; sanitized hashes/metrics receipts retained; disposable TEST_ONLY PG and compiler/cache/log copies intentionally discarded.",
+    "removed_allocated_bytes": 8387694592,
+    "residual_test_keys_overwritten": 0,
+    "schema": "epg10.security-owned-cleanup.v1",
+    "source_manifest_sha256": "7b8130d48037c0084fc3dffbb44954feecd49059915df4daafdc4f1637189197",
+    "target_absent": true,
+    "tls_directories_remaining_before_cleanup": [],
+    "volumes_created_or_removed": 0
+  },
+  "remaining_work_partition": {
+    "independently_runnable_owned_implementation_test_cleanup_items": [],
+    "dependent_same_phase_work": [
+      {
+        "owner": "TS/PM authority owner",
+        "action": "Publish actual handler/wire and current human/workload/delegation/membership business authority mounted with native commit lease; then bind and rerun same08 command qualification.",
+        "blocks": "Actual T08-01/03; N12 remains0/9 published; isolated default-deny tests do not replace native business semantics."
+      },
+      {
+        "owner": "Research current policy/identity owner",
+        "action": "Commission current trusted provider/publication; approve exact researcher field matrix and verified stable user/TS mapping, then bind and qualify same08 read disclosure/cache/export/SSE.",
+        "blocks": "Actual current read scope, workload identity, current revoke propagation and actual researcher mapping; no ADMIN or historical-link fallback."
+      },
+      {
+        "owner": "TS/PKI and runtime operators",
+        "action": "Renew three shared expired leafs under existing valid CA/stable identities; use exact six Manager plus three Source Proxy service window with valid rollback or fail-closed path. Verify strict TLS and unaffected tuples.",
+        "blocks": "Actual Manager upstream TLS; no JWT/DB/image/business changes implied; nine-service change not performed by source-only08 approval."
+      },
+      {
+        "owner": "Security/current-authority runtime owners",
+        "action": "Return approved real propagation bound and finite key/cert overlap/drain decision, then measure actual authority commit to final protected network write.",
+        "blocks": "Runtime revoke and rotation acceptance; isolated206us is not a numeric production budget."
+      }
+    ]
+  },
+  "security_boundaries": {
+    "current_grant_constructor_is_not_authentication": true,
+    "default_provider_unavailable": true,
+    "legacy_sse_dynamic_revocation_installed": false,
+    "legacy_sse_expiry_fixed": true,
+    "legacy_jwks_dynamic_reload_installed": false,
+    "public_roots_proxy_redirect_fallback": false,
+    "secret_defense": "KNOWN_PATTERNS_OVER_APPROVED_ALLOWLIST_NOT_GENERAL_DLP",
+    "keys_committed": false,
+    "source_or_broker_data_copied": false
+  },
+  "source_alignment": {
+    "evidence": "final-reconciliation.json#/source_alignment",
+    "nonjournal_sources": 34,
+    "unchanged_from07": 32,
+    "changed": "PM guide docs-only e2003bf and binding repository recovery WIP; reviewed, no authority widening.",
+    "research": "ELP2-09 committed e6620f4; selected15current auth/trust/read/realtime hashes unchanged; ELP2-10 concurrent staged work not runtime publication."
+  },
+  "reproduction": {
+    "runner": "scripts/epg10-04/run.py",
+    "runner_tests": "scripts/epg10-04/test_run.py",
+    "profile": "08",
+    "requirements": "New exact private /tmp/epg10-08-* source-only target; both-host lock check, bounded own lock; existing pinned PG image, Rust1.85.1/OpenSSL; no operational secrets/data; offline locked input; exact contract fixtures; cleanup entire owned target afterwards.",
+    "environment": {
+      "EPG10_TEST_PROFILE": "08",
+      "EPG10_PORTAL_REVISION": "f10c15f6bd6d7e30358af5946c2877b33b8fe4c2",
+      "EPG10_EXPECT_BOOTSTRAP_TESTS": "22",
+      "EPG10_EXPECT_READ_TESTS": "38",
+      "EPG10_EXPECT_RESOURCE_TESTS": "8",
+      "EPG10_EXPECT_MANAGER_TESTS": "11",
+      "EPG10_EXPECT_COMMAND_TESTS": "24",
+      "EPG10_EXPECT_TLS_TESTS": "10"
+    },
+    "command": "python3 /tmp/epg10-08-<new-owned-target>/run.py",
+    "execution_host": "SGP; HK foreign measurement lock respected"
+  },
+  "evidence": {
+    "immutable_qualification": "qualification.json",
+    "prior_failures_and_fixes": "attempt-history.json",
+    "cleanup": "cleanup-receipt.json",
+    "source_runtime_release_retention": "final-reconciliation.json",
+    "tls_observations": "tls-observations.json",
+    "owner_packet": "SECURITY_CONTRACT_AND_OWNER_RETURN.md"
+  },
+  "next_permitted_step": "Continue dependent work in same approved08 when exact owner artifacts/window exist; no new generic approval or phase ID;09…11 not started.",
+  "static_checks": {
+    "at_utc": "2026-10-16T12:00:29.787767+00:00",
+    "automated_count_sum": 490,
+    "files_scanned_for_known_secret_values": 25,
+    "git_diff_check": "PASS",
+    "json_files_parsed": 7,
+    "manifest_matches": true,
+    "new_local_markdown_link_failures": [],
+    "no_cargo_pytest_build_container_or_load_job": true,
+    "runner_hashes_matched": 4,
+    "secret_value_findings": [],
+    "source_hashes_matched": 426,
+    "status": "PASS_STATIC_METADATA_ONLY"
+  }
+}

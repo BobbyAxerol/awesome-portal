@@ -717,7 +717,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
   providers/publication and connected Edge binding are absent. Own7.365GB test
   copies/cache/logs cleaned;12HK+5SGP tuples unchanged/restarts0. Evidence and
   one same-phase owner return are linked in §23.16; no runtime activation.
-  08…11 await approval.
+  **08 approved/in progress (§23.17):** current-scope provider adapter over05,
+  checked bounded JWT/JWKS, legacy SSE expiry fix, explicitCA-only TLS1.3,
+  selected-payload secret defense qualified source-dark: final490automated PASS,
+  0FAIL/ignored/skip, fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for
+  actual providers, TS commit/business proof, researcher field approval and
+  expired Manager TLS. Eight formal families have limited isolated proof;
+  T08-03 business model remains partial. Own8.388GB artifacts removed;
+  17original +6Manager tuples unchanged (historical Manager restarts retained).
+  Exact actions/evidence in §23.17 and its single owner return. No operational
+  activation or peer changes;09…11 await approval.
   01capacity exit remains unmet, not waived.
   No operational runtime/source/credential change, push or merge. Only owned
   test containers/private fixture/tempfiles removed; no image build/pull/prune.

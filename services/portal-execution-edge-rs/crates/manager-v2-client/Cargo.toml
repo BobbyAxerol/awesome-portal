@@ -17,5 +17,11 @@ tokio.workspace = true
 url.workspace = true
 uuid.workspace = true
 
+[dev-dependencies]
+rustls.workspace = true
+rustls-pemfile.workspace = true
+ts-adapter-v1 = { path = "../ts-adapter-v1" }
+ts-transport = { path = "../ts-transport" }
+
 [lints]
 workspace = true

@@ -107,16 +107,25 @@ impl ManagerV2Client {
             .no_proxy()
             .user_agent("portal-execution-edge/manager-v2.runtime.v1");
         if enforce_tls {
-            let root = Certificate::from_pem(config.root_ca_pem)
+            if config.root_ca_pem.len() > 1024 * 1024 {
+                return Err(ManagerV2ClientError::InvalidTrustAnchor);
+            }
+            let roots = Certificate::from_pem_bundle(config.root_ca_pem)
                 .map_err(|_| ManagerV2ClientError::InvalidTrustAnchor)?;
+            if roots.is_empty() {
+                return Err(ManagerV2ClientError::InvalidTrustAnchor);
+            }
             let identity = Identity::from_pem(config.client_identity_pem)
                 .map_err(|_| ManagerV2ClientError::InvalidClientIdentity)?;
             builder = builder
                 .https_only(true)
                 .min_tls_version(reqwest::tls::Version::TLS_1_3)
                 .max_tls_version(reqwest::tls::Version::TLS_1_3)
-                .add_root_certificate(root)
+                .tls_built_in_root_certs(false)
                 .identity(identity);
+            for root in roots {
+                builder = builder.add_root_certificate(root);
+            }
         }
         let client = builder
             .build()

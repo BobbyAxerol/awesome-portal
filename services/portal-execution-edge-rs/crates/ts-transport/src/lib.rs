@@ -98,12 +98,22 @@ impl BoundedSourceClient {
             .no_proxy()
             .user_agent("primus-portal-execution-edge/ex-be-02");
         if require_https {
-            let root = Certificate::from_pem(config.root_ca_pem)
+            if config.root_ca_pem.len() > 1024 * 1024 {
+                return Err(TransportError::InvalidTrustAnchor);
+            }
+            let roots = Certificate::from_pem_bundle(config.root_ca_pem)
                 .map_err(|_| TransportError::InvalidTrustAnchor)?;
+            if roots.is_empty() {
+                return Err(TransportError::InvalidTrustAnchor);
+            }
             builder = builder
                 .https_only(true)
                 .min_tls_version(reqwest::tls::Version::TLS_1_3)
-                .add_root_certificate(root);
+                .max_tls_version(reqwest::tls::Version::TLS_1_3)
+                .tls_built_in_root_certs(false);
+            for root in roots {
+                builder = builder.add_root_certificate(root);
+            }
         }
         if let Some(raw) = config.client_identity_pem {
             let identity =

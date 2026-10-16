@@ -4015,6 +4015,13 @@ enum NextStreamEvent {
 async fn next_sse_event(
     mut machine: StreamMachine,
 ) -> Option<(Result<Event, Infallible>, StreamMachine)> {
+    if machine.terminal_after_initial && machine.initial.is_empty() {
+        return None;
+    }
+    if stream_assertion_expired(&machine) {
+        let event = expire_stream_assertion(&mut machine);
+        return Some((Ok(event), machine));
+    }
     if let Some(event) = machine.initial.pop_front() {
         return Some((Ok(event), machine));
     }
@@ -4027,6 +4034,12 @@ async fn next_sse_event(
         _ = machine.heartbeat.tick() => NextStreamEvent::Heartbeat,
         () = tokio::time::sleep_until(machine.expires_at) => NextStreamEvent::Expired,
     };
+    // Expiry may race an already-ready subscription or heartbeat. Never expose
+    // queued financial data merely because `select!` chose it over the timer.
+    if stream_assertion_expired(&machine) {
+        let event = expire_stream_assertion(&mut machine);
+        return Some((Ok(event), machine));
+    }
     let event = match next {
         NextStreamEvent::Delivery(SubscriptionDelivery::Event(event)) => projection_event(&event),
         NextStreamEvent::Delivery(SubscriptionDelivery::Gap(gap)) => {
@@ -4043,12 +4056,20 @@ async fn next_sse_event(
             }),
             None,
         ),
-        NextStreamEvent::Expired => {
-            machine.terminal_after_initial = true;
-            auth_expiring_event(&machine.assertion_expires_at)
-        }
+        NextStreamEvent::Expired => expire_stream_assertion(&mut machine),
     };
     Some((Ok(event), machine))
+}
+
+fn stream_assertion_expired(machine: &StreamMachine) -> bool {
+    tokio::time::Instant::now() >= machine.expires_at || Utc::now() >= machine.assertion_expires_at
+}
+
+fn expire_stream_assertion(machine: &mut StreamMachine) -> Event {
+    machine.initial.clear();
+    machine.subscription = None;
+    machine.terminal_after_initial = true;
+    auth_expiring_event(&machine.assertion_expires_at)
 }
 
 #[derive(Serialize)]
@@ -4185,9 +4206,12 @@ async fn realtime_journal_poller(poller: RealtimeJournalPoller) {
                 *ready.write().await = true;
                 break cursors;
             }
-            Err(error) => {
+            Err(_error) => {
                 *ready.write().await = false;
-                warn!(error = %error, "realtime journal poller startup retry");
+                warn!(
+                    code = "REALTIME_STORE_UNAVAILABLE",
+                    "realtime journal poller startup retry"
+                );
             }
         }
     };
@@ -4206,9 +4230,12 @@ async fn realtime_journal_poller(poller: RealtimeJournalPoller) {
         .await
         {
             Ok(()) => *ready.write().await = true,
-            Err(error) => {
+            Err(_error) => {
                 *ready.write().await = false;
-                warn!(error = %error, "realtime journal poll failed without discarding epoch cursors");
+                warn!(
+                    code = "REALTIME_STORE_UNAVAILABLE",
+                    "realtime journal poll failed without discarding epoch cursors"
+                );
             }
         }
     }
@@ -5207,6 +5234,123 @@ mod tests {
                 "expires_at": "2026-08-22T10:00:00Z",
             })
         );
+    }
+
+    fn stream_expiry_fixture(
+        expires_at: tokio::time::Instant,
+        assertion_expires_at: DateTime<Utc>,
+    ) -> (RealtimeHub, StreamMachine) {
+        let hub = RealtimeHub::new(8).unwrap();
+        let subscription = hub.subscribe(
+            "TEST_ONLY_workspace",
+            "paper",
+            ProjectionCursor {
+                epoch_id: uuid::Uuid::nil(),
+                sequence: 0,
+            },
+            "TEST_ONLY_session",
+            Duration::ZERO,
+        );
+        let machine = StreamMachine {
+            initial: VecDeque::new(),
+            subscription: Some(subscription),
+            heartbeat: tokio::time::interval_at(
+                tokio::time::Instant::now() + Duration::from_secs(60),
+                Duration::from_secs(60),
+            ),
+            expires_at,
+            assertion_expires_at,
+            terminal_after_initial: false,
+        };
+        (hub, machine)
+    }
+
+    async fn rendered_stream_event(event: Result<Event, Infallible>) -> String {
+        let response = Sse::new(stream::iter([event])).into_response();
+        let bytes = to_bytes(response.into_body(), 4_096).await.unwrap();
+        String::from_utf8(bytes.to_vec()).unwrap()
+    }
+
+    #[tokio::test]
+    async fn expired_stream_discards_initial_data_and_closes_after_one_auth_notice() {
+        let (hub, mut machine) = stream_expiry_fixture(
+            tokio::time::Instant::now() - Duration::from_millis(1),
+            Utc::now() + chrono::Duration::seconds(60),
+        );
+        machine.initial = VecDeque::from([
+            Event::default()
+                .event("order.updated")
+                .data("TEST_ONLY_RESTRICTED_ORDER"),
+            Event::default()
+                .event("fill.recorded")
+                .data("TEST_ONLY_RESTRICTED_FILL"),
+        ]);
+        let (event, machine) = next_sse_event(machine).await.unwrap();
+        assert!(machine.initial.is_empty());
+        assert!(machine.subscription.is_none());
+        assert!(machine.terminal_after_initial);
+        let body = rendered_stream_event(event).await;
+        assert!(body.contains("event: auth.expiring"));
+        assert!(!body.contains("TEST_ONLY_RESTRICTED"));
+        assert_eq!(hub.metrics().active_subscribers, 0);
+        assert!(next_sse_event(machine).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn wall_clock_expiry_discards_initial_data_despite_future_monotonic_deadline() {
+        let (_hub, mut machine) = stream_expiry_fixture(
+            tokio::time::Instant::now() + Duration::from_secs(60),
+            Utc::now() - chrono::Duration::seconds(1),
+        );
+        machine.initial.push_back(
+            Event::default()
+                .event("order.updated")
+                .data("TEST_ONLY_RESTRICTED_ORDER"),
+        );
+        machine.terminal_after_initial = true;
+        let (event, machine) = next_sse_event(machine).await.unwrap();
+        let body = rendered_stream_event(event).await;
+        assert!(body.contains("event: auth.expiring"));
+        assert!(!body.contains("TEST_ONLY_RESTRICTED"));
+        assert!(machine.initial.is_empty());
+        assert!(next_sse_event(machine).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn valid_assertion_preserves_initial_stream_delivery() {
+        let (_hub, mut machine) = stream_expiry_fixture(
+            tokio::time::Instant::now() + Duration::from_secs(60),
+            Utc::now() + chrono::Duration::seconds(60),
+        );
+        machine.initial.push_back(
+            Event::default()
+                .event("order.updated")
+                .data("TEST_ONLY_ALLOWED_ORDER"),
+        );
+        let (event, machine) = next_sse_event(machine).await.unwrap();
+        let body = rendered_stream_event(event).await;
+        assert!(body.contains("event: order.updated"));
+        assert!(body.contains("TEST_ONLY_ALLOWED_ORDER"));
+        assert!(!machine.terminal_after_initial);
+        assert!(machine.subscription.is_some());
+    }
+
+    #[tokio::test]
+    async fn awaiting_live_stream_terminates_at_the_assertion_deadline() {
+        let (_hub, machine) = stream_expiry_fixture(
+            tokio::time::Instant::now() + Duration::from_millis(5),
+            Utc::now() + chrono::Duration::seconds(60),
+        );
+        let (event, machine) =
+            tokio::time::timeout(Duration::from_secs(1), next_sse_event(machine))
+                .await
+                .unwrap()
+                .unwrap();
+        assert!(rendered_stream_event(event)
+            .await
+            .contains("event: auth.expiring"));
+        assert!(machine.subscription.is_none());
+        assert!(next_sse_event(machine).await.is_none());
     }
 
     #[test]

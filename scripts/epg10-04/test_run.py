@@ -25,31 +25,33 @@ class RunnerSafety(unittest.TestCase):
         source = Path(private.name) / 'source'
         names = ['Cargo.toml', 'Cargo.lock', *qualification.owned_rust(profile),
                  'crates/projection-store-pg/migrations/0019_scoped_bootstrap.sql']
-        if profile == '07':
+        if profile in ('07', '08'):
             names.append(qualification.COMMAND_MIGRATION)
         if profile != '04':
             names.append('crates/projection-store-pg/migrations/0020_scoped_read.sql')
             names = [qualification.RUST_WORKSPACE + '/' + name for name in names]
             names.append(qualification.SHARED_FIXTURE)
-        if profile in ('06', '07'):
+        if profile in ('06', '07', '08'):
             names.extend(qualification.RESOURCE_SHARED_FIXTURES)
             names.extend(qualification.RESOURCE_COMPILE_INPUTS)
             names.extend(qualification.RUST_WORKSPACE + '/' + name
                          for name in qualification.RESOURCE_BUILD_SCRIPTS)
-        if profile == '07':
+        if profile in ('07', '08'):
             names.extend(qualification.COMMAND_SHARED_FIXTURES)
+        if profile == '08':
+            names.extend(qualification.SECURITY_COMPILE_INPUTS)
         for name in names:
             path = source / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text('TEST_ONLY\n')
         return source
 
-    def test_profile_defaults_to04_and_requires_exact_04_or05_or06_or07(self):
+    def test_profile_defaults_to04_and_requires_exact_04_or05_or06_or07_or08(self):
         with patch.dict(qualification.os.environ, {}, clear=True):
             self.assertEqual(qualification.test_profile(), '04')
-        for value in ('04', '05', '06', '07'):
+        for value in ('04', '05', '06', '07', '08'):
             self.assertEqual(qualification.test_profile(value), value)
-        for value in ('', '4', '5', '6', '7', '08', '04,05', '05 ', '07 ', 5, True):
+        for value in ('', '4', '5', '6', '7', '8', '09', '04,05', '05 ', '07 ', '08 ', 5, True):
             with self.subTest(profile=value):
                 with self.assertRaisesRegex(ValueError, 'EXPLICIT_TEST_PROFILE'):
                     qualification.test_profile(value)
@@ -624,7 +626,8 @@ class RunnerSafety(unittest.TestCase):
             qualification.parse_rust_results('\n'.join([row]*6), 8)
 
     def test_profile07_unit_timeout_is_bounded_without_changing_prior_profiles_or_own_lock(self):
-        self.assertEqual(qualification.UNIT_TEST_TIMEOUT_SECONDS,
+        self.assertEqual({profile: qualification.UNIT_TEST_TIMEOUT_SECONDS[profile]
+                          for profile in ('04', '05', '06', '07')},
                          {'04': 240, '05': 240, '06': 240, '07': 600})
         self.assertEqual(qualification.LOCK_SECONDS, 1500)
         self.assertLess(qualification.UNIT_TEST_TIMEOUT_SECONDS['07'], qualification.LOCK_SECONDS - 30)
@@ -758,6 +761,138 @@ class RunnerSafety(unittest.TestCase):
             self.assertIn(relative, after)
             self.assertEqual(after[relative], qualification.hashlib.sha256(path.read_bytes()).hexdigest())
             self.assertTrue(set(before) < set(after))
+
+    def test_profile08_cleanup_and_private_paths_cannot_select_other_profiles(self):
+        helper = qualification.load_cleanup_helpers(Path(__file__).resolve().parent, '08')
+        self.assertTrue(helper.PG.startswith('epg10-08-pg-'))
+        self.assertTrue(helper.OWNER.startswith('codex-epg10-08-'))
+        self.assertNotEqual(helper.PG, self.helper.PG)
+        for path in ('/home/bobby', '/tmp/epg10-04-test', '/tmp/epg10-05-test',
+                     '/tmp/epg10-06-test', '/tmp/epg10-07-test', '/tmp/epg10-08-',
+                     '/tmp/epg10-08-test/child', '/tmp/epg10-08-test/../foreign'):
+            with self.subTest(path=path), self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
+                qualification.validate_base(Path(path), '08')
+
+    def test_profile08_adds_transport_and_manager_units_to_all_eight07_packages(self):
+        packages = qualification.package_arguments('08')
+        self.assertEqual(packages, ['-p', 'ts-transport', '-p', 'manager-v2-client',
+                                    *qualification.package_arguments('07')])
+        self.assertEqual(len(packages), 20)
+        self.assertEqual(len(set(packages[1::2])), 10)
+        row = 'test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        self.assertEqual(qualification.parse_rust_results('\n'.join([row]*10), 10)['passed'], 20)
+        with self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
+            qualification.parse_rust_results('\n'.join([row]*8), 10)
+
+    def test_profile08_tls_count_is_explicit_bounded_exact_and_unskippable(self):
+        for value in ('1', '6', '128'):
+            self.assertEqual(qualification.expected_test_count(value, 'TLS'), int(value))
+        for invalid in (None, '', '0', '129', '-1', '1.0', '01', 1, True):
+            with self.subTest(value=invalid), self.assertRaisesRegex(ValueError, 'EXACT_BOUNDED_TLS'):
+                qualification.expected_test_count(invalid, 'TLS')
+        row = 'test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        self.assertEqual(qualification.parse_rust_results(row, 1, 6, count_kind='TLS')['passed'], 6)
+        with self.assertRaisesRegex(ValueError, 'EXACT_TLS_TEST_COUNT'):
+            qualification.parse_rust_results(row, 1, 5, count_kind='TLS')
+        for invalid in ('', row.replace('0 ignored', '1 ignored'),
+                        row.replace('0 filtered out', '1 filtered out')):
+            with self.subTest(result=invalid), self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
+                qualification.parse_rust_results(invalid, 1, 6, count_kind='TLS')
+
+    def test_profile08_requires_and_hash_binds_every_security_source_and_compile_fixture(self):
+        source = self.source_fixture('08')
+        before = qualification.source_hashes(source, '08')
+        required = [qualification.RUST_WORKSPACE + '/' + name
+                    for name in qualification.SECURITY_OWNED_RUST]
+        required.extend(qualification.SECURITY_COMPILE_INPUTS)
+        for relative in required:
+            self.assertIn(relative, before)
+            path = source / relative
+            path.unlink()
+            with self.subTest(missing=relative), self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+                qualification.source_hashes(source, '08')
+            path.write_text('TEST_ONLY_CHANGED\n')
+            self.assertNotEqual(before[relative], qualification.source_hashes(source, '08')[relative])
+            path.write_text('TEST_ONLY\n')
+
+    def test_profile08_does_not_accept07_inventory_and_reuses_existing_pg_suites(self):
+        source = self.source_fixture('07')
+        before = qualification.source_hashes(source, '07')
+        with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+            qualification.source_hashes(source, '08')
+        self.assertEqual(qualification.source_hashes(source, '07'), before)
+        self.assertTrue(set(qualification.owned_rust('07')) < set(qualification.owned_rust('08')))
+        self.assertIn('crates/projection-store-pg/tests/epg10_05_scoped_read.rs',
+                      qualification.owned_rust('08'))
+        self.assertNotIn('crates/projection-store-pg/tests/epg10_08_security.rs',
+                         qualification.owned_rust('08'))
+        with self.assertRaisesRegex(ValueError, 'EXPLICIT_TEST_COUNT_KIND'):
+            qualification.expected_test_count('1', 'SECURITY')
+
+    def test_profile08_transport_fixtures_have_individual_64k_caps_and_original_caps_stay_strict(self):
+        source = self.source_fixture('08')
+        self.assertEqual(len(qualification.SECURITY_COMPILE_INPUTS), 7)
+        for name, cap in qualification.SECURITY_COMPILE_INPUTS.items():
+            self.assertEqual(cap, 64 * 1024)
+            for size in (0, cap + 1):
+                (source / name).write_bytes(b'x' * size)
+                with self.subTest(path=name, size=size), self.assertRaisesRegex(
+                        ValueError, 'BOUNDED_PUBLIC_COMPILE_INPUT_REQUIRED'):
+                    qualification.source_hashes(source, '08')
+            (source / name).write_text('TEST_ONLY\n')
+        for name in (qualification.SHARED_FIXTURE, *qualification.RESOURCE_SHARED_FIXTURES,
+                     *qualification.COMMAND_SHARED_FIXTURES):
+            (source / name).write_bytes(b'x' * (64 * 1024 + 1))
+            with self.subTest(path=name), self.assertRaisesRegex(ValueError, 'BOUNDED_SHARED_FIXTURE'):
+                qualification.source_hashes(source, '08')
+            (source / name).write_text('TEST_ONLY\n')
+
+    def test_profile08_mtime_refresh_is_explicit_and_never_changes_bytes(self):
+        source = self.source_fixture('08', private_prefix='epg10-08-')
+        before = qualification.source_hashes(source, '08')
+        stamp = 2_000_000_000_000_000_002
+        with patch.object(qualification.time, 'time_ns', return_value=stamp):
+            receipt = qualification.refresh_copied_input_mtimes(source.parent, source, before, '08')
+        self.assertEqual(receipt['touched_files'], len(before))
+        self.assertTrue(receipt['bytes_unchanged'])
+        self.assertFalse(receipt['target_or_cache_touched'])
+        self.assertEqual(qualification.source_hashes(source, '08'), before)
+        self.assertTrue(all((source / name).stat().st_mtime_ns == stamp for name in before))
+        with patch.object(qualification.os, 'utime') as mutate:
+            with self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
+                qualification.refresh_copied_input_mtimes(source.parent, source, before)
+            mutate.assert_not_called()
+
+    def test_profile08_mtime_refresh_rejects_escape_and_manifest_drift_before_mutation(self):
+        source = self.source_fixture('08', private_prefix='epg10-08-')
+        before = qualification.source_hashes(source, '08')
+        with patch.object(qualification.os, 'utime') as mutate:
+            with self.assertRaisesRegex(ValueError, 'EXACT_PRIVATE_SOURCE_PATH'):
+                qualification.refresh_copied_input_mtimes(source.parent, source / '..', before, '08')
+            for manifest in ({}, {'../outside': '0' * 64}, dict(before, injected='0' * 64)):
+                with self.assertRaisesRegex(ValueError, 'EXACT_VALIDATED_INPUT_MANIFEST'):
+                    qualification.refresh_copied_input_mtimes(source.parent, source, manifest, '08')
+            mutate.assert_not_called()
+
+    def test_profile08_security_warnings_are_owned_and_tls_executes_exactly_one_binary(self):
+        for path in qualification.SECURITY_OWNED_RUST:
+            warning = {'message': {'level': 'warning', 'code': {'code': 'clippy::security'},
+                'spans': [{'is_primary': True, 'file_name': path}]}}
+            with self.subTest(path=path):
+                self.assertEqual(qualification.clippy_findings(json.dumps(warning), '08')['owned_warnings'],
+                                 ['clippy::security'])
+        self.assertEqual(qualification.TLS_TEST_ARGUMENTS, (
+            'cargo', 'test', '--offline', '--locked', '-p', 'manager-v2-client',
+            '--test', 'epg10_08_tls', '--', '--nocapture', '--test-threads=1'))
+        row = 'test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        with self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
+            qualification.parse_rust_results(row + '\n' + row, 1, 6, count_kind='TLS')
+
+    def test_profile08_unit_timeout_stays_bounded_and_preserves_all_prior_profiles(self):
+        self.assertEqual(qualification.UNIT_TEST_TIMEOUT_SECONDS,
+                         {'04': 240, '05': 240, '06': 240, '07': 600, '08': 600})
+        self.assertEqual(qualification.LOCK_SECONDS, 1500)
+        self.assertLess(qualification.UNIT_TEST_TIMEOUT_SECONDS['08'], qualification.LOCK_SECONDS - 30)
 
     @staticmethod
     def child_usage(user=1.0, system=0.5, rss=100, reads=2, writes=4):

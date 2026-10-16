@@ -1264,8 +1264,12 @@ dependencies = [
  "manager-extension-contract",
  "manager-v2-contract",
  "reqwest",
+ "rustls",
+ "rustls-pemfile",
  "thiserror",
  "tokio",
+ "ts-adapter-v1",
+ "ts-transport",
  "url",
  "uuid",
 ]

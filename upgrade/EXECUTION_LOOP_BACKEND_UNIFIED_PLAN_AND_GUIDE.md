@@ -9588,8 +9588,9 @@ no test images/cache/containers created by this package.
 
 EPG10-00 is **COMPLETED_INVENTORY_ONLY / BOBBY_APPROVED** (2026-10-15);
 01 is **IN_PROGRESS / BOBBY_APPROVED**,02 is **COMPLETED_CONTRACT_ONLY**,
-03 is **IN_PROGRESS / BOBBY_APPROVED**,04 is **IN_PROGRESS / BOBBY_APPROVED**,05–11 remain
-**PLANNED / AWAITING_BOBBY_APPROVAL**. Until a phase receipt records execution,
+03…08 are **IN_PROGRESS / BOBBY_APPROVED** (current scoped receipts in
+§23.12…§23.17);09–11 remain **PLANNED / AWAITING_BOBBY_APPROVAL**.
+Until a phase receipt records execution,
 test counts are required case identities, **not executed tests**. Test bodies are preserved in each detailed
 phase block and the pinned Edge guide; partner ELP2/PM cases are not double-counted.
 
@@ -10126,8 +10127,12 @@ Owned7.365GB test copies/cache/logs removed;12HK+5SGP tuples unchanged/restarts0
 <a id="epg10-08-plan"></a>
 #### EPG10-08 Hoàn thiện revocation scope và TLS
 
-**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
-**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+**Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED (2026-10-16).
+**Tests:** FINAL_IMMUTABLE_490_PASS / 0_FAIL_IGNORED_SKIP / FMT_STRICT_CLIPPY_PASS — **Exit:** NOT_MET — **Runtime activation:** NOT_AUTHORIZED.
+**Owned package:** QUALIFIED_ISOLATED_SOURCE_DARK; full runtime security acceptance
+is not closed. Eight formal families have limited isolated proof; T08-03 remains
+partial without actual business authority. No production family is certified.
+Execution, exact scoped decisions and receipts: [§23.17](#2317-epg10-08-execution-journal--2026-10-16).
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-08](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls);
 [BE §§3–5, 9.2, 14.2; ELP2-02/03/04/09](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.5, 11.3–11.5](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -10173,7 +10178,16 @@ namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not exe
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
 source/runtime/retention tuple; remaining gate owner and next independently runnable
-scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+scope. **Hiện tại:** owned current-scope/JWT/SSE-expiry/TLS/secret-defense package
+qualified source-dark; final490automated PASS,0FAIL/ignored/skip, fmt/strict
+zero-warning Clippy PASS. All independently runnable owned code/tests/preparation
+and cleanup finished. Actual providers/TS commit authority/researcher field matrix
+and expired Manager TLS remain exact same08 dependencies, not deferred product
+tasks. See §23.17, [verification](evidence/execution-edge-v1_2/EPG10-08/verification.json)
+and [single owner return](evidence/execution-edge-v1_2/EPG10-08/SECURITY_CONTRACT_AND_OWNER_RETURN.md).
+Own8.388GB test artifacts removed;17original +6Manager runtime tuples unchanged.
+Historical Manager restart counts3/4/4 were not caused by08. No runtime activation
+or product-security acceptance claimed;09…11 remain not started.
 
 <a id="epg10-09-plan"></a>
 #### EPG10-09 Kiểm thử E2E dữ liệu command và recovery
@@ -12566,6 +12580,269 @@ TS/PM/DL and34non-journal source interfaces unchanged.08…11 not started.
 Commit this coherent verified slice locally as Bobby on the existing feature
 branch; no push/merge/deploy. Workspace root's prior rule10a edit is preserved,
 not bundled into this Portal commit; no peer source or runtime changed.
+
+### 23.17 EPG10-08 execution journal — 2026-10-16
+
+**Pre-code freeze (11:00 UTC): BOBBY_APPROVED / IN_PROGRESS.** Execute the
+complete independently runnable08 scope on
+`feat/execution-edge-upgrade-v1_2`, starting `f10c15f6bd6d7e30358af5946c2877b33b8fe4c2`,
+worktree `/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`.
+Required rules, EDGE08, BE§§3–5/9.2/14.2/ELP2-02/03/04/09,
+SCORE§8.5/11.3–11.5 and REVIEW§3.3 reviewed. Guide links and full checklist
+remain in [phase08](#epg10-08-plan); this journal is its implementation record.
+
+**Approved files/resources:** existing Rust auth/transport, typed read
+authorization/cache/stream/command negative tests, minimal reuse of the
+existing isolated runner, bounded sanitized evidence and backend indexes.
+No new financial authority, identity issuer, policy grant, arbitrary query,
+browser route, UI, source exporter or peer mutation. Cover paper/sandbox/live
+structurally; Canary is a live stage, not a fourth invented environment.
+Reuse05 current-scope rechecks and07 durable command authority seams; audit
+legacy routes separately rather than advertise their old TTL as08 revocation.
+Fix independently reproducible in-scope defects before handoff.
+
+**Invariants/decision boundary:** current verified user/workload and current
+app/field/membership revisions at every disclosure; no role/display-name
+authority, no implicit commands/export from read-all. No secret-shaped
+publication or error data. TLS1.3, explicit trust and hostname verification,
+no insecure fallback, no redirect/proxy credential forwarding. TS alone owns
+effective membership and commit-time revocation lease. Research owns session,
+policy evaluator and approved linked-researcher fields. Unpublished runtime
+providers remain fail closed, never replaced by fixture claims.
+
+**Tests/exit:** T08-01…09 start NOT_RUN. Test cryptographic negatives,
+rotation overlap/removal, bounds, queued/active stream expiry/revocation,
+cache hit/in-flight/download/cursor scope invalidation, read-only command
+denial, hidden metrics/secret injection and unaffected-scope positive controls.
+Use ephemeral TEST_ONLY keys/certificates and disposable PG only; record UTC
+and monotonic timings as isolated measurements, not an invented production SLA.
+Real TS-commit/Research-runtime proof is required for full XLC-01/05 acceptance;
+isolated tests must not close it. No phase09 or production release authorized.
+
+**Parallel review/preflight:** TS advanced to `3a09fe19d453b78a083eacccbc6fa462f11c03dd`,
+PM remains `d16aa2b5f251596e469807f57e81fe14cdc7e763`,
+DL advanced to `aaa81a849c7309bdaa7e7f566b61e2c76f90d332`.
+All34 phase07 non-journal TS/PM/DL authority interfaces unchanged so far.
+Research `daf434875e28aa131105d7f27d910b2f0ca05792` has active ELP2-09
+uncommitted changes; read/pin only, never edit/copy as a stable publication.
+Readonly preflight captured12HK+5SGP runtime tuples and Docker inventories.
+HK foreign measurement lock `claude-burst-b16-a1parity` until13:48:52Z:
+no local heavy jobs. SGP has no measurement lock; any isolated job must first
+check fresh capacity/activity and acquire its own bounded lock.
+
+**Rollback/cleanup:** no operational flag, certificate/key, DB role, deployed
+image or service restart. Revert scoped source commit to roll back code;
+disable any future affected surface without broad-admin/TLS fallback. Preserve
+accepted command receipts/recovery and committed facts. Delete only08-owned
+private source/cache/log/test-key copies and disposable test resources; shred
+transient private keys, retain17 protected runtime tuples and named operational
+rollback artifacts, no shared image/cache prune during peer work. Record
+pre/post disk and final source/runtime reconciliation before commit.
+
+**At pre-code freeze:** implementation/tests not yet run; full exit NOT_EVALUATED.
+External gates are scoped actual authority/trust publication and field-policy
+approval, not permission to defer owned code, target preparation or tests.
+
+**11:14 UTC coherent source slice / qualification in progress:** checked JWT
+lifetime arithmetic, bounded strict RS256/JWKS metadata and negative/rotation
+tests; legacy SSE expiry-before-initial and post-await expiry guard; coarse
+poller error codes (no raw DB error Display). New source-dark current-read
+adapter composes the existing `ReadAuthorizer` with fresh exact-scope provider
+facts per check, independent read/export/replay rights and deny-default;
+neither crypto authentication nor a TS commit lease is inferred. Selected
+payload publication adds bounded recursive secret-key/PEM/Bearer defense over
+the approved field allowlist, not arbitrary-secret recognition. V1/Manager
+clients now use only explicit CA bundles, TLS1.3 and no proxy/redirect fallback.
+Ephemeral TLS integration tests call the public strict constructors.
+
+SGP `/tmp/epg10-08-2o2e0k22` preflight: no foreign lock/heavy worker,
+167877935104/665811062784B free (25.214%; C4 observation, above20% and
+100GiB runner guard), existing cached PG image only. Own bounded runner lock,
+one-CPU/nice15 compiler and0.5CPU/768MiB disposable PG; no operational DB/data.
+The transfer was narrowed after review to tracked public source plus exactly
+the two inspected new Rust files and named contracts; no untracked glob/env
+or credentials. Runner safety85/85 and rustfmt PASS for first candidate;
+compile still running. Review additionally hardened the test TLS header read
+against fragmentation and extended secret injection through actual PG/cache/
+export; those later bytes require a fresh final immutable qualification.
+
+Fresh private Source Proxy handshake to172.23.0.1:8444 with configured explicit
+CA and `-verify_ip172.23.0.1 -verify_return_error -tls1_3`: TLS1.3,
+TLS_AES_256_GCM_SHA384, Verification OK (no client credentials/application
+request). On-disk Source Proxy certificate expiry2027-10-03, Edge server
+2027-02-20; Source Proxy chain verifies. These are narrow trust observations,
+NOT current-user authorization, loaded Edge leaf proof or rotation evidence.
+No real certificate/key operation or runtime config/restart performed.
+
+**11:22 UTC fresh TLS localization:** the frontend PASS above does NOT clear
+the00 upstream fault. All6 TS-owned Manager facade/issuer loaded leafs across
+paper8023/4,sandbox8123/4,live8223/4 fail explicitCA+hostname TLS verification;
+expiry2026-09-27T03:40:51Z. Shared Source Proxy Manager client leaf also expired;
+CA valid through2027-08-27. [TLS receipt](evidence/execution-edge-v1_2/EPG10-08/tls-observations.json)
+contains only public metadata and exact6additional runtime tuples. Existing
+restart counts3/4 for facades are historical, not phase08 restart0 claims.
+No verification bypass or authenticated application request. Exact external
+repair proposal in [single08 owner return](evidence/execution-edge-v1_2/EPG10-08/SECURITY_CONTRACT_AND_OWNER_RETURN.md):
+renew3shared leafs, reload6Manager+3SourceProxy contexts under a named TS/PKI
+window, no JWT/DB/image/business-scope change. That operational blast radius is
+not authorized by the source-only08 package; no unsolicited peer PKI mutation.
+It blocks actual Manager TLS acceptance, not isolated code/test completion.
+
+**11:30 UTC first qualification / owned fix round:** first immutable candidate
+compiled all11 packages/all targets and passed85 runner safety +250 library
+tests. Edge binary38PASS/4FAIL: the four new expiry tests incorrectly built a
+hub below its existing minimum capacity, failing before assertions. Corrected
+only that TEST_ONLY fixture to the existing8-entry minimum; no runtime limit
+weakened. First attempt and cleanup retained in attempt history, not hidden or
+counted as final acceptance. Final source also adds two durable queued-command
+revocation cases, fragmented TLS-header handling and actual PG/cache/export
+secret-injection coverage. Independent review found case-insensitive Bearer
+prefix bypass in the new defense; fixed and added lower/mixed-case negatives.
+All changed bytes require fresh immutable full-suite qualification.
+
+Fresh parallel review: TS `434bf38d5e73dd77de4e47b6a416bc35a19c2b6f`,
+PM still `d16aa2b5f251596e469807f57e81fe14cdc7e763`,
+DL `fe8c857cfa97405aaccef3ae45ad7e4f0f9a7c56`.
+33/34 frozen non-journal inputs unchanged; PM binding repository and §58.64
+add source-only service recovery, still no mounted current provider or native
+commit publication. Research ELP2-09 committed at
+`e6620f416e43bc8c18a044339a598c436d8556ba`, authority bytes unchanged from
+reviewed WIP, default trust unqualified and hub not instantiated by runtime.
+No peer edits or jobs. New untracked guide files are preserved outside this
+implementation slice; no broad Git add.
+
+**11:39 UTC second immutable candidate:**490 automated cases PASS/0FAIL/skip:
+85 runner,250 libraries,42 actual Edge binary,10 strict public-constructor TLS,
+22 bootstrap/38scoped-read/8resource/11Manager/24command real disposable-PG.
+Lower/mixed-case Bearer and nested secret injection through PG/cache/export
+deny; durable queued revoke has zero effects. Isolated SSE check293µs with0
+restricted notices after revoke, not a production propagation SLA. Qualification
+still FAIL because strict pedantic Clippy found one new redundant closure;
+replace it by the equivalent char method, run strict all-target preflight and
+then the complete final immutable suite. No failed lint is waived as debt.
+
+Additional independent TLS diagnostic: using the actual SGP Control API public
+`edge-server-ca.crt`, Paper Edge10.70.0.2:8443 verifies TLS1.3 +IP hostname.
+The inbound SGP-client CA is a different identity boundary and correctly does
+not verify the Edge-server leaf; it was not substituted/bypassed. No client
+private credential/HTTP request was used; current user/app acceptance not inferred.
+
+**11:43 UTC lint/TLS slice:** strict offline all-target Clippy preflight now
+returns0 after fixing method-call closure, test doc backticks and inline format
+args (no suppressions). Final full08 immutable runner restarted against these
+formatted bytes. Sandbox8444/Live8445 Edge listener chain/IP verification also
+PASS with actual SGP CA; all present CN `portal-execution-edge.paper`. This
+shared TLS identity is not a current profile/human grant; actual workload/provider
+binding is still unqualified. No secret/client credential, HTTP request or
+runtime mutation, and no new security gate fabricated from certificate naming.
+
+**11:58 UTC final immutable qualification and reconciliation:**
+[qualification](evidence/execution-edge-v1_2/EPG10-08/qualification.json) is
+`PASS_ISOLATED_CORRECTNESS_ONLY`: **490PASS,0FAIL/ignored/skip/filtered**;
+85runner +250libraries +42actual Edge binary +10strict public-constructor TLS
++22bootstrap/38scoped-read/8resource/11Manager/24command disposable real-PG.
+All11packages/all targets compile, fmt and strict all-target zero-warning Clippy
+PASS. Earlier fixture/lint failures and fixes remain in
+[attempt history](evidence/execution-edge-v1_2/EPG10-08/attempt-history.json);
+no warning suppression, failed case relabelled as debt, or double-counted prior
+candidate.426source +4helper hashes match final tested local bytes; immutable
+manifest `7b8130d48037c0084fc3dffbb44954feecd49059915df4daafdc4f1637189197`.
+Raw private receipt SHA256
+`3fc50c53ffc41e57c5c6b1cdc1659cb3837710128020c0aaa071715f381ab4af`;
+bounded sanitized metrics/hashes retained, raw logs/key material not committed.
+
+Final TEST_ONLY revoke check206µs,0restricted notices after revoke, UTC
+`2026-10-16T11:48:49.386663086+00:00`; **not** authority-commit→network propagation
+SLA, TS native transaction proof, production capacity, HA or financial Live proof.
+Eight formal families have declared isolated proof; T08-03 remains partial
+without actual protected-owner/business model. All nine full-runtime families
+remain unaccepted. Detailed exact boundaries in
+[verification](evidence/execution-edge-v1_2/EPG10-08/verification.json) and
+[single owner packet](evidence/execution-edge-v1_2/EPG10-08/SECURITY_CONTRACT_AND_OWNER_RETURN.md).
+Legacy SSE now expires correctly, but neither dynamic legacy JWKS reload nor
+current-provider revocation is commissioned by that fix. The new default
+current provider denies/unavailable; no request body, ADMIN role or valid TLS
+alone mints a business grant.
+
+**Final peer round11:52–11:53UTC:**
+[source/runtime/release reconciliation](evidence/execution-edge-v1_2/EPG10-08/final-reconciliation.json)
+pins TS`434bf38d5e73dd77de4e47b6a416bc35a19c2b6f`,
+PM`e2003bfe8a21124fb78dbdfdda1ad774cbecdfc2`,
+DL`fe8c857cfa97405aaccef3ae45ad7e4f0f9a7c56` and Research
+`e6620f416e43bc8c18a044339a598c436d8556ba`. Latest PM commit is docs-only
+guide§1.6/1.7 +journal§58.65; full relevant guide delta reviewed. It references
+Edgev1.2 and18remaining gaps, without changing business math/phase bodies,
+runtime or provider authority. Recovery repository WIP remains source-only,
+six prepared cases NOT_RUN, no mounted current provider; N12still0/9published.
+**32/34** phase07 nonjournal inputs unchanged at final round (earlier33/34 was
+historical): changed PM guide and binding repository only. All4 governing Edge
+guide hashes unchanged. Research selected15auth/trust/read/realtime/wiring
+hashes unchanged from reviewed ELP2-09; concurrent ELP2-10 staged work is not
+a stable release or commissioned source. No peer writes/tests/restarts by08.
+Unrelated new `SCORE_IMPLEMENTATION_FEASIBILITY_REVIEW_v1.0_VI.md` preserved
+untracked and excluded from this commit; no broad add or peer file cleanup.
+
+**Cleanup / runtime / retention:**
+[cleanup receipt](evidence/execution-edge-v1_2/EPG10-08/cleanup-receipt.json)
+records exact `/tmp/epg10-08-2o2e0k22` removal at11:51:28UTC,
+**8,387,694,592allocated bytes** (~8.388GB). SGP free before159725641728B,
+after168109350912B (shared observational delta); target/owned lock absent,
+owned test containers0, residual ephemeral TLS dirs/keys0. Test Drop overwrote
+then unlinked private keys; this is not an SSD/snapshot erasure guarantee.
+No images built/pulled/removed, BuildKit created/removed, volumes or operational
+resources removed. All17original protected tuples +6additional TS Manager
+tuples unchanged. Original17 restart counts0; Manager facade3/4/4 are historical
+and unchanged. Zero operational deploy/config/PKI/DB/grant/financial mutation.
+HK foreign `claude-burst-b16-a1parity` measurement lock honoured through13:48:52UTC;
+all heavy work ran only in authorized isolated SGP target under own bounded lock.
+
+Final C4 SGP free167971209216/665811062784B=25.228%, above20% guard but below30%
+attention. Exact shared-host quiet-window retention maintenance stays Bobby/ops
+owned; no scoped08 artifact remains. Shared/unowned images and BuildKit are
+inventoried, not broadly pruned during peer measurement/build/release work.
+Canonical HK source remains `/home/bobby/.worktrees/portal-execution-manager-v2`
+`feat/manager-v2-paper-read@54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4`;
+SGP stable source `/home/bobby/portal-main-release`
+`main@533162635f56584d630e3d971d77d50860595f15`. Operational Edge/projection
+image `sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e`
+revision `8814cd2a5f66aeac0828812dbb8340c4f0a4adbb`, release
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`.
+Full23service/image/config tuples,6active worktrees and unchanged shared
+release/rollback retention are in reconciliation. No new rollback artifact;
+retained operational artifacts are not requalified, expired credentials are
+not valid rollback. Feature source is not deployed runtime. No push/merge.
+
+**Recorded result / exact next work:** `IN_PROGRESS / OWNED_ISOLATED_PACKAGE_QUALIFIED_SOURCE_DARK`,
+full08 exit **NOT_MET**. Independently runnable owned implementation/test/
+instrumentation/cleanup items remaining0. Dependent actual Edge binding and
+connected qualification remain work in **this same approved08**, not a new
+product phase or completed runtime. TS/PM publishes native current/commit
+authority and exact handlers; Research commissions current policy/field matrix/
+verified identity mappings; TS/PKI repairs the3expired shared leafs in the exact
+6Manager+3Proxy operational window with valid rollback or disabled affected
+path; runtime owners provide/measure real propagation and finite rotation bound.
+All concrete returns/actions are consolidated in the single packet, not a
+repeated generic approval. No unapproved09…11 work started.
+
+**12:00 UTC final lightweight checks:** all7JSON receipts parse,25owned files
+scanned for known secret values with0findings, newly added local Markdown
+links0missing, `git diff --check` PASS. Rehashed426source +4helpers against the
+final immutable receipt with0mismatches and exact manifest match;490test count
+sum confirmed. This static check is not another Rust/PG/performance run and
+did not contend with HK measurement. Stage only15tracked owned files,2newRust
+files and8sanitized evidence files; preserve unrelated feasibility-review file.
+Commit locally under verified `BobbyAxerol <vugioan11022002@gmail.com>` on the
+existing feature branch; no push/merge/runtime deployment.
+
+**12:06 UTC resume check (19:06 ICT):** interruption left the exact25owned
+files staged, no unstaged tracked edits; all426tested source hashes still
+match and all7JSON receipts parse. Fresh read-only peer round: TS/PM/DL and
+canonical Portal HEAD/staged/unstaged hashes unchanged from11:53; all34selected
+local source hashes and all15Research security/wiring hashes unchanged.
+Research HEAD/staged/unstaged hashes unchanged; no new authority publication
+inferred. Exact post-interruption source receipt added to final reconciliation.
+No tests/builds/peer writes/runtime operations during this resume check;
+unrelated untracked feasibility-review file still preserved outside commit.
 
 
 

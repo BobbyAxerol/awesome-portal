@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """One isolated SGP Rust/PG correctness run; never performance acceptance.
 
-Private input: /tmp/epg10-{04,05,06,07}-*/{source/,run.py,test_run.py,
+Private input: /tmp/epg10-{04,05,06,07,08}-*/{source/,run.py,test_run.py,
 execution_edge_observe.py,epg03_run.py}. For04 source/ is the exact Rust
-workspace; for05/06/07 it preserves services/portal-execution-edge-rs plus the exact
+workspace; for05/06/07/08 it preserves services/portal-execution-edge-rs plus the exact
 shared packages/contracts/fixtures/keyset-page.valid.json monorepo layout;
-06/07 additionally require exact public Edge compile-time inputs below.
-EPG10_TEST_PROFILE is explicitly 04, 05, 06 or 07 (default04). Root supplies
-EPG10_PORTAL_REVISION, EPG10_EXPECT_BOOTSTRAP_TESTS and, for05/06/07,
-EPG10_EXPECT_READ_TESTS;06/07 also require EPG10_EXPECT_RESOURCE_TESTS and
-EPG10_EXPECT_MANAGER_TESTS;07 requires EPG10_EXPECT_COMMAND_TESTS.
+06/07/08 additionally require exact public Edge compile-time inputs below.
+EPG10_TEST_PROFILE is explicitly 04, 05, 06, 07 or 08 (default04). Root supplies
+EPG10_PORTAL_REVISION, EPG10_EXPECT_BOOTSTRAP_TESTS and, for05/06/07/08,
+EPG10_EXPECT_READ_TESTS;06/07/08 also require EPG10_EXPECT_RESOURCE_TESTS and
+EPG10_EXPECT_MANAGER_TESTS;07/08 require EPG10_EXPECT_COMMAND_TESTS and08
+requires EPG10_EXPECT_TLS_TESTS. TLS tests create only ephemeral TEST_ONLY keys
+below the private TMPDIR; no operational trust material is supplied.
 Resource/WAL/cost observations remain tainted for
 capacity, and cumulative child maxrss is not an individual stage peak. Only an
 explicit EPG10_ALLOW_DEPENDENCY_FETCH=1 permits the first locked compile to fetch;
@@ -39,7 +41,7 @@ LABEL = 'portal.measurement.owner'
 TOOLCHAIN = '/home/bobby/.rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin'
 MAX_LOG_BYTES = 8 * 1024 * 1024
 LOCK_SECONDS = 1500
-UNIT_TEST_TIMEOUT_SECONDS = {'04': 240, '05': 240, '06': 240, '07': 600}
+UNIT_TEST_TIMEOUT_SECONDS = {'04': 240, '05': 240, '06': 240, '07': 600, '08': 600}
 RUST_WORKSPACE = 'services/portal-execution-edge-rs'
 SHARED_FIXTURE = 'packages/contracts/fixtures/keyset-page.valid.json'
 RESOURCE_SHARED_FIXTURES = tuple('packages/contracts/fixtures/' + name for name in (
@@ -81,6 +83,8 @@ RESOURCE_BUILD_SCRIPTS = (
 )
 EDGE_TEST_ARGUMENTS = ('cargo', 'test', '--offline', '--locked', '-p', 'edge-service',
                        '--bins', '--', '--test-threads=1')
+TLS_TEST_ARGUMENTS = ('cargo', 'test', '--offline', '--locked', '-p', 'manager-v2-client',
+                      '--test', 'epg10_08_tls', '--', '--nocapture', '--test-threads=1')
 MAX_COST_LINE_BYTES = 4096
 MAX_SAFE_METRIC = (1 << 53) - 1
 OWNED_RUST = (
@@ -118,20 +122,34 @@ COMMAND_MIGRATION = 'crates/projection-store-pg/migrations/0021_command_relay.sq
 COMMAND_SHARED_FIXTURES = (
     'packages/contracts/fixtures/execution-command-relay-denied.valid.json',
 )
+SECURITY_OWNED_RUST = (
+    'crates/edge-auth/src/lib.rs',
+    'crates/ts-transport/src/lib.rs',
+    'crates/manager-v2-client/src/lib.rs',
+    'crates/manager-v2-client/src/tests.rs',
+    'crates/manager-v2-client/tests/epg10_08_tls.rs',
+    'crates/manager-v2-client/Cargo.toml',
+    'crates/query-api/src/scoped/authority.rs',
+)
+SECURITY_COMPILE_INPUTS = {
+    RUST_WORKSPACE + '/fixtures/' + name + '.v1.json': 64 * 1024
+    for name in ('contracts', 'capabilities', 'health', 'orders', 'fills', 'positions', 'events')
+}
 
 
 def test_profile(profile=None):
     value = os.environ.get('EPG10_TEST_PROFILE', '04') if profile is None else profile
-    if value not in ('04', '05', '06', '07'):
-        raise ValueError('EXPLICIT_TEST_PROFILE_04_OR_05_OR_06_OR_07_REQUIRED')
+    if value not in ('04', '05', '06', '07', '08'):
+        raise ValueError('EXPLICIT_TEST_PROFILE_04_OR_05_OR_06_OR_07_OR_08_REQUIRED')
     return value
 
 
 def owned_rust(profile=None):
     profile = test_profile(profile)
     return (OWNED_RUST + (SCOPED_OWNED_RUST if profile != '04' else ())
-            + (RESOURCE_OWNED_RUST if profile in ('06', '07') else ())
-            + (COMMAND_OWNED_RUST if profile == '07' else ()))
+            + (RESOURCE_OWNED_RUST if profile in ('06', '07', '08') else ())
+            + (COMMAND_OWNED_RUST if profile in ('07', '08') else ())
+            + (SECURITY_OWNED_RUST if profile == '08' else ()))
 
 
 def package_arguments(profile=None):
@@ -139,15 +157,17 @@ def package_arguments(profile=None):
     profile = test_profile(profile)
     if profile != '04':
         packages = ['query-api', 'realtime-sse', *packages]
-    if profile in ('06', '07'):
+    if profile in ('06', '07', '08'):
         packages = ['projection-core', 'manager-projection', *packages]
-    if profile == '07':
+    if profile in ('07', '08'):
         packages = ['command-relay', 'edge-auth', *packages]
+    if profile == '08':
+        packages = ['ts-transport', 'manager-v2-client', *packages]
     return [argument for package in packages for argument in ('-p', package)]
 
 
 def expected_test_count(value, kind):
-    if kind not in ('BOOTSTRAP', 'READ', 'RESOURCE', 'MANAGER', 'COMMAND'):
+    if kind not in ('BOOTSTRAP', 'READ', 'RESOURCE', 'MANAGER', 'COMMAND', 'TLS'):
         raise ValueError('EXPLICIT_TEST_COUNT_KIND_REQUIRED')
     if not isinstance(value, str) or not re.fullmatch('[1-9][0-9]{0,2}', value) or int(value) > 128:
         raise ValueError('EXACT_BOUNDED_' + kind + '_TEST_COUNT_REQUIRED')
@@ -216,12 +236,15 @@ def source_hashes(source, profile=None):
                 raise ValueError('PRIVATE_CONFIG_NOT_SOURCE_INPUT')
             size = path.stat().st_size
             if profile != '04' and relative.as_posix() in (
-                    SHARED_FIXTURE, *(RESOURCE_SHARED_FIXTURES if profile in ('06', '07') else ()),
-                    *(COMMAND_SHARED_FIXTURES if profile == '07' else ())):
+                    SHARED_FIXTURE, *(RESOURCE_SHARED_FIXTURES if profile in ('06', '07', '08') else ()),
+                    *(COMMAND_SHARED_FIXTURES if profile in ('07', '08') else ())):
                 if not 0 < size <= MAX_SHARED_FIXTURE_BYTES:
                     raise ValueError('BOUNDED_SHARED_FIXTURE_REQUIRED')
-            if profile in ('06', '07') and relative.as_posix() in RESOURCE_COMPILE_INPUTS:
+            if profile in ('06', '07', '08') and relative.as_posix() in RESOURCE_COMPILE_INPUTS:
                 if not 0 < size <= RESOURCE_COMPILE_INPUTS[relative.as_posix()]:
+                    raise ValueError('BOUNDED_PUBLIC_COMPILE_INPUT_REQUIRED')
+            if profile == '08' and relative.as_posix() in SECURITY_COMPILE_INPUTS:
+                if not 0 < size <= SECURITY_COMPILE_INPUTS[relative.as_posix()]:
                     raise ValueError('BOUNDED_PUBLIC_COMPILE_INPUT_REQUIRED')
             total += size
             if len(hashes) >= 10000 or total > 128 * 1024 * 1024:
@@ -232,21 +255,23 @@ def source_hashes(source, profile=None):
     if profile != '04':
         required += ('crates/projection-store-pg/migrations/0020_scoped_read.sql',)
         required = tuple(RUST_WORKSPACE + '/' + path for path in required) + (SHARED_FIXTURE,)
-    if profile in ('06', '07'):
+    if profile in ('06', '07', '08'):
         required += (*RESOURCE_SHARED_FIXTURES, *RESOURCE_COMPILE_INPUTS,
                      *(RUST_WORKSPACE + '/' + name for name in RESOURCE_BUILD_SCRIPTS))
-    if profile == '07':
+    if profile in ('07', '08'):
         required += (RUST_WORKSPACE + '/' + COMMAND_MIGRATION, *COMMAND_SHARED_FIXTURES)
+    if profile == '08':
+        required += tuple(SECURITY_COMPILE_INPUTS)
     if any(path not in hashes for path in required):
         raise ValueError('EXACT_OWNED_INPUT_MISSING')
     return hashes
 
 
 def refresh_copied_input_mtimes(base, source, expected_hashes, profile='06'):
-    """06/07 only: invalidate private-copy Cargo fingerprints, never source bytes."""
+    """06/07/08 only: invalidate private-copy Cargo fingerprints, never source bytes."""
     profile = test_profile(profile)
-    if profile not in ('06', '07'):
-        raise ValueError('MTIME_REFRESH_PROFILE_06_OR_07_REQUIRED')
+    if profile not in ('06', '07', '08'):
+        raise ValueError('MTIME_REFRESH_PROFILE_06_OR_07_OR_08_REQUIRED')
     validate_base(base, profile)
     if source != base / 'source' or source.resolve() != source:
         raise ValueError('EXACT_PRIVATE_SOURCE_PATH_REQUIRED')
@@ -684,7 +709,8 @@ def main():
     receipt = dict(schema={'04': 'epg10.bootstrap-correctness.v1',
                           '05': 'epg10.scoped-read-correctness.v1',
                           '06': 'epg10.resource-correctness.v1',
-                          '07': 'epg10.command-correctness.v1'}[profile], test_profile=profile, status='FAIL',
+                          '07': 'epg10.command-correctness.v1',
+                          '08': 'epg10.security-correctness.v1'}[profile], test_profile=profile, status='FAIL',
                    at_utc=datetime.now(timezone.utc).isoformat(),
                    provenance='TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL', runtime_activation=False,
                    production_mutations=0, source_requests=0, pg_image=IMAGE,
@@ -706,22 +732,26 @@ def main():
         expected_read = (expected_test_count(os.environ.get('EPG10_EXPECT_READ_TESTS'), 'READ')
                          if profile != '04' else None)
         expected_resource = (expected_test_count(os.environ.get('EPG10_EXPECT_RESOURCE_TESTS'), 'RESOURCE')
-                             if profile in ('06', '07') else None)
+                             if profile in ('06', '07', '08') else None)
         expected_manager = (expected_test_count(os.environ.get('EPG10_EXPECT_MANAGER_TESTS'), 'MANAGER')
-                            if profile in ('06', '07') else None)
+                            if profile in ('06', '07', '08') else None)
         expected_command = (expected_test_count(os.environ.get('EPG10_EXPECT_COMMAND_TESTS'), 'COMMAND')
-                            if profile == '07' else None)
+                            if profile in ('07', '08') else None)
+        expected_tls = (expected_test_count(os.environ.get('EPG10_EXPECT_TLS_TESTS'), 'TLS')
+                        if profile == '08' else None)
         if not re.fullmatch('[0-9a-f]{40}', revision):
             raise ValueError('EXACT_SOURCE_REVISION_REQUIRED')
         receipt['source_revision'] = revision
         receipt['expected_bootstrap_tests'] = expected
         if expected_read is not None:
             receipt['expected_read_tests'] = expected_read
-        if profile in ('06', '07'):
+        if profile in ('06', '07', '08'):
             receipt['expected_resource_tests'] = expected_resource
             receipt['expected_manager_tests'] = expected_manager
-        if profile == '07':
+        if profile in ('07', '08'):
             receipt['expected_command_tests'] = expected_command
+        if profile == '08':
+            receipt['expected_tls_tests'] = expected_tls
         # Existing observer helper reserves 90s itself; pass1410 for an exact
         # 1500s lease, with a separate30s local cleanup reserve.
         lock_context = helper.obs.measurement_lock(helper.obs.LOCK, helper.OWNER,
@@ -755,9 +785,9 @@ def main():
             helper.obs.verify_lock(helper.obs.LOCK, lock)
             receipt['stages'][name] = run_logged(prefix + args, base / (name + '.log'),
                 cwd=directory or source, env=run_env or env, timeout=timeout,
-                check=check if profile not in ('06', '07') else False,
-                measure_resources=profile in ('06', '07'))
-            if profile in ('06', '07') and check and receipt['stages'][name]['returncode']:
+                check=check if profile not in ('06', '07', '08') else False,
+                measure_resources=profile in ('06', '07', '08'))
+            if profile in ('06', '07', '08') and check and receipt['stages'][name]['returncode']:
                 raise subprocess.CalledProcessError(receipt['stages'][name]['returncode'], args)
             return (base / (name + '.log')).read_text(errors='replace')
         stage = 'runner_safety_tests'
@@ -766,7 +796,7 @@ def main():
         stage = 'rustfmt'
         logged(stage, ['cargo', 'fmt', '--all', '--', '--check'])
         receipt['rustfmt'] = 'PASS'
-        if profile in ('06', '07'):
+        if profile in ('06', '07', '08'):
             stage = 'refresh_private_source_mtimes'
             helper.obs.verify_lock(helper.obs.LOCK, lock)
             receipt['source_mtime_refresh'] = refresh_copied_input_mtimes(
@@ -777,19 +807,19 @@ def main():
         compile_env['CARGO_NET_OFFLINE'] = 'false' if allow_fetch else 'true'
         receipt['dependency_fetch_allowed_during_compile_only'] = allow_fetch
         packages = package_arguments(profile)
-        compile_packages = packages + (['-p', 'edge-service'] if profile in ('06', '07') else [])
-        compile_targets = ['--all-targets'] if profile in ('06', '07') else ['--lib']
+        compile_packages = packages + (['-p', 'edge-service'] if profile in ('06', '07', '08') else [])
+        compile_targets = ['--all-targets'] if profile in ('06', '07', '08') else ['--lib']
         logged(stage, ['cargo', 'test', '--locked', *compile_packages, *compile_targets, '--no-run'],
             timeout=900, run_env=compile_env)
         if profile == '05':
             stage = 'compile_integration_tests'
             logged(stage, ['cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
                 '--tests', '--no-run'], timeout=240)
-        elif profile in ('06', '07'):
+        elif profile in ('06', '07', '08'):
             receipt['integration_compile_coverage'] = dict(
                 basis='COVERED_BY_' + profile + '_ALL_TARGETS_NO_RUN', package_count=len(compile_packages) // 2,
                 locked=True, no_run=True, all_targets=True)
-        if profile in ('06', '07'):
+        if profile in ('06', '07', '08'):
             stage = 'compile_edge_service'
             logged(stage, ['cargo', 'check', '--offline', '--locked', '-p', 'edge-service',
                 '--all-targets'], timeout=600)
@@ -828,18 +858,22 @@ def main():
         stage = 'postgresql_observer_start'
         sampler = OwnPgSampler(helper)
         sampler.start()
-        if profile in ('06', '07'):
+        if profile in ('06', '07', '08'):
             stage = 'pre_suite_owned_wal'
             wal_before = owned_wal_stats(helper, sampler.roster[0]['container_id'])
         stage = 'unit_tests'
         receipt['unit_tests'] = parse_rust_results(logged(stage,
             ['cargo', 'test', '--offline', '--locked', *packages,
              '--lib', '--', '--test-threads=1'], timeout=UNIT_TEST_TIMEOUT_SECONDS[profile]),
-             {'04': 2, '05': 4, '06': 6, '07': 8}[profile])
-        if profile in ('06', '07'):
+             {'04': 2, '05': 4, '06': 6, '07': 8, '08': 10}[profile])
+        if profile in ('06', '07', '08'):
             stage = 'edge_tests'
             receipt['edge_tests'] = parse_rust_results(logged(stage,
                 list(EDGE_TEST_ARGUMENTS), timeout=240), 1)
+        if profile == '08':
+            stage = 'tls_tests'
+            receipt['tls_tests'] = parse_rust_results(logged(stage,
+                list(TLS_TEST_ARGUMENTS), timeout=240), 1, expected_tls, count_kind='TLS')
         stage = 'bootstrap_tests'
         receipt['bootstrap_tests'] = parse_rust_results(logged(stage,
             ['cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
@@ -853,11 +887,11 @@ def main():
                  '--test', 'epg10_05_scoped_read', '--', '--nocapture', '--test-threads=1'], timeout=240),
                  1, expected_read, count_kind='READ')
             database_stages.append(stage)
-        if profile in ('06', '07'):
+        if profile in ('06', '07', '08'):
             integration_suites = [
                     ('resource_tests', 'epg10_06_resources', expected_resource, 'RESOURCE'),
                     ('manager_tests', 'epg10_06_manager', expected_manager, 'MANAGER')]
-            if profile == '07':
+            if profile in ('07', '08'):
                 integration_suites.append(('command_tests', 'epg10_07_command', expected_command, 'COMMAND'))
             for stage, target, count, kind in integration_suites:
                 output = logged(stage, ['cargo', 'test', '--offline', '--locked',
@@ -875,11 +909,11 @@ def main():
         receipt['database_test_stage_seconds_observational'] = {
             name: receipt['stages'][name]['elapsed_seconds'] for name in database_stages}
         stage = 'clippy'
-        clippy_packages = packages + (['-p', 'edge-service'] if profile in ('06', '07') else [])
+        clippy_packages = packages + (['-p', 'edge-service'] if profile in ('06', '07', '08') else [])
         findings = clippy_findings(logged(stage,
             ['cargo', 'clippy', '--offline', '--locked', *clippy_packages, '--all-targets',
              '--message-format=json', *(['--', '-D', 'warnings'] if profile != '04' else [])],
-            timeout=600 if profile in ('06', '07') else 240, check=False), profile)
+            timeout=600 if profile in ('06', '07', '08') else 240, check=False), profile)
         receipt['clippy'] = findings
         if receipt['stages'][stage]['returncode'] or findings['owned_warnings']:
             raise ValueError('CLIPPY_GATE_FAILED_PRIVATE_LOG')
