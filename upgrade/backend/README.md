@@ -8,7 +8,7 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
-  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…10 approved/in progress;11 approval pending**. Six offline
+  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…10 approved/in progress;11 independent approved/in progress**. Six offline
   metadata cases PASS, with source/runtime/TLS and owned unknowns recorded in
   §23.9 and its manifest. No activation/runtime acceptance. The campaign starts
   from current `origin/dev`, keeps the complete four-file owner guide bundle under
@@ -27,12 +27,17 @@ Chúng không thay thế phase hoặc exit gate trong
   artifacts removed,23protected tuples unchanged. Single
   [10 packet](../evidence/execution-edge-v1_2/EPG10-10/SHADOW_CUTOVER_AND_OWNER_RETURN.md)
   tracks six scoped round2 returns, not connected acceptance; no runnable owned
-  work left. Recommend11 independent handoff after named approval;11 NOT_STARTED.
+  work left. **11 independent handoff COMPLETE (§23.20):535PASS/fmt/strict Clippy,
+  8,619,655,168B disposable artifacts removed,23protected tuples unchanged.**
+  [11 handoff](../evidence/execution-edge-v1_2/EPG10-11/OPERATIONS_HANDOFF_AND_ACCEPTANCE.md)
+  binds5scoped cases and source/retention/alert/restore limitations; no owned
+  runnable code/test/cleanup left. Full connected10/11 remains NOT_MET pending
+  original scoped owner returns; no new phase/duplicate generic approval.
   Owned current-scope/JWT/SSE-expiry/strict-TLS/selected-field
   package qualified source-dark, final490automated PASS/0FAIL/ignored/skip,
   fmt/strict zero-warning Clippy PASS. Full08 NOT_MET: actual authority/TS native
   commit/researcher field policy remain exact scoped
-  dependencies. Completion request resumed08 after earlier deferral; fresh PM
+  dependencies. Historical08 completion round after earlier deferral recorded PM
   `c401a023` still publishes no actual human/workload/COMMIT provider and Research
   `169195ca` remains unqualified/UNMAPPED. Single owner packet now specifies
   RG03/RG08 read trust and separate restricted-field/command returns, not a

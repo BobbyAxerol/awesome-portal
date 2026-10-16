@@ -1,0 +1,597 @@
+{
+  "schema": "epg10.operations-attempt-history.v1",
+  "provenance": "TEST_ONLY_ISOLATED_NOT_PRODUCTION",
+  "attempts": [
+    {
+      "number": 1,
+      "receipt_sha256": "c69667211cb6cf7bc8b688d85ab556e198081dbf3723f477295feea3f02d4a00",
+      "receipt": {
+        "at_utc": "2026-10-16T16:57:12.501102+00:00",
+        "cleanup": {
+          "errors": [],
+          "images_built": 0,
+          "images_pulled": 0,
+          "owned_container_removed": false,
+          "private_build_dir_pending_removal": "/tmp/epg10-11-SjT1jzQJ",
+          "resource_sampler_stopped_before_container_cleanup": true,
+          "volumes_created": 0,
+          "volumes_removed": 0
+        },
+        "disk_after_container": 167901683712,
+        "disk_before": 167901712384,
+        "elapsed_seconds_observational": 0.896,
+        "error_type": "ValueError",
+        "expected_bootstrap_tests": 33,
+        "expected_command_tests": 27,
+        "expected_manager_tests": 11,
+        "expected_read_tests": 42,
+        "expected_resource_tests": 8,
+        "expected_tls_tests": 12,
+        "failed_stage": "preflight",
+        "foreign_test_metadata_before": [],
+        "limitation": "CORRECTNESS_ONLY_SHARED_HOST_NOT_CAPACITY_OR_PRODUCTION_PROOF",
+        "lock_window_seconds": 1500,
+        "performance_acceptance": false,
+        "pg_image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "production_mutations": 0,
+        "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+        "runtime_activation": false,
+        "schema": "epg10.operations-correctness.v1",
+        "source_requests": 0,
+        "source_revision": "9db77811fb0845344422f1c77968f6fcbc64b66f",
+        "stages": {},
+        "status": "FAIL",
+        "tainted_for_capacity": true,
+        "test_profile": "11"
+      },
+      "cause": "Owned copy-list omitted the operations manifest itself; no test/compile/PG started. Added required public manifest, retained guard.",
+      "resolution": "SAME_FULL_PROFILE_RERUN_REQUIRED"
+    },
+    {
+      "number": 2,
+      "receipt_sha256": "c8883ee09d4a60852e05f3a60e42ade789fb7fdea9ad76f38721ef16133d19fb",
+      "receipt": {
+        "at_utc": "2026-10-16T16:59:48.422160+00:00",
+        "cleanup": {
+          "errors": [],
+          "images_built": 0,
+          "images_pulled": 0,
+          "owned_container_removed": false,
+          "private_build_dir_pending_removal": "/tmp/epg10-11-SjT1jzQJ",
+          "resource_sampler_stopped_before_container_cleanup": true,
+          "volumes_created": 0,
+          "volumes_removed": 0
+        },
+        "dependency_fetch_allowed_during_compile_only": true,
+        "disk_after_container": 164958355456,
+        "disk_before": 167900192768,
+        "elapsed_seconds_observational": 459.531,
+        "error_type": "CalledProcessError",
+        "expected_bootstrap_tests": 33,
+        "expected_command_tests": 27,
+        "expected_manager_tests": 11,
+        "expected_read_tests": 42,
+        "expected_resource_tests": 8,
+        "expected_tls_tests": 12,
+        "failed_stage": "compile",
+        "foreign_test_metadata_before": [],
+        "input_manifest_sha256": "b08b667f3f9c812b62b9552551a33c941671e1a8bacab6c11aefca803412063d",
+        "limitation": "CORRECTNESS_ONLY_SHARED_HOST_NOT_CAPACITY_OR_PRODUCTION_PROOF",
+        "lock_window_seconds": 1500,
+        "operations_tests": {
+          "failed": 0,
+          "passed": 9,
+          "skipped": 0
+        },
+        "performance_acceptance": false,
+        "pg_image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "production_mutations": 0,
+        "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+        "resources": {
+          "cargo_cpu_affinity": [
+            0
+          ],
+          "cargo_jobs": 1,
+          "cargo_nice": 15,
+          "pg_cpu_limit": 0.5,
+          "pg_max_connections": 24,
+          "pg_memory_limit_bytes": 805306368,
+          "pg_pids_limit": 128,
+          "pg_tmpfs_limit_bytes": 536870912,
+          "private_log_limit_bytes_per_stage": 8388608
+        },
+        "runner_hashes": {
+          "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+          "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+          "run.py": "c2deece8a2a34f343799db2c80c52513b520ceae6e3365d2e47e7669b2a2421b",
+          "test_run.py": "5c86d835f87db0622b77c066f37a30c140096986d817c601376d3be886c62734"
+        },
+        "runner_safety_tests": {
+          "failed": 0,
+          "passed": 100,
+          "skipped": 0
+        },
+        "runtime_activation": false,
+        "rustfmt": "PASS",
+        "schema": "epg10.operations-correctness.v1",
+        "source_mtime_refresh": {
+          "basis": "VALIDATED_PRIVATE_SOURCE_MTIME_REFRESH_NOT_BYTE_CHANGE",
+          "bytes_unchanged": true,
+          "refreshed_at_ns": 1792169993924061400,
+          "target_or_cache_touched": false,
+          "touched_files": 439
+        },
+        "source_requests": 0,
+        "source_revision": "9db77811fb0845344422f1c77968f6fcbc64b66f",
+        "source_workspace_relative": "services/portal-execution-edge-rs",
+        "stages": {
+          "compile": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 71552,
+              "block_output_operations": 7343240,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906956,
+              "maxrss_before_kib": 54924,
+              "maxrss_cumulative_highwater_delta_kib": 852032,
+              "system_cpu_seconds": 51.940821,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 361.327202
+            },
+            "elapsed_seconds": 453.741,
+            "private_log_bytes": 18889,
+            "returncode": 101
+          },
+          "operations_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 0,
+              "block_output_operations": 0,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 40944,
+              "maxrss_before_kib": 40944,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 0.015628999999999893,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 0.1211190000000002
+            },
+            "elapsed_seconds": 0.138,
+            "private_log_bytes": 970,
+            "returncode": 0
+          },
+          "runner_safety_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 0,
+              "block_output_operations": 27240,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 40944,
+              "maxrss_before_kib": 29804,
+              "maxrss_cumulative_highwater_delta_kib": 11140,
+              "system_cpu_seconds": 0.493362,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 1.140855
+            },
+            "elapsed_seconds": 1.724,
+            "private_log_bytes": 9591,
+            "returncode": 0
+          },
+          "rustfmt": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 0,
+              "block_output_operations": 0,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 54924,
+              "maxrss_before_kib": 40944,
+              "maxrss_cumulative_highwater_delta_kib": 13980,
+              "system_cpu_seconds": 0.03193399999999991,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 1.170265
+            },
+            "elapsed_seconds": 1.21,
+            "private_log_bytes": 0,
+            "returncode": 0
+          }
+        },
+        "status": "FAIL",
+        "tainted_for_capacity": true,
+        "test_profile": "11"
+      },
+      "input_count": 439,
+      "cause": "Owned TEST_ONLY operations.rs called Arc receiver on a plain ResourceEnvelope; compile E0599; no PG/Rust tests started.",
+      "resolution": "Wrapped new test ResourceEnvelope in Arc as required by existing production API; SAME_FULL_PROFILE_RERUN_REQUIRED"
+    },
+    {
+      "number": 3,
+      "receipt_sha256": "943e545f3d357b682e88bdf685f3badd868e3dd52c09f57e8fa081b321373ef9",
+      "receipt": {
+        "at_utc": "2026-10-16T17:09:46.780939+00:00",
+        "cleanup": {
+          "errors": [],
+          "images_built": 0,
+          "images_pulled": 0,
+          "owned_container_removed": true,
+          "private_build_dir_pending_removal": "/tmp/epg10-11-SjT1jzQJ",
+          "resource_sampler_stopped_before_container_cleanup": true,
+          "volumes_created": 0,
+          "volumes_removed": 0
+        },
+        "dependency_fetch_allowed_during_compile_only": true,
+        "disk_after_container": 160269778944,
+        "disk_before": 164954968064,
+        "edge_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 42,
+          "passed_per_binary": [
+            42
+          ],
+          "test_binaries": 1
+        },
+        "elapsed_seconds_observational": 987.816,
+        "error_type": "CalledProcessError",
+        "expected_bootstrap_tests": 33,
+        "expected_command_tests": 27,
+        "expected_manager_tests": 11,
+        "expected_read_tests": 42,
+        "expected_resource_tests": 8,
+        "expected_tls_tests": 12,
+        "failed_stage": "bootstrap_tests",
+        "foreign_test_metadata_before": [],
+        "input_manifest_sha256": "6c50a6d153a72fbdc0f984356729a3f4c362b5d9525e20098ac02df78807a4d8",
+        "integration_compile_coverage": {
+          "all_targets": true,
+          "basis": "COVERED_BY_11_ALL_TARGETS_NO_RUN",
+          "locked": true,
+          "no_run": true,
+          "package_count": 11
+        },
+        "limitation": "CORRECTNESS_ONLY_SHARED_HOST_NOT_CAPACITY_OR_PRODUCTION_PROOF",
+        "lock_window_seconds": 1500,
+        "operations_tests": {
+          "failed": 0,
+          "passed": 9,
+          "skipped": 0
+        },
+        "performance_acceptance": false,
+        "pg_image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "postgresql_observation": {
+          "duration_seconds_observational": 581.395548,
+          "interval_seconds": 1,
+          "limitations": [
+            "SHARED_HOST_NOT_CAPACITY_OR_PERFORMANCE_ACCEPTANCE",
+            "SAMPLED_MAXIMUM_NOT_INSTANTANEOUS_PEAK",
+            "PROCESS_RSS_SUM_CAN_DOUBLE_COUNT_SHARED_PAGES",
+            "ONLY_TEST_POSTGRESQL_CGROUP_NOT_CARGO_WORKER_RESOURCES"
+          ],
+          "maximum_samples": 1500,
+          "maximum_sampling_gap_seconds": 1.007289,
+          "postgresql": {
+            "anonymous_max_bytes": 18345984,
+            "average_cores": 0.061025,
+            "cpu_core_seconds": 35.479551,
+            "io_delta": {
+              "rbytes": 40960,
+              "rios": 2,
+              "wbytes": 0,
+              "wios": 0
+            },
+            "memory_end_bytes": 135245824,
+            "memory_events_delta": {
+              "high": 0,
+              "low": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0
+            },
+            "memory_start_bytes": 61890560,
+            "name": "epg10-11-pg-8842721dbde5",
+            "network_delta": {
+              "rx_bytes": 3840881,
+              "tx_bytes": 19043532
+            },
+            "pids_max": 10,
+            "sampled_memory_max_bytes": 486178816,
+            "throttled_usec": 32962407
+          },
+          "process_rss_sum_sampled_max_bytes": 169357312,
+          "sample_count": 582,
+          "status": "PASS_OBSERVATION_ONLY",
+          "tainted_for_capacity": true
+        },
+        "production_mutations": 0,
+        "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+        "resources": {
+          "cargo_cpu_affinity": [
+            0
+          ],
+          "cargo_jobs": 1,
+          "cargo_nice": 15,
+          "pg_cpu_limit": 0.5,
+          "pg_max_connections": 24,
+          "pg_memory_limit_bytes": 805306368,
+          "pg_pids_limit": 128,
+          "pg_tmpfs_limit_bytes": 536870912,
+          "private_log_limit_bytes_per_stage": 8388608
+        },
+        "runner_hashes": {
+          "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+          "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+          "run.py": "c2deece8a2a34f343799db2c80c52513b520ceae6e3365d2e47e7669b2a2421b",
+          "test_run.py": "5c86d835f87db0622b77c066f37a30c140096986d817c601376d3be886c62734"
+        },
+        "runner_safety_tests": {
+          "failed": 0,
+          "passed": 100,
+          "skipped": 0
+        },
+        "runtime_activation": false,
+        "rustfmt": "PASS",
+        "schema": "epg10.operations-correctness.v1",
+        "source_mtime_refresh": {
+          "basis": "VALIDATED_PRIVATE_SOURCE_MTIME_REFRESH_NOT_BYTE_CHANGE",
+          "bytes_unchanged": true,
+          "refreshed_at_ns": 1792170591949741000,
+          "target_or_cache_touched": false,
+          "touched_files": 439
+        },
+        "source_requests": 0,
+        "source_revision": "9db77811fb0845344422f1c77968f6fcbc64b66f",
+        "source_workspace_relative": "services/portal-execution-edge-rs",
+        "stages": {
+          "bootstrap_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 11608,
+              "block_output_operations": 1850112,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 907000,
+              "maxrss_before_kib": 907000,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 9.993402000000003,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 110.31144300000005
+            },
+            "elapsed_seconds": 131.421,
+            "private_log_bytes": 12227,
+            "returncode": 101
+          },
+          "compile": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 24,
+              "block_output_operations": 4365696,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 907000,
+              "maxrss_before_kib": 55424,
+              "maxrss_cumulative_highwater_delta_kib": 851576,
+              "system_cpu_seconds": 19.072764,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 116.24596500000001
+            },
+            "elapsed_seconds": 135.803,
+            "private_log_bytes": 5460,
+            "returncode": 0
+          },
+          "compile_edge_service": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 8,
+              "block_output_operations": 2072464,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 907000,
+              "maxrss_before_kib": 907000,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 30.934141,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 191.63312299999996
+            },
+            "elapsed_seconds": 259.591,
+            "private_log_bytes": 8894,
+            "returncode": 0
+          },
+          "edge_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 97096,
+              "block_output_operations": 990512,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 907000,
+              "maxrss_before_kib": 907000,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 5.002969000000007,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 76.177909
+            },
+            "elapsed_seconds": 81.831,
+            "private_log_bytes": 4438,
+            "returncode": 0
+          },
+          "operations_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 0,
+              "block_output_operations": 0,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 40840,
+              "maxrss_before_kib": 40840,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 0.023299999999999987,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 0.1087149999999999
+            },
+            "elapsed_seconds": 0.133,
+            "private_log_bytes": 970,
+            "returncode": 0
+          },
+          "runner_safety_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 0,
+              "block_output_operations": 27240,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 40840,
+              "maxrss_before_kib": 30204,
+              "maxrss_cumulative_highwater_delta_kib": 10636,
+              "system_cpu_seconds": 0.5391849999999999,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 1.002841
+            },
+            "elapsed_seconds": 1.625,
+            "private_log_bytes": 9591,
+            "returncode": 0
+          },
+          "rustfmt": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 0,
+              "block_output_operations": 0,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 55424,
+              "maxrss_before_kib": 40840,
+              "maxrss_cumulative_highwater_delta_kib": 14584,
+              "system_cpu_seconds": 0.025216999999999934,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 1.1200580000000002
+            },
+            "elapsed_seconds": 1.15,
+            "private_log_bytes": 0,
+            "returncode": 0
+          },
+          "tls_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 34200,
+              "block_output_operations": 1098880,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 907000,
+              "maxrss_before_kib": 907000,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 7.088256000000001,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 57.77542900000003
+            },
+            "elapsed_seconds": 67.534,
+            "private_log_bytes": 2825,
+            "returncode": 0
+          },
+          "unit_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 5520,
+              "block_output_operations": 3475248,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 907000,
+              "maxrss_before_kib": 907000,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 17.218788000000004,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 220.425185
+            },
+            "elapsed_seconds": 298.452,
+            "private_log_bytes": 27133,
+            "returncode": 0
+          }
+        },
+        "status": "FAIL",
+        "tainted_for_capacity": true,
+        "test_profile": "11",
+        "tls_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 12,
+          "passed_per_binary": [
+            12
+          ],
+          "test_binaries": 1
+        },
+        "unit_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 250,
+          "passed_per_binary": [
+            31,
+            61,
+            15,
+            16,
+            9,
+            26,
+            20,
+            36,
+            30,
+            6
+          ],
+          "test_binaries": 10
+        }
+      },
+      "input_count": 439,
+      "cause": "New T11-02 assertion compared persisted DeltaEvent {event,revision} with bare Event. Existing store serializes full DeltaEvent; test oracle shape was wrong, not product data.",
+      "resolution": "Expected exact full DeltaEvent with revision, no weaker comparison or changed product DTO. SAME_FULL_PROFILE_RERUN_REQUIRED",
+      "failure_log": {
+        "stage": "bootstrap_tests",
+        "sha256": "3548ea7e524112bdc3940a96690c3add519b54a41ca9bd1d40f074025f236b53",
+        "bytes": 12227,
+        "raw_log_committed": false
+      }
+    }
+  ]
+}

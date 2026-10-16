@@ -32,7 +32,7 @@ fn owned_test_root(path: &Path) -> bool {
             .file_name()
             .and_then(|name| name.to_str())
             .is_some_and(|name| {
-                ["epg10-08-", "epg10-09-", "epg10-10-"]
+                ["epg10-08-", "epg10-09-", "epg10-10-", "epg10-11-"]
                     .iter()
                     .any(|prefix| {
                         name.strip_prefix(prefix).is_some_and(|suffix| {
@@ -46,11 +46,12 @@ fn owned_test_root(path: &Path) -> bool {
 }
 
 #[test]
-fn test_root_accepts_only_explicit08_through10_names() {
+fn test_root_accepts_only_explicit08_through11_names() {
     for path in [
         "/tmp/epg10-08-private",
         "/tmp/epg10-09-private_1.X",
         "/tmp/epg10-10-private_2.X",
+        "/tmp/epg10-11-private_3.X",
     ] {
         assert!(owned_test_root(Path::new(path)));
     }
@@ -63,7 +64,9 @@ fn test_root_rejects_other_phases_nested_paths_and_operational_roots() {
         "/tmp/epg10-09-",
         "/tmp/epg10-10-",
         "/tmp/epg10-10-private/child",
-        "/tmp/epg10-11-private",
+        "/tmp/epg10-11-",
+        "/tmp/epg10-11-private/child",
+        "/tmp/epg10-12-private",
         "/tmp/epg10-09-private/child",
         "/tmp/epg10-09-private/../foreign",
         "/tmp/epg10-09-private bad",

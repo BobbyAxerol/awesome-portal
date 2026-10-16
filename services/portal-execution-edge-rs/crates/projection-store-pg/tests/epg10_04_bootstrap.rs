@@ -28,6 +28,9 @@ mod edge_cases;
 #[path = "epg10_10/rollout.rs"]
 mod rollout;
 
+#[path = "epg10_11/operations.rs"]
+mod operations;
+
 const NOW: i64 = 1_792_100_000_000;
 
 fn limits() -> Limits {

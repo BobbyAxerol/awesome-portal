@@ -1,0 +1,197 @@
+{
+  "schema": "epg10.operations-focused-precheck-history.v1",
+  "provenance": "TEST_ONLY_PRECHECK_NOT_FULL_PROFILE_ACCEPTANCE",
+  "admission_denied": {
+    "at_utc": "2026-10-16T17:34:03Z",
+    "receipt_sha256": "2b27ab7611098b947a8832d924fa5607b8447c27a592d3540cd3d082db3ab18d",
+    "reason": "FOREIGN_PMA11_LEASE_WON_EXCLUSIVE_ADMISSION_RACE",
+    "jobs_started": 0,
+    "production_mutations": 0
+  },
+  "attempts": [
+    {
+      "number": 1,
+      "receipt_sha256": "38712555c5df89c82796f026de8ef5198f3bc0b35594a531973ba84dfe214ddc",
+      "receipt": {
+        "at_utc": "2026-10-16T17:37:28.947763+00:00",
+        "cleanup": {
+          "errors": [],
+          "images_built": 0,
+          "images_pulled": 0,
+          "owned_container_removed": true,
+          "private_build_dir_pending_removal": "/tmp/epg10-11-SjT1jzQJ",
+          "resource_sampler_stopped_before_container_cleanup": true,
+          "volumes_created": 0,
+          "volumes_removed": 0
+        },
+        "disk_after_container": 159837855744,
+        "disk_before": 160249458688,
+        "elapsed_seconds_observational": 98.404,
+        "ended_utc": "2026-10-16T17:39:07.351789+00:00",
+        "error_type": "CalledProcessError",
+        "failed_stage": "clippy",
+        "final_profile": false,
+        "input_manifest_sha256": "02eb3d3d7e6f05c17064db1285647aa90321939055195eb6f147f99dc5e21118",
+        "logical_restore": {
+          "all_table_digests_equal": true,
+          "application_reopened_migrations_idempotent": true,
+          "dump_bytes": 195718,
+          "ha_pitr_or_production_dr": false,
+          "migration_dump_bytes": 3903,
+          "rows": 92,
+          "schema_rows_sha256": "e892b09f5880047e0c7937c5e2cd233b8ecc28bfbf2b8a24ec208eb1092b43f5",
+          "scope": "portal_projection synthetic schema + public._sqlx_migrations only; no roles/ACL/private config",
+          "status": "PASS_TEST_ONLY_LOGICAL_RESTORE",
+          "tables": 48,
+          "target": "SECOND_DISPOSABLE_DATABASE_SAME_OWNED_PG"
+        },
+        "operations_tests": {
+          "failed": 0,
+          "filtered_out": 31,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 2,
+          "scope": "PRECHECK_ONLY_NOT_FINAL_PROFILE"
+        },
+        "performance_acceptance": false,
+        "postgresql_observation": {
+          "duration_seconds_observational": 90.182344,
+          "interval_seconds": 1,
+          "limitations": [
+            "SHARED_HOST_NOT_CAPACITY_OR_PERFORMANCE_ACCEPTANCE",
+            "SAMPLED_MAXIMUM_NOT_INSTANTANEOUS_PEAK",
+            "PROCESS_RSS_SUM_CAN_DOUBLE_COUNT_SHARED_PAGES",
+            "ONLY_TEST_POSTGRESQL_CGROUP_NOT_CARGO_WORKER_RESOURCES"
+          ],
+          "maximum_samples": 1500,
+          "maximum_sampling_gap_seconds": 1.004657,
+          "postgresql": {
+            "anonymous_max_bytes": 9011200,
+            "average_cores": 0.026488,
+            "cpu_core_seconds": 2.38871,
+            "io_delta": {
+              "rbytes": 1101824,
+              "rios": 62,
+              "wbytes": 200704,
+              "wios": 2
+            },
+            "memory_end_bytes": 111079424,
+            "memory_events_delta": {
+              "high": 0,
+              "low": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0
+            },
+            "memory_start_bytes": 62296064,
+            "name": "epg10-11-pg-8842721dbde5",
+            "network_delta": {
+              "rx_bytes": 249608,
+              "tx_bytes": 154285
+            },
+            "pids_max": 9,
+            "sampled_memory_max_bytes": 113287168,
+            "throttled_usec": 1364401
+          },
+          "process_rss_sum_sampled_max_bytes": 86171648,
+          "sample_count": 91,
+          "status": "PASS_OBSERVATION_ONLY",
+          "tainted_for_capacity": true
+        },
+        "production_mutations": 0,
+        "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+        "public_source_files": 439,
+        "restored_application_test": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 1,
+          "passed_per_binary": [
+            1
+          ],
+          "test_binaries": 1
+        },
+        "runner_hashes": {
+          "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+          "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+          "run.py": "c2deece8a2a34f343799db2c80c52513b520ceae6e3365d2e47e7669b2a2421b",
+          "test_run.py": "5c86d835f87db0622b77c066f37a30c140096986d817c601376d3be886c62734"
+        },
+        "runtime_activation": false,
+        "schema": "epg10.operations-focused-precheck.v1",
+        "source_requests": 0,
+        "source_revision": "9db77811fb0845344422f1c77968f6fcbc64b66f",
+        "stages": {
+          "clippy": {
+            "elapsed_seconds": 69.901,
+            "private_log_bytes": 303768,
+            "returncode": 101
+          },
+          "operations_tests": {
+            "elapsed_seconds": 8.765,
+            "private_log_bytes": 627,
+            "returncode": 0
+          },
+          "restored_application_test": {
+            "elapsed_seconds": 5.649,
+            "private_log_bytes": 512,
+            "returncode": 0
+          },
+          "rustfmt": {
+            "elapsed_seconds": 1.354,
+            "private_log_bytes": 0,
+            "returncode": 0
+          }
+        },
+        "status": "FAIL"
+      },
+      "cause": "New test closure lacked a unit-return statement semicolon; strict Clippy denied semicolon_if_nothing_returned. Existing test/restore data assertions passed, not full-profile acceptance.",
+      "resolution": "Only new test .unwrap(); statement corrected; same focused precheck and full unchanged profile required."
+    },
+    {
+      "number": 2,
+      "receipt_sha256": "e5b2786e085d0469bae40176590b82a837fdb4699f086f96c36198c2a5ca5869",
+      "status": "PASS_FOCUSED_PRECHECK_ONLY",
+      "started_utc": "2026-10-16T17:40:42.419680Z",
+      "ended_utc": "2026-10-16T17:41:28.569797Z",
+      "elapsed_seconds": 46.15,
+      "operations_tests": {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "filtered_out": 31,
+        "scope": "PRECHECK_ONLY"
+      },
+      "restored_application_test": {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "filtered_out": 0
+      },
+      "rustfmt": "PASS",
+      "clippy": "PASS_STRICT_ZERO_WARNINGS",
+      "logical_restore": {
+        "tables": 48,
+        "rows": 92,
+        "all_table_digests_equal": true,
+        "schema_rows_sha256": "65115893e851932d39562ec10d8d1b8444346f2fd839c0cc016551f751b96f7f",
+        "dump_bytes": 195733,
+        "migration_dump_bytes": 3901,
+        "application_reopened_migrations_idempotent": true,
+        "ha_pitr_or_production_dr": false
+      },
+      "public_source_files": 439,
+      "source_input_unchanged": true,
+      "input_manifest_sha256": "c5a74b40f198c6a5cdc27de3d0f3b22a2cdd2f171fedc6504612cd1364541a7d",
+      "cleanup": {
+        "owned_container_removed": true,
+        "errors": [],
+        "lock_released": true
+      },
+      "production_mutations": 0,
+      "source_requests": 0,
+      "full_profile_acceptance": false
+    }
+  ]
+}

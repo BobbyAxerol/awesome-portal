@@ -9364,7 +9364,10 @@ CI failures reached `main` in this release.
 <a id="epg10-upgrade-v12"></a>
 ## 23. Execution Portal Edge upgrade v1.2 — EPG10-00…11
 
-**Recorded:** 2026-10-15 UTC. **Status: EPG10-00_COMPLETED_INVENTORY_ONLY.**
+**Current status:** independent11 COMPLETE / full connected acceptance NOT_MET;
+see §23.4 and §23.20 for current scoped receipts and original-phase round2.
+**Historical initial record:** 2026-10-15 UTC, EPG10-00_COMPLETED_INVENTORY_ONLY;
+the following early00–05 status is retained as history, not current approval state.
 Bobby approved EPG10-00 after the documentation package; its six offline metadata
 cases PASS and its inventory exit gate passes with explicitly owned UNKNOWNs.
 This is not runtime qualification. EPG10-01 is now **IN_PROGRESS / BOBBY_APPROVED**;
@@ -9589,7 +9592,8 @@ no test images/cache/containers created by this package.
 EPG10-00 is **COMPLETED_INVENTORY_ONLY / BOBBY_APPROVED** (2026-10-15);
 01 is **IN_PROGRESS / BOBBY_APPROVED**,02 is **COMPLETED_CONTRACT_ONLY**,
 03…08 are **IN_PROGRESS / BOBBY_APPROVED** (current scoped receipts in
-§23.12…§23.17);09–11 remain **PLANNED / AWAITING_BOBBY_APPROVAL**.
+§23.12…§23.17);09/10 independent rounds are **COMPLETE / full connected NOT_MET**
+(§23.18/§23.19);11 **COMPLETE_INDEPENDENT / full connected NOT_MET** (§23.20).
 Until a phase receipt records execution,
 test counts are required case identities, **not executed tests**. Test bodies are preserved in each detailed
 phase block and the pinned Edge guide; partner ELP2/PM cases are not double-counted.
@@ -9607,7 +9611,7 @@ phase block and the pinned Edge guide; partner ELP2/PM cases are not double-coun
 | [EPG10-08](#epg10-08-plan) | Read/command revoke, scope and TLS | T08-01…09 (9) | Read trust independently; command commit proof separately |
 | [EPG10-09](#epg10-09-plan) | Scoped integrated acceptance | T09-01…21 (21) | Read 04/05/06/08; command and metric prerequisites only where enabled |
 | [EPG10-10](#epg10-10-plan) | Shadow/fenced rollout/rollback | T10-01…05 (5) | 09 exact scope + explicit release target approval |
-| [EPG10-11](#epg10-11-plan) | Operator handoff/acceptance | T11-01…05 (5) | 10 scoped rollout + restore/retention/ownership evidence |
+| [EPG10-11](#epg10-11-plan) | COMPLETE independent operator handoff; full connected NOT_MET | T11-01…05:5scoped PASS;535automated PASS | Original10 scoped SOURCE/TRUST/COMMAND/RESEARCH/LOAD/RELEASE returns |
 
 Order: 00 → 01 and 02; after contract approval, isolated 03/04 and read-security/
 query work can proceed in parallel. 06 measures the integrated candidate.
@@ -10404,8 +10408,11 @@ connected/production cutover or approval to start11.
 <a id="epg10-11-plan"></a>
 #### EPG10-11 Bàn giao vận hành và đóng acceptance
 
-**Status:** PLANNED / NOT_STARTED — **Approval:** AWAITING_BOBBY_APPROVAL.
-**Tests:** NOT_RUN — **Exit:** NOT_EVALUATED — **Runtime activation:** NOT_AUTHORIZED.
+**Status:** COMPLETE_INDEPENDENT — approved operational handoff implemented,
+tested and cleaned2026-10-16; connected acceptance remains original-phase round2.
+**Tests:**535PASS/0FAIL/skip/ignored/filtered;5formal cases PASS only in declared
+isolated scope, fmt/strict Clippy PASS (§23.20). Earlier failed attempts retained
+and all owned defects fixed. **Full exit:** NOT_MET — **Runtime activation:** NOT_AUTHORIZED.
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-11](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-11-bàn-giao-vận-hành-và-đóng-acceptance);
 [BE §§16–18; ELP2-11](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.2, 10–12](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -10424,7 +10431,9 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 
 **Deliverables:** operation runbooks, ownership/on-call map, final acceptance matrix, approved configuration envelope, release notes và known limitations.
 
-**Checklist:**
+**Full connected checklist (remains OPEN):** independent evidence and completed
+scoped T11-01…05 checklist are in §23.20; do not check these full release items
+from isolated tests or source-only documentation.
 
 - [ ] Bàn giao source/consumer checkpoint, backlog, freshness, TLS/auth, unknown-command và storage alerts có actionable owner.
 - [ ] Rehearse runbooks cursor expiry, slow clients, stale data, authority unavailable, revoke loss, projection corruption và cert expiry.
@@ -10444,12 +10453,19 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 **Resource/test execution boundary:** Independent operator restore/resync/drill and alert firing/recovery; final source/runtime reconciliation, cleanup disk/retention evidence and measured supported capacity only. Shared-host lock, disposable
 namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
 
-**Technical debt / external gates:** Chưa tạo debt. Named operator and acceptance/retention decisions are operational dependencies. Unfinished restore, alert or required integration remains phase work. Scope-limited read handover cannot be labelled completion of all 12 phases.
+**Technical debt / external gates:** No unfinished owned independent code/test/cleanup.
+Original10 packet owns SOURCE/TRUST/COMMAND/RESEARCH/LOAD/RELEASE integration returns
+(owner, exact input, dependent test and round2 exit); only applicable scopes wait.
+Actual retention/floor, production notification/on-call and qualified configuration
+belong to those concrete release/source inputs, not invented new approval gates.
+Same-host restore and symbolic alert tests are not production DR/installed alerts.
+Full guide/campaign acceptance remains open; do not copy isolated PASS into it.
 
 **Tracking sau mỗi tested slice:** files/contracts changed; command+receipt links;
 actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/cleanup;
 source/runtime/retention tuple; remaining gate owner and next independently runnable
-scope. **Hiện tại:** no implementation, no product receipt, no cleanup artifacts.
+scope. **Hiện tại:** independent work COMPLETE in §23.20; connected round2 remains
+NOT_MET. No production acceptance/runtime activation follows from this approval.
 
 ### 23.6 Decision and external-dependency register
 
@@ -13712,7 +13728,7 @@ Recommend Bobby approve11 independent operational handoff work next;11 remains
 NOT_STARTED until named approval, and cannot sign off full connected acceptance
 or release without the applicable returned facts. No new generic approval gate.
 
-**Pre-commit verification:** `git diff --check` / staged check PASS; bounded
+**Pre-commit verification (10 historical):** `git diff --check` / staged check PASS; bounded
 read-only metadata assertions PASS for all431 final source hashes,519counts,
 23runtime tuples, exact cleanup, original round2 status, packet/runbook file
 links and both backend indexes. Phase11 still NOT_STARTED. Staged only the20
@@ -13720,6 +13736,319 @@ owned source/test/template/evidence/tracking files; unrelated feasibility
 review remains untracked. Verified BobbyAxerol <vugioan11022002@gmail.com> and
 normal default commit path (no active commit hooks changed/bypassed). No secret,
 raw logs/test rows/cache/runtime files staged; no HK heavy job under foreign lock.
+
+### 23.20 EPG10-11 operational handoff execution — 2026-10-16
+
+**Approval/status:** Bobby explicitly approved11 independent work and original10
+connected round2 on actual owner returns. COMPLETE_INDEPENDENT; connected11/full
+release NOT_MET. Feature baseline `feat/execution-edge-upgrade-v1_2@9db77811fb0845344422f1c77968f6fcbc64b66f`,
+same documented worktree; unrelated feasibility review is preserved untracked.
+
+**Goal/guides:** execute the11 checklist and T11-01…05 defined above, EDGE11,
+BE16–18/ELP2-11, SCORE8.2/10–12, REVIEW6–7 and C4. Deliver one linked operations
+handoff with ownership, alert recovery, configuration/retention envelope and
+honest acceptance matrix. No additional product feature/UI/service/migration.
+
+**Approved slice/invariants:** docs + source-dark machine-readable operational
+manifest, bounded stdlib validation/drill tests and TEST_ONLY real-PG recovery
+tests reusing existing04–10 Rust ports and qualification runner. Another operator
+must follow the checked-in instructions without private operational credentials.
+Exercise retained-history resync and disposable DB backup/restore, not financial
+ledger rollback. Every alert has reason/owner/action/recovery. Score/watch work
+remains bounded consumer work; no TS recompute, policy invention or false numeric
+approval. Keep all production routes/source/command switches unchanged.
+
+**Test/measurement boundary:** correctness before performance. Fresh lock on
+approved isolated SGP only; HK foreign TS-CI lease until17:40Z prohibits heavy
+jobs there. Pin source+runner hashes, exact PASS/FAIL counts, real PG image and
+schema, independent operator receipt, resource/disk observations, never capacity/
+production/HA claims. Validate links, exact acceptance scopes and missing-return
+fail-closed behavior. C4 removes only this run's exact private target/testPG/keys
+under own lease; inventory active/named rollback images and before/after runtime.
+
+**Stop/rollback/decision boundary:** failed drill must be fixed/re-run in11;
+leave operational deployment untouched. No shared restore, peer writes, financial
+send, deploy/restart, push/merge or new grant. Source/trust/command/Research/load/
+release facts still belong to the six10 returns, consumed immediately when real.
+Unmet connected inputs stay original-phase round2, not blanket independent bans.
+
+**Initial source refresh16:41Z:** PM nowd65c8f74 with808 peer-package PASS
+(222PG/ASGI+586unit), not Edge evidence; still no mounted authority/exporter.
+TS native publication fence unchanged; Research fa857b85 remains source-dark,
+separate provider-candidate work is underway but unqualified. No actual connected
+return yet. Independent implementation/tests/cleanup remain owned runnable work.
+
+**Implementation slice16:49Z:** added one source-dark operations manifest and
+runbook, full42-family owner/history/retention/quality continuation matrix,
+15 actionable alert routing/recovery records, eleven XLC references and five
+formal acceptance boundaries. No production thresholds/retention/on-call invented;
+existing200rows/1MiB is a contract ceiling, not a capacity measurement. Extended
+the existing runner with explicit11 target/inputs, offline operational negatives,
+same-host disposable schema backup/restore and two Rust resync/admission drills.
+Only test code/harness/docs changed; no product feature/schema/route or services.
+
+**SGP preflight16:48Z:** short formatter/safety lease refused FileExistsError
+before any job started: PM current-read lease16:47:17–16:52:17Z and actual two
+PM cells present. Foreign resources untouched; no test result claimed. Added
+explicit PM test-cell guard to existing runner so lease release alone cannot
+hide an active peer job. Prepared only `/tmp/epg10-11-SjT1jzQJ` public-code target;
+all23protected runtime tuples match fresh16:47:26Z baseline. Finish remaining
+docs/source checks now; format/test after actual lease AND peer cells are absent.
+
+**16:55–16:57Z preflight PASS / operator started:** foreign PM lease/cells actually
+absent16:55:19Z. Own short formatting/safety lease acquired and released cleanly;
+100/100 stdlib runner tests PASS, no failures/skips, cargo fmt completed only on
+private copies; exact formatted two new Rust test files reconciled to this branch.
+Independent operator read the written runbook/manifest/profile, found no missing
+private steps, and now executes the exact profile11 command on the frozen target.
+The logical restore includes public._sqlx_migrations so the application must reopen
+and migrate twice without mutation, not merely compare a schema that cannot start.
+No production action/source request; no HK heavy job under foreign TS-CI lease.
+
+**Attempt1 FAIL16:57Z, owned staging fixed:** independent operator followed the
+runbook; preflight EXACT_OWNED_INPUT_MISSING because root's copy list included
+manifest references but omitted the manifest itself. No compile/test/PG started;
+0.896s, cleanup errors0, lease released. ReceiptSHA256
+`c69667211cb6cf7bc8b688d85ab556e198081dbf3723f477295feea3f02d4a00`
+retained as FAIL. Staged that one public manifest; no guard relaxed. Static
+review also corrected a test vector: missing telemetry uses MISSING_TELEMETRY,
+whereas a real command UNKNOWN must correctly fire its incident. Operator reruns
+the SAME full documented profile after renewed frozen input hashes; not new scope
+or a synthetic replacement for an unexecuted gate.
+
+**Attempt2 progress17:00:52Z:** independent operator acquired own lease
+16:59:48–17:24:48Z (`codex-epg10-11-8842721dbde5`). Exact439public inputs
+admitted. Fresh runner100PASS + operations9PASS + rustfmt PASS; locked compile
+in progress. These109 are a tested offline slice, not a full-profile/PG/restore
+or connected acceptance claim. Source/runner bytes remain frozen.
+
+**Parallel source round17:06:59Z:** read-only pins in
+[11 source review](evidence/execution-edge-v1_2/EPG10-11/source-review.json).
+PM now clean`4ec68ff3`: **832 peer PASS=225PG/ASGI+607unit**, plus25offline
+separately, all authority TEST_ONLY. Human→workload→app/field lease now encloses
+the owning COMMIT; task/context/connection/scope binding and uncertain release
+503/UNKNOWN are implemented, not future lifecycle wiring. Consumed the current
+handoff SHA`f5d654ee…` and lease receipt`07eea3da…`; their hashes/page cursor/
+current-frame STREAM still do not equal Edge digests/B-delta/replay/checkpoint.
+Actual provider/field enablement remain false; async PM lease is not the Edge
+synchronous provider ABI. No actual endpoint/identity mapping exists to bind.
+
+PM separate immutable Research-association candidate now clean`9c39b466`,
+45 peer PASS(15new+30registry), TEST_ONLY real isolatedPG. Consumed packet
+SHA`c8b86592…`; explicit issuer/workspace/alpha/version/source→registered TS
+instance association/outbox is source-qualified, not WIP or runtime identity.
+It is based98db and does not include4ec lease composition; PM owner must port
+before adoption. Edge candidate clean9db77811, no candidate-specific code yet.
+TS cleantracked`d6dc7901` has only roster/CI changes; native publication Rust/
+SQL59 hashes unchanged, publisher owner/generation/lease through stage/publish/
+COMMIT still absent. DL clean696fa3d4 unchanged. No peer writes or jobs by audit;
+source qualification counts are never added to11's own test count. Original
+03/08/09/10/11 connected rounds remain scoped to the exact actual return.
+
+**Attempt2 FAIL17:07:53Z, owned test compile fixed:**100safety+9operations and
+fmt passed; compile E0599 twice because new test admission receiver requires
+Arc<ResourceEnvelope>, not plain ResourceEnvelope. No Rust/PG suite started;
+459.531s, no PG/images/volumes, cleanup errors0 and lease absent. Preserved
+receipt SHA`c8883ee0…` in attempt history. Wrapped only the new test instance in
+Arc using the existing API; product code/limits untouched. Refroze439source
+hashes and instructed independent operator to rerun the SAME complete profile;
+these are owned defects fixed here, never labelled external technical debt.
+
+**Attempt3/source continuation17:11Z:** same independent operator ran exact
+runbook after updated e24f622d test hash, own lease17:09:46–17:34:46Z;
+100safety+9operations+fmt PASS, full compile/tests pending. Fresh Research
+fa857b85 owner packet at17:10:16Z now consumes the qualified association
+candidate; current human/workload revocation interoperability remains only a
+proposal, not an installed provider/mapping. ELP2-11 not started. Its normal
+documentation landing hook is deferred by this actual SGP measurement lease,
+not bypassed. No new authentic connected input to bind; source-dark default
+and original six10 return groups remain accurate.18HK runtime tuples refreshed
+17:09Z are byte-for-byte unchanged. Read-only Docker capacity inventory retried
+after transient concurrent snapshot cleanup error; retry succeeded, no shared
+resources removed. Final C4/23tuple reconciliation follows the full drill.
+
+**Attempt3 progress17:17:45Z:** both locked all-target Rust compile and offline
+edge-service check PASS; the Arc test defect is now resolved on the actual
+target. Fresh safety100/operations9/fmt remain PASS in THIS run. Owned disposable
+PG created under the same lease; unit/PG/TLS/restore/Clippy gates still running,
+not counted as PASS until terminal receipt. No source/runtime mutation.
+
+**Attempt3 tested slice17:22:11Z:** all10 unit suites250PASS/0FAIL/ignored;
+runner proceeds to42Edge tests, TLS and real-PG suites. This run's109Python
+cases, fmt and both compile gates passed. No full-profile/restore/Clippy claim
+before terminal receipt; independent operational cleanup still pending.
+
+**17:24Z parallel-window change:** HK lock now belongs to`claude-dl-roll`,
+17:13:22–19:13:22Z, declared DL v2.2.4 production rollout. No HK heavy work
+was started by11 under either foreign owner. Do not prune shared images/cache
+or touch that rollout; only our exact SGP target/PG may be removed after its
+own tests and private evidence harvest. Final runtime/source audit will use
+fresh metadata rather than assuming the earlier TS-CI lock still owns HK.
+
+**Attempt3 FAIL17:26Z, new oracle corrected:**100safety+9ops+250unit+42Edge+
+12TLS PASS; bootstrap32PASS/1FAIL. T11-02 compared persisted full DeltaEvent
+(`event`+`revision`) against bare Event. Root inspected existing DeltaEvent DTO
+and bootstrap store serialization: changed only expected serialization to FULL
+DeltaEvent, retaining exact revision and event equality. No product contract or
+validation weakened. ReceiptSHA`943e545f…`,987.816s, PG removed/lock absent/
+cleanup errors0; later suites/restore/Clippy NOT_RUN, not inherited PASS.
+Current new test SHA`fafa0dd3…`; remaining438source+4helper bytes unchanged.
+
+**Next owned runnable action:** separate short isolated precheck of the2new
+operations tests and as-yet-unexecuted logical restore/application probe using
+the SAME existing runner/helper ports. Precheck may intentionally filter31old
+bootstrap cases and is never full-profile acceptance/counts. Catch owned new
+drill defects before another long regression. Then rerun the unchanged complete
+runbook profile with all33bootstrap/remaining suites and zero final filtered/
+ignored/skip. All previous FAILs retained; do not defer or call them external
+debt. No additional production target/secret or HK job is authorized or used.
+
+**SGP lock17:29:11Z:** a new foreign authority correctness lease
+`codex-portal-elp210-authority-172852`,17:28:52–17:33:52Z is active.
+Independent operator verified new source SHA but started NO precheck/PG/build
+under it. Continue owned static contract/oracle review and journal now; resume
+the already approved test once peer lease AND actual job are absent. No peer
+container/lock touched; a time-slot dependency does not close11 or excuse its
+owned test work. HK DL rollout lease remains separately protected.
+
+**Source round17:30:48Z:** narrow independent review sees both PM/Edge
+candidates still clean9c39/9db. OwningPM4ec now has opt-in source-capture UoW
+WIP (§58.69), explicitly IN_PROGRESS_SOURCE_DARK;11new scenarios prepared,
+not qualified. No actual trust/provider/grant/mount return. Existing4ec/9c39
+qualified packet hashes unchanged; no WIP adopted. Exact synchronous Edge
+current-read versus async PM through-COMMIT ABI/identity correspondence remains
+the previously recorded actual-provider dependency, not generic missing PM code.
+
+**17:34Z quiet-slot admission race, safely refused:** peer cells/lease were
+absent17:33:21Z, but another PM lease acquired17:33:24–17:38:24Z before
+our exclusive precheck admission17:34:03Z. O_EXCL failed before any stage or
+PG started; cleanup errors0 and production/source requests0. ReceiptSHA
+`2b27ab7611098b947a8832d924fa5607b8447c27a592d3540cd3d082db3ab18d`.
+This is admission containment, not a test PASS/FAIL or fourth full-profile run.
+Retain prior bootstrap failure-log SHA`3548ea7e524112bdc3940a96690c3add519b54a41ca9bd1d40f074025f236b53`
+(12227bytes), not private raw logs. Current public source review also records
+the17:30 WIP follow-up; no actual provider/identity return was inferred.
+
+**Focused precheck17:39Z:** new operations2PASS/31intentionally filtered;
+logical restore48tables/92synthetic rows fully equal and restored-app1PASS.
+Strict Clippy then FAIL on one new-test unit-return closure missing a semicolon.
+Fixed only `.unwrap();`, no suppression/product change. ReceiptSHA`38712555…`
+retained in [precheck history](evidence/execution-edge-v1_2/EPG10-11/precheck-history.json);
+PG removed/lease released/errors0. New source SHA`ca68fcea…`; same focused
+precheck then SAME complete profile will rerun. No final test PASS yet.
+
+**Source refresh17:38Z:** TS advanced`77a6d671` with native publisher bytes
+unchanged. PM has new hash-matched TEST_ONLY capture receipt`3846f44c…`:
+858peerPASS(236integration+622unit;26new+832regression),25offline separate.
+Source still4ec+uncommitted capture; journal not yet reconciled. Consumed as
+emerging bounded source evidence, not committed/runtime qualification. Capture
+wraps opt-in operator UoW before owning COMMIT; no native publisher owner fence,
+actual provider/field policy/export/mapping was installed. No owned connected
+binding became runnable. Both candidates/DL unchanged; source review pins exact
+dirty manifests and does not count peer tests in11.
+
+**Focused precheck final PASS17:40:42–17:41:28Z:** operations2PASS with31old
+cases intentionally filtered; restored-app1PASS, fmt/strict Clippy zero warnings.
+Actual logical restore48tables/92synthetic rows, all digests equal; application
+reopens and migrates twice unchanged.439source bytes unchanged; PG removed/
+lease released/cleanup errors0. ReceiptSHA`e5b2786e…` recorded separately;
+not full-profile acceptance and never added to final counts. Independent operator
+now runs unchanged complete runbook profile (attempt4) in fresh SGP quiet slot.
+
+**Attempt4 admitted17:42:20Z:** own lease until18:07:20Z; fresh100safety+
+9operations+fmt PASS. By17:46:34Z both all-target compile and offline Edge
+check passed; actual isolatedPG created, unit/database suites running. No prior
+attempt logs/counts reused. Independent read-only reviewer found no concrete
+correctness/safety defect in EDGE11/runbook/manifest/new Rust drills/restore;
+scope claims consistently isolated, migration state and full DeltaEvent preserved.
+Final receipt, exact C4 teardown and23tuple reconciliation still required.
+
+**Final complete profile PASS17:42:20–17:50:06Z:** independent operator followed
+the unchanged checked-in runbook on approved SGP target.465.979s observation,
+not performance acceptance. **535fresh PASS/0FAIL/skip/ignored/filtered**:
+100safety+9operations+250unit+42Edge+12TLS+33bootstrap+42read+8resource+
+11Manager+27command+1restored-app. Fmt and strict Clippy0warnings PASS;
+439public source hashes+4helper hashes match current branch exactly, source
+bytes unchanged. ReceiptSHA`3728add9214da22e739b13d3da415e77629b84d7ff02fb1bc3a839f3cd56077b`.
+Actual logical restore **48tables/6249synthetic rows**, every digest equal;
+application reopens/migrates twice with no row or migration-state change.
+Retained-history resync repairs corruption with complete DeltaEvent/revision/
+tombstone/reference/zero-row coverage; old generation rejected. Pause/resume
+preserves raw original/correction history and policy boundary, not an installed
+Research analytics scheduler or calibrated numerical score. No HA/PITR/production
+DR, real-source, all-profile or capacity certification is claimed.
+
+**Independent acceptance checklist COMPLETE (not full connected checklist):**
+
+- [x] T11-01: different operator followed public runbook; no hidden operational credential/command, no operator input edits.
+- [x] T11-02: actual disposablePG restore, app restart/migration-state tie-out and retained-history resync/canonical full coverage.
+- [x] T11-03:15actionable alert contracts fire/recover/unknown-contain; fresh cursor/slow/stale/authority/revoke/TLS/storage/unknown regressions. Not installed runtime collectors/notifications.
+- [x] T11-04:42family owner/history/null-retention/quality continuation,11XLC/source/partner references, exact current evidence/false-PASS negatives.
+- [x] T11-05: bounded consumer pause/resume/raw correction/policy history and watch/score alert recovery; actual Research scheduler/config/provider remains round2.
+
+**C4 complete17:51Z:** harvested public source/hash/metric receipts first;
+validated exact0700-owned target, frozen helpers, terminal PASS, no owned PG or
+processes and fresh own cleanup lease. Removed ONLY
+`/tmp/epg10-11-SjT1jzQJ`: **8,619,655,168allocated bytes** of disposable source/
+cargo/target/private logs. Free bytes159,249,326,080→167,868,968,960 (shared-host
+observation, not attribution of all delta). Target/PG/keys/processes/ownlease
+absent; cleanup errors0, images built/pulled/removed0, BuildKit/volumes/networks
+created/removed0. No operational resource or rollback artifact removed.
+Read-only Docker inventories include images and BuildKit; no shared prune under
+HK DL rollout lease. SGP root25.21% free (>20%, <30% capacity observation);
+next disk-heavy work needs own preflight/quiet lease. Decision
+**NO_ACTION_NEEDED_IN_11_SCOPE**; shared cache maintenance is not an owned11 leak.
+
+**Source/release/runtime reconciliation:** fresh HK17:49:52/SGP17:51:30 all
+**23protected image/config/start/restart tuples unchanged**. Deploy runner
+`portal-gh-deploy-runner.service` active; no restart/deploy. Canonical Portal
+`/home/bobby/.worktrees/portal-execution-manager-v2`,
+`feat/manager-v2-paper-read@54c6f5f3`; stable SGP
+`/home/bobby/portal-main-release main@53316263`. Edge compose-declared release
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`,
+revision8814cd2a, active Edge image`sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e`.
+All7active Portal feature worktrees retained; no merge/abandonment inferred.
+08 private PKI recovery bundle retained under existing30day policy until
+2026-11-15T12:37:33Z; no expired certificate authorized as rollback. Feature
+source/test bytes are not the deployed product. No push/merge by this slice.
+
+**Final parallel source round17:52Z:** TS77a6d671 native fence bytes unchanged;
+PM now clean committed`f8ddea31`,858peerPASS capture packet`3846f44c…` consumed
+as qualified TEST_ONLY source, not runtime provider/export proof. New PM candidate
+current-human files and Research fa857b85 current-human WIP are explicitly NOT
+adopted/qualified by11; Edge candidate9db still clean. No actual connected input
+is available to bind. No TS/PM/DL/Research files were edited; no source requests,
+financial/native effects, route/command/alert/TLS trust activation or production
+data mutation. Existing Manager/V1/D4 and already active Live read stay unchanged.
+
+**Evidence/read order:** [operations/acceptance handoff](evidence/execution-edge-v1_2/EPG10-11/OPERATIONS_HANDOFF_AND_ACCEPTANCE.md),
+[final535qualification](evidence/execution-edge-v1_2/EPG10-11/qualification.json),
+[independent operator/reviewer](evidence/execution-edge-v1_2/EPG10-11/operator-attestation.json),
+[C4/runtime/release](evidence/execution-edge-v1_2/EPG10-11/final-reconciliation.json),
+[fresh source/dirty pins](evidence/execution-edge-v1_2/EPG10-11/source-review.json),
+[all3full-attempt FAILs](evidence/execution-edge-v1_2/EPG10-11/attempt-history.json)
+and [focused precheck history](evidence/execution-edge-v1_2/EPG10-11/precheck-history.json).
+Owned staging/API-test/oracle/Clippy defects were fixed here, not labelled debt;
+final counts include only complete attempt4, never earlier/peer/precheck counts.
+
+**Recorded closeout / recommended next action:**11 independent COMPLETE; no
+owned runnable implementation/test/cleanup left. Full10/11 connected NOT_MET.
+Use the SAME [10 owner-return packet](evidence/execution-edge-v1_2/EPG10-10/SHADOW_CUTOVER_AND_OWNER_RETURN.md)
+for six original scoped returns. As each actual input arrives, bind and rerun
+its affected03/08/09/10/11 cell immediately; do not wait for unrelated PM/N1/DL
+roadmaps. No new phase or repeated generic approval required. Do not declare
+campaign/production cutover complete or start an unapproved next phase.
+
+**Pre-commit verification (11):** `git diff --check` PASS. Bounded read-only
+metadata reconciliation passes439current source hashes/4helper hashes,
+535fresh results/strict zero-warning Clippy, actual restore48tables/6249rows,
+23unchanged runtime tuples, exact C4 teardown, all3failed full attempts and
+both focused attempts retained.16local runbook/handoff file links resolve;
+both backend indexes and current plan status agree. No HK heavy test under
+foreign DL rollout lock. Identity is BobbyAxerol <vugioan11022002@gmail.com>;
+normal default commit path has no active hook changed or bypassed. Stage only
+owned11source/test/ops/bounded evidence/tracking; preserve unrelated untracked
+feasibility review, no secret/private key/raw logs/data/cache/runtime staged.
 
 
 

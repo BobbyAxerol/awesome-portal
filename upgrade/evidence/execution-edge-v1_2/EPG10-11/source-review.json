@@ -1,0 +1,239 @@
+{
+  "schema": "epg10.operations-source-review.v1",
+  "provenance": "READ_ONLY_PEER_SOURCE_METADATA_NOT_RUNTIME_OR_EDGE_TEST_ACCEPTANCE",
+  "at_utc": "2026-10-16 17:06:59 UTC",
+  "pm": {
+    "worktree": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+    "branch": "feat/portfolio-account-v1_1-parallel",
+    "commit": "4ec68ff3ea8c0f3febb6b80a3483fa1ddd3a3ad9",
+    "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_path_list_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "status": [],
+    "source_contract": {
+      "commit": "4ec68ff3ea8c0f3febb6b80a3483fa1ddd3a3ad9",
+      "handoff_sha256": "f5d654ee0a0d452de357dc1c92a4884ba05324fe5db4a28593ce435782c22c1b",
+      "lease_evidence_sha256": "07eea3daff26a3e83b46e16d3f359fb2bc272e64fa820f18cb90c9da482e1f46",
+      "peer_passed": 832,
+      "pg_asgi_passed": 225,
+      "unit_passed": 607,
+      "offline_peer_passed_separate": 25,
+      "actual_provider_installed": false,
+      "actual_field_policy_enabled": false,
+      "production_mutations": 0,
+      "actual_native_send": 0,
+      "scope": "TEST_ONLY_CURRENT_READ_POLICY_LEASE_THROUGH_OWNING_COMMIT_NOT_EDGE_TEST_COUNTS"
+    },
+    "consumed_correspondence": [
+      "Human/workload/app/field leases compose around owning COMMIT; actual provider still must supply current truth.",
+      "Exact task/TransportContext/connection/scope; inherited or expired lease denied.",
+      "Provider unavailable503 before DB; release uncertainty after COMMIT503/UNKNOWN, recover same key under new current lease.",
+      "PM async lease is not binary-compatible with Edge synchronous CurrentReadGrantProvider.",
+      "PM internal hashes, business page cursor and current-frame STREAM are not Edge digests/B-delta/replay/checkpoint.",
+      "PM1024 page cap does not override Edge200rows/1MiB.",
+      "No command/native financial authority implied by read grant."
+    ]
+  },
+  "dl": {
+    "worktree": "/home/bobby/.worktrees/data-layer-p184-closure",
+    "branch": "fix/p184-dl-closure",
+    "commit": "696fa3d4b618550052cd53e4cc12087f3c7b83c7",
+    "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_path_list_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "status": []
+  },
+  "ts": {
+    "worktree": "/home/bobby/.worktrees/trading-system-next-upgrade",
+    "branch": "feat/v2-rust-first-okx-demo",
+    "commit": "d6dc7901ad18f90f0d83cece822de8732f0cb436",
+    "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_path_list_sha256": "b5b9433a17437c5e4c2525c2e29d67e64e957ce91ef34b94f56ad0a17f7eaae2",
+    "status": [
+      "?? \"upgrade/TS_PORTFOLIO_ACCOUNT_MANAGEMENT_UPGRADE_GUIDE_v1.1 (1).md\""
+    ],
+    "native_publisher_fence": {
+      "rust_sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+      "sql59_sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+      "status": "UNCHANGED_SOURCE_OWNER_GENERATION_LEASE_THROUGH_STAGE_PUBLISH_COMMIT_STILL_MISSING"
+    }
+  },
+  "pm_candidate": {
+    "worktree": "/home/bobby/.worktrees/portal-elp210-pm-provider-candidate",
+    "branch": "feat/portal-elp210-pm-provider-candidate",
+    "commit": "9c39b4663bac971d37b489445b8cfff5d2b463ad",
+    "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_path_list_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "status": [],
+    "source_contract": {
+      "packet_sha256": "c8b865924f058c294385c492dcd00120205c77645b0154b6800d4f5e6daf9fc7",
+      "peer_passed": 45,
+      "new_passed": 15,
+      "registry_regression_passed": 30,
+      "provenance": "TEST_ONLY_REAL_ISOLATED_PG_PEER_PACKAGE_NOT_EDGE_COUNTS",
+      "actual_identity_rows": false,
+      "actual_provider_installed": false,
+      "edge_wire_mounted": false,
+      "base_includes_pm_4ec_lease_composition": false,
+      "adoption": "PM_OWNER_MUST_PORT_TO_CURRENT_PM_SOURCE_BEFORE_ADOPTION"
+    }
+  },
+  "edge_candidate": {
+    "worktree": "/home/bobby/.worktrees/portal-elp210-edge-provider-candidate",
+    "branch": "feat/portal-elp210-edge-provider-candidate",
+    "commit": "9db77811fb0845344422f1c77968f6fcbc64b66f",
+    "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked_path_list_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "status": []
+  },
+  "peer_mutations": 0,
+  "original_connected_round": "03/08/09/10/11_ROUND2_ACTUAL_BOUND_INPUTS_NOT_NEW_PHASE",
+  "research": {
+    "artifacts": {
+      "/home/bobby/.local/state/portal-execution-elp210/20261016/root-intake-terminal.json": {
+        "bytes": 5062,
+        "sha256": "aec3ae24eca60cfa17060ad2927215c6641fe68df71370a35d00d33611aa93e3"
+      },
+      "/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/source-followthrough.md": {
+        "bytes": 18432,
+        "sha256": "53ee424acc1b970f782647b3a940f461c9a29ddd6d35d39e0fa4e312dbdc9c03"
+      }
+    },
+    "at_utc": "2026-10-16T17:10:16.456785+00:00",
+    "branch": "docs/research-loop-plan",
+    "commit": "fa857b8538c1dd38ab61af94700c71c911d81424",
+    "host": "SGP",
+    "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "status": [
+      " M upgrade/UNIFIED_IMPLEMENTATION_PLAN.md",
+      " M upgrade/execution_loop/evidence/ELP2-10/coverage-and-handoff.md",
+      "?? upgrade/execution_loop/evidence/ELP2-10/authority-continuation.md",
+      "?? upgrade/execution_loop/evidence/ELP2-10/source-followthrough.md"
+    ],
+    "unstaged_diff_sha256": "cbe0b3b5e2636167c49f2f16f422b6ba606fa3f9ef2d2b9a0d02366df87fd5aa",
+    "untracked_path_list_sha256": "2437b25de6fb3acc6e0db92a53631b2c6180d08ad6c8cdcacf821022738e18cd",
+    "worktree": "/home/bobby/portal-research",
+    "interpretation": {
+      "owner_receipt_consumed": "LOCAL_IMPLEMENTATION_LANDED_NORMAL_HOOK_PASS_NOT_SOURCE_CONNECTED",
+      "default_provider": "SOURCE_PROVIDER_NOT_INSTALLED",
+      "stable_human_mapping": "UNMAPPED",
+      "elp2_11": "NOT_STARTED_NOT_PUBLISHED",
+      "source_followthrough": "NEW_9c39_TEST_ONLY_ASSOCIATION_SOURCE_CONSUMED_AUTHORITY_PROTOCOL_PROPOSAL_NOT_IMPLEMENTED",
+      "actual_provider_binding_available": false,
+      "new_generic_approval_gate_created": false
+    }
+  },
+  "additional_rounds": [
+    {
+      "at_utc": "2026-10-16T17:30:48Z",
+      "scope": "PM_CURRENT_AND_TWO_CANDIDATES_READ_ONLY",
+      "pm_head": "4ec68ff3ea8c0f3febb6b80a3483fa1ddd3a3ad9",
+      "pm_unstaged_diff_sha256": "dca8c7436fcdc64ac9b4717642d3c0a733da45757072afce1399ad2db9dc473f",
+      "pm_untracked_content_manifest_sha256": "0b09d49a4a738203964cb308858618b8e42d2fb1733c18e46fe690b06e15c2a0",
+      "pm_wip": "OPT_IN_PMSourceCapture_IN_PROGRESS_SOURCE_DARK_11_NEW_CASES_PREPARED_NOT_QUALIFIED",
+      "source_handoffs_unchanged": true,
+      "pm_candidate": "9c39b4663bac971d37b489445b8cfff5d2b463ad_CLEAN",
+      "edge_candidate": "9db77811fb0845344422f1c77968f6fcbc64b66f_CLEAN_NO_NEW_IMPLEMENTATION",
+      "edge_authority_abi_sha256": "8cd8a369c95c08d2b20b6a50cf2f54a40ce12428fc103dbd805cc1bcd8ff751c",
+      "actual_provider_or_mapping_new_return": false,
+      "wip_adopted": false,
+      "peer_mutations": 0
+    },
+    {
+      "at_utc": "2026-10-16T17:38:18Z",
+      "provenance": "READ_ONLY_PEER_METADATA_NOT_EDGE_TEST_OR_RUNTIME_ACCEPTANCE",
+      "ts": {
+        "commit": "77a6d6710ae7b2b11da05b6049c7dbc7fd1e8616",
+        "tracked_clean": true,
+        "untracked_content_manifest_sha256": "c2674282aab6274c81b0bd059c91517bac134b8f669d1deec1afd87bfe59eecd",
+        "native_publisher_fence_bytes_unchanged": true
+      },
+      "pm": {
+        "commit": "4ec68ff3ea8c0f3febb6b80a3483fa1ddd3a3ad9",
+        "unstaged_diff_sha256": "dca8c7436fcdc64ac9b4717642d3c0a733da45757072afce1399ad2db9dc473f",
+        "untracked_content_manifest_sha256": "0f0798f4723b894d8bb1ba907dda5773c07fbd046158afa3041ed48881e3da56",
+        "capture_receipt_sha256": "3846f44caa7e2f5dbf5f17bebc58d374f24e80cf86670b9d5a3b800d06c5e5ec",
+        "capture_receipt_status": "HASH_MATCHED_TEST_ONLY_RECEIPT_UNCOMMITTED_JOURNAL_NOT_YET_RECONCILED",
+        "peer_passed": 858,
+        "integration_passed": 236,
+        "unit_passed": 622,
+        "new_passed": 26,
+        "regression_passed": 832,
+        "offline_passed_separate": 25,
+        "scope": "OPT_IN_OPERATOR_UOW_CAPTURE_BEFORE_OWNING_COMMIT_NOT_NATIVE_PUBLISHER_FENCE",
+        "actual_provider_installed": false,
+        "actual_field_policy_enabled": false,
+        "actual_native_send": 0
+      },
+      "candidates_clean_unchanged": true,
+      "dl_clean_unchanged": true,
+      "new_actual_publication_or_identity_return": false,
+      "peer_writes": 0,
+      "heavy_jobs": 0
+    },
+    {
+      "at_utc": "2026-10-16T17:52:04Z",
+      "provenance": "FINAL_READ_ONLY_SOURCE_RECONCILIATION",
+      "ts": {
+        "commit": "77a6d6710ae7b2b11da05b6049c7dbc7fd1e8616",
+        "tracked_clean": true,
+        "native_publisher_fence_bytes_unchanged": true
+      },
+      "pm": {
+        "commit": "f8ddea319a0588ea2994b937db1b2e999bd688d9",
+        "clean": true,
+        "capture_receipt_sha256": "3846f44caa7e2f5dbf5f17bebc58d374f24e80cf86670b9d5a3b800d06c5e5ec",
+        "qualification": "COMMITTED_ISOLATED_SOURCE_PACKAGE_QUALIFIED_FULL_PHASES_OPEN",
+        "peer_passed": 858,
+        "offline_peer_passed_separate": 25,
+        "actual_provider_installed": false,
+        "actual_field_policy_enabled": false,
+        "native_send": 0,
+        "scope": "OPT_IN_IDENTITY_OPERATOR_CAPTURE_UOW_BEFORE_OWNING_COMMIT_NOT_NATIVE_PUBLISHER_FENCE"
+      },
+      "pm_candidate": {
+        "commit": "9c39b4663bac971d37b489445b8cfff5d2b463ad",
+        "untracked_wip": [
+          "contracts/baseline/portfolio-account-v1_1/pma11-elp210-human-commit-candidate.sql",
+          "services/portfolio_management/portal_human_candidate.py",
+          "tests/integration/test_elp210_human_commit_candidate.py"
+        ],
+        "qualification": "NEW_CURRENT_HUMAN_SOURCE_WIP_NOT_ADOPTED_NO_ACTUAL_PROVIDER_RETURN"
+      },
+      "edge_candidate": {
+        "commit": "9db77811fb0845344422f1c77968f6fcbc64b66f",
+        "clean": true
+      },
+      "dl": {
+        "commit": "696fa3d4b618550052cd53e4cc12087f3c7b83c7",
+        "clean": true
+      },
+      "research": {
+        "path": "/home/bobby/portal-research",
+        "branch": "docs/research-loop-plan",
+        "commit": "fa857b8538c1dd38ab61af94700c71c911d81424",
+        "status": [
+          "M apps/control-api/src/execution-v2/access.service.ts",
+          " M scripts/execution-v2/qualification-readiness.mjs",
+          " M scripts/execution-v2/qualification-readiness.test.mjs",
+          " M upgrade/UNIFIED_IMPLEMENTATION_PLAN.md",
+          " M upgrade/execution_loop/evidence/ELP2-10/README.md",
+          " M upgrade/execution_loop/evidence/ELP2-10/coverage-and-handoff.md",
+          "?? apps/control-api/src/execution-v2/current-human-candidate.sql",
+          "?? apps/control-api/src/execution-v2/current-human-candidate.ts",
+          "?? apps/control-api/src/execution-v2/current-human-snapshot.ts",
+          "?? apps/control-api/test/elp210-current-human-candidate.spec.ts",
+          "?? upgrade/execution_loop/evidence/ELP2-10/authority-continuation.md",
+          "?? upgrade/execution_loop/evidence/ELP2-10/source-followthrough.md"
+        ],
+        "unstaged_diff_sha256": "015da6befbb880293f6255d59c1b6f0797b963d9522cc2e47a22743e272b4baf"
+      },
+      "new_actual_publication_or_identity_return": false,
+      "heavy_jobs": 0,
+      "peer_writes": 0
+    }
+  ]
+}

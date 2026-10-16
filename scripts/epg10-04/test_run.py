@@ -27,6 +27,12 @@ class RunnerSafety(unittest.TestCase):
         helper.docker.return_value.stdout = b'a epg10-10-pg-owned\nd production-control-api\n'
         qualification.require_no_peer_tests(helper)
 
+    def test_pm_correctness_cells_are_foreign_even_without_cargo_process(self):
+        helper = SimpleNamespace(PG='epg10-11-own', docker=MagicMock())
+        helper.docker.return_value.stdout = b'a pma11-read-sgp-test-db\nb pma11-read-sgp-test-tests\n'
+        with self.assertRaisesRegex(RuntimeError, 'FOREIGN_TEST_JOB_ACTIVE_RUN_TAINTED'):
+            qualification.require_no_peer_tests(helper)
+
     def test_foreign_test_inventory_overflow_fails_closed(self):
         helper = SimpleNamespace(PG='own', docker=MagicMock())
         helper.docker.return_value.stdout = b'x' * (128 * 1024 + 1)
@@ -64,33 +70,35 @@ class RunnerSafety(unittest.TestCase):
         source = Path(private.name) / 'source'
         names = ['Cargo.toml', 'Cargo.lock', *qualification.owned_rust(profile),
                  'crates/projection-store-pg/migrations/0019_scoped_bootstrap.sql']
-        if profile in ('07', '08', '09', '10'):
+        if profile in ('07', '08', '09', '10', '11'):
             names.append(qualification.COMMAND_MIGRATION)
         if profile != '04':
             names.append('crates/projection-store-pg/migrations/0020_scoped_read.sql')
             names = [qualification.RUST_WORKSPACE + '/' + name for name in names]
             names.append(qualification.SHARED_FIXTURE)
-        if profile in ('06', '07', '08', '09', '10'):
+        if profile in ('06', '07', '08', '09', '10', '11'):
             names.extend(qualification.RESOURCE_SHARED_FIXTURES)
             names.extend(qualification.RESOURCE_COMPILE_INPUTS)
             names.extend(qualification.RUST_WORKSPACE + '/' + name
                          for name in qualification.RESOURCE_BUILD_SCRIPTS)
-        if profile in ('07', '08', '09', '10'):
+        if profile in ('07', '08', '09', '10', '11'):
             names.extend(qualification.COMMAND_SHARED_FIXTURES)
-        if profile in ('08', '09', '10'):
+        if profile in ('08', '09', '10', '11'):
             names.extend(qualification.SECURITY_COMPILE_INPUTS)
+        if profile == '11':
+            names.extend(qualification.OPERATIONS_INPUTS)
         for name in names:
             path = source / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text('TEST_ONLY\n')
         return source
 
-    def test_profile_defaults_to04_and_requires_exact_04_through10(self):
+    def test_profile_defaults_to04_and_requires_exact_04_through11(self):
         with patch.dict(qualification.os.environ, {}, clear=True):
             self.assertEqual(qualification.test_profile(), '04')
-        for value in ('04', '05', '06', '07', '08', '09', '10'):
+        for value in ('04', '05', '06', '07', '08', '09', '10', '11'):
             self.assertEqual(qualification.test_profile(value), value)
-        for value in ('', '4', '5', '6', '7', '8', '9', '11', '04,05', '05 ', '07 ', '08 ', '09 ', '10 ', 5, True):
+        for value in ('', '4', '5', '6', '7', '8', '9', '12', '04,05', '05 ', '07 ', '08 ', '09 ', '10 ', 5, True):
             with self.subTest(profile=value):
                 with self.assertRaisesRegex(ValueError, 'EXPLICIT_TEST_PROFILE'):
                     qualification.test_profile(value)
@@ -929,7 +937,7 @@ class RunnerSafety(unittest.TestCase):
 
     def test_profile08_unit_timeout_stays_bounded_and_preserves_all_prior_profiles(self):
         self.assertEqual(qualification.UNIT_TEST_TIMEOUT_SECONDS,
-                         {'04': 240, '05': 240, '06': 240, '07': 600, '08': 600, '09': 600, '10': 600})
+                         {'04': 240, '05': 240, '06': 240, '07': 600, '08': 600, '09': 600, '10': 600, '11': 600})
         self.assertEqual(qualification.LOCK_SECONDS, 1500)
         self.assertLess(qualification.UNIT_TEST_TIMEOUT_SECONDS['08'], qualification.LOCK_SECONDS - 30)
 
@@ -988,11 +996,44 @@ class RunnerSafety(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'PRIVATE_DISPOSABLE'):
             qualification.validate_base(Path('/tmp/epg10-09-foreign'), '10')
 
+    def test_profile11_inherits_safety_with_separate_target_and_required_ops(self):
+        self.assertEqual(qualification.package_arguments('11'), qualification.package_arguments('10'))
+        helper = qualification.load_cleanup_helpers(Path(__file__).resolve().parent, '11')
+        self.assertTrue(helper.OWNER.startswith('codex-epg10-11-'))
+        self.assertTrue(helper.PG.startswith('epg10-11-pg-'))
+        with self.assertRaises(ValueError):
+            qualification.validate_base(Path('/tmp/epg10-10-foreign'), '11')
+        source = self.source_fixture('11')
+        for name in qualification.OPERATIONS_INPUTS:
+            self.assertIn(name, qualification.source_hashes(source, '11'))
+        (source / qualification.OPERATIONS_INPUTS[0]).unlink()
+        with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+            qualification.source_hashes(source, '11')
+
+    def test_restore_fingerprint_rejects_nonisolated_database_and_container(self):
+        helper = SimpleNamespace(docker=MagicMock())
+        for container, database in [('bad', 'portal_projection_test_epg10_04'),
+                                    ('a' * 64, 'production')]:
+            with self.assertRaisesRegex(ValueError, 'EXACT_DISPOSABLE_RESTORE_TARGET'):
+                qualification.restore_fingerprint(helper, container, database)
+        helper.docker.assert_not_called()
+
+    def test_restore_digest_mismatch_or_unbounded_dump_never_pass(self):
+        helper = SimpleNamespace(docker=MagicMock())
+        helper.docker.return_value.stdout = b'128\n'
+        with patch.object(qualification, 'restore_fingerprint', side_effect=[[{'rows': 1}], [{'rows': 2}]]):
+            with self.assertRaisesRegex(ValueError, 'RESTORE_SCHEMA_ROW_DIGEST_MISMATCH'):
+                qualification.logical_restore_drill(helper, 'a' * 64)
+        helper.docker.return_value.stdout = b'99999999\n'
+        with patch.object(qualification, 'restore_fingerprint', return_value=[]):
+            with self.assertRaisesRegex(ValueError, 'BOUNDED_TEST_DUMP_REQUIRED'):
+                qualification.logical_restore_drill(helper, 'a' * 64)
+
     def test_rollout_module_migration_and_child_are_required_for_embedded_store(self):
         names = ('crates/projection-store-pg/src/bootstrap_rollout.rs',
                  'crates/projection-store-pg/migrations/0022_bootstrap_rollout.sql',
                  'crates/projection-store-pg/tests/epg10_10/rollout.rs')
-        for profile in ('04', '09', '10'):
+        for profile in ('04', '09', '10', '11'):
             source = self.source_fixture(profile)
             before = qualification.source_hashes(source, profile)
             for name in names:
