@@ -50,13 +50,18 @@
 > JWT/JWKS, legacy SSE expiry, explicitCA TLS1.3 and selected-payload security
 > guards qualified source-dark: final490automated PASS,0FAIL/ignored/skip,
 > fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for actual current providers,
-> TS commit/business proof, researcher field matrix and expired Manager TLS.
-> Own8.388GB artifacts removed;17original +6Manager runtime tuples unchanged.
+> TS commit/business proof and researcher field matrix.
+> Bobby explicitly defers actual mapping/authority/field-matrix acceptance to
+> parallel PM integration. Exact6Manager+3Proxy TLS repair is connected-qualified:
+> 6TLS/12positive/12denial PASS;46helper tests PASS; valid fallback loaded. Initial
+> wrong method expectation and containment/recovery retained, no policy weakening.
+> Own8.388GB +212,992B test artifacts removed; all23runtime images/configs unchanged,
+> only6Manager approved restart timestamps/counters changed; Edge/DB untouched.
 > No mounted authority or runtime activation inferred.09…11 await named approval. Evidence/action packets
 > linked in §23.15/§23.16/§23.17.
 > 01capacity is still pending;
 > logical02 closure does not waive it.
-> No runtime activation. Four owner-supplied guides
+> No current-authority activation. Four owner-supplied guides
 > are linked and pinned there; earlier acceptance is not new upgrade evidence.
 
 > **Trạng thái:** Draft để owner review và chốt thứ tự triển khai<br>

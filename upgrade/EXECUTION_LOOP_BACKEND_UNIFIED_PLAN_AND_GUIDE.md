@@ -10128,7 +10128,18 @@ Owned7.365GB test copies/cache/logs removed;12HK+5SGP tuples unchanged/restarts0
 #### EPG10-08 Hoàn thiện revocation scope và TLS
 
 **Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED (2026-10-16).
-**Tests:** FINAL_IMMUTABLE_490_PASS / 0_FAIL_IGNORED_SKIP / FMT_STRICT_CLIPPY_PASS — **Exit:** NOT_MET — **Runtime activation:** NOT_AUTHORIZED.
+**Tests:** FINAL_IMMUTABLE_490_PASS + FINAL_REPAIR_46_PASS / 0_FAIL_IGNORED_SKIP / FMT_STRICT_CLIPPY_PASS; connected TLS6 + positive reads12 + denial12 PASS — **Exit:** NOT_MET — **Runtime authority activation:** NOT_AUTHORIZED; **named PKI repair:** QUALIFIED_VALID_FALLBACK_LOADED.
+**Continuation approval (2026-10-16):** Bobby explicitly requests completion of
+the three outstanding08 items, including the exact6Manager+3SourceProxy PKI
+repair window and actual authority/policy binding. The earlier source-only
+runtime prohibition is superseded only for that named repair, with strict
+verification, valid rollback/disable-path and shared-host locks preserved.
+No financial command activation, arbitrary grants, peer-history rewrite,
+unapproved business field matrix or09…11 activation follows from this approval.
+**Latest owner disposition:** actual identity/membership/field-matrix/Stan
+authority qualification is **OWNER_DEFERRED_TO_PM_INTEGRATION**; retain the
+same08 acceptance items for the parallel Portfolio & Account Management return.
+This does not waive proof, enable a grant, or block independent TLS preparation.
 **Owned package:** QUALIFIED_ISOLATED_SOURCE_DARK; full runtime security acceptance
 is not closed. Eight formal families have limited isolated proof; T08-03 remains
 partial without actual business authority. No production family is certified.
@@ -10180,13 +10191,19 @@ actual PASS/FAIL/SKIP/BLOCKED counts and NOT_RUN cases; measurements; rollback/c
 source/runtime/retention tuple; remaining gate owner and next independently runnable
 scope. **Hiện tại:** owned current-scope/JWT/SSE-expiry/TLS/secret-defense package
 qualified source-dark; final490automated PASS,0FAIL/ignored/skip, fmt/strict
-zero-warning Clippy PASS. All independently runnable owned code/tests/preparation
-and cleanup finished. Actual providers/TS commit authority/researcher field matrix
-and expired Manager TLS remain exact same08 dependencies, not deferred product
-tasks. See §23.17, [verification](evidence/execution-edge-v1_2/EPG10-08/verification.json)
+zero-warning Clippy PASS. Subsequent continuation prepares guarded same-identity
+TLS repair tooling; its separate test/cleanup receipt must precede operations.
+Actual providers/TS commit authority/researcher field matrix are explicitly
+owner-deferred to PM integration. Named Manager TLS repair is now connected-
+qualified with valid same-identity fallback loaded; all6Manager running, all3
+Proxy contexts reloaded, no Edge/DB/image/JWT/grant change. First wrong-status
+assertion and bounded containment/recovery are retained in
+[TLS continuation](evidence/execution-edge-v1_2/EPG10-08/tls-continuation.json). See §23.17,
+[verification](evidence/execution-edge-v1_2/EPG10-08/verification.json)
 and [single owner return](evidence/execution-edge-v1_2/EPG10-08/SECURITY_CONTRACT_AND_OWNER_RETURN.md).
-Own8.388GB test artifacts removed;17original +6Manager runtime tuples unchanged.
-Historical Manager restart counts3/4/4 were not caused by08. No runtime activation
+Own8.388GB original test artifacts plus212,992B continuation targets removed.
+All23protected runtime images/configs unchanged; only6Manager start times and
+normal manual-restart counters changed in the approved window. No current-policy
 or product-security acceptance claimed;09…11 remain not started.
 
 <a id="epg10-09-plan"></a>
@@ -12843,6 +12860,135 @@ Research HEAD/staged/unstaged hashes unchanged; no new authority publication
 inferred. Exact post-interruption source receipt added to final reconciliation.
 No tests/builds/peer writes/runtime operations during this resume check;
 unrelated untracked feasibility-review file still preserved outside commit.
+
+**Continuation pre-code/operations freeze (2026-10-16,19:10–19:15 ICT):**
+Bobby requests finishing actual TS/PM authority and commit proof, Research
+current-policy/verified identity/approved-field binding, and the exact three
+shared-leaf repair across6Manager+3Proxy. Start from local08commit`5bc5b10e`;
+same feature worktree/branch, preserve unrelated untracked feasibility review.
+Root/workspace and Portal rules, phase08 guide/checklist and single owner packet
+reread. Refresh peer source/runtime pins before mutation, do not edit a dirty
+peer checkout or invent a business identity/field decision. No financial effect,
+capital/membership grant, live command enable or phase09 scope is approved.
+
+Independent work now: inspect existing CA/private references without disclosing
+values; audit actual runtime mounts/loaded TLS contexts and safe rollback;
+implement narrowly owned repeatable repair/preflight/qualification tooling;
+inspect existing current authority/provider composition and exact missing
+contract facts. Tests and runtime steps must honour both-host measurement locks.
+HK foreign`claude-burst-b16-a1parity` lock currently ends13:48:52Z (20:48:52ICT),
+so no HK container start/restart/build/cargo/pytest/load now. Do not stop its
+resources or remove its live lock. A missing authority/business decision still
+denies; no fixture or local role becomes a mounted provider by assertion.
+
+Rollback: retain original private credential files/metadata separately outside
+Git; expired credentials are forensic material, not functional recovery.
+Prepare a valid signed same-identity fallback or fail closed on the affected
+read path. Renew existing leaves under the same CA and identities, not JWT
+signer/DB grants/images; qualify exact positive/negative TLS/profile/unauth
+cases and unaffected service tuples. Protect committed receipts/data. Record
+all operation/results/cleanup in this same journal and single08packet before
+claiming full runtime exit; previous490PASS remains isolated proof only.
+
+**Owner clarification during continuation (19:18 ICT):** Bobby confirms
+the stable Portal↔TS identity mapping, researcher field-matrix approval and
+Stan mutation/delegation/current-authority work probably have not been reached
+by the parallel Portfolio & Account Management campaign; record them for later
+implementation/acceptance with that owner. These exact dependent08 read/command
+acceptance items are **OWNER_DEFERRED_TO_PM_INTEGRATION**, not an instruction
+to fabricate grants, write peer WIP or claim full08 closed. Current scope stays
+deny/unavailable where mapping/policy/native provider is missing. Refresh real
+owner returns before eventual binding; no repeated generic approval needed.
+The independent approved9service TLS repair/preparation continues separately.
+Full08 exit remains NOT_MET until the deferred proof actually exists.
+
+Fresh read-only source audit: PM`e2003bfe` has active approved§58.65.5/PMA11-14
+WIP in operator adapters/API plus new handoff/recovery files. Existing human
+and workload lease seams encompass COMMIT but all configured providers remain
+absent; no pma.identity.v1/current-provider private reference discovered. TS
+membership candidate install/root bootstrap is not proven by source alone.
+Research`e6620f4` retains21staged ELP2-10 paths; actual main composition supplies
+no trust override, profile mappings explicitly UNMAPPED, source-verified
+publication deliberately uncommissioned. Real Portal session reads/current
+fences exist but cannot become TS membership authority by assertion. These
+facts confirm the actual dependency, not merely an inactive feature flag.
+
+**12:33 UTC continuation window refresh:** foreign HK lock was removed by its
+owner before its deadline; read-only inventory shows no phase-owned runtime
+mutation. Do not treat the previous13:48:52Z deadline as a new mandatory wait
+after the lock is absent. Finish TEST_ONLY repair round-trip qualification on
+SGP, refresh source/23runtime tuples, then acquire our own bounded lock before
+the already-approved exact9service PKI transaction. The narrow helper stages
+same-key/subject/SAN/EKU leafs plus an independent valid fallback, checks both
+sets immediately before publication, never restores expired leafs, validates
+loaded TLS fingerprints and bounded profile-specific application contracts,
+and rechecks its lease/deadlines before each mutation. All authority integration
+still OWNER_DEFERRED_TO_PM_INTEGRATION; no financial effects/grants/UI/09 work.
+
+**12:37–12:40 UTC first operational attempt and correction:** the45TEST_ONLY
+repair cases PASS on SGP; exact18HK metadata tuples initially match prior
+evidence, and all426Rust/contract source hashes remain unchanged. After fresh
+absence of foreign locks, the approved repair acquires its own lock, stages
+private primary/fallback leafs and publishes/reloads exact9services. Both
+attempts fail the helper's `ROUTE_DENIAL_FAILED` assertion. Containment stops
+all6Manager containers (confirmed actual state); no Proxy/Edge/DB container
+stopped. This failure is retained, not declared PASS/debt. Recovery within a
+new own lock restarts the same6 with the valid fallback; strict TLS and first
+profile's four positive contracts pass, then the same denial assertion fails.
+All6 are restored running, no insecure or expired credential fallback used.
+
+Bounded actual probes across Paper/Sandbox/Live prove GET200/POST405/HEAD405/
+unknown404. Earlier static interpretation of location-level `limit_except GET`
+as POST403 was incomplete; the effective runtime policy returns405. Correct
+the helper expectation to405 and add a full qualification-path regression;
+do not change runtime policy to match an incorrect test. Final source tests,
+connected proof and unaffected-tuple reconciliation still required before
+calling this TLS repair qualified. Mapping/field policy remains owner-deferred.
+
+**12:41–12:44 UTC final connected repair proof and closeout:** corrected effective
+method policy passes strictTLS1.3/chain/hostname +loaded certificate hash on all
+6Manager ports; each Paper/Sandbox/Live profile passes catalogue/capabilities/
+bounded1row records/portfolio projection and POST405/HEAD405/unknown404/no-mTLS
+denial: **6TLS +12positive +12negative PASS**, catalogue96relations/profile.
+No record/token/credential retained. Loaded same-identity fallback expires
+**2026-11-15T12:37:33Z**; existing CA/keys/JWT/DB/grants/images/configs unchanged.
+The earlier false denial expectation was an owned test defect, fixed with a
+full six-leaf/three-profile regression, not waived or relabelled external debt.
+No additional restart needed for final qualification.45prior +46final tests are
+two candidates, **not91distinct tests**; final46PASS/0FAIL/SKIP on SGP,0.633s
+test time (not capacity). Source hashes match HK. Previous490-case immutable
+source/PG receipt still matches all426source files; no new full Rust rerun.
+
+Only the approved6Manager containers restarted (primary, fallback, recovery);
+temporary confirmed fail-closed stops after the initial assertion were restored
+within this window. Three Proxy processes reloaded each round (9reloads total),
+no Proxy/Edge/PG container restarted. All18HK are running; IDs/images/configs
+unchanged, only6Manager start timestamps and normal manual-restart counters
+changed (old facade3/4/4 recorded; now0). All5SGP image/config/restart tuples
+match prior proof and remain running. Stable/canonical releases and rollback
+images retained unchanged. No new image/build/cache/volume/network, no peer
+source edits, push or merge. TS advanced to`1a648ea8` (native replay fix), DL
+to`cd3fd3a` (read-only cleaner watch), Research to`169195ca` (21ELP2-10 files
+committed, no main/provider/identity wiring change); PM`e2003bfe` active WIP is
+preserved. These peer commits do not invent the deferred business authority.
+
+Cleanup: exact SGPlocal-test targets `/tmp/epg10-08-tls-3dMhfxGE`114,688B and
+`/tmp/epg10-08-tls-final-lEqGxMm8`98,304B removed, total212,992allocated bytes;
+private TEST_ONLY key files/owned locks/containers remaining0. First target free
+168496881664→168496996352B; final168361070592→168361168896B. Shared-host free
+deltas observational. HK available222043660288B. Both Docker image/BuildKit
+inventories taken; owned images/cache0 so no shared prune during peer work.
+Keep only the explicit root0700/0600 private repair bundle for30days as active
+fallback/valid recovery/expired forensic reference, never Git or expired rollback.
+Detailed source/runtime/retention and all attempts:
+[sanitized continuation](evidence/execution-edge-v1_2/EPG10-08/tls-continuation.json).
+
+**Recorded disposition:** TLS_REPAIR_CONNECTED_QUALIFIED;
+AUTHORITY_MAPPING_FIELDS_OWNER_DEFERRED_TO_PM_INTEGRATION; full08 **NOT_MET**.
+Runnable independent repair/tool/test/cleanup work left0. Exact resume owner:
+parallel TS/PM and Research return real mapping/current providers/accepted
+field policy/Stan ceiling +native commit lease; resume their dependent same08
+qualification then, no new phase or invented grant. No09…11 implementation.
 
 
 

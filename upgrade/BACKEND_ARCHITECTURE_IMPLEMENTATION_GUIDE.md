@@ -721,12 +721,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   checked bounded JWT/JWKS, legacy SSE expiry fix, explicitCA-only TLS1.3,
   selected-payload secret defense qualified source-dark: final490automated PASS,
   0FAIL/ignored/skip, fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for
-  actual providers, TS commit/business proof, researcher field approval and
-  expired Manager TLS. Eight formal families have limited isolated proof;
+  actual providers, TS commit/business proof and researcher field approval.
+  Bobby now explicitly defers the actual authority/mapping/
+  field matrix to parallel PM integration; do not fake grants or edit peer WIP.
+  Exact6Manager+3Proxy TLS repair is connected-qualified:6TLS/12positive/
+  12denial PASS, final46helper tests PASS; valid same-identity fallback loaded.
+  Eight formal families have limited isolated proof;
   T08-03 business model remains partial. Own8.388GB artifacts removed;
-  17original +6Manager tuples unchanged (historical Manager restarts retained).
-  Exact actions/evidence in §23.17 and its single owner return. No operational
-  activation or peer changes;09…11 await approval.
+  Additional212,992B test targets removed; all23images/configs unchanged,
+  only6approved Manager start times/counters changed; no Edge/DB restart.
+  First incorrect method assertion and safe containment/recovery retained in
+  §23.17/TLS continuation. No authority activation or peer changes;09…11 await approval.
   01capacity exit remains unmet, not waived.
   No operational runtime/source/credential change, push or merge. Only owned
   test containers/private fixture/tempfiles removed; no image build/pull/prune.

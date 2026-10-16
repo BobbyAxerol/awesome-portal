@@ -18,9 +18,16 @@ Chúng không thay thế phase hoặc exit gate trong
   **08 (§23.17):** owned current-scope/JWT/SSE-expiry/strict-TLS/selected-field
   package qualified source-dark, final490automated PASS/0FAIL/ignored/skip,
   fmt/strict zero-warning Clippy PASS. Full08 NOT_MET: actual authority/TS native
-  commit/researcher field policy and expired Manager TLS remain exact scoped
-  dependencies. Own8.388GB artifacts cleaned;17original +6Manager tuples
-  unchanged, no operational mutation. Single owner packet and verification
+  commit/researcher field policy remain exact scoped
+  dependencies. Owner explicitly defers actual authority/mapping/field matrix to
+  parallel PM integration. Named6Manager+3Proxy TLS repair is now connected-
+  qualified:6TLS +12positive/12denial PASS; final46helper tests PASS, valid
+  same-identity fallback loaded. Incorrect first method assertion + bounded
+  containment/recovery retained in §23.17/TLS continuation; no policy weakening.
+  Own8.388GB artifacts cleaned;17original +6Manager tuples
+  images/configs unchanged, only6Manager approved restart timestamps/counters
+  changed. Additional212,992B test targets cleaned. No authority activation.
+  Single owner packet and verification
   linked in §23.17;09…11 are not started.
   01 available-source continuation now has53offline tests
   plus six00metadata PASS, both-host120s observations, two real+two isolated

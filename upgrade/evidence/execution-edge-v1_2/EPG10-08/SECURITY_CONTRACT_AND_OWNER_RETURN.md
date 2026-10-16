@@ -5,9 +5,18 @@ Authority: [main journal §23.17](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_A
 EDGE08 and BE§§3–5/9.2/14.2/ELP2-02/03/04/09. This is the single08
 security/owner return, not another roadmap or permission to change a peer.
 
-Final recorded status: **IN_PROGRESS / OWNED_ISOLATED_PACKAGE_QUALIFIED_SOURCE_DARK**.
+Final recorded status: **IN_PROGRESS / TLS_RUNTIME_QUALIFIED /
+AUTHORITY_OWNER_DEFERRED_TO_PM_INTEGRATION**.
 Final490automated PASS/0FAIL/ignored/skip; fmt/strict zero-warning Clippy PASS.
 **Full08 exit NOT_MET**; actual current security is not production-certified.
+Continuation:46repair tests PASS, actual6TLS +12positive/12denial PASS across
+Paper/Sandbox/Live. Valid same-identity fallback loaded, expiry2026-11-15;
+only6Manager restarted and3Proxy contexts reloaded. The original source-only
+and expired-TLS statements below describe the earlier490-case snapshot and
+are superseded for this exact repair by [TLS continuation](tls-continuation.json)
+and the final main journal. No DB/image/JWT/grant/current-provider activation.
+Initial false POST403 expectation caused bounded containment; all6Manager
+restored, corrected effective POST405 policy qualified, failure retained honestly.
 Use [verification](verification.json) and the final main journal for executed results.
 No isolated fixture is an issuer, membership receipt, mounted provider or native
 TS commit. Paper/sandbox/live are structural scopes; Canary is a live stage.
@@ -264,3 +273,79 @@ Real provider binding, native commit qualification and connected security tests
 stay dependent work inside this same08 once exact owner returns exist. The
 four action items above are not permission to edit peer authority or rotate
 services unannounced; do not open another phase for them or claim08 complete.
+
+## Owner-approved continuation and deferred business acceptance
+
+After the source-only commit, Bobby approved finishing the exact6Manager+
+3SourceProxy leaf repair and requested remaining actual authority integration.
+Subsequent clarification explicitly defers stable Portal↔TS mapping, researcher
+field matrix and Stan/current-authority acceptance to the parallel Portfolio &
+Account Management work because those inputs have not yet been implemented.
+State: **OWNER_DEFERRED_TO_PM_INTEGRATION**, full08 exit still NOT_MET.
+Do not alter a dirty peer checkout, mint a current policy from fixture/name/
+ADMIN, or advertise command acceptance. Resume dependent binding/acceptance in
+the same08 when real producer artifacts exist. TLS preparation is independent.
+
+Read-only follow-up confirms concrete providers absent, not just deployment
+flags: PM `operator_runtime.py:46` is unmounted; `identity/human.py:117` and
+`operator_session.py:44` hold external leases through COMMIT but instantiate
+no real lease providers. Research `main.ts:9` supplies no trust dependencies,
+`access-trust.ts:20–22` stays unqualified; `auth/profile.contract.ts:23–26`
+reports UNMAPPED and `publication-adapter.ts:49–51` rejects uncommissioned
+SOURCE_VERIFIED. Research §4.8/ELP2-REQ-00-002 still requires actual field
+selection. PM owner is actively changing the same trust/handoff boundary.
+
+HK measurement lock `claude-burst-b16-a1parity` currently expires
+2026-10-16T13:48:52Z (20:48:52ICT). Do not start/restart the six Manager
+containers or run local heavy tests/builds until it is absent/expired and a
+fresh lock check permits the exact operational window. No renewed certificate
+or source test is a loaded-runtime acceptance before the contexts reload.
+
+### Independent TLS continuation: execution contract
+
+The first foreign lock was removed early; subsequent PM isolated/preflight
+locks are also respected. Do not restart around a foreign window, remove a
+peer lock, or turn its deadline into a repeated approval request. The existing
+approval remains valid for this exact9service repair when a fresh atomic lock
+acquisition succeeds.
+
+Owned helper: [`renew_manager_tls.py`](../../../../scripts/epg10-08/renew_manager_tls.py),
+tests: [`test_renew_manager_tls.py`](../../../../scripts/epg10-08/test_renew_manager_tls.py).
+It uses the existing pinned Manager CA and existing leaf private keys; preserves
+subjects/SAN/EKU/extensions, DB/JWT/image/configuration identities; stages two
+independent30day leaf sets outside Git; revalidates both before publication.
+Only4existing private files change (two server certs plus two copies of the
+same Proxy client bundle), preserving ownership/modes. Existing6Manager
+containers restart, existing3Proxy nginx contexts validate/reload; no compose
+recreation against the removed historical owner worktree. Loaded leaf hashes,
+chain/hostname/TLS1.3 and exact profile catalogue/capabilities/one-row records/
+portfolio projection are checked; POST405/HEAD405/unknown404/no-mTLS denial
+are separate negative cases. No response records or assertion tokens retained.
+
+The helper acquires an exclusive1800s host lock, guards every operational
+write/subprocess/probe against lease replacement/expiry, and bounds primary/
+fallback/containment stages to600/600/180s. Failure uses the separately valid
+same-identity set, never the expired originals; failed recovery attempts all
+six Manager stops independently and requires actual stopped-state observation
+before making any containment claim. A lost lock prevents further mutation.
+Private originals are forensic only. Retain the named0700/root-only bundle
+with0600files as bounded30day repair/recovery evidence; it is not a Git artifact
+or a reason to keep disposable test caches/images.
+
+Final46TEST_ONLY methods PASS on SGP (0FAIL/SKIP), including real temporary
+PKI/file prepare+publish+fallback round-trips with Docker/HTTP mocked. Source
+hashes match HK; the prior490source/PG security cases remain byte-pinned and
+are not re-run or relabelled connected acceptance. Runtime outcome is recorded
+separately in the main journal and the continuation receipt; neither suite
+supplies the deferred PM/Research business authority.
+
+Final outcome: TLS repair connected-qualified, all18HK+5SGP services running;
+all immutable images/configs retained. Only6Manager start times/manual counters
+changed; Edge/PG/Proxy containers and five SGP services did not restart.
+Additional212,992B from two exact SGP test targets removed, no owned test keys/
+containers/locks remain. Root-only private repair/recovery bundle explicitly
+retained30days; all payload/secret values remain outside Git. Main08 remains
+NOT_MET only for the exact real trust/business/revoke acceptance deferred by
+Bobby, not an unfinished TLS task. Resume within08 after TS/PM +Research
+return their actual providers/identity receipts/approved policy/native lease;
+no phase09…11 activation or fabricated all-business grant follows.

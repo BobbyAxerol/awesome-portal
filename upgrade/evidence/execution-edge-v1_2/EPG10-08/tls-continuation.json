@@ -1,0 +1,633 @@
+{
+  "schema": "epg10.manager-tls-continuation.v1",
+  "recorded_at_utc": "2026-10-16T12:44:26Z",
+  "phase": "EPG10-08",
+  "phase_exit": "NOT_MET",
+  "business_authority_status": "OWNER_DEFERRED_TO_PM_INTEGRATION",
+  "tls_status": "MANAGER_TLS_REPAIRED_FALLBACK_LOADED_NOT_HUMAN_POLICY_ACCEPTANCE",
+  "authority_runtime_activation": false,
+  "financial_effects": 0,
+  "owner_disposition": {
+    "identity_mapping": "DEFERRED_TO_PARALLEL_PM",
+    "researcher_field_matrix": "DEFERRED_TO_PARALLEL_PM",
+    "stan_mutation_delegation_ceiling": "DEFERRED_TO_PARALLEL_PM",
+    "native_commit_authority": "DEFERRED_TO_PARALLEL_PM",
+    "resume": "Same08 on actual producer return, not a new phase or fabricated grants"
+  },
+  "tested_source": {
+    "branch": "feat/execution-edge-upgrade-v1_2",
+    "baseline_commit": "5bc5b10e3d589fcbea5aafeafbd0dbe71efa48c3",
+    "worktree": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+    "sha256": {
+      "scripts/epg10-08/renew_manager_tls.py": "1dc531303fefda34c67128c66d97b8ca81531666eb30525bef9b44afffd2205b",
+      "scripts/epg10-08/test_renew_manager_tls.py": "c661f125afd1200bf37ba84b6b0ae6612302bc929270731fb0c9d687899269e9",
+      "scripts/execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569"
+    },
+    "prior490_source_hashes_rechecked": [
+      {
+        "name": "input_hashes",
+        "files": 426,
+        "mismatches": []
+      }
+    ]
+  },
+  "unit_tests": {
+    "passed": 46,
+    "failed": 0,
+    "skipped": 0,
+    "host": "SGP",
+    "provenance": "TEST_ONLY ephemeral PKI/files; Docker/network/operational credentials mocked",
+    "elapsed_seconds_observational": 0.801918,
+    "output_sha256": "e5a9f6e75a2d3e10118539e7925a7bc087c129057008ba9d052d6eeaa3fca36f",
+    "prior_45_case_run": {
+      "at_utc": "2026-10-16T12:35:34.157226+00:00",
+      "passed": 45,
+      "output_sha256": "9af1a8f8450069d3949e43c00a0f357033074ad5f609e86322aa9aff4c77d2d1"
+    },
+    "capacity_acceptance": false
+  },
+  "attempts": [
+    {
+      "at_utc": "2026-10-16T12:37:33Z",
+      "status": "PRIMARY_AND_FALLBACK_QUALIFICATION_FAILED",
+      "reason": "ROUTE_DENIAL_FAILED; helper incorrectly expected POST403 from location-only static review; effective global method guard returns405",
+      "actual_containment": "6Manager stopped; all stopped states confirmed; no Proxy/Edge/DB stopped"
+    },
+    {
+      "at_utc": "2026-10-16T12:39:32Z",
+      "status": "MANAGERS_RESTORED_RUNNING_VALID_FALLBACK",
+      "reason": "Same6 restart +same3 reload; strictTLS/Paper4positive contracts passed; wrong method expectation reproduced"
+    },
+    {
+      "observed_between_utc": ["2026-10-16T12:39:32Z", "2026-10-16T12:41:06Z"],
+      "status": "DENIAL_EXPECTATION_CORRECTED_NOT_POLICY_WEAKENED",
+      "reason": "Actual3profiles GET200/POST405/HEAD405/unknown404; nginx-T global request_method guard confirmed",
+      "regression": "Full6leaf+3profile qualification mocked test rejects POST403; final46PASS"
+    },
+    {
+      "at_utc": "2026-10-16T12:41:39.643204+00:00",
+      "status": "FINAL_CONNECTED_TLS_AND_BOUNDED_READ_PASS",
+      "restarts_in_this_final_check": 0
+    }
+  ],
+  "connected_qualification": {
+    "at_utc": "2026-10-16T12:41:39.643204+00:00",
+    "financial_effects": 0,
+    "human_current_policy_qualification": false,
+    "loaded_manager_tls": [
+      {
+        "certificate_sha256": "80788add88a7e4ff4a3ab72d418e50417996a85c7c48a741c724017b94a788ab",
+        "port": 8023,
+        "tls": "TLSv1.3"
+      },
+      {
+        "certificate_sha256": "090a870a5f54b996a9b9218532c9748603ef00c8b1690087a8b31867c56e6108",
+        "port": 8024,
+        "tls": "TLSv1.3"
+      },
+      {
+        "certificate_sha256": "80788add88a7e4ff4a3ab72d418e50417996a85c7c48a741c724017b94a788ab",
+        "port": 8123,
+        "tls": "TLSv1.3"
+      },
+      {
+        "certificate_sha256": "090a870a5f54b996a9b9218532c9748603ef00c8b1690087a8b31867c56e6108",
+        "port": 8124,
+        "tls": "TLSv1.3"
+      },
+      {
+        "certificate_sha256": "80788add88a7e4ff4a3ab72d418e50417996a85c7c48a741c724017b94a788ab",
+        "port": 8223,
+        "tls": "TLSv1.3"
+      },
+      {
+        "certificate_sha256": "090a870a5f54b996a9b9218532c9748603ef00c8b1690087a8b31867c56e6108",
+        "port": 8224,
+        "tls": "TLSv1.3"
+      }
+    ],
+    "proxy_profiles": [
+      {
+        "business_rows_recorded": false,
+        "catalogue_relations": 96,
+        "negative_cases": 4,
+        "positive_reads": 4,
+        "profile": "paper",
+        "profile_id": "PAPER_BINANCE_USDM"
+      },
+      {
+        "business_rows_recorded": false,
+        "catalogue_relations": 96,
+        "negative_cases": 4,
+        "positive_reads": 4,
+        "profile": "sandbox",
+        "profile_id": "SANDBOX_BINANCE_USDM"
+      },
+      {
+        "business_rows_recorded": false,
+        "catalogue_relations": 96,
+        "negative_cases": 4,
+        "positive_reads": 4,
+        "profile": "live",
+        "profile_id": "LIVE_BINANCE_USDM"
+      }
+    ],
+    "status": "MANAGER_TLS_REPAIRED_FALLBACK_LOADED_NOT_HUMAN_POLICY_ACCEPTANCE"
+  },
+  "private_recovery": {
+    "preparation_receipt": {
+    "keys_jwt_ca_db_config_images_unchanged": true,
+    "manifest_sha256": "fab4dc5bac2cb7c470353295490afac4ce288573037312627093f736374dfc8b",
+    "private_bundle": "/home/bobby/secure/portal-manager-read-v2/renewal-epg10-08-64qjgx59",
+    "runtime_mutations": 0,
+    "status": "PREPARED_NOT_ACTIVATED"
+    },
+    "current_status": "ACTIVE_VALID_FALLBACK",
+    "loaded_set": "fallback",
+    "unique_private_files_changed": 4,
+    "file_publication_events_primary_plus_fallback": 8,
+    "keys_ca_jwt_db_config_images_preserved": true,
+    "certificate_not_after_utc": "2026-11-15T12:37:33Z",
+    "directory_mode": "0700 root:root",
+    "file_mode": "0600",
+    "retention": "Named private bundle retained30days as explicit recovery/forensic material, manual owner maintenance; original expired leaves not functional rollback",
+    "recovery_option": "Both valid same-identity sets retained; no insecure/expired fallback"
+  },
+  "certificate_sha256": {
+    "facade": "80788add88a7e4ff4a3ab72d418e50417996a85c7c48a741c724017b94a788ab",
+    "issuer": "090a870a5f54b996a9b9218532c9748603ef00c8b1690087a8b31867c56e6108",
+    "proxy_client": "377361960dd52ce5f201a173f2aeb2e8f84e82cfd1593a2dbf492c83321e8c40",
+    "ca": "e4a0ff8f882f073e600dc3ec99b862b9bd88a953a91e694d347ee0c71883ddfe"
+  },
+  "runtime_reconciliation": {
+    "hk_before": [
+      {
+        "name": "portal-execution-edge-execution-edge-1",
+        "id": "131c8c7ef16dfa512dc388c47a52f1c7e5e0305de7d046ba2014174e9fdce4c1",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "6180b9bf3d7d16cc8b9ada67ccb6c860e3c83430412de14758961f9857db90f6",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.222432627Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-live-execution-edge-1",
+        "id": "73cd3e85723776aa7b1445ecc62d8b981253ad72ad54973d884ef4cf9fb2768f",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "98a191c75adf491d5b61de58f2e7d3b7e022a1f15533150d406ae9dc7f55ab0f",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.216153683Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-live-manager-projection-worker-1",
+        "id": "510a0fa25669cddb5bf0b2d3d508176c9bd84631340e270ef401f49edf16b3fe",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "1582b40cffaa5fb00350fa79da5f32519d03271fdb6f6dc59e719bc73ca68d53",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.216377234Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-live-projection-postgres-1",
+        "id": "ed97b30e4ed355d3ee1359a7441fdbca45467dad5b83b8e224b1ec319f4d64c6",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.196296887Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-live-source-proxy-1",
+        "id": "e5895351de60e4ae25a2d8375c55c2f606f5cbce6aa919fcf20e3a91b9482dbf",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "config": "9bb20c8894a71aa620bce6a62828f66336618526a0f8e6fcb4a1f46449d6384c",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.200743474Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-manager-projection-worker-1",
+        "id": "8113bdc737f1085fd41e123a956c942e54dd6452bc1c15c42191efd2136fbde4",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "95e96a9b2c547f91b6175a0055de71aaee7197db3b37ed48012509cacee73801",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.212450549Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-projection-postgres-1",
+        "id": "8c7913cc1e393e4c6165570459dd60b4ab091a5aaaa69cfffeb69f23f899d3fb",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.1391836Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-sandbox-execution-edge-1",
+        "id": "cfbd5942298e66cdabf53cbd00329b9bd4da9f584a09bfd407fcdc17996ab569",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "cd79e9c68f67595e5ddbb88bddb95e4694a5b286ac25a72fb29bbe38d15190a1",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.220112038Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-sandbox-manager-projection-worker-1",
+        "id": "9a222eec68a10e3fa46a06b394d69634d28c2e61ce47d6643485966bd04f28f7",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "12294191799e7d112a3c8c8eff86f32dce1531fc40ec87062d87b13b53b23caa",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.210734102Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-sandbox-projection-postgres-1",
+        "id": "1f2f7796c26de7c81b32bb5a3995fef6f16b9f69b9c2fe1552c863d642a1696f",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.134189771Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-sandbox-source-proxy-1",
+        "id": "dadf1c61f7b883af2250f66d608f2ede8bedfd81caeeaf13ea48581cf0e41186",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "config": "da4b44c00580f3e4dfa42b77fd160f72c79300d6ab3f226e595ec42ee7f26b77",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.163786113Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-source-proxy-1",
+        "id": "ffdcbdebe71def456c83809d1382daeaac04f60815c37e78c1f4355c1668f098",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "config": "21786bb09a2c5e94481b457a19a262c0cb2bf3fc6edb86629b053247ca329de8",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.153396054Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-manager-read-paper-v2-portal_manager_read-1",
+        "id": "2a87918c7fd17bc0ef28fd5328414da3c1c0e9d15440ca214f245688dc8cd22f",
+        "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+        "config": "225db7755ea8ca9317e18af8febf06c7f3a4f92892a57f344a626126c98bf889",
+        "running": true,
+        "started_at": "2026-09-15T04:32:03.552777833Z",
+        "restarts": 3
+      },
+      {
+        "name": "portal-manager-read-paper-v2-portal_manager_issuer-1",
+        "id": "30c3a81dddfa5a88aa6585626843db52ba78d72b07a535e400d2536594c63952",
+        "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+        "config": "7710fc8e206a9812eb2abea7d7d222a1c568217a2f7ee6d8b122ed0009043342",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.191486379Z",
+        "restarts": 0
+      },
+      {
+        "name": "trading-system-manager-read-sandbox-portal_manager_read-1",
+        "id": "fb2107bd7021de57ed42648d53ff719345f4b4e9360f4edc71ed7308b232f91a",
+        "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+        "config": "453f59be45d1935795155c1aa2e44ceb7c6e10d636878f54f7319e4fa831a5bd",
+        "running": true,
+        "started_at": "2026-09-15T04:32:05.420318911Z",
+        "restarts": 4
+      },
+      {
+        "name": "trading-system-manager-read-sandbox-portal_manager_issuer-1",
+        "id": "3b15396a2c4520a53abd283a65c3cda98bff119e3993a0430d86b1ea1cd60565",
+        "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+        "config": "a97d6be022ee4c9c11e61539980aa80a15a96d77f18d2af94b057cae1d89c4df",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.042209541Z",
+        "restarts": 0
+      },
+      {
+        "name": "trading-system-manager-read-live-portal_manager_read-1",
+        "id": "cc975621909254caa701977735cfd1543032afb6e8fdaeb85eba04d13a8357dc",
+        "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+        "config": "976ebe89ed6839c23119c4ed7b927a6465de0cd333941c93fcbe077d740f8111",
+        "running": true,
+        "started_at": "2026-09-15T04:32:05.66963468Z",
+        "restarts": 4
+      },
+      {
+        "name": "trading-system-manager-read-live-portal_manager_issuer-1",
+        "id": "5577af90835f3c21710afe3d7ff9654991426aa46a3914e8a14eb7279c5c29c2",
+        "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+        "config": "e68c442990013c2c22a55a0816d62124823aa5d0aabfc95ad27278a2d76664ba",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.050424722Z",
+        "restarts": 0
+      }
+    ],
+    "hk_after": [
+      {
+        "name": "portal-execution-edge-execution-edge-1",
+        "id": "131c8c7ef16dfa512dc388c47a52f1c7e5e0305de7d046ba2014174e9fdce4c1",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "6180b9bf3d7d16cc8b9ada67ccb6c860e3c83430412de14758961f9857db90f6",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.222432627Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-live-execution-edge-1",
+        "id": "73cd3e85723776aa7b1445ecc62d8b981253ad72ad54973d884ef4cf9fb2768f",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "98a191c75adf491d5b61de58f2e7d3b7e022a1f15533150d406ae9dc7f55ab0f",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.216153683Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-live-manager-projection-worker-1",
+        "id": "510a0fa25669cddb5bf0b2d3d508176c9bd84631340e270ef401f49edf16b3fe",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "1582b40cffaa5fb00350fa79da5f32519d03271fdb6f6dc59e719bc73ca68d53",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.216377234Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-live-projection-postgres-1",
+        "id": "ed97b30e4ed355d3ee1359a7441fdbca45467dad5b83b8e224b1ec319f4d64c6",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.196296887Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-live-source-proxy-1",
+        "id": "e5895351de60e4ae25a2d8375c55c2f606f5cbce6aa919fcf20e3a91b9482dbf",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "config": "9bb20c8894a71aa620bce6a62828f66336618526a0f8e6fcb4a1f46449d6384c",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.200743474Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-manager-projection-worker-1",
+        "id": "8113bdc737f1085fd41e123a956c942e54dd6452bc1c15c42191efd2136fbde4",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "95e96a9b2c547f91b6175a0055de71aaee7197db3b37ed48012509cacee73801",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.212450549Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-projection-postgres-1",
+        "id": "8c7913cc1e393e4c6165570459dd60b4ab091a5aaaa69cfffeb69f23f899d3fb",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.1391836Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-sandbox-execution-edge-1",
+        "id": "cfbd5942298e66cdabf53cbd00329b9bd4da9f584a09bfd407fcdc17996ab569",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "cd79e9c68f67595e5ddbb88bddb95e4694a5b286ac25a72fb29bbe38d15190a1",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.220112038Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-sandbox-manager-projection-worker-1",
+        "id": "9a222eec68a10e3fa46a06b394d69634d28c2e61ce47d6643485966bd04f28f7",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "config": "12294191799e7d112a3c8c8eff86f32dce1531fc40ec87062d87b13b53b23caa",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.210734102Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-sandbox-projection-postgres-1",
+        "id": "1f2f7796c26de7c81b32bb5a3995fef6f16b9f69b9c2fe1552c863d642a1696f",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.134189771Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-sandbox-source-proxy-1",
+        "id": "dadf1c61f7b883af2250f66d608f2ede8bedfd81caeeaf13ea48581cf0e41186",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "config": "da4b44c00580f3e4dfa42b77fd160f72c79300d6ab3f226e595ec42ee7f26b77",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.163786113Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-execution-edge-source-proxy-1",
+        "id": "ffdcbdebe71def456c83809d1382daeaac04f60815c37e78c1f4355c1668f098",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "config": "21786bb09a2c5e94481b457a19a262c0cb2bf3fc6edb86629b053247ca329de8",
+        "running": true,
+        "started_at": "2026-09-15T04:31:56.153396054Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-manager-read-paper-v2-portal_manager_read-1",
+        "id": "2a87918c7fd17bc0ef28fd5328414da3c1c0e9d15440ca214f245688dc8cd22f",
+        "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+        "config": "225db7755ea8ca9317e18af8febf06c7f3a4f92892a57f344a626126c98bf889",
+        "running": true,
+        "started_at": "2026-10-16T12:39:24.779624184Z",
+        "restarts": 0
+      },
+      {
+        "name": "portal-manager-read-paper-v2-portal_manager_issuer-1",
+        "id": "30c3a81dddfa5a88aa6585626843db52ba78d72b07a535e400d2536594c63952",
+        "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+        "config": "7710fc8e206a9812eb2abea7d7d222a1c568217a2f7ee6d8b122ed0009043342",
+        "running": true,
+        "started_at": "2026-10-16T12:39:25.023819622Z",
+        "restarts": 0
+      },
+      {
+        "name": "trading-system-manager-read-sandbox-portal_manager_read-1",
+        "id": "fb2107bd7021de57ed42648d53ff719345f4b4e9360f4edc71ed7308b232f91a",
+        "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+        "config": "453f59be45d1935795155c1aa2e44ceb7c6e10d636878f54f7319e4fa831a5bd",
+        "running": true,
+        "started_at": "2026-10-16T12:39:25.285275074Z",
+        "restarts": 0
+      },
+      {
+        "name": "trading-system-manager-read-sandbox-portal_manager_issuer-1",
+        "id": "3b15396a2c4520a53abd283a65c3cda98bff119e3993a0430d86b1ea1cd60565",
+        "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+        "config": "a97d6be022ee4c9c11e61539980aa80a15a96d77f18d2af94b057cae1d89c4df",
+        "running": true,
+        "started_at": "2026-10-16T12:39:25.541952691Z",
+        "restarts": 0
+      },
+      {
+        "name": "trading-system-manager-read-live-portal_manager_read-1",
+        "id": "cc975621909254caa701977735cfd1543032afb6e8fdaeb85eba04d13a8357dc",
+        "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+        "config": "976ebe89ed6839c23119c4ed7b927a6465de0cd333941c93fcbe077d740f8111",
+        "running": true,
+        "started_at": "2026-10-16T12:39:25.821076411Z",
+        "restarts": 0
+      },
+      {
+        "name": "trading-system-manager-read-live-portal_manager_issuer-1",
+        "id": "5577af90835f3c21710afe3d7ff9654991426aa46a3914e8a14eb7279c5c29c2",
+        "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+        "config": "e68c442990013c2c22a55a0816d62124823aa5d0aabfc95ad27278a2d76664ba",
+        "running": true,
+        "started_at": "2026-10-16T12:39:26.074285865Z",
+        "restarts": 0
+      }
+    ],
+    "changed_fields": [
+      {
+        "name": "portal-manager-read-paper-v2-portal_manager_read-1",
+        "fields": [
+          "started_at",
+          "restarts"
+        ]
+      },
+      {
+        "name": "portal-manager-read-paper-v2-portal_manager_issuer-1",
+        "fields": [
+          "started_at"
+        ]
+      },
+      {
+        "name": "trading-system-manager-read-sandbox-portal_manager_read-1",
+        "fields": [
+          "started_at",
+          "restarts"
+        ]
+      },
+      {
+        "name": "trading-system-manager-read-sandbox-portal_manager_issuer-1",
+        "fields": [
+          "started_at"
+        ]
+      },
+      {
+        "name": "trading-system-manager-read-live-portal_manager_read-1",
+        "fields": [
+          "started_at",
+          "restarts"
+        ]
+      },
+      {
+        "name": "trading-system-manager-read-live-portal_manager_issuer-1",
+        "fields": [
+          "started_at"
+        ]
+      }
+    ],
+    "hk_ids_images_configs_unchanged": true,
+    "all18_hk_running": true,
+    "only6_manager_start_times_changed": true,
+    "manager_historical_restart_counters": "3/4/4 facade before manualrestart; Docker normal manualrestart resets to0; prior evidence retained",
+    "sgp_after": [
+      {
+        "name": "/portal-control-api-1",
+        "image": "sha256:8400439bc2cea6baf9bb86d3b4e851d4a0601531de86a7c1a47347f5837b7641",
+        "config": "963a3d8436bd48220cc41cafb73a18e8c6d0d4fd6abe72eddb843539b8918f60",
+        "running": true,
+        "restarts": 0
+      },
+      {
+        "name": "/portal-portal-web-1",
+        "image": "sha256:c2fb7a8c1122f8b737c3cefee1b78cafda7b025a0f8c36b56b5b9424a1b9ea31",
+        "config": "e0e3c404d22c6ae26fa993e3d56433591bcaf7c77fc89a675b21f4856ff87840",
+        "running": true,
+        "restarts": 0
+      },
+      {
+        "name": "/portal-research-preview-control-api-1",
+        "image": "sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d",
+        "config": "42a9f3ad29ba77eeab6683f99070469673bb2f78824f3c4191093f8ee664306d",
+        "running": true,
+        "restarts": 0
+      },
+      {
+        "name": "/portal-research-preview-portal-api-1",
+        "image": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+        "config": "59551a2cdeb2bb8696602336920f30db42cd61b9ecaed3cbd55ebd96e50d4fd4",
+        "running": true,
+        "restarts": 0
+      },
+      {
+        "name": "/portal-stable-v1-0-1-control-api-1",
+        "image": "sha256:d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263",
+        "config": "26c0d954d1f3af2133b2a528f39430f814e3c35d350095aecf7178f3bc90cedb",
+        "running": true,
+        "restarts": 0
+      }
+    ],
+    "sgp5_images_configs_restarts_match_prior": true,
+    "all5_sgp_running": true,
+    "sgp_runtime_mutations": 0,
+    "proxy_process_reloads_per_profile": 3,
+    "proxy_process_reloads_total": 9,
+    "proxy_container_restarts": 0,
+    "edge_db_restarts": 0
+  },
+  "source_round": {
+    "ts_head": "1a648ea8b09fa0bcc9397d55b4f1ef0a0cc1547a",
+    "ts_change": "Native market writer durable-progress fix, no TLS/auth provider edit",
+    "pm_head": "e2003bfe8a21124fb78dbdfdda1ad774cbecdfc2",
+    "pm_unstaged_sha256": "876fdb0e24124646870e522eef9a3db4b994846b36fb700ea70c4a0c52d7646e",
+    "pm_change": "Active approved PMA11-14 handoff/recovery WIP preserved, not edited",
+    "dl_head": "cd3fd3a68cb5cb3ffe030425a7e6d3d21fdb908f",
+    "dl_change": "Read-only Kafka internal-offset watch, no authority inference",
+    "research_head": "169195ca534462dd07376bcc5872b474ba366567",
+    "research_change": "21ELP2-10 files committed; main/app-module/profile identity wiring unchanged",
+    "peer_worktrees_mutated_by_this_slice": false
+  },
+  "cleanup": {
+    "decision": "OWNED_TEST_RESOURCES_REMOVED_SHARED_PRUNE_NOT_AUTHORIZED",
+    "targets": [
+      {
+        "path": "/tmp/epg10-08-tls-3dMhfxGE",
+        "allocated_bytes_removed": 114688,
+        "free_before_bytes": 168496881664,
+        "free_after_bytes": 168496996352
+      },
+      {
+        "path": "/tmp/epg10-08-tls-final-lEqGxMm8",
+        "allocated_bytes_removed": 98304,
+        "free_before_bytes": 168361070592,
+        "free_after_bytes": 168361168896
+      }
+    ],
+    "total_allocated_test_bytes_removed": 212992,
+    "disks_observational_shared_host": true,
+    "own_containers_images_volumes_networks_created": 0,
+    "images_removed": 0,
+    "buildkit_cache_created_or_removed": 0,
+    "shared_cache_prune": "Not performed: no owned cache/images, concurrent peer work and retained release/rollback artifacts protected",
+    "hk_available_bytes": 222043660288,
+    "sgp_available_bytes": 168361168896,
+    "own_locks_removed": true,
+    "private_test_keys_remaining": 0,
+    "operational_recovery_bundle_explicitly_retained": true
+  },
+  "release": {
+    "canonical_checkout": "/home/bobby/.worktrees/portal-execution-manager-v2",
+    "canonical_branch": "feat/manager-v2-paper-read",
+    "canonical_commit": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+    "stable_sgp": "/home/bobby/portal-main-release main@533162635f56584d630e3d971d77d50860595f15",
+    "edge_release": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+    "edge_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+    "active_feature_worktrees": "Same six documented in final-reconciliation.json; no new/merged worktree removed",
+    "images_and_release_rollback": "All active/explicit operational rollback artifacts retained unchanged; no new image",
+    "pushed": false,
+    "merged": false
+  }
+}

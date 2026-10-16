@@ -1,5 +1,16 @@
 {
   "schema": "epg10.security-verification.v1",
+  "latest_continuation": {
+    "recorded_at_utc": "2026-10-16T12:44:26Z",
+    "evidence": "tls-continuation.json",
+    "status": "TLS_RUNTIME_QUALIFIED_AUTHORITY_OWNER_DEFERRED_TO_PM_INTEGRATION",
+    "final_helper_tests": {"passed": 46, "failed": 0, "skipped": 0},
+    "connected": {"strict_tls": 6, "positive_reads": 12, "denial_cases": 12, "failed": 0},
+    "tls_runtime_mutated": true,
+    "authority_runtime_activation": false,
+    "full_phase08_accepted": false,
+    "snapshot_below": "Original11:58 isolated490-case snapshot retained. ExpiredTLS and unapproved-repair statements below are historical and superseded by this continuation; actual identity/field/COMMIT qualifications are explicitly owner-deferred, not waived."
+  },
   "recorded_at_utc": "2026-10-16T11:58:00Z",
   "phase": "EPG10-08",
   "phase_status": "IN_PROGRESS_OWNED_ISOLATED_PACKAGE_QUALIFIED_SOURCE_DARK",
@@ -267,6 +278,7 @@
     "execution_host": "SGP; HK foreign measurement lock respected"
   },
   "evidence": {
+    "latest_tls_runtime_continuation": "tls-continuation.json",
     "immutable_qualification": "qualification.json",
     "prior_failures_and_fixes": "attempt-history.json",
     "cleanup": "cleanup-receipt.json",
