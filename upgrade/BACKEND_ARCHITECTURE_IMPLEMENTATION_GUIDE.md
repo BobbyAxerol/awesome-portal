@@ -738,7 +738,11 @@ deep-dive → ADR → slice → evidence discipline documented above.
   checked bounded JWT/JWKS, legacy SSE expiry fix, explicitCA-only TLS1.3,
   selected-payload secret defense qualified source-dark: final490automated PASS,
   0FAIL/ignored/skip, fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for
-  actual providers, TS commit/business proof and researcher field approval.
+  actual providers, TS commit/business proof and researcher field implementation.
+  [Original10/11 round2 intake](evidence/execution-edge-v1_2/EPG10-11/round2-intake.json)
+  consumes PM current-human candidate0e7059cc (23 peer TEST_ONLY PASS) and the
+  owner-accepted r1 field matrix; neither is installed runtime authority.
+  Research normal-hook exit124 remains FAIL_OR_INCOMPLETE, not acceptance.
   Historical08 completion round after the earlier PM deferral recorded
   PM`c401a023` still explicitly NOT_PUBLISHED for runtime authority/COMMIT proof;
   Research`169195ca` has no production provider and UNMAPPED identity. The single

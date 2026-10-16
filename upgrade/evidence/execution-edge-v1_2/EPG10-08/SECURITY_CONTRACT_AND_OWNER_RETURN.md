@@ -11,8 +11,9 @@ ACTUAL_AUTHORITY_PUBLICATION_MISSING** (completion request resumed12:55UTC).
 cleanup COMPLETE; **three integration debt items OPEN for round2**, tracked in
 main phase08: `08-READ-TRUST`, `08-RESEARCHER-POLICY`, `08-COMMAND-COMMIT`.
 Full08 NOT_MET does not prohibit independent09 implementation after09 approval.
-Recommended next action: approve09, execute all independent slices and accept
-real partner returns within the original08 scope when each becomes available.
+Current next action: accept actual partner returns within the original08 scope
+as available;09–11 independent work has since completed. The historical
+recommendation to approve09 does not require approval again.
 Final490automated PASS/0FAIL/ignored/skip; fmt/strict zero-warning Clippy PASS.
 **Full08 exit NOT_MET**; actual current security is not production-certified.
 Continuation:46repair tests PASS, actual6TLS +12positive/12denial PASS across
@@ -27,7 +28,31 @@ Use [verification](verification.json) and the final main journal for executed re
 No isolated fixture is an issuer, membership receipt, mounted provider or native
 TS commit. Paper/sandbox/live are structural scopes; Canary is a live stage.
 
-## Current completion return —16/10/2026,19:55 ICT
+## Current round2 delta —17/10/2026, Asia/Saigon
+
+The [original10/11 intake](../EPG10-11/round2-intake.json) supersedes only stale
+dependency assertions below, not historical test receipts. PM candidate
+`0e7059cc968654d50e76fcc76f3a2d3aceababe3` now qualifies the genuine-human
+prepare/ENTER/terminal-proof and logical-COMMIT lease lifecycle:23peer TEST_ONLY
+PASS, not Edge counts. Owning PM imports it pending current composition tests.
+Actual authenticated transport/trust and separate workload/app/read-field
+providers are not installed. This human fence does NOT fix the native global
+journal publisher-generation COMMIT gap.
+
+Owner-accepted matrix `pma-field-policy-20261016-r1`, SHA256
+`e274b7ffb43d8916f542516c851a470a7fd77e8d883f339496dbf6c72cf47824`,
+closes the **policy approval** subgap. Researcher linked READ covers only the
+approved attributed fields/current eligible tuples; HISTORY/EXPORT/STREAM
+remain denied in r1. Financial projection, actual current provider and privacy/
+revoke qualification remain peer-owned implementation/binding work. Do not
+continue requesting approval of r1 or infer an authentication/runtime grant.
+
+Research normal-hook landing timed out exit124, leaving the candidate staged;
+no release/provider qualification follows. Original08/10/11 round2 remains
+approved; bind only an authentic compatible return, not a successful ENTER as
+all read rights. Full connected08/10/11 remains NOT_MET.
+
+## Historical completion return —16/10/2026,19:55 ICT
 
 Bobby requested finishing this same08 after the earlier deferral. The missing
 dependency is now freshly verified **producer implementation/publication**, not
@@ -70,7 +95,9 @@ provider. Offline consumer leases do not supply human/business authority.
    wait for all PM13/P184 publication merely to supply this trust contract.
 3. **Restricted researcher lane only:** owner-reviewed exact allowed fields,
    precision/bands/history/export/SSE and current linked ownership/membership.
-   BE§4.8 remains PROPOSED; absent decisions deny this lane. This does not block
+   At this historical snapshot BE§4.8 remained PROPOSED. The current r1 owner
+   decision is accepted above; its projection/provider must now implement that
+   exact revision, not seek the same approval again. This does not block
    manager all-business read acceptance once items1–2 are real. Existing service
    Manager reads remain available but are not human-policy qualification.
 4. **Command lane only — RG03/RG17:** implement actual human/workload/delegation

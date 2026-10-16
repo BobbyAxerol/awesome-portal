@@ -10412,7 +10412,9 @@ connected/production cutover or approval to start11.
 tested and cleaned2026-10-16; connected acceptance remains original-phase round2.
 **Tests:**535PASS/0FAIL/skip/ignored/filtered;5formal cases PASS only in declared
 isolated scope, fmt/strict Clippy PASS (§23.20). Earlier failed attempts retained
-and all owned defects fixed. **Full exit:** NOT_MET — **Runtime activation:** NOT_AUTHORIZED.
+and all owned defects fixed. **Full exit:** NOT_MET — **Runtime activation:**
+NOT_ACTIVATED; exact connected source/target/recovery inputs remain unbound.
+Original10/11 round2 is approved; do not request the same generic approval again.
 
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-11](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-11-bàn-giao-vận-hành-và-đóng-acceptance);
 [BE §§16–18; ELP2-11](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.2, 10–12](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
@@ -14049,6 +14051,133 @@ foreign DL rollout lock. Identity is BobbyAxerol <vugioan11022002@gmail.com>;
 normal default commit path has no active hook changed or bypassed. Stage only
 owned11source/test/ops/bounded evidence/tracking; preserve unrelated untracked
 feasibility review, no secret/private key/raw logs/data/cache/runtime staged.
+
+#### 23.20.1 Original10/11 connected round2 continuation — 2026-10-17 Asia/Saigon
+
+**Approval/status:** Bobby explicitly approved continuing EPG10-11 and original
+10/11 connected round2; no new phase/general approval is needed. Baseline
+`feat/execution-edge-upgrade-v1_2@d682da29454ceb709754b7e381b76c22383d951e`.
+Independent11 stays COMPLETE; connected intake IN_PROGRESS/full exit NOT_MET
+until exact applicable source/authority/release facts actually qualify.
+
+**Goal/guides/scope:** consume newly available owner returns from the SAME six10
+groups, bind only a genuinely supplied compatible input, execute its dependent
+original-phase tests. EDGE10/11, BE16–18/ELP2-11, REVIEW6–7, existing10/11 runbooks
+and C4 govern this continuation. Inspect current source/runtime/dirty digests,
+not chat memory. Repair owned stale status/index text now. No new product/UI,
+peer implementation, schema, identity/key provisioning or arbitrary DB access.
+
+**Invariants/decision/rollback:** keep existing V1/D4/Manager/Live readers and
+operational containers unchanged; source-qualified protocol is not installed
+authority/export/identity. An owner-approved field matrix is no longer awaiting
+owner approval, but still needs its actual projection/provider qualification.
+Never turn a read grant into native command authority or source-terminal human
+lease proof into global journal publisher fencing. Runtime changes need the
+exact returned target/config/recovery/owner tuple, not another generic phase
+approval. Preserve prior535and all failed receipts as historical, not new PASS.
+
+**Tests/evidence/cleanup gate:** fresh bounded metadata/hash/contract intake;
+existing offline operations/runner checks for this documentation-only slice
+under a short own HK lease if no foreign work, no cargo/PG rebuild when tested
+product bytes unchanged. Connected tests only for a real returned binding;
+otherwise explicit NOT_RUN with owner/exact input. Inventory image/BuildKit,
+rootfree, protected23runtime tuples and all active/rollback/worktree retention.
+No shared prune, deploy/restart, financial send, source row/secret copy or push/
+merge; any temporary resource is exact-owned and cleaned. All runnable owned
+work finishes here; cross-owner inputs stay the original phase's round2.
+
+**Initial fresh intake18:13UTC (01:13Asia/Saigon):** PM candidate0e7059cc is
+new committed23PASS TEST_ONLY current-human ENTER/terminal-proof and advisory
+COMMIT fence source; actual transport/trust/workload/field providers are still
+uninstalled. OwningPM imports it on f8+WIP and has owner-approved field matrixr1;
+composition qualification pending. Research fa857b85 staged landing is inside
+its own17:57:19–18:17:19UTC lease; no SGP job started here. HK prior DL lock is
+now absent, not assumed active until19:13. Finish actual source/ABI intake and
+record exact runnable-versus-blocked partition before any runtime action.
+
+**Consumed delta01:20Asia/Saigon:** candidate0e7059cc clean; genuine-human
+prepare/ENTER/terminal-proof recovery and logical-COMMIT lifecycle is implemented
+and qualified23peer TEST_ONLY cases. OwningPMf8 imports it; its new composition
+qualification is still pending. Matrix`pma-field-policy-20261016-r1` is explicitly
+OWNER_ACCEPTED (`e274b7ff…`); close the policy-approval subgap, not runtime fields.
+Linked READ uses only approved attributed fields/current eligible tuples; r1
+HISTORY/EXPORT/STREAM remain denied. Financial projection/provider/qualification
+is actual remaining peer implementation, not a request to approve r1 again.
+
+**Research attempt honestly consumed:** actual normal-hook landing ended
+01:15:39Asia/Saigon, exit124/FAIL_OR_INCOMPLETE; HEADfa857b85 unchanged,12staged
+paths, staged diff`9bb27f56…`,8peer runtime tuples unchanged. This is not a new
+landing PASS or mounted authority. Peer owners retain their implementation;
+this continuation edits no TS/PM/DL/Research worktree and adopts no untested WIP.
+Research started a separate normal-hook retry01:20:53Asia/Saigon, lease until
+02:00:53; HEAD stillfa857 at01:21:36, new staged digest`e7011983…`. That retry is
+IN_PROGRESS, not a replacement PASS for the failed first attempt. Neither the
+past timeout nor a future source-hook PASS alone supplies actual runtime trust.
+
+**Partition/action (same original returns):** runnable owned intake/ABI review,
+status repair and operator handoff are completed now. No compatible actual input
+is returned: PM human ENTER/resolve produces no fresh Edge operation/field grant;
+real authenticated transport/trust/mapping/current workload+field provider remain
+uninstalled. TS77a publisher/sql59 decisive hashes unchanged; its native global
+publisher fence is separate and still unresolved. Matching B/delta/history/floor,
+typed command mount, selected Research consumer, connected budgets/config and
+qualified release/recovery scope remain original SOURCE/TRUST/COMMAND/RESEARCH/
+LOAD/RELEASE returns. Exact owner/input/dependent tests are in
+[round2 intake](evidence/execution-edge-v1_2/EPG10-11/round2-intake.json) and the
+same10 packet. No new full-connected test is claimed or substitute provider built.
+
+**Test scheduling:** fresh HK lock owner`claude-writer-release`, until
+02:29:02Asia/Saigon; SGP lock PM publisher-capture until01:21:40Asia/Saigon.
+Do not start the contemplated9ops/100runner rerun or any cargo/pytest/container/
+load job in those foreign windows. No product/harness byte changed, so retain
+historical535qualification and validate only bounded metadata/hash/JSON/link/diff
+consistency now. These locks are scheduling facts, not the reason connected
+acceptance is missing; authentic binding inputs are independently absent.
+
+**Verification/closeout01:24Asia/Saigon:** bounded read-only consistency command
+completed24checks/0failures,612local Markdown file links resolve. All439public
+qualification inputs and4helper hashes match the historical535tested bytes;
+no code/harness change and no fresh unit/integration/capacity/connected test run.
+`git diff --check` PASS. Fresh runtime receipts01:18SGP/01:20HK match all
+23protected tuples exactly (image/config/start/restart/running); existing active
+Paper/Sandbox/Live Manager reads unchanged. Deploy runner active. Research's
+failed first normal-hook attempt and separate ongoing retry remain distinct.
+
+**C4/release/retention:** fresh Docker images/containers/volume/BuildKit metadata
+recorded in intake; own images/build/cache/container/network/volume creation0,
+removed bytes0, no cleanup required. HK root available212,277,415,936B of
+518,933,680,128B; SGP167,616,708,608B of665,811,062,784B (25.17%free), observation
+only, not capacity PASS or permission to prune shared cache. Foreign locks and
+all active/named rollback/08private PKI recovery artifacts retained; all7active
+Portal worktrees remain active, none inferred merged/abandoned. Canonical
+`/home/bobby/.worktrees/portal-execution-manager-v2`
+`feat/manager-v2-paper-read@54c6f5f3`; this active feature
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`
+`feat/execution-edge-upgrade-v1_2@d682da29` plus enclosing intake commit. Stable
+SGP`/home/bobby/portal-main-release main@53316263`; Edge compose-declared release
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`,
+revision8814cd2a, image`sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e`.
+Exact23current image/config tuples and baseline hash are retained in intake.
+No runtime/DB/TLS/key/financial effect, peer edit, push or merge.
+
+**Recorded result/recommendation:** original10/11 round2 source intake and owned
+status/handoff repair COMPLETE;11independent stays COMPLETE, full connected10/11
+NOT_MET. T10-01…05/T11-01…05 connected NOT_RUN for missing authentic compatible
+inputs, not missing generic approval. Source human lifecycle and r1 policy
+approval subgaps are closed; do not keep advertising them as missing. PM/Research
+must finish their actual client/trust/current workload+field/projection/provider
+commissioning; TS supplies native fenced publication/export and exact source
+scope. Consume each qualifying return immediately in its original dependent
+03/08/09/10/11 cell under exact target/recovery facts and an own free lease.
+No new phase, repeated general approval or blanket wait for unrelated roadmaps.
+All owned runnable intake/docs/metadata checks finished; real peer implementation
+is not mislabeled as an Edge code defect or as merely missing evidence.
+
+**Commit scope:** only six owned tracking/handoff Markdown files and the bounded
+`EPG10-11/round2-intake.json`; configured BobbyAxerol identity verified, no active
+hook changed/bypassed. Preserve unrelated untracked feasibility review. This
+documentation continuation does not replace, rerun or amend historical535/failed
+test receipts. Enclosing local commit supplies revision; no push/merge requested.
 
 
 

@@ -141,11 +141,15 @@ Canonical source remains `/home/bobby/.worktrees/portal-execution-manager-v2`
 all immutable active digests/configs and named rollback retention are in the
 reconciliation. None of phase10's source is deployed. No push/merge.
 
-Next: recommend named approval for11's independent operational handoff work.
-Connected10 stays in its original round2; use the six scoped returns above,
-consume actual inputs immediately and rerun affected bindings/T10 cases.
-No blanket PM/P184 wait, repeat generic approval, fabricated provider or
-full-connected sign-off. Phase11 is NOT_STARTED until Bobby approves it.
-Full tracking and tested-source/release boundaries agree with
+Current continuation (2026-10-17 Asia/Saigon): Bobby approved11; its independent
+operational handoff is COMPLETE. Original10/11 connected round2 is also approved
+and remains NOT_MET; the earlier recommendation to obtain11 approval is obsolete.
+Use the SAME six returns above, consume actual inputs immediately and rerun
+their affected bindings/T10/T11 cases. [11 handoff](../EPG10-11/OPERATIONS_HANDOFF_AND_ACCEPTANCE.md)
+and [round2 intake](../EPG10-11/round2-intake.json) record new PM current-human
+source qualification and accepted r1 field policy, without inventing a mounted
+provider/exporter or treating them as connected PASS. No blanket PM/P184 wait,
+repeat generic approval, fabricated provider or full-connected sign-off.
+Historical10 evidence and tested-source/release boundaries remain in
 [main plan §23.19](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#2319-epg10-10-shadow-fenced-cutover-and-rollback-execution--2026-10-16)
 and the backend indexes.

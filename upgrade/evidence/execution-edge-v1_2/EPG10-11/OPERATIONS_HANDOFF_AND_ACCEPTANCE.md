@@ -3,6 +3,8 @@
 Status: COMPLETE_INDEPENDENT — implemented, isolated-tested and cleaned.
 Full connected acceptance NOT_MET; no production activation/sign-off.
 Bobby approved independent11 and original10 round2 on actual owner returns.
+Current original10/11 round2 continuation is also approved; no repeated generic
+approval is required. See the dated intake below before historical source pins.
 [Main plan §23.20](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#2320-epg10-11-operational-handoff-execution--2026-10-16)
 is the journal, not this packet. No production cutover/alert installation/command
 activation, UI, analytics calculator or new source stack is included.
@@ -64,6 +66,51 @@ create ephemeral keys, never copy owner PKI. Full phase/campaign exit stays NOT_
 until exact released scope has connected evidence, not a blanket stop on all work.
 
 ## Parallel source consumption and next action
+
+### Current round2 intake —17/10/2026,01:20 Asia/Saigon
+
+[Bounded intake](round2-intake.json) pins the fresh source/dirty hashes, actual
+return availability, runtime/C4 metadata and exact owner/action for the SAME six
+10 return groups. This continuation is documentation/contract reconciliation,
+not a new product feature, test-provider installation or production deployment.
+
+- PM candidate0e7059cc now implements genuine-human prepare/ENTER and immutable
+  terminal-proof recovery with a logical-COMMIT fence:23peer TEST_ONLY real-PG/
+  crypto PASS. It does not return Edge current operation/field grants or an
+  installed authenticated transport. Owning PMf8 imports it; composition tests
+  are pending. The human lease must not be mistaken for the native publisher
+  owner/generation-through-COMMIT fence, whose decisive TS77a source is unchanged.
+- Matrix `pma-field-policy-20261016-r1` is OWNER_ACCEPTED; another r1 approval is
+  NOT required. Current-grant mapping/provider, attributed financial projection
+  and its privacy/revoke/source qualification remain peer-owned implementation.
+  Linked researcher HISTORY/EXPORT/STREAM remain denied under the accepted r1.
+- Research fa857b85 has staged current-human source work. Its actual normal-hook
+  landing receipt ended01:15:39 Asia/Saigon with exit124/FAIL_OR_INCOMPLETE;
+  HEAD did not advance and its8protected runtime tuples stayed unchanged. This
+  is not a passing landing or mounted provider. Exact staged hash is in intake.
+  A separate bounded normal-hook retry began01:20:53 Asia/Saigon and is still
+  in progress at intake; its result must not be predeclared. No retry started here.
+- No actual exporter/authority/command/consumer/config/recovery binding has been
+  returned for the scoped T10/T11 connected cases. They remain NOT_RUN, not
+  failed new tests and not blocked on renewed phase approval. The Edge read
+  provider remains unavailable by default; PM async ENTER cannot safely stand
+  in for synchronous fresh read/field authorization.
+
+Fresh23protected runtime tuples remain unchanged against the recorded baseline.
+No product/harness bytes changed; earlier535PASS remains historical, not rerun
+or added to the23peer cases. HK writer-release and SGP PM test leases prevent
+starting another test job during this intake. Only bounded read-only metadata,
+hash/link/JSON consistency and Git diff checks are performed here. No owned
+image/cache/container/volume/network was created; no shared cleanup is authorized.
+
+**Next permitted action:** use the original10 packet. PM/Research owners finish
+their actual client/trust/current workload+field/provider commissioning return;
+TS returns its native fenced publication/export scope. As an applicable return
+arrives, Edge binds it and executes original03/08/09/10/11 dependent drills under
+the exact returned target/recovery and a free measurement lease. Do not wait for
+unrelated roadmaps, invent grants, open a new phase or seek generic approval again.
+
+### Historical source-qualified baseline
 
 Read-only pins: [source-review.json](source-review.json); initial17:06:59Z,
 latest source reconciliation17:52:04Z. The following4ec/9c39 paragraphs describe

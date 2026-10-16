@@ -8,7 +8,7 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
-  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…10 approved/in progress;11 independent approved/in progress**. Six offline
+  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…10 approved/in progress;11 independent COMPLETE; original10/11 connected round2 approved, NOT_MET**. Six offline
   metadata cases PASS, with source/runtime/TLS and owned unknowns recorded in
   §23.9 and its manifest. No activation/runtime acceptance. The campaign starts
   from current `origin/dev`, keeps the complete four-file owner guide bundle under
@@ -36,8 +36,13 @@ Chúng không thay thế phase hoặc exit gate trong
   Owned current-scope/JWT/SSE-expiry/strict-TLS/selected-field
   package qualified source-dark, final490automated PASS/0FAIL/ignored/skip,
   fmt/strict zero-warning Clippy PASS. Full08 NOT_MET: actual authority/TS native
-  commit/researcher field policy remain exact scoped
-  dependencies. Historical08 completion round after earlier deferral recorded PM
+  commit/researcher field implementation remain exact scoped
+  dependencies. Current [round2 intake](../evidence/execution-edge-v1_2/EPG10-11/round2-intake.json)
+  consumes PM current-human candidate0e7059cc (23 peer TEST_ONLY PASS) and
+  owner-accepted field matrixr1; neither installs the real provider. Field-policy
+  approval and human lifecycle source implementation are no longer missing.
+  Research normal-hook attempt timed out (exit124), not a new PASS or release.
+  Historical08 completion round after earlier deferral recorded PM
   `c401a023` still publishes no actual human/workload/COMMIT provider and Research
   `169195ca` remains unqualified/UNMAPPED. Single owner packet now specifies
   RG03/RG08 read trust and separate restricted-field/command returns, not a
