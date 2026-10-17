@@ -136,6 +136,7 @@ export class ManagerScoreHistoryStore {
     // Known legacy v1 is not a RESTATED item but still consumes the shared
     // budget. A newer/unknown mode cannot be erased into a complete empty list.
     if(rows.some(r=>!["portal.execution.manager-score-recalculation.v1","portal.execution.manager-score-original-inputs.v1",
+      "portal.execution.manager-score-original-inputs.v2",
       "portal.execution.manager-score-restatement.v1"].includes(r.schema_version??"")))fail("HISTORY_SCHEMA_UNSUPPORTED");
     const heads=await query<Head>("SELECT head_kind,calculation_key FROM execution_manager_score_mode_heads WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND source_revision=$4 ORDER BY head_kind",args);
     if(heads.length>2||new Set(heads.map(h=>h.head_kind)).size!==heads.length||heads.some(h=>
@@ -154,7 +155,8 @@ export class ManagerScoreHistoryStore {
       if(accessDigest(source)!==actual.payload_digest||actual.payload_digest!==inventory.source_digest)fail("HISTORY_SOURCE_CHANGED");
       const originalKey=inventory.heads.find(h=>h.head_kind==="ORIGINAL_INPUTS")?.calculation_key??null;
       const restatedKey=inventory.heads.find(h=>h.head_kind==="RESTATED_CURRENT_POLICY")?.calculation_key??null;
-      const originals=inventory.rows.filter(r=>r.schema_version==="portal.execution.manager-score-original-inputs.v1");
+      const originals=inventory.rows.filter(r=>r.schema_version==="portal.execution.manager-score-original-inputs.v1"||
+        r.schema_version==="portal.execution.manager-score-original-inputs.v2");
       const calculations=inventory.rows.filter(r=>r.schema_version==="portal.execution.manager-score-restatement.v1");
       if(originals.length!==(originalKey===null?0:1)||originalKey!==null&&originals[0]?.calculation_key!==originalKey||
         calculations.length>0&&originalKey===null)fail("HISTORY_DATA_INVALID");

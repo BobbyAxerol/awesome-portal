@@ -11425,3 +11425,36 @@ overall post-test restore stopped at missing shared-Core base tables (selected
 suites use separate DBs). [Exact failure/cleanup and normal-hook next step](execution_loop/evidence/ELP2-06/scoped-score-history.md#impacted-gate-terminal-2026-10-17t1316utc).
 No source/runtime/restore PASS inferred; source/index/eight runtime tuples
 unchanged. Land one coherent normal hook, not another full focused retest.
+
+<a id="elp2-backend-path-20261017"></a>
+
+**Latest backend continuation — History terminal and PATH follow-through:**
+`0aad2697fe5f47977b1379329c3167f12aea3849` landed63owned files
++18,920/−3,685 including generated contracts. [Actual terminal and cleanup](execution_loop/evidence/ELP2-06/scoped-score-history.md#history-terminal-20261017-1347):
+720contracts,APIbuild,5,373API PASS/3existing skips and scoped PG restore PASS;
+source freeze/eight protected runtimes unchanged, resources/lease clean.
+This supersedes only that batch's pending entries, retaining previous failures.
+
+Approved next [PATH original proof → off-request historical worker → retained
+revision/history](execution_loop/evidence/ELP2-06/path-original-restated.md)
+is APPLIED/UNCOMMITTED; new tests NOT_RUN at entry, one bounded actual-PG
+affected gate then coherent normal-hook commit. Legacy v1 input bytes/history
+unchanged; real accepted manifest/source installation NOT_PROVIDED. No new
+public field, frontend change, source/job/command/Live activation or migration.
+
+[Current phase-by-phase remaining backend/qualification census](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-backend-return-20261017-path)
+separates real local code debt from source/trust,14 numeric budgets, approved
+Score/Regime calibration and matched coexistence/P184G2. Continue existing
+02–11 assignment;11NOT_ENTRY_READY. Claude NOT_STARTED_BY_OWNER_DIRECTION /
+AWAITING_CONSUMER_REVIEW; existing historical DTO handoff is ready for future
+assignment, not consumer acceptance. No push/dev/main/sign/release/deploy.
+
+**PATH impacted terminal14:04UTC:** APIbuild PASS;10files/295tests,
+294PASS/1FAIL. Only final-revoke test expected404 instead of existing409;
+assertion corrected, added fresh-read denial and immutable-row equality, no
+product code changed. [Failure/hash/resource cleanup and grouped normal-hook
+next step](execution_loop/evidence/ELP2-06/path-original-restated.md#path-affected-20261017-1404).
+Restore/final commit still pending; no whole-phase/source/browser PASS.
+One coherent normal-hook landing is reserved as `20261017/path-land-140613`,
+PENDING at freeze; exact terminal result/full SHA lives in its controller/log.
+No additional unaffected focus/engine/browser run or hook bypass.

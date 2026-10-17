@@ -1,5 +1,25 @@
 # ELP2-06 — Scoped retained Score history and archive classification
 
+<a id="history-terminal-20261017-1347"></a>
+
+## Terminal landing —2026-10-17T13:47UTC
+
+Actual commit `0aad2697fe5f47977b1379329c3167f12aea3849`,63files
++18,920/−3,685 versus `f1f5fc7d` (generated artifacts included, not logic lines).
+Controller `20261017/history-land-131843`, terminal PASS/exit0 at13:47:29UTC:
+720contracts/64files, APIbuild,5,373API tests/3existing skips in361files,
+actual scoped PostgreSQL restore and four access-row digests PASS. Gate log
+SHA256 `b83e46235758f6e454d6f3fa44c3e9a86f089ea6d4da0683205581b040d8490e`.
+Eight protected runtime image/start/restart tuples unchanged; source/index
+freeze checks PASS, owned resources empty and lease released. Capacity after
+gate:10,876MiB available RAM,156GiB filesystem available (75% used),
+C4 `NO_ACTION_NEEDED`; no prune. Earlier failed receipts below remain retained.
+
+Only that batch's code/contract/isolated correctness gate is closed. Real
+source, current-human/trust, calibration, budgets, coexistence/G2, FE/browser
+remain separate. New [PATH follow-through](path-original-restated.md) has its
+own impacted tests; do not reuse this PASS for the changed PATH implementation.
+
 ## Entry, scope and preserved failed gate
 
 Approved backend continuation, `docs/research-loop-plan`, parent

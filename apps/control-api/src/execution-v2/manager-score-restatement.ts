@@ -90,7 +90,21 @@ function sameDelta(a:string,b:string):boolean {
  * dependency custody, not a newly approved normalization artifact. */
 function work(item:Item,p:Policy,revision:string,computed:number):
   {task:Task;withheld:ManagerScoreWithheldMetricReasons;reasons:string[]}|{absence:string} {
-  if(item.task.input.kind==="PATH")return {absence:"PATH_METHOD_PROOF_NOT_RETAINED"};
+  if(item.task.input.kind==="PATH"){
+    // This state is REBUILT from an actual immutable v2 ORIGINAL source row,
+    // including manifest bytes/input/scope/binding/source/availability pins.
+    if(item.method_custody.state!=="BOUND_PATH_DEPENDENCY"||!item.path_dependency)
+      return {absence:"PATH_METHOD_PROOF_NOT_RETAINED"};
+    if(item.method_custody.method_digest!==p.method_digest)
+      return {absence:"INPUT_METHOD_NOT_RETAINED_FOR_POLICY"};
+    const task=JSON.parse(item.input_json) as Task;
+    if(task.input.kind!=="PATH")return fail("MANAGER_RESTATED_INPUT_INVALID");
+    task.expected_policy_revision=p.policy_revision;task.calculation_revision=revision;task.computed_at_ms=computed;
+    // The ONLY path edit already permitted by calculateRestated. Preserve all
+    // original grid/cost/gap/turnover/subperiod facts, including their absence.
+    task.input.path.stress_delta_bps=p.stress_delta_bps;
+    return {task,withheld:{},reasons:[]};
+  }
   const dep=item.metrics_dependency;
   if(item.method_custody.state!=="BOUND_METRICS_DEPENDENCY"||!dep)
     return {absence:"METRIC_DEPENDENCIES_NOT_RETAINED"};
@@ -122,6 +136,8 @@ const header=z.object({
     availability:z.enum(["AVAILABLE","PARTIAL","NOT_PUBLISHED"]),reason_codes:z.array(text).max(8),historical:z.unknown().nullable()}).strict()).min(1).max(128),
   calculation_key:digest,supersedes_calculation_key:digest.nullable(),
 }).strict();
+const storedPathSummary=z.object({sample_count:ms,complete_block_count:ms,incomplete_tail_duration_ms:ms,
+  reason_codes:z.array(text).max(32).refine(v=>new Set(v).size===v.length)}).strict();
 function parse(row:StoredRow,o:Original,c:Pick<ManagerScoreRecalculationConfig,"maximum_bundle_bytes">):ManagerScoreRestatementSnapshot {
   const b=header.parse(capture(row.payload,c.maximum_bundle_bytes)) as ManagerScoreRestatementSnapshot;
   if(row.calculation_key!==b.calculation_key||accessDigest(b)!==row.payload_digest||
@@ -157,16 +173,27 @@ function parse(row:StoredRow,o:Original,c:Pick<ManagerScoreRecalculationConfig,"
       derived_input_digest:h.derived_input_digest,policy_identity_digest:h.policy_identity_digest,withheld_metric_reasons:h.withheld_metric_reasons};
     if(h.derivation_context_digest!==accessDigest(derivation)||
       Object.keys(h.result).sort().join(",")!=="path_summary,provenance,quality,raw_metrics"||h.result.quality.preview!==null||
-      h.result.path_summary!==null||!ms.safeParse(h.checked_at_ms).success||
+      !ms.safeParse(h.checked_at_ms).success||
       Object.keys(h.feed_freshness).sort().join(",")!=="maximum_input_age_ms,source_age_ms,status"||
       !ms.safeParse(h.feed_freshness.maximum_input_age_ms).success||h.feed_freshness.maximum_input_age_ms<1||
       h.feed_freshness.source_age_ms!==h.checked_at_ms-b.source.as_of_ms||
       h.feed_freshness.status!==(h.feed_freshness.source_age_ms>h.feed_freshness.maximum_input_age_ms?
         "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS":"WITHIN_CURRENT_FEED_FRESHNESS"))
       fail("MANAGER_RESTATED_RESULT_MISMATCH");
-    if(expected.task.input.kind!=="METRICS"||
-      accessDigest(h.result.raw_metrics)!==accessDigest(expected.task.input.quality.metrics))
-      fail("MANAGER_RESTATED_RESULT_MISMATCH");
+    if(expected.task.input.kind==="METRICS"){
+      if(h.result.path_summary!==null||accessDigest(h.result.raw_metrics)!==accessDigest(expected.task.input.quality.metrics))
+        fail("MANAGER_RESTATED_RESULT_MISMATCH");
+    }else{
+      // GET restores an already immutable named-worker result. Validate the
+      // closed shape/count bounds and exact provenance; DO NOT recompute PATH
+      // metrics or F(PRB) here. Stored worker intake is the numeric boundary.
+      const summary=storedPathSummary.parse(h.result.path_summary),path=expected.task.input.path;
+      if(h.result.raw_metrics===null||summary.sample_count!==path.observations.length||
+        summary.complete_block_count>path.blocks.length||
+        summary.incomplete_tail_duration_ms>path.window_end_ms-path.window_start_ms||
+        summary.reason_codes.some(r=>!h.result.quality.reason_codes.includes(r)))
+        fail("MANAGER_RESTATED_RESULT_MISMATCH");
+    }
     const {preview:_preview,...quality}=h.result.quality;
     const validated=managerScorePublication.parse({slot:entry.slot,quality,raw_metrics:h.result.raw_metrics,provenance:h.result.provenance});
     const p=validated.provenance;

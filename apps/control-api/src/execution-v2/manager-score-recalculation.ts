@@ -23,9 +23,17 @@ export interface ManagerScoreMetricsDependency {
   metrics_input_digest:string; method_digest:string; stress_delta_bps:string;
   source_locator:string;
 }
+/** PROPOSED private producer sidecar. Actual accepted source/installation is
+ * NOT PROVIDED by this type. Exact manifest bytes are retained, not re-created
+ * from the current policy. Only ORIGINAL v2 custody accepts this new record. */
+export interface ManagerScorePathDependency {
+  manifest_json:string;
+  manifest_sha256:string;
+}
 export interface ManagerScoreRecalculationTask {
   slot:"RAW"|"DIRECT_NAV"; task:Omit<ManagerScoreRuntimeTask,"policy">;
   metrics_dependency?:ManagerScoreMetricsDependency;
+  path_dependency?:ManagerScorePathDependency;
 }
 type Task=ManagerScoreRecalculationTask;
 type RetainedTask=Task&{input_json:string};
@@ -99,6 +107,9 @@ const sameDelta=(a:string,b:string)=>{
   return normal(a)===normal(b);
 };
 function validateDependency(item:Task,d:ManagerModelDocument,initialPolicy?:Policy):void {
+  // Do not silently omit a new v2 sidecar in the legacy v1 recalculation mode.
+  // Root/input opaque keys remain untouched when no outer sidecar is supplied.
+  if(item.path_dependency!==undefined)fail("MANAGER_DERIVED_PATH_REQUIRES_V2_CUSTODY");
   if(item.metrics_dependency===undefined){
     // A declared binding cannot be silently stripped into legacy absence.
     if(item.task.metrics_dependency_digest!==undefined)fail("MANAGER_DERIVED_METRIC_DEPENDENCY_INVALID");

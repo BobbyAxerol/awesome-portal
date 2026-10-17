@@ -6,8 +6,8 @@ import type { PoolClient } from "pg";
 import { accessDigest } from "./access-policy";
 import { managerModelDocument, type ManagerModelDocument } from "./manager-model.contract";
 import { managerScorePublication, type ManagerScorePublication } from "./manager-score-publication.contract";
-import type { ManagerScoreRuntimeTask } from "./manager-score-runtime";
-import type { ManagerScoreMetricsDependency, ManagerScoreRecalculationConfig, ManagerScoreRecalculationTask } from "./manager-score-recalculation";
+import { managerScoreMethodDescriptor,managerScoreMethodDigest,type ManagerScoreRuntimeTask } from "./manager-score-runtime";
+import type { ManagerScoreMetricsDependency, ManagerScorePathDependency,ManagerScoreRecalculationConfig, ManagerScoreRecalculationTask } from "./manager-score-recalculation";
 
 type OriginalTask = Omit<ManagerScoreRuntimeTask, "policy">;
 export interface ManagerScoreOriginalInput {
@@ -17,6 +17,7 @@ export interface ManagerScoreOriginalInput {
   input_json: string;
   task: OriginalTask;
   metrics_dependency?: ManagerScoreMetricsDependency;
+  path_dependency?: ManagerScorePathDependency;
 }
 type Limits = Pick<ManagerScoreRecalculationConfig, "maximum_bundle_bytes" |
   "maximum_revisions_per_source" | "maximum_retained_bytes_per_source">;
@@ -70,6 +71,19 @@ const dependencySchema = z.object({
   source_revision:dependencyText,source_set_digest:digest,source_as_of_ms:ms,metrics_input_digest:digest,method_digest:digest,
   stress_delta_bps:z.string().max(512).regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$(?![\s\S])/),source_locator:dependencyText,
 }).strict();
+const pathDependencySchema=z.object({manifest_json:z.string().min(1).max(65_536),manifest_sha256:digest}).strict();
+/** PROPOSED source manifest, not a jointly accepted wire or a JSON authority
+ * flag. Scope/binding identifiers preserve the original worker byte grammar;
+ * newly introduced manifest refs/locators use strict dependency text. */
+const pathMethodManifestSchema=z.object({
+  schema_version:z.literal("portal.execution.manager-score-path-method.v1"),
+  scope_digest:digest,binding_digest:digest,source_revision:text,source_set_digest:digest,
+  source_as_of_ms:ms,path_input_digest:digest,method:managerScoreMethodDescriptor,method_digest:digest,
+  method_manifest_ref:dependencyText,available_at_ms:ms,source_locator:dependencyText,
+  original_stress_delta_bps:z.string().max(512).regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$(?![\s\S])/)
+    .refine(v=>Number.isFinite(Number(v))&&Number(v)>0),
+}).strict();
+export type ManagerScorePathMethodManifest=z.infer<typeof pathMethodManifestSchema>;
 const hash = (s:string) => "sha256:" + createHash("sha256").update(s).digest("hex");
 function fail(s:string):never { throw new Error(s); }
 const scopeKeys = (d:Pick<ManagerModelDocument,"workspace_id"|"environment"|"profile_id">) =>
@@ -87,10 +101,10 @@ interface RetainedInput extends ManagerScoreOriginalInput {
   method_custody:{
     state:"BOUND_METRICS_DEPENDENCY"|"NOT_RETAINED";
     reason:"PATH_METHOD_PROOF_NOT_RETAINED"|"METRIC_DEPENDENCIES_NOT_RETAINED"|null;
-  };
+  }|{state:"BOUND_PATH_DEPENDENCY";reason:null;method_digest:string};
 }
 export interface ManagerScoreOriginalCustodySnapshot {
-  schema_version:"portal.execution.manager-score-original-inputs.v1";
+  schema_version:"portal.execution.manager-score-original-inputs.v1"|"portal.execution.manager-score-original-inputs.v2";
   source:ReturnType<typeof sourcePin>;
   retained_tasks:RetainedInput[];
   inputs_digest:string;
@@ -111,7 +125,16 @@ export function captureManagerScoreOriginalInputs(items:readonly ManagerScoreRec
   if(!Number.isSafeInteger(maximumBytes)||maximumBytes<1||maximumBytes>8*1024*1024)
     fail("MANAGER_ORIGINAL_LIMIT_INVALID");
   const detached=capture(items,maximumBytes,true,true);
-  return detached.map(item=>({...item,input_json:JSON.stringify(item.task)}));
+  return detached.map(item=>{
+    // Synchronous, detached intake BEFORE the caller's first yield/worker.
+    // A same-named opaque ROOT/INPUT key does not opt in to the new protocol.
+    if(item.path_dependency!==undefined){
+      taskSchema.parse(item.task);
+      if(item.metrics_dependency!==undefined)fail("MANAGER_ORIGINAL_DEPENDENCY_MISMATCH");
+      pathMethod(item.task,item.path_dependency);
+    }
+    return {...item,input_json:JSON.stringify(item.task)};
+  });
 }
 
 /** Closed JSON, before stringify; only a caller's original task may omit its
@@ -160,8 +183,31 @@ function sourceScores(d:ManagerModelDocument):Map<string,ManagerScorePublication
   }
   return result;
 }
+/** Caller supplies bounded own-data capture, never a live source object. No
+ * current-policy handle is consulted; this cannot manufacture past knowledge. */
+function pathMethod(task:OriginalTask,raw:ManagerScorePathDependency):ManagerScorePathMethodManifest {
+  const dep=pathDependencySchema.parse(raw),bytes=Buffer.from(dep.manifest_json,"utf8");
+  if(bytes.length>65_536||hash(dep.manifest_json)!==dep.manifest_sha256||
+    new TextDecoder("utf-8",{fatal:true}).decode(bytes)!==dep.manifest_json)
+    fail("MANAGER_ORIGINAL_PATH_MANIFEST_MISMATCH");
+  const m=pathMethodManifestSchema.parse(JSON.parse(dep.manifest_json));
+  // Inspect the marker only under the explicit OUTER v2 intake. Do not reserve
+  // or retype this key in the historical worker's accepted opaque envelope.
+  const marker=Object.getOwnPropertyDescriptor(task,"path_dependency_digest");
+  if(task.input.kind!=="PATH"||!marker||!("value"in marker)||marker.value!==accessDigest(dep)||
+    m.scope_digest!==accessDigest(task.scope)||m.binding_digest!==accessDigest(task.binding)||
+    m.source_revision!==task.source_revision||m.source_set_digest!==task.source_set_digest||
+    m.source_as_of_ms!==task.input.quality.as_of_ms||m.path_input_digest!==accessDigest(task.input)||
+    m.method_digest!==managerScoreMethodDigest(m.method)||m.method.comparable_basis_id!==task.binding.comparable_basis_id||
+    m.method.currency!==task.input.path.currency||m.method.currency!==task.input.quality.currency||
+    m.original_stress_delta_bps!==task.input.path.stress_delta_bps||
+    m.available_at_ms>m.source_as_of_ms||m.available_at_ms>task.computed_at_ms||
+    task.input.path.block_manifest_registered_at_ms>m.available_at_ms)
+    fail("MANAGER_ORIGINAL_PATH_DEPENDENCY_MISMATCH");
+  return m;
+}
 function bindInput(raw:ManagerScoreOriginalInput,d:ManagerModelDocument,scores:Map<string,ManagerScorePublication>,limit:number):RetainedInput {
-  const allowed=new Set(["slot","input_json","task","metrics_dependency"]);
+  const allowed=new Set(["slot","input_json","task","metrics_dependency","path_dependency"]);
   // Stored RetainedInput adds derived fields; those are checked by the final
   // rebuilt-envelope digest below, not trusted as producer method evidence.
   const retainedOnly=new Set(["input_digest","original_publication_digest","method_custody"]);
@@ -169,10 +215,11 @@ function bindInput(raw:ManagerScoreOriginalInput,d:ManagerModelDocument,scores:M
   // Normalize undefined only in the original task, never source publication or
   // stored envelope; restore original order from exact input_json after JSONB.
   const item={...capture({slot:raw.slot,input_json:raw.input_json,
-    ...(raw.metrics_dependency===undefined?{}:{metrics_dependency:raw.metrics_dependency})},limit),
+    ...(raw.metrics_dependency===undefined?{}:{metrics_dependency:raw.metrics_dependency}),
+    ...(raw.path_dependency===undefined?{}:{path_dependency:raw.path_dependency})},limit),
     task:capture(raw.task,limit,true)};
   const closed=z.object({slot:z.enum(["RAW","DIRECT_NAV"]),input_json:z.string().min(1),
-    task:z.unknown(),metrics_dependency:dependencySchema.optional()}).strict().parse(item);
+    task:z.unknown(),metrics_dependency:dependencySchema.optional(),path_dependency:pathDependencySchema.optional()}).strict().parse(item);
   const ordered=capture(JSON.parse(closed.input_json),limit) as OriginalTask;
   taskSchema.parse(ordered);
   if(JSON.stringify(ordered)!==closed.input_json||accessDigest(ordered)!==accessDigest(closed.task))
@@ -193,7 +240,12 @@ function bindInput(raw:ManagerScoreOriginalInput,d:ManagerModelDocument,scores:M
     fail("MANAGER_ORIGINAL_SOURCE_MISMATCH");
   let method:RetainedInput["method_custody"];
   const dep=closed.metrics_dependency;
-  if(dep===undefined){
+  const pathDep=closed.path_dependency;
+  if(pathDep!==undefined){
+    if(dep!==undefined)fail("MANAGER_ORIGINAL_DEPENDENCY_MISMATCH");
+    const manifest=pathMethod(t,pathDep);
+    method={state:"BOUND_PATH_DEPENDENCY",reason:null,method_digest:manifest.method_digest};
+  }else if(dep===undefined){
     if(t.metrics_dependency_digest!==undefined)fail("MANAGER_ORIGINAL_DEPENDENCY_MISMATCH");
     method={state:"NOT_RETAINED",reason:t.input.kind==="PATH"?"PATH_METHOD_PROOF_NOT_RETAINED":"METRIC_DEPENDENCIES_NOT_RETAINED"};
   }else{
@@ -203,7 +255,8 @@ function bindInput(raw:ManagerScoreOriginalInput,d:ManagerModelDocument,scores:M
     method={state:"BOUND_METRICS_DEPENDENCY",reason:null};
   }
   return {slot:closed.slot,input_json:closed.input_json,task:ordered,input_digest:inputDigest,
-    original_publication_digest:accessDigest(score),method_custody:method,...(dep===undefined?{}:{metrics_dependency:dep})};
+    original_publication_digest:accessDigest(score),method_custody:method,
+    ...(dep===undefined?{}:{metrics_dependency:dep}),...(pathDep===undefined?{}:{path_dependency:pathDep})};
 }
 function bundleFrom(d:ManagerModelDocument,tasks:readonly ManagerScoreOriginalInput[],limit:number):ManagerScoreOriginalCustodySnapshot {
   if(!Array.isArray(tasks)||tasks.length<1||tasks.length>128)fail("MANAGER_ORIGINAL_INPUT_BOUND");
@@ -213,13 +266,17 @@ function bundleFrom(d:ManagerModelDocument,tasks:readonly ManagerScoreOriginalIn
     if(seen.has(k))fail("MANAGER_ORIGINAL_DUPLICATE_SLOT");seen.add(k);return item;
   }).sort((a,b)=>{const x=slotKey(a.slot,a.task.binding),y=slotKey(b.slot,b.task.binding);return x<y?-1:x>y?1:0;});
   if(scores.size!==seen.size)fail("MANAGER_ORIGINAL_INCOMPLETE_INPUT_SET");
-  const base={schema_version:"portal.execution.manager-score-original-inputs.v1" as const,
+  // Only an explicit new outer proof chooses v2. Historical opaque root/input
+  // keys, even with the same names, remain byte-exact v1 NOT_RETAINED inputs.
+  const version:ManagerScoreOriginalCustodySnapshot["schema_version"]=retained.some(t=>t.path_dependency!==undefined)?
+    "portal.execution.manager-score-original-inputs.v2":"portal.execution.manager-score-original-inputs.v1";
+  const base={schema_version:version,
     source:sourcePin(d),retained_tasks:retained,inputs_digest:accessDigest(retained)};
   return capture({...base,calculation_key:keyOf(base)},limit);
 }
 function parseBundle(raw:unknown,payloadDigest:string,d:ManagerModelDocument,limit:number):ManagerScoreOriginalCustodySnapshot {
   const b=capture(raw,limit) as ManagerScoreOriginalCustodySnapshot;
-  if(!b||b.schema_version!=="portal.execution.manager-score-original-inputs.v1"||
+  if(!b||!["portal.execution.manager-score-original-inputs.v1","portal.execution.manager-score-original-inputs.v2"].includes(b.schema_version)||
     Object.keys(b).sort().join(",")!=="calculation_key,inputs_digest,retained_tasks,schema_version,source"||
     accessDigest(b)!==payloadDigest||accessDigest(b.source)!==accessDigest(sourcePin(d)))
     fail("MANAGER_ORIGINAL_DIGEST_MISMATCH");

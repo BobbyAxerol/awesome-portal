@@ -16,9 +16,11 @@ import {unqualifiedAccessTrust} from "../src/execution-v2/access-trust";
 import {BUSINESS_READ_FIELDS} from "../src/execution-v2/read-fields";
 import {productReadFixture,OWN,PEER,PRIVATE} from "./elp2-product-read.fixture";
 import {ManagerScoreRuntime,loadApprovedManagerScorePolicy,managerScorePolicyHash,managerScoreRecalculationPolicy,
-  managerScorePublicationPolicyCurrent,type ApprovedManagerScorePolicy,type ManagerScoreRuntimeTask,
+  managerScorePublicationPolicyCurrent,managerScoreMethodDigest,type ApprovedManagerScorePolicy,type ManagerScoreRuntimeTask,
+  type ManagerScoreMethodDescriptor,
   type ManagerScoreRuntimePolicyArtifact} from "../src/execution-v2/manager-score-runtime";
-import {ManagerScoreOriginalCustody,type ManagerScoreOriginalInput} from "../src/execution-v2/manager-score-original-custody";
+import {ManagerScoreOriginalCustody,captureManagerScoreOriginalInputs,type ManagerScoreOriginalInput,
+  type ManagerScorePathMethodManifest} from "../src/execution-v2/manager-score-original-custody";
 import {ManagerScoreRestatement} from "../src/execution-v2/manager-score-restatement";
 import type {ManagerScoreHistoryStore} from "../src/execution-v2/manager-score-history.store";
 import {ManagerProjectionLeases} from "../src/execution-v2/manager-lease";
@@ -56,11 +58,18 @@ function policy(asOf:number,name="B",delta="5",method="SYNTHETIC:grid",anchors="
       approval_ref:"SYNTHETIC_NOT_OWNER_APPROVAL:"+name,approved_at_ms:approved,valid_until_ms:now+120_000,scope:policyScope}});
   if(loaded.status!=="READY")throw new Error(JSON.stringify(loaded));
   const p=managerScoreRecalculationPolicy(loaded.handle,now,now);if(!p||approved<=asOf)throw new Error("SYNTHETIC_LATER_POLICY");
-  return {handle:loaded.handle,p};
+  const a=artifact.policy,c=artifact.runtime_config;
+  const methodDescriptor:ManagerScoreMethodDescriptor={formula_hash:a.formula_hash,comparable_basis_id:a.comparable_basis_id,
+    duration_key:a.duration_key,observation_frequency:a.observation_frequency,calendar:a.calendar,timezone:a.timezone,
+    currency:a.currency,cash_reference_id:a.cash_reference_id,cost_method:a.cost_method,required_costs:a.required_costs,
+    block_manifest_id:a.block_manifest_id,stress_policy_id:a.stress_policy_id,grid_method_ref:c.grid_method_ref,
+    flow_adjustment_method_ref:c.flow_adjustment_method_ref,ownership_method_ref:c.ownership_method_ref,fx_method_ref:c.fx_method_ref};
+  return {handle:loaded.handle,p,methodDescriptor};
 }
 type ReadBinding={scope:typeof scope;members:ManagerMember[];subject_id:string;partition:{economic_domain:"PAPER";
   currency:string;basis:string;native_profile_ref:string;domain_proof_ref:string}};
-async function fixture(kind:"METRICS"|"PATH"="METRICS",bound=true,mixed=false,readBinding?:ReadBinding){
+async function fixture(kind:"METRICS"|"PATH"="METRICS",bound=true,mixed=false,readBinding?:ReadBinding,pathProof=false,
+  pathFault?:(task:Omit<ManagerScoreRuntimeTask,"policy">)=>void){
   // Configure the exact source/custody binding BEFORE worker bytes/digests are
   // calculated. Never retrofit identities/census into an already hashed task.
   const fixtureScope=readBinding?.scope??scope,runtimeScope={...fixtureScope,catalogue_digest:catalogue};
@@ -76,12 +85,19 @@ async function fixture(kind:"METRICS"|"PATH"="METRICS",bound=true,mixed=false,re
     calculation_revision:"SYNTHETIC:original-worker",computed_at_ms:asOf+1000,expected_policy_revision:null};
   const metrics:Omit<ManagerScoreRuntimeTask,"policy">={...base,input:{kind:"METRICS",quality:{...q,sample_count:4,complete_block_count:2,
     metrics:{net_excess_twr:"0.06",sharpe_period:"0.12",mdd:"0.04",add:"0.01",positive_block_ratio:"0.75",stress_excess_twr:"0.045"}}}};
-  const path:Omit<ManagerScoreRuntimeTask,"policy">={...base,binding:{...base.binding,subject_id:"SYNTHETIC:path-alpha"},
+  const path:Omit<ManagerScoreRuntimeTask,"policy">={...base,binding:{...base.binding,subject_id:readBinding?.subject_id??"SYNTHETIC:path-alpha"},
     input:{kind:"PATH",quality:q,path:{observations:["0.02","-0.01","0.015","-0.005"].map((net_return,i)=>({
       from_ms:start+i*100,to_ms:start+(i+1)*100,net_return,cash_return:"0",stress_subperiods:null})),
       blocks:[{from_ms:start,to_ms:asOf,complete:true,expected_observations:4}],window_start_ms:start,window_end_ms:asOf,
       expected_observations:4,grid_verified:true,required_costs_complete:true,currency:"USDT",cash_currency:"USDT",
       block_manifest_registered_at_ms:start-1,stress_delta_bps:"5"}}};
+  if(pathProof&&path.input.kind==="PATH"){
+    path.input.path.blocks=[{from_ms:start,to_ms:start+200,complete:true,expected_observations:2},
+      {from_ms:start+200,to_ms:asOf,complete:true,expected_observations:2}];
+    for(const observation of path.input.path.observations)observation.stress_subperiods=[{
+      net_return:observation.net_return,opening_capital:"10000",gross_executed_notional:"1000",turnover_verified:true}];
+    pathFault?.(path);
+  }
   const tasks=mixed?[metrics,path]:[kind==="PATH"?path:metrics],items:ManagerScoreOriginalInput[]=[];
   const runtime=new ManagerScoreRuntime(limits),scores=[];
   for(const task of tasks){
@@ -91,9 +107,25 @@ async function fixture(kind:"METRICS"|"PATH"="METRICS",bound=true,mixed=false,re
       source_as_of_ms:asOf,metrics_input_digest:accessDigest(task.input),method_digest:loaded.p.method_digest,stress_delta_bps:"5",
       source_locator:"SYNTHETIC:original-method-artifact-NOT-source-qualification"}:undefined;
     if(dep)task.metrics_dependency_digest=accessDigest(dep);
-    const result=await runtime.calculate({...task,policy:null}),{preview:_preview,...quality}=result.quality;
+    // Explicit synthetic stand-in for an independently available source-method
+    // record BEFORE original capture. The production adapter must supply this
+    // artifact; neither custody nor current policy constructs it.
+    let pathDependency:ManagerScoreOriginalInput["path_dependency"];
+    if(pathProof&&task.input.kind==="PATH"){
+      const manifest:ManagerScorePathMethodManifest={schema_version:"portal.execution.manager-score-path-method.v1",
+        scope_digest:accessDigest(task.scope),binding_digest:accessDigest(task.binding),source_revision:task.source_revision,
+        source_set_digest:task.source_set_digest,source_as_of_ms:asOf,path_input_digest:accessDigest(task.input),
+        method:loaded.methodDescriptor,method_digest:managerScoreMethodDigest(loaded.methodDescriptor),
+        method_manifest_ref:"SYNTHETIC:pre-existing-method-NOT-source-qualification",available_at_ms:asOf,
+        source_locator:"SYNTHETIC:source-method-record-NOT-source-qualification",original_stress_delta_bps:task.input.path.stress_delta_bps};
+      const manifest_json=JSON.stringify(manifest);pathDependency={manifest_json,manifest_sha256:hash(manifest_json)};
+      Object.assign(task,{path_dependency_digest:accessDigest(pathDependency)});
+    }
+    const [captured]=captureManagerScoreOriginalInputs([{slot:"RAW",task,...(dep?{metrics_dependency:dep}:{}),
+      ...(pathDependency?{path_dependency:pathDependency}:{})}],limits.maximum_input_bytes);
+    const result=await runtime.calculate({...captured.task,policy:null}),{preview:_preview,...quality}=result.quality;
     scores.push({slot:"RAW" as const,quality,raw_metrics:result.raw_metrics,provenance:result.provenance});
-    items.push({slot:"RAW",input_json:JSON.stringify(task),task,...(dep?{metrics_dependency:dep}:{})});
+    items.push(captured);
   }
   const doc:ManagerModelDocument={schema_version:"portal.execution.manager-model-input.v1",...fixtureScope,qualification:"SOURCE_VERIFIED",
     family_id:"alpha_fleet_overview",revision:base.source_revision,supersedes_revision:null,source_epoch:"SYNTHETIC:epoch",source_sequence:"1",
@@ -182,7 +214,12 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("R06 explicit historical restate
   }
   const count=async()=>(await pool.query("SELECT count(*)::text AS n FROM execution_manager_calculation_revisions")).rows[0].n;
   const restatedHead=async()=>(await pool.query("SELECT calculation_key FROM execution_manager_score_mode_heads WHERE head_kind='RESTATED_CURRENT_POLICY'")).rows[0]?.calculation_key??null;
-  async function namedReadSetup(){
+  async function originalSnapshot(d:ManagerModelDocument){
+    const client=await pool.connect();
+    try{return await new ManagerScoreOriginalCustody(config).restore(client,d);}finally{client.release();}
+  }
+  async function namedReadSetup(kind:"METRICS"|"PATH"="METRICS",pathProof=false,
+    pathFault?:(task:Omit<ManagerScoreRuntimeTask,"policy">)=>void){
     // Genuine current scope minting from existing fixture. All Core/source/
     // approval providers remain explicitly synthetic; Execution storage is PG.
     const f=productReadFixture({fields:[...BUSINESS_READ_FIELDS]}),current=Date.now();
@@ -200,7 +237,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("R06 explicit historical restate
       assignment_revision:"SYNTHETIC:a",owner_revision:"SYNTHETIC:o",binding_revision:"SYNTHETIC:b",
       valid_from_ms:current-60_000,valid_to_ms:null}));
     const boundScope={workspace_id:f.principal.workspaceId,environment:"paper" as const,profile_id:f.config.EXECUTION_EDGE_PAPER_PROFILE_ID};
-    const h=await setup(await fixture("METRICS",true,false,{scope:boundScope,members,subject_id:OWN.alpha_id,partition}));
+    const h=await setup(await fixture(kind,true,false,{scope:boundScope,members,subject_id:OWN.alpha_id,partition},pathProof,pathFault));
     const manager=new ExecutionManagerRuntime(pool,{trust:unqualifiedAccessTrust,cadence_ms:1000,maximum_publication_reads:1,
       partitions:[{scope:boundScope,commissioning:h.data.commissioning,source:h.source,publication:async()=>h.data.publication,
         bounds:{maximum_documents_per_tick:1,maximum_document_bytes:262_144,maximum_document_rows:20,
@@ -327,6 +364,132 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("R06 explicit historical restate
       expect(await count()).toBe(before);expect(worker).not.toHaveBeenCalled();
       expect(r.h.source.acknowledge).not.toHaveBeenCalled();
     }finally{await r.manager.beforeApplicationShutdown();}
+  });
+  it("actual PG PATH v2 runs original→later worker→named revision/history, preserving original bytes and archive reads without a coordinator",async()=>{
+    const r=await namedReadSetup("PATH",true),d=r.h.data.doc;
+    try{
+      const sourceBefore=(await pool.query("SELECT payload::text,payload_digest,source_sequence::text FROM execution_manager_model_revisions")).rows;
+      const originalBefore=(await pool.query("SELECT calculation_key,payload::text,payload_digest FROM execution_manager_calculation_revisions")).rows;
+      const original=await originalSnapshot(d);
+      expect(original?.schema_version).toBe("portal.execution.manager-score-original-inputs.v2");
+      expect(original?.retained_tasks[0].method_custody).toMatchObject({state:"BOUND_PATH_DEPENDENCY",reason:null});
+      const pending=await r.service.read(r.f.principal,r.q);
+      expect(pending.score_details[0].score?.quality).toMatchObject({status:"policy_pending",value:null});
+      const worker=vi.spyOn(r.h.data.runtime,"calculateRestated");
+      await r.h.idle();expect(worker).toHaveBeenCalledTimes(1);worker.mockClear();
+      const snapshot=await r.coordinator.snapshot(d),historical=snapshot.view!.entries[0].historical!;
+      expect(snapshot.view!.entries[0].availability).toBe("AVAILABLE");
+      expect(historical.result.path_summary).toMatchObject({sample_count:4,complete_block_count:2});
+      expect(historical.result.raw_metrics?.stress_excess_twr).not.toBeNull();
+      const view=await r.service.read(r.f.principal,{...r.q,revision_mode:"RESTATED_CURRENT_POLICY"});
+      expect(view).toMatchObject({availability:"AVAILABLE",purpose:"HISTORICAL_ANALYSIS_ONLY",operational_current:false,
+        eligibility:{policy_state:"CURRENT",usable_as_current_operational_score:false},
+        knowledge_cutoff_ms:snapshot.view!.knowledge_cutoff_ms,computed_at_ms:snapshot.view!.computed_at_ms});
+      expect(view.score_details[0].score?.quality.value).toBe(historical.result.quality.value);
+      expect(historical.knowledge_cutoff_ms).toBeGreaterThan(historical.economic_as_of_ms);
+      const history=await r.service.history(r.f.principal,{...r.q,revision_mode:"RESTATED_CURRENT_POLICY",limit:1});
+      expect(history).toMatchObject({availability:"AVAILABLE",page:{returned_count:1,authorized_total_count:1},
+        items:[{revision_ref:view.revision_ref,supersedes_revision_ref:pending.revision_ref}]});
+      const archive=new ManagerScoreRevisionService(pool,r.f.scopes,r.f.config);
+      const archived=await archive.read(r.f.principal,{...r.q,revision_mode:"RESTATED_CURRENT_POLICY",revision_ref:view.revision_ref});
+      expect(archived).toMatchObject({availability:"AVAILABLE",revision_ref:view.revision_ref,eligibility:{policy_state:"UNKNOWN"}});
+      expect((await archive.history(r.f.principal,{...r.q,revision_mode:"ORIGINAL_AS_PUBLISHED",limit:1})).page.authorized_total_count).toBe(1);
+      const publicBytes=JSON.stringify([view,history,archived]);
+      for(const key of ["path_dependency","manifest_json","method_manifest_ref","retained_tasks","input_json","calculation_key"])
+        expect(publicBytes).not.toContain('"'+key+'"');
+      expect((await pool.query("SELECT payload::text,payload_digest,source_sequence::text FROM execution_manager_model_revisions")).rows).toEqual(sourceBefore);
+      expect((await pool.query("SELECT calculation_key,payload::text,payload_digest FROM execution_manager_calculation_revisions WHERE calculation_key=$1",
+        [originalBefore[0].calculation_key])).rows).toEqual(originalBefore);
+      expect(worker).not.toHaveBeenCalled();expect(r.h.source.read).not.toHaveBeenCalled();expect(r.h.source.acknowledge).not.toHaveBeenCalled();
+      expect((await pool.query("SELECT count(*)::text AS n FROM execution_manager_calculation_heads")).rows[0].n).toBe("0");
+    }finally{await r.manager.beforeApplicationShutdown();}
+  });
+  it("PATH v2 later delta/anchors append revisions, restart keeps exact K and rejects incompatible method rather than recasting Original",async()=>{
+    const h=await setup(await fixture("PATH",true,false,undefined,true)),worker=vi.spyOn(h.data.runtime,"calculateRestated");
+    await h.idle();const first=await h.coordinator.snapshot(h.data.doc),original=await originalSnapshot(h.data.doc);
+    h.state.handle=policy(h.data.doc.as_of_ms,"C","10","SYNTHETIC:grid","0.2").handle;
+    await h.idle();const second=await h.coordinator.snapshot(h.data.doc);
+    expect(second.view!.supersedes_calculation_key).toBe(first.key);
+    expect(second.view!.entries[0].availability).toBe("AVAILABLE");
+    expect(Number(second.view!.entries[0].historical!.result.raw_metrics!.stress_excess_twr)).toBeLessThan(
+      Number(first.view!.entries[0].historical!.result.raw_metrics!.stress_excess_twr));
+    expect(second.view!.entries[0].historical!.result.raw_metrics!.net_excess_twr).toBe(first.view!.entries[0].historical!.result.raw_metrics!.net_excess_twr);
+    expect(await originalSnapshot(h.data.doc)).toEqual(original);
+    const restarted=new ManagerScoreRestatement({pool,runtime:h.data.runtime,currentPolicy:()=>h.state.handle,source:h.source,
+      commissioning:h.data.commissioning,publication:async()=>h.data.publication,config});
+    const lease=(await pool.query("SELECT workspace_id,environment,profile_id,holder_id::text,fencing_token::text,lease_epoch::text FROM execution_manager_consumer_fences")).rows[0];
+    await restarted.idle({lease,signal:new AbortController().signal,deadline_ms:performance.now()+5000,transaction_timeout_ms:2000,lease_ttl_ms:4000});
+    expect(await restarted.snapshot(h.data.doc)).toEqual(second);expect(worker).toHaveBeenCalledTimes(2);
+    expect(await restarted.restoreRetained(h.data.doc,first.key!)).toEqual(first.view);
+    h.state.handle=policy(h.data.doc.as_of_ms,"D","10","SYNTHETIC:different-grid").handle;
+    await h.idle();expect((await h.coordinator.snapshot(h.data.doc)).view!.entries[0]).toMatchObject({
+      availability:"NOT_PUBLISHED",reason_codes:["INPUT_METHOD_NOT_RETAINED_FOR_POLICY"],historical:null});
+    expect(worker).toHaveBeenCalledTimes(2);expect(h.source.acknowledge).not.toHaveBeenCalled();
+  });
+  const pathFaults:[string,(task:Omit<ManagerScoreRuntimeTask,"policy">)=>void,string][]=[
+    ["empty-grid",t=>{if(t.input.kind==="PATH")t.input.path.observations=[];},"partial_components"],
+    ["grid-gap",t=>{if(t.input.kind==="PATH")t.input.path.observations[0].to_ms-=1;},"partial_components"],
+    ["missing-costs",t=>{t.input.quality.required_costs_complete=false;if(t.input.kind==="PATH")t.input.path.required_costs_complete=false;},"partial_costs"],
+    ["missing-turnover",t=>{if(t.input.kind==="PATH")t.input.path.observations[0].stress_subperiods![0].gross_executed_notional=null;},"partial_components"],
+    ["invalid-block",t=>{if(t.input.kind==="PATH")t.input.path.blocks[0].expected_observations=3;},"partial_components"],
+    ["intrinsic-stale",t=>{t.input.quality.stale=true;},"stale"],
+    ["invalid-data",t=>{t.input.quality.data_valid=false;},"invalid_data"],
+  ];
+  it.each(pathFaults)("actual PATH %s retains genuine worker PARTIAL/invalid shape across PG restart and public history",async(_name,fault,status)=>{
+    const r=await namedReadSetup("PATH",true,fault);
+    try{
+      await r.h.idle();const persisted=await r.coordinator.snapshot(r.h.data.doc),entry=persisted.view!.entries[0];
+      expect(entry.availability).toBe("PARTIAL");expect(entry.historical!.result.quality).toMatchObject({status,value:null});
+      expect(entry.historical!.result.raw_metrics).not.toBeNull();expect(entry.historical!.result.path_summary).not.toBeNull();
+      expect(await r.coordinator.restoreRetained(r.h.data.doc,persisted.key!)).toEqual(persisted.view);
+      const worker=vi.spyOn(r.h.data.runtime,"calculateRestated"),archive=new ManagerScoreRevisionService(pool,r.f.scopes,r.f.config);
+      const view=await archive.read(r.f.principal,{...r.q,revision_mode:"RESTATED_CURRENT_POLICY"});
+      expect(view.score_details[0].score?.quality).toMatchObject({status,value:null});
+      expect((await archive.history(r.f.principal,{...r.q,revision_mode:"RESTATED_CURRENT_POLICY",limit:1})).items).toHaveLength(1);
+      expect(worker).not.toHaveBeenCalled();expect(r.h.source.acknowledge).not.toHaveBeenCalled();
+    }finally{await r.manager.beforeApplicationShutdown();}
+  });
+  it.each(["sample-count","block-count","tail-duration","foreign-reason"])("rejects rehashed stored PATH %s mismatch without recomputing",async fault=>{
+    const h=await setup(await fixture("PATH",true,false,undefined,true));await h.idle();const key=await restatedHead();
+    const row=(await pool.query("SELECT payload FROM execution_manager_calculation_revisions WHERE calculation_key=$1",[key])).rows[0];
+    const summary=row.payload.entries[0].historical.result.path_summary;
+    if(fault==="sample-count")summary.sample_count++;
+    if(fault==="block-count")summary.complete_block_count=100;
+    if(fault==="tail-duration")summary.incomplete_tail_duration_ms=401;
+    if(fault==="foreign-reason")summary.reason_codes=["SYNTHETIC:not-from-worker"];
+    await pool.query("UPDATE execution_manager_calculation_revisions SET payload=$1::jsonb,payload_digest=$2 WHERE calculation_key=$3",[JSON.stringify(row.payload),accessDigest(row.payload),key]);
+    const worker=vi.spyOn(h.data.runtime,"calculateRestated");
+    await expect(h.coordinator.snapshot(h.data.doc)).rejects.toThrow("MANAGER_RESTATED_RESULT_MISMATCH");
+    expect(worker).not.toHaveBeenCalled();
+  });
+  it("PATH grant revoke during final delivery refuses read without changing immutable historical result",async()=>{
+    const r=await namedReadSetup("PATH",true);
+    try{
+      await r.h.idle();
+      const retainedBefore=(await pool.query("SELECT calculation_key,payload::text,payload_digest FROM execution_manager_calculation_revisions ORDER BY calculation_key")).rows;
+      const worker=vi.spyOn(r.h.data.runtime,"calculateRestated");
+      const store=Reflect.get(r.service,"historyStore") as ManagerScoreHistoryStore,unchanged=store.unchanged.bind(store);
+      const provider=r.f.access.readPublication.getMockImplementation()!;let armed=false;
+      vi.spyOn(store,"unchanged").mockImplementation(async(...args)=>{const valid=await unchanged(...args);armed=true;return valid;});
+      r.f.access.readPublication.mockImplementation(async request=>{const publication=await provider(request);
+        if(armed)r.f.context.grants=[];return publication;});
+      // Existing fingerprint-change contract is409 for a mid-flight revoke;
+      // the next fresh authorization cannot read the now-ungranted resource.
+      await expect(r.service.read(r.f.principal,{...r.q,revision_mode:"RESTATED_CURRENT_POLICY"})).rejects.toMatchObject({status:409,code:"EXECUTION_READ_ACCESS_CHANGED"});
+      expect(armed).toBe(true);
+      await expect(r.service.read(r.f.principal,{...r.q,revision_mode:"RESTATED_CURRENT_POLICY"})).rejects.toMatchObject({status:404,code:"EXECUTION_READ_NOT_AVAILABLE"});
+      expect((await pool.query("SELECT calculation_key,payload::text,payload_digest FROM execution_manager_calculation_revisions ORDER BY calculation_key")).rows).toEqual(retainedBefore);
+      expect(worker).not.toHaveBeenCalled();expect(r.h.source.acknowledge).not.toHaveBeenCalled();
+    }finally{await r.manager.beforeApplicationShutdown();}
+  });
+  it("PATH policy revoke after actual INSERT rolls back derived head, retaining v2 Original and immutable source",async()=>{
+    let state:Awaited<ReturnType<typeof setup>>["state"]|undefined;
+    const p=transactionPool(async sql=>{if(sql.startsWith("INSERT INTO execution_manager_calculation_revisions")&&state)state.handle=null;});
+    const h=await setup(await fixture("PATH",true,false,undefined,true),{},p);state=h.state;
+    await expect(h.idle()).rejects.toThrow("MANAGER_RESTATED_POLICY_CHANGED");
+    expect(await count()).toBe("1");expect(await restatedHead()).toBeNull();
+    expect((await originalSnapshot(h.data.doc))?.schema_version).toBe("portal.execution.manager-score-original-inputs.v2");
+    expect(h.source.acknowledge).not.toHaveBeenCalled();
   });
   it("retains pending original then computes only explicit later-policy historical view without source/ACK/legacy mutation",async()=>{
     const h=await setup(),before=(await pool.query("SELECT payload::text,payload_digest,source_sequence::text FROM execution_manager_model_revisions")).rows;

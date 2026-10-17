@@ -39,6 +39,21 @@ const configSchema = z.object({
   maximum_input_age_ms: ms, minimum_window_ms: ms, maximum_window_ms: ms,
   grid_method_ref: text, flow_adjustment_method_ref: text, ownership_method_ref: text, fx_method_ref: text,
 }).strict();
+/** PRIVATE shared economic-method identity, not a source or approval loader.
+ * Keep exactly the existing tuple: anchors/maturity/delta are deliberately not
+ * part of it. A retained source manifest must supply it independently. */
+export const managerScoreMethodDescriptor = z.object({
+  formula_hash:digest,comparable_basis_id:text,duration_key:text,observation_frequency:text,
+  calendar:text,timezone:text,currency:text,cash_reference_id:text,cost_method:text,
+  required_costs:z.array(text).max(32).refine(v=>new Set(v).size===v.length),
+  block_manifest_id:text,stress_policy_id:text,grid_method_ref:text,
+  flow_adjustment_method_ref:text,ownership_method_ref:text,fx_method_ref:text,
+}).strict();
+export type ManagerScoreMethodDescriptor=z.infer<typeof managerScoreMethodDescriptor>;
+export function managerScoreMethodDigest(method:ManagerScoreMethodDescriptor):string {
+  const value=managerScoreMethodDescriptor.parse(method);
+  return hash(canonical({...value,required_costs:[...value.required_costs].sort()}));
+}
 const artifactSchema = z.object({ schema_version: z.literal("portal.execution.manager-score-policy-runtime.v1"),
   scope: scopeSchema, policy: policySchema, runtime_config: configSchema }).strict();
 const approvalSchema = z.object({ artifact_sha256: digest, policy_id: text, policy_hash: digest, formula_hash: digest,
@@ -233,12 +248,12 @@ export function managerScoreRecalculationPolicy(handle:ApprovedManagerScorePolic
     r.approval.approved_at_ms>sourceAsOf||r.approval.valid_until_ms<=now)return null;
   const p=r.artifact.policy,c=r.artifact.runtime_config;
   return freeze({identity_digest:hash(canonical({artifact:r.artifact,approval:r.approval})),
-    method_digest:hash(canonical({formula_hash:p.formula_hash,comparable_basis_id:p.comparable_basis_id,
+    method_digest:managerScoreMethodDigest({formula_hash:p.formula_hash,comparable_basis_id:p.comparable_basis_id,
       duration_key:p.duration_key,observation_frequency:p.observation_frequency,calendar:p.calendar,timezone:p.timezone,
       currency:p.currency,cash_reference_id:p.cash_reference_id,cost_method:p.cost_method,
       required_costs:[...p.required_costs].sort(),block_manifest_id:p.block_manifest_id,stress_policy_id:p.stress_policy_id,
       grid_method_ref:c.grid_method_ref,flow_adjustment_method_ref:c.flow_adjustment_method_ref,
-      ownership_method_ref:c.ownership_method_ref,fx_method_ref:c.fx_method_ref})),
+      ownership_method_ref:c.ownership_method_ref,fx_method_ref:c.fx_method_ref}),
     policy_revision:r.approval.policy_revision,stress_delta_bps:p.stress_delta_bps,
     approved_at_ms:r.approval.approved_at_ms,valid_until_ms:r.approval.valid_until_ms});
 }

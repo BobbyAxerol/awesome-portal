@@ -243,3 +243,14 @@ new contract/PG tests NOT_RUN before the grouped gate. Scoped history,
 PATH proof, dependent Composition/Regime restatement and actual source/config
 installation remain OPEN; ordinary current Manager DTO is unchanged. Claude
 consumer remains owner-held, not accepted by producer delivery.
+
+### History terminal and PATH follow-through —2026-10-17
+
+`0aad2697fe5f47977b1379329c3167f12aea3849` is now the actual landed History/
+Original/Restated/candidate batch. [Terminal result](scoped-score-history.md#history-terminal-20261017-1347)
+supersedes its pending entries:720contracts,APIbuild,5,373API tests/3existing
+skips and scoped PG restore PASS; no source/runtime acceptance.
+New [Original PATH proof → worker → retained History slice](path-original-restated.md)
+is APPLIED/UNCOMMITTED, new tests NOT_RUN at entry. v1 history remains untouched,
+actual source manifest/installation NOT_PROVIDED. This is not dependent
+Composition/Regime restatement or approved calibration. FE stays owner-held.

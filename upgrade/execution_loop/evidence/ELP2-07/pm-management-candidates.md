@@ -88,13 +88,13 @@ Read-only source repin12:40–12:49UTC: same HK PM worktree/branch,
 `7ea79f91f9f4c0e1a24c1f978a9268ff7a4f7346`. Owner economic/current-root/
 manifest/guide WIP remains preserved, not a clean-whole-tree claim. Relevant
 operator_adapters/operator_wire bytes still match the table above. Additional
-`services/portfolio_management/` source pins:
+source pins (exact paths; reallocation repository belongs to `risk_pool`):
 
 | File | SHA256 |
 |---|---|
-| `binding_repository.py` | `cee38e2c62415043a00e8ba1b36d8e0da4747df3ef49f4ca5ceed5c00ffaa9b1` |
-| `lock_reallocation_contract.py` | `8e90855dc08c9457cb396cda218cefb767ef87cff11274cd263a354b2ef628cf` |
-| `lock_reallocation_repository.py` | `698d638dce94b28695c1fcb3751cd0e7efb9ad5eaa214d2e870e2ddc95810075` |
+| `services/portfolio_management/binding_repository.py` | `cee38e2c62415043a00e8ba1b36d8e0da4747df3ef49f4ca5ceed5c00ffaa9b1` |
+| `services/portfolio_management/lock_reallocation_contract.py` | `8e90855dc08c9457cb396cda218cefb767ef87cff11274cd263a354b2ef628cf` |
+| `services/risk_pool/lock_reallocation_repository.py` | `698d638dce94b28695c1fcb3751cd0e7efb9ad5eaa214d2e870e2ddc95810075` |
 
 Source current-human provider remains UNBOUND_FAIL_CLOSED/unmounted; these
 bytes do not prove deployment or authenticated financial authority.

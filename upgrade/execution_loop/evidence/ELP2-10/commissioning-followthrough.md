@@ -1,5 +1,53 @@
 # ELP2-10 — three-gate commissioning follow-through
 
+<a id="elp210-backend-return-20261017-path"></a>
+
+## Current return — History landed; PATH custody validation next
+
+HEAD `0aad2697fe5f47977b1379329c3167f12aea3849`; same integration branch,
+no remote push. [Actual terminal](../ELP2-06/scoped-score-history.md#history-terminal-20261017-1347)
+is PASS:720contracts,APIbuild,5,373API PASS/3existing skips, scoped PG restore;
+eight runtime tuples unchanged, own resources/lease cleaned. Earlier pending
+and failed entries below are history, not current defects silently discarded.
+
+New [PATH original proof→historical worker→History](../ELP2-06/path-original-restated.md)
+is APPLIED/UNCOMMITTED, new unit/PG tests NOT_RUN at entry. No public DTO or
+frontend changes; independent review accepts source-only, not installation.
+
+| Phase | Remaining backend / qualification, not just frontend debt |
+|---|---|
+|00–01|Maintain affected route/schema pins; approved runtime calibration00-005 remains distinct from locked formula|
+|02–03|Genuine accepted issuer/mapping/current-grant installation and delegated field ceiling; local OwnProfile/exact-scope/final-clock code exists|
+|04|29 null-purpose SCREEN_BOUND relations: four selected collectors,25 still need exact finite capture/purpose/auth/source classification; private heartbeat ROOT exists but public DTO/reader still closed|
+|05–06|PATH affected gate and real independently retained method proof; economic provider installation/tie-out, dependent historical Composition/Regime recomputation and cross-profile integration|
+|07–08|Finite candidate codecs are not complete family bridges: public typed policies/results, authenticated factory, held current-human through owning COMMIT, RETURN writer, assignment/rebind/lifecycle/monitor|
+|09|Authenticated serialized adapter/factory/listener and connected barrier/tail/correction/floor/hidden/revoke proof; local coordinator/source component exists|
+|10|Real trust/current-human/Core final-egress/owning COMMIT,14 approved numeric budget groups, Score/Regime calibration, matched coexistence/applicable original P184G2|
+|11|NOT_ENTRY_READY; no merge/dev/main/signed release/deploy follows|
+
+Read-only PM repin at `89293d0d2ecb075f34250dd1d516b062ca6c3275`
+already found a fixed six-route business-root-read native provider implementation;
+it is UNMOUNTED and connected gates are NOT_MET/NOT_STARTED. Portal adapter and
+lifecycle composition are still code debt, not a claim that TS has no provider.
+Private review `20261017/pm-new-read-listener-delta-review.md`, SHA256
+`c907f68385fe03d43992ebdf54befd0bb0aa3e0dc350192edee6bba16f87b7d3`.
+Preserve the remote owner's WIP and installation/measurement boundaries.
+
+Claude UXM00–10 remains NOT_STARTED_BY_OWNER_DIRECTION; all consumer handoffs
+AWAITING_CONSUMER_REVIEW. New PATH uses existing historical operation/types;
+its exact mapping is in06. Continue approved independent backend work without
+turning test/source-only evidence into runtime authority or phase-wide PASS.
+
+**PATH affected terminal14:04UTC:** [APIbuild and294PASS/1FAIL](../ELP2-06/path-original-restated.md#path-affected-20261017-1404).
+Only new mid-flight grant-revoke expectation was404 rather than the existing
+409ACCESS_CHANGED contract; corrected assertion adds fresh-read404 and actual
+immutable-row equality. No product code change after this focus. Grouped normal
+hook pending; scoped restore NOT_RUN from this failed attempt, cleanup/source/
+index/eight runtimes unchanged. Do not repeat unaffected focus/build for it.
+Coherent normal-hook controller `20261017/path-land-140613` is PENDING at
+source freeze. Exact terminal controller/log and full commit SHA decide the
+landing; no full-PASS/source/browser label is prewritten.
+
 <a id="elp210-backend-return-20261017-1315"></a>
 
 ## Current backend return —2026-10-17T13:15UTC
