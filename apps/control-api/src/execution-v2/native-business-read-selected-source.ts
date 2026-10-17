@@ -84,6 +84,13 @@ function fresh(state: SourceState, context: NativeReadContext): void {
 export function selectedNativeBusinessReadSelection(source: unknown): SelectedNativeBusinessReadSelection {
   return stateFor(source).selection;
 }
+/** Immutable configured installation boundary only, not an app/native grant.
+ * Identity-checked from the SAME selected wrapper state; copied/Proxy instances
+ * cannot manufacture or extend finite egress validity. */
+export function selectedNativeBusinessReadInstallationExpiresAtMs(source:unknown):number {
+  return stateFor(source).expiresAtMs;
+}
+
 /** Identity-only readback: no reflection/getter/prototype traversal. This proves
  * a selected actual client's correlated authenticated HTTP result, NOT a grant,
  * source-local held permit, final-egress observation or native reconciliation. */

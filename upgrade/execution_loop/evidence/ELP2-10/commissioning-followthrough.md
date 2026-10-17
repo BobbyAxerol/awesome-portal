@@ -2554,3 +2554,40 @@ scoped restore and source/index/runtime/cleanup PASS; no overlapping counts adde
 [Exact receipt and pending coherent hook](native-read-lifecycle-primitives.md#domain-focused-terminal-20261017-211440).
 No sliding TTL or permission/legacy fingerprint change; conservative same-workspace
 early re-evaluation is explicit. Production/trust/Claude/full10 states unchanged.
+
+### 2026-10-17T21:47Z — primitives landed / native lifecycle integration
+
+NC-02's [actual normal hook](native-read-lifecycle-primitives.md#normal-hook-terminal-20261017-214415)
+landed43e877fd:791contracts/6192API PASS+3existing skips, build/scoped restore/
+four access-row digests, source/index/eight protected runtime tuples unchanged;
+own Node/PG/network/lease gone. Supersedes only pending local landing; preserves
+first build refusal and interrupted hook history. No new installed authority.
+
+Existing05-001/07-001/NC03-P1–P4 continue in the owning
+[same-family lifecycle packet](native-read-lifecycle-integration.md), not a new
+ledger or phase. Genuine selected-source WeakMap results, original microsecond
+Base/JWT caps, actual reserved finite HTTP observation, immutable same-key
+terminal and positive source ACK before global release are applied UNCOMMITTED/
+NOT_RUN. A cold ENTER loss with no actual HTTP witness remains UNKNOWN/pending;
+cached PM v1 has no valid automatic positive closure for that shape. Producer
+extension proposal is explicit, not silently relabelled FINAL_HTTP_ABORT_CONFIRMED.
+
+Next backend: affected actual PG/TLS/HTTP proof then coherent normal-hook land;
+dependency-closed real Core/provider/trust/writer installation remains mandatory.
+No public route/generated/Claude field or design task; review intake remains7.3,
+UXM owner-held/AWAITING_CONSUMER_REVIEW. Budgets/calibration/coexistence/P184G2/
+browser and11 entry remain open. No push/dev/main/sign/release/deploy.
+
+**NC-03 actual focused terminal21:54UTC:**7files/241tests and API build PASS,
+0fail/skip, actual disposable PG/TLS/finite HTTP; scoped restore/four access
+digests and frozen source/index/eight protected runtime tuples PASS. Exact
+owned resources/lease released; later foreign lease untouched. [Owning result,
+hashes and coverage](native-read-lifecycle-integration.md#focused-terminal-20261017-215417).
+Same original requirements; cold ENTER without actual HTTP proof remains
+UNKNOWN/pending. Current source is FOCUSED_CORRECTNESS_PASS/UNCOMMITTED/
+NORMAL_HOOK_PENDING/NOT_MOUNTED, not installed PM/provider authority. Fresh
+read-only PM92a6a263 intake reuses exact provider/verifier bytes and directly
+observes NONE_FAIL_CLOSED/DRAFT/TEST_ONLY, not genuine trust commissioning.
+One coherent normal-hook land next; actual provider/writer/trust, budgets/
+calibration/coexistence/P184G2/browser and11 status unchanged. Claude review
+intake7.3 still owner-held/AWAITING_CONSUMER_REVIEW, no new field or UI task.

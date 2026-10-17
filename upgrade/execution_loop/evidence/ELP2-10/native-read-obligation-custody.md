@@ -161,3 +161,15 @@ This closes the NC-01 local custody implementation gate only. Real source,
 terminal reconciliation and all full10/11 gates remain open. The next bounded
 code batch is [NC-02 primitives](native-read-lifecycle-primitives.md), not a
 claim that custody alone can be safely mounted.
+
+## Same-family lifecycle continuation —21:47UTC
+
+NC-02 landed43e877fd through its [actual normal hook](native-read-lifecycle-primitives.md#normal-hook-terminal-20261017-214415):
+791contracts/6192API PASS+3existing skips, build/scoped restore/four access digests,
+source/runtime preservation and owned teardown PASS. Native custody remains the
+SAME ledger/barrier/recovery surface. [NC-03](native-read-lifecycle-integration.md)
+adds explicit private MANAGER_HTTP lifecycle without converting old CUSTODY_ONLY
+rows or using reverse leases. Source ACK must commit before pending clears;
+status/restart/expiry/DB no-send fences are not final HTTP abort evidence.
+Entry APPLIED_UNCOMMITTED/NOT_RUN/unmounted; actual trust/provider/writer install,
+budgets/calibration/coexistence/P184G2 and assigned Claude/browser remain open.

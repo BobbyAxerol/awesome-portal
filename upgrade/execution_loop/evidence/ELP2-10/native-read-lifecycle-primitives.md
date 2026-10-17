@@ -283,3 +283,28 @@ Full10 budgets/calibration/coexistence/original P184 G2/browser remain OPEN;
 11NOT_ENTRY_READY. Local primitives passing does not close native commissioning.
 Rollback: keep unmounted/exclude candidate composition; never delete existing
 obligations/audit/source bytes, operational data or grants.
+
+<a id="normal-hook-terminal-20261017-214415"></a>
+## Coherent normal-hook terminal —21:44:15UTC
+
+Landed `43e877fd5801cf710df164184ef1c342bb52bcc8`,15files +2686/−12.
+Controller `native-lifecycle-primitives-land-211636` exit0/PASS:67contract
+files/791tests, API build,379API files/6192tests PASS;2existing skipped files/
+3existing skipped tests. API duration1258.03s. New domain46/source43/egress63
+are152 of6192, not additional coverage;727/201 focused receipts overlap them.
+NDT-01 locally verified and delivered; historical failed/interrupted runs stay.
+
+Scoped PostgreSQL restore/four access-row digests PASS, frozen source/index and
+eight protected runtime tuples unchanged. Exact owned containers/network absent
+and own lease released. Log SHA256
+`5defcb842382bb33726c9ca7e7326a155338edb7e5b28dd612fb23fefe42fdab`;
+terminal controller JSON
+`9670e3ce1be70d8ac13718693da9c6c54e34a17e51487713a1c86a53d151e8ae`.
+This supersedes pending local landing, not actual source/native authority.
+
+Next accepted P1–P4 implementation and affected proof live in the SAME phase's
+[NC-03 lifecycle packet](native-read-lifecycle-integration.md). At preparation
+APPLIED_UNCOMMITTED/NOT_RUN, no real source installation or public/Claude field.
+Cold ENTER reply loss without genuine HTTP witness remains pending, not a
+fabricated abort. Native commissioning, budgets/calibration/coexistence/G2,
+assigned browser proof and11 entry stay open. No runtime/push/deploy change.

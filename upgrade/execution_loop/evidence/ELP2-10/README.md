@@ -240,3 +240,16 @@ destructive down migration or self-activation; placement/DR detail in runbook.
   API build/201focused tests/scoped restore PASS,0fail/skip; six boundary classes
   and stable scope on actual PG. Earlier hook interrupted before land for this
   new finding, not falsely green. Normal-hook commit remains pending.
+- [NC-02 normal-hook terminal21:44UTC](native-read-lifecycle-primitives.md#normal-hook-terminal-20261017-214415):
+  landed43e877fd;791contracts/6192API PASS+3existing skips; build/scoped restore,
+  source/runtime preservation and owned teardown PASS. No source commissioning.
+- [NC-03 same-family native lifecycle](native-read-lifecycle-integration.md):
+  exact signer/original deadline, actual selected-source ISSUE/ENTER, reserved
+  HTTP→immutable terminal→authenticated same-key ACK; APPLIED_UNCOMMITTED/NOT_RUN
+  at entry. Cold no-witness recovery stays UNKNOWN. No public/Claude field,
+  runtime activation or full10/11 promotion.
+- [NC-03 actual focused terminal21:54UTC](native-read-lifecycle-integration.md#focused-terminal-20261017-215417):
+  API build/7files/241tests PASS,0fail/skip; actual disposable PG/TLS/HTTP,
+  scoped restore/four access digests, frozen source/index/eight runtime tuples
+  and owned teardown PASS. Normal-hook landing pending; cold ENTER without
+  HTTP proof stays pending, not falsely released. Actual commissioning open.

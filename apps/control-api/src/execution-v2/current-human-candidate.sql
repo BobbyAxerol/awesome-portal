@@ -36,7 +36,8 @@ CREATE INDEX leases_unresolved ON elp210_candidate.leases(phase,expires_at_ms)
   WHERE phase IN ('ISSUED','ENTERED','UNKNOWN');
 -- NC-01: fresh DISPOSABLE candidate schema only, not a production migration.
 -- A native ISSUE can commit before ENTER. Every native row blocks drain from
--- admission onward; this slice deliberately has NO successful release state.
+-- admission onward. Default CUSTODY_ONLY remains nonreleasable; opt-in
+-- MANAGER_HTTP releases only after actual authenticated native ACK is durable.
 CREATE TABLE elp210_candidate.native_read_obligations (
   lease_id text PRIMARY KEY CHECK (lease_id ~ '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'),
   attempt_id text UNIQUE NOT NULL CHECK (attempt_id ~ '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'),
@@ -55,7 +56,64 @@ CREATE TABLE elp210_candidate.native_read_obligations (
   issued_at_ms bigint NOT NULL,
   expires_at_ms bigint NOT NULL CHECK (expires_at_ms>issued_at_ms AND expires_at_ms-issued_at_ms<=60000),
   CHECK (expires_at_ms=floor(extract(epoch FROM deadline::timestamptz)*1000)::bigint),
-  phase text NOT NULL DEFAULT 'ADMITTED' CHECK (phase IN ('ADMITTED','UNKNOWN')),
+
+  lifecycle_kind text NOT NULL DEFAULT 'CUSTODY_ONLY' CHECK(lifecycle_kind IN('CUSTODY_ONLY','MANAGER_HTTP')),
+  sender_id text CHECK(length(sender_id)=36 AND sender_id ~ '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'),
+  scope_digest text CHECK(length(scope_digest)=71 AND scope_digest ~ '^sha256:[a-f0-9]{64}$'),
+  no_send_fenced boolean NOT NULL DEFAULT false,
+  native_source_digest text CHECK(length(native_source_digest)=64 AND native_source_digest ~ '^[a-f0-9]{64}$'),
+  native_source_fingerprint text CHECK(length(native_source_fingerprint)=64 AND native_source_fingerprint ~ '^[a-f0-9]{64}$'),
+  native_valid_until_ms bigint CHECK(native_valid_until_ms>=0 AND native_valid_until_ms<=expires_at_ms),
+  issue_response_digest text CHECK(length(issue_response_digest)=71 AND issue_response_digest ~ '^sha256:[a-f0-9]{64}$'),
+  enter_response_digest text CHECK(length(enter_response_digest)=71 AND enter_response_digest ~ '^sha256:[a-f0-9]{64}$'),
+  status_response_digest text CHECK(length(status_response_digest)=71 AND status_response_digest ~ '^sha256:[a-f0-9]{64}$'),
+  body_digest text CHECK(length(body_digest)=71 AND body_digest ~ '^sha256:[a-f0-9]{64}$'),
+  receipt_id text CHECK(length(receipt_id)=36 AND receipt_id ~ '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'),
+  receipt_digest text CHECK(length(receipt_digest)=71 AND receipt_digest ~ '^sha256:[a-f0-9]{64}$'),
+  terminal_reason text CHECK(octet_length(terminal_reason) BETWEEN 1 AND 128),
+  source_reconciled boolean NOT NULL DEFAULT false,
+  source_ack_action text CHECK(source_ack_action IN('cancel-unentered','resolve')),
+  source_ack_digest text CHECK(length(source_ack_digest)=71 AND source_ack_digest ~ '^sha256:[a-f0-9]{64}$'),
+  phase text NOT NULL DEFAULT 'ADMITTED',
+  CHECK(
+    (lifecycle_kind='CUSTODY_ONLY' AND phase IN('ADMITTED','UNKNOWN')
+      AND sender_id IS NULL AND scope_digest IS NULL AND NOT no_send_fenced
+      AND native_source_digest IS NULL AND native_source_fingerprint IS NULL AND native_valid_until_ms IS NULL
+      AND issue_response_digest IS NULL AND enter_response_digest IS NULL AND status_response_digest IS NULL
+      AND body_digest IS NULL AND receipt_id IS NULL AND receipt_digest IS NULL AND terminal_reason IS NULL
+      AND NOT source_reconciled AND source_ack_action IS NULL AND source_ack_digest IS NULL)
+    OR
+    (lifecycle_kind='MANAGER_HTTP' AND sender_id IS NOT NULL AND scope_digest IS NOT NULL
+      AND phase IN('ADMITTED','SENDING','UNKNOWN','SERVED','ABORTED','CANCELLED')
+      AND (native_source_digest IS NULL AND native_source_fingerprint IS NULL AND native_valid_until_ms IS NULL
+        AND issue_response_digest IS NULL AND enter_response_digest IS NULL AND status_response_digest IS NULL
+        OR native_source_digest IS NOT NULL AND (
+          issue_response_digest IS NOT NULL AND native_source_fingerprint IS NOT NULL AND native_valid_until_ms IS NOT NULL
+          OR status_response_digest IS NOT NULL AND no_send_fenced AND body_digest IS NULL))
+      AND (NOT source_reconciled AND source_ack_action IS NULL AND source_ack_digest IS NULL
+        OR source_reconciled AND source_ack_action IS NOT NULL AND source_ack_digest IS NOT NULL
+          AND (phase='SERVED' AND source_ack_action='resolve'
+            OR phase='ABORTED' AND source_ack_action IN('resolve','cancel-unentered')
+            OR phase='CANCELLED' AND source_ack_action='cancel-unentered'))
+      AND (
+        phase IN('ADMITTED','UNKNOWN') AND body_digest IS NULL AND receipt_id IS NULL AND receipt_digest IS NULL
+          AND terminal_reason IS NULL AND NOT source_reconciled
+        OR phase IN('SENDING','UNKNOWN') AND body_digest IS NOT NULL AND NOT no_send_fenced
+          AND native_source_digest IS NOT NULL AND native_source_fingerprint IS NOT NULL
+          AND issue_response_digest IS NOT NULL AND enter_response_digest IS NOT NULL
+          AND receipt_id IS NULL AND receipt_digest IS NULL AND terminal_reason IS NULL AND NOT source_reconciled
+        OR phase='SERVED' AND body_digest IS NOT NULL AND NOT no_send_fenced
+          AND native_source_digest IS NOT NULL AND native_source_fingerprint IS NOT NULL
+          AND issue_response_digest IS NOT NULL AND enter_response_digest IS NOT NULL
+          AND receipt_id IS NOT NULL AND receipt_digest IS NOT NULL AND terminal_reason IS NOT NULL
+        OR phase='ABORTED' AND body_digest IS NOT NULL AND native_source_digest IS NOT NULL
+          AND native_source_fingerprint IS NOT NULL AND issue_response_digest IS NOT NULL AND enter_response_digest IS NOT NULL
+          AND receipt_id IS NOT NULL AND receipt_digest IS NOT NULL AND terminal_reason IS NOT NULL
+        OR phase='CANCELLED' AND body_digest IS NULL AND no_send_fenced AND source_reconciled
+          AND receipt_id IS NULL AND receipt_digest IS NULL AND terminal_reason IS NULL
+      )
+    )
+  ),
   CHECK (stable_core_digest=encode(sha256(convert_to(base_body,'UTF8')),'hex')),
   CHECK (((base_body::jsonb#>>'{binding,lease_id}')=lease_id
     AND (base_body::jsonb#>>'{binding,attempt_id}')=attempt_id
@@ -69,7 +127,7 @@ CREATE TABLE elp210_candidate.native_read_obligations (
 CREATE TABLE elp210_candidate.native_read_events (
   event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   lease_id text NOT NULL REFERENCES elp210_candidate.native_read_obligations(lease_id),
-  phase text NOT NULL CHECK (phase IN ('ADMITTED','UNKNOWN')),
+  phase text NOT NULL CHECK(phase IN('ADMITTED','SENDING','UNKNOWN','SERVED','ABORTED','CANCELLED')),
   occurred_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
 -- One bounded accounting/pending surface. Family disambiguates raw native
@@ -80,13 +138,13 @@ CREATE VIEW elp210_candidate.obligations AS
     request_digest,authority_fingerprint,issued_at_ms,expires_at_ms,phase,
     phase IN ('ISSUED','ENTERED','UNKNOWN') AS unresolved,
     NULL::text AS base_body,NULL::text AS stable_core_digest,NULL::text AS binding_digest,
-    NULL::text AS source_identity_digest
+    NULL::text AS source_identity_digest,NULL::text AS lifecycle_kind
     FROM elp210_candidate.leases
   UNION ALL
   SELECT 'NATIVE_READ',lease_id,attempt_id,authority_revision,
     subject_id,session_id,session_revision,workspace_id,environment,workload_id,
-    request_digest,authority_fingerprint,issued_at_ms,expires_at_ms,phase,true,
-    base_body,stable_core_digest,binding_digest,source_identity_digest
+    request_digest,authority_fingerprint,issued_at_ms,expires_at_ms,phase,NOT source_reconciled,
+    base_body,stable_core_digest,binding_digest,source_identity_digest,lifecycle_kind
     FROM elp210_candidate.native_read_obligations;
 CREATE TABLE elp210_candidate.events (
   event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -147,6 +205,11 @@ BEGIN
   PERFORM 1 FROM elp210_candidate.authority WHERE singleton FOR UPDATE;
   IF TG_OP='INSERT' THEN
     IF NEW.phase<>'ADMITTED'
+      OR(NEW.lifecycle_kind='MANAGER_HTTP' AND(NEW.no_send_fenced OR NEW.native_source_digest IS NOT NULL
+        OR NEW.native_source_fingerprint IS NOT NULL OR NEW.native_valid_until_ms IS NOT NULL OR NEW.issue_response_digest IS NOT NULL
+        OR NEW.enter_response_digest IS NOT NULL OR NEW.status_response_digest IS NOT NULL
+        OR NEW.body_digest IS NOT NULL OR NEW.receipt_id IS NOT NULL OR NEW.receipt_digest IS NOT NULL
+        OR NEW.terminal_reason IS NOT NULL OR NEW.source_reconciled OR NEW.source_ack_action IS NOT NULL OR NEW.source_ack_digest IS NOT NULL))
       OR NOT EXISTS(SELECT 1 FROM elp210_candidate.authority WHERE singleton
         AND drain_id IS NULL AND revision=NEW.authority_revision)
       OR EXISTS(SELECT 1 FROM elp210_candidate.leases WHERE lease_id=NEW.lease_id)
@@ -162,9 +225,39 @@ BEGIN
           AND (EXISTS(SELECT 1 FROM public.workspace_members m WHERE m.workspace_id=NEW.workspace_id AND m.user_id=u.user_id)
             OR EXISTS(SELECT 1 FROM public.portal_owner_anchor a WHERE a.anchor_id='PORTAL_OWNER' AND a.user_id=u.user_id)))
     THEN RAISE EXCEPTION 'CURRENT_HUMAN_NATIVE_ADMISSION_REFUSED'; END IF;
-  ELSIF OLD.phase<>'ADMITTED' OR NEW.phase<>'UNKNOWN'
-    OR (to_jsonb(NEW)-'phase') IS DISTINCT FROM (to_jsonb(OLD)-'phase')
-  THEN RAISE EXCEPTION 'CURRENT_HUMAN_NATIVE_TRANSITION_INVALID'; END IF;
+
+  ELSIF OLD.lifecycle_kind='CUSTODY_ONLY' THEN
+    IF OLD.phase<>'ADMITTED' OR NEW.phase<>'UNKNOWN'
+      OR(to_jsonb(NEW)-'phase') IS DISTINCT FROM(to_jsonb(OLD)-'phase')
+    THEN RAISE EXCEPTION 'CURRENT_HUMAN_NATIVE_TRANSITION_INVALID'; END IF;
+  ELSE
+    IF(to_jsonb(NEW)-ARRAY['phase','no_send_fenced','native_source_digest','native_source_fingerprint','native_valid_until_ms',
+      'issue_response_digest','enter_response_digest','status_response_digest','body_digest',
+      'receipt_id','receipt_digest','terminal_reason','source_reconciled','source_ack_action','source_ack_digest'])
+      IS DISTINCT FROM(to_jsonb(OLD)-ARRAY['phase','no_send_fenced','native_source_digest','native_source_fingerprint','native_valid_until_ms',
+      'issue_response_digest','enter_response_digest','status_response_digest','body_digest',
+      'receipt_id','receipt_digest','terminal_reason','source_reconciled','source_ack_action','source_ack_digest'])
+      OR(OLD.no_send_fenced AND NOT NEW.no_send_fenced)
+      OR(OLD.source_reconciled AND to_jsonb(NEW) IS DISTINCT FROM to_jsonb(OLD))
+      OR(OLD.native_source_digest IS NOT NULL AND NEW.native_source_digest IS DISTINCT FROM OLD.native_source_digest)
+      OR(OLD.native_source_fingerprint IS NOT NULL AND NEW.native_source_fingerprint IS DISTINCT FROM OLD.native_source_fingerprint)
+      OR(OLD.native_valid_until_ms IS NOT NULL AND NEW.native_valid_until_ms IS DISTINCT FROM OLD.native_valid_until_ms)
+      OR(OLD.issue_response_digest IS NOT NULL AND NEW.issue_response_digest IS DISTINCT FROM OLD.issue_response_digest)
+      OR(OLD.enter_response_digest IS NOT NULL AND NEW.enter_response_digest IS DISTINCT FROM OLD.enter_response_digest)
+      OR(OLD.status_response_digest IS NOT NULL AND NEW.status_response_digest IS DISTINCT FROM OLD.status_response_digest)
+      OR(OLD.body_digest IS NOT NULL AND NEW.body_digest IS DISTINCT FROM OLD.body_digest)
+      OR(OLD.receipt_id IS NOT NULL AND NEW.receipt_id IS DISTINCT FROM OLD.receipt_id)
+      OR(OLD.receipt_digest IS NOT NULL AND NEW.receipt_digest IS DISTINCT FROM OLD.receipt_digest)
+      OR(OLD.terminal_reason IS NOT NULL AND NEW.terminal_reason IS DISTINCT FROM OLD.terminal_reason)
+      OR(OLD.source_ack_action IS NOT NULL AND NEW.source_ack_action IS DISTINCT FROM OLD.source_ack_action)
+      OR(OLD.source_ack_digest IS NOT NULL AND NEW.source_ack_digest IS DISTINCT FROM OLD.source_ack_digest)
+      OR NOT(
+        OLD.phase='ADMITTED' AND NEW.phase IN('ADMITTED','UNKNOWN','SENDING','ABORTED','CANCELLED')
+        OR OLD.phase='SENDING' AND NEW.phase IN('UNKNOWN','SERVED','ABORTED')
+        OR OLD.phase='UNKNOWN' AND NEW.phase IN('UNKNOWN','SERVED','ABORTED','CANCELLED')
+        OR OLD.phase IN('SERVED','ABORTED','CANCELLED') AND NEW.phase=OLD.phase)
+    THEN RAISE EXCEPTION 'CURRENT_HUMAN_NATIVE_TRANSITION_INVALID'; END IF;
+  END IF;
   UPDATE elp210_candidate.authority SET lease_epoch=lease_epoch+1 WHERE singleton;
   INSERT INTO elp210_candidate.native_read_events(lease_id,phase) VALUES(NEW.lease_id,NEW.phase);
   RETURN NEW;

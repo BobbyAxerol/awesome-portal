@@ -11831,6 +11831,16 @@ Receipt sha256:4fcd8a6d18ff1042b7e1b477684e6a663ac5984b4dd653eaed7c2909b2937139;
 
 - NC-02 amended-domain actual terminal21:14UTC: API build/4files/201PASS,0fail/skip; all six fixed boundaries and stale expected scope after actual benign transition proven on disposable PG. [Source/review/log hashes, restore/runtime/cleanup](execution_loop/evidence/ELP2-10/native-read-lifecycle-primitives.md#domain-focused-terminal-20261017-211440). NDT-01 locally verified, coherent normal-hook landing pending. Unchanged TLS/HTTP receipt reused, no sum of overlapping tests, native lifecycle/10/11 and Claude statuses unchanged.
 
+<a id="elp210-native-lifecycle-integration-20261017"></a>
+### ELP2-10 — native primitives terminal and same-family lifecycle
+
+- NC-02 landed43e877fd, normal-hook terminal21:44:15UTC:791contracts/6192API PASS+3existing skips, API build/scoped restore/four access-row digests/source-index/eight runtime tuples/owned teardown PASS. [Owning terminal and hashes](execution_loop/evidence/ELP2-10/native-read-lifecycle-primitives.md#normal-hook-terminal-20261017-214415). Supersedes pending local landing, not installed source authority; failed/interrupted history retained.
+- [NC-03 owning requirement/review/test/next-work packet](execution_loop/evidence/ELP2-10/native-read-lifecycle-integration.md): same NC-01 native ledger and barrier, original Base signer, selected actual source ISSUE/ENTER, actual reserved HTTP completion/abort, immutable terminal and authenticated source ACK before release. APPLIED_UNCOMMITTED/NOT_RUN at entry, unmounted; old CUSTODY_ONLY and reverse-human behavior preserved.
+- Cold lost ENTER before any real HTTP witness remains UNKNOWN/pending; cached PM v1 has no positive closure. A distinct producer-recognized pre-send cancellation transition is proposed, not an accepted proof or false final-egress abort. Actual provider/trust/writer installation stays05-001/07-001, no duplicate queue.
+- Backend next: affected PG/TLS/HTTP gate→normal-hook landing→actual dependency-closed installation proof. No new public type/Claude field; UXM owner-held/AWAITING_CONSUMER_REVIEW, recurring intake7.3. Budgets/calibration/coexistence/original P184G2/browser stay open;11NOT_ENTRY_READY. No push/dev/main/release/deploy.
+
+- NC-03 actual terminal21:54UTC: API build/7files/241tests PASS,0fail/skip; scoped PG restore/four access digests/source-index freeze/eight runtime tuples/owned teardown PASS. [Exact result and source/log/controller hashes](execution_loop/evidence/ELP2-10/native-read-lifecycle-integration.md#focused-terminal-20261017-215417). Normal-hook coherent landing pending; no second focus for receipt-only append. Actual trust/provider/writer/cold no-HTTP reconciliation, budgets/calibration/coexistence/P184G2/browser and11 remain open; Claude owner-held/no new public field or claimed ack. Fresh source PM92a6a263 is source compatibility, not installed authority.
+
 <a id="epg10-08-return-20261017-2109"></a>
 ### Original EPG10-08 owner return — current native integration findings and PM terminal
 
