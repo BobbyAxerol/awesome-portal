@@ -53,6 +53,11 @@ export class ExecutionCommandController {
     const q=this.parse(commandWorkspace,raw),key=this.parse(commandId,id);
     return this.call(()=>this.service.status(this.actor(r),q.workspace_id,key));
   }
+  @Get("/:id/workflow") @Header("Cache-Control","private, no-store")
+  async workflow(@Req()r:Request,@Param("id")id:string,@Query()raw:unknown){
+    const q=this.parse(commandWorkspace,raw),key=this.parse(commandId,id);
+    return this.call(()=>this.service.workflow(this.actor(r),q.workspace_id,key));
+  }
   @Post("/:id/reconcile") @Header("Cache-Control","private, no-store")
   async reconcile(@Req()r:Request,@Param("id")id:string,@Body()raw:unknown,@Res({passthrough:true})reply:FastifyReply){
     const q=this.parse(commandWorkspace,raw),key=this.parse(commandId,id);this.security(r);reply.code(200);

@@ -10,11 +10,11 @@ const collectionFixture=load("fixtures/execution-trusted-command-collection.synt
 const ajv=new Ajv2020({strict:false});
 const compile=(name:string)=>ajv.compile(JSON.parse(JSON.stringify({$ref:"#/components/schemas/"+name,components:{schemas:api.components.schemas}})));
 describe("ELP2-07 generated command contract",()=>{
-  it("publishes five named operations on four paths without replacing submit",()=>{
-    expect(Object.keys(api.paths)).toHaveLength(4);
+  it("publishes six named operations on five paths without replacing submit",()=>{
+    expect(Object.keys(api.paths)).toHaveLength(5);
     const entries=Object.values(api.paths).flatMap((path)=>Object.values(path as Record<string,unknown>));
-    expect(entries).toHaveLength(5);
-    expect(new Set(entries.map((entry)=> (entry as {operationId:string}).operationId)).size).toBe(5);
+    expect(entries).toHaveLength(6);
+    expect(new Set(entries.map((entry)=> (entry as {operationId:string}).operationId)).size).toBe(6);
     const capital=api.paths["/api/v1/execution/capital-commands"];
     expect(capital.post.operationId).toBe("executionCapitalCommandSubmitV1");
     expect(capital.get.operationId).toBe("executionCapitalCommandCollectionV1");

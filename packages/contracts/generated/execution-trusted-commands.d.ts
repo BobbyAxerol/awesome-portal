@@ -73,6 +73,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/capital-commands/{id}/workflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read-only local projection of one durable original capital command. Strict id/workspace query, current exact TS-accepted audit.read before disclosure and after final I/O, including all DENY and delegation ancestry. The original sender may differ from this reviewer; original send expiry does not revoke current report permission. Immutable command/profile/qualification/intent/status correlation is checked. Four outcome dimensions remain separate; UNKNOWN never causes resend. source_as_of_ms is null because no owning-source cutoff is stored; observed_at_ms is the Portal local-read clock, not source freshness. Stable snapshot_ref contains only authorized public fields and excludes private authority and read time. No prepare/send/lookup/recover/reconcile or command/event/audit writes; existing authority-provider resolution remains possible. Retained exact Core workspace is preserved. Hidden/missing share404, visible corrupt data has sanitized503. All responses are private, no-store. */
+        get: operations["executionCapitalCommandWorkflowGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -500,6 +517,41 @@ export interface components {
                 next_cursor: string | null;
             };
         };
+        WorkflowContext: {
+            workspace_id: string;
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            resource: {
+                /** @enum {string} */
+                kind: "ROOT" | "PORTFOLIO" | "ALPHA" | "DEPLOYMENT" | "ACCOUNT" | "BINDING";
+                id: string;
+            };
+            policy_revision: string;
+            snapshot_ref: string;
+            source_as_of_ms: number | null;
+            observed_at_ms: number;
+        };
+        WorkflowCapital: {
+            /** @constant */
+            schema_version: "portal.execution.capital-workflow.v1";
+            context: components["schemas"]["WorkflowContext"];
+            currency: string;
+            status: components["schemas"]["CommandStatus"];
+            /** @enum {string} */
+            effect_kind: "ECONOMIC_ASSIGNMENT" | "MANAGEMENT_BUDGET" | "NOMINAL_ROOT_CAP";
+            /** @constant */
+            physical_transfer_performed: false;
+            /** @constant */
+            form_cancel: "DISCARD_LOCAL_DRAFT_ONLY";
+            /** @constant */
+            after_submit_cancel: "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED";
+            /** @constant */
+            refresh: "GET_ORIGINAL_COMMAND_NO_RESUBMIT";
+            /** @enum {string} */
+            public_copy_key: "QUERY_SAME_INTENT" | "REVIEW_RECEIPT" | "PARTIAL_REMAINDER_PENDING" | "APPLIED_PART_RETAINED" | "SOURCE_REJECTED";
+            /** @constant */
+            automatic_resend: false;
+        } & (unknown & unknown);
         CommandProblem: {
             error: {
                 code: string;
@@ -964,6 +1016,98 @@ export interface operations {
             /** @description Closed input / current authority / correlation / capacity failure. Never blindly retry; query same intent. */
             503: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+        };
+    };
+    executionCapitalCommandWorkflowGetV1: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current-authorized original command workflow, no execution effect or source-freshness inference */
+            200: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowCapital"];
+                };
+            };
+            /** @description COMMAND_INPUT_INVALID; malformed id/workspace or unknown query field. */
+            400: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Session authentication required. */
+            401: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current actor/session authority refused. */
+            403: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_RESOURCE_NOT_FOUND; hidden and unknown are identical. */
+            404: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ACCESS_RETRY_REQUIRED; current Core authority changed during read. */
+            409: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_STATUS_UNVERIFIED or sanitized COMMAND_UNAVAILABLE; no partial response or raw diagnostics. */
+            503: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {

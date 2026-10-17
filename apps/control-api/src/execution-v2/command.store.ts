@@ -7,10 +7,29 @@ import { commandAuthorization,type CommandAuthorization } from "./command-trust"
 
 export interface CommandRecord {id:string;actor:string;hash:string;intent:CommandIntent;
   authorization:CommandAuthorization;status:CommandStatus;attempt:string|null;}
+/** Raw private one-row candidate. A reader must authorize the immutable target
+ * before decoding private status/proof; malformed hidden rows cannot be oracles. */
+export interface WorkflowCommandCandidate {id:string;workspace:string;actor:string;hash:string;
+  intent:unknown;authorization:unknown;status:unknown;}
 function record(row:Record<string,any>):CommandRecord {return {id:row.command_id,actor:row.actor_user_id,hash:row.intent_hash,
   intent:row.intent,authorization:commandAuthorization.parse(row.authorization_fact),status:commandStatus.parse(row.status),attempt:row.attempt_id};}
 export class CommandStore {
   constructor(private readonly pool:Pool){}
+  async workflowCandidate(workspace:string,id:string):Promise<WorkflowCommandCandidate|null> {
+    const db=await this.pool.connect();
+    try {
+      await db.query("BEGIN READ ONLY");
+      await db.query("SET LOCAL statement_timeout='5000ms'");
+      const row=(await db.query(`SELECT command_id,workspace_id,actor_user_id,intent_hash,intent,authorization_fact,status
+        FROM execution_trusted_commands WHERE workspace_id=$1 AND command_id=$2`,[workspace,id])).rows[0];
+      await db.query("COMMIT");
+      return row?{id:row.command_id,workspace:row.workspace_id,actor:row.actor_user_id,hash:row.intent_hash,
+        intent:row.intent,authorization:row.authorization_fact,status:row.status}:null;
+    } catch(error) {
+      try{await db.query("ROLLBACK");}catch{/* Keep the original query failure. */}
+      throw error;
+    } finally {db.release();}
+  }
   async get(workspace:string,id:string):Promise<CommandRecord|null> {
     const row=(await this.pool.query("SELECT * FROM execution_trusted_commands WHERE workspace_id=$1 AND command_id=$2",[workspace,id])).rows[0];
     return row?record(row):null;

@@ -229,3 +229,26 @@ Actual dependency-closed provider/trust/writer installation, cold producer
 reconciliation extension, approved budgets/calibration, coexistence/P184G2 and
 assigned consumer/browser remain open. No new Claude type/field/assignment or
 acknowledgement; ELP2-11 remains NOT_ENTRY_READY.
+
+<a id="normal-hook-terminal-20261017-222420"></a>
+## Actual normal-hook landing — 2026-10-17T22:24:20Z
+
+Landed `0ccdc5edfbbf6d4e911baa375cd25cf3d4e0e6c1`, parent43e877fd.
+Controller `native-lifecycle-integration-land-215549` terminated0/PASS at
+22:24:20.093345UTC: **67contract files/791tests PASS**, API build PASS,
+**380API files/6222tests PASS**,2existing skipped files/3existing skipped tests;
+API duration1300.71s. Normal repository hook, scoped PostgreSQL restore and
+four scoped-access row digests PASS. Source/index frozen; eight protected
+runtime tuples unchanged; owned Node/PG/network absent and own lease removed.
+Do not add the overlapping focused241tests as new full-suite coverage.
+
+- Log SHA256 `721624bdc2f8caac7c78fc39ba41ff4c0d45f76ff6e92ef6b8cf1f84b9bdb8fe`.
+- Terminal controller JSON SHA256
+  `781032556752da4538073731d9538329d7d7e90463b38bc31a0c6db04172b8c7`.
+- Commit10files +1688/−62:3implementation +707/−62,1test +653/−0,
+  6docs +328/−0; no frontend or unrelated contributor paths.
+
+This supersedes pending local landing only. Candidate remains unmounted;
+actual provider/trust/writer installation, cold no-HTTP reconciliation,
+budget/calibration/coexistence/P184G2 and assigned consumer/browser are still
+OPEN. No push, dev/main, release/deploy or Claude acknowledgement follows.

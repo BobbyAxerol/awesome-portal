@@ -1,5 +1,10 @@
 # ELP2-07 — Trusted command và status bridge
 
+**2026-10-17 continuation:** [current-authorized capital workflow GET](../ELP2-08/capital-workflow-read.md)
+connects one immutable stored command to the canonical08 projection. Applied,
+uncommitted/NOT_RUN at entry; no command-source executor, financial effect,
+runtime or consumer activation. Existing07-001/002 gates remain open.
+
 2026-10-17 [04's finite exact-resource command collection](../ELP2-04/finite-account-command-readers.md)
 adds local read-only enumeration and fixes report-grant ancestry for detail.
 Implementation UNCOMMITTED/NOT_RUN at entry; no sender, broader operation

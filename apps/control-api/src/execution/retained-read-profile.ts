@@ -30,6 +30,8 @@ export function coreExecutionRead(path: string): boolean {
   // This additive exact-target status collection is Core-owned. Do not
   // broaden neighboring legacy capital detail routes or mutation access.
   if (path === "/api/v1/execution/capital-commands") return true;
+  // Additive local workflow GET only. No neighboring detail/mutation exemption.
+  if (/^\/api\/v1\/execution\/capital-commands\/ecm_[a-f0-9]{32}\/workflow$/.test(path)) return true;
   // Existing Core-owned gate envelopes keep the caller's workflow workspace;
   // they are not Manager deployment reads from the retained source workspace.
   if (/^\/api\/v1\/execution\/deployments\/[^/]+\/(?:canary|live)$/.test(path)) return true;

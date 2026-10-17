@@ -693,6 +693,173 @@
           }
         }
       }
+    },
+    "/api/v1/execution/capital-commands/{id}/workflow": {
+      "get": {
+        "operationId": "executionCapitalCommandWorkflowGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^ecm_[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "description": "Read-only local projection of one durable original capital command. Strict id/workspace query, current exact TS-accepted audit.read before disclosure and after final I/O, including all DENY and delegation ancestry. The original sender may differ from this reviewer; original send expiry does not revoke current report permission. Immutable command/profile/qualification/intent/status correlation is checked. Four outcome dimensions remain separate; UNKNOWN never causes resend. source_as_of_ms is null because no owning-source cutoff is stored; observed_at_ms is the Portal local-read clock, not source freshness. Stable snapshot_ref contains only authorized public fields and excludes private authority and read time. No prepare/send/lookup/recover/reconcile or command/event/audit writes; existing authority-provider resolution remains possible. Retained exact Core workspace is preserved. Hidden/missing share404, visible corrupt data has sanitized503. All responses are private, no-store.",
+        "responses": {
+          "200": {
+            "description": "Current-authorized original command workflow, no execution effect or source-freshness inference",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowCapital"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMMAND_INPUT_INVALID; malformed id/workspace or unknown query field.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session authentication required.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current actor/session authority refused.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "COMMAND_RESOURCE_NOT_FOUND; hidden and unknown are identical.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ACCESS_RETRY_REQUIRED; current Core authority changed during read.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "COMMAND_STATUS_UNVERIFIED or sanitized COMMAND_UNAVAILABLE; no partial response or raw diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2633,6 +2800,259 @@
           "page"
         ],
         "description": "Finite exact-resource/environment trusted-capital statuses only. Not the mixed operation queue. Current TS-accepted audit authorization precedes collection. Runtime also verifies cross-row target and page-count invariants."
+      },
+      "WorkflowContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ROOT",
+                  "PORTFOLIO",
+                  "ALPHA",
+                  "DEPLOYMENT",
+                  "ACCOUNT",
+                  "BINDING"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "kind",
+              "id"
+            ]
+          },
+          "policy_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "snapshot_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "source_as_of_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observed_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "workspace_id",
+          "environment",
+          "resource",
+          "policy_revision",
+          "snapshot_ref",
+          "source_as_of_ms",
+          "observed_at_ms"
+        ]
+      },
+      "WorkflowCapital": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.capital-workflow.v1"
+          },
+          "context": {
+            "$ref": "#/components/schemas/WorkflowContext"
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "status": {
+            "$ref": "#/components/schemas/CommandStatus"
+          },
+          "effect_kind": {
+            "type": "string",
+            "enum": [
+              "ECONOMIC_ASSIGNMENT",
+              "MANAGEMENT_BUDGET",
+              "NOMINAL_ROOT_CAP"
+            ]
+          },
+          "physical_transfer_performed": {
+            "const": false
+          },
+          "form_cancel": {
+            "const": "DISCARD_LOCAL_DRAFT_ONLY"
+          },
+          "after_submit_cancel": {
+            "const": "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED"
+          },
+          "refresh": {
+            "const": "GET_ORIGINAL_COMMAND_NO_RESUBMIT"
+          },
+          "public_copy_key": {
+            "type": "string",
+            "enum": [
+              "QUERY_SAME_INTENT",
+              "REVIEW_RECEIPT",
+              "PARTIAL_REMAINDER_PENDING",
+              "APPLIED_PART_RETAINED",
+              "SOURCE_REJECTED"
+            ]
+          },
+          "automatic_resend": {
+            "const": false
+          }
+        },
+        "required": [
+          "schema_version",
+          "context",
+          "currency",
+          "status",
+          "effect_kind",
+          "physical_transfer_performed",
+          "form_cancel",
+          "after_submit_cancel",
+          "refresh",
+          "public_copy_key",
+          "automatic_resend"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "properties": {
+                    "business": {
+                      "properties": {
+                        "state": {
+                          "const": "UNKNOWN"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "status": {
+                  "properties": {
+                    "business": {
+                      "properties": {
+                        "amounts": {
+                          "type": "null"
+                        },
+                        "receipt_ref": {
+                          "type": "null"
+                        },
+                        "source_event_ref": {
+                          "type": "null"
+                        },
+                        "revision": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "status": {
+                  "properties": {
+                    "business": {
+                      "properties": {
+                        "receipt_ref": {
+                          "type": "string"
+                        },
+                        "source_event_ref": {
+                          "type": "string"
+                        },
+                        "revision": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "properties": {
+                    "operation": {
+                      "not": {
+                        "enum": [
+                          "ADJUST_TARGET_BUDGET",
+                          "SET_ROOT_LIMIT"
+                        ]
+                      }
+                    },
+                    "business": {
+                      "properties": {
+                        "state": {
+                          "not": {
+                            "const": "UNKNOWN"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "status": {
+                  "properties": {
+                    "business": {
+                      "properties": {
+                        "amounts": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       },
       "CommandProblem": {
         "type": "object",

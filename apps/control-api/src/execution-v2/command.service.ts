@@ -10,6 +10,8 @@ import { ExecutionAccessService } from "./access.service";
 import { assertAmountPartition } from "./foundation.contract";
 import { CommandError,commandIntent,commandPreview,commandStatus,type CommandIntent,type CommandStatus } from "./command.contract";
 import { CommandStore,type CommandRecord } from "./command.store";
+import { capitalWorkflow } from "./workflow";
+import { workflowCommandRecord,workflowCommandTarget } from "./capital-workflow-record";
 import { commandMembershipCurrent } from "./command-current-authority";
 import { commandAuthorization,sourceCommandResult,unqualifiedCommandTrust,type CommandAuthorization,type CommandTrust,type SourceCommandResult } from "./command-trust";
 
@@ -174,6 +176,36 @@ export class ExecutionCommandService {
     this.permit(c,old.intent,true);
     const current=await this.access.confirmReadContext(actor,workspace,c);this.permit(current,old.intent,true);
     return old.status;
+  }
+  /** Current-authorized local presentation only. No command/provider dispatch,
+   * recovery, status update, event or audit write. The original author may differ
+   * from the current report reader; old new-send expiry is not current ACL. */
+  async workflow(actor:AccessActor,workspace:string,id:string):Promise<ReturnType<typeof capitalWorkflow>> {
+    const captured=await this.access.readContext(actor,workspace);
+    const row=await this.store.workflowCandidate(workspace,id);
+    if(!row)throw new CommandError("COMMAND_RESOURCE_NOT_FOUND",404);
+    const target=workflowCommandTarget(row);
+    this.report(captured,target.resource,target.environment);
+    // Last awaited operation. Release the bounded read transaction before this
+    // current Core fence; no source calls or database awaits follow it.
+    const current=await this.access.confirmReadContext(actor,workspace,captured);
+    const decision=this.report(current,target.resource,target.environment);
+    try {
+      const {intent,status}=workflowCommandRecord(row,workspace,id,target);
+      if(decision.policy_revision===null)throw new CommandError("COMMAND_STATUS_UNVERIFIED",503);
+      const context={workspace_id:workspace,environment:target.environment,resource:target.resource,
+        policy_revision:decision.policy_revision,
+        snapshot_ref:accessDigest({domain:"portal.execution.capital-workflow.v1",workspace_id:workspace,
+          environment:target.environment,resource:target.resource,currency:intent.business_payload.currency,
+          policy_revision:decision.policy_revision,status}),
+        // Stored updated_at_ms is Portal state time, never PM source-cutoff proof.
+        source_as_of_ms:null,observed_at_ms:Math.max(current.now_ms,Date.now())};
+      return capitalWorkflow(context,intent.business_payload.currency,status);
+    } finally {
+      // Also fence validation failures: expiry while decoding a corrupt visible
+      // record must not become a corruption/existence oracle after access ends.
+      this.report({...current,now_ms:Math.max(current.now_ms,Date.now())},target.resource,target.environment);
+    }
   }
   /** A local finite status read only. Never calls command trust/reconcile/recovery.
    * Mandatory exact resource prevents an empty list becoming global discovery.

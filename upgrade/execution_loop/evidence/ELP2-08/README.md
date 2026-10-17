@@ -1,5 +1,10 @@
 # ELP2-08 — Workflows và HiFi states
 
+**2026-10-17 continuation:** [capital workflow read](capital-workflow-read.md)
+adds the missing current-authorized local GET, preserving the schema-only
+workflow OpenAPI and original command semantics. Applied/uncommitted, tests
+NOT_RUN at entry. Source/consumer/full08 gates remain separate; Claude held.
+
 ## Entry / approved scope
 
 Bobby assigned ELP2-08 on 2026-10-16. Entry:

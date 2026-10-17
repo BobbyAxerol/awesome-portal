@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import ts from 'typescript';
 import { workflowFixtures } from './execution-workflow-fixtures.mjs';
+import { capitalWorkflowSchemas } from './execution-capital-workflow-schema.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..'), require = createRequire(import.meta.url), cache = new Map();
 function load(path) {
   if (cache.has(path)) return cache.get(path).exports;
@@ -39,7 +40,10 @@ const src = resolve(root, '../../apps/control-api/src/execution-v2');
 const c = load(resolve(src, 'workflow.contract.ts')), functions = load(resolve(src, 'workflow.ts'));
 const foundation = JSON.parse(readFileSync(resolve(root, 'openapi/execution-v2-foundation.openapi.json'), 'utf8'));
 const command = JSON.parse(readFileSync(resolve(root, 'openapi/execution-trusted-commands.openapi.json'), 'utf8'));
-const schemas = { ...foundation.components.schemas, ...command.components.schemas };
+// Workflow definitions are regenerated from their canonical Zod source below;
+// never import them back through the command API or create an ordering cycle.
+const schemas = { ...foundation.components.schemas,
+  ...Object.fromEntries(Object.entries(command.components.schemas).filter(([name]) => !name.startsWith('Workflow'))) };
 for (const [name, key] of Object.entries({ WorkflowContext: 'workflowContext', WorkflowReadState: 'workflowReadState',
   WorkflowReceiptStep: 'workflowReceiptStep', WorkflowCreate: 'workflowCreate', WorkflowCapital: 'workflowCapital',
   WorkflowConfirmation: 'workflowConfirmation', WorkflowLifecycle: 'workflowLifecycle', WorkflowNavigation: 'workflowNavigation',
@@ -65,18 +69,7 @@ schemas.WorkflowCreate.allOf = [{
 }];
 // Preserve the runtime's receipt/null-amount distinction in served JSON too.
 // Decimal partition arithmetic remains a runtime obligation, never target-as-amount.
-const capitalBusiness = properties => ({ properties: { status: { properties: { business: { properties } } } } });
-schemas.WorkflowCapital.allOf = [{
-  if: capitalBusiness({ state: { const: 'UNKNOWN' } }),
-  then: capitalBusiness(Object.fromEntries(['amounts', 'receipt_ref', 'source_event_ref', 'revision'].map(k => [k, { type: 'null' }]))),
-  else: capitalBusiness(Object.fromEntries(['receipt_ref', 'source_event_ref', 'revision'].map(k => [k, { type: 'string' }]))),
-}, {
-  if: { properties: { status: { properties: {
-    operation: { not: { enum: ['ADJUST_TARGET_BUDGET', 'SET_ROOT_LIMIT'] } },
-    business: { properties: { state: { not: { const: 'UNKNOWN' } } } },
-  } } } },
-  then: capitalBusiness({ amounts: { type: 'object' } }),
-}];
+Object.assign(schemas, capitalWorkflowSchemas(c, json));
 schemas.WorkflowLifecycle.allOf = [{
   if: { properties: { state: { const: 'READY_FOR_AUTHORITY_REVIEW' } }, required: ['state'] },
   then: { properties: { reason_code: { type: 'null' }, obligations: { properties: { coverage: { const: 'COMPLETE' }, freshness: { const: 'FRESH' }, source_receipt_ref: { type: 'string' } } } } },
