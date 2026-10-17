@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import { isProxy } from "node:util/types";
 import { z } from "zod";
 import { accessDigest } from "./access-policy";
 import { financialStage, utcMilliseconds } from "./foundation.contract";
 import { publicationDigest } from "./publication.contract";
+import { managerModelDocument, type ManagerModelDocument } from "./manager-model.contract";
 import { calculateManagerRegimeFit, MANAGER_REGIME_FORMULA, type ManagerRegimeInput,
   type ManagerRegimePolicy, type ManagerRegimeReference } from "./manager-regime";
 import { managerRegimeDecimal as decimal, managerRegimeText as text, managerRegimeRef as ref,
@@ -95,11 +97,16 @@ export type ManagerRegimeSourceAcceptancePin = z.infer<typeof evidenceAcceptance
 declare const approvedPolicy: unique symbol, verifiedEvidence: unique symbol;
 export interface ApprovedManagerRegimePolicy { readonly [approvedPolicy]: true }
 export interface VerifiedManagerRegimeEvidence { readonly [verifiedEvidence]: true }
-interface PolicyRecord { artifact: ManagerRegimePolicyArtifact; approval: ManagerRegimePolicyApprovalPin }
-interface EvidenceRecord { artifact: ManagerRegimeEvidenceArtifact; acceptance: ManagerRegimeSourceAcceptancePin;
+interface PolicyRecord { artifact: ManagerRegimePolicyArtifact; approval: ManagerRegimePolicyApprovalPin; artifact_utf8: string }
+interface EvidenceRecord { artifact: ManagerRegimeEvidenceArtifact; acceptance: ManagerRegimeSourceAcceptancePin; artifact_utf8: string;
   input: Omit<ManagerRegimeInput, "policy" | "allow_test_only"> }
 const policies = new WeakMap<ApprovedManagerRegimePolicy, PolicyRecord>();
 const evidenceRecords = new WeakMap<VerifiedManagerRegimeEvidence, EvidenceRecord>();
+// Private numerical-output witness only. Original custody can bind exactly the
+// real returned worker object without changing/freeze-cloning caller output.
+const originalWorkerPublications = new WeakMap<ManagerRegimePublication, {
+  policy: ApprovedManagerRegimePolicy; evidence: VerifiedManagerRegimeEvidence; digest: string;
+}>();
 const ARTIFACT_CEILING = 8 * 1024 * 1024;
 const POLICY_CEILING = 65_536;
 function fail(condition: unknown, code: string): asserts condition { if (!condition) throw new Error(code); }
@@ -157,10 +164,10 @@ const absent = (error: unknown): Absence => ({ status: "NOT_PUBLISHED", reason_c
 const policyCurrent = (r: PolicyRecord, now: number) => Number.isSafeInteger(now) && now >= r.approval.available_at_ms && now < r.approval.valid_until_ms;
 const evidenceCurrent = (r: EvidenceRecord, now: number) => Number.isSafeInteger(now) && now >= r.artifact.source_as_of_ms &&
   now >= r.acceptance.available_at_ms && now < r.acceptance.valid_until_ms && now - r.artifact.source_as_of_ms <= r.artifact.maximum_source_age_ms;
-export function loadApprovedManagerRegimePolicy(input: { artifact_bytes: string | Uint8Array | null;
-  approval_pin: ManagerRegimePolicyApprovalPin | null; scope: ManagerRegimeScope; as_of_ms: number }):
-  { status: "READY"; handle: ApprovedManagerRegimePolicy } | Absence {
-  try {
+/** Exact current loader semantics, independently reusable at an original clock.
+ * Parsing a retained record does not register an operational/current handle. */
+function policyRecordFromBytes(input: { artifact_bytes: string | Uint8Array | null;
+  approval_pin: ManagerRegimePolicyApprovalPin | null; scope: ManagerRegimeScope; as_of_ms: number }): PolicyRecord {
     fail(input.approval_pin !== null, "REGIME_POLICY_NOT_APPROVED");
     const decoded = decode(input.artifact_bytes, POLICY_CEILING);
     const pin = policyApproval.parse(capture(input.approval_pin, POLICY_CEILING));
@@ -186,7 +193,14 @@ export function loadApprovedManagerRegimePolicy(input: { artifact_bytes: string 
       Number(p.min_current_feature_coverage) > 0 && Number(p.min_current_feature_coverage) <= 1 &&
       p.empirical_quantiles.every(q => Number(q) >= 0 && Number(q) <= 1) &&
       new Set(p.empirical_quantiles.map(Number)).size === p.empirical_quantiles.length, "REGIME_POLICY_CONFIG_INVALID");
-    const record = freeze({ artifact: a, approval: pin }); fail(policyCurrent(record, now), "REGIME_POLICY_NOT_CURRENT");
+    const record = freeze({ artifact: a, approval: pin, artifact_utf8: decoded.bytes.toString("utf8") });
+    fail(policyCurrent(record, now), "REGIME_POLICY_NOT_CURRENT"); return record;
+}
+export function loadApprovedManagerRegimePolicy(input: { artifact_bytes: string | Uint8Array | null;
+  approval_pin: ManagerRegimePolicyApprovalPin | null; scope: ManagerRegimeScope; as_of_ms: number }):
+  { status: "READY"; handle: ApprovedManagerRegimePolicy } | Absence {
+  try {
+    const record = policyRecordFromBytes(input);
     const handle = Object.freeze({}) as ApprovedManagerRegimePolicy; policies.set(handle, record); return { status: "READY", handle };
   } catch (error) { return absent(error); }
 }
@@ -206,10 +220,9 @@ function bindingKnown(b: z.infer<typeof managerRegimeResearchBinding>, cutoff: n
       b.evidence_available_at_ms].every(t => t <= cutoff);
 }
 const receiptKnown = (r: z.infer<typeof receipt> | null, cutoff: number) => r !== null && r.available_at_ms <= cutoff;
-export function loadVerifiedManagerRegimeEvidence(input: { artifact_bytes: string | Uint8Array | null;
-  source_pin: ManagerRegimeSourceAcceptancePin | null; scope: ManagerRegimeScope; as_of_ms: number }):
-  { status: "READY"; handle: VerifiedManagerRegimeEvidence } | Absence {
-  try {
+/** Closed source/method proof parsing without minting a current evidence handle. */
+function evidenceRecordFromBytes(input: { artifact_bytes: string | Uint8Array | null;
+  source_pin: ManagerRegimeSourceAcceptancePin | null; scope: ManagerRegimeScope; as_of_ms: number }): EvidenceRecord {
     fail(input.source_pin !== null, "REGIME_SOURCE_NOT_ACCEPTED");
     const decoded = decode(input.artifact_bytes, ARTIFACT_CEILING);
     const pin = evidenceAcceptance.parse(capture(input.source_pin, ARTIFACT_CEILING));
@@ -290,8 +303,14 @@ export function loadVerifiedManagerRegimeEvidence(input: { artifact_bytes: strin
       as_of_ms: cutoff, evaluation_at_ms: a.evaluation_at_ms, evidence_snapshot_id: a.evidence_snapshot_id,
       evidence_snapshot_available_at_ms: a.evidence_snapshot_available_at_ms, revision: a.revision,
       supersedes_revision: a.supersedes_revision, references: materialized };
-    const record = freeze({ artifact: a, acceptance: pin, input: calculationInput });
-    fail(evidenceCurrent(record, now), "REGIME_EVIDENCE_NOT_CURRENT");
+    const record = freeze({ artifact: a, acceptance: pin, input: calculationInput, artifact_utf8: decoded.bytes.toString("utf8") });
+    fail(evidenceCurrent(record, now), "REGIME_EVIDENCE_NOT_CURRENT"); return record;
+}
+export function loadVerifiedManagerRegimeEvidence(input: { artifact_bytes: string | Uint8Array | null;
+  source_pin: ManagerRegimeSourceAcceptancePin | null; scope: ManagerRegimeScope; as_of_ms: number }):
+  { status: "READY"; handle: VerifiedManagerRegimeEvidence } | Absence {
+  try {
+    const record = evidenceRecordFromBytes(input);
     const handle = Object.freeze({}) as VerifiedManagerRegimeEvidence; evidenceRecords.set(handle, record); return { status: "READY", handle };
   } catch (error) { return absent(error); }
 }
@@ -434,8 +453,272 @@ export class ManagerRegimeRuntime {
       fail(!signal?.aborted && policies.get(policyHandle) === p && evidenceRecords.get(evidenceHandle) === e,
         "REGIME_APPROVAL_REVOKED_OR_CANCELLED");
       fail(publicationMatches(p, e, publication, this.now()), "REGIME_PUBLICATION_NOT_CURRENT");
+      originalWorkerPublications.set(publication, { policy: policyHandle, evidence: evidenceHandle,
+        digest: accessDigest(publication) });
       return { status: "READY", publication };
     } catch (error) { return absent(error); }
     finally { this.inFlight--; }
   }
+}
+
+/** PRIVATE versioned original Regime custody. No public approval, current grant,
+ * source acceptance, new worker or original-parent writer is created here. */
+const originalDigest = publicationDigest.refine(value => /^sha256:[a-f0-9]{64}$(?![\s\S])/.test(value));
+const originalSourceSchema = z.object({ workspace_id: text, environment: managerRegimeScope.shape.environment,
+  profile_id: text, catalogue_digest: originalDigest, revision: text, payload_digest: originalDigest,
+  source_epoch: text, source_sequence: managerModelDocument.innerType().shape.source_sequence,
+  projection_generation: text, source_set_digest: originalDigest, as_of_ms: utcMilliseconds }).strict();
+const originalRegimeBase = z.object({
+  schema_version: z.literal("portal.execution.manager-regime-original-inputs.v1"),
+  purpose: z.literal("HISTORICAL_ANALYSIS_ONLY"), operational_current: z.literal(false),
+  source: originalSourceSchema, binding: managerRegimeSubjectBinding,
+  policy_artifact_utf8: z.string().min(1).max(POLICY_CEILING), policy_artifact_sha256: originalDigest,
+  policy_approval: policyApproval,
+  evidence_artifact_utf8: z.string().min(1).max(ARTIFACT_CEILING), evidence_artifact_sha256: originalDigest,
+  source_acceptance: evidenceAcceptance, original_publication_digest: originalDigest,
+  original_input_digest: originalDigest, original_computed_at_ms: utcMilliseconds,
+  captured_at_ms: utcMilliseconds, population_census_digest: originalDigest, reference_census_digest: originalDigest,
+}).strict();
+const originalRegimeSchema = originalRegimeBase.extend({ custody_digest: originalDigest }).strict();
+export type ManagerRegimeOriginalCustody = z.infer<typeof originalRegimeSchema>;
+const originalReason = z.enum(["REGIME_ORIGINAL_CUSTODY_INVALID", "REGIME_ORIGINAL_CUSTODY_BOUND",
+  "REGIME_ORIGINAL_CUSTODY_NOT_APPROVED", "REGIME_ORIGINAL_CUSTODY_NOT_CURRENT",
+  "REGIME_ORIGINAL_CUSTODY_SOURCE_MISMATCH", "REGIME_ORIGINAL_CUSTODY_PUBLICATION_MISMATCH",
+  "REGIME_ORIGINAL_CUSTODY_POPULATION_MISMATCH", "REGIME_ORIGINAL_CUSTODY_DIGEST_MISMATCH",
+  "REGIME_ORIGINAL_CUSTODY_ORIGINAL_TIME_INVALID", "REGIME_ORIGINAL_CUSTODY_ARTIFACT_INVALID"]);
+type OriginalAbsence = { status: "NOT_PUBLISHED"; reason_code: z.infer<typeof originalReason> };
+export type ManagerRegimeOriginalCapture = { status: "READY"; custody: ManagerRegimeOriginalCustody } | OriginalAbsence;
+declare const retainedRegimeBrand: unique symbol;
+/** Historical-only: never accepted by current calculate, loaders or read fences. */
+export interface RetainedManagerRegimeInputs { readonly [retainedRegimeBrand]: true }
+export type ManagerRegimeOriginalRestore = { status: "READY"; handle: RetainedManagerRegimeInputs } | OriginalAbsence;
+interface RetainedRegimeRecord { custody: ManagerRegimeOriginalCustody; policy: PolicyRecord; evidence: EvidenceRecord }
+const retainedRegimes = new WeakMap<RetainedManagerRegimeInputs, RetainedRegimeRecord>();
+const capturedOriginalRegimes = new WeakMap<ManagerRegimeOriginalCustody, ManagerRegimeOriginalCustody>();
+function originalFail(condition: unknown, code: z.infer<typeof originalReason>): asserts condition {
+  if (!condition) throw new Error(code);
+}
+function originalAbsence(error: unknown): OriginalAbsence {
+  // Do not inspect a thrown Proxy/getter while reporting a rejected boundary.
+  let message: unknown;
+  if (error !== null && typeof error === "object" && !isProxy(error)) {
+    const field = Object.getOwnPropertyDescriptor(error, "message");
+    if (field && Object.hasOwn(field, "value")) message = field.value;
+  }
+  const parsed = typeof message === "string" ? originalReason.safeParse(message) : null;
+  return { status: "NOT_PUBLISHED", reason_code: parsed?.success ? parsed.data :
+    message === "REGIME_RUNTIME_INPUT_BOUND" || message === "REGIME_ARTIFACT_BYTE_LIMIT" ?
+      "REGIME_ORIGINAL_CUSTODY_BOUND" : "REGIME_ORIGINAL_CUSTODY_INVALID" };
+}
+/** New optional boundary only; no reflection on Proxy, getters or opaque handles. */
+function originalFields(value: unknown, expected: readonly string[]): Record<string, PropertyDescriptor> {
+  originalFail(value !== null && typeof value === "object" && !isProxy(value) &&
+    [Object.prototype, null].includes(Object.getPrototypeOf(value)) && Object.getOwnPropertySymbols(value).length === 0,
+  "REGIME_ORIGINAL_CUSTODY_INVALID");
+  const fields = Object.getOwnPropertyDescriptors(value);
+  originalFail(Object.keys(fields).length === expected.length && expected.every(key => Object.hasOwn(fields, key)) &&
+    Object.values(fields).every(field => field.enumerable && Object.hasOwn(field, "value")),
+  "REGIME_ORIGINAL_CUSTODY_INVALID"); return fields;
+}
+function originalCapture(value: unknown, limit: number): unknown {
+  let nodes = 0, textBytes = 0; const active = new Set<object>();
+  const inspect = (item: unknown, depth: number): void => {
+    originalFail(++nodes <= 250_000 && depth <= 32, "REGIME_ORIGINAL_CUSTODY_BOUND");
+    if (typeof item === "string") {
+      textBytes += Buffer.byteLength(item, "utf8"); originalFail(textBytes <= limit, "REGIME_ORIGINAL_CUSTODY_BOUND"); return;
+    }
+    if (item === null || typeof item === "boolean" || typeof item === "number" && Number.isFinite(item)) return;
+    originalFail(item !== null && typeof item === "object" && !isProxy(item), "REGIME_ORIGINAL_CUSTODY_INVALID");
+    const array = Array.isArray(item), prototype = Object.getPrototypeOf(item);
+    originalFail(!active.has(item) && (array ? prototype === Array.prototype : [Object.prototype, null].includes(prototype)) &&
+      Object.getOwnPropertySymbols(item).length === 0, "REGIME_ORIGINAL_CUSTODY_INVALID");
+    const fields = Object.getOwnPropertyDescriptors(item), length: unknown = array ? fields.length?.value : undefined;
+    originalFail(!array || Number.isSafeInteger(length) && (length as number) >= 0 && (length as number) <= 32_768 &&
+      Object.keys(fields).length === (length as number) + 1, "REGIME_ORIGINAL_CUSTODY_BOUND");
+    active.add(item);
+    for (const [key, field] of Object.entries(fields)) {
+      if (array && key === "length") continue;
+      originalFail(field.enumerable && Object.hasOwn(field, "value") &&
+        (!array || /^(?:0|[1-9]\d*)$(?![\s\S])/.test(key) && Number(key) < (length as number)),
+      "REGIME_ORIGINAL_CUSTODY_INVALID");
+      textBytes += Buffer.byteLength(key, "utf8"); originalFail(textBytes <= limit, "REGIME_ORIGINAL_CUSTODY_BOUND");
+      inspect(field.value, depth + 1);
+    }
+    active.delete(item);
+  };
+  inspect(value, 0); return capture(value, limit);
+}
+function originalLimit(value: unknown): number {
+  originalFail(Number.isSafeInteger(value) && (value as number) >= 1 && (value as number) <= ARTIFACT_CEILING,
+    "REGIME_ORIGINAL_CUSTODY_BOUND"); return value as number;
+}
+function originalNow(now: () => number): number {
+  originalFail(typeof now === "function" && !isProxy(now), "REGIME_ORIGINAL_CUSTODY_INVALID");
+  const value: unknown = now();
+  originalFail(typeof value === "number" && Number.isSafeInteger(value) && value >= 0,
+    "REGIME_ORIGINAL_CUSTODY_ORIGINAL_TIME_INVALID"); return utcMilliseconds.parse(value);
+}
+function originalDocument(value: unknown): ManagerModelDocument {
+  const d = managerModelDocument.parse(originalCapture(value, ARTIFACT_CEILING));
+  originalFail(d.qualification === "SOURCE_VERIFIED", "REGIME_ORIGINAL_CUSTODY_SOURCE_MISMATCH"); return d;
+}
+function originalSource(d: ManagerModelDocument): z.infer<typeof originalSourceSchema> {
+  return { workspace_id: d.workspace_id, environment: d.environment, profile_id: d.profile_id,
+    catalogue_digest: d.catalogue_digest, revision: d.revision, payload_digest: accessDigest(d),
+    source_epoch: d.source_epoch, source_sequence: d.source_sequence, projection_generation: d.projection_generation,
+    source_set_digest: d.source_set_digest, as_of_ms: d.as_of_ms };
+}
+function originalSubjectKey(b: ManagerRegimeSubjectBinding): string {
+  return accessDigest({ subject_type: b.subject_type, subject_id: b.subject_id, alpha_id: b.alpha_id,
+    alpha_version_id: b.alpha_version_id, population: b.tuple_population_digest,
+    partition: b.partition_digest, stages: [...b.stage_filter].sort() });
+}
+function originalSourceMatches(p: PolicyRecord, e: EvidenceRecord, d: ManagerModelDocument,
+  publication: ManagerRegimePublication): void {
+  const a = e.artifact, scope = { workspace_id: d.workspace_id, environment: d.environment,
+    profile_id: d.profile_id, catalogue_digest: d.catalogue_digest };
+  originalFail(same(a.scope, scope) && same(p.artifact.scope, scope) && a.source_revision === d.revision &&
+    a.projection_generation === d.projection_generation && a.source_set_digest === d.source_set_digest &&
+    a.source_as_of_ms === d.as_of_ms, "REGIME_ORIGINAL_CUSTODY_SOURCE_MISMATCH");
+  const matching = (d.precomputed_regimes ?? []).filter(value =>
+    originalSubjectKey(value.provenance.binding) === originalSubjectKey(a.binding) && same(value.provenance.scope, a.scope));
+  originalFail(matching.length === 1 && same(matching[0], publication),
+    "REGIME_ORIGINAL_CUSTODY_PUBLICATION_MISMATCH");
+  // The independent source/method pin already attests its COMPLETE bound
+  // subject/partition census; every exact tuple+stage must occur once in135.
+  // Unrelated source subjects/partitions are not added to that denominator.
+  const source = new Map<string, number>();
+  for (const member of d.members) {
+    if (member.valid_from_ms > d.as_of_ms || member.valid_to_ms !== null && member.valid_to_ms <= d.as_of_ms) continue;
+    const key = censusKey(member); source.set(key, (source.get(key) ?? 0) + 1);
+  }
+  originalFail(a.population.every(member => source.get(censusKey(member)) === 1) &&
+    censusDigest(a.population) === e.acceptance.population_census_digest &&
+    referenceCensus(a) === e.acceptance.reference_census_digest, "REGIME_ORIGINAL_CUSTODY_POPULATION_MISMATCH");
+}
+export function captureManagerRegimeOriginal(input: { policy: ApprovedManagerRegimePolicy | null;
+  evidence: VerifiedManagerRegimeEvidence | null; document: ManagerModelDocument; publication: ManagerRegimePublication;
+  maximum_bytes: number }, now: () => number = Date.now): ManagerRegimeOriginalCapture {
+  try {
+    const fields = originalFields(input, ["policy", "evidence", "document", "publication", "maximum_bytes"]);
+    const limit = originalLimit(fields.maximum_bytes.value), ph = fields.policy.value as ApprovedManagerRegimePolicy | null;
+    const eh = fields.evidence.value as VerifiedManagerRegimeEvidence | null;
+    const p = ph && policies.get(ph), e = eh && evidenceRecords.get(eh);
+    originalFail(p && e, "REGIME_ORIGINAL_CUSTODY_NOT_APPROVED");
+    const returned: unknown = fields.publication.value;
+    const witness = returned !== null && typeof returned === "object" ?
+      originalWorkerPublications.get(returned as ManagerRegimePublication) : undefined;
+    originalFail(witness && witness.policy === ph && witness.evidence === eh,
+      "REGIME_ORIGINAL_CUSTODY_PUBLICATION_MISMATCH");
+    const document = originalDocument(fields.document.value);
+    const publication = managerRegimePublication.parse(originalCapture(returned, ARTIFACT_CEILING));
+    originalFail(accessDigest(publication) === witness.digest, "REGIME_ORIGINAL_CUSTODY_PUBLICATION_MISMATCH");
+    originalSourceMatches(p, e, document, publication);
+    const captured = originalNow(now), computed = publication.provenance.computed_at_ms;
+    originalFail(computed <= captured && document.observed_at_ms <= captured && document.recorded_through_ms <= captured,
+      "REGIME_ORIGINAL_CUSTODY_ORIGINAL_TIME_INVALID");
+    originalFail(policyCurrent(p, captured) && evidenceCurrent(e, captured), "REGIME_ORIGINAL_CUSTODY_NOT_CURRENT");
+    originalFail(publicationMatches(p, e, publication, computed) && publicationMatches(p, e, publication, captured),
+      "REGIME_ORIGINAL_CUSTODY_PUBLICATION_MISMATCH");
+    const base = originalRegimeBase.parse({
+      schema_version: "portal.execution.manager-regime-original-inputs.v1",
+      purpose: "HISTORICAL_ANALYSIS_ONLY", operational_current: false,
+      source: originalSource(document), binding: e.artifact.binding,
+      policy_artifact_utf8: p.artifact_utf8, policy_artifact_sha256: p.approval.artifact_sha256, policy_approval: p.approval,
+      evidence_artifact_utf8: e.artifact_utf8, evidence_artifact_sha256: e.acceptance.artifact_sha256,
+      source_acceptance: e.acceptance, original_publication_digest: accessDigest(publication),
+      original_input_digest: inputDigest(p, e), original_computed_at_ms: computed, captured_at_ms: captured,
+      population_census_digest: e.acceptance.population_census_digest, reference_census_digest: e.acceptance.reference_census_digest });
+    const custody = originalRegimeSchema.parse(originalCapture({ ...base, custody_digest: accessDigest(base) }, limit));
+    const finished = originalNow(now);
+    originalFail(finished >= captured, "REGIME_ORIGINAL_CUSTODY_ORIGINAL_TIME_INVALID");
+    originalFail(ph && eh && policies.get(ph) === p && evidenceRecords.get(eh) === e &&
+      policyCurrent(p, finished) && evidenceCurrent(e, finished),
+    "REGIME_ORIGINAL_CUSTODY_NOT_CURRENT");
+    const original = freeze(custody); capturedOriginalRegimes.set(original, original);
+    return { status: "READY", custody: original };
+  } catch (error) { return originalAbsence(error); }
+}
+/** Identity only. JSON/clones/restored inputs cannot mint a new ORIGINAL write. */
+export function managerRegimeCapturedOriginal(value: unknown): ManagerRegimeOriginalCustody | null {
+  return value !== null && typeof value === "object" ? capturedOriginalRegimes.get(value as ManagerRegimeOriginalCustody) ?? null : null;
+}
+export function restoreManagerRegimeOriginal(input: { custody: unknown; expected_custody_digest: string;
+  document: ManagerModelDocument; maximum_bytes: number }, now: () => number = Date.now): ManagerRegimeOriginalRestore {
+  try {
+    const fields = originalFields(input, ["custody", "expected_custody_digest", "document", "maximum_bytes"]);
+    const limit = originalLimit(fields.maximum_bytes.value);
+    const custody = originalRegimeSchema.parse(originalCapture(fields.custody.value, limit));
+    const expected: unknown = fields.expected_custody_digest.value;
+    originalFail(typeof expected === "string", "REGIME_ORIGINAL_CUSTODY_INVALID");
+    const expectedDigest = originalDigest.parse(expected), { custody_digest, ...base } = custody;
+    originalFail(custody_digest === expectedDigest && accessDigest(base) === custody_digest,
+      "REGIME_ORIGINAL_CUSTODY_DIGEST_MISMATCH");
+    const document = originalDocument(fields.document.value);
+    originalFail(same(custody.source, originalSource(document)), "REGIME_ORIGINAL_CUSTODY_SOURCE_MISMATCH");
+    let p: PolicyRecord, e: EvidenceRecord;
+    const scope = { workspace_id: document.workspace_id, environment: document.environment,
+      profile_id: document.profile_id, catalogue_digest: document.catalogue_digest };
+    try {
+      // Original-clock record validation ONLY: no current handle registration,
+      // lookup, policy replacement, numerical calculation or source I/O.
+      p = policyRecordFromBytes({ artifact_bytes: custody.policy_artifact_utf8, approval_pin: custody.policy_approval,
+        scope, as_of_ms: custody.original_computed_at_ms });
+      e = evidenceRecordFromBytes({ artifact_bytes: custody.evidence_artifact_utf8, source_pin: custody.source_acceptance,
+        scope, as_of_ms: custody.original_computed_at_ms });
+    } catch { throw new Error("REGIME_ORIGINAL_CUSTODY_ARTIFACT_INVALID"); }
+    originalFail(custody.policy_artifact_sha256 === p.approval.artifact_sha256 &&
+      custody.evidence_artifact_sha256 === e.acceptance.artifact_sha256 && same(custody.binding, e.artifact.binding) &&
+      custody.population_census_digest === e.acceptance.population_census_digest &&
+      custody.reference_census_digest === e.acceptance.reference_census_digest &&
+      custody.original_input_digest === inputDigest(p, e), "REGIME_ORIGINAL_CUSTODY_DIGEST_MISMATCH");
+    const readNow = originalNow(now);
+    originalFail(custody.original_computed_at_ms <= custody.captured_at_ms && custody.captured_at_ms <= readNow &&
+      document.observed_at_ms <= custody.captured_at_ms && document.recorded_through_ms <= custody.captured_at_ms &&
+      policyCurrent(p, custody.captured_at_ms) && evidenceCurrent(e, custody.captured_at_ms),
+    "REGIME_ORIGINAL_CUSTODY_ORIGINAL_TIME_INVALID");
+    const publication = (document.precomputed_regimes ?? []).find(value =>
+      accessDigest(value) === custody.original_publication_digest);
+    originalFail(publication && publication.provenance.computed_at_ms === custody.original_computed_at_ms,
+      "REGIME_ORIGINAL_CUSTODY_PUBLICATION_MISMATCH");
+    originalSourceMatches(p, e, document, publication);
+    originalFail(publicationMatches(p, e, publication, custody.original_computed_at_ms) &&
+      publicationMatches(p, e, publication, custody.captured_at_ms), "REGIME_ORIGINAL_CUSTODY_PUBLICATION_MISMATCH");
+    const handle = Object.freeze({}) as RetainedManagerRegimeInputs;
+    retainedRegimes.set(handle, freeze({ custody, policy: p, evidence: e })); return { status: "READY", handle };
+  } catch (error) { return originalAbsence(error); }
+}
+/** Detached historical-only original evidence, NEVER an operational approval.
+ * "input" preserves exact source-derived reference proof-known-at watermarks. */
+export function managerRegimeRetainedInputs(handle: RetainedManagerRegimeInputs | null): {
+  custody: ManagerRegimeOriginalCustody; policy_artifact: ManagerRegimePolicyArtifact;
+  policy_approval: ManagerRegimePolicyApprovalPin; evidence_artifact: ManagerRegimeEvidenceArtifact;
+  source_acceptance: ManagerRegimeSourceAcceptancePin; input: Omit<ManagerRegimeInput, "policy" | "allow_test_only">;
+} | null {
+  const record = handle ? retainedRegimes.get(handle) : undefined; if (!record) return null;
+  try {
+    // Each component passed its own bounded record/custody parser. Reapplying
+    // one node budget to their repeated combined trees rejects valid large
+    // originals. Keep every individual ceiling, plus the SAME aggregate byte
+    // ceiling checked before cloning; this is a fixed six-component accessor.
+    const components = [
+      ["custody", record.custody, ARTIFACT_CEILING],
+      ["policy_artifact", record.policy.artifact, POLICY_CEILING],
+      ["policy_approval", record.policy.approval, POLICY_CEILING],
+      ["evidence_artifact", record.evidence.artifact, ARTIFACT_CEILING],
+      ["source_acceptance", record.evidence.acceptance, ARTIFACT_CEILING],
+      ["input", record.evidence.input, ARTIFACT_CEILING],
+    ] as const;
+    let bytes = 2;
+    for (const [key, value] of components) {
+      bytes += Buffer.byteLength(JSON.stringify(key), "utf8") + 1 + Buffer.byteLength(JSON.stringify(value), "utf8") +
+        (bytes === 2 ? 0 : 1);
+      originalFail(bytes <= 3 * ARTIFACT_CEILING + 2 * POLICY_CEILING, "REGIME_ORIGINAL_CUSTODY_BOUND");
+    }
+    return freeze(Object.fromEntries(components.map(([key, value, limit]) => [key, originalCapture(value, limit)])) as {
+    custody: ManagerRegimeOriginalCustody; policy_artifact: ManagerRegimePolicyArtifact;
+    policy_approval: ManagerRegimePolicyApprovalPin; evidence_artifact: ManagerRegimeEvidenceArtifact;
+    source_acceptance: ManagerRegimeSourceAcceptancePin; input: Omit<ManagerRegimeInput, "policy" | "allow_test_only">;
+    });
+  } catch { return null; }
 }

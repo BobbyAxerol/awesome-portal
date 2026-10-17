@@ -11605,3 +11605,37 @@ fabricated. Canonical06-002 also retains independent pre-E freeze-witness
 requirement for a later-approved historical Regime policy; original custody
 may proceed independently. Recurring Claude intake and owner-held UXM state
 remain unchanged.
+
+<a id="elp2-regime-original-20261017"></a>
+
+**Composition actual terminal17:17UTC / next Regime foundation:**
+[775contracts/APIbuild/5,722API PASS+3existing skips, scoped PG restore/four
+row digests and exact cleanup](execution_loop/evidence/ELP2-06/composition-dependent-restatement.md#composition-dependent-terminal-20261017-1717)
+landed233b217bc90d3a21749c569bcd33410972a04a83,27files,+7,713/−1,168;
+eight protected runtimes unchanged. This supersedes pending Composition
+validation only, retaining failed receipts and phase-wide missing criteria.
+
+[Regime ORIGINAL custody and one lifecycle](execution_loop/evidence/ELP2-06/regime-original-custody.md)
+APPLIED_UNCOMMITTED/new-tests-NOT_RUN: exact original policy/evidence UTF8,
+genuine output/full135 identity, closed complete v4 parent, independent-of-Score
+opt-in and one135/138/139 transaction. RGC-01/02 and RGL-01 source findings
+accepted/corrected; future historical worker still needs genuine pre-E witness.
+No public contract/FE/migration/activation. Current-authorized REGIME historical
+worker/coordinator/API is next implementation, not called delivered here.
+
+[Source repin and remaining phase matrix](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-regime-original-20261017)
+includes PM768cc6c9 existing-registry preserving installer, unchanged native
+wire grammar and explicit owner-summary-only evidence limit. Full06-002 and
+10 remain OPEN for actual source/config/economic/ALL, authenticated native/
+current-human/app trust, approved14budgets/calibration/coexistence/P184G2.
+11NOT_ENTRY_READY. Claude intake rules§7.3 checked, UXM00–10 owner-held/no new
+consumer ack; no push/dev/main/sign/release/deploy. No duplicate request IDs.
+
+**Regime ORIGINAL corrected affected terminal17:48:50UTC:**
+[APIbuild/511API in14files/scoped PG restore/four row digests PASS](execution_loop/evidence/ELP2-06/regime-original-custody.md#regime-original-affected-20261017-1748).
+The84 new cases are included in511; earlier compile/14-failure receipts remain.
+Source/index/eight runtime tuples unchanged; own Node/PG/network1373263 and
+measurement lease clean. Normal-hook landing PENDING. Historical Regime
+worker/coordinator/API remains independently implementable work under06-002,
+not source/config-only or a claimed completed consumer. Claude intake rules
+§7.3 remain binding; no new public field/FE change or runtime activation.

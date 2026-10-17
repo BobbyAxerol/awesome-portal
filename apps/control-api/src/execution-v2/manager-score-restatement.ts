@@ -75,9 +75,22 @@ const semanticKey=(o:Original,p:Policy,c:Pick<ManagerScoreRecalculationConfig,"c
   calculation_revision:c.calculation_revision,input_method_revision:c.input_method_revision,
 });
 const compositionKey=(binding:ManagerCompositionBinding)=>accessDigest({...binding,stage_filter:[...binding.stage_filter].sort()});
+type CompositionOriginal=Extract<Original,{schema_version:"portal.execution.manager-score-original-inputs.v3"|"portal.execution.manager-score-original-inputs.v4"}>;
+function hasComposition(o:Original):o is CompositionOriginal {
+  return (o.schema_version==="portal.execution.manager-score-original-inputs.v3"||
+    o.schema_version==="portal.execution.manager-score-original-inputs.v4")&&o.retained_compositions.length>0;
+}
+/** A later calculation cannot use a parent before its last retained original
+ * fact existed. v1/v2/v3 recipes remain unchanged; v4 also binds Regime custody. */
+function originalV4AvailableAt(o:Original):number {
+  return o.schema_version!=="portal.execution.manager-score-original-inputs.v4"?o.source.as_of_ms:
+    Math.max(o.source.as_of_ms,...o.retained_tasks.map(item=>item.task.computed_at_ms),
+      ...o.retained_compositions.flatMap(item=>[item.custody.original_computed_at_ms,item.custody.captured_at_ms]),
+      ...o.retained_regimes.flatMap(item=>[item.custody.original_computed_at_ms,item.custody.captured_at_ms]));
+}
 function combinedKey(o:Original,p:Policy,c:Pick<ManagerScoreRecalculationConfig,"calculation_revision"|"input_method_revision">,
   compositionRevision:string):string {
-  if(o.schema_version!=="portal.execution.manager-score-original-inputs.v3"||o.retained_compositions.length===0)
+  if(!hasComposition(o))
     fail("MANAGER_RESTATED_COMPOSITION_ORIGINAL_REQUIRED");
   return accessDigest({domain:"portal.execution.manager-score-restatement.v2",
     composition_worker_schema_version:MANAGER_COMPOSITION_HISTORICAL_WORKER_VERSION,
@@ -175,7 +188,7 @@ function parseV1(row:StoredRow,o:Original,c:Pick<ManagerScoreRecalculationConfig
   if(row.calculation_key!==b.calculation_key||accessDigest(b)!==row.payload_digest||
     accessDigest(o.source)!==accessDigest(b.source)||o.calculation_key!==b.original_custody_key||o.inputs_digest!==b.original_inputs_digest||
     b.calculation_key!==semanticKey(o,b.policy,{calculation_revision:b.calculation_revision,input_method_revision:b.input_method_revision})||b.entries.length!==o.retained_tasks.length||
-    b.knowledge_cutoff_ms<b.source.as_of_ms||b.computed_at_ms<b.knowledge_cutoff_ms||
+    b.knowledge_cutoff_ms<originalV4AvailableAt(o)||b.computed_at_ms<b.knowledge_cutoff_ms||
     b.policy.approved_at_ms>b.knowledge_cutoff_ms||b.policy.valid_until_ms<=b.computed_at_ms||b.computed_at_ms>Date.now())
     fail("MANAGER_RESTATED_DIGEST_MISMATCH");
   validateScoreEntries(b,o);return b;
@@ -253,7 +266,7 @@ const combinedHeader=header.extend({
 function originalCompositionInputs(o:Original,d:ManagerModelDocument,maximumBytes:number):{
   binding:ManagerCompositionBinding;custody_digest:string;allocation:RetainedManagerAllocationInputs;
 }[]{
-  if(o.schema_version!=="portal.execution.manager-score-original-inputs.v3"||o.retained_compositions.length===0||
+  if(!hasComposition(o)||
     accessDigest(d)!==o.source.payload_digest||d.revision!==o.source.revision)
     fail("MANAGER_RESTATED_COMPOSITION_ORIGINAL_REQUIRED");
   // Original decoder already enforces bounded complete v3 census and parent
@@ -282,7 +295,7 @@ function parse(row:StoredRow,o:Original,c:Pick<ManagerScoreRecalculationConfig,"
   const inputs=originalCompositionInputs(o,d,c.maximum_bundle_bytes);
   const originalCutoff=Math.max(d.as_of_ms,d.observed_at_ms,d.recorded_through_ms,
     ...o.retained_tasks.map(item=>item.task.computed_at_ms),
-    ...(o.schema_version==="portal.execution.manager-score-original-inputs.v3"?
+    originalV4AvailableAt(o),...(hasComposition(o)?
       o.retained_compositions.flatMap(item=>[item.custody.original_computed_at_ms,item.custody.captured_at_ms]):[]));
   if(row.calculation_key!==b.calculation_key||accessDigest(b)!==row.payload_digest||
     accessDigest(o.source)!==accessDigest(b.source)||o.calculation_key!==b.original_custody_key||o.inputs_digest!==b.original_inputs_digest||
@@ -465,8 +478,7 @@ export class ManagerScoreRestatement {
     const d=await this.models.document(scope.workspace_id,scope.environment,scope.profile_id,head.revision);check();
     if(!d||d.qualification!=="SOURCE_VERIFIED"){this.disposition="RESTATED_SOURCE_NOT_QUALIFIED";return;}
     const o=await this.original(d);check();if(!o){this.disposition="RESTATED_ORIGINAL_NOT_RETAINED";return;}
-    const dependent=o.schema_version==="portal.execution.manager-score-original-inputs.v3"&&
-      o.retained_compositions.length>0?this.options.composition:undefined;
+    const dependent=hasComposition(o)?this.options.composition:undefined;
     // Legacy default is exact: mixed originals continue RAW-only v1 and a
     // Composition-only original remains typed absent without this opt-in.
     if(o.retained_tasks.length===0&&!dependent){this.disposition="RESTATED_DEPENDENT_WORKER_NOT_INSTALLED";return;}
@@ -474,7 +486,8 @@ export class ManagerScoreRestatement {
     // original K, compute time and result; clock alone never changes work key.
     const candidateK=Date.now(),handle=this.options.currentPolicy(),p=managerScoreRestatementPolicy(handle,{...scope,catalogue_digest:d.catalogue_digest},candidateK,Date.now());
     if(!p){this.disposition="RESTATED_POLICY_NOT_ELIGIBLE";return;}
-    if(dependent&&o.schema_version==="portal.execution.manager-score-original-inputs.v3"&&
+    if(candidateK<originalV4AvailableAt(o))fail("MANAGER_RESTATED_ORIGINAL_NOT_AVAILABLE_AS_OF");
+    if(dependent&&hasComposition(o)&&
       candidateK<Math.max(d.observed_at_ms,d.recorded_through_ms,...o.retained_tasks.map(item=>item.task.computed_at_ms),
         ...o.retained_compositions.flatMap(item=>[item.custody.original_computed_at_ms,item.custody.captured_at_ms])))
       fail("MANAGER_RESTATED_ORIGINAL_NOT_AVAILABLE_AS_OF");

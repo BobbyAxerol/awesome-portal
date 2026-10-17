@@ -54,6 +54,21 @@ describe("ELP2-06 Regime frozen-input shared calculator (synthetic, no runtime/s
     expect(stage.matched_outcome_summary).toMatchObject({ median: "0.02", min: "-0.01", max: "0.03", method: "DESCRIPTIVE_NET_TWR_LINEAR_EMPIRICAL_UNWEIGHTED_QUANTILES", quantiles: [{ probability: "0.25", value: "0.005" }, { probability: "0.75", value: "0.025" }] });
     expect(JSON.stringify(actual)).not.toMatch(/forecast|expected_return|win_probability|model_confidence/);
   });
+  it.each([1,3,128,1600,4096].flatMap(n=>["0.02","-0.02","0"].map(outcome=>({n,outcome}))))(
+    "finite Gaussian accumulation preserves exact ESS/mean bounds for $n equal neighbors, outcome$outcome",({n,outcome})=>{
+      const value=input(),A=500_000;
+      Object.assign(value.policy!,{max_reference_windows:n,min_neighbors:1,min_effective_sample_size:"1",min_distinct_episodes:1});
+      value.as_of_ms=A;value.evaluation_at_ms=A;value.evidence_snapshot_available_at_ms=A;
+      Object.assign(value.current,{feature_cutoff_ms:A,closed_through_ms:A,available_at_ms:A});
+      value.references=Array.from({length:n},(_,index)=>reference(index,"0",outcome));
+      const actual=calculateManagerRegimeFit(value),stage=actual.stage_breakdown[0];
+      expect(actual.status).toBe("supported");expect(actual.neighbor_count).toBe(n);
+      expect(Number(stage.effective_sample_size)).toBeGreaterThanOrEqual(1);
+      expect(Number(stage.effective_sample_size)).toBeLessThanOrEqual(n);
+      expect(Number(stage.effective_sample_size)).toBeCloseTo(n,8);
+      expect(stage.matched_outcome_summary).toMatchObject({mean:outcome,min:outcome,max:outcome});
+      expect(stage.neighbors).toHaveLength(n);expect(stage.neighbors.every(row=>Number(row.weight)>0)).toBe(true);
+    });
   it.each(["alpha_id", "research_binding_id", "run_id", "strategy_version", "params_hash", "trade_params_hash", "param_mapping_version", "universe_id", "venue", "data_snapshot_id", "split_manifest_hash"] as const)("R01 excludes mismatched exact binding axis %s without a green fallback", axis => {
     const value = input(); mutableReferences(value)[0].binding[axis] = "TEST_ONLY:other";
     const actual = expectReason(value, "unbound", "REFERENCE_BINDING_MISMATCH"); expect(actual.neighbor_count).toBe(0);

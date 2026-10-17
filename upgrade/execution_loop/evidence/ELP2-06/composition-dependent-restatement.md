@@ -189,3 +189,27 @@ and the owned lease was released. Main adds the five new canonical Composition
 fixtures to the snapshot inventory and regenerates the digest-only snapshot
 using the repository script. This repairs the integrity record, not a bypass
 or relaxed gate. The27 owned paths are explicitly included in the controller.
+
+<a id="composition-dependent-terminal-20261017-1717"></a>
+
+## Actual coherent terminal —2026-10-17T17:17:24UTC
+
+Landed `233b217bc90d3a21749c569bcd33410972a04a83`,27owned paths,
++7,713/−1,168 (includes generated contract/schema/types). Normal-hook controller
+`20261017/composition-dependent-land-165050` ended PASS:775contract cases/
+66files, APIbuild,5,722API PASS/3existing skips across365PASS/2skip files,
+scoped PostgreSQL restore/four row digests PASS. New68API cases (24actual-PG,
+44BFF) and15contract cases are included in, not added again to, these totals.
+
+ControllerSHA256 `d44137eb6b16c9063e6286bb4917b76f43c764cad06c270b0724e903c2838f41`;
+gate logSHA256 `07a6603f97584f76a42f4991a15431e8b8ce0374d65809c8a9942ff7bbe30e5c`.
+Exact source/index and eight protected runtime image/start/restart tuples
+remained pinned. Owned Node/PG/network1104467 removed, remaining resources[],
+matching measurement lease released. No operational volumes/runtime changes.
+Capacity observation afterward:155GiB free/621GiB (24% free); a point sample,
+not peak/coexistence or production-budget qualification.
+
+This supersedes local Composition pending validation, not the three preserved
+failed attempts or full06/10. Regime chain, actual accepted source/config/
+economic tie-out/compatible ALL, approved calibration/budgets and Claude
+consumer/browser acceptance remain OPEN. No push/dev/main/release.

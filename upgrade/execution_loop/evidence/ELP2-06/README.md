@@ -1,5 +1,14 @@
 # ELP2-06 — Manager read models và 360 datasets
 
+**Current continuation,2026-10-17:** [Composition dependent terminal](composition-dependent-restatement.md#composition-dependent-terminal-20261017-1717)
+landed233b217b:775contracts/APIbuild/5,722API PASS+3existing skips and scoped
+PG restore PASS; exact cleanup/source/index/eight runtime tuples preserved.
+[Independent Regime ORIGINAL custody/lifecycle](regime-original-custody.md)
+is APPLIED_UNCOMMITTED/new-tests-NOT_RUN on that parent. This newer entry
+supersedes earlier pending-only lines, not their failed histories.06-002 stays
+OPEN for complete Regime historical worker/API, source/config/economic tie-out,
+compatible ALL and consumer acceptance; no activation/FE/release implied.
+
 Latest continuation: [exact original Composition allocation custody](composition-original-custody.md)
 is APPLIED_UNCOMMITTED on clean parentf734db9d. It retains complete v3 original
 inputs through existing135/138/139 with exact accepted allocation bytes and
@@ -286,3 +295,13 @@ cases and correction remain pending coherent normal-hook terminal, not claimed
 PASS. No redundant unaffected load/browser/engine gates. Regime's later-policy
 worker also needs independent pre-E freeze evidence or explicit typed refusal;
 accepted under06-002, separate original custody can continue independently.
+
+### Regime ORIGINAL affected terminal —2026-10-17T17:48:50UTC
+
+[Exact custody/lifecycle result and preserved failures](regime-original-custody.md#regime-original-affected-20261017-1748):
+APIbuild,511/511API tests in14files, scoped PG restore/four row digests PASS;
+all19 owned paths/index/eight protected runtime tuples unchanged, own isolated
+resources and measurement lease released. Normal-hook commit still pending.
+This delivers no public field, historical Regime worker/API, source approval,
+calibration or consumer acceptance. Canonical06-002 stays OPEN; next backend
+is the independently witnessed historical worker/coordinator/authorized API.

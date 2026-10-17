@@ -18,7 +18,8 @@ import { ManagerCompositionRuntime, managerCompositionPublicationCurrent, manage
 import type { ManagerCompositionReadFence } from "./manager-composition-publication";
 import type { ManagerScorePublication } from "./manager-score-publication.contract";
 import type { ManagerCompositionPublication } from "./manager-composition-publication.contract";
-import { ManagerRegimeRuntime, managerRegimePublicationCurrent, type ApprovedManagerRegimePolicy,
+import { ManagerRegimeRuntime, managerRegimePublicationCurrent,captureManagerRegimeOriginal,
+  type ManagerRegimeOriginalCustody,type ApprovedManagerRegimePolicy,
   type VerifiedManagerRegimeEvidence, type ManagerRegimeRuntimeTask } from "./manager-regime-runtime";
 import type { ManagerRegimeReadFence } from "./manager-regime-publication";
 import type { ManagerRegimeSubjectBinding, ManagerRegimePublication } from "./manager-regime-publication.contract";
@@ -27,6 +28,8 @@ import { ManagerScoreRecalculation, type ManagerScoreRecalculationConfig,
   type ManagerScoreRecalculationTask } from "./manager-score-recalculation";
 import { ManagerScoreRestatement, type ManagerScoreDependentComposition } from "./manager-score-restatement";
 import { captureManagerScoreOriginalInputs } from "./manager-score-original-custody";
+import { ManagerOriginalCustodyLifecycle,type ManagerOriginalCustodyCaps,
+  type ManagerOriginalCustodyOmission } from "./manager-original-custody-lifecycle";
 
 export interface ManagerRuntimePartition {
   scope: ManagerLeaseScope;
@@ -44,6 +47,8 @@ export interface ManagerRuntimePartition {
   composition?: { runtime:ManagerCompositionRuntime;maximum_tasks_per_revision:number;currentAllocation():ApprovedManagerAllocation|null;
     tasks(delivery:ManagerConsumerDelivery,signal:AbortSignal):Promise<Array<Omit<ManagerCompositionRuntimeTask,"allocation"|"raw_scores">>> };
   regime?: { runtime: ManagerRegimeRuntime; maximum_tasks_per_revision: number;
+    /** Independent explicit ORIGINAL custody opt-in; no Score policy/default. */
+    original_custody?:ManagerOriginalCustodyCaps;
     currentPolicy(): ApprovedManagerRegimePolicy | null;
     currentEvidence(binding: ManagerRegimeSubjectBinding): VerifiedManagerRegimeEvidence | null;
     tasks(delivery: ManagerConsumerDelivery, signal: AbortSignal):
@@ -77,6 +82,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
   private readonly repository: ManagerModelRepository;
   private readonly recalculations=new Map<string,ManagerScoreRecalculation>();
   private readonly restatements=new Map<string,ManagerScoreRestatement>();
+  private readonly originalCustodies=new Map<string,ManagerOriginalCustodyLifecycle>();
   private readonly cadenceMs: number;
   private readonly publicationReadLimit: number;
   private readonly installedTrust?: AccessTrustProvider;
@@ -112,6 +118,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
         (p.composition?.maximum_tasks_per_revision ?? 0) + p.regime.maximum_tasks_per_revision > 128))
         throw new Error("MANAGER_REGIME_TASK_BOUND");
       if(p.score?.recalculation&&p.score.restatement)throw new Error("MANAGER_SCORE_CUSTODY_MODE_CONFLICT");
+      if(p.regime?.original_custody&&p.score?.recalculation)throw new Error("MANAGER_SCORE_CUSTODY_MODE_CONFLICT");
       const recalculation=p.score?.recalculation?new ManagerScoreRecalculation({pool,runtime:p.score.runtime,
         currentPolicy:()=>p.score!.currentPolicy(),commissioning:p.commissioning,source:p.source,
         publication:(request,signal)=>p.publication(request,signal),config:p.score.recalculation}):undefined;
@@ -121,8 +128,14 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
         publication:(request,signal)=>p.publication(request,signal),config:p.score.restatement,
         ...(p.score.restatement.composition?{composition:p.score.restatement.composition}:{})}):undefined;
       if(restatement)this.restatements.set(key(p.scope),restatement);
-      return new ManagerProjectionConsumer({pool,source:this.materializingSource(p,recalculation,restatement),scope:p.scope,bounds:p.bounds,
-        commissioning:p.commissioning,recalculation:restatement??recalculation});
+      const originalCustody=p.regime?.original_custody?new ManagerOriginalCustodyLifecycle(p.regime.original_custody,
+        restatement?[{caps:{maximum_bundle_bytes:p.score!.restatement!.maximum_bundle_bytes,
+          maximum_revisions_per_source:p.score!.restatement!.maximum_revisions_per_source,
+          maximum_retained_bytes_per_source:p.score!.restatement!.maximum_retained_bytes_per_source},
+          idle:input=>restatement.idle(input)}]:[]):undefined;
+      if(originalCustody)this.originalCustodies.set(key(p.scope),originalCustody);
+      return new ManagerProjectionConsumer({pool,source:this.materializingSource(p,recalculation,restatement,originalCustody),scope:p.scope,bounds:p.bounds,
+        commissioning:p.commissioning,recalculation:originalCustody??restatement??recalculation});
     });
     this.lastState="READY";
   }
@@ -131,6 +144,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
   /** Private reader dependency, never reconstructed from browser input. */
   recalculationFor(scope:ManagerLeaseScope):ManagerScoreRecalculation|undefined{return this.recalculations.get(key(scope));}
   restatementFor(scope:ManagerLeaseScope):ManagerScoreRestatement|undefined{return this.restatements.get(key(scope));}
+  originalCustodyFor(scope:ManagerLeaseScope):ManagerOriginalCustodyLifecycle|undefined{return this.originalCustodies.get(key(scope));}
   accessTrust(base?: AccessTrustProvider): AccessTrustProvider | undefined {
     if (!this.installation) return base;
     if (base && base !== this.installedTrust) throw new Error("MANAGER_RUNTIME_TRUST_CONFLICT");
@@ -209,7 +223,8 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     await Promise.allSettled([...this.publicationFlights]);
     await Promise.all(this.consumers.map(c=>c.stop()));await this.flight;this.lastState="STOPPED";
   }
-  private materializingSource(p: ManagerRuntimePartition,recalculation?:ManagerScoreRecalculation,restatement?:ManagerScoreRestatement): ManagerProjectionSource {
+  private materializingSource(p: ManagerRuntimePartition,recalculation?:ManagerScoreRecalculation,
+    restatement?:ManagerScoreRestatement,originalCustody?:ManagerOriginalCustodyLifecycle): ManagerProjectionSource {
     return {read:async input=>{
       const raw=await p.source.read(input);if(!raw)return null;
       if(Buffer.byteLength(JSON.stringify(raw.document))>p.bounds.maximum_document_bytes)throw new Error("MANAGER_PROJECTION_LIMIT");
@@ -236,10 +251,12 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
       const provided=p.score?await p.score.tasks(delivery,input.signal):[];
       // The exact detached values drive BOTH original calculation and custody.
       // Capturing only in late attach would adopt provider mutation after yield.
-      const originals=restatement?captureManagerScoreOriginalInputs(provided,p.bounds.maximum_document_bytes):undefined;
+      const originalCapture=originalCustody?.captureScoreInputs(provided,p.bounds.maximum_document_bytes);
+      const originals=originalCustody?(originalCapture?.originals??undefined):
+        restatement?captureManagerScoreOriginalInputs(provided,p.bounds.maximum_document_bytes):undefined;
       // Custody's duplicate exact input_json bytes have their OWN optional cap;
       // they must not reduce admission of the original worker envelope.
-      const tasks=originals?.map(({input_json:_bytes,...item})=>item)??provided;
+      const tasks=originalCapture?.tasks??originals?.map(({input_json:_bytes,...item})=>item)??provided;
       if(tasks.length>(p.score?.maximum_tasks_per_revision??0)||Buffer.byteLength(JSON.stringify(tasks))>p.bounds.maximum_document_bytes)
         throw new Error("MANAGER_SCORE_TASK_BOUND");
       const scores:ManagerScorePublication[]=[];
@@ -273,10 +290,12 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
           const result=await p.composition.runtime.calculate({...task,allocation,raw_scores:scores},this.scoreFence,input.signal);
           if(!this.compositionFence.accepts(result,scores))throw new Error("MANAGER_COMPOSITION_APPROVAL_CHANGED");
           compositions.push(result);
-          if(restatement)compositionOriginals.push({allocation,publication:result});
+          if(restatement||originalCustody)compositionOriginals.push({allocation,publication:result});
         }
       }
       const regimes: ManagerRegimePublication[] = [];
+      const regimeOriginals:Array<{policy:ApprovedManagerRegimePolicy|null;evidence:VerifiedManagerRegimeEvidence|null;
+        publication:ManagerRegimePublication}>=[];
       if(p.regime) {
         const tasks = await p.regime.tasks(delivery, input.signal);
         if(tasks.length > p.regime.maximum_tasks_per_revision ||
@@ -288,11 +307,14 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
             task.source_revision !== document.revision || task.projection_generation !== document.projection_generation ||
             task.source_set_digest !== document.source_set_digest || task.source_qualification !== document.qualification ||
             task.source_as_of_ms !== document.as_of_ms) throw new Error("MANAGER_REGIME_SOURCE_BINDING_INVALID");
-          const result = await p.regime.runtime.calculate({...task, policy:p.regime.currentPolicy(),
-            evidence:p.regime.currentEvidence(task.binding)}, input.signal);
+          const policy=p.regime.currentPolicy(),evidence=p.regime.currentEvidence(task.binding);
+          const result = await p.regime.runtime.calculate({...task,policy,evidence}, input.signal);
           if(input.signal.aborted)throw input.signal.reason;
           // Missing/expired Regime config is independent of valid financial slots.
-          if(result.status === "READY" && this.regimeFence.accepts(result.publication)) regimes.push(result.publication);
+          if(result.status === "READY" && this.regimeFence.accepts(result.publication)){
+            regimes.push(result.publication);
+            if(originalCustody)regimeOriginals.push({policy,evidence,publication:result.publication});
+          }
         }
       }
       const materialized={...document,...(p.score?{precomputed_scores:scores}:{}),
@@ -300,7 +322,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
       if(Buffer.byteLength(JSON.stringify(materialized))>p.bounds.maximum_document_bytes)throw new Error("MANAGER_PROJECTION_LIMIT");
       const result={...delivery,document:materialized};
       recalculation?.attach(result,tasks);
-      if(originals&&restatement){
+      if(originals&&restatement&&!originalCustody){
         if(compositionOriginals.length===0)restatement.attach(result,originals);
         else{
           // FULL final source includes all Score/Composition/Regime results.
@@ -325,6 +347,49 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
             captures.length=0;restatement.omitCompositionOriginal(result,omission);
           }else restatement.attach(result,originals,captures);
         }
+      }
+      if(originalCustody){
+        // ONE original writer owns all siblings. A later Score coordinator gets
+        // only serial IDLE, never its own initial attach/persist on this path.
+        let omission:ManagerOriginalCustodyOmission|null=originalCapture?.omission??null;
+        const compositionCaptures:ManagerCompositionOriginalAllocationCustody[]=[];
+        const regimeCaptures:ManagerRegimeOriginalCustody[]=[];
+        const maximumBytes=originalCustody.originalCustodyByteLimit();
+        let capturedBytes=Buffer.byteLength('{"retained_compositions":[],"retained_regimes":[]}');
+        const retain=(custody:{custody_digest:string},first:boolean):boolean=>{
+          const bytes=Buffer.byteLength(JSON.stringify({custody_digest:custody.custody_digest,custody}))+(first?0:1);
+          if(bytes>maximumBytes-capturedBytes){omission="ORIGINAL_INPUT_BOUND_NOT_RETAINED";return false;}
+          capturedBytes+=bytes;return true;
+        };
+        if(omission===null)for(const original of compositionOriginals){
+          try{
+            const captured=captureManagerCompositionOriginalAllocation({...original,document:materialized,
+              raw_fence:this.scoreFence,maximum_bytes:maximumBytes});
+            if(captured.status!=="READY"){
+              omission=captured.reason_code==="COMPOSITION_ORIGINAL_CUSTODY_BOUND"?
+                "ORIGINAL_INPUT_BOUND_NOT_RETAINED":"ORIGINAL_COMPOSITION_CAPTURE_NOT_RETAINED";break;
+            }
+            if(!retain(captured.custody,compositionCaptures.length===0))break;
+            compositionCaptures.push(captured.custody);
+          }catch{omission="ORIGINAL_COMPOSITION_CAPTURE_NOT_RETAINED";break;}
+        }
+        if(omission===null)for(const original of regimeOriginals){
+          try{
+            const captured=captureManagerRegimeOriginal({...original,document:materialized,maximum_bytes:maximumBytes});
+            if(captured.status!=="READY"){
+              omission=captured.reason_code==="REGIME_ORIGINAL_CUSTODY_BOUND"?
+                "ORIGINAL_INPUT_BOUND_NOT_RETAINED":"ORIGINAL_REGIME_CAPTURE_NOT_RETAINED";break;
+            }
+            if(!retain(captured.custody,regimeCaptures.length===0))break;
+            regimeCaptures.push(captured.custody);
+          }catch{omission="ORIGINAL_REGIME_CAPTURE_NOT_RETAINED";break;}
+        }
+        if(omission!==null){
+          compositionCaptures.length=0;regimeCaptures.length=0;
+          originalCustody.omit(result,omission);
+        }else if((originals?.length??0)===0&&compositionCaptures.length===0&&regimeCaptures.length===0)
+          originalCustody.omit(result,"ORIGINAL_INPUTS_NOT_SUPPLIED");
+        else originalCustody.attach(result,originals??[],compositionCaptures,regimeCaptures);
       }
       return result;
     },recheck:i=>p.source.recheck(i),acknowledge:(r,s)=>p.source.acknowledge(r,s)};

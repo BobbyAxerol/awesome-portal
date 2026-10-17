@@ -347,12 +347,18 @@ function stageSummary(neighbors: Neighbor[], input: ManagerRegimeInput, policy: 
   if (maximum < Math.log(Number.MIN_VALUE) || Math.exp(maximum) === 0) throw new Error("KERNEL_UNDERFLOW");
   const shifted = logs.map(value => Math.exp(value - maximum)); const total = shifted.reduce((sum, value) => sum + value, 0);
   if (!(total > 0) || !Number.isFinite(total)) throw new Error("KERNEL_NONFINITE");
-  const weights = shifted.map(value => value / total); const ess = 1 / weights.reduce((sum, value) => sum + value * value, 0);
+  const weights = shifted.map(value => value / total); const rawEss = 1 / weights.reduce((sum, value) => sum + value * value, 0);
   const outcomes = neighbors.map(row => numeric(row.reference.net_twr)); let magnitude = 0;
   for (const value of outcomes) magnitude = Math.max(magnitude, Math.abs(value));
-  const mean = magnitude === 0 ? 0 : outcomes.reduce((sum, value, index) => sum + weights[index] * (value / magnitude), 0) * magnitude;
-  if (!Number.isFinite(ess) || !Number.isFinite(mean)) throw new Error("SUMMARY_NONFINITE");
+  const rawMean = magnitude === 0 ? 0 : outcomes.reduce((sum, value, index) => sum + weights[index] * (value / magnitude), 0) * magnitude;
+  if (!Number.isFinite(rawEss) || !Number.isFinite(rawMean)) throw new Error("SUMMARY_NONFINITE");
   const sorted = [...outcomes].sort((a, b) => a - b); const episodes = unique(neighbors.map(row => row.reference.episode_id));
+  // Positive normalized Gaussian weights imply these exact mathematical
+  // bounds. Remove finite floating-point accumulation drift, never invalid
+  // kernels/nonfinite results or a calibrated support threshold. Equal1600
+  // weights otherwise produce ESS1600.000000000013 and fail the strict DTO.
+  const ess = Math.min(neighbors.length, Math.max(1, rawEss));
+  const mean = Math.min(sorted[sorted.length - 1], Math.max(sorted[0], rawMean));
   const first = neighbors[0].reference; const reasons: string[] = [];
   if (neighbors.length < policy.min_neighbors) reasons.push("NEIGHBOR_SUPPORT_INSUFFICIENT");
   if (ess < numeric(policy.min_effective_sample_size)) reasons.push("EFFECTIVE_SAMPLE_SIZE_INSUFFICIENT");

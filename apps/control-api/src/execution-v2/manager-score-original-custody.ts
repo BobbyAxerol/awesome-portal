@@ -10,6 +10,8 @@ import { managerScorePublication, type ManagerScorePublication } from "./manager
 import { managerScoreMethodDescriptor,managerScoreMethodDigest,type ManagerScoreRuntimeTask } from "./manager-score-runtime";
 import { managerCompositionCapturedOriginalAllocation,restoreManagerCompositionOriginalAllocation,
   type ManagerCompositionOriginalAllocationCustody } from "./manager-composition-runtime";
+import { managerRegimeCapturedOriginal,restoreManagerRegimeOriginal,
+  type ManagerRegimeOriginalCustody } from "./manager-regime-runtime";
 import type { ManagerScoreMetricsDependency, ManagerScorePathDependency,ManagerScoreRecalculationConfig, ManagerScoreRecalculationTask } from "./manager-score-recalculation";
 
 type OriginalTask = Omit<ManagerScoreRuntimeTask, "policy">;
@@ -112,6 +114,11 @@ interface RetainedComposition {
   custody_digest:string;
   custody:ManagerCompositionOriginalAllocationCustody;
 }
+interface RetainedRegime {
+  /** Derived from genuine first-write identity; independently pinned by parent. */
+  custody_digest:string;
+  custody:ManagerRegimeOriginalCustody;
+}
 interface OriginalSnapshotBase {
   source:ReturnType<typeof sourcePin>;
   retained_tasks:RetainedInput[];
@@ -120,8 +127,9 @@ interface OriginalSnapshotBase {
 }
 export type ManagerScoreOriginalCustodySnapshot = OriginalSnapshotBase & (
   {schema_version:"portal.execution.manager-score-original-inputs.v1"|"portal.execution.manager-score-original-inputs.v2";
-    retained_compositions?:never} |
-  {schema_version:"portal.execution.manager-score-original-inputs.v3";retained_compositions:RetainedComposition[]}
+    retained_compositions?:never;retained_regimes?:never} |
+  {schema_version:"portal.execution.manager-score-original-inputs.v3";retained_compositions:RetainedComposition[];retained_regimes?:never} |
+  {schema_version:"portal.execution.manager-score-original-inputs.v4";retained_compositions:RetainedComposition[];retained_regimes:RetainedRegime[]}
 );
 export interface PreparedManagerScoreOriginalCustody {
   readonly calculation_key:string;
@@ -390,6 +398,102 @@ function parseCompositionBundle(raw:unknown,payloadDigest:string,d:ManagerModelD
     fail("MANAGER_ORIGINAL_INPUT_MISMATCH");
   return rebuilt;
 }
+/** NEW v4 identity boundary only. Never reflect on an untrusted child, nor
+ * clone even genuine children before their COMBINED parent byte admission.
+ * Empty Regime input is validated here but does not select/upgrade v4. */
+function capturedV4Children<T extends {custody_digest:string}>(value:readonly T[]|undefined,
+  lookup:(value:unknown)=>T|null,budget:{bytes:number;limit:number},
+  requiredCode:string,mismatchCode:string):{custody_digest:string;custody:T}[] {
+  if(value===undefined)return [];
+  if(!value||typeof value!=="object"||isProxy(value)||!Array.isArray(value)||
+    Object.getPrototypeOf(value)!==Array.prototype||Object.getOwnPropertySymbols(value).length)
+    fail("MANAGER_ORIGINAL_INPUT_INVALID");
+  const fields=Object.getOwnPropertyDescriptors(value as object),length:unknown=fields.length?.value;
+  if(!Number.isSafeInteger(length)||(length as number)<0||(length as number)>128)fail("MANAGER_ORIGINAL_INPUT_BOUND");
+  if(Object.keys(fields).length!==(length as number)+1)fail("MANAGER_ORIGINAL_INPUT_INVALID");
+  const result:{custody_digest:string;custody:T}[]=[];
+  for(let index=0;index<(length as number);index++){
+    const field=fields[String(index)];
+    if(!field?.enumerable||!("value"in field))fail("MANAGER_ORIGINAL_INPUT_INVALID");
+    const custody=lookup(field.value);
+    if(!custody)fail(requiredCode);
+    // These records alone are module-branded/frozen. Budget exact wrappers
+    // before detached copies/restore; never trust a serializable child's echo.
+    const entryBytes=Buffer.byteLength(JSON.stringify({custody_digest:custody.custody_digest,custody}))+(index===0?0:1);
+    if(entryBytes>budget.limit-budget.bytes)fail("MANAGER_ORIGINAL_INPUT_BOUND");
+    budget.bytes+=entryBytes;
+    const {custody_digest,...base}=custody,parentDigest=accessDigest(base);
+    if(parentDigest!==custody_digest)fail(mismatchCode);
+    result.push({custody_digest:parentDigest,custody});
+  }
+  return result;
+}
+const regimeKey=(binding:ManagerRegimeOriginalCustody["binding"])=>
+  accessDigest({...binding,stage_filter:[...binding.stage_filter].sort()});
+function retainedRegimes(d:ManagerModelDocument,raw:readonly RetainedRegime[],limit:number):RetainedRegime[] {
+  if(!Array.isArray(raw)||raw.length<1||raw.length>128)fail("MANAGER_ORIGINAL_INPUT_BOUND");
+  if(Buffer.byteLength(JSON.stringify(raw))>limit)fail("MANAGER_ORIGINAL_INPUT_BOUND");
+  const source=new Map<string,NonNullable<ManagerModelDocument["precomputed_regimes"]>[number]>();
+  for(const publication of d.precomputed_regimes??[]){
+    const key=regimeKey(publication.provenance.binding);
+    if(source.has(key))fail("MANAGER_ORIGINAL_DUPLICATE_REGIME");
+    source.set(key,publication);
+  }
+  const seen=new Set<string>(),retained:RetainedRegime[]=[];
+  for(const entry of raw){
+    if(!entry||typeof entry!=="object"||Object.keys(entry).sort().join(",")!=="custody,custody_digest"||
+      typeof entry.custody_digest!=="string"||!digest.safeParse(entry.custody_digest).success)
+      fail("MANAGER_ORIGINAL_REGIME_CUSTODY_MISMATCH");
+    // Historical decode uses this independently pinned immutable PARENT field.
+    // No current policy or fresh first-write identity is restored.
+    const restored=restoreManagerRegimeOriginal({custody:entry.custody,
+      expected_custody_digest:entry.custody_digest,document:d,maximum_bytes:limit});
+    if(restored.status!=="READY"){
+      if(restored.reason_code==="REGIME_ORIGINAL_CUSTODY_BOUND")fail("MANAGER_ORIGINAL_INPUT_BOUND");
+      fail("MANAGER_ORIGINAL_REGIME_CUSTODY_MISMATCH");
+    }
+    const key=regimeKey(entry.custody.binding),publication=source.get(key);
+    if(!publication||accessDigest(publication)!==entry.custody.original_publication_digest)
+      fail("MANAGER_ORIGINAL_REGIME_SOURCE_MISMATCH");
+    if(seen.has(key))fail("MANAGER_ORIGINAL_DUPLICATE_REGIME");
+    seen.add(key);retained.push(entry);
+  }
+  if(seen.size!==source.size)fail("MANAGER_ORIGINAL_INCOMPLETE_REGIME_SET");
+  return retained.sort((a,b)=>{const x=regimeKey(a.custody.binding),y=regimeKey(b.custody.binding);return x<y?-1:x>y?1:0;});
+}
+function regimeBundleFrom(d:ManagerModelDocument,tasks:readonly ManagerScoreOriginalInput[],
+  compositions:readonly RetainedComposition[],regimes:readonly RetainedRegime[],limit:number):ManagerScoreOriginalCustodySnapshot {
+  if(!Array.isArray(tasks)||tasks.length>128||!Array.isArray(compositions)||compositions.length>128||
+    !Array.isArray(regimes)||regimes.length<1||regimes.length>128)fail("MANAGER_ORIGINAL_INPUT_BOUND");
+  const retained_tasks=tasks.length>0?bundleFrom(d,tasks,limit).retained_tasks:[];
+  if(tasks.length===0&&sourceScores(d).size!==0)fail("MANAGER_ORIGINAL_INCOMPLETE_INPUT_SET");
+  // Include source, tasks, all wrappers and fixed digest/key fields in ONE
+  // byte bound before the first child clone/restore. Digest strings are fixed.
+  const pending={schema_version:"portal.execution.manager-score-original-inputs.v4" as const,source:sourcePin(d),
+    retained_tasks,retained_compositions:compositions,retained_regimes:regimes,
+    inputs_digest:accessDigest({retained_tasks,retained_compositions:compositions,retained_regimes:regimes})};
+  if(Buffer.byteLength(JSON.stringify({...pending,calculation_key:keyOf(pending)}))>limit)
+    fail("MANAGER_ORIGINAL_INPUT_BOUND");
+  const retained_compositions=compositions.length>0?retainedCompositions(d,compositions,limit):[];
+  if(compositions.length===0&&(d.precomputed_compositions??[]).length!==0)
+    fail("MANAGER_ORIGINAL_INCOMPLETE_COMPOSITION_SET");
+  const retained_regimes=retainedRegimes(d,regimes,limit);
+  const base={schema_version:pending.schema_version,source:pending.source,retained_tasks,retained_compositions,
+    retained_regimes,inputs_digest:accessDigest({retained_tasks,retained_compositions,retained_regimes})};
+  return compositionJson({...base,calculation_key:keyOf(base)},limit);
+}
+function parseRegimeBundle(raw:unknown,payloadDigest:string,d:ManagerModelDocument,limit:number):ManagerScoreOriginalCustodySnapshot {
+  const b=compositionJson(raw,limit) as Extract<ManagerScoreOriginalCustodySnapshot,
+    {schema_version:"portal.execution.manager-score-original-inputs.v4"}>;
+  if(!b||b.schema_version!=="portal.execution.manager-score-original-inputs.v4"||
+    Object.keys(b).sort().join(",")!=="calculation_key,inputs_digest,retained_compositions,retained_regimes,retained_tasks,schema_version,source"||
+    accessDigest(b)!==payloadDigest||accessDigest(b.source)!==accessDigest(sourcePin(d)))
+    fail("MANAGER_ORIGINAL_DIGEST_MISMATCH");
+  const rebuilt=regimeBundleFrom(d,b.retained_tasks,b.retained_compositions,b.retained_regimes,limit);
+  if(accessDigest(rebuilt)!==payloadDigest||b.calculation_key!==rebuilt.calculation_key)
+    fail("MANAGER_ORIGINAL_INPUT_MISMATCH");
+  return rebuilt;
+}
 function bundleFrom(d:ManagerModelDocument,tasks:readonly ManagerScoreOriginalInput[],limit:number):ManagerScoreOriginalCustodySnapshot {
   if(!Array.isArray(tasks)||tasks.length<1||tasks.length>128)fail("MANAGER_ORIGINAL_INPUT_BOUND");
   const scores=sourceScores(d),seen=new Set<string>();
@@ -411,6 +515,8 @@ function parseBundle(raw:unknown,payloadDigest:string,d:ManagerModelDocument,lim
   // without invoking accessors, before entering the new closed-v3 parser.
   if(raw&&typeof raw==="object"&&isProxy(raw))fail("MANAGER_ORIGINAL_INPUT_INVALID");
   const tag=raw&&typeof raw==="object"?Object.getOwnPropertyDescriptor(raw,"schema_version"):undefined;
+  if(tag&&"value"in tag&&tag.value==="portal.execution.manager-score-original-inputs.v4")
+    return parseRegimeBundle(raw,payloadDigest,d,limit);
   if(tag&&"value"in tag&&tag.value==="portal.execution.manager-score-original-inputs.v3")
     return parseCompositionBundle(raw,payloadDigest,d,limit);
   const b=capture(raw,limit) as ManagerScoreOriginalCustodySnapshot;
@@ -452,14 +558,25 @@ export class ManagerScoreOriginalCustody {
     this.limits=Object.freeze({...limits});
   }
   prepare(document:ManagerModelDocument,tasks:readonly ManagerScoreOriginalInput[],
-    compositions?:readonly ManagerCompositionOriginalAllocationCustody[]):PreparedManagerScoreOriginalCustody {
-    // Check the NEW optional identity boundary before any reflection/JSON copy.
-    // Undefined or a valid empty array retains exact existing v1/v2 bytes/keys.
-    const retained=compositions===undefined?[]:capturedCompositions(compositions,this.limits.maximum_bundle_bytes);
-    const d=originalDocument(document,this.limits.maximum_bundle_bytes);
-    const detached=capture(tasks,this.limits.maximum_bundle_bytes,true);
-    const bundle=retained.length===0?bundleFrom(d,detached,this.limits.maximum_bundle_bytes):
-      compositionBundleFrom(d,detached,retained,this.limits.maximum_bundle_bytes);
+    compositions?:readonly ManagerCompositionOriginalAllocationCustody[],
+    regimes?:readonly ManagerRegimeOriginalCustody[]):PreparedManagerScoreOriginalCustody {
+    const limit=this.limits.maximum_bundle_bytes,budget={bytes:Buffer.byteLength('{"retained_compositions":[],"retained_regimes":[]}'),limit};
+    const capturedRegimes=capturedV4Children(regimes,managerRegimeCapturedOriginal,budget,
+      "MANAGER_ORIGINAL_REGIME_CAPTURE_REQUIRED","MANAGER_ORIGINAL_REGIME_CUSTODY_MISMATCH");
+    let bundle:ManagerScoreOriginalCustodySnapshot;
+    if(capturedRegimes.length===0){
+      // Undefined/valid empty NEW input executes the exact legacy v1/v2/v3
+      // preparation recipe; do not reserve new keys in old opaque task bytes.
+      const retained=compositions===undefined?[]:capturedCompositions(compositions,limit);
+      const d=originalDocument(document,limit),detached=capture(tasks,limit,true);
+      bundle=retained.length===0?bundleFrom(d,detached,limit):compositionBundleFrom(d,detached,retained,limit);
+    }else{
+      const retained=capturedV4Children(compositions,value=>managerCompositionCapturedOriginalAllocation(
+        value!==null&&typeof value==="object"?value as ManagerCompositionOriginalAllocationCustody:null),budget,
+        "MANAGER_ORIGINAL_COMPOSITION_CAPTURE_REQUIRED","MANAGER_ORIGINAL_COMPOSITION_CUSTODY_MISMATCH");
+      const d=originalDocument(document,limit),detached=capture(tasks,limit,true);
+      bundle=regimeBundleFrom(d,detached,retained,capturedRegimes,limit);
+    }
     const payload_digest=accessDigest(bundle),value=Object.freeze({calculation_key:bundle.calculation_key,payload_digest});
     prepared.set(value,{bundle,json:JSON.stringify(bundle)});return value;
   }

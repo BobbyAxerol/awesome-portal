@@ -115,6 +115,16 @@ function approvedPolicy():ApprovedManagerScorePolicy{
 }
 
 describe("ELP2-06 PATH original custody — real unit boundary / SYNTHETIC proof only",()=>{
+it.each([false,true])("empty fourth Regime input preserves existing PATH-opt-in=%s original key/hash/bytes",async explicitPath=>{
+  const h=await fixture(explicitPath?bind(task()):{slot:"RAW",task:task("METRICS")}),
+    before=JSON.stringify(h.restore()),storedBefore=JSON.stringify(h.stored.payload),
+    actual=h.custody.prepare(h.document,[h.captured],undefined,[]);
+  expect(h.stored.payload.schema_version).toBe(explicitPath?
+    "portal.execution.manager-score-original-inputs.v2":"portal.execution.manager-score-original-inputs.v1");
+  expect(actual).toEqual(h.prepared);expect(h.restore()).toEqual(h.stored.payload);
+  expect(JSON.stringify(h.restore())).toBe(before);expect(JSON.stringify(h.stored.payload)).toBe(storedBefore);
+  expect(Object.hasOwn(h.restore(),"retained_regimes")).toBe(false);
+});
   it("preserves the prior exact canonical method tuple/hash without adding normalization policy fields",()=>{
     const m={...method,required_costs:["funding","fees"]};
     // Independent copy of the PRE-extraction tuple/canonical-byte recipe. Keep

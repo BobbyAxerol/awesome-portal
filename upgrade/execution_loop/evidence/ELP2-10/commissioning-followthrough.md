@@ -1,5 +1,48 @@
 # ELP2-10 — three-gate commissioning follow-through
 
+<a id="elp210-regime-original-20261017"></a>
+
+## Current continuation —Composition landed; Regime ORIGINAL validation
+
+[Actual Composition terminal](../ELP2-06/composition-dependent-restatement.md#composition-dependent-terminal-20261017-1717)
+landed233b217bc90d3a21749c569bcd33410972a04a83:775contracts/APIbuild/
+5,722API PASS+3existing skips/scoped PG restore/four digests PASS; exact owned
+cleanup and eight protected runtimes unchanged. [Regime custody/lifecycle](../ELP2-06/regime-original-custody.md)
+is the next APPLIED_UNCOMMITTED backend06-002 slice, new tests NOT_RUN. It
+does not supply the independent historical Regime worker/API or source trust.
+Earlier pending sections below remain historical, superseded only by this
+actual result. Claude UXM held; no new review/consumer ack observed at intake.
+
+Affected Regime terminal17:48:50UTC now supersedes only its NOT_RUN entry:
+[APIbuild/511API/scoped PG restore/four row digests PASS](../ELP2-06/regime-original-custody.md#regime-original-affected-20261017-1748).
+All19 owned paths/index/eight protected runtimes stayed pinned; exact own
+Node/PG/network and lease clean. Normal-hook landing remains pending. This is
+TEST_ONLY custody/numerical correctness, not actual source/trust/calibration.
+
+Read-only PM repin17:10–17:12UTC, exact worktree
+`/home/bobby/.worktrees/trading-system-pm-v1_1`, branch
+`feat/portfolio-account-v1_1-parallel`, SHA
+`768cc6c9b1e7c62b303c5cbce126b5af4179e39c`: concrete installer now also
+preserves existing identity/policy registry. Selected complete diff/hash read;
+factory76c8574a… unchanged, installer6c3c43a3…, native fence85c48948… only
+extracts metadata proof helper. Six native route/Base wire grammars unchanged;
+no unrelated Portal protocol rewrite/retest required. Private witness
+`20261017/source-repin-1712.md` records scope and preserved peer WIP.
+Committed owner receiptac915b3e… reports263PASS in isolated TEST_ONLY; only
+receipt summary was read, not raw JUnit/controller. Do not add that count to
+Portal tests or claim actual Portal↔PM installation/connected authority.
+Subsequent PM operator-audit owns a separate guarded correctness window;
+Portal does not remove its guard, start its jobs or inherit WIP as authority.
+
+Remaining code/qualification: OwnProfile/current issuer/grant installation;
+finite parent/technical/audit and cache concurrency; Regime historical chain,
+economic tie-out/ALL; authenticated family adapters/RETURN/owning COMMIT;
+serialized replay factory/listener and connected continuity/revoke; actual
+current app/human/native durable-attempt/final-egress trust.14approved numeric
+budgets/calibration/coexistence/applicable original P184G2/browser are separate
+mandatory gates. Not all remaining work is external.11NOT_ENTRY_READY;
+no FE/push/dev/main/sign/release/deploy or runtime/command/Live activation.
+
 <a id="elp210-native-read-transport-20261017"></a>
 
 ## Latest continuation — private native READ transport, heartbeat fixture correction
