@@ -231,3 +231,23 @@ the stopped hook PASS. Failed logSHA256
 terminal18:52:22.860050UTC, source/index/eight runtimes unchanged, ownresources=[]
 and measurement lease released. The local58-case result remains scoped local
 parser proof, not a substitute for the isolated full contract gate.
+
+## Terminal normal-hook delivery — 2026-10-17T19:21:53Z
+
+Landed `888d017107e32664d9f016dfbe151fb674eba9f3`:39paths,+13,353/−2,648,
+including generated outputs/tests/docs and the preserved peer Unified append.
+Normal hook exit0:67contract files/788PASS;372API files/5,945PASS with3existing
+skips in2files; API build and scoped PostgreSQL restore/four row digests PASS.
+API duration1174.27s; earlier overlapping focused gates are not extra coverage.
+Earlier failed attempts above remain FAIL.
+
+Receipt `/home/bobby/.local/state/portal-execution-elp210/20261017/regime-dependent-land-185526/controller.json`;
+log SHA256`fb1764a1e2354d20e4981d5d0019498772a7f5de2b4dca58af881962efb0eb84`,
+controller SHA256`a4a2280de6e5e8bbe11279695b7d7bdf54935bceabbf4782b91ba098eb12f917`.
+Frozen39source hashes matched through the hook; eight protected runtime
+image/start/restart/running tuples unchanged. Exact owned containers/network
+absent at terminal and own reservation released; later foreign reservations
+are not removed. No push/deploy/shared rebuild/frontend or source activation.
+Local Regime original→restated worker→retention→API delivery is not genuine
+source commissioning, approved calibration or consumer acceptance.
+Full06/10 and11 entry prerequisites remain as recorded above.

@@ -13,7 +13,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. */
+        /** @description Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. All responses are private, no-store. */
         post: operations["executionCapitalCommandPreviewV1"];
         delete?: never;
         options?: never;
@@ -28,9 +28,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** @description Local finite exact-resource/environment trusted-capital status collection, not the mixed operation queue. Exact current TS-accepted audit.read before DB and after I/O. Unknown/hidden resources have the same404. Strict query rejects unknown fields. No send, lookup, recover, reconcile, writes or ACK. Cursor binds actor/session/workspace/query/current authority and only authorized statuses;400 invalid/expired cursor,409 refresh after visible data/authority change,503 explicit overflow/response bound. All responses are private, no-store. */
+        get: operations["executionCapitalCommandCollectionV1"];
         put?: never;
-        /** @description Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. */
+        /** @description Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. All responses are private, no-store. */
         post: operations["executionCapitalCommandSubmitV1"];
         delete?: never;
         options?: never;
@@ -45,7 +46,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. */
+        /** @description Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. All responses are private, no-store. */
         get: operations["executionCapitalCommandStatusV1"];
         put?: never;
         post?: never;
@@ -64,7 +65,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. */
+        /** @description Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. All responses are private, no-store. */
         post: operations["executionCapitalCommandReconcileV1"];
         delete?: never;
         options?: never;
@@ -465,6 +466,40 @@ export interface components {
             /** @enum {string} */
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
         };
+        CommandCollectionQuery: {
+            workspace_id: string;
+            /** @enum {string} */
+            resource_kind: "ROOT" | "PORTFOLIO" | "DEPLOYMENT";
+            resource_id: string;
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            /** @default 25 */
+            limit: number;
+            after?: string;
+        };
+        /** @description Finite exact-resource/environment trusted-capital statuses only. Not the mixed operation queue. Current TS-accepted audit authorization precedes collection. Runtime also verifies cross-row target and page-count invariants. */
+        CommandCollection: {
+            /** @constant */
+            schema_version: "portal.execution.command-collection.v1";
+            /** @constant */
+            family: "TRUSTED_CAPITAL_COMMANDS_ONLY";
+            /** @constant */
+            coverage: "EXACT_AUTHORIZED_RESOURCE_ONLY";
+            resource: {
+                /** @enum {string} */
+                kind: "ROOT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            items: components["schemas"]["CommandStatus"][];
+            page: {
+                limit: number;
+                returned_count: number;
+                has_more: boolean;
+                next_cursor: string | null;
+            };
+        };
         CommandProblem: {
             error: {
                 code: string;
@@ -565,6 +600,101 @@ export interface operations {
             /** @description Closed input / current authority / correlation / capacity failure. Never blindly retry; query same intent. */
             503: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+        };
+    };
+    executionCapitalCommandCollectionV1: {
+        parameters: {
+            query: {
+                workspace_id: string;
+                resource_kind: "ROOT" | "PORTFOLIO" | "DEPLOYMENT";
+                resource_id: string;
+                environment: "paper" | "sandbox" | "live";
+                limit?: number;
+                after?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Finite exact-authorized-target status page; no global total or mixed-queue completeness */
+            200: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandCollection"];
+                };
+            };
+            /** @description COMMAND_INPUT_INVALID or COMMAND_COLLECTION_CURSOR_INVALID; malformed/expired cursor. */
+            400: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Session authentication required. */
+            401: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current actor/session authority refused. */
+            403: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_RESOURCE_NOT_FOUND; hidden and unknown are identical. */
+            404: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_COLLECTION_CURSOR_CHANGED or ACCESS_RETRY_REQUIRED; refresh exact resource. */
+            409: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_COLLECTION_OVERFLOW, COMMAND_COLLECTION_RESPONSE_BOUND, COMMAND_COLLECTION_NOT_CONFIGURED, COMMAND_STATUS_UNVERIFIED or sanitized COMMAND_UNAVAILABLE; no partial success. */
+            503: {
+                headers: {
+                    /** @description Authenticated private read; never a shared cache entry. */
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {

@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
- "generated_at": "2026-10-16",
- "route_count": 239,
+ "generated_at": "2026-10-17",
+ "route_count": 240,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -19,6 +19,7 @@
   {"route":"POST /api/v1/execution/capital-commands/preview","controller":"execution-v2/command.controller.ts","interaction_class":"PORTAL_MUTATION","owner":"codex","test_owner":"codex","evidence":"ELP2-07: named capital preview; default unqualified and retained mutation guard; TEST_ONLY component proof is not runtime authority."},
   {"route":"POST /api/v1/execution/capital-commands","controller":"execution-v2/command.controller.ts","interaction_class":"EDGE_COMMAND","owner":"codex","test_owner":"codex","evidence":"ELP2-07: source-dark trusted dispatch; current policy/step-up/TS authority required. No source adapter activated; no generic CLI."},
   {"route":"GET /api/v1/execution/capital-commands/:id","controller":"execution-v2/command.controller.ts","interaction_class":"INTERACTION_READ","owner":"codex","test_owner":"codex","evidence":"ELP2-07: local durable status only; exact current accepted report grant, no send, no source query."},
+  {"route":"GET /api/v1/execution/capital-commands","controller":"execution-v2/command.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-04 finite-account-command-readers: finite exact-resource/environment status collection with current TS-accepted audit authority before SQL and after I/O; full delegation ancestry, opaque current-bound cursor, no mixed-queue total, send, lookup, recovery, write or ACK. Disposable HTTP/PG proof remains separate from source commissioning and unassigned consumer acceptance."},
   {"route":"POST /api/v1/execution/capital-commands/:id/reconcile","controller":"execution-v2/command.controller.ts","interaction_class":"PORTAL_MUTATION","owner":"codex","test_owner":"codex","evidence":"ELP2-07: authoritative lookup of same intent only, no resend; current accepted report authority and CSRF required."},
   {"route":"GET /api/v1/execution/manager/fund-overview","controller":"execution-v2/manager-model.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"evidence":"ELP2-06: scoped qualified projection; Fund requires whole-population authority. SOURCE_CONTRACT_NOT_RUNTIME_ACCEPTANCE; consumer not assigned.","owner":"codex","test_owner":"codex"},
   {"route":"GET /api/v1/execution/manager/fleet","controller":"execution-v2/manager-model.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"evidence":"ELP2-06: full authorized query before paging, exact decimal and partition; no generic browser source selectors.","owner":"codex","test_owner":"codex"},

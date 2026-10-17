@@ -177,3 +177,11 @@ regressions and6 ordinary-intake cases. All new cases await the coherent normal
 hook; private drafts are no longer the implementation state. Full07 source/
 held-COMMIT/installation and broader-family gaps remain OPEN. No wire/DTO/FE
 field or runtime enabled; consumer still AWAITING_CONSUMER_REVIEW.
+
+**2026-10-17 finite reader subset:** see [04's exact producer packet](../ELP2-04/finite-account-command-readers.md).
+New `executionCapitalCommandCollectionV1` is a local exact-resource/environment
+CommandStatus collection, not the mixed operation queue or a command executor.
+Shared report evaluation now retains delegation ancestors/DENYs while refusing
+app-only audit ALLOW leaves. Proposed mounted HTTP/PG regression is NOT_RUN at
+entry. Existing schemas/financial semantics/command flags unchanged; generated
+query/result and synthetic example are for owner-assigned future consumers.

@@ -43,7 +43,7 @@ export function retainedRelationAction(relation: string): ReadScopeRequirement["
  * supply the missing purpose/lineage/finite field contract. No wildcard default. */
 export const NAMED_RETAINED_PURPOSES = Object.freeze({
   account_balances: "account.read", account_policies: null, account_reservations: "account.read",
-  account_sync_current_state: null, account_sync_effective: "account.read", account_sync_snapshots: null,
+  account_sync_current_state: "account.read", account_sync_effective: "account.read", account_sync_snapshots: "account.read",
   accounts: "account.read", alpha_risk_config: null, alphas: "alpha.read",
   broker_account_sync_current_state: null, broker_account_sync_effective: null, broker_account_sync_snapshots: null,
   broker_sync_state_history: null, broker_sync_valuation_current_state: null, broker_sync_valuation_history: null,
@@ -161,6 +161,11 @@ export async function retainedOperationPage(config: ControlApiConfig,
   const rawItems = relation?.availability === "AVAILABLE" ? relation.items : [];
   if (rawItems.length > 10000) throw new RetainedOperationError("UDB_RETAINED_VIEW_ROW_BOUND", 503);
   const finiteFields = scoped ? namedRetainedBusinessFields(operation.relation) : null;
+  // Newly captured account-sync aliases are finite in BOTH compatibility
+  // modes. Keep this separate from V2 source/row/field authority and ID rules;
+  // no existing legacy alias gains a different disclosure or identity recipe.
+  const publicFields = finiteFields ?? (operation.relation === "account_sync_current_state" ||
+    operation.relation === "account_sync_snapshots" ? namedRetainedBusinessFields(operation.relation) : null);
   if (finiteFields && relation && !namedRetainedBusinessSourceAllowed(operation.relation, relation.source_id))
     throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
   let sourceRows = rawItems;
@@ -246,7 +251,8 @@ export async function retainedOperationPage(config: ControlApiConfig,
   const records = items.map(item => {
     const values: Record<string, string | number | boolean | null> = {};
     for (const field of operation.fields) {
-      if (finiteFields && (!finiteFields.includes(field.name) || !retainedFieldAllowed(scope!, field.name))) continue;
+      if (publicFields && !publicFields.includes(field.name)) continue;
+      if (finiteFields && !retainedFieldAllowed(scope!, field.name)) continue;
       // The parent supplies only strategy; its row authority is not a public
       // field grant. Preserve direct rows and child-owned fields unchanged.
       if (field.name === "strategy_id" && joinedFindingRows.has(item) &&
@@ -259,18 +265,18 @@ export async function retainedOperationPage(config: ControlApiConfig,
       if (field.name in item.fields) values[field.name] = scalar(field.kind, item.fields[field.name]);
     }
     const identity = operation.identityFields.map(name => {
-      const value = finiteFields ? item.fields[name] : values[name];
+      const value = publicFields ? item.fields[name] : values[name];
       if (value === null || value === undefined) throw new RetainedOperationError(scoped ? "EXECUTION_READ_FIELD_POLICY_PENDING" : "UDB_RETAINED_ROW_IDENTITY_NOT_CAPTURED", 503);
-      if (finiteFields && typeof value === "string" && (!value || /[\u0000-\u001f\u007f]/u.test(value)))
+      if (publicFields && typeof value === "string" && (!value || /[\u0000-\u001f\u007f]/u.test(value)))
         throw new RetainedOperationError("UDB_RETAINED_SCALAR_CONTRACT_REJECTED", 503);
       const kind = operation.fields.find(f => f.name === name)?.kind;
       const key = kind === "TIMESTAMP" ? managerTimestamp(item.fields[name])?.identity :
-        finiteFields && kind ? String(scalar(kind, value)) : String(value);
+        publicFields && kind ? String(scalar(kind, value)) : String(value);
       if (key === undefined) throw new RetainedOperationError("UDB_RETAINED_SCALAR_CONTRACT_REJECTED", 503);
       return `${name}\u0000${key}`;
     });
-    // sync_id is source-observed, not a declared PK. Do not manufacture
-    // stronger uniqueness or silently collapse conflicting retained rows.
+    // Effective sync IDs are source-observed, not a declared PK. Even a
+    // declared source PK cannot silently collapse duplicate retained rows.
     const identityKey = identity.join("\u0001");
     if (finiteFields && identities.has(identityKey)) throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
     identities.add(identityKey);

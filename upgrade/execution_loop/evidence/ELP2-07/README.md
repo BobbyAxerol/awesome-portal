@@ -1,5 +1,11 @@
 # ELP2-07 — Trusted command và status bridge
 
+2026-10-17 [04's finite exact-resource command collection](../ELP2-04/finite-account-command-readers.md)
+adds local read-only enumeration and fixes report-grant ancestry for detail.
+Implementation UNCOMMITTED/NOT_RUN at entry; no sender, broader operation
+executor, source authority or runtime activation is added. Existing07 source/
+held-COMMIT/installation and08 workflow gates remain separate.
+
 **Current finite source-compatible follow-through:**
 [management/profile/reallocation candidate codecs](pm-management-candidates.md)
 are separate from the public trusted bridge. Profile and reallocation are

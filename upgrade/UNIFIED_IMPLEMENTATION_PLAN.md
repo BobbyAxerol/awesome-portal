@@ -11680,6 +11680,42 @@ under canonical04-009, no broad audit/custody/source grant or generic parent
 shortcut. Claude owner-held/AWAITING_CONSUMER_REVIEW; full06/10 mandatory gates
 and11NOT_ENTRY_READY remain. No FE/push/dev/main/runtime change.
 
+<a id="elp2-finite-account-command-readers-20261017"></a>
+
+**Regime terminal19:21UTC:**
+[888d017107e32664d9f016dfbe151fb674eba9f3,39paths,+13,353/−2,648](execution_loop/evidence/ELP2-06/regime-dependent-restatement.md#terminal-normal-hook-delivery--2026-10-17t192153z)
+normal hook exit0:788contracts/5,945API PASS+3existing skips, build and scoped
+PG restore/four row digests PASS; source/eight runtimes unchanged and owned
+resources empty. Local delivery does not close source/calibration/consumer.
+
+**Approved04-008/009 next coherent subset:**
+[Finite account-sync observations and exact-target command status collection](execution_loop/evidence/ELP2-04/finite-account-command-readers.md)
+APPLIED_UNCOMMITTED / NOT_RUN at entry. Two exact account.read purposes, finite
+public fields in legacy/V2 and private snapshot identity; other27 null purposes
+remain closed. Additive current TS-accepted audit collection, full grant
+ancestry/DENY, exact Core retained route only; no mixed queue or global totals.
+Primary read independent proposals and accepted ASR-01/TCR-01/CC-03 corrections.
+Regenerate real query/result and canonical synthetic example; mounted PG/HTTP
+and focused current-scope regressions required before normal-hook landing.
+
+**Affected gate19:33UTC:** build PASS,382PASS/6FAIL in11files. Six failures
+share a reserved-word SQL alias in the new disposable bulk fixture; corrected
+only that fixture, not production logic/assertions. Restore did not run after
+failure. [Failure/cleanup/hash and exact next gate](execution_loop/evidence/ELP2-04/finite-account-command-readers.md#first-affected-gate--terminal1933utc-not_pass).
+Unchanged passed tests/build are not manually repeated; coherent normal hook
+must validate corrected cases/contracts and restore before landing. Live
+static route ledger295→296, one GET/no removal; capability239→240 is separate.
+
+Backend continues approved remaining parent/source/trust/adapter scope, not
+ELP2-11 entry. Claude NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW;
+[exact field/cursor/absence handoff](execution_loop/evidence/ELP2-04/contract-handoff.md#2026-10-17--additive-finite-readers-consumer-still-owner-held),
+no UI edit or asserted acknowledgement. Full04/06/10 source/current native
+trust, approved budgets/calibration, coexistence/G2/browser remain OPEN.
+No push/merge dev/main/deploy/shared rebuild/source or command activation.
+Concurrent EPG10-08 owner addenda below are preserved, not claimed as this
+reader package's implementation/test result. Foreign measurement reservations
+are respected and never deleted; heavy gates serialize across both tracks.
+
 <a id="epg10-08-egress-reservation-20261017"></a>
 
 **Original EPG10-08 owner continuation / 2026-10-18 Asia/Saigon (actual acquisition timestamp in receipt) — entry before code.**
@@ -11755,3 +11791,8 @@ outside our writes. No new generic approval or new phase is required.
 - Still owned: production composition/current identity/domain amendment, PM/Core bind, per-frame SSE currentness plus real revoke/cache/cursor/recovery. This component is not phase closure; no09connected.
 
 - Native PG harness attempt18:53:39 NOT_RUN: worker mountpoint absent under RO source; no TypeScript/test executed. Owned DB/network/failed worker removed,10 runtime tuples unchanged,0 images/build. Fix only fresh isolated node_modules mountpoint directory, then rerun same gates; not product defect/acceptance.
+
+- Actual18:54:23 attempt: strict tsc failed before Vitest (NOT_PASS), new selected-source constructor definite assignment4errors; missing extracted TLS helper; existing peer test-only Duplex/Socket type mismatch under this worker. No product source landed. Worker/DB/network removed and10 runtime tuples unchanged. Correct fresh private wrapper throw flow and add exact peer in-memory-generated TLS helper; strict own affected source/tests, execute peer221 wire cases via their unchanged Vitest suite. No editing peer tests to mask the existing test-only typing difference.
+- Before rerun: extend actual PostgreSQL fault coverage by1case for consecutive SENDING and ABORTED physical COMMIT ACK loss; same sender actual no-send closure and immutable restart receipt, never repeat HTTP or PM issue/ENTER. All11PG cases mandatory, zero skips. Harness explicitly distinguishes copied6a baseline from current peer HEAD. Actual foreign contracts/API Node+PG jobs must be terminal AND both lock namespaces clear before acquisition; retain this check every job boundary. No installed authority or09connected claim.
+
+**Original08 correction after actual19:24PG result / before edits:** attempt-192411 strict affected TypeScript PASS;169 real Vitest definitions165PASS/4FAIL, plus afterAll cleanup hook failure (JUnit170/5, zeroSKIP), NOT_PASS. Peer compatibility is80 unchanged cases (36codec+44client), not221; exact finite49+native40 yields169, with11actualPG. Three physical ACK-loss cases blocked because TEST_ONLY fault injector replaced pg.Pool.connect(callback) with Promise-only implementation; preserve callback overload unchanged and intercept only owning Promise transaction clients. No production SQL change follows from that harness fault. The delayed-close test must wait for actual egress admission release/close events, not assume destroyed flags plus one setImmediate prove observed quiescence. Keep full original failure receipt/log. All owned worker/PG/network removed;10protected runtime tuples unchanged; no source deployment or operational DB/identity change. Re-run all169 with zero failure/error/skip and exact11PG; full08/provider/SSE still NOT_MET.

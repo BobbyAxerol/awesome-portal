@@ -24,7 +24,7 @@
             }
           }
         ],
-        "description": "Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text.",
+        "description": "Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. All responses are private, no-store.",
         "requestBody": {
           "required": true,
           "content": {
@@ -138,7 +138,7 @@
             }
           }
         ],
-        "description": "Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text.",
+        "description": "Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. All responses are private, no-store.",
         "requestBody": {
           "required": true,
           "content": {
@@ -231,6 +231,219 @@
             }
           }
         }
+      },
+      "get": {
+        "operationId": "executionCapitalCommandCollectionV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          {
+            "name": "resource_kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ROOT",
+                "PORTFOLIO",
+                "DEPLOYMENT"
+              ]
+            }
+          },
+          {
+            "name": "resource_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        ],
+        "description": "Local finite exact-resource/environment trusted-capital status collection, not the mixed operation queue. Exact current TS-accepted audit.read before DB and after I/O. Unknown/hidden resources have the same404. Strict query rejects unknown fields. No send, lookup, recover, reconcile, writes or ACK. Cursor binds actor/session/workspace/query/current authority and only authorized statuses;400 invalid/expired cursor,409 refresh after visible data/authority change,503 explicit overflow/response bound. All responses are private, no-store.",
+        "responses": {
+          "200": {
+            "description": "Finite exact-authorized-target status page; no global total or mixed-queue completeness",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandCollection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMMAND_INPUT_INVALID or COMMAND_COLLECTION_CURSOR_INVALID; malformed/expired cursor.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session authentication required.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current actor/session authority refused.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "COMMAND_RESOURCE_NOT_FOUND; hidden and unknown are identical.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "COMMAND_COLLECTION_CURSOR_CHANGED or ACCESS_RETRY_REQUIRED; refresh exact resource.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "COMMAND_COLLECTION_OVERFLOW, COMMAND_COLLECTION_RESPONSE_BOUND, COMMAND_COLLECTION_NOT_CONFIGURED, COMMAND_STATUS_UNVERIFIED or sanitized COMMAND_UNAVAILABLE; no partial success.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Authenticated private read; never a shared cache entry.",
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/execution/capital-commands/{id}": {
@@ -262,7 +475,7 @@
             }
           }
         ],
-        "description": "Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text.",
+        "description": "Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. All responses are private, no-store.",
         "responses": {
           "200": {
             "description": "Typed preview or durable status; no runtime authority inferred",
@@ -375,7 +588,7 @@
             }
           }
         ],
-        "description": "Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text.",
+        "description": "Source-dark by default. Session/current exact action + origin/CSRF/step-up for new sends. Retained preview rejects mutations. Browser cannot install actor/workload/context/profile/credentials. ACK is not APPLIED. GET is local-only; reconcile only queries same authoritative key, never resends. Public error text is fixed, never raw source text. All responses are private, no-store.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2271,6 +2484,155 @@
           "updated_at_ms",
           "authority"
         ]
+      },
+      "CommandCollectionQuery": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "resource_kind": {
+            "type": "string",
+            "enum": [
+              "ROOT",
+              "PORTFOLIO",
+              "DEPLOYMENT"
+            ]
+          },
+          "resource_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "workspace_id",
+          "resource_kind",
+          "resource_id",
+          "environment"
+        ]
+      },
+      "CommandCollection": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.command-collection.v1"
+          },
+          "family": {
+            "const": "TRUSTED_CAPITAL_COMMANDS_ONLY"
+          },
+          "coverage": {
+            "const": "EXACT_AUTHORIZED_RESOURCE_ONLY"
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ROOT",
+                  "PORTFOLIO",
+                  "DEPLOYMENT"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "kind",
+              "id"
+            ]
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommandStatus"
+            },
+            "maxItems": 100
+          },
+          "page": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "returned_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "has_more": {
+                "type": "boolean"
+              },
+              "next_cursor": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "limit",
+              "returned_count",
+              "has_more",
+              "next_cursor"
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "family",
+          "coverage",
+          "resource",
+          "environment",
+          "items",
+          "page"
+        ],
+        "description": "Finite exact-resource/environment trusted-capital statuses only. Not the mixed operation queue. Current TS-accepted audit authorization precedes collection. Runtime also verifies cross-row target and page-count invariants."
       },
       "CommandProblem": {
         "type": "object",

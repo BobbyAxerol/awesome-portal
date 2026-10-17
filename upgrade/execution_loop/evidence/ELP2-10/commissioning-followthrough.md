@@ -2477,3 +2477,21 @@ Full06 source/config/tie-out/ALL,10 actual current-human/native terminal,
 approved14budgets/calibration/coexistence/P184G2, owner-held Claude browser and
 11NOT_ENTRY_READY remain unchanged. Latest Claude request intake checked; no
 new consumer acknowledgement claimed or duplicate queue created.
+
+### 2026-10-17T19:22Z — Regime landed, finite04 read continuation
+
+[Regime888d0171 terminal](../ELP2-06/regime-dependent-restatement.md#terminal-normal-hook-delivery--2026-10-17t192153z)
+passed the coherent normal hook:788contracts/5,945API+3existing skips,
+build/scoped restore, unchanged source/eight runtime tuples, no owned resources.
+This is local original/restated worker/storage/API evidence only, not approved
+production calibration, installed PM trust or consumer/browser acceptance.
+
+[04's finite account-sync/command collection subset](../ELP2-04/finite-account-command-readers.md)
+is APPLIED_UNCOMMITTED/NOT_RUN at entry. Preserve full delegated grant graph,
+finite field/cursor privacy and separate Core/source workspaces. Other27 null
+purposes and parent/source currentness remain closed. No economic operation,
+source install, runtime/credential/grant change or frontend assignment. Latest
+Claude intake remains owner-held/AWAITING_CONSUMER_REVIEW, not an actual ack.
+Actual native authority/trust,14 approved budgets/calibration, coexistence/G2,
+browser and full10 exit remain OPEN;11NOT_ENTRY_READY. Keep the independent
+EPG10-08 process-recovery lane and its new measurements separate from ours.

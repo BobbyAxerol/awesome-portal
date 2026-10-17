@@ -39,6 +39,7 @@ TRACKED = (
     "openapi/execution-trusted-commands.openapi.json",
     "generated/execution-trusted-commands.d.ts",
     "fixtures/execution-trusted-commands.synthetic.valid.json",
+    "fixtures/execution-trusted-command-collection.synthetic.valid.json",
     "tooling/verify-generated.sh",
     "fixtures/execution-manager-dataset.rows.synthetic.valid.json",
     "tooling/generate-execution-manager-models.mjs",

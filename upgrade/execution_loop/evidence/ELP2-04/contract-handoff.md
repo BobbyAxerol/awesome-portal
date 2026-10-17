@@ -100,3 +100,23 @@ dependency readiness and owner assignment are separate.
 > not a frontend workaround. Do not open the next backend phase or deploy.
 
 This text is a prepared handoff, not proof that Claude received or accepted it.
+
+## 2026-10-17 — additive finite readers, consumer still owner-held
+
+Read [the exact producer packet](finite-account-command-readers.md) first.
+Account-sync current/snapshot use the existing named-page DTO, five public
+candidate fields and their distinct source clocks; private sync_id stays
+private even in legacy. V2 field/resource/current-source scope is not widened.
+Other27 unclassified aliases remain closed; no complete-history/health claim.
+
+Additive `executionCapitalCommandCollectionV1` publishes `CommandCollectionQuery`
+and `CommandCollection` in `execution-trusted-commands.d.ts`. Require explicit
+workspace/resource_kind/resource_id/environment. limit1..100(default25), signed
+after; no global totals/mixed queue. Preserve UNKNOWN/null amounts and four
+status axes. Hidden/unknown404, invalid400, refresh409 and unavailable503 are
+not empty successes. Canonical synthetic fixture is
+`execution-trusted-command-collection.synthetic.valid.json`.
+Regenerate with `npm --prefix packages/contracts run generate:execution-trusted-commands`.
+Existing submit/detail schemas and UI remain unchanged. Source at this entry
+is UNCOMMITTED/NOT_RUN; consult terminal addendum before consumption.
+AWAITING_CONSUMER_REVIEW / NOT_STARTED_BY_OWNER_DIRECTION, not delivered UI.

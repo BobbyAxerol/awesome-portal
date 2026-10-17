@@ -1,5 +1,12 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+2026-10-17 next approved subset: [finite account-sync and exact-target command
+readers](finite-account-command-readers.md). Two existing named account purposes
+and one additive current-authorized command collection are APPLIED/UNCOMMITTED,
+tests NOT_RUN at entry. Full delegation ancestry is preserved for command
+detail and collection; no grant/source/runtime/consumer is activated. Other27
+null purposes, remaining parent/source qualification and04-010 stay OPEN.
+
 2026-10-17 backend follow-through: [positive operation/technical readers](positive-readers.md)
 partially implements existing04-008/009. V1/other parent barriers stay unchanged;
 128/128 focused tests/build/restore passed, including four actual PG coalescer

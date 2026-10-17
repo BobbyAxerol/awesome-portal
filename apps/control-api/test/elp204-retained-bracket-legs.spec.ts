@@ -44,7 +44,7 @@ describe("ELP2-04 finite same-snapshot order-bracket legs", () => {
   it("opens only the narrow account purpose and existing public-field vocabulary", () => {
     expect(NAMED_RETAINED_PURPOSES.order_bracket_legs).toBe("account.read");
     expect(NAMED_RETAINED_PURPOSES.order_brackets).toBe("alpha.read");
-    expect(Object.values(NAMED_RETAINED_PURPOSES).filter(value => value === null)).toHaveLength(29);
+    expect(Object.values(NAMED_RETAINED_PURPOSES).filter(value => value === null)).toHaveLength(27);
     expect(namedRetainedBusinessFields("order_bracket_legs")!.every(field =>
       BUSINESS_READ_FIELDS.includes(field as never) || field === "submitted_at")).toBe(true);
   });

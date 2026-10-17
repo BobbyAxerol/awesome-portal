@@ -5,7 +5,9 @@ import { ExecutionReadScopeError } from "../execution-v2/read-scope";
 /** A narrow publication subset, not a field grant. Actual values still require
  * the current scope's reviewed fields. No global business vocabulary changes. */
 const fields = Object.freeze({
+  account_sync_current_state: Object.freeze(["account_id", "currency", "mode", "status", "updated_at"]),
   account_sync_effective: Object.freeze(["account_id", "currency", "mode", "status", "created_at"]),
+  account_sync_snapshots: Object.freeze(["account_id", "currency", "mode", "status", "created_at"]),
   reconciliation_findings: Object.freeze(["account_id", "strategy_id", "mode", "status", "created_at"]),
   conditional_order_group_legs: Object.freeze([
     "group_id", "leg_id", "sequence", "side", "quantity", "price", "state", "created_at", "updated_at",
@@ -35,7 +37,9 @@ export function namedRetainedBusinessResourceId(key: string, workspaceId: string
  * alias can supply these records. Matching a bare relation name is not proof. */
 export function namedRetainedBusinessSourceAllowed(relation: string, source: string): boolean {
   switch (relation) {
+    case "account_sync_current_state": return source === "manager.current.account-sync-current-state";
     case "account_sync_effective": return source === "manager.accounts" || source === "manager.current.account-sync-effective";
+    case "account_sync_snapshots": return source === "manager.current.account-sync-snapshots";
     case "reconciliation_findings": return source === "manager.reconciliation" || source === "manager.current.reconciliation-findings";
     case "execution_sessions": return source === "manager.sessions" || source === "manager.current.execution-sessions";
     case "conditional_order_group_legs": return source === "manager.conditional-orders" || source === "manager.current.conditional-order-group-legs";
@@ -53,7 +57,8 @@ export function namedRetainedBusinessSourceAllowed(relation: string, source: str
 export function namedRetainedBusinessAnchored(relation: string, row: Record<string, ProjectionScalar>): boolean {
   const account = Object.getOwnPropertyDescriptor(row, "account_id");
   if (!account || !("value" in account) || typeof account.value !== "string" || !account.value) return false;
-  if (relation === "account_sync_effective" || relation === "order_bracket_legs") return true;
+  if (relation === "account_sync_current_state" || relation === "account_sync_effective" ||
+    relation === "account_sync_snapshots" || relation === "order_bracket_legs") return true;
   const strategy = Object.getOwnPropertyDescriptor(row, "strategy_id");
   return Boolean(strategy && "value" in strategy && typeof strategy.value === "string" && strategy.value);
 }

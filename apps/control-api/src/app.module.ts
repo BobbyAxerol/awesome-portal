@@ -29,7 +29,7 @@ import { AccountLifecycleService } from "./admin/account-lifecycle.service";
 import { OwnerAccessGuard } from "./admin/owner-access.guard";
 import { OwnerAccessService } from "./auth/owner-access.service";
 import { HealthController } from "./health/health.controller";
-import { ControlApiConfig } from "./config";
+import { ControlApiConfig,querySigningKeys } from "./config";
 import { CONTROL_API_CONFIG, CONTROL_API_POOL, EXECUTION_DATA_POOL, EXECUTION_DURABLE_MIRROR_WRITER } from "./tokens";
 import { buildExecutionPool } from "./db/pool";
 import { FacadeController } from "./facade/facade.controller";
@@ -385,9 +385,10 @@ export class AppModule {
         },
         {
           provide: ExecutionCommandService,
-          useFactory: (db:Pool,access:ExecutionAccessService)=>new ExecutionCommandService(db,access,
-            dependencies.executionCommandTrust,dependencies.allowTestOnlyExecutionAccess===true),
-          inject:[CONTROL_API_POOL,ExecutionAccessService],
+          useFactory: (db:Pool,access:ExecutionAccessService,cfg:ControlApiConfig)=>new ExecutionCommandService(db,access,
+            dependencies.executionCommandTrust,dependencies.allowTestOnlyExecutionAccess===true,
+            {activeKeyId:cfg.QUERY_CURSOR_ACTIVE_KEY_ID,keys:querySigningKeys(cfg),ttlSeconds:cfg.QUERY_CURSOR_TTL_SECONDS}),
+          inject:[CONTROL_API_POOL,ExecutionAccessService,CONTROL_API_CONFIG],
         },
         {
           provide: AccountLifecycleService,

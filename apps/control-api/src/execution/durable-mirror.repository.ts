@@ -211,6 +211,9 @@ const CURRENT_KEY_FIELDS: Readonly<Record<string, readonly string[]>> = {
   "manager.command-journal:command_journal": ["command_id"],
   "manager.accounts:margin_balances": ["account_id", "instrument_id", "currency"],
   "manager.accounts:account_sync_effective": ["sync_id"],
+  // Exact generated declared-PK aliases; retained observations, not history proof.
+  "manager.current.account-sync-current-state:account_sync_current_state": ["account_id"],
+  "manager.current.account-sync-snapshots:account_sync_snapshots": ["sync_id"],
 };
 
 @Injectable()

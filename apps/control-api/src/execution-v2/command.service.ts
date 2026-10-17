@@ -1,4 +1,8 @@
 import type { Pool } from "pg";
+import { KeysetCursorCodec,type CursorKeyring } from "../query/cursor";
+import { QueryContractError } from "../query/contracts";
+import { commandCollection,commandCollectionQuery,CommandCollectionError,
+  type CommandCollection,type CommandCollectionQuery } from "./command-collection.contract";
 import type { AccessActor,AccessAction } from "./access.contract";
 import { AccessPolicyError } from "./access.contract";
 import { accessDigest,evaluateAccess,type AccessEvaluationContext } from "./access-policy";
@@ -85,14 +89,25 @@ export function mergeSource(old:CommandRecord,raw:SourceCommandResult):CommandSt
 export class ExecutionCommandService {
   private readonly store:CommandStore;
   private activeIo=0;
+  private readonly collectionCursor:KeysetCursorCodec|null;
   constructor(pool:Pool,private readonly access:ExecutionAccessService,private readonly trust:CommandTrust=unqualifiedCommandTrust,
-    private readonly allowTestOnly=false){this.store=new CommandStore(pool);}
+    private readonly allowTestOnly=false,cursor?:CursorKeyring){this.store=new CommandStore(pool);
+    this.collectionCursor=cursor?new KeysetCursorCodec(cursor):null;}
+  private report(c:AccessEvaluationContext,resource:CommandIntent["resource"],environment:CommandIntent["environment"]) {
+    // Identical financial-receipt rule for detail and collection, never read_all.
+    // Remove only app-only audit ALLOW leaves. Keep every DENY and all
+    // access.grant ancestors: dropping a ceiling invalidates its delegated
+    // DENY and can incorrectly let an independent accepted ALLOW win.
+    const effective={...c,grants:c.grants.filter(g=>
+      g.action!=="audit.read"||g.effect==="DENY"||g.requires_ts_acceptance)};
+    const result=evaluateAccess(effective,"audit.read",resource,environment);
+    if(!result.allowed)throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
+    return result;
+  }
   private permit(c:AccessEvaluationContext,i:CommandIntent,read=false) {
-    // A financial receipt is not an app-only audit row: its ALLOW must carry
-    // current TS acceptance as well. Keep every DENY in the evaluation.
-    const effective=read?{...c,grants:c.grants.filter(g=>g.effect==="DENY"||g.requires_ts_acceptance)}:c;
-    const result=evaluateAccess(effective,read?"audit.read":action[i.business_payload.operation],i.resource,i.environment);
-    if(!result.allowed)throw new AccessPolicyError(read?"ACCESS_RESOURCE_NOT_FOUND":result.reason_code??"ACCESS_DENIED",read?404:403);
+    if(read){this.report(c,i.resource,i.environment);return;}
+    const result=evaluateAccess(c,action[i.business_payload.operation],i.resource,i.environment);
+    if(!result.allowed)throw new AccessPolicyError(result.reason_code??"ACCESS_DENIED",403);
   }
   private async prepare(actor:AccessActor,i:CommandIntent,c:AccessEvaluationContext) {
     let raw:CommandAuthorization|null;
@@ -159,6 +174,71 @@ export class ExecutionCommandService {
     this.permit(c,old.intent,true);
     const current=await this.access.confirmReadContext(actor,workspace,c);this.permit(current,old.intent,true);
     return old.status;
+  }
+  /** A local finite status read only. Never calls command trust/reconcile/recovery.
+   * Mandatory exact resource prevents an empty list becoming global discovery.
+   */
+  async collection(actor:AccessActor,raw:CommandCollectionQuery):Promise<CommandCollection> {
+    const q=commandCollectionQuery.parse(raw),resource={kind:q.resource_kind,id:q.resource_id};
+    const c=await this.access.readContext(actor,q.workspace_id);
+    this.report(c,resource,q.environment); // nonvacuous authority, before DB.
+    if(!this.collectionCursor)throw new CommandCollectionError("COMMAND_COLLECTION_NOT_CONFIGURED",503);
+    const candidates=await this.store.statusCandidates(q.workspace_id,resource,q.environment);
+    // No DB transaction/client survives into the current authority check.
+    const current=await this.access.confirmReadContext(actor,q.workspace_id,c);
+    const decision=this.report(current,resource,q.environment);
+    if(candidates.length>1024)throw new CommandCollectionError("COMMAND_COLLECTION_OVERFLOW",503);
+    const rows=candidates.map(row=>{
+      const target=commandStatus.shape.resource.parse(row.resource);
+      const env=commandStatus.shape.environment.parse(row.environment);
+      // Query is over immutable intent fields; mutable status cannot grant scope.
+      if(target.kind!==resource.kind||target.id!==resource.id||env!==q.environment)
+        throw new CommandError("COMMAND_STATUS_UNVERIFIED",503);
+      this.report(current,target,env); // every immutable intent tuple before sort/page.
+      const status=commandStatus.parse(row.status);
+      if(status.command_id!==row.id||status.resource.kind!==target.kind||
+        status.resource.id!==target.id||status.environment!==env)
+        throw new CommandError("COMMAND_STATUS_UNVERIFIED",503);
+      return status;
+    }).sort((a,b)=>b.created_at_ms-a.created_at_ms||
+      (a.command_id<b.command_id?-1:a.command_id>b.command_id?1:0));
+    const query={workspace_id:q.workspace_id,resource,environment:q.environment,limit:q.limit};
+    // Only this authorized exact-target status set participates. No hidden
+    // workspace total, other-resource source digest or private intent/body.
+    const fingerprint=accessDigest({domain:"portal.execution.command-collection.v1",actor,query,
+      core_authority:current.authority_fingerprint,policy_revision:decision.policy_revision,
+      scope_revision:decision.scope_revision,field_policy_ref:decision.field_policy_ref,
+      visible_statuses:rows.map(row=>accessDigest(row))});
+    let offset=0;
+    if(q.after) {
+      let boundary:readonly (string|number|boolean)[];
+      try {boundary=this.collectionCursor.decode(q.after,{resourceId:"execution.trusted-capital-commands.v1",
+        workspaceId:q.workspace_id,direction:"after",queryFingerprint:fingerprint,boundarySize:2});}
+      catch(error) {
+        if(error instanceof QueryContractError)throw new CommandCollectionError(
+          error.code==="CURSOR_CONTEXT_MISMATCH"?"COMMAND_COLLECTION_CURSOR_CHANGED":"COMMAND_COLLECTION_CURSOR_INVALID",
+          error.code==="CURSOR_CONTEXT_MISMATCH"?409:400);
+        throw error;
+      }
+      const index=rows.findIndex(row=>row.created_at_ms===boundary[0]&&row.command_id===boundary[1]);
+      if(index<0)throw new CommandCollectionError("COMMAND_COLLECTION_CURSOR_CHANGED",409);
+      offset=index+1;
+    }
+    const items=rows.slice(offset,offset+q.limit),hasMore=offset+items.length<rows.length;
+    const last=items[items.length-1];
+    const next=hasMore?this.collectionCursor.encode({resource_id:"execution.trusted-capital-commands.v1",
+      workspace_id:q.workspace_id,direction:"after",query_fingerprint:fingerprint,
+      boundary:[last.created_at_ms,last.command_id]}):null;
+    const result=commandCollection.parse({schema_version:"portal.execution.command-collection.v1",
+      family:"TRUSTED_CAPITAL_COMMANDS_ONLY",coverage:"EXACT_AUTHORIZED_RESOURCE_ONLY",
+      resource,environment:q.environment,items,
+      page:{limit:q.limit,returned_count:items.length,has_more:hasMore,next_cursor:next}});
+    if(Buffer.byteLength(JSON.stringify(result),"utf8")>1024*1024)
+      throw new CommandCollectionError("COMMAND_COLLECTION_RESPONSE_BOUND",503);
+    // No awaited work after the final Core confirmation; clock/TS validity is
+    // evaluated again synchronously immediately before returning the page.
+    this.report({...current,now_ms:Math.max(current.now_ms,Date.now())},resource,q.environment);
+    return result;
   }
   async reconcile(actor:AccessActor,workspace:string,id:string) {
     await this.status(actor,workspace,id);
