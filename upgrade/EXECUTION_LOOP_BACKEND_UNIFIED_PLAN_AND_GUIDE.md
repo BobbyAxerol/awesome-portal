@@ -10138,7 +10138,7 @@ Owned7.365GB test copies/cache/logs removed;12HK+5SGP tuples unchanged/restarts0
 #### EPG10-08 Hoàn thiện revocation scope và TLS
 
 **Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED (2026-10-16).
-**Vòng triển khai độc lập:** COMPLETE — **Debt ghép nối/nghiệm thu vòng2:** OPEN.
+**Vòng triển khai độc lập lịch sử16/10:** COMPLETE — **Vòng2 actual provider:** IN_PROGRESS_OWNED_IMPLEMENTATION; connected acceptance OPEN.
 **Đi tiếp:** GO cho phần09 độc lập sau khi09 được duyệt; không đợi đóng toàn bộ08.
 Đây không phải COMPLETE toàn phase hoặc quyền mở runtime chưa được nghiệm thu.
 **Tests:** FINAL_IMMUTABLE_490_PASS + FINAL_REPAIR_46_PASS / 0_FAIL_IGNORED_SKIP / FMT_STRICT_CLIPPY_PASS; connected TLS6 + positive reads12 + denial12 PASS — **Exit:** NOT_MET — **Runtime authority activation:** REVIEWED_PACKAGE_APPROVED_NOT_DEPLOYED; **named PKI repair:** QUALIFIED_VALID_FALLBACK_LOADED.
@@ -10174,11 +10174,17 @@ not a jointly accepted producer; r1 source c7c3997f is now qualified. No duplica
 account/activation/grant mutation. Full08 remains NOT_MET.
 Read does not wait for command07, native publication or the whole PM roadmap.
 Original08 continuation [§23.20.6](#23206-original08--resource-scoped-authority-completion-and-reviewed-installation)
-has135focused Core compatibility PASS (72new+63legacy),0FAIL/SKIP; the first
-configured hook built successfully and passed ordinary122/root64 PG cases but
-failed one peer Regime fixture path (API4773PASS/1FAIL/3SKIP). No source commit.
-Peer fixed the path using the existing contracts mount; retry waits for the
-current foreign correctness window, with all peer source/index work preserved.
+has135focused Core compatibility PASS (72new+63legacy),0FAIL/SKIP. The first
+configured hook's peer Regime fixture failure was corrected; final actual normal
+hook completed contracts715/API4825PASS/3SKIP, build/restore PASS, and the owned
+source landed d483357a. Its whole-source wrapper remains NOT_PASS for concurrent
+peer drift, not rewritten as whole-branch/runtime acceptance. Latest
+[§23.20.7](#23207-original08--actual-provider-owning-boundary-and-connected-acceptance)
+tracks PM dependency sidecar233ffa86 (168PASS) and uninstalled Core-terminal
+component32PASS. The original08 continuation also qualified business-root221PASS
+at11:38UTC and repaired finite HTTP egress35PASS at11:43UTC, failed attempts retained.
+These do not replace actual provider/installer/final-delivery work or close08.
+Preserve the current peer hook/source/index pin.
 Exact [qualification](evidence/execution-edge-v1_2/EPG10-08/current-correspondence-qualification.json)
 separates fixture corrections, draft/source landing and actual authority.
 Historical16/10 pins below do not override this fresh disposition.
@@ -15803,5 +15809,318 @@ registered peer paths are not an assertion of activity or authority to prune.
 Commit only six owned Edge tracking/evidence paths under Bobby identity, normal
 Git configuration unchanged; no push/merge, deployment or next-phase acceptance.
 
+### 23.20.7 Original08 — actual provider, owning boundary and connected acceptance
+
+**Entry / full objective,17/10/2026 UTC:** Bobby explicitly assigns completion
+of the actual permission provider, currentness through physical COMMIT/final
+delivery, reviewed package installation and real revoke/cache/cursor/SSE
+qualification. IN_PROGRESS; do not redefine success as another source-only or
+isolated slice. Entry Edge8560ac10; PM has advanced to85e754ba with peer driver
+instrumentation WIP; Researchd483357a has a live peer normal hook/index pin
+(control-api-test-node-3167765, lease to10:26:49UTC). HK foreign P18 window
+to12:07:15UTC. Respect both jobs/locks; do not restart, drift peer source/index,
+or claim lock expiry means a live job stopped. Read canonical/local AGENTS,
+Research scoped rules, phase08/EDGE08 and backend-contract§3–5/9.2/14.2,
+current Core/PM/Rust/config and exact installed schema/identity evidence first.
+
+**Invariants / decision boundary:** approved Bobby protected OWNER and Stan
+subordinate-grant management within Bobby's ceiling remain fixed. Preserve
+actual stable Portal IDs/issuer/subject; no duplicate accounts, invented session
+or historical/native acceptance. Separate Portal/session, TS business/native,
+workload/app/field trust. No command/financial activation, broker/Redis/SQL
+shortcut, full-migration bootstrap or unrelated runtime change. Candidate fence
+58PASS is not default production architecture: derive exact real dependency and
+writer/range closure, reuse qualified lifecycle/transport abstractions, and
+measure any new write contention before installation. Keep all declared modes;
+Paper evidence order is not a product permission ceiling.
+
+**Work / single-writer map before code:** root owns orchestration, Edge runtime
+and journals. Existing bounded PM reviewer audits real native dependency/census/
+maintenance input closure; existing Research reviewer audits physical owning
+COMMIT/final-send integration and deployment dependencies. Read-only first,
+explicit private-draft allowlists before edits, no jobs/peer commits/deployments.
+Root reviews every contract and selects the smallest complete composition,
+then journals exact files, resource envelope, target services/schema/identities,
+validation and rollback before promotion/installation. Missing input does not
+defer independent producer/terminal/installer/harness work.
+
+**Requirement → evidence / exit:** (1) genuine stable identity↔TS mapping and
+native/Portal permission facts on the exact selected DB/volume with full finite
+scope provenance; (2) authenticated provider configured on each actual hop,
+including wrong issuer/audience/certificate/expired/replay denials; (3) native
+revoke/writer ordering across real physical Core COMMIT or bounded final
+response/frame, disconnect/UNKNOWN and serialized recovery, unaffected-scope
+positives; (4) reviewed dependency-closed schema/config/binary install with
+actual migration/role/pool/source pins, additive grants and exact change window;
+(5) actual Edge cache/cursor/SSE stale permission denials, stable authorized
+reads and no hidden-scope leakage; (6) rollback/revocation and capacity/resource
+bounds, owned cleanup, source/release/runtime reconciliation and sanitized
+receipts. Unit/isolated/same-host cases retain their exact evidentiary scope;
+full08 stays NOT_MET until connected requirements are genuinely demonstrated.
+
+**Rollback / persistence:** preserve current healthy V1/Manager paths and named
+rollback releases; additive migrations are not destructively rolled back. On
+failure disable only new affected binding/route, keep immutable receipts and
+ambiguous outcomes quarantined, never restore revoked authority or remove
+shared data/volumes. No push/merge/new phase. Keep this complete objective
+active while meaningful in-scope work remains; record tested progress and
+genuine dependencies without manufacturing completion or config-only debt.
+
+**Independent preparation10:04UTC / reserved private ownership:** source audit
+finds no production AccessTrust factory: Core main still composes the safe
+default, and existing scoped delivery ends at a DTO, not socket completion.
+PM selected observer lacks the exact native dependency manifest required by a
+held source. Reuse native policy/user ordering; do not install the experimental
+20-relation/global-epoch guard as a default or call its58isolated cases capacity.
+Reserve `/tmp/epg10-08-owning-provider-it5elJNc/` for source-only preparation:
+PM reviewer owns `native_observation_dependencies.patch` plus
+`test_native_observation_dependencies.py`; Research reviewer owns
+`native-core-terminal.ts`, `native-core-terminal.sql` and
+`native-core-terminal.spec.ts`. Root alone integrates canonical source/journals.
+No agent starts jobs, modifies canonical/shared/index paths or deploys from this
+reservation. The dependency manifest must come from the SAME actual RR snapshot,
+not requested keys or rereads; it attests only the five native tables actually
+queried, not supplied census/accepted-input currentness. Terminal preparation
+binds genuine owning transaction/immutable receipt and serialized recovery;
+controller return, pre-COMMIT check, TTL/disconnect and unsigned boolean never
+release UNKNOWN. Actual final response/frame delivery remains a separate
+mandatory integration, not implicitly covered by a mutation-only terminal.
+Tests will use the already declared isolated envelope only after fresh Bobby/
+root lock and actual peer-job checks; production writes/restarts remain zero.
+
+**Tested slice10:16UTC:** PM native dependency sidecar exact25canonical-input
+closure168PASS/0FAIL/ERROR/SKIP (20new units+69observer/policy+7PG observer+
+44membership units+28PG membership),12.349s. Record
+`/tmp/epg10-08-owning-native-yxdVxPu9/attempt-101641`, receipt0e378196… and
+JUnit7b598c1f…; existing PM native-selected-reader evidence carries full pins.
+No authority mounted: observation-only five-table manifest is not a census,
+accepted-input proof or held lease. Own worker/PG/network removed,10SGP
+protected runtime tuples unchanged, no image/build/cache or operational writes.
+Actual peer Core hook ended and its host lock cleared before this test; peer
+Research source/index remains preserved and still d483357a, not a new landing.
+
+**Compatibility work, not permission restriction:** actual TS legacy rows
+include NULLportfolio deployments and the existing entity ROOT proof caps at
+200resources/32KiB. Do not remap legacy data, truncate census, silently raise
+limits or reduce approved all-business Manager access. Implement the smallest
+explicit native business-root maintenance acceptance and bounded collection
+proof, with genuine at-install receipt/current head, real mapped subjects and
+protected-owner/Stan ceiling; don't reuse capital pools or fabricate original
+membership facts. Existing Manager catalogue-bound business reads remain their
+own active surface; researcher/typed linked tuples require their real mapping.
+This bridge and actual held provider/final delivery/installer/drills are owned
+unfinished original08 work; no new phase or generic reapproval.
+
+**Next private component qualification / before execution:** reserve
+`/tmp/epg10-08-core-terminal-GlcgcnQY` for the frozen mutation-only terminal
+three-file draft (source60ceeac2…, SQLa1d07303…, spec04a714c2…). Reuse actual
+Core pool/access-digest source and existing cached read-only dependencies, plus
+the same <=300s,1CPU/512MiB worker+1CPU/1GiB tmpfs PostgreSQL envelope,
+internal network/nohostports/no operational mount/build/pull/install. Run its
+14unit+18PG definitions on a fresh disposable fixture ONLY; source pins,
+original failed results, real lock ordering/physical COMMIT and lost-ACK
+injection provenance, exact teardown/runtime/disk evidence required. It is not
+an installed provider, real source ENTER, final READ transport or full08 proof.
+The xmin comparison currently qualifies plain owning transactions only;
+SAVEPOINT/subtransaction compatibility remains fail-closed and unqualified.
+
+**Narrow business-root source preparation / before edits:** reserve only
+`business-root-read.sql`, `business_root_read.py`,
+`test_business_root_read.py`, `test_business_root_read_repository.py` in
+`/tmp/epg10-08-owning-provider-it5elJNc/` for the existing PM reviewer. Root
+alone promotes after review. Explicit versioned READ authority over sealed
+Manager catalogue/profile/field-policy digests, not entity ROOT_SCOPE or
+portfolio ownership; mutable head plus immutable genuine maintenance
+acceptance/revision, real protected owner/mapped subjects, CAS/idempotency and
+UNKNOWN/status. Only Bobby's private maintenance acceptance may install these
+nondelegable full-business grants; Stan subordinate portfolio membership
+management remains the existing protected-owner/ceiling reducer, never a new
+root bootstrap privilege. All declared modes remain possible, profiles pinned.
+No default grant, row-population enumeration, old receipt reconstruction,
+financial writer locks, schema install, provider mount or test/job by reviewer.
+Root reviews exact native writer/revoke closure and held lifecycle separately;
+an accepted read revision alone does not prove final delivery currentness.
+
+**Terminal harness first attempt10:23UTC:** pre-lease import refused because
+the reused measurement guard imports `pma11_migration_rehearsal`; that helper
+was omitted from the new source closure. Zero tests/containers/leases created,
+not a product FAIL/PASS. Copy only this existing nonsecret helper, extend the
+pin closure7→8files, then retry the same declared target/profile after fresh
+guards. Preserve the original error; no silent reduced test selection.
+
+**Second apparatus attempt10:23:37UTC:** cached Node container failed before
+Vitest because its nested `/app/node_modules` mountpoint was missing beneath
+the read-only source bind. Product cases0/NOT_RUN, receipt NOT_PASS; own PG,
+worker and internal network removed,10protected runtime tuples unchanged.
+Prepare only that empty mount directory, keep source/test bytes and limits
+unchanged, improve the harness's bounded failure code and retry after the live
+peer focus window. This is an owned harness fix, not product technical debt.
+
+**READ transport review / private preparation before edits:** Core uses
+Nest/Fastify; `onResponse` runs for finish AND error, so it is not a SERVED
+witness. Existing scope delivery ends at DTO. Reserve only
+`native-read-egress.ts` and `native-read-egress.spec.ts` in the same private
+owning-provider target for Research reviewer, no jobs/canonical edits. Reuse
+actual Node ServerResponse for a finite <=1MiB buffer and a one-owner one-shot
+send; bound deadline/backpressure and distinguish finish+`writableFinished`
+from error/closed transport. This proves local Core egress/OS handoff, not
+browser receipt. Do not await socket with Core row locks. Durable SENDING and
+authenticated native hold are prerequisites supplied by actual composition,
+not invented by DTO construction or test fakes. No READ terminal from TTL,
+DB absence or a request to close while an old writer may still run. Recovery
+needs actual sender quiescence/process fencing, otherwise UNKNOWN remains.
+Per-frame SSE needs a new finite permit each time; no indefinite connection
+lease or reused successful response witness.
+
+**Core-terminal final component qualification10:25:31UTC:** same frozen
+private three-file product/SQL/test bytes32PASS/0FAIL/ERROR/SKIP in7.952s,
+14unit+18actual PG fixture cases. Target
+`/tmp/epg10-08-core-terminal-GlcgcnQY/attempt-102531`, receipt
+fb62e74c6c39377ba6c265242b1c149bbc43f3a75c1770d8c08444eda1122649,
+JUnit a3edf5e15797b34d23b249eb4429818bc5363f3420cc34208b59ee50077256b1.
+Real existing Core pool2f838bf4… and access-digest4b4dcbbf… are copied unchanged;
+the prerequisite authority tables are explicitly TEST_ONLY component fixtures,
+not a stable full-schema installation. Real PostgreSQL COMMIT plus injected lost
+driver ACK is fault-injection evidence, not a real network-outage certification.
+Fresh lock+peer-job absence checked before test; own worker/PG/internal network
+removed,10protected runtime tuples unchanged, no new image/cache/build/ports/
+volumes/production mutation. Shared SGP free166938058752→166936866816B is not
+exclusive test consumption/reclaim. Both earlier apparatus failures remain
+recorded above. No installed source/authentication/final-READ claim follows.
+
+**PM coherent landing / cleanup:**233ffa86a9c0e887a3fac014dc20d575df2c6334
+commits only the tested native sidecar/source/unit/PG/evidence and owned58.102.1
+plan hunk, Bobby identity, no push/merge. PM subsequently advanced e62b6825
+from peer work; preserve its probe/readiness/journal paths. Own terminal PM
+source/archive copies631162logical bytes per host removed after pin/mount/
+terminal checks. HK free235010289664→235010977792B,18protected tuples unchanged;
+SGP free166755676160→166756429824B,10unchanged. Only bounded receipts/JUnit/
+pins/helpers and active separate drafts remain. Shared active/peer/rollback
+images and BuildKit cache intentionally retained; none created by these tests.
+Current actual provider/final-send binding and dependency-closed installation
+are owned unfinished work, not debt/config-only or grounds to declare08 closed.
+
+**Approved source transfer / actual qualification17/10,11:10–11:39UTC:** Bobby
+explicitly approved exactly25 native identity/membership source/test files and
+six named business-root/HTTP-egress drafts, runner and hash manifest to
+SGP `/tmp/epg10-08-business-root-L7CwneYt`. No secret, DB data or private config
+copied. First business-root attempt111012:220PASS/1FAIL,0ERROR/SKIP; the invalid
+environment test fixture raised before the decoder. Preserve that receipt and
+correct only fixture construction, never validation. Retry113858 after the
+actual peer hook3586824 stopped and both host locks cleared:221PASS/0FAIL/ERROR/
+SKIP,16.902s. This includes45new units and8actual disposable-PG cases plus168
+existing native/membership regressions. Corrected unit source5e52137b…; product
+business_root_read2606c197… and SQL74a5ee6e… unchanged. Receipt/JUnit remain
+bounded at the named target, original failures retained.
+
+**Finite-egress result / repair boundary before edits:** attempt113915 ran all
+35cases:32PASS/3FAIL,0ERROR/SKIP,18.409s, not qualified. Investigate/fix the
+1MiB exact-byte assertion's expensive JS deep comparison, real client-abort
+notification during stalled writes, and a premature injected finish event which
+Node's own listener may detach before the user listener sees writableFinished.
+Keep all negative cases and finite production bounds; require the captured
+socket's write queue to be empty for positive local completion, and observe
+remote read-end/abort only on the exact owned transport. Re-run this same35case
+profile after fresh SGP lock/job guards, no full branch test/rebuild. Local HK
+foreign lock is now absent; SGP PM binding-revision correctness job owns the
+next window to11:44:52UTC. Do not overlap it. This is owned implementation/test
+repair, not external debt. No runtime install or business grant is inferred.
+
+**Cleanup / current correspondence:** both113858/113915 removed their exact
+worker/PG/internal-network resources;10protected SGP image/config/start/restart
+tuples unchanged. Shared free166759116800→166758952960B for business-root;
+no exclusive disk attribution. No image/build/cache created; retain active
+source copies only for this correction/integration, then remove exact copies
+after pin/receipt review. Do not edit the Research peer's staged plan/index;
+the bounded private journal fragments reconcile here. Canonical Portal feature
+54c6f5f3, Edge feature8560ac10, PM673ce7cf and Research322e2347 are source pins,
+not deployed releases. Existing active/rollback services and release roots stay
+as recorded in current-correspondence-runtime.json; no restart/schema/grant/
+command activation, push or merge occurred.
+
+**Reviewed domain-proof seam / owned work still required:** preserve entity
+currentAccessRelations.v1 and finite ROOT_SCOPE semantics. Add only a separate
+optional internal Manager-domain proof/port bound to genuine current native
+maintenance acceptance plus explicit reviewed Core business.read_all grant,
+mapping, environment/profile and catalogue/profile/field-policy digests. Forward
+it through both existing identity and Manager runtime wrappers; consume at the
+closed Manager read-scope, never global wildcard authorization or browser
+grantChange. Include these pins/revisions in cache/cursor/realtime identity;
+retain explicit DENY and separate stream permission. Native full-domain
+authority cannot make legacy NULLportfolio rows valid nonnull five-tuples:
+publish truthful catalogue/domain rows, not fabricated portfolio mappings.
+Observation-only proof still requires the actual held provider, owning Core
+terminal and finite final-send/per-frame composition, installer and real drills.
+Full08 NOT_MET;09connected NOT_STARTED. These remaining owned items are not
+relabelled as external debt or a configuration-only gate.
+
+**Egress correction114214 / honest UNKNOWN semantics before retry:** same35
+cases now34PASS/1FAIL,0ERROR/SKIP,4.978s. The captured-queue guard correctly
+rejects premature finish; remaining expectation incorrectly required ABORTED
+although Node detached response.socket and the captured stalled socket is not
+closed. Keep UNKNOWN and retained capacity, strengthen the test to check both,
+then explicitly close only that test's captured socket and verify late local
+capacity release. No production shared-socket destroy, bypass or positive
+completion from an injected event. Original32/35 and34/35 failures remain;
+same35case retry, no skipped case or relaxed currentness/production deadline.
+
+**Final finite-egress component qualification114338:**35PASS/0FAIL/ERROR/SKIP
+in3.837s on the same cached1CPU/512MiB, network=none localhost target. Product
+319c40e4…, test0bfd4974…; receipt8984ae043f8261322f79c29f9e255eb76382205429e069855f9ae3c35d319559,
+JUnitd2e6260b97632ffc8b405eb52aedabd82d589cd3c62362c105b15d8311e27dcc.
+Actual ServerResponse completion/currentness/byte boundary, client abort,
+backpressure, one-shot witness and UNKNOWN retained-until-real-quiescence are
+exercised; no authenticated/native held permit or installed Core route was
+supplied. Worker and own lease removed,10SGP protected runtime tuples unchanged,
+new image/build/cache0. Shared free166741073920→166740369408B is observational.
+[Bounded qualification](evidence/execution-edge-v1_2/EPG10-08/business-root-egress-qualification.json)
+records all five failed/final attempts, full source/receipt/JUnit pins and exact
+non-certifications. No synthetic test permit becomes real business authority.
+
+**Native source promotion:** PM four-file business-root candidate is copied
+byte-identically to intended canonical source/test/SQL paths, with owned
+58.102.1 main-plan hunk, guide pointer and bounded evidence. PM peer committed
+binding-revision work1716376e independently; Research peer commissioning landed
+f1f5fc7d. Refresh changed seams before later Core integration; do not amend
+their commits/index or claim their tests certify this provider. Actual held
+source, terminal/final-send composition, installation and connected drills
+remain owned unfinished work in this08, not another phase or generic approval.
+
+**Next owned native bridge / before private edits:** existing PM reviewer may
+write only `business_root_held.py`, `native_fence_business_root.patch`,
+`test_business_root_held.py` and `test_business_root_held_pg.py` in the existing
+private owning-provider target. Read fresh local locks first; foreign window
+means source audit only. Root alone applies/reviews/promotes/runs anything.
+Patch reuses old native fence's exact lifecycle/ledger and epoch-CAS, narrows
+its three source/SQL/installer files to policy/users/business-read head/history;
+no new lease engine or financial/census/portfolio writer fence. Bridge calls
+the unchanged qualified business-root observer in the SAME RR/READONLY
+snapshot, derives only validated policy/owner/subject/acceptance keys and clamps
+expiry before issue to native expiry, reviewed operation deadline and60s bound.
+Validate exact native constraints, unconditional ALWAYS I/U/D/TRUNCATE guards,
+source SELECT-only/control named-EXECUTE-only roles and no owner/DDL/SETROLE/
+superuser escape. Unrelated Stan writes remain possible; epoch is acquisition
+CAS, never active semantic permission/cache revision. Tests must exercise
+selected writer exclusion/revoke, unaffected scope, deadline/binding/key drift,
+UNKNOWN/retire/ENTER/terminal same-key recovery and privilege/bypass failures.
+No job or canonical/shared/index/schema/runtime write by reviewer. These are
+prepared definitions, not run evidence or an authenticated installed provider.
+
+**Coherent native landing and scoped source-copy teardown11:51–11:53UTC:**
+PM49a6acc33f04989b1aac6cd0375a0cf5ac2ff73a lands only the qualified native
+business-root4files/evidence/owned journal/guide pointer under Bobby identity.
+No push/merge. After exact pins, terminal-job and no-mounted-copy checks, remove
+40approved SGP copy files/duplicates494267logicalB (source29+egress5+draft6),
+not the canonical source;4now-committed HK duplicate drafts60363B also removed.
+Keep bounded failure/final receipts/JUnit/logs/pins/helper runners and active
+separate Core/held-provider preparations only. SGPfree166724554752→166724562944B,
+HK239209070592→239300710400B; no exclusive disk attribution.10SGP/18HK runtime
+image/config/start/restart tuples unchanged. Read-only SGP inventories382image
+output rows/b3f0a36a… and3774BuildKit output lines/89929a1c… retained as bounded
+hashes; no images/build/cache created by tests and no shared prune/volume/data/
+release/worktree deletion. Retain active/peer artifacts and named TSr59/r49
+rollback releases. Full08 remains NOT_MET; same original08 implementation
+continues with exact four-table held bridge/authenticated Core composition,
+not a new phase, blanket dependency wait or request for repeated approval.
 
 
