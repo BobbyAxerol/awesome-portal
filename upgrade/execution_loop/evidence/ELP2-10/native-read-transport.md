@@ -187,3 +187,61 @@ separate unchanged engine/browser/load/DR campaign. The real PM source wire
 and current-human/final-egress installation gates remain OPEN, not proven by
 ephemeral synthetic TLS endpoints. No public field change for Claude in the
 native slice; the additive heartbeat contract remains AWAITING_CONSUMER_REVIEW.
+
+
+<a id="native-read-terminal-20261017-1602"></a>
+
+## Normal-hook landing —2026-10-17T16:02:08UTC
+
+Commit `f734db9d1cbdc8d409cbdc19bee23c1e4b09ad9d`,32owned paths
++3,698/−48, includes heartbeat and private native READ codec/client.760contract
+tests, APIbuild,5,618API tests and real scoped PG restore/four access-row digests
+PASS;3existing API skips across2files retained. These overlap prior221focused
+passes; no summed unique coverage or source/provider acceptance.
+
+Controller `/home/bobby/.local/state/portal-execution-elp210/20261017/native-read-land-153544/controller.json`;
+logSHA256 `bd1b5b4de6d0fe2b1fc903c6e83418cd75f3bc27b20737d4e6132457604f599b`.
+Source/index and all eight protected runtime tuples unchanged; owned resources
+empty/lease released. It supersedes pending landing only, preserving failed
+attempts and the private-source/authority limits. No push or runtime activation.
+
+## Source repin —observed15:48:39–15:50:16UTC
+
+PM `bobby@16.163.212.33:/home/bobby/.worktrees/trading-system-pm-v1_1`,
+branch `feat/portfolio-account-v1_1-parallel`, moved fromf02ebd78 to
+`afa1af81eb88fe51451515bc237769ec4e7f98a7`. All six previously pinned native
+wire files remain byte-identical; this does not require a Portal wire change.
+
+The actual source factory/installer now EXISTS; do not keep calling it absent:
+`services/portfolio_management/native_business_read_runtime.py`,187lines,
+SHA256 `76c8574a5cfcdc34a1f92e7967a5fea3192d970bf72b1952db500a4409452273`;
+`native_business_read_installation.py`,314lines,
+SHA256 `8a8ea939686bff4e48aa164536379fc1ea734188f5cd1aed554a2451c005872a`.
+Primary read all501lines. Runtime composes explicit pinned separate pools,
+observer/held bridge/provider/mTLS listener, with fresh preflight per start.
+Installer is fresh-only or exact independently pinned resume, preserves two
+durable schema/guard stages, UNKNOWN on uncertain COMMIT and explicit
+acceptance maintenance. Neither import nor config load enables a listener.
+
+PM current R2 guide lines45–51 and Unified §58.102.1 report235PASS TEST_ONLY;
+the raw qualification receipt was NOT read/reused as a Portal gate. New owner
+WIP §58.118 corrected62socket cases remains PENDING in the observation.
+Preserved dirty Unified/readiness and untracked integration test; no remote
+writes/tests/DB/business requests, install, credential access or service action.
+
+Exact local static alignment note:
+`20261017/source-repin-1545/source-alignment-review.md` SHA256
+`20eef2822ccf6d4c19c56cc7963f5e3cbb458ae33a2c3c089e6be2affb26624e`;
+501line witness SHA256
+`9d78edd9eccb88a311cb99c87713f3db8c2015a58bcc43d6967a64e0d00f0c2f`.
+This is SOURCE_CONFIRMED / INSTALLATION_NOT_OBSERVED, not runtime acceptance.
+Owner-reported waiter/PID labels were not used as process correspondence proof.
+No newly acknowledged Claude receipt/changed wire was found in this selected
+delta; that narrow observation is not a global absence assertion.
+
+Core current-session/app/domain grant proof, independent native JWT signer,
+durable exact-attempt lifecycle, actual HTTP final-send/confirmed-abort terminal,
+reviewed genuine configuration installation and connected revoke/recovery are
+still OPEN integration work. Keep native Base/deadline immutable and do not
+use reverse-human candidate.issue as a bare JWT factory. Numeric budget/
+calibration, coexistence and applicable original P184 performance G2 stay OPEN.

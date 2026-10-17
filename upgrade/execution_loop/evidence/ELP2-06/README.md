@@ -1,5 +1,16 @@
 # ELP2-06 — Manager read models và 360 datasets
 
+Latest continuation: [exact original Composition allocation custody](composition-original-custody.md)
+is APPLIED_UNCOMMITTED on clean parentf734db9d. It retains complete v3 original
+inputs through existing135/138/139 with exact accepted allocation bytes and
+first-write identity; no current-allocation substitution, public type or new
+migration.36new expanded regressions await one grouped normal hook. Historical
+Composition/Regime dependent calculation/public reads and genuine source/config
+installation remain OPEN06-002; this custody slice is not the whole chain.
+Claude stays NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW; no new
+field or acknowledgement is inferred. Prior pending/failure entries below are
+historical; each linked terminal receipt supersedes only its own batch.
+
 Latest continuation: [bounded scoped Score history](scoped-score-history.md)
 replaces enumeration stub and adds archived policy classification/older public
 refs, preserving current access/original bytes. APPLIED/UNCOMMITTED at entry;

@@ -20,6 +20,8 @@ import { datasetPublication } from "./publication.contract";
 import { qualifyDatasetPublication, publicationCommissioningCurrent, publicationCommissioningDeadline,
   type PublicationCommissioning } from "./publication-adapter";
 import type { ExecutionReadPublicationRequest } from "./read-publication";
+import type { ManagerCompositionOriginalAllocationCustody,ManagerCompositionOriginalAllocationCapture } from "./manager-composition-runtime";
+type CompositionCustodyOmissionReason=Extract<ManagerCompositionOriginalAllocationCapture,{status:"NOT_PUBLISHED"}>["reason_code"];
 
 type Policy = NonNullable<ReturnType<typeof managerScoreRestatementPolicy>>;
 type Original = ManagerScoreOriginalCustodySnapshot;
@@ -227,6 +229,7 @@ export class ManagerScoreRestatement {
   private readonly custody:ManagerScoreOriginalCustody;
   private readonly attached=new WeakMap<ManagerConsumerDelivery,PreparedManagerScoreOriginalCustody>();
   private disposition="NOT_RUN";
+  private compositionCustodyOmission:CompositionCustodyOmissionReason|null=null;
   constructor(private readonly options:{pool:Pool;runtime:ManagerScoreRuntime;currentPolicy():ApprovedManagerScorePolicy|null;
     commissioning:PublicationCommissioning;source:ManagerProjectionSource;
     publication(request:ExecutionReadPublicationRequest,signal:AbortSignal):Promise<unknown|null>;
@@ -236,7 +239,16 @@ export class ManagerScoreRestatement {
     this.config=Object.freeze({...c});this.options=Object.freeze({...options,config:this.config});
     this.models=new ManagerModelRepository(options.pool);this.leases=new ManagerProjectionLeases(options.pool);
   }
-  status(){return {state:this.disposition};}
+  status(){return this.disposition==="ORIGINAL_COMPOSITION_CUSTODY_NOT_RETAINED"&&this.compositionCustodyOmission!==null?
+    {state:this.disposition,reason_code:this.compositionCustodyOmission}:{state:this.disposition};}
+  /** Existing frozen optional bundle cap, not a new source/input budget. */
+  originalCustodyByteLimit():number{return this.config.maximum_bundle_bytes;}
+  /** Whole optional bundle only. No partial v3, fallback original, source/ACK
+   * mutation, grant or current-policy dependency is created by this omission. */
+  omitCompositionOriginal(delivery:ManagerConsumerDelivery,reason:CompositionCustodyOmissionReason):void{
+    this.attached.delete(delivery);this.compositionCustodyOmission=reason;
+    this.disposition="ORIGINAL_COMPOSITION_CUSTODY_NOT_RETAINED";
+  }
   /** Read-only archive classification; never requires today's eligibility for
    * the immutable fact to exist, and never asserts current economic data. */
   classifyPolicy(view:ManagerScoreRestatementSnapshot):"CURRENT"|"NOT_CURRENT"|"UNKNOWN" {
@@ -247,22 +259,32 @@ export class ManagerScoreRestatement {
   /** The caller has ALREADY captured these exact task bytes before its first
    * yield and invoked the original worker from that detached capture. This
    * after-materialization verifier cannot replace that early caller capture. */
-  prepareOriginal(document:ManagerModelDocument,tasks:readonly ManagerScoreOriginalInput[]):PreparedManagerScoreOriginalCustody {
-    return this.custody.prepare(document,tasks);
+  prepareOriginal(document:ManagerModelDocument,tasks:readonly ManagerScoreOriginalInput[],
+    compositions?:readonly ManagerCompositionOriginalAllocationCustody[]):PreparedManagerScoreOriginalCustody {
+    // Forward identities intact: serializing here would destroy first-write proof.
+    return this.custody.prepare(document,tasks,compositions);
   }
   /** Caller-owned SAME source transaction, lease/final source/authority fences,
    * physical COMMIT/release then ACK. Never invoke alongside legacy initial writer. */
   persistOriginal(client:PoolClient,prepared:PreparedManagerScoreOriginalCustody):Promise<"INSERTED"|"DUPLICATE"> {
     return this.custody.persist(client,prepared);
   }
-  attach(delivery:ManagerConsumerDelivery,tasks:readonly ManagerScoreOriginalInput[]):void {
-    if(tasks.length===0){this.disposition="ORIGINAL_INPUTS_NOT_SUPPLIED";return;}
-    try{this.attached.set(delivery,this.prepareOriginal(delivery.document as ManagerModelDocument,tasks));}
+  attach(delivery:ManagerConsumerDelivery,tasks:readonly ManagerScoreOriginalInput[],
+    compositions?:readonly ManagerCompositionOriginalAllocationCustody[]):void {
+    // Do not inspect new optional records/array getters here. The ORIGINAL
+    // codec validates that boundary and all first-write identities synchronously.
+    if(tasks.length===0&&compositions===undefined){this.disposition="ORIGINAL_INPUTS_NOT_SUPPLIED";return;}
+    try{this.attached.set(delivery,this.prepareOriginal(delivery.document as ManagerModelDocument,tasks,compositions));}
     catch(error){
       if(error instanceof Error&&error.message==="MANAGER_ORIGINAL_INPUT_BOUND"){
         this.attached.delete(delivery);this.disposition="ORIGINAL_INPUT_BOUND_NOT_RETAINED";return;
       }
-      throw error;
+      if(compositions!==undefined){
+        // New optional v3 intake cannot suppress an otherwise valid economic
+        // source. Reject the WHOLE custody, never retain a forged/partial subset.
+        this.omitCompositionOriginal(delivery,"COMPOSITION_ORIGINAL_CUSTODY_INVALID");return;
+      }
+      throw error; // Existing v1/v2 semantic/tamper failure behavior is unchanged.
     }
   }
   // Original custody makes no new policy claim and imposes no policy expiry on
@@ -340,6 +362,9 @@ export class ManagerScoreRestatement {
     const d=await this.models.document(scope.workspace_id,scope.environment,scope.profile_id,head.revision);check();
     if(!d||d.qualification!=="SOURCE_VERIFIED"){this.disposition="RESTATED_SOURCE_NOT_QUALIFIED";return;}
     const o=await this.original(d);check();if(!o){this.disposition="RESTATED_ORIGINAL_NOT_RETAINED";return;}
+    // A genuine Composition-only v3 ORIGINAL is valid custody, not an empty
+    // Score restatement. Dependent historical calculation is NOT installed here.
+    if(o.retained_tasks.length===0){this.disposition="RESTATED_DEPENDENT_WORKER_NOT_INSTALLED";return;}
     // K captured once for a NEW semantic result. An existing row preserves its
     // original K, compute time and result; clock alone never changes work key.
     const candidateK=Date.now(),handle=this.options.currentPolicy(),p=managerScoreRestatementPolicy(handle,{...scope,catalogue_digest:d.catalogue_digest},candidateK,Date.now());

@@ -11541,3 +11541,32 @@ auth16/16. Normal-hook coherent landing remains PENDING. No protected runtime
 change or owned resource leak; failed attempts retained. It is not source
 provider installation/commissioning, numeric calibration/budget, coexistence,
 P184G2 or Claude acceptance. No frontend changes or push.
+
+
+<a id="elp2-backend-composition-custody-20261017"></a>
+
+**Native/heartbeat actual terminal16:02UTC:** landed
+`f734db9d1cbdc8d409cbdc19bee23c1e4b09ad9d`,32owned files,+3,698/−48.
+[760contracts,APIbuild,5,618API PASS/3existing skips and real scoped PG
+restore/four row digests PASS](execution_loop/evidence/ELP2-10/native-read-transport.md#native-read-terminal-20261017-1602).
+Source/index/eight protected runtimes unchanged, resources/lease clean. This
+supersedes the pending native/heartbeat entries only; failed receipts remain.
+
+**Approved06 continuation:** [exact original Composition allocation custody](execution_loop/evidence/ELP2-06/composition-original-custody.md)
+is APPLIED_UNCOMMITTED on that clean parent. Full final source capture and
+private first-write identity preserve exact allocation/approval/publication
+bytes in v3 through existing135/138/139; current-allocation substitution and
+legacy retrofit rejected. Shared byte/row limits and whole optional omission
+preserve financial publication.36new regressions NOT_RUN before one grouped
+normal hook; no public contract/migration/frontend/runtime change.
+
+[Fresh source alignment and phase-by-phase remaining requirements](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-backend-return-20261017-composition-custody)
+records PMafa1af81's concrete factory/installer and unchanged six-wire pins,
+without inheriting owner-reported tests or claiming installation. Historical
+Composition/Regime worker/public-read chain and actual Core/native lifecycle/
+terminal remain unfinished implementation, not just pending calibration.
+14numeric budgets, approved calibration and matched coexistence/P184G2 remain
+OPEN;11NOT_ENTRY_READY. Claude NOT_STARTED_BY_OWNER_DIRECTION /
+AWAITING_CONSUMER_REVIEW. Intake rules §7.3 retain canonical request IDs and
+require an actual acknowledgement before consumer closure. No push, dev/main
+merge, signed release or deploy.

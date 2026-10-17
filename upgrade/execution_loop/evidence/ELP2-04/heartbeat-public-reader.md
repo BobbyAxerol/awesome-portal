@@ -169,3 +169,27 @@ preserve retained snapshots, source custody, grants, identities, revocations,
 keys, immutable history and audit. Teardown only this controller's exact
 disposable resources; retain evidence, active/rollback images and all eight
 protected runtime tuples. Capacity/cleanup status follows actual terminal.
+
+
+<a id="heartbeat-terminal-20261017-1602"></a>
+
+## Corrected normal-hook terminal —2026-10-17T16:02:08UTC
+
+Landed `f734db9d1cbdc8d409cbdc19bee23c1e4b09ad9d`,32owned paths
++3,698/−48 including native READ transport, generated heartbeat contract/tests
+and recurring Claude review rules.760contracts PASS; APIbuild PASS;
+5,618API PASS/3existing skips (364files PASS/2skipped); real disposablePG
+dump/restore including four scoped-access row digests PASS. This supersedes
+only the prior pending/corrected heartbeat landing, not its preserved failures.
+
+Controller `/home/bobby/.local/state/portal-execution-elp210/20261017/native-read-land-153544/controller.json`,
+logSHA256 `bd1b5b4de6d0fe2b1fc903c6e83418cd75f3bc27b20737d4e6132457604f599b`.
+Source/index and eight protected runtime tuples unchanged; remaining owned
+resources[], exact measurement lease released. Focused221 is overlapping
+coverage, not additional unique full-suite tests. No runtime/source/FE change.
+
+Named reader contract/code are landed, not a genuine source publication or
+consumer acceptance. Other generic null-purpose technical/audit aliases stay
+OPEN04-009;04-010 stays NOT_STARTED_BY_OWNER_DIRECTION /
+AWAITING_CONSUMER_REVIEW. Next independent backend slice is
+[Composition ORIGINAL custody](../ELP2-06/composition-original-custody.md).

@@ -12,6 +12,8 @@ import { ManagerScoreRuntime, managerScorePublicationPolicyCurrent, type Approve
 import { managerScorePublication } from "./manager-score-publication.contract";
 import type { ManagerScoreReadFence } from "./manager-score-publication";
 import { ManagerCompositionRuntime, managerCompositionPublicationCurrent, managerCompositionPublicationForRead,
+  captureManagerCompositionOriginalAllocation, type ManagerCompositionOriginalAllocationCapture,
+  type ManagerCompositionOriginalAllocationCustody,
   type ApprovedManagerAllocation, type ManagerCompositionRuntimeTask } from "./manager-composition-runtime";
 import type { ManagerCompositionReadFence } from "./manager-composition-publication";
 import type { ManagerScorePublication } from "./manager-score-publication.contract";
@@ -251,6 +253,9 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
         scores.push(managerScorePublication.parse({slot:item.slot,quality,raw_metrics:result.raw_metrics,provenance:result.provenance}));
       }
       const compositions:ManagerCompositionPublication[]=[];
+      // Preserve the EXACT handle used by each worker; a later currentAllocation()
+      // could be a different installed allocation even when its JSON looks equal.
+      const compositionOriginals:Array<{allocation:ApprovedManagerAllocation|null;publication:ManagerCompositionPublication}>=[];
       if(p.composition){
         const tasks=await p.composition.tasks(delivery,input.signal);
         if(tasks.length>p.composition.maximum_tasks_per_revision||Buffer.byteLength(JSON.stringify(tasks))>p.bounds.maximum_document_bytes)
@@ -261,9 +266,11 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
             task.source_revision!==document.revision||task.source_set_digest!==document.source_set_digest||
             task.source_qualification!==document.qualification||task.source_as_of_ms!==document.as_of_ms)
             throw new Error("MANAGER_COMPOSITION_SOURCE_BINDING_INVALID");
-          const result=await p.composition.runtime.calculate({...task,allocation:p.composition.currentAllocation(),raw_scores:scores},this.scoreFence,input.signal);
+          const allocation=p.composition.currentAllocation();
+          const result=await p.composition.runtime.calculate({...task,allocation,raw_scores:scores},this.scoreFence,input.signal);
           if(!this.compositionFence.accepts(result,scores))throw new Error("MANAGER_COMPOSITION_APPROVAL_CHANGED");
           compositions.push(result);
+          if(restatement)compositionOriginals.push({allocation,publication:result});
         }
       }
       const regimes: ManagerRegimePublication[] = [];
@@ -290,7 +297,32 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
       if(Buffer.byteLength(JSON.stringify(materialized))>p.bounds.maximum_document_bytes)throw new Error("MANAGER_PROJECTION_LIMIT");
       const result={...delivery,document:materialized};
       recalculation?.attach(result,tasks);
-      if(originals)restatement!.attach(result,originals);
+      if(originals&&restatement){
+        if(compositionOriginals.length===0)restatement.attach(result,originals);
+        else{
+          // FULL final source includes all Score/Composition/Regime results.
+          // Capture synchronously before attach; no allocation substitution or
+          // JSON clone can replace genuine first-write custody identities.
+          const captures:ManagerCompositionOriginalAllocationCustody[]=[];
+          const maximumBytes=restatement.originalCustodyByteLimit();let capturedBytes=2;
+          let omission:Extract<ManagerCompositionOriginalAllocationCapture,{status:"NOT_PUBLISHED"}>["reason_code"]|null=null;
+          for(const original of compositionOriginals){
+            try{
+              const captured=captureManagerCompositionOriginalAllocation({...original,document:materialized,
+                raw_fence:this.scoreFence,maximum_bytes:maximumBytes});
+              if(captured.status!=="READY"){omission=captured.reason_code;break;}
+              const bytes=Buffer.byteLength(JSON.stringify(captured.custody))+1;
+              if(capturedBytes+bytes>maximumBytes){omission="COMPOSITION_ORIGINAL_CUSTODY_BOUND";break;}
+              capturedBytes+=bytes;captures.push(captured.custody);
+            }catch{omission="COMPOSITION_ORIGINAL_CUSTODY_INVALID";break;}
+          }
+          if(omission!==null){
+            // Do not fall back to v1/v2 or retain a partial v3 census. Omit ONLY
+            // optional ORIGINAL custody; financial publication/fences stay intact.
+            captures.length=0;restatement.omitCompositionOriginal(result,omission);
+          }else restatement.attach(result,originals,captures);
+        }
+      }
       return result;
     },recheck:i=>p.source.recheck(i),acknowledge:(r,s)=>p.source.acknowledge(r,s)};
   }

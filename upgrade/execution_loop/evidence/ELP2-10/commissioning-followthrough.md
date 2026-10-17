@@ -2311,3 +2311,46 @@ status. Future Claude work: UXM00audit →01/02IA/roles →03–06design/approva
 →07fixture consumers →08/09qualified reads/confirmations →10browser acceptance.
 No frontend assignment, UI change, source/command/Live activation, push,
 dev/main/sign/release/deploy or protected runtime restart in this followthrough.
+
+
+<a id="elp210-backend-return-20261017-composition-custody"></a>
+
+## Backend continuation —native terminal and exact Composition ORIGINAL
+
+Native/heartbeat landed `f734db9d1cbdc8d409cbdc19bee23c1e4b09ad9d`:
+32files,+3,698/−48.760contracts/APIbuild/5,618API tests/scoped PG restore PASS,
+3existing skips; source/index/eight runtimes unchanged, owned resources/lease
+clean. [Actual terminal/hash and source repin](native-read-transport.md#native-read-terminal-20261017-1602)
+supersedes only that pending batch, not whole phase/runtime acceptance.
+
+[Composition ORIGINAL custody](../ELP2-06/composition-original-custody.md) is
+APPLIED_UNCOMMITTED: exact allocation bytes/approval/source/publication and
+complete census, first-write identity, immutable-parent restore, private v3,
+shared bounds and same135/138/139 transaction. All-or-nothing optional omission
+preserves genuine null/partial financial source; no v1/v2 retrofit or current
+allocation substitution.36new expanded regressions NOT_RUN before grouped
+normal hook; no public field/route/migration/FE change. The missing historical
+dependent worker/read is explicitly NOT_DELIVERED, not hidden by this custody.
+
+PM source repin toafa1af81 contains a concrete runtime and resumable installer;
+six native wire hashes unchanged. Source factory absence is no longer the gap.
+Genuine installation, current Core app/domain authority, native signer and actual
+final-send/COMMIT terminal plus connected revoke/recovery remain unproved.
+PM235PASS is owner-reported TEST_ONLY, not a reused Portal or current-runtime gate.
+
+| Phase / canonical owner record | Current remaining work / next action |
+| --- | --- |
+|02–03 identity/access|Local mapping and scoped grants exist; actual selected issuer/mapping/current grant installation and delegated field ceiling still require proof, not one blanket receipt |
+|04-009/010|Named heartbeat landed; remaining finite parent/technical/audit reader source classifications and concurrency proof stay in their owning matrix. Claude not assigned |
+|05–06 /06-002/00-005|Composition v3 custody pending gate; historical Composition/Regime worker/projection/API and compatible ALL source tie-out remain implementation work, plus actual source/config installation |
+|07–08|Private family codecs/policies are not mounted authenticated executors; actual owning COMMIT/RETURN writer, assignment/rebind/lifecycle adapters and current-human trust remain |
+|09|Concrete local scoped replay pieces exist; authenticated serialized source factory/listener and connected snapshot→tail/correction/floor/hidden/revoke proof remain |
+|10|Actual provider/current-human/Core terminal/durable attempt integration,14numeric budget groups and approved Score/Regime calibration artifacts, matched coexistence/applicable P184 performance G2 remain |
+|11|NOT_ENTRY_READY; no auto merge/release/deploy |
+
+Backend can continue the approved historical dependent chain and independent
+remaining readers/families/realtime seams; do not label all unfinished code
+external. Claude UXM00–10 remains NOT_STARTED_BY_OWNER_DIRECTION /
+AWAITING_CONSUMER_REVIEW. Existing generated handoffs are ready for future
+assignment only. Recurring intake §7.3 applies before freeze/landing/exit; no
+new Execution consumer acknowledgement is claimed after the selected repin.

@@ -245,4 +245,16 @@ describe("ELP2-06 PATH original custody — real unit boundary / SYNTHETIC proof
       expect(restored.retained_tasks[0].original_publication_digest).toBe(accessDigest(f.document.precomputed_scores![0]));
       if(fault==="missing-turnover")expect(f.result.raw_metrics?.stress_excess_twr).toBeNull();
     });
+
+it.each(["v1","v2"] as const)("keeps existing %s exact original bytes/keys when optional Composition capture is omitted or empty",async version=>{
+  const source=task();Object.defineProperty(source,"SYNTHETIC_opaque",{enumerable:true,value:{items:["\u0085","\u2028","   ",null]}});
+  const f=await fixture(version==="v2"?bind(source):{slot:"RAW",task:source});
+  const before=JSON.stringify(f.stored),ordinary=f.custody.prepare(f.document,[f.captured]);
+  const omitted=f.custody.prepare(f.document,[f.captured],undefined),empty=f.custody.prepare(f.document,[f.captured],[]);
+  expect(omitted).toEqual(ordinary);expect(empty).toEqual(ordinary);expect(ordinary).toEqual(f.prepared);
+  expect(f.restore().schema_version).toBe(`portal.execution.manager-score-original-inputs.${version}`);
+  expect(f.restore().retained_tasks[0].input_json).toBe(f.captured.input_json);
+  expect(f.restore().retained_tasks[0].input_digest).toBe(f.result.provenance.input_digest);
+  expect(JSON.stringify(f.stored)).toBe(before);expect(f.restore()).not.toHaveProperty("retained_compositions");
+});
 });

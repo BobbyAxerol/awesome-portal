@@ -4,7 +4,7 @@ import "reflect-metadata";
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppModule } from "../src/app.module";
 import { accessDigest } from "../src/execution-v2/access-policy";
@@ -16,6 +16,10 @@ import { EXECUTION_PUBLICATION_CATALOGUE } from "../src/execution-v2/publication
 import { ManagerScoreRuntime, loadApprovedManagerScorePolicy, managerScorePolicyHash, managerScorePublicationCurrent, managerScorePublicationPolicyCurrent,
   type ManagerScoreRuntimePolicyArtifact, type ManagerScoreRuntimeTask } from "../src/execution-v2/manager-score-runtime";
 import { managerScorePublication, type ManagerScorePublication } from "../src/execution-v2/manager-score-publication.contract";
+import { ManagerScoreOriginalCustody, captureManagerScoreOriginalInputs, decodeRetainedManagerScoreOriginal,
+  type ManagerScoreOriginalCustodySnapshot } from "../src/execution-v2/manager-score-original-custody";
+import { ManagerScoreRestatement } from "../src/execution-v2/manager-score-restatement";
+import { ManagerScoreHistoryStore } from "../src/execution-v2/manager-score-history.store";
 import { managerScorePopulationDigest } from "../src/execution-v2/manager-score-publication";
 import { ManagerModelRepository } from "../src/execution-v2/manager-model.store";
 import type { ManagerModelDocument } from "../src/execution-v2/manager-model.contract";
@@ -24,6 +28,8 @@ import { queryManagerModel } from "../src/execution-v2/manager-model";
 import { ManagerModelService } from "../src/execution-v2/manager-model.service";
 import { ManagerModelController } from "../src/execution-v2/manager-model.controller";
 import { ManagerCompositionRuntime, loadApprovedManagerAllocation, revokeApprovedManagerAllocation,
+  captureManagerCompositionOriginalAllocation, restoreManagerCompositionOriginalAllocation,
+  managerCompositionRetainedAllocationInputs,
   managerCompositionPublicationCurrent, managerCompositionPublicationForRead,
   type ManagerAllocationArtifact, type ManagerAllocationApprovalPin,
   type ManagerCompositionRuntimeTask } from "../src/execution-v2/manager-composition-runtime";
@@ -715,5 +721,509 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-10 installed worker/Score/
     expect(runtime.status().state).not.toBe("STOPPED");finishCleanup();
     await shutdown;await refused;expect(publication).toHaveBeenCalledOnce();
     await expect(access.readPublication!(request)).rejects.toThrow("MANAGER_PUBLICATION_CAPACITY");
+  });
+});
+
+/** Synthetic original-custody boundaries; actual gate receipts live in ELP2-06. */
+type CompositionOriginalCustody = Extract<ReturnType<typeof captureManagerCompositionOriginalAllocation>, {status:"READY"}>["custody"];
+type CompositionRetainedHandle = Extract<ReturnType<typeof restoreManagerCompositionOriginalAllocation>, {status:"READY"}>["handle"];
+const originalAbsence=(suffix:string)=>({status:"NOT_PUBLISHED",reason_code:`COMPOSITION_ORIGINAL_CUSTODY_${suffix}`});
+async function compositionOriginal(fx=compositionInput(),allocation=fx.handle) {
+  const calculated=await calculatedComposition(fx,allocation,()=>now);
+  const document:ManagerModelDocument={...structuredClone(fx.d.document),precomputed_scores:structuredClone(calculated.raw),
+    precomputed_compositions:[structuredClone(calculated.publication)]};
+  const request={allocation,document,publication:calculated.publication,raw_fence:calculated.fence,maximum_bytes:65_536};
+  const result=captureManagerCompositionOriginalAllocation(request,()=>now);
+  if(result.status!=="READY")throw new Error(JSON.stringify(result));
+  return {fx,...calculated,document,request,custody:result.custody};
+}
+function restoredComposition(custody:CompositionOriginalCustody,document:ManagerModelDocument,readAt=now) {
+  return restoreManagerCompositionOriginalAllocation({custody,expected_custody_digest:custody.custody_digest,document,maximum_bytes:65_536},()=>readAt);
+}
+function requireRetainedComposition(custody:CompositionOriginalCustody,document:ManagerModelDocument,readAt=now) {
+  const result=restoredComposition(custody,document,readAt);
+  if(result.status!=="READY")throw new Error(JSON.stringify(result));return result.handle;
+}
+function rehashCompositionCustody(custody:CompositionOriginalCustody) {
+  const {custody_digest:_old,...base}=custody;custody.custody_digest=accessDigest(base);return custody;
+}
+
+describe("ELP2-06 original Composition custody — synthetic pure/runtime inputs, not source authority",()=>{
+  it("preserves exact BOM/whitespace allocation bytes and returns detached original inputs after current allocation changes",async()=>{
+    const fx=compositionInput(),candidate=compositionCandidate(fx);
+    const bytes="\ufeff"+JSON.stringify(candidate.artifact,null,2)+"\n";
+    const pin={...candidate.pin,artifact_sha256:hash(bytes)};
+    const loaded=loadApprovedManagerAllocation({artifact_bytes:bytes,approval_pin:pin,scope:candidate.artifact.scope,as_of_ms:now});
+    if(loaded.status!=="READY")throw new Error(JSON.stringify(loaded));
+    const original=await compositionOriginal(fx,loaded.handle);
+    expect(original.custody.artifact_utf8).toBe(bytes);expect(hash(original.custody.artifact_utf8)).toBe(pin.artifact_sha256);
+    expect(original.custody.source.payload_digest).toBe(accessDigest(original.document));
+    expect(original.publication.result.value).toBe("80");
+    // A separate current synthetic allocation changes weights; historical custody never reads it.
+    const changed=compositionInput(),artifact=structuredClone(changed.artifact);
+    artifact.rows[0].allocated_economic_capital="20";artifact.rows[1].allocated_economic_capital="80";
+    artifact.allocation_revision="SYNTHETIC:allocation-r2";artifact.allocation_snapshot_id="SYNTHETIC:snapshot-r2";
+    artifact.nav_partition!.rows[0].current_nav_allocated_capital="20";artifact.nav_partition!.rows[1].current_nav_allocated_capital="80";
+    artifact.nav_partition!.idle_cash="0";
+    const next=requireCompositionAllocation(compositionCandidate(changed,artifact));
+    const current=await calculatedComposition(changed,next,()=>now);expect(current.publication.result.value).toBe("58");
+    revokeApprovedManagerAllocation(loaded.handle);
+    const retained=requireRetainedComposition(original.custody,original.document,pin.valid_until_ms+60_000);
+    const first=managerCompositionRetainedAllocationInputs(retained)!,second=managerCompositionRetainedAllocationInputs(retained)!;
+    expect(first.artifact.rows.map(row=>row.allocated_economic_capital)).toEqual(["60","20"]);
+    expect(first.custody.artifact_utf8).toBe(bytes);expect(first.approval).toEqual(pin);
+    expect(first).not.toBe(second);expect(first.artifact).not.toBe(second.artifact);expect(Object.isFrozen(first.artifact.rows)).toBe(true);
+    expect(Reflect.set(first.artifact.rows[0],"allocated_economic_capital","999")).toBe(false);
+    expect(managerCompositionRetainedAllocationInputs(retained)!.artifact.rows[0].allocated_economic_capital).toBe("60");
+  });
+  it("cannot turn a retained, cloned or JSON handle into current allocation authority",async()=>{
+    const f=await compositionOriginal(),retained=requireRetainedComposition(f.custody,f.document);
+    expect(managerCompositionRetainedAllocationInputs({} as CompositionRetainedHandle)).toBeNull();
+    expect(managerCompositionRetainedAllocationInputs(JSON.parse(JSON.stringify(retained)))).toBeNull();
+    expect(managerCompositionRetainedAllocationInputs(f.fx.handle as unknown as CompositionRetainedHandle)).toBeNull();
+    const forged=retained as unknown as typeof f.fx.handle;
+    await expect(compositionRuntime(()=>now).calculate({...f.fx.task,allocation:forged,raw_scores:f.raw},f.fence))
+      .rejects.toMatchObject({code:"COMPOSITION_ALLOCATION_NOT_APPROVED"});
+    expect(managerCompositionPublicationCurrent(forged,f.publication,f.raw,f.fence,now)).toBe(false);
+  });
+  it.each(["zero","partial","missing"] as const)("retains %s q without replacing null with zero or dropping the denominator",async kind=>{
+    const fx=compositionInput(kind==="partial");
+    for(const item of fx.scoreTasks.filter(value=>value.slot==="RAW")){
+      if(item.task.input.kind!=="METRICS")throw new Error("SYNTHETIC_FIXTURE_KIND");
+      if(kind==="zero")item.task.input.quality.metrics={net_excess_twr:"-0.02",sharpe_period:"0",mdd:"0.1",add:"0.04",positive_block_ratio:"0",stress_excess_twr:"-0.02"};
+      if(kind==="missing")item.task.input.quality.metrics.sharpe_period=null;
+    }
+    const f=await compositionOriginal(fx),restored=requireRetainedComposition(f.custody,f.document);
+    expect(managerCompositionRetainedAllocationInputs(restored)!.artifact.rows.map(row=>row.allocated_economic_capital)).toEqual(["60","20"]);
+    expect(f.publication.result).toMatchObject(kind==="zero"?{value:"0",status:"available",score_coverage_allocated:"1"}:
+      kind==="partial"?{value:null,status:"partial_coverage",score_coverage_allocated:"0.75",bounds:{lower:"67.5",upper:"92.5"}}:
+      {value:null,status:"partial_coverage",score_coverage_allocated:"0",bounds:{lower:"0",upper:"100"}});
+  });
+  it("retains verified empty no_allocation, not an invented zero score",async()=>{
+    const fx=compositionInput(),artifact=structuredClone(fx.artifact);
+    artifact.population=[];artifact.rows=[];artifact.binding.tuple_population_digest=accessDigest([]);artifact.source_set_digest=accessDigest([]);
+    artifact.grouping=null;artifact.nav_partition=null;
+    fx.d.document.members=[];fx.d.document.facts=[];fx.d.document.source_set_digest=artifact.source_set_digest;
+    fx.task.binding=artifact.binding;fx.task.source_set_digest=artifact.source_set_digest;fx.scoreTasks=[];
+    const allocation=requireCompositionAllocation(compositionCandidate(fx,artifact)),f=await compositionOriginal(fx,allocation);
+    expect(f.publication.result).toMatchObject({value:null,status:"no_allocation",total_allocated_capital:"0",score_coverage_allocated:null});
+    expect(managerCompositionRetainedAllocationInputs(requireRetainedComposition(f.custody,f.document))!.artifact.rows).toEqual([]);
+  });
+  it("optional capture refusal leaves original source/publication bytes untouched",async()=>{
+    const f=await compositionOriginal(),before=JSON.stringify({document:f.document,publication:f.publication});
+    for(const maximum_bytes of [0,1,NaN,Infinity,1.5,8*1024*1024+1])
+      expect(captureManagerCompositionOriginalAllocation({...f.request,maximum_bytes},()=>now)).toEqual(originalAbsence("BOUND"));
+    expect(restoreManagerCompositionOriginalAllocation({custody:f.custody,expected_custody_digest:f.custody.custody_digest,
+      document:f.document,maximum_bytes:1},()=>now)).toEqual(originalAbsence("BOUND"));
+    expect(JSON.stringify({document:f.document,publication:f.publication})).toBe(before);
+    expect(captureManagerCompositionOriginalAllocation({...f.request,allocation:{} as typeof f.fx.handle},()=>now)).toEqual(originalAbsence("NOT_APPROVED"));
+    expect(captureManagerCompositionOriginalAllocation(f.request,()=>f.fx.pin.valid_until_ms)).toEqual(originalAbsence("NOT_CURRENT"));
+  });
+  it("captures only exact source, complete correlated census and original RAW/publication references",async()=>{
+    const f=await compositionOriginal();
+    for(const kind of ["revision","qualification","missing-member","duplicate-member","changed-stage","missing-publication","duplicate-publication","raw-digest"] as const){
+      const document=structuredClone(f.document);
+      if(kind==="revision")document.revision="SYNTHETIC:other";
+      if(kind==="qualification")document.qualification="TEST_ONLY" as typeof document.qualification;
+      if(kind==="missing-member")document.members.pop();
+      if(kind==="duplicate-member")document.members.push(structuredClone(document.members[0]));
+      if(kind==="changed-stage")document.members[0].stage="SANDBOX";
+      if(kind==="missing-publication")document.precomputed_compositions=[];
+      if(kind==="duplicate-publication")document.precomputed_compositions!.push(structuredClone(f.publication));
+      if(kind==="raw-digest")document.precomputed_scores![0].provenance.calculation_revision="SYNTHETIC:substituted";
+      const suffix=kind==="revision"||kind==="qualification"?"SOURCE_MISMATCH":
+        ["missing-member","duplicate-member","changed-stage"].includes(kind)?"POPULATION_MISMATCH":"PUBLICATION_MISMATCH";
+      expect(captureManagerCompositionOriginalAllocation({...f.request,document},()=>now),kind).toEqual(originalAbsence(suffix));
+    }
+  });
+  it("checks the independent expected digest even when an attacker recomputes the custody self-hash",async()=>{
+    const f=await compositionOriginal();
+    const mutations:Array<(c:CompositionOriginalCustody)=>void>=[
+      c=>{c.source.source_epoch="SYNTHETIC:other";},c=>{c.binding.subject_id="SYNTHETIC:other";},
+      c=>{c.artifact_utf8+="\n";},c=>{c.approval_pin.approval_ref="SYNTHETIC:substituted";},
+      c=>{c.original_publication_digest=hash("wrong");},c=>{c.population_census_digest=hash("wrong");},c=>{c.captured_at_ms++;}
+    ];
+    for(const mutate of mutations){const custody=structuredClone(f.custody);mutate(custody);rehashCompositionCustody(custody);
+      expect(restoreManagerCompositionOriginalAllocation({custody,expected_custody_digest:f.custody.custody_digest,
+        document:f.document,maximum_bytes:65_536},()=>now)).toEqual(originalAbsence("DIGEST_MISMATCH"));}
+  });
+  it("rejects changed actual source document even when the outer custody remains authentic",async()=>{
+    const f=await compositionOriginal();
+    for(const change of [(d:ManagerModelDocument)=>{d.source_sequence="2";},(d:ManagerModelDocument)=>{d.projection_generation="SYNTHETIC:g2";},
+      (d:ManagerModelDocument)=>{d.precomputed_scores![0].provenance.calculation_revision="SYNTHETIC:other";},
+      (d:ManagerModelDocument)=>{d.precomputed_compositions![0].provenance.calculation_revision="SYNTHETIC:other";}]){
+      const document=structuredClone(f.document);change(document);
+      expect(restoredComposition(f.custody,document)).toEqual(originalAbsence("SOURCE_MISMATCH"));}
+  });
+  it("also verifies intrinsic artifact, census, original publication and time if an external test pin is deliberately changed",async()=>{
+    const f=await compositionOriginal();
+    // These deliberately replaced TEST_ONLY expected pins exercise deeper corruption checks;
+    // they do NOT establish permission for a source/client to replace an independent pin.
+    const cases:Array<[string,(c:CompositionOriginalCustody)=>void]>=[
+      ["ARTIFACT_INVALID",c=>{c.artifact_utf8+="\n";}],
+      ["DIGEST_MISMATCH",c=>{c.population_census_digest=hash("wrong");}],
+      ["PUBLICATION_MISMATCH",c=>{c.original_publication_digest=hash("wrong");}],
+      ["ORIGINAL_TIME_INVALID",c=>{c.captured_at_ms=now+1;}],
+      ["ORIGINAL_TIME_INVALID",c=>{c.captured_at_ms=now-1;}],
+      ["ORIGINAL_TIME_INVALID",c=>{c.captured_at_ms=f.fx.pin.valid_until_ms;}]
+    ];
+    for(const [suffix,mutate] of cases){const custody=structuredClone(f.custody);mutate(custody);rehashCompositionCustody(custody);
+      expect(restoredComposition(custody,f.document,suffix==="ORIGINAL_TIME_INVALID"&&custody.captured_at_ms>now+1?custody.captured_at_ms:now),suffix)
+        .toEqual(originalAbsence(suffix));}
+  });
+  it("rejects own accessors, symbols and nonplain descriptors without invoking them",async()=>{
+    const f=await compositionOriginal();let reads=0;
+    const request={...f.request};Object.defineProperty(request,"document",{enumerable:true,get(){reads++;return f.document;}});
+    expect(captureManagerCompositionOriginalAllocation(request,()=>now)).toEqual(originalAbsence("INVALID"));
+    const fence={};Object.defineProperty(fence,"accepts",{enumerable:true,get(){reads++;return f.fence.accepts;}});
+    expect(captureManagerCompositionOriginalAllocation({...f.request,raw_fence:fence as typeof f.fence},()=>now)).toEqual(originalAbsence("INVALID"));
+    const document=structuredClone(f.document);Object.defineProperty(document.members[0],"name",{enumerable:true,get(){reads++;return "secret";}});
+    expect(captureManagerCompositionOriginalAllocation({...f.request,document},()=>now)).toEqual(originalAbsence("INVALID"));
+    expect(captureManagerCompositionOriginalAllocation({...f.request,[Symbol("secret")]:true} as typeof f.request,()=>now)).toEqual(originalAbsence("INVALID"));
+    expect(captureManagerCompositionOriginalAllocation(Object.assign(Object.create({secret:true}),f.request),()=>now)).toEqual(originalAbsence("INVALID"));
+    expect(reads).toBe(0);
+  });
+  it("rejects outer and nested Proxies before reflection, including expected-digest objects and clock functions",async()=>{
+    const f=await compositionOriginal();let traps=0;
+    const proxy=<T extends object>(target:T):T=>new Proxy(target,{get(){traps++;throw new Error("PRIVATE_PROXY");},
+      getPrototypeOf(){traps++;throw new Error("PRIVATE_PROXY");},ownKeys(){traps++;throw new Error("PRIVATE_PROXY");},
+      getOwnPropertyDescriptor(){traps++;throw new Error("PRIVATE_PROXY");},apply(){traps++;throw new Error("PRIVATE_PROXY");}});
+    for(const request of [proxy({...f.request}),{...f.request,document:proxy(f.document)},
+      {...f.request,document:{...f.document,members:[proxy(f.document.members[0]),...f.document.members.slice(1)]}},
+      {...f.request,publication:proxy(f.publication)},{...f.request,raw_fence:proxy(f.fence)}])
+      expect(captureManagerCompositionOriginalAllocation(request,()=>now)).toEqual(originalAbsence("INVALID"));
+    const restore={custody:f.custody,expected_custody_digest:f.custody.custody_digest,document:f.document,maximum_bytes:65_536};
+    expect(restoreManagerCompositionOriginalAllocation(proxy(restore),()=>now)).toEqual(originalAbsence("INVALID"));
+    expect(restoreManagerCompositionOriginalAllocation({...restore,custody:{...f.custody,approval_pin:proxy(f.custody.approval_pin)}},()=>now))
+      .toEqual(originalAbsence("INVALID"));
+    const digestObject={};for(const key of ["then","catch","constructor"])Object.defineProperty(digestObject,key,
+      {enumerable:true,get(){traps++;return undefined;}});
+    const revoked=Proxy.revocable({},{});revoked.revoke();
+    for(const value of [digestObject,proxy({}),revoked.proxy])expect(restoreManagerCompositionOriginalAllocation({...restore,
+      expected_custody_digest:value as unknown as string},()=>now)).toEqual(originalAbsence("INVALID"));
+    const digestGetter={...restore};Object.defineProperty(digestGetter,"expected_custody_digest",
+      {enumerable:true,get(){traps++;return f.custody.custody_digest;}});
+    expect(restoreManagerCompositionOriginalAllocation(digestGetter,()=>now)).toEqual(originalAbsence("INVALID"));
+    expect(captureManagerCompositionOriginalAllocation(f.request,proxy(()=>now))).toEqual(originalAbsence("INVALID"));
+    expect(restoreManagerCompositionOriginalAllocation(restore,proxy(()=>now))).toEqual(originalAbsence("INVALID"));
+    expect(traps).toBe(0);
+  });
+  it("detaches caller-owned custody data before retaining the original allocation",async()=>{
+    const f=await compositionOriginal(),custody=structuredClone(f.custody),handle=requireRetainedComposition(custody,f.document);
+    custody.artifact_utf8="attacker";custody.approval_pin.approval_ref="changed";
+    expect(managerCompositionRetainedAllocationInputs(handle)!.custody).toEqual(f.custody);
+  });
+});
+
+const compositionV3Limits={maximum_bundle_bytes:262_144,maximum_revisions_per_source:4,maximum_retained_bytes_per_source:1_048_576};
+const compositionV3Config={...compositionV3Limits,calculation_revision:"SYNTHETIC:v3-restated",
+  input_method_revision:"SYNTHETIC:v3-original-wrapper"};
+function compositionV3ScoreInputs(fx:ReturnType<typeof compositionInput>) {
+  // Existing composition fixture tasks come from a RuntimeTask and contain
+  // policy:null. Actual worker excludes policy from input bytes. The provider
+  // for this opt-in fixture must supply the genuine policy-free task shape.
+  return fx.scoreTasks.map(({slot,task})=>{const {policy:_policy,...original}=task;return {slot,task:original};});
+}
+async function compositionV3Fixture(kind:"full"|"partial"|"composition-only"|"empty"="full"){
+  const fx=compositionInput(kind==="partial");let allocation=fx.handle;
+  if(kind==="composition-only")fx.scoreTasks=[];
+  if(kind==="empty"){
+    const artifact=structuredClone(fx.artifact);artifact.population=[];artifact.rows=[];artifact.source_set_digest=accessDigest([]);
+    artifact.binding.tuple_population_digest=accessDigest([]);artifact.grouping=null;artifact.nav_partition=null;
+    fx.d.document.members=[];fx.d.document.facts=[];fx.d.document.source_set_digest=artifact.source_set_digest;
+    fx.task.binding=artifact.binding;fx.task.source_set_digest=artifact.source_set_digest;fx.scoreTasks=[];
+    allocation=requireCompositionAllocation(compositionCandidate(fx,artifact));
+  }
+  // Capture task bytes BEFORE the first worker await, as required by runtime.
+  const inputs=captureManagerScoreOriginalInputs(compositionV3ScoreInputs(fx),compositionV3Limits.maximum_bundle_bytes);
+  const f=await compositionOriginal(fx,allocation);return {...f,inputs};
+}
+type CompositionV3Fixture=Awaited<ReturnType<typeof compositionV3Fixture>>;
+type CompositionV3Snapshot=Extract<ManagerScoreOriginalCustodySnapshot,{schema_version:"portal.execution.manager-score-original-inputs.v3"}>;
+
+describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 ORIGINAL v3 — actual disposable PG / SYNTHETIC authority",()=>{
+  const database="elp206_composition_v3_"+randomUUID().replaceAll("-","");
+  const url=(name:string)=>{const u=new URL(process.env.TEST_DATABASE_URL!);u.pathname="/"+name;return u.toString();};
+  const options={max:2,connectionTimeoutMillis:2000,query_timeout:4000};
+  let pg:Pool;const ownedRuntimes:ExecutionManagerRuntime[]=[];
+  beforeAll(async()=>{if(!/^elp206_composition_v3_[a-f0-9]{32}$/.test(database))throw new Error("TEST_ONLY_DB_NAME");
+    const admin=new Pool({...options,max:1,connectionString:url("postgres")});
+    try{await admin.query("CREATE DATABASE "+database);}finally{await admin.end();}
+    pg=new Pool({...options,connectionString:url(database)});
+    for(const file of ["1723680000135_execution-manager-models.sql","1723680000137_execution-manager-consumer-fence.sql",
+      "1723680000138_execution-manager-calculation-revisions.sql","1723680000139_execution-manager-score-mode-heads.sql"])
+      await pg.query(readFileSync(resolve(__dirname,"../migrations",file),"utf8").split("-- Down Migration")[0]);
+  },60_000);
+  beforeEach(async()=>{vi.restoreAllMocks();for(const runtime of ownedRuntimes.splice(0))await runtime.beforeApplicationShutdown();
+    await pg.query("TRUNCATE execution_manager_score_mode_heads,execution_manager_calculation_heads,execution_manager_calculation_revisions,execution_manager_model_heads,execution_manager_model_revisions,execution_manager_consumer_fences");});
+  afterAll(async()=>{vi.restoreAllMocks();for(const runtime of ownedRuntimes.splice(0))await runtime.beforeApplicationShutdown();await pg?.end();
+    if(!/^elp206_composition_v3_[a-f0-9]{32}$/.test(database))throw new Error("TEST_ONLY_DB_NAME");
+    const admin=new Pool({...options,max:1,connectionString:url("postgres")});
+    try{await admin.query("DROP DATABASE IF EXISTS "+database+" WITH (FORCE)");}finally{await admin.end();}
+  },60_000);
+  async function tx<T>(body:(client:PoolClient)=>Promise<T>):Promise<T>{const client=await pg.connect();
+    try{await client.query("BEGIN");await client.query("SET LOCAL statement_timeout='3000ms'");await client.query("SET LOCAL lock_timeout='1000ms'");
+      const result=await body(client);await client.query("COMMIT");return result;
+    }catch(error){await client.query("ROLLBACK").catch(()=>undefined);throw error;}finally{client.release();}}
+  async function putSource(client:PoolClient,d:ManagerModelDocument){const key=[d.workspace_id,d.environment,d.profile_id];
+    await client.query(`INSERT INTO execution_manager_model_revisions
+      (workspace_id,environment,profile_id,revision,source_epoch,source_sequence,projection_generation,payload_digest,payload)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)`,[...key,d.revision,d.source_epoch,d.source_sequence,d.projection_generation,accessDigest(d),JSON.stringify(d)]);
+    await client.query(`INSERT INTO execution_manager_model_heads
+      (workspace_id,environment,profile_id,revision,source_epoch,source_sequence,projection_generation,payload_digest,catalogue_digest)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,[...key,d.revision,d.source_epoch,d.source_sequence,d.projection_generation,accessDigest(d),d.catalogue_digest]);}
+  const count=async(table:string)=>(await pg.query("SELECT count(*)::text AS n FROM "+table)).rows[0].n;
+  const financialRows=async()=>(await pg.query("SELECT revision,payload::text,payload_digest,source_sequence::text,projection_generation FROM execution_manager_model_revisions ORDER BY revision")).rows;
+  async function originalRow(){return (await pg.query(`SELECT h.calculation_key,r.payload_digest,r.payload,r.created_at::text
+    FROM execution_manager_score_mode_heads h JOIN execution_manager_calculation_revisions r
+    USING(workspace_id,environment,profile_id,source_revision,calculation_key) WHERE h.head_kind='ORIGINAL_INPUTS'`)).rows[0];}
+  async function committedV3(input?:CompositionV3Fixture,custody=new ManagerScoreOriginalCustody(compositionV3Limits)){
+    const f=input??await compositionV3Fixture();
+    const prepared=custody.prepare(f.document,f.inputs,[f.custody]);
+    await tx(async client=>{await putSource(client,f.document);expect(await custody.persist(client,prepared)).toBe("INSERTED");});
+    return {f,custody,prepared};}
+  function requireV3(snapshot:ManagerScoreOriginalCustodySnapshot|null):CompositionV3Snapshot{
+    if(snapshot?.schema_version!=="portal.execution.manager-score-original-inputs.v3")throw new Error("TEST_ONLY_EXPECTED_V3");return snapshot;}
+
+  function installedV3(options:{compositionOnly?:boolean;maximumBundleBytes?:number;loseFirstAck?:boolean;optIn?:boolean}={}){
+    const fx=compositionInput();if(options.compositionOnly)fx.scoreTasks=[];
+    // TEST_ONLY fixture lifetime, not a production policy/default. The original
+    // source/as-of/window/input times remain unchanged. No Score policy is
+    // installed: pending RAW must give genuine null/partial Composition.
+    const at=Date.now();fx.pin.valid_until_ms=at+120_000;
+    fx.artifact.maximum_source_age_ms=Math.max(60_000,at-fx.artifact.source_as_of_ms+120_000);
+    fx.handle=requireCompositionAllocation(compositionCandidate(fx));fx.d.publication.expires_at_ms=at+120_000;
+    let pending=true,acks=0,finalRefusal=false;
+    const acknowledge=vi.fn(async()=>{if(++acks===1&&options.loseFirstAck)throw new Error("SYNTHETIC_V3_ACK_LOST");pending=false;});
+    const installed=compositionInstallation(fx,acknowledge),partition=installed.installation.partitions[0];
+    const c=commissioning();c.pin.valid_until_ms=at+120_000;
+    partition.commissioning=loadPublicationCommissioning(c.bytes,c.pin,at);
+    const tasks=vi.fn(async()=>compositionV3ScoreInputs(fx)),currentPolicy=vi.fn(()=>null);
+    partition.score!.tasks=tasks;partition.score!.currentPolicy=currentPolicy;
+    if(options.optIn!==false)partition.score!.restatement={...compositionV3Config,maximum_bundle_bytes:options.maximumBundleBytes??compositionV3Config.maximum_bundle_bytes};
+    installed.state.allocation=fx.handle;
+    const read=vi.fn(async()=>pending?structuredClone(fx.d):null),publication=vi.fn(async()=>fx.d.publication);
+    partition.source.read=read;partition.publication=publication;
+    partition.source.recheck=vi.fn(async()=>({assertCurrent:()=>{if(finalRefusal)throw new Error("SYNTHETIC_FINAL_SOURCE_REFUSAL");}}));
+    const start=()=>{const runtime=new ExecutionManagerRuntime(pg,installed.installation);ownedRuntimes.push(runtime);return runtime;};
+    return {fx,installed,tasks,currentPolicy,read,publication,acknowledge,start,refuseFinal:()=>{finalRefusal=true;}};
+  }
+
+  it("installed materializer captures final source, persists v3 in the same transaction and reuses custody after lost ACK/restart",async()=>{
+    const h=installedV3({loseFirstAck:true}),first=h.start();await first.tick();expect(first.status().state).toBe("TICK_REFUSED");
+    const repo=new ManagerModelRepository(pg),document=await repo.document(scope.workspace_id,scope.environment,scope.profile_id,h.fx.d.document.revision);
+    expect(document!.precomputed_scores).toHaveLength(3);expect(document!.precomputed_scores!.every(s=>s.quality.value===null)).toBe(true);
+    expect(document!.precomputed_compositions![0].result).toMatchObject({status:"partial_coverage",value:null,total_allocated_capital:"80",score_coverage_allocated:"0"});
+    const stored=await originalRow(),before=await financialRows();
+    const snapshot=requireV3(await tx(client=>new ManagerScoreOriginalCustody(compositionV3Limits).restore(client,document!)));
+    expect(snapshot.retained_compositions[0].custody.source.payload_digest).toBe(accessDigest(document));
+    expect(snapshot.retained_tasks.map(t=>t.input_json).sort()).toEqual(compositionV3ScoreInputs(h.fx).map(t=>JSON.stringify(t.task)).sort());
+    await first.beforeApplicationShutdown();const restarted=h.start();await restarted.tick();expect(restarted.status().state).toBe("TICK_OK");
+    expect(h.tasks).toHaveBeenCalledOnce();expect(h.acknowledge).toHaveBeenCalledTimes(2);
+    expect(await originalRow()).toEqual(stored);expect(await financialRows()).toEqual(before);
+    expect(await count("execution_manager_calculation_revisions")).toBe("1");expect(await count("execution_manager_calculation_heads")).toBe("0");
+  });
+  it("Composition-only opt-in writes a real v3 ORIGINAL, then IDLE refuses absent dependent worker without reading policy or writing empty Score",async()=>{
+    const h=installedV3({compositionOnly:true}),runtime=h.start();await runtime.tick();expect(runtime.status().state).toBe("TICK_OK");
+    const document=await new ManagerModelRepository(pg).document(scope.workspace_id,scope.environment,scope.profile_id,h.fx.d.document.revision);
+    const snapshot=requireV3(await tx(client=>new ManagerScoreOriginalCustody(compositionV3Limits).restore(client,document!)));
+    expect(snapshot.retained_tasks).toEqual([]);expect(snapshot.retained_compositions).toHaveLength(1);
+    expect(document!.precomputed_scores).toEqual([]);const before=await financialRows(),original=await originalRow();
+    await runtime.tick();expect(runtime.status().state).toBe("TICK_OK");
+    expect(runtime.restatementFor(scope)!.status().state).toBe("RESTATED_DEPENDENT_WORKER_NOT_INSTALLED");
+    expect(h.currentPolicy).not.toHaveBeenCalled();expect(h.publication).not.toHaveBeenCalled();
+    expect(await count("execution_manager_calculation_revisions")).toBe("1");expect(await count("execution_manager_calculation_heads")).toBe("0");
+    expect(await originalRow()).toEqual(original);expect(await financialRows()).toEqual(before);
+  });
+  it("optional capture cap omits the whole original bundle while committing and acknowledging genuine financial null/partial publication",async()=>{
+    const h=installedV3({maximumBundleBytes:1}),runtime=h.start();await runtime.tick();expect(runtime.status().state).toBe("TICK_OK");
+    expect(runtime.restatementFor(scope)!.status()).toEqual({state:"ORIGINAL_COMPOSITION_CUSTODY_NOT_RETAINED",reason_code:"COMPOSITION_ORIGINAL_CUSTODY_BOUND"});
+    const document=await new ManagerModelRepository(pg).document(scope.workspace_id,scope.environment,scope.profile_id,h.fx.d.document.revision);
+    expect(document!.precomputed_scores).toHaveLength(3);expect(document!.precomputed_compositions).toHaveLength(1);
+    expect(document!.precomputed_compositions![0].result.value).toBeNull();expect(h.acknowledge).toHaveBeenCalledOnce();
+    expect(await count("execution_manager_model_revisions")).toBe("1");expect(await count("execution_manager_calculation_revisions")).toBe("0");
+    expect(await count("execution_manager_score_mode_heads")).toBe("0");
+  });
+  it("Composition does not implicitly opt a partition into ORIGINAL custody",async()=>{
+    const h=installedV3({optIn:false}),runtime=h.start();await runtime.tick();expect(runtime.status().state).toBe("TICK_OK");
+    expect(runtime.restatementFor(scope)).toBeUndefined();expect(h.acknowledge).toHaveBeenCalledOnce();
+    expect(await count("execution_manager_model_revisions")).toBe("1");expect(await count("execution_manager_calculation_revisions")).toBe("0");
+    expect(await count("execution_manager_score_mode_heads")).toBe("0");
+  });
+  it("a synchronous final source refusal after real source/custody INSERT rolls back135/138/139 and sends zero ACK",async()=>{
+    const h=installedV3(),runtime=h.start(),coordinator=runtime.restatementFor(scope)!,persist=coordinator.persistAttached.bind(coordinator);
+    vi.spyOn(coordinator,"persistAttached").mockImplementation(async(client,delivery)=>{
+      await persist(client,delivery);
+      expect((await client.query("SELECT count(*)::text AS n FROM execution_manager_calculation_revisions")).rows[0].n).toBe("1");
+      expect((await client.query("SELECT count(*)::text AS n FROM execution_manager_score_mode_heads")).rows[0].n).toBe("1");
+      h.refuseFinal();
+    });
+    await runtime.tick();expect(runtime.status().state).toBe("TICK_REFUSED");expect(h.acknowledge).not.toHaveBeenCalled();
+    for(const table of ["execution_manager_model_revisions","execution_manager_model_heads","execution_manager_calculation_revisions","execution_manager_score_mode_heads"])
+      expect(await count(table)).toBe("0");
+  });
+
+  it("commits final135 source +138 original +139 pointer, restores exact original and retries after restart without changing source",async()=>{
+    const h=await committedV3(),before=await financialRows(),stored=await originalRow();
+    const restarted=new ManagerScoreOriginalCustody(compositionV3Limits),snapshot=requireV3(await tx(client=>restarted.restore(client,h.f.document)));
+    expect(snapshot.retained_tasks.map(item=>item.input_json).sort()).toEqual(h.f.inputs.map(item=>item.input_json).sort());
+    expect(snapshot.retained_compositions).toEqual([{custody_digest:h.f.custody.custody_digest,custody:h.f.custody}]);
+    expect(snapshot.source.payload_digest).toBe(accessDigest(h.f.document));expect(snapshot.calculation_key).toBe(h.prepared.calculation_key);
+    expect(stored.payload_digest).toBe(accessDigest(snapshot));
+    const parent=snapshot.retained_compositions[0],restored=restoreManagerCompositionOriginalAllocation({custody:parent.custody,
+      expected_custody_digest:parent.custody_digest,document:h.f.document,maximum_bytes:compositionV3Limits.maximum_bundle_bytes},()=>now);
+    if(restored.status!=="READY")throw new Error(JSON.stringify(restored));
+    expect(managerCompositionRetainedAllocationInputs(restored.handle)!.artifact.rows.map(row=>row.allocated_economic_capital)).toEqual(["60","20"]);
+    await tx(async client=>expect(await restarted.persist(client,restarted.prepare(h.f.document,h.f.inputs,[h.f.custody]))).toBe("DUPLICATE"));
+    expect(await originalRow()).toEqual(stored);expect(await financialRows()).toEqual(before);
+    expect(await count("execution_manager_calculation_heads")).toBe("0");expect(await count("execution_manager_calculation_revisions")).toBe("1");
+  });
+  it("restores original60/20 after current20/80 replacement, original revocation and today's original approval expiry",async()=>{
+    const h=await committedV3(),before=await financialRows(),artifact=structuredClone(h.f.fx.artifact);
+    artifact.rows[0].allocated_economic_capital="20";artifact.rows[1].allocated_economic_capital="80";
+    artifact.nav_partition!.rows[0].current_nav_allocated_capital="20";artifact.nav_partition!.rows[1].current_nav_allocated_capital="80";
+    artifact.nav_partition!.idle_cash="0";const replacement=requireCompositionAllocation(compositionCandidate(h.f.fx,artifact));
+    expect(managerCompositionPublicationCurrent(replacement,h.f.publication,h.f.raw,h.f.fence,now)).toBe(false);
+    revokeApprovedManagerAllocation(h.f.request.allocation);
+    const clock=vi.spyOn(Date,"now").mockReturnValue(h.f.fx.pin.valid_until_ms+1);
+    try{const snapshot=requireV3(await tx(client=>h.custody.restore(client,h.f.document)));
+      expect(JSON.parse(snapshot.retained_compositions[0].custody.artifact_utf8).rows.map((r:{allocated_economic_capital:string})=>r.allocated_economic_capital)).toEqual(["60","20"]);
+      expect(snapshot.retained_compositions[0].custody.approval_pin.valid_until_ms).toBe(h.f.fx.pin.valid_until_ms);
+    }finally{clock.mockRestore();}expect(await financialRows()).toEqual(before);
+  });
+  it.each(["composition-only","empty"] as const)("retains %s with zero published Score slots; never invents numeric Score",async kind=>{
+    const h=await committedV3(await compositionV3Fixture(kind));
+    const snapshot=requireV3(await tx(client=>h.custody.restore(client,h.f.document)));
+    expect(snapshot.retained_tasks).toEqual([]);expect(snapshot.retained_compositions).toHaveLength(1);
+    expect(h.f.document.precomputed_scores).toEqual([]);
+    expect(h.f.publication.result).toMatchObject(kind==="empty"?{value:null,status:"no_allocation",total_allocated_capital:"0"}:
+      {value:null,status:"partial_coverage",total_allocated_capital:"80",score_coverage_allocated:"0"});
+  });
+  it("requires the exact Score census even when Composition captures are valid",async()=>{
+    const f=await compositionV3Fixture(),custody=new ManagerScoreOriginalCustody(compositionV3Limits);
+    expect(()=>custody.prepare(f.document,[],[f.custody])).toThrow("MANAGER_ORIGINAL_INCOMPLETE_INPUT_SET");
+    expect(()=>custody.prepare(f.document,f.inputs.slice(1),[f.custody])).toThrow("MANAGER_ORIGINAL_INCOMPLETE_INPUT_SET");
+    expect(()=>custody.prepare(f.document,[...f.inputs,f.inputs[0]],[f.custody])).toThrow("MANAGER_ORIGINAL_DUPLICATE_SLOT");
+  });
+  it("bounds aggregate genuine capture bytes before later duplicate/census restore, though each child fits individually",async()=>{
+    const f=await compositionV3Fixture(),childBytes=Buffer.byteLength(JSON.stringify(f.custody));
+    const maximum_bundle_bytes=Math.max(childBytes+2,Buffer.byteLength(JSON.stringify(f.document))+1024);
+    const copies=Math.floor((maximum_bundle_bytes-2)/(childBytes+1))+2;
+    expect(copies).toBeGreaterThanOrEqual(2);expect(copies).toBeLessThanOrEqual(128);
+    const captured=captureManagerCompositionOriginalAllocation({...f.request,maximum_bytes:maximum_bundle_bytes},()=>now);
+    if(captured.status!=="READY")throw new Error(JSON.stringify(captured));
+    expect(Buffer.byteLength(JSON.stringify([captured.custody]))).toBeLessThanOrEqual(maximum_bundle_bytes);
+    const repeated=Array.from({length:copies},()=>captured.custody);
+    expect(Buffer.byteLength(JSON.stringify(repeated))).toBeGreaterThan(maximum_bundle_bytes);
+    const narrow=new ManagerScoreOriginalCustody({...compositionV3Limits,maximum_bundle_bytes});
+    expect(()=>narrow.prepare(f.document,f.inputs,repeated)).toThrow("MANAGER_ORIGINAL_INPUT_BOUND");
+    // Same genuine identities are otherwise duplicates, not forged captures.
+    expect(()=>new ManagerScoreOriginalCustody(compositionV3Limits).prepare(f.document,f.inputs,[captured.custody,captured.custody]))
+      .toThrow("MANAGER_ORIGINAL_DUPLICATE_COMPOSITION");
+    expect(await count("execution_manager_model_revisions")).toBe("0");
+  });
+  it("retains the complete distinct Composition binding census and rejects duplicate or omitted bindings",async()=>{
+    const fx=compositionInput(),inputs=captureManagerScoreOriginalInputs(compositionV3ScoreInputs(fx),compositionV3Limits.maximum_bundle_bytes);
+    const one=await calculatedComposition(fx,fx.handle,()=>now),artifact=structuredClone(fx.artifact);
+    artifact.binding={...artifact.binding,subject_type:"manager_book",subject_id:"SYNTHETIC:manager-book"};
+    const allocation=requireCompositionAllocation(compositionCandidate(fx,artifact));
+    const two=await compositionRuntime(()=>now).calculate({...fx.task,binding:artifact.binding,allocation,raw_scores:one.raw},one.fence);
+    const document={...structuredClone(fx.d.document),precomputed_scores:one.raw,precomputed_compositions:[one.publication,two]};
+    const captures=[{allocation:fx.handle,publication:one.publication},{allocation,publication:two}].map(item=>{
+      const captured=captureManagerCompositionOriginalAllocation({...item,document,raw_fence:one.fence,maximum_bytes:compositionV3Limits.maximum_bundle_bytes},()=>now);
+      if(captured.status!=="READY")throw new Error(JSON.stringify(captured));return captured.custody;});
+    const custody=new ManagerScoreOriginalCustody(compositionV3Limits);
+    expect(()=>custody.prepare(document,inputs,captures.slice(0,1))).toThrow("MANAGER_ORIGINAL_INCOMPLETE_COMPOSITION_SET");
+    expect(()=>custody.prepare(document,inputs,[captures[0],captures[0]])).toThrow("MANAGER_ORIGINAL_DUPLICATE_COMPOSITION");
+    const prepared=custody.prepare(document,inputs,[...captures].reverse());
+    await tx(async client=>{await putSource(client,document);await custody.persist(client,prepared);});
+    expect(requireV3(await tx(client=>custody.restore(client,document))).retained_compositions).toHaveLength(2);
+  });
+  it("rejects cloned/forged/restored first-capture identities, array accessors and Proxy wrappers with zero traps",async()=>{
+    const f=await compositionV3Fixture(),custody=new ManagerScoreOriginalCustody(compositionV3Limits);let traps=0;
+    const proxy=<T extends object>(target:T)=>new Proxy(target,{get(){traps++;throw new Error("PRIVATE_PROXY");},
+      getPrototypeOf(){traps++;throw new Error("PRIVATE_PROXY");},ownKeys(){traps++;throw new Error("PRIVATE_PROXY");}});
+    const retained=requireRetainedComposition(f.custody,f.document),revoked=Proxy.revocable(f.custody,{});revoked.revoke();
+    for(const value of [structuredClone(f.custody),JSON.parse(JSON.stringify(f.custody)),{},retained,proxy(f.custody),revoked.proxy])
+      expect(()=>custody.prepare(f.document,f.inputs,[value] as typeof f.custody[])).toThrow("MANAGER_ORIGINAL_COMPOSITION_CAPTURE_REQUIRED");
+    expect(()=>custody.prepare(f.document,f.inputs,proxy([f.custody]))).toThrow("MANAGER_ORIGINAL_INPUT_INVALID");
+    const getter=[f.custody];Object.defineProperty(getter,"0",{enumerable:true,get(){traps++;return f.custody;}});
+    expect(()=>custody.prepare(f.document,f.inputs,getter)).toThrow("MANAGER_ORIGINAL_INPUT_INVALID");expect(traps).toBe(0);
+  });
+  it("rejects rehashed child, parent, source and census corruption against the actual immutable135 source",async()=>{
+    const h=await committedV3(),stored=await originalRow(),sourceBefore=await financialRows();
+    const faults:Array<(b:CompositionV3Snapshot)=>void>=[
+      b=>{b.retained_compositions[0].custody.artifact_utf8+="\n";},
+      b=>{b.retained_compositions[0].custody_digest=hash("wrong-parent");},
+      b=>{b.retained_compositions[0].custody.source.source_epoch="SYNTHETIC:other";},
+      b=>{b.retained_compositions[0].custody.population_census_digest=hash("wrong-census");},
+      b=>{b.retained_compositions[0].custody.original_publication_digest=hash("wrong-publication");},
+      b=>{b.retained_compositions[0].custody.captured_at_ms++;},
+      b=>{b.retained_compositions.push(structuredClone(b.retained_compositions[0]));}
+    ];
+    for(const change of faults){const b=structuredClone(stored.payload) as CompositionV3Snapshot;change(b);
+      // Simulate accidental/corrupt138 bytes while retaining trusted original135.
+      // Rehashing child/self/parent is not independent producer authority.
+      for(const entry of b.retained_compositions){const {custody_digest:_digest,...base}=entry.custody;
+        if(entry.custody_digest===h.f.custody.custody_digest)entry.custody.custody_digest=accessDigest(base);}
+      b.inputs_digest=accessDigest({retained_tasks:b.retained_tasks,retained_compositions:b.retained_compositions});
+      b.calculation_key=accessDigest({mode:"ORIGINAL_INPUTS",source:b.source,inputs_digest:b.inputs_digest});
+      expect(()=>decodeRetainedManagerScoreOriginal(h.f.document,{calculation_key:b.calculation_key,payload:b,payload_digest:accessDigest(b)},compositionV3Limits.maximum_bundle_bytes)).toThrow();
+    }
+    expect(await originalRow()).toEqual(stored);expect(await financialRows()).toEqual(sourceBefore);
+  });
+  it("binds original persistence to the actual135 generation rather than only the supplied parent document",async()=>{
+    const f=await compositionV3Fixture(),custody=new ManagerScoreOriginalCustody(compositionV3Limits),p=custody.prepare(f.document,f.inputs,[f.custody]);
+    await expect(tx(async client=>{const changed=structuredClone(f.document);changed.projection_generation="SYNTHETIC:other";
+      await putSource(client,changed);await custody.persist(client,p);})).rejects.toThrow("MANAGER_ORIGINAL_SOURCE_MISMATCH");
+    expect(await count("execution_manager_model_revisions")).toBe("0");
+  });
+  it("cannot retrofit v3 onto an existing immutable v1 original pointer for the same source",async()=>{
+    const f=await compositionV3Fixture(),custody=new ManagerScoreOriginalCustody(compositionV3Limits);
+    const old=custody.prepare(f.document,f.inputs),next=custody.prepare(f.document,f.inputs,[f.custody]);
+    await tx(async client=>{await putSource(client,f.document);await custody.persist(client,old);});
+    const before=await originalRow();await expect(tx(client=>custody.persist(client,next))).rejects.toThrow("MANAGER_ORIGINAL_HEAD_CONFLICT");
+    expect(await originalRow()).toEqual(before);expect(await count("execution_manager_calculation_revisions")).toBe("1");
+  });
+  it("counts existing138 rows against the same cap, optionally omits custody and preserves the financial source",async()=>{
+    const f=await compositionV3Fixture(),config={...compositionV3Config,maximum_revisions_per_source:1};
+    const coordinator=new ManagerScoreRestatement({pool:pg,runtime:scoreRuntime(),currentPolicy:()=>null,
+      commissioning:commissioning().handle,source:{read:async()=>null,recheck:async()=>({}),acknowledge:async()=>{}},
+      publication:async()=>f.fx.d.publication,config});
+    const delivery={document:f.document,publication:f.fx.d.publication};coordinator.attach(delivery,f.inputs,[f.custody]);
+    await tx(async client=>{await putSource(client,f.document);const payload={schema_version:"SYNTHETIC:shared-quota-row"};
+      await client.query(`INSERT INTO execution_manager_calculation_revisions
+        (workspace_id,environment,profile_id,source_revision,calculation_key,payload_digest,payload) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)`,
+      [f.document.workspace_id,f.document.environment,f.document.profile_id,f.document.revision,hash("shared-row"),accessDigest(payload),JSON.stringify(payload)]);
+      await coordinator.persistAttached(client,delivery);});
+    expect(coordinator.status().state).toBe("ORIGINAL_RETENTION_CAP_NOT_RETAINED");
+    expect(await count("execution_manager_model_revisions")).toBe("1");expect(await count("execution_manager_calculation_revisions")).toBe("1");
+    expect(await count("execution_manager_score_mode_heads")).toBe("0");expect((await financialRows())[0].payload_digest).toBe(accessDigest(f.document));
+  });
+  it("invalid new-v3 attach deletes an earlier attachment, omits the WHOLE optional bundle and preserves financial publication",async()=>{
+    const f=await compositionV3Fixture(),coordinator=new ManagerScoreRestatement({pool:pg,runtime:scoreRuntime(),currentPolicy:()=>null,
+      commissioning:commissioning().handle,source:{read:async()=>null,recheck:async()=>({}),acknowledge:async()=>{}},
+      publication:async()=>f.fx.d.publication,config:compositionV3Config});
+    const delivery={document:f.document,publication:f.fx.d.publication};coordinator.attach(delivery,f.inputs,[f.custody]);
+    coordinator.attach(delivery,f.inputs,[structuredClone(f.custody)]);
+    expect(coordinator.status()).toEqual({state:"ORIGINAL_COMPOSITION_CUSTODY_NOT_RETAINED",reason_code:"COMPOSITION_ORIGINAL_CUSTODY_INVALID"});
+    await tx(async client=>{await putSource(client,f.document);await coordinator.persistAttached(client,delivery);});
+    expect((await financialRows())[0].payload_digest).toBe(accessDigest(f.document));expect(await count("execution_manager_calculation_revisions")).toBe("0");
+    expect(await count("execution_manager_score_mode_heads")).toBe("0");
+  });
+  it("uses actual PostgreSQL JSONB bytes for v3, not a new per-mode compact-byte quota",async()=>{
+    const f=await compositionV3Fixture(),custody=new ManagerScoreOriginalCustody({...compositionV3Limits,maximum_retained_bytes_per_source:compositionV3Limits.maximum_bundle_bytes});
+    const p=custody.prepare(f.document,f.inputs,[f.custody]);await tx(client=>putSource(client,f.document));
+    const padding={padding:"x".repeat(compositionV3Limits.maximum_bundle_bytes-1024)};
+    await pg.query(`INSERT INTO execution_manager_calculation_revisions
+      (workspace_id,environment,profile_id,source_revision,calculation_key,payload_digest,payload) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)`,
+    [f.document.workspace_id,f.document.environment,f.document.profile_id,f.document.revision,hash("byte-cap-row"),accessDigest(padding),JSON.stringify(padding)]);
+    await expect(tx(client=>custody.persist(client,p))).rejects.toThrow("MANAGER_DERIVED_RETENTION_CAP_REACHED");
+    expect(await count("execution_manager_calculation_revisions")).toBe("1");expect(await count("execution_manager_score_mode_heads")).toBe("0");
+  });
+  it("accepts v3 in the strict retained History inventory but performs no dependent restatement or source write",async()=>{
+    const h=await committedV3(),before=await financialRows(),history=await new ManagerScoreHistoryStore(pg).scan(h.f.document,3000);
+    expect(history.original?.schema_version).toBe("portal.execution.manager-score-original-inputs.v3");expect(history.restatements).toEqual([]);
+    expect(history.original_head_key).toBe(h.prepared.calculation_key);expect(history.restated_head_key).toBeNull();expect(await financialRows()).toEqual(before);
   });
 });
