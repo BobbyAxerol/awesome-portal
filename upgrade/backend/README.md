@@ -72,11 +72,18 @@ Chúng không thay thế phase hoặc exit gate trong
   restricted-r1 producer work; stored BUSINESS report66743c88 is now source-
   qualified (416ownerPASS), not external debt or an unfinished adapter.
   Current-relations producer/PM native receipt→Core membership normalization
-  remains real implementation work, not just missing config. All three Portal
-  principals exist (one invited); no duplicate account creation. Seven requested
+  remains real implementation work, not just missing config. Historical dev
+  lookup found one invited user; [actual volume audit](../evidence/execution-edge-v1_2/EPG10-08/database-volume-audit.json)
+  /main§23.20.5 corrects released stable to all3ACTIVE, not a new invitation.
+  Dev and Research preview use separate volumes; preview Bobby has a different ID.
+  No duplicate account creation. Seven requested
   new PM identity/authority relations are absent on the existing Manager target;
   this does not identify/commission the actual PM target. See current08 receipt.
-  bobby/thanhvuong ACTIVE, stan INVITED; no new account/activation/grant changes.
+  Manager's source is confirmed HK trading_system_pgdata, not a mistaken Portal
+  DB; PM authority relations are not deployed on its checked cluster. PMd95bf36a
+  native correspondence263owner PASS is a proposal/oracle, not a Core adapter.
+  R1 current source c7c3997f is qualified; no longer missing r1 code/approval.
+  No account/activation/grant/runtime change; preserve active peer hook/source.
   18HK+8SGP protected tuples unchanged, exact own cells/lease removed,49,616,770B
   finished source copies cleaned. No shared Docker/cache prune during peer jobs.
   Historical08 completion round after earlier deferral recorded PM

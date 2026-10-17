@@ -1,6 +1,7 @@
 {
   "schema": "epg10.original08-producer-qualification.v1",
   "status": "MAPPING_SOURCE_QUALIFIED_RELATIONS_PRODUCER_CONTRACT_OPEN",
+  "current_database_identity_and_pm_intake_ref": "database-volume-audit.json",
   "phase": "Original approved EPG10-08 round2; no connected09",
   "journal": "../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23204-original08--approved-producer-implementation-and-binding",
   "wire": "existing-identity-mapping-contract.json",
@@ -39,7 +40,7 @@
       "owner_unit_subset": 294,
       "owner_offline_passed_separate": 25,
       "qualification": "BUSINESS_SOURCE_QUALIFIED_NOT_INSTALLED_AUTHORITY; owner tests not fresh Edge executions",
-      "remaining_owned_implementation": "PM restricted-r1 source projection; no new r1 approval requested"
+      "historical_remaining_implementation": "At66743c88 restricted-r1 was still WIP. Current c7c3997f source is now qualified; see database-volume-audit.json. No new r1 approval requested."
     }
   },
   "research_mapping": {
@@ -97,13 +98,14 @@
   ],
   "next_exact_inputs": [
     {"owner": "Research/Core and TS identity", "input": "Genuine existing stable issuer+subject and independently accepted trust binding; align assertion, mapping, listener tuple and accepted current-source user on exactly that identity. Generic candidate already supports stable issuer; candidate-only urn helper must not alias another identity."},
-    {"owner": "PM/Research producer integration", "input": "Concrete current relations/membership authority producer is missing, not config-only debt. PM per-scope/env membership heads and per-command receipts have no canonical normalization into Core's one membership tuple for relations(user,workspace). Freeze actual receipt/revision correlation, env/scope revoke/renewal/expiry, bounded authoritative ROOT/owner/member coverage and current workload/app/field binding, then implement authenticated projection/client. No latest-receipt or synthetic workspace acceptance hash. Missing model denies, not arbitrary new grants."},
+    {"owner": "PM/Research producer integration", "input": "PMd95bf36a now records native source meaning and a263case oracle/proposal, not an authenticated producer or jointly accepted normalization. Core must resolve original accepted facts to explicit finite native legs, resource/environment-aware currentness, parent/deny/intake and authority fingerprint compatibility, finite ROOT coverage and held revocation, then implement authenticated source/client. No latest-receipt, synthetic workspace acceptance or name mapping. Actual authority remains absent, not config-only debt."},
     {"owner": "PM/TS current-source authority", "input": "Independently qualified immutable workload/application/r1-field/grant references, exact target/DB identity and separately privileged installation configuration. Importer code and TEST_ONLY fixtures are not that qualification."},
-    {"owner": "PM report source", "input": "BUSINESS stored-report producer is source-qualified at66743c88. Return independently qualified actual source/census/valuation definitions and target installation; restricted-r1 projection is separately PM-owned unfinished code, not another approval. No blanket wait for all history/native03."},
+    {"owner": "PM report source", "input": "BUSINESS stored-report66743c88 and restricted-r1 current source c7c3997f are both source-qualified. Return independently qualified actual source/census/valuation/field definitions and reviewed installation; no longer missing r1 code or approval. No blanket wait for all history/native03."},
     {"owner": "Edge", "input": "Bind those actual compatible providers, then original08 real revoke/cache/cursor/SSE/export and unaffected-scope positives. Command07/08 remains separately authenticated/current-COMMIT qualified."}
   ],
   "actual_edge08_acceptance": "NOT_MET",
   "existing_manager_target_metadata_check": {
+    "resolved_runtime_target_ref": "database-volume-audit.json",
     "qualification": "READ_ONLY_CATALOGUE_NOT_IDENTITY_OR_AUTHORITY_ACCEPTANCE",
     "connection_reference": "Existing Paper Manager-v2 mounted /run/secrets/facade-db.dsn; secret values not retained",
     "requested_relations": ["public.ts_users", "pm_membership.policy", "pm_membership.memberships", "pm_membership.membership_revisions", "pm_membership.receipts", "pm_current_access.heads", "pm_current_access.acceptances"],
@@ -114,7 +116,8 @@
   },
   "portal_onboarding_readonly_intake": {
     "qualification": "EXISTENCE_DISCOVERY_ONLY_NOT_TS_MAPPING_SESSION_OR_GRANT",
-    "target": "Existing canonical SGP portal-control-api-1 DATABASE_URL; value never retained",
+    "target": "Historical SGP dev/integration portal-control-api-1 DATABASE_URL, volume portal_portal-postgres-data; not released stable. Credential value never retained",
+    "scope_correction_ref": "database-volume-audit.json",
     "maximum_candidate_rows": 7,
     "matched_rows": 3,
     "active_rows": 2,
@@ -123,7 +126,7 @@
     "stable_id_sha256": ["sha256:13f557c9cbeb231a3eb2b669a6dc82b3010125bbe88563156e682d170ae67acf", "sha256:f2e2de9cef92865bedd5e39f11028886e29616909d5d8140b8275044816ece58", "sha256:fa1ebccf987a076fef8f60de6d7d4f3a331b1e54050e7514c5a782315a7fb575"],
     "raw_stable_ids_passwords_sessions_tokens_or_grants_retained": false,
     "mutations": 0,
-    "action": "Reuse existing Portal principals, complete Stan invitation via normal auth flow, then use exact accepted issuer/target for genuine TS mapping. Names/status discovery never authorizes business rights."
+    "action": "Historical integration-only intake. Stable volume has all three ACTIVE, so no Stan invitation/activation is required there. Research preview is a third volume with a different Bobby ID. Pin the actual accepted commissioning identity source before TS mapping; never merge users/grants by name."
   },
   "connected09_started": false,
   "production_mutations": 0,

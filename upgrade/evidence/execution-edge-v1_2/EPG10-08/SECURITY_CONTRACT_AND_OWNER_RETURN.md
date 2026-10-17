@@ -31,6 +31,27 @@ TS commit. Paper/sandbox/live are structural scopes; Canary is a live stage.
 
 ## Current round2 delta —17/10/2026, Asia/Saigon
 
+**Latest volume correction / source intake:** [actual route/DB/volume audit](database-volume-audit.json)
+and main§23.20.5 supersede the earlier blanket identity status. Released
+`portal.primusspark.com` uses volume
+`portal-stable-v1-0-1_portal-postgres-data`: bobby, stan and thanhvuong are all
+ACTIVE, no forced password change/archive. The former Stan INVITED result was
+from dev/integration `portal_portal-postgres-data`, not stable. Research preview
+has a third volume/different Bobby ID. No duplicate user or stable invitation
+is needed; no cross-installation issuer/grant inference from copied IDs/names.
+Actual Manager source connects to HK `live_data_executor` on volume
+`trading_system_pgdata`, confirmed by connected address/start and PGDATA mount.
+The new PM identity/membership/current-access relations are not deployed on the
+checked cluster databases. This is a genuine installation boundary, not a reason
+to create users on the wrong DB or apply the whole PM upgrade automatically.
+PMd95bf36a now returns a native correspondence proposal/oracle263owner PASS
+(25offline separate), not a joint Core freeze or authenticated adapter. PM r1
+current source c7c3997f is also qualified; no longer missing r1 code/approval.
+Six actual Core policy/intake source pins match the proposal, but the old
+single-principal tuple cannot implement it as-is. Complete that compatible
+producer and qualify exact target/issuer/source installation before binding08.
+No peer write under its active hook, new heavy job, migration, grant or restart.
+
 **Latest approved producer implementation:** Bobby assigns completing PM and
 Research producers, then actual Edge08 qualification; connected09 stays stopped.
 Main journal23.20.4 owns this continuation. PM now has qualified accepted-current-
@@ -55,7 +76,8 @@ Align the actual accepted stable issuer/subject across assertion/mapping/listene
 current-source user; the candidate-only urn issuer cannot alias an existing user.
 PM stored BUSINESS report source66743c88 now has416unique owner PASS (122PG+
 294unit;25offline separate), source139a8164…; no longer an unfinished adapter.
-Restricted-r1 source projection remains PM-owned code, not missing r1 approval.
+Restricted-r1 source was WIP at that snapshot; c7c3997f now qualifies it as
+recorded above. Its actual field-source/trust installation remains open.
 Only actual qualified source/trust/installation inputs can make Edge08 binding
 runnable. Generic `CurrentHumanCandidate.create` already accepts an explicit
 stable issuer and existing `createControlApiApp` dependency injection accepts
@@ -79,12 +101,13 @@ is not completion of both producers. PM source `_snapshot` takes `FOR UPDATE`;
 a SELECT-only producer must not copy it unchanged. See main23.20.4 for exact
 owner/decision/test boundary; no connected09 or repeated blanket approval.
 
-**Owner onboarding clarification / actual read-only intake:** all three named
-Portal accounts already exist on the canonical running Control API store:
+**Historical integration-only intake, not released stable:** all three named
+Portal accounts already existed on `portal-control-api-1`'s dev/integration store:
 bobby and thanhvuong are ACTIVE; stan remains INVITED/forced-password-change.
 These names are discovery labels, not authorization keys. Do not create
-duplicate Portal accounts or force activation to make a test pass. Reuse the
-verified stable IDs through the ordinary auth flow, then commission the actual
+duplicate Portal accounts or force activation to make a test pass. This earlier
+Stan invitation recommendation does not apply to stable, where Stan is ACTIVE.
+Pin the accepted installation/issuer and verified stable IDs, then commission the actual
 TS issuer/user mapping and accepted policy on the correct target. Seven exact
 new TS/PM identity/current-authority relations are absent on the existing Paper
 Manager read target's catalogue. That observation does not identify the PM

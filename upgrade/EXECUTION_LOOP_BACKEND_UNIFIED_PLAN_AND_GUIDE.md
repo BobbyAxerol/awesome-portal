@@ -10166,8 +10166,12 @@ is retained for concurrent peer changes, not erased by these test results.
 PM current-source74474c96/stored-report66743c88 are source-qualified, not installed
 authority. **Current-relations producer/native-receipt→Core grant normalization
 remains unfinished producer work**, not config-only debt or a new phase gate.
-All three Portal accounts exist: bobby/thanhvuong ACTIVE, stan INVITED; no
-duplicate account/activation/grant mutation. Full08 remains NOT_MET.
+Volume-resolved correction in [§23.20.5](#23205-original08--volume-resolved-identity-correction-and-current-source-intake):
+released stable has bobby/stan/thanhvuong all ACTIVE; INVITED was dev/integration
+only. TS Manager's actual volume is trading_system_pgdata; new PM authority
+relations are not deployed there. PMd95bf36a supplies a correspondence proposal,
+not a jointly accepted producer; r1 source c7c3997f is now qualified. No duplicate
+account/activation/grant mutation. Full08 remains NOT_MET.
 Read does not wait for command07, native publication or the whole PM roadmap.
 Historical16/10 pins below do not override this fresh disposition.
 **Owned package:** QUALIFIED_ISOLATED_SOURCE_DARK; full runtime security acceptance
@@ -15186,6 +15190,151 @@ score-review hash109659d2… unchanged/excluded. These are metadata checks, not
 new product/security/performance tests. Commit exactly seven owned tracking/
 contract/evidence files with Bobby identity on the existing feature branch;
 normal configured Git behavior, no hook bypass/push/merge/runtime operation.
+
+### 23.20.5 Original08 — volume-resolved identity correction and current-source intake
+
+**Entry / approval / status, 17/10/2026 Asia/Saigon:** Bobby requests checking
+the actual database volumes, explaining the result before further approval,
+and continuing already-approved08 if no issue. Baseline7657da76, existing
+feature branch/worktree unchanged; unrelated untracked score review preserved.
+Read workspace/project rules, phase08 and EDGE08/BE3–5/REVIEW3, actual current
+containers, preceding journal and PMd95bf36a native-correspondence return before
+this scoped correction. Recorded result: READ_ONLY_AUDIT_AND_SOURCE_INTAKE_COMPLETE;
+full08 remains OPEN/NOT_MET as detailed below.
+
+**Goal / scope / invariants:** trace configured public route -> running web/
+Control API -> actual connected PostgreSQL address/database -> exact Docker
+container/network/mounted PGDATA volume. A DB name or a container label alone
+does not identify identity authority; distinguish stable, dev/integration and
+Research preview. Correct previous scope errors explicitly; preserve historical
+receipts, stable IDs, users, grants and peer staging. No secret/password/session
+values collected, no new users/SQL migrations/roles/runtime config/restarts,
+no production authority or connected09. Conditional continuation is not approval
+to apply the PM upgrade schema or silently choose a different identity issuer.
+
+**Checks / exit / rollback / decision boundary before edits:** readonly
+2s-statement/3s-connect catalogue and bounded named-account checks only;
+inspect mounts, networks and existing Nginx upstreams, not unbounded logs/data.
+Repin current PM proposal and Core source, separate owner oracle tests from
+fresh tests. Audit exits with explicit route/DB/volume/account mapping and
+corrected source-installation status. Actual08 still requires a genuinely
+commissioned compatible producer and real revocation cases. Existing HK G12
+and SGP Core normal-hook measurement windows prohibit heavy jobs/source drift
+there; finish independent Edge evidence/contract intake without touching peers.
+Rollback is removal of this unconsumed correction slice only, not reverting
+runtime/users or rewriting earlier receipts. Record exact evidence, remaining
+work, resource/runtime reconciliation and commit the bounded owned scope.
+
+**Executed correction / actual volume truth:** [bounded audited return](evidence/execution-edge-v1_2/EPG10-08/database-volume-audit.json).
+The previous generic 'Stan INVITED' statement selected dev/integration, not
+released stable. Loaded host Nginx and container `/api` upstreams plus actual
+connected server addresses establish these separate installations (all DBs are
+named portal_control; that name/alias does not distinguish a database):
+
+| Configured route | Connected PostgreSQL / exact volume | Bounded observed users |
+| --- | --- | --- |
+| portal.primusspark.com ->127.0.0.1:18081 ->stable web/control-api | 172.21.0.5, portal-stable-v1-0-1-portal-postgres-1; `portal-stable-v1-0-1_portal-postgres-data` | bobby, stan, thanhvuong all ACTIVE; no forced-password-change/archive |
+| dev-portal.primusspark.com ->127.0.0.1:8080 ->integration web/control-api | 172.18.0.5, portal-portal-postgres-1; `portal_portal-postgres-data` | bobby/thanhvuong ACTIVE; stan INVITED. Same copied ID hashes as stable do not make lifecycle/policy current across volumes |
+| research-portal.primusspark.com ->127.0.0.1:8095 ->Research preview web/control-api | 172.22.0.2, portal-research-preview-portal-postgres-1; `portal-research-preview_portal-postgres-data` | exact-name candidates match only bobby ACTIVE, with a DIFFERENT stable-ID hash; no directory-wide absence claim |
+
+**Correction consequence:** no duplicate user, stable invitation or password
+change is needed. Do not use the preview Bobby ID as released Bobby by matching
+name, or assume cloned stable IDs authenticate a different issuer/installation.
+The old observed integration rows/receipt stay intact, but are explicitly
+historical and no longer the current released-identity claim. Existing Portal
+accounts and TS issuer+subject mapping are different layers; ACTIVE alone still
+does not prove an active authenticated session or accepted business grants.
+Actual login issuer/workspace/source installation must be pinned in the same
+commissioning return; the route/DB audit does not mint that trust.
+
+**TS source target resolved, not guessed:** existing Manager mounted DSN
+connects as ts_portal_manager_read_facade to live_data_executor:5432 on
+executor_network, actual server172.18.0.20. PostgreSQL container
+08df6d6d… has `/var/lib/postgresql/data` on `trading_system_pgdata`; server start
+matches the direct readback2026-09-15T04:32:04.569576Z, cluster-ID hash9e0c2ad6….
+Its existing gateway/portfolio/journal DSNs point to the same owning target.
+public.orders/fills exist. Catalogue read on all three non-template DBs
+(live_data_executor/live_data_executor_verify/postgres) finds no public.ts_users,
+pm_membership.policy/memberships or pm_current_access.heads; the Manager target
+also lacks the other exact identity/current-authority probes from23.20.4.
+This removes the earlier 'selected source may be the wrong TS DB' ambiguity:
+it IS the current shared TS volume, but the new PM identity/current-authority
+schema is not deployed there. No inference about other possible TS clusters.
+Edge `portal-execution-projection-pgdata-v1` is a separate projection store,
+not a login directory or TS business authority. Do not move/replace any volume.
+
+**New PM return consumed, no stale missing-code claims:** PMd95bf36a publishes
+native receipt/head/lineage semantics and resource/environment-aware
+correspondence proposala4b9a570… with owner evidencec8ea844c…:
+263component PASS/0FAIL/ERROR/SKIP (219new oracle+44native regressions),25offline
+separate. This is owner TEST_ONLY component evidence, not a fresh Edge run or
+Core/DB/held-lease qualification. All six actual Core source pins at8ba33de3
+match the proposal. PM explicitly leaves compatible Core normalization,
+authenticated source/client and joint acceptance unimplemented/open; no 'joint
+freeze' or new grant/receipt is inferred. One Core grant can span several native
+legs; resource/environment, parent/deny, intake/recovery and authority fingerprint
+must select the relevant current proof set without revoking unaffected scopes.
+PM restricted-r1 current producer now landed c7c3997f, source459b14d8…/
+owner receiptb5a1319a…, source-qualified with combined601owner PASS and separate
+25offline according to its return; not missing code or r1 approval any longer.
+Actual independently qualified field-source/accepted-policy installation is
+still absent. Do not overwrite ongoing PM instance-history staged work or Core
+profile/regime/recovery normal-hook staging to implement this follow-through.
+
+**Tests/evidence/runtime/cleanup:**8bounded READ ONLY transactions;2s statement
+timeout and bounded named-candidate rows. No password/session/token/grant rows
+queried; raw stable IDs/credentials not retained. Loaded route configuration
+inspection is not a browser/external-ingress or login test. New product/security/
+capacity cases0; previous source-test counts remain historical, not rerun or
+summed. Current HK G13 window until15:01:55Asia/Saigon and SGP Core hook until
+13:54:04 respected; no heavy job, container/build/pull/install or peer-file/index
+mutation. Fresh18HK/8SGP protected runtime tuples unchanged against existing
+TLS/mapping baselines, all running, image/config/start/restart intact. Inventory
+HK103images31.18GB/380cache28.91GB/free235848912896B;
+SGP328images88.82GB/3774cache195.9GB/free166989180928B, deploy runner active.
+No own disposable resource created: cleanup NO_ACTION_NEEDED for this audit;
+no shared prune/volume cleanup under peer jobs. Retain active/explicit rollback
+images, private valid08PKI, all seven active Portal worktrees and peer resources.
+No deleted data/resources, user/grant/schema/config mutation or restart.
+
+**Canonical/source/release:** HK canonical Portal remains
+`/home/bobby/.worktrees/portal-execution-manager-v2`
+feat/manager-v2-paper-read@54c6f5f3; owned feature path/branch unchanged at entry
+7657da76 plus this evidence commit. The historical path
+`/home/bobby/portal-main-release` exists on **SGP**, not this HK filesystem;
+do not treat it as a local checkout here. Actual SGP stable compose directory
+`/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose` exists and
+is named by the running stable Control API. Stable image d2c23ad6… differs from
+integration8400439b… and previewd13cef06…; full immutable digests in the receipt.
+Edge runtime d6aa7a51…/Paper config6180b9bf… remains as23.20.4; no deploy.
+TS canonical668e1032/next94f30101, PMd95bf36a with staged history WIP,
+DLmain5bf5cd54 and Research8ba33de3 with staged Core slice remain peer-owned;
+no source/authority acceptance derived from unrelated native rollout changes.
+
+**Recorded result / remaining partition / recommendation:**
+ROUTES_DATABASES_VOLUMES_VERIFIED_STABLE_IDENTITY_CORRECTED; full08 NOT_MET,
+connected09 NOT_STARTED. Audit/correction/new-owner-return intake complete.
+Do not ask Bobby to create those released Portal users or reapprove r1/TLS.
+The next already-approved source work is compatible Core normalization and
+authenticated PM current-relations producer, with original accepted provenance,
+finite coverage/bounds and real revocation fence; not another duplicate mapping
+client. Genuine exact issuer/target/schema/grant/source installation and
+connected revoke/cache/cursor/SSE positives/negatives remain dependent work.
+The live TS volume lacks the requisite schema, so conditional 'continue if no
+issue' does NOT authorize a silent PM migration/user bootstrap during this
+audit. Any production installation must name exact reviewed SQL/schema/role/
+identity/source changes, owner window and rollback with the TS/PM owners; it
+cannot be represented by installing all101+12 migrations or generated grants.
+No blanket phase approval/new phase needed for the remaining owned code;
+do not call that unfinished implementation external configuration debt.
+
+**Final metadata/commit gate:** unique-key JSON and64KiB bounds PASS for audit
+10477B and producer14854B; native proposal/current-linked source hashes match
+actual PM bytes, stable-versus-preview identity and five-distinct-volume checks
+PASS.611local Markdown file links resolve/zero missing; `git diff --check` PASS.
+These are metadata checks, not new product tests. Bobby author/committer verified;
+commit exactly six owned tracking/evidence files, exclude unrelated score review
+(hash109659d2… unchanged), no peer index/source change, hook bypass, push/merge.
 
 
 

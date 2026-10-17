@@ -777,10 +777,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Concrete current-relations producer is also still missing: PM per-scope
   native receipts have no agreed normalization to Core's one membership tuple.
   This is producer contract/implementation work, not config-only debt. Existing
-  Portal principals all exist (one still invited); do not create duplicate users.
+  Historical integration-only intake found one invited user; do not treat it as
+  stable status. [Volume-resolved audit](evidence/execution-edge-v1_2/EPG10-08/database-volume-audit.json)
+  /main§23.20.5 confirms stable bobby/stan/thanhvuong all ACTIVE, distinct dev and
+  Research volumes (preview Bobby ID differs), actual TS volume trading_system_pgdata.
   Existing Manager target has none of seven requested new identity/authority
   relations in bounded catalogue read; do not repurpose it as the PM target.
-  bobby/thanhvuong ACTIVE; stan INVITED. No duplicate identity or grants created.
+  No new stable invitation/duplicate identity/grants. PMd95bf36a now supplies
+  native correspondence proposal/oracle263owner PASS, not a Core-compatible
+  authenticated producer or installed authority. Restricted-r1 source c7c3997f
+  is qualified, not unfinished code/missing approval; actual source installation
+  remains open. Preserve current peer source/index and active correctness windows.
   Actual connected08→09→10→11 NOT_MET; no runtime mutation.18HK+8SGP protected
   tuples unchanged; exact test cells/lease cleaned and49,616,770B source copies
   removed. Shared Docker/cache pruning deferred under active peer jobs.
