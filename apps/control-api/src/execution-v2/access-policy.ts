@@ -1,5 +1,6 @@
 import { AccessAction, AccessPolicyError, AccessResource, AccessRefusal, GrantChange,
-  ReviewedAccessPolicy, ResourceSelector, ScopedAccessGrant, tsBusinessAction } from "./access.contract";
+  ReviewedAccessPolicy, ResourceSelector, ScopedAccessGrant, tsBusinessAction,
+  type ManagerDomainGrant, type ManagerDomainFieldSeal, type ManagerReadDomain } from "./access.contract";
 import { currentAccessRelations, currentGrantProof, currentResources,
   type CurrentAccessRelations, type AccessEnvironment } from "./access-current-relations";
 import { accessDigest, canonicalSelector } from "./access-digest";
@@ -311,4 +312,76 @@ export function validateDelegation(context: AccessEvaluationContext, change: Gra
     if (!decision.allowed) throw new AccessPolicyError("DELEGATION_CEILING_EXCEEDED");
   }
   return ceiling;
+}
+
+/** PRIVATE app-layer whole-domain read. Native authority is deliberately NOT
+ * fabricated from this selection; a genuine held native proof is still needed.
+ * Roots only: no union of entity ceilings, delegated selectors or TS receipts. */
+export function selectManagerDomainGrant(context:AccessEvaluationContext,domains:readonly ManagerDomainGrant[],
+  environment:AccessEnvironment,domain:ManagerReadDomain) {
+  if(!context.actor_current||!context.active_principals.has(context.principal_id))
+    throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
+  if(!policyReady(context)||context.policy!.qualification!=="OWNER_VERIFIED")
+    throw new AccessPolicyError("POLICY_PENDING",503);
+  const policy=context.policy!,same=(value:ManagerReadDomain)=>accessDigest(value)===accessDigest(domain);
+  const current=(g:ManagerDomainGrant)=>g.workspace_id===context.workspace_id&&g.policy_revision===policy.revision&&
+    g.subject_user_id===context.principal_id&&g.issued_by===policy.protected_owner_user_id&&g.parent_grant_id===null&&
+    context.active_principals.has(g.issued_by)&&g.revoked_at_ms===null&&g.valid_from_ms<=context.now_ms&&g.valid_until_ms>context.now_ms&&
+    g.environment===environment&&same(g.domain);
+  const relevant=new Set<AccessAction>(["business.read_all","alpha.read","portfolio.read","portfolio.read_restricted",
+    "portfolio.discover_linked","account.read","binding.read"]);
+  // A resource DENY cannot be proved disjoint without the real entity source.
+  // Never drop it or resolve an entity census while holding this Core TX.
+  if(context.grants.some(g=>g.subject_user_id===context.principal_id&&g.workspace_id===context.workspace_id&&
+    g.policy_revision===policy.revision&&g.effect==="DENY"&&relevant.has(g.action)&&g.environments.includes(environment)&&
+    g.revoked_at_ms===null&&g.valid_from_ms<=context.now_ms&&(g.valid_until_ms===null||g.valid_until_ms>context.now_ms)&&
+    context.active_principals.has(g.subject_user_id)&&context.active_principals.has(g.issued_by)))
+    throw new AccessPolicyError("ACCESS_DENIED");
+  const matches=domains.filter(current);
+  if(matches.some(g=>g.effect==="DENY"))throw new AccessPolicyError("ACCESS_DENIED");
+  const seals=policy.manager_read_domains??[];
+  const allowed=matches.filter(g=>g.effect==="ALLOW").flatMap(grant=>{
+    const seal=seals.find(s=>s.environment===environment&&same(s.domain)&&s.field_policy_ref===grant.field_policy_ref&&
+      s.valid_from_ms<=context.now_ms&&s.valid_until_ms>context.now_ms&&grant.valid_from_ms>=s.valid_from_ms&&
+      grant.valid_until_ms<=s.valid_until_ms);
+    return seal?[{grant,seal}]:[];
+  }).sort((a,b)=>a.grant.grant_id<b.grant.grant_id?-1:a.grant.grant_id>b.grant.grant_id?1:0);
+  if(!allowed.length)throw new AccessPolicyError("ACCESS_DENIED");
+  // One exact owner root supplies the permission; never union fragmented facts.
+  return allowed[0]!;
+}
+
+/** PRIVATE temporal ceiling, not a permission evaluator. Only call after exact
+ * root/seal selection with the complete schema-validated held Core snapshot.
+ * Conservatively stop at ANY future fixed transition in that workspace: an
+ * unrelated subject/action/environment may shorten availability, never grant
+ * access. No source census/receipt verification or sliding now+TTL is inferred.
+ * Non-null revocation still means revoked immediately in existing selection;
+ * its timestamp here is only an additional conservative re-evaluation bound. */
+export function managerDomainReadValidUntil(
+  context:Pick<AccessEvaluationContext,"now_ms"|"workspace_id"|"policy"|"grants">,
+  domains:readonly ManagerDomainGrant[],
+  selected:{grant:ManagerDomainGrant;seal:ManagerDomainFieldSeal},sessionUntilMs:number):number {
+  const now=context.now_ms,baseline=[sessionUntilMs,selected.grant.valid_until_ms,selected.seal.valid_until_ms];
+  if(!Number.isSafeInteger(now)||now<0||baseline.some(value=>!Number.isSafeInteger(value)||value<=now))
+    throw new AccessPolicyError("ACCESS_DENIED");
+  let until=Math.min(...baseline);
+  const transition=(value:number|null)=>{
+    if(value!==null&&Number.isSafeInteger(value)&&value>now&&value<until)until=value;
+  };
+  // Do not filter by currentness, action, subject, environment or policy revision:
+  // a currently inactive DENY/ancestor/receipt can change meaning with time.
+  for(const grant of domains)if(grant.workspace_id===context.workspace_id) {
+    transition(grant.valid_from_ms);transition(grant.valid_until_ms);transition(grant.revoked_at_ms);
+  }
+  for(const grant of context.grants)if(grant.workspace_id===context.workspace_id) {
+    transition(grant.valid_from_ms);transition(grant.valid_until_ms);transition(grant.revoked_at_ms);
+    if(grant.ts_receipt) {
+      transition(grant.ts_receipt.effective_at_ms);transition(grant.ts_receipt.expires_at_ms);
+    }
+  }
+  if(context.policy?.workspace_id===context.workspace_id)for(const seal of context.policy.manager_read_domains??[]) {
+    transition(seal.valid_from_ms);transition(seal.valid_until_ms);
+  }
+  return until;
 }

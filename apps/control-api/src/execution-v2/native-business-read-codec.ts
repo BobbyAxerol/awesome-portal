@@ -74,6 +74,9 @@ const managerIntent = z.object({ schema_version: z.literal("pma.manager-read-int
   action: z.enum(["catalogue", "capabilities", "relation_page", "relation_record", "projection_page"]), digest: raw }).strict();
 const base = z.object({ schema_version: z.literal("pma.native-business-read.request.v1"),
   binding, domain, manager_intent: managerIntent, deadline: utc }).strict();
+export type NativeBusinessReadBase = z.infer<typeof base>;
+export type NativeReadContext = Omit<NativeBusinessReadBase, "schema_version">;
+const context = base.omit({ schema_version: true }).strict();
 const humanRequest = base.extend({ human_token: token }).strict();
 const terminalRequest = base.extend({ signed_terminal: token }).strict();
 type Request = z.infer<typeof base> | z.infer<typeof humanRequest> | z.infer<typeof terminalRequest>;
@@ -113,6 +116,12 @@ const settled = common.extend({ state: z.literal("SETTLED"), may_authorize_read:
 }).strict();
 const result = z.union([issued, entered, uncertain, observed, cancelled, retired, settled]);
 export type NativeBusinessReadResult = z.infer<typeof result>;
+const selectedPins = z.object({
+  binding: binding.pick({ human_issuer: true, subject: true, workspace_id: true,
+    environment: true, workload_id: true }).strict(),
+  domain, human: issued.shape.human, native: issued.shape.native, source_fingerprint: raw,
+}).strict();
+export type NativeBusinessReadSelectedPins = z.infer<typeof selectedPins>;
 type Data = string | boolean | { [key: string]: Data };
 const sha256 = (value: string | Uint8Array): string => createHash("sha256").update(value).digest("hex");
 function exactObject(value: unknown, keys?: readonly string[]): Record<string, unknown> {
@@ -234,6 +243,59 @@ export function nativeBusinessReadWorkloadId(value: unknown): string {
   try {
     if (typeof value !== "string") return fail();
     return binding.shape.workload_id.parse(value);
+  } catch { return fail(); }
+}
+
+/** Closed own-data configuration capture, NOT an installation receipt or grant. */
+export function captureNativeBusinessReadSelectedPins(input: unknown): Readonly<NativeBusinessReadSelectedPins> {
+  try {
+    const parsed = selectedPins.parse(ownData(input));
+    if (Buffer.byteLength(canonical(parsed as Data), "utf8") > 32768) return fail();
+    return freeze(parsed);
+  } catch { return fail(); }
+}
+
+/** Preserve the exact expired Base for same-attempt recovery. No clock,
+ * permission, source acceptance or deadline extension is inferred here. */
+export function captureNativeBusinessReadBase(input: unknown,
+  limits: NativeBusinessReadCodecBounds): Readonly<NativeBusinessReadBase> {
+  try {
+    const cap = bounds(limits);
+    const parsed = base.parse(types.isUint8Array(input) ? decode(input as Uint8Array, cap.request_bytes) : ownData(input));
+    if (parsed.manager_intent.digest !== parsed.binding.request_digest ||
+        Buffer.byteLength(canonical(parsed as Data), "utf8") > cap.request_bytes) return fail();
+    return freeze(parsed);
+  } catch { return fail(); }
+}
+
+/** Validate BEFORE object spread; never invokes caller accessors or Proxy traps. */
+export function captureNativeBusinessReadContext(input: unknown,
+  limits: NativeBusinessReadCodecBounds): Readonly<NativeReadContext> {
+  try {
+    const cap = bounds(limits), parsed = context.parse(ownData(input));
+    const captured = captureNativeBusinessReadBase({
+      schema_version: "pma.native-business-read.request.v1", ...parsed,
+    }, cap);
+    return freeze({ binding: captured.binding, domain: captured.domain,
+      manager_intent: captured.manager_intent, deadline: captured.deadline });
+  } catch { return fail(); }
+}
+
+/** Signature PREIMAGE only, exact same source action/path/canonical Base.
+ * Removing ONLY human_token is equivalent to Base for these two actions.
+ * This creates no prepared request/client witness/held authority. */
+export function nativeBusinessReadIdentityPreimage(action: "issue" | "enter", input: unknown,
+  limits: NativeBusinessReadCodecBounds): Readonly<{
+    base_body: string; provider_delivery_digest: string; binding_digest: string; stable_core_digest: string;
+  }> {
+  try {
+    if (action !== "issue" && action !== "enter") return fail();
+    const cap = bounds(limits), captured = captureNativeBusinessReadBase(input, cap);
+    const body = canonical(captured as Data), path = "/internal/elp210/business-root-read/" + action;
+    return Object.freeze({ base_body: body,
+      provider_delivery_digest: pmHttpRequestDigest({ method: "POST", raw_path: Buffer.from(path, "ascii"),
+        query_string: new Uint8Array(), body: Buffer.from(body, "utf8") }, { request_bytes: cap.request_bytes }),
+      binding_digest: sha256(canonical(captured.binding as Data)), stable_core_digest: sha256(body) });
   } catch { return fail(); }
 }
 

@@ -141,3 +141,23 @@ previously untracked test had a blank EOF line. No build/contracts/API/restore
 ran and no commit was created. Remove only that line, preserve the rejection,
 then run the same normal hook with unchanged authority/tests. Staging is the
 same15-path owned allowlist; no foreign index path is altered.
+
+## Normal-hook terminal — 2026-10-17T20:47:09Z
+
+Landed `c730729eaf5071bdcf151a40aebedc4a0f483019`,15files +926/−18;
+the shared Unified diff preserves six peer-owned lines and is not counted as
+independent Codex implementation. Controller `native-obligation-land-201928`
+exit0/PASS:67contract files/791tests, API build,376API files/6040tests PASS,
+two existing skipped files/three existing skipped tests. API duration1219.80s.
+Custody28 includes the new actual-PG `+00:00` microsecond case; client45 is a
+subset, not additional to6040. Scoped PostgreSQL restore/four access-row digests,
+source/index freeze and all eight protected runtime tuples PASS; exact owned
+Node/PG/network resources absent and own measurement lease released.
+
+Log SHA256 `026d9c8684f866a7a722ede975497dc8a7ce82d5320a17a134a10572b7603019`;
+terminal controller SHA256
+`ce3fc00c48241aab96ca0fecf741abe8ab908e62e5f77803b2e766397f422030`.
+This closes the NC-01 local custody implementation gate only. Real source,
+terminal reconciliation and all full10/11 gates remain open. The next bounded
+code batch is [NC-02 primitives](native-read-lifecycle-primitives.md), not a
+claim that custody alone can be safely mounted.

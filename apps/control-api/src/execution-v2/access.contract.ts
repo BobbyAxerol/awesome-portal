@@ -80,6 +80,40 @@ export interface ScopedAccessGrant {
   field_policy_ref: string | null;
 }
 
+
+/** PRIVATE stored app permission, never a public ResourceSelector or TS receipt.
+ * Exact reviewed catalogue/field seals are intersected with native held proof
+ * by the caller; this fact alone never authorizes transport or business COMMIT. */
+const managerHash=z.string().length(64).regex(/^[0-9a-f]{64}$/);
+const managerText=accessText.refine(v=>!/[\u0000-\u001f\u007f]/u.test(v),"INVALID_MANAGER_TEXT");
+export const managerReadDomain=z.object({profile_id:managerText.refine(v=>Buffer.byteLength(v,"utf8")<=128),
+  catalogue_sha256:managerHash,profile_sha256:managerHash,field_policy_sha256:managerHash}).strict();
+export type ManagerReadDomain=z.infer<typeof managerReadDomain>;
+export const managerDomainFieldSeal=z.object({environment:executionEnvironment,domain:managerReadDomain,
+  field_policy_ref:managerText,valid_from_ms:utcMilliseconds,valid_until_ms:utcMilliseconds}).strict()
+  .refine(v=>v.valid_until_ms>v.valid_from_ms,"INVALID_INTERVAL");
+export type ManagerDomainFieldSeal=z.infer<typeof managerDomainFieldSeal>;
+export const managerDomainGrant=z.object({schema_version:z.literal("portal.manager-domain-grant.v1"),
+  grant_id:accessText,workspace_id:accessText,subject_user_id:accessText,issued_by:accessText,
+  parent_grant_id:z.null(),revision:opaqueRevision,policy_revision:opaqueRevision,
+  action:z.literal("business.read_all"),effect:z.enum(["ALLOW","DENY"]),environment:executionEnvironment,
+  domain:managerReadDomain,field_policy_ref:managerText,valid_from_ms:utcMilliseconds,
+  valid_until_ms:utcMilliseconds,revoked_at_ms:utcMilliseconds.nullable()}).strict()
+  .refine(v=>v.valid_until_ms>v.valid_from_ms,"INVALID_INTERVAL");
+export type ManagerDomainGrant=z.infer<typeof managerDomainGrant>;
+
+/** Internal DB-only API, intentionally not exposed by access.controller/OpenAPI. */
+export const managerDomainReadInput=z.object({actor:z.object({user_id:accessText,session_id:accessText,
+  session_generation:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)}).strict(),workspace_id:accessText,
+  environment:executionEnvironment,domain:managerReadDomain,
+  expected_scope_digest:z.string().length(71).regex(/^sha256:[0-9a-f]{64}$/).optional()}).strict();
+export type ManagerDomainReadInput=z.infer<typeof managerDomainReadInput>;
+export interface ManagerDomainReadDecision {
+  authority_fingerprint:string;scope_digest:string;field_policy_sha256:string;field_policy_ref:string;
+  valid_until_ms:number;now_ms:number;policy_revision:string;grant_id:string;grant_revision:string;actor:AccessActor;
+}
+
+
 export interface ReviewedAccessPolicy {
   workspace_id: string;
   revision: string;
@@ -89,6 +123,8 @@ export interface ReviewedAccessPolicy {
   qualification: "OWNER_VERIFIED" | "TEST_ONLY" | "UNQUALIFIED";
   protected_owner_user_id: string;
   researcher_fields: { state: "PENDING" | "QUALIFIED"; policy_ref: string | null; fields: string[] };
+  /** Optional private reviewed Manager field seals; absent means no domain read. */
+  manager_read_domains?: ManagerDomainFieldSeal[];
 }
 
 export interface AccessActor {
@@ -138,7 +174,23 @@ export const scopedAccessGrant=z.object({grant_id:accessText,subject_user_id:acc
 export const reviewedAccessPolicy=z.object({workspace_id:accessText,revision:opaqueRevision,artifact_digest:digest,
   approval_ref:accessText,state:z.enum(["REVIEWED","PENDING"]),qualification:z.enum(["OWNER_VERIFIED","TEST_ONLY","UNQUALIFIED"]),
   protected_owner_user_id:accessText,researcher_fields:z.object({state:z.enum(["PENDING","QUALIFIED"]),policy_ref:accessText.nullable(),
-    fields:z.array(accessText).max(256)}).strict()}).strict();
+    fields:z.array(accessText).max(256)}).strict(),
+  manager_read_domains:z.array(managerDomainFieldSeal).max(32).refine(values=>new Set(values.map(v=>JSON.stringify([
+    v.environment,v.domain.profile_id,v.domain.catalogue_sha256,v.domain.profile_sha256,v.domain.field_policy_sha256]))).size===values.length,
+    "DUPLICATE_MANAGER_SEAL").optional()}).strict();
+
+/** Explicit stored union. A present invalid version MUST NOT fall back to the
+ * legacy decoder; public grantChanges/resourceSelector remain unchanged. */
+export type StoredAccessGrant=ScopedAccessGrant|ManagerDomainGrant;
+export function classifyStoredAccessGrant(value:unknown):
+  {kind:"LEGACY";fact:ScopedAccessGrant}|{kind:"MANAGER_DOMAIN";fact:ManagerDomainGrant} {
+  try {
+    if(value!==null&&typeof value==="object"&&Object.hasOwn(value,"schema_version"))
+      return {kind:"MANAGER_DOMAIN",fact:managerDomainGrant.parse(value)};
+    return {kind:"LEGACY",fact:scopedAccessGrant.parse(value)};
+  }catch{throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);}
+}
+
 export const tsMembershipAcceptance=z.object({source:accessText,source_contract:accessText,trust_profile:accessText,receipt_id:accessText,
   proposal_id:accessText,proposal_digest:digest,portal_user_id:accessText,ts_user_id:accessText,mapping_revision:opaqueRevision,
   human_requester_user_id:accessText,workspace_id:accessText,action:accessAction,selector_digest:digest,environments,

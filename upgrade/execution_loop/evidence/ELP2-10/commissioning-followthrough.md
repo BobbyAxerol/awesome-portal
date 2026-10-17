@@ -2521,3 +2521,36 @@ witness review accepted correlation-only semantics and found UTC `+00:00`
 custody SQL mismatch; fixed with one more actual-PG regression for the coherent
 normal hook (PENDING), preserving exact deadline bytes/hash. [Owning packet](native-read-obligation-custody.md#focused-terminal--2026-10-17t201810z)
 retains actual scope, failure-before-hook/PTY retry and remaining lifecycle work.
+
+**NC-01 normal-hook terminal20:47UTC:** landedc730729e,791contracts and6040API
+PASS with3existing skips, scoped restore/four access digests and unchanged source,
+index/eight protected runtime tuples; exact owned resources and lease removed.
+[Owning terminal](native-read-obligation-custody.md#normal-hook-terminal--2026-10-17t204709z).
+This supersedes only pending local landing, not native terminal/installed authority.
+
+[NC-02 primitives and independent review dispositions](native-read-lifecycle-primitives.md)
+now define the next applied unmounted subset: actual selected-client source
+identity, existing-store exact app-domain authority and finite response ownership.
+NCD-01/EGR-01/02 source corrections accepted; real PG/TLS/HTTP regressions and
+normal hook still NOT_RUN at entry. Current PM WIP adds scoped-notice v2; retain
+closed finite v1 and do not call its old receipts v2 qualification. No Claude
+review/acceptance invented; UI held/no new public field. Native signer, SAME
+obligation lifecycle/final-egress settlement and actual trust/config remain next;
+approved budgets/calibration/coexistence/P184G2/browser and11 entry stay open.
+
+**NC-02 focused terminal21:00UTC:** API build/15files/727tests PASS,0fail/skip,
+actual local TLS/HTTP/disposable PG plus scoped restore/four access-row digests.
+Source/index/eight runtime tuples unchanged; exact owned resources/lease gone.
+[Owning receipt](native-read-lifecycle-primitives.md#focused-terminal-20261017-210005)
+preserves the first build failure and final tested source hashes; normal-hook
+landing pending. Four next-lifecycle source-only findings have an accepted
+implementation/test matrix there, not fake Claude acknowledgement or new phase.
+No public contract/FE/runtime change; full native10/11 gates remain unchanged.
+
+**NC-02 amended-domain terminal21:14UTC:** independent NDT-01 temporal-horizon
+finding accepted, first hook stopped before commit, canonical fixed-boundary
+amendment plus21 regressions delivered to the focused gate. API build/201tests,
+scoped restore and source/index/runtime/cleanup PASS; no overlapping counts added.
+[Exact receipt and pending coherent hook](native-read-lifecycle-primitives.md#domain-focused-terminal-20261017-211440).
+No sliding TTL or permission/legacy fingerprint change; conservative same-workspace
+early re-evaluation is explicit. Production/trust/Claude/full10 states unchanged.

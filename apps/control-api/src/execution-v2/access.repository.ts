@@ -1,5 +1,6 @@
 import { Pool, PoolClient } from "pg";
-import { GrantChange, ReviewedAccessPolicy, ScopedAccessGrant } from "./access.contract";
+import { AccessPolicyError, classifyStoredAccessGrant, managerDomainGrant, type ManagerDomainGrant,
+  type StoredAccessGrant, GrantChange, ReviewedAccessPolicy, ScopedAccessGrant } from "./access.contract";
 
 export type ProposalState = "APP_APPLIED"|"TS_PENDING"|"TS_APPLIED"|"TS_REJECTED"|"TS_UNKNOWN"|"REVOKED";
 export interface AccessReceipt {
@@ -36,11 +37,22 @@ export class AccessRepository {
       (lock?" FOR UPDATE NOWAIT":""),[workspace]);
     return r.rows[0]?.policy??null;
   }
-  async grants(workspace:string):Promise<ScopedAccessGrant[]> {
+  async storedGrants(workspace:string):Promise<ReturnType<typeof classifyStoredAccessGrant>[]> {
     const r=await this.db.query("SELECT grant_fact FROM portal_access_grants_v2 WHERE workspace_id=$1 ORDER BY grant_id LIMIT 10001",[workspace]);
-    return r.rows.map(row=>row.grant_fact);
+    if(r.rows.length>10000)throw new AccessPolicyError("ACCESS_SCOPE_LIMIT_EXCEEDED",503);
+    return r.rows.map(row=>classifyStoredAccessGrant(row.grant_fact));
+  }
+  /** Existing entity readers never receive a private domain selector/fact. */
+  async grants(workspace:string):Promise<ScopedAccessGrant[]> {
+    return (await this.storedGrants(workspace)).flatMap(row=>row.kind==="LEGACY"?[row.fact]:[]);
   }
   async saveGrant(grant:ScopedAccessGrant,insert=false):Promise<void> {
+    return this.saveStoredGrant(grant,insert);
+  }
+  async saveManagerDomainGrant(grant:ManagerDomainGrant,insert=false):Promise<void> {
+    return this.saveStoredGrant(managerDomainGrant.parse(grant),insert);
+  }
+  private async saveStoredGrant(grant:StoredAccessGrant,insert:boolean):Promise<void> {
     if (insert) await this.db.query(`INSERT INTO portal_access_grants_v2
       (grant_id,workspace_id,subject_user_id,issued_by,parent_grant_id,revision,grant_fact)
       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)`,[grant.grant_id,grant.workspace_id,grant.subject_user_id,

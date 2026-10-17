@@ -224,3 +224,19 @@ destructive down migration or self-activation; placement/DR detail in runbook.
   Native final settlement, real trust/config installation and full10 remain open.
 - [Current commissioning ledger](commissioning-followthrough.md): canonical
   phase dependencies and Claude intake; no duplicate request/acceptance queue.
+- [NC-01 normal-hook terminal20:47UTC](native-read-obligation-custody.md#normal-hook-terminal--2026-10-17t204709z):
+  landedc730729e,791contract/6040API PASS+3existing skips, scoped restore,
+  freeze/eight runtime tuples/owned teardown PASS. Local custody only, unmounted.
+- [NC-02 lifecycle primitives](native-read-lifecycle-primitives.md): actual-client
+  selected source, exact current app-domain/field seal and finite final-egress;
+  independent NCD-01/EGR-01/02 corrections accepted, affected tests NOT_RUN at
+  entry. No new public field/Claude task or runtime activation. Same native
+  lifecycle/signing/settlement and full10/11 dependencies remain open.
+- [NC-02 focused terminal21:00UTC](native-read-lifecycle-primitives.md#focused-terminal-20261017-210005):
+  API build/15files/727tests PASS,0skip; actual disposable PG/scoped restore,
+  local TLS/HTTP, eight runtime tuples and owned teardown PASS. Normal hook
+  pending; first build refusal retained. No installed source/consumer authority.
+- [NC-02 temporal amendment terminal21:14UTC](native-read-lifecycle-primitives.md#domain-focused-terminal-20261017-211440):
+  API build/201focused tests/scoped restore PASS,0fail/skip; six boundary classes
+  and stable scope on actual PG. Earlier hook interrupted before land for this
+  new finding, not falsely green. Normal-hook commit remains pending.
