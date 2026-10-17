@@ -10075,6 +10075,12 @@ not reclassified as somebody else's technical debt.07 was not started at that
 **Owned package:** QUALIFIED_SOURCE_DARK — **Full phase exit:** NOT_MET —
 **Runtime activation:** NOT_AUTHORIZED / NOT_PERFORMED.
 
+**Latest original-round2 slice (2026-10-17):** PM source formats consumed;
+pure Rust HTTP byte-binding/full owning-outcome adapter75PASS/strict Clippy/fmt,
+cleaned. This is format qualification, not a mounted CommandPort or actual
+authority. See [§23.20.2](#23202-original-round2--pm-source-codec-follow-through-2026-10-17)
+and [bounded receipt](evidence/execution-edge-v1_2/EPG10-07/pm-source-qualification.json).
+
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-07](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-07-thực-hiện-command-relay-có-durable-receipt);
 [BE §§3, 9.2–9.4, 11–12; ELP2-07](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§8.5, 9.9, 10 (no score-driven authority)](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
 [REVIEW §§3.1–3.3](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
@@ -14485,6 +14491,115 @@ the five owned tracking files. `git diff --check` PASS. These read-only metadata
 hash/link checks are not fresh product/connected tests (0), capacity evidence or
 peer-test inheritance. Configured Bobby identity verified; commit only these
 five files through normal hooks, preserving the unrelated untracked review.
+
+### 23.20.2 Original round2 — PM source codec follow-through (2026-10-17)
+
+**Entry / approval / goal:** Bobby requests completion and an explicit next gap,
+not another status-only handoff. Continue approved07/08/09→10/11 round2; no new
+phase. Baseline Edgeec5c6c2f; preserve unrelated untracked feasibility review.
+Fresh PM38ee3b4b now contains qualified HTTP binding (1009PASS), durable original
+intent0faf6ef0, owning outcome461990f2 and private current-authorized handler
+3fd02c18. Its new source return makes Edge format/binding adaptation runnable
+now even though actual network/trust remains unmounted. The previous failed
+PM retake is historical, not the current blocker. Research30162a3f is clean;
+commissioning packet e1410ca5… still reports human/budget/coexistence OPEN.
+TS66d1d0d4 native publication Rust13f21d53…/SQL59 hash0115a6bc… unchanged.
+
+**Guide/scope/invariants:** original [07 guide](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-07-thực-hiện-command-relay-có-durable-receipt),
+[08 guide](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls),
+[BE§3/9.2–9.4](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md),
+REVIEW§3 and original10 six returns apply. Implement only pure Rust PM outcome
+and exact HTTP byte-binding codecs in existing command-relay, tests and bounded
+evidence/handoff; no TS/PM/Research edits, invented HTTP route/authentication,
+grants, native send, SQL, migration or runtime activation. Keep separate delivery
+hash, immutable Edge intent digest and normalized source intent digest. Full
+receipt must match trusted original source key/normalized digest/resolved target;
+reuse AuthorityReceipt exact-money/state/progress validation. ACK/invalid decode
+never proves APPLIED or not-applied. Source context construction authenticates
+nobody; actual current providers and mounted authenticated port remain required.
+
+**Test/exit/rollback:** parity with pinned published PM HTTP vectors and current
+PM codec; reject wrong key/scope/digest/target, malformed/duplicate/extra fields,
+stringified counters, bad money/state/checkpoint, oversized response and changed
+delivery bytes. Run impacted Rust command tests, fmt and strict Clippy in an
+isolated SGP source-only target under an own measurement lease, no operational
+DB/secrets/container/image build. Clean exact owned target; record image/cache/
+disk/runtime before/after. Rollback is omission of unmounted additive codec;
+retain financial facts/receipts/rights. Exit for this slice is actual format
+parity/security tests, not connected07/08/10/11 acceptance. Once tested, update
+single07/08/11 handoffs/backend indexes with priority and exact remaining owner
+input; no repeated generic approval and no new phase.
+
+**Actual implemented/tested closure09:48Asia/Saigon:** `command-relay::pm_source`
+now supplies exact HTTP delivery hash and strict native full-outcome decoding,
+original scoped request/normalized source digest/key/target correlation, all15
+presentation fields plus separate source metadata; existing AuthorityReceipt
+owns exact partition/state/progress. No arbitrary HTTP client, authentication,
+grant or source/runtime binding added. Final `cargo test --locked --offline -p
+command-relay --lib`:75PASS/0FAIL/ignored/filtered (14new/61regression);3modes×8
+operations and6states covered. Both published digest vectors also pass against
+actual unchanged PM Python function (2separate format checks, no DB/network).
+Strict `cargo clippy --locked --offline -p command-relay --all-targets -- -D
+warnings` and `cargo fmt --all -- --check` PASS on final bytes. Rust1.85.1 pinned,
+own CARGO_HOME/target and2jobs; initial locked fetch only, then offline; lockfile
+unchanged8bc867dc…. Historical535not rerun or summed with overlapping75.
+
+**Failures retained / fixed:** initial offline launcher missing cached ahash,
+zero tests; isolated locked fetch fixes dependency availability, not lockfile.
+First lint launcher needed pinned toolchain PATH; strict lint then caught one
+TEST_ONLY doc backtick, fixed with no lint relaxation. Final full75+lint/fmt
+all exit0, no owned failure deferred. Initial non-sudo metadata query denied;
+read-only sudo metadata succeeded. PM public private-composition packet has
+duplicate root `status` keys (qualification vs operation); report to PM owner
+to rename the operation entry. Not consumed as authority, not patched in peer
+worktree or invented as another Edge gate.
+
+**Cleanup / source-release-runtime reconciliation:** own exact0700 SGP target
+`/tmp/epg10-07-pm-codec-0g7pp45j` and exclusive15minute lease removed02:48:15UTC.
+416,098,563logical bytes deleted, including isolated Cargo registry/target;
+SGPfree167,147,765,760→167,532,646,400B shared-host observation, not exclusive
+attribution. Target/own lease independently absent; no container/network/volume/
+image/BuildKit created or pruned. Fresh protected tuples18HK+5SGP match baseline
+exactly, including immutable image/config/start/restart. HKfree237,391,138,816B;
+images102/30.57GB+BuildKit371/28.3GB HK,328/88.82GB+3774/195.9GB SGP. All7active
+Portal worktrees/current release/named rollback/08PKI retained; no shared prune.
+Canonical manager54c6f5f3/stableSGPmain53316263; active Edge8814cd2a/image
+d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e unchanged,
+feature source NOT deployed. PM now6e0424b7/Research30162a3f/TS66d1d0d4 reviewed;
+DLcanonical `/home/bobby/data_layer main@5bf5cd54`, old authority worktree absent,
+not used as current source. No peer/runtime/DB/financial/TLS/identity mutation.
+
+**Exact next action / phase recommendation:** no new phase12; close integration
+gaps in original phases, without asking for the same approval again:
+
+| Priority / original gap | Actual owner input / action | Then Edge-owned acceptance |
+| --- | --- | --- |
+| Next08-READ-TRUST | Portal identity/Research + TS/PM commission actual current human/workload/app/field provider and stable verified mapping on exact target; source components/r1 approval already exist | Bind CurrentReadGrantProvider; original08 revoke/read/cache/cursor/SSE/export plus positive/unaffected-scope controls; do not wait for commands/native journal |
+| Separate07 +08-COMMAND-COMMIT | PM/TS publish mounted authenticated submit/status wire for the qualified private EdgeCommandHandler, original normalized binding and current through-COMMIT leases/retention; empty runtime cells are not wildcard | Wire CommandPort using the completed codec+existing durable ledger; original07/08-command/09 same-key loss/revoke/full receipt/status/private recovery cases |
+| Parallel03 SOURCE | TS native publisher owner/generation fence through stage/publish/head COMMIT plus authenticated matched B/delta/history/floor/coverage export | Rerun affected03/09; do not confuse DL market publisher or human ENTER with native journal fence |
+| Parallel01/06 LOAD | Returned real source-connected target/current-config measurements and approved numeric bounds, not missing owned instrumentation/preparation | Run existing B0/B1/B2/coexistence harness under exclusive lease |
+| After applicable returns09→10→11 | Exact qualified datasets/operations/current trust, release/config/backup/rollback/operational pins | Connected09, scoped10 shadow/cutover/rollback, actual11 operator/restore/alerts acceptance |
+
+Scope codec gap CLOSED; actual07/08 and full10/11 still NOT_MET, independent11
+COMPLETE. Not production-ready/activated, not merely “waiting for new approval.”
+The [single07 return](evidence/execution-edge-v1_2/EPG10-07/COMMAND_RELAY_AND_OWNER_RETURN.md)
+and [qualification](evidence/execution-edge-v1_2/EPG10-07/pm-source-qualification.json)
+contain exact owner facts, tests/cleanup/next action. No remaining owned code/
+test/cleanup runnable from the available format-only return; next actual port/
+provider makes its dependent binding/tests runnable immediately. Keep historical
+failed PM receipts, superseded by successful1009source qualification, not deleted.
+
+**Final metadata/commit gate:**4current tested code/lock hashes and5PM format
+pins match;640local Markdown file links resolve/0missing. Scoped receipt7,133B
+with unique JSON keys; historical intake65,413B<64KiB,
+now points to the current07 receipt rather than claiming the old failed retake
+is current. `git diff --check` PASS; BobbyAxerol identity verified. Only the
+three Rust files, current bounded receipt and eight tracking/handoff files are
+in scope; preserve unrelated untracked feasibility review. HK foreign G13
+reservation until12:15:39Asia/Saigon respected; no local cargo/pytest/full
+workspace verification launched. Scoped Rust75/Clippy/fmt ran on SGP under
+our own lease, not HK and not a full-monorepo/connected acceptance claim.
+Normal configured local commit, no hook bypass, push, merge or runtime deploy.
 
 
 

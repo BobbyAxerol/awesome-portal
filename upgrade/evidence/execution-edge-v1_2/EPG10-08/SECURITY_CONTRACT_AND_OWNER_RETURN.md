@@ -30,6 +30,20 @@ TS commit. Paper/sandbox/live are structural scopes; Canary is a live stage.
 
 ## Current round2 delta —17/10/2026, Asia/Saigon
 
+Latest09:48: Research clean30162a3f coordinates delegated receipt authority;
+current commissioning packet e1410ca5… still marks human/budget/coexistence OPEN.
+PM6e0424b7 has qualified HTTP delivery binding, owning outcomes and private
+current-authorized command composition. Edge has now completed the runnable
+format codec/hash follow-through with75Rust PASS/strict Clippy/fmt and2actual
+PM vector checks, [separate scoped receipt](../EPG10-07/pm-source-qualification.json).
+This closes format adaptation only, NOT actual CurrentReadGrantProvider,
+AuthorityProvider, identity/field trust or native through-COMMIT authority.
+TLS repair/r1 policy approval remain closed; do not request either again.
+Next original gap is08-READ-TRUST real provider/mapping commissioning; command
+07/08-COMMAND-COMMIT remains separate and needs the actual authenticated port.
+Source components being implemented is no longer the same as absent code.
+Earlier hashes/test failures below are historical; full08 remains NOT_MET.
+
 Latest follow-up01:51Asia/Saigon: Research normal-hook retry is terminal PASS,
 clean commit`d92efc0e33d71d2d2f21f7f67cafa1cae946cb0b`; first exit124 remains
 historical. Follow-up02:00: PM r1 financial/composition source now has965pytest

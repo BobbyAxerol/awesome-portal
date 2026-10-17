@@ -1,6 +1,6 @@
 {
   "schema": "epg10.connected-round2-intake.v1",
-  "current_state_ref": "resumed_intake (blocked_audit and earlier intake remain historical)",
+  "current_state_ref": "../EPG10-07/pm-source-qualification.json (current); resumed_intake/blocked_audit are historical",
   "resumed_intake": {
     "observed_utc": "2026-10-16T19:28:14Z",
     "feature_baseline": "d2d0f65230ed0cb09c915bafd528e720765fd557",

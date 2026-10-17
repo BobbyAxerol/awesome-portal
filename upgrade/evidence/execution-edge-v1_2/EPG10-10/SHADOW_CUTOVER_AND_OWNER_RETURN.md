@@ -4,6 +4,16 @@ Status: independent round COMPLETE / IMPLEMENTED_AND_TESTED_ISOLATED; C4 CLEAN.
 Full connected phase exit NOT_MET. This is one packet for the original phase10
 round2, not a new roadmap. No owned runnable code/test/cleanup remains.
 
+Latest17/10/2026,09:48Asia/Saigon: new qualified PM source formats made Edge
+07/08 codec work runnable; it is now implemented/tested/cleaned, not deferred.
+See [75PASS scoped qualification](../EPG10-07/pm-source-qualification.json).
+PM HTTP1009PASS supersedes its failed attempts; private owning outcome/handler
+are implemented, while actual network/trust remain unmounted. The six return
+rows below still identify actual connected inputs, not a request to redo those
+source components. Next gap08-READ-TRUST commissioning, separately07 transport/
+08-command COMMIT; parallel03 native publication/01–06 connected load. Then
+affected09→10→11, no new phase or repeated general approval. Full exit NOT_MET.
+
 ## Implemented boundary
 
 Additive Portal PG0022 + internal Rust bootstrap controls: opt-in held SHADOW,

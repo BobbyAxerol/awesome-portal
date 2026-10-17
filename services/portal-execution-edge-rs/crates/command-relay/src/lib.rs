@@ -9,6 +9,7 @@
 pub mod authority;
 pub mod current_primitive;
 pub mod durable;
+pub mod pm_source;
 
 use std::collections::HashMap;
 

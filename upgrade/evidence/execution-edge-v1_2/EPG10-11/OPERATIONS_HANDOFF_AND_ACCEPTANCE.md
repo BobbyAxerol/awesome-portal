@@ -2,9 +2,11 @@
 
 Status: COMPLETE_INDEPENDENT — implemented, isolated-tested and cleaned.
 Full connected acceptance NOT_MET; no production activation/sign-off.
-Original connected objective BLOCKED after three resumed same-input audits;
-full exit remains NOT_MET and original approval stays valid.
-See current `resumed_intake` before the historical `blocked_audit` in the intake.
+Latest17/10/2026 follow-through: new qualified PM formats consumed; owned Rust
+source codec COMPLETE with75PASS/strict Clippy/fmt and cleanup. Full exit remains
+NOT_MET; next gap08 trust commissioning, separately07 actual transport/08-command.
+See [current scoped receipt](../EPG10-07/pm-source-qualification.json) before the
+historical `resumed_intake`/`blocked_audit`. Original approval stays valid.
 Bobby approved independent11 and original10 round2 on actual owner returns.
 Current original10/11 round2 continuation is also approved; no repeated generic
 approval is required. See the dated intake below before historical source pins.
@@ -69,6 +71,27 @@ create ephemeral keys, never copy owner PKI. Full phase/campaign exit stays NOT_
 until exact released scope has connected evidence, not a blanket stop on all work.
 
 ## Parallel source consumption and next action
+
+### Current action order —17/10/2026,09:48 Asia/Saigon
+
+No EPG10-12 is proposed. All00–11 independent rounds are implemented; complete
+remaining original-phase connected gaps, not another roadmap:
+
+1. 08-READ-TRUST: actual Portal↔TS identity/current human/workload/application/
+field provider commissioning; bind and run original08 read revoke/positive/
+unaffected-scope controls. Do not wait for the command lane/native journal.
+2. 07/08-COMMAND-COMMIT: actual authenticated mounted PM private transport and
+original source binding; reuse new codec + existing ledger, qualify same-key
+loss/revoke/current COMMIT/authoritative status/recovery on exact target.
+3. In parallel03 native publisher fence/export and01/06 real connected budgets/
+coexistence. Existing measurement preparation is already complete; no invented
+production bounds or synthetic capacity PASS.
+4. Run applicable09 connected cases, then10 exact-scope shadow/cutover/rollback,
+then11 actual operator/restore/alerts/acceptance with returned source/release pins.
+
+Actual return makes its Edge work runnable immediately; original approval valid.
+No route, financial send, PKI/grant or production runtime changed by the new
+codec. No full campaign/release sign-off from75unit format tests.
 
 ### Resumed intake —17/10/2026,02:21 Asia/Saigon
 

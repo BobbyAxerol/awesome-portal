@@ -6,6 +6,44 @@ Status: **IN_PROGRESS / OWNED_ISOLATED_PACKAGE_QUALIFIED / SOURCE_DARK**;
 and [EDGE07 guide](../../../upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-07-thực-hiện-command-relay-có-durable-receipt)
 remain authoritative. This is a backend implementation, not a UI or activation.
 
+## Current original-round2 follow-through —17/10/2026,09:48 Asia/Saigon
+
+PM HTTP byte binding is now1009PASS, not the historical1007PASS/2FAIL attempt.
+PM0faf6ef0/461990f2/3fd02c18 supply durable original intent, full owning outcome
+and private current-authorized handler; latest6e0424b7 adds current economic
+history. Do not keep asking PM to implement these already qualified components.
+
+Edge now consumes the frozen formats in [pm_source.rs](../../../../services/portal-execution-edge-rs/crates/command-relay/src/pm_source.rs):
+exact delivered-byte HTTP digest, bounded full-outcome decode and original
+source key/digest/resolved-target correlation; all15presentation fields and
+source correlation metadata retained. Reuses existing exact decimal/state/
+progress validation; rejects duplicate/unknown/missing fields and string counters.
+No auth, URL, source-call, retry, route, grant or runtime flag is installed.
+[Qualification](pm-source-qualification.json):75Rust PASS (14new/61regression),
+strict Clippy/fmt PASS;2actual PM HTTP-vector checks separately. Includes all
+3canonical modes×8capital shapes and6owning states, TEST_ONLY, not actual native
+operations. Private416,098,563B source/cache target removed; own lease absent,
+all23protected runtime tuples unchanged; no Docker artifact or shared prune.
+
+**Next gap, not a new phase:**08-READ-TRUST/current provider commissioning is
+the first read lane; command07 separately needs PM/TS to publish the mounted
+authenticated transport for `EdgeCommandHandler.submit/status`, actual byte
+delivery envelope/current human-workload-field providers and original resolved
+binding. PM's source packet explicitly has no new HTTP wire/routes or installed
+network transport. Never invent that wire by calling the reduced candidate API.
+After that return, Edge implements the actual CommandPort against this codec and
+runs07/08-COMMAND-COMMIT/09 loss/revoke/status/recovery cases on the exact target.
+Retained original intent/proof must not be reconstructed from current profile;
+UNKNOWN never permits automatic resend. Actual operation/profile qualification
+and retention still required, but whole PM/TS upgrade is not a prerequisite.
+Then affected09→10scoped cutover/rollback→11 acceptance, in the original round.
+Full connected07/08/10/11 remains NOT_MET. Original approval remains valid.
+
+Peer metadata observation: `pma11-14-private-edge-composition.json` repeats the
+root `status` key (qualification and operation); PM owner should rename its
+status-operation entry. We do not consume that ambiguous key or modify PM's
+file. Full-outcome wire has its own schema/strict decoder; no extra Edge gate.
+
 ## Implemented boundary
 
 - Existing Rust `command-relay`: immutable bounded PM JSON and local canonical

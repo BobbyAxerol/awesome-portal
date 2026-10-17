@@ -748,10 +748,11 @@ deep-dive → ADR → slice → evidence discipline documented above.
   provider-publication evidence is consumed, not pending WIP publication. No
   runtime certification. Actual authenticated current provider/export/mapping
   remain unbound.
-  Original round2 goal BLOCKED after three resumed same-input audits;11 independent
-  complete/full10/11 NOT_MET. PM HTTP binding remains unqualified: first1000PASS/
-  9FAIL, retake1007PASS/2FAIL of1009. Actual grant/port not returned; Research
-  current-human/budget/coexistence OPEN. Approval remains valid, no new phase gate.
+  Latest original-round2 follow-through: PM HTTP1009PASS/owning outcomes/private
+  composition now consumed; Edge pure PM source codec75PASS/strict Clippy/fmt and
+  scoped cleanup COMPLETE. Full10/11 NOT_MET. Next08 real trust commissioning,
+  separately07 mounted transport/08-command COMMIT; then connected09→10→11.
+  No12/new approval; current scoped receipt linked from main plan§23.20.2.
   Historical08 completion round after the earlier PM deferral recorded
   PM`c401a023` still explicitly NOT_PUBLISHED for runtime authority/COMMIT proof;
   Research`169195ca` has no production provider and UNMAPPED identity. The single
