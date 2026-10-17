@@ -1,4 +1,5 @@
-import { accessDigest, AccessEvaluationContext, businessReadDenied, evaluateAccess, evaluateBusinessRead, grantCurrent, policyReady } from "./access-policy";
+import { accessDigest, AccessEvaluationContext, businessReadDenied, evaluateAccess, evaluateBusinessRead, grantCurrent, policyReady,
+  environmentRelations, currentBoundaryProof } from "./access-policy";
 import { AccessAction, AccessPolicyError, AccessResource, accessResource } from "./access.contract";
 import { ExecutionReadPublication, ExecutionReadPublicationRequest, ReadDatasetBinding, readDatasetBinding, readPublication } from "./read-publication";
 import { AUDIT_READ_FIELDS, BUSINESS_READ_FIELDS, TECHNICAL_READ_FIELDS, isBusinessReadField } from "./read-fields";
@@ -110,25 +111,37 @@ export function scopeRealtimeIdentity(scope:AuthorizedExecutionReadScope):string
     binding:s.binding,action:s.requirement.action,resource:s.requirement.resource??null,
     dataset:dataset&&{...dataset,source_revision:undefined},authority:s.context&&{
       db:s.context.authority_fingerprint,role:s.context.actor_role,policy:s.context.policy,
-      grants:s.context.grants.map(g=>[g,grantCurrent(g,s.context!)]),active:[...s.context.active_principals].sort(),
+      grants:s.context.grants.map(g=>[g,Object.hasOwn(s.context!.relationsFor(g.subject_user_id),"current_authority")?
+        s.resources.some(resource=>grantCurrent(g,s.context!,new Set(),{resource,environment:scope.environment})):grantCurrent(g,s.context!)]),active:[...s.context.active_principals].sort(),
       // Population is bound BELOW, after authorization. A hidden-only change
       // in a provider's root directory must not change this visible identity.
       relations:[...new Set(s.context.grants.flatMap(g=>[g.subject_user_id,g.issued_by]).concat(s.context.principal_id))].sort()
-        .map(id=>{const r=s.context!.relationsFor(id);return[id,r.qualified,r.revision,r.membership];})},
+        .map(id=>{const r=s.context!.relationsFor(id);return Object.hasOwn(r,"current_authority")?
+          [id,currentBoundaryProof(s.context!,scope.environment,[...s.resources,...(s.requirement.resource?[s.requirement.resource]:[])])]:
+          [id,r.qualified,r.revision,r.membership];})},
     tuples:s.tuples,resources:s.resources,fields:s.fields,field_policy:scope.fieldPolicyRef,
     strategy:s.strategyPairs,bindings:s.bindingPairs});
 }
 
-const contextProof=(context:AccessEvaluationContext)=>({
+const contextProof=(context:AccessEvaluationContext,environment?:ReadEnvironment,resources:readonly AccessResource[]=[])=>({
   db:context.authority_fingerprint??null,role:context.actor_role??null,policy:context.policy,
-  grants:context.grants.map(g=>[g,grantCurrent(g,context)]),active:[...context.active_principals].sort(),
-  relations:[...new Set(context.grants.flatMap(g=>[g.subject_user_id,g.issued_by]).concat(context.principal_id))].sort()
+  grants:context.grants.map(g=>[g,environment&&Object.hasOwn(context.relationsFor(g.subject_user_id),"current_authority")?
+    resources.some(resource=>grantCurrent(g,context,new Set(),{resource,environment})):grantCurrent(g,context)]),active:[...context.active_principals].sort(),
+  relations:environment?currentBoundaryProof(context,environment,resources):[...new Set(context.grants.flatMap(g=>[g.subject_user_id,g.issued_by]).concat(context.principal_id))].sort()
     .map(id=>[id,context.relationsFor(id)]),
 });
 const tupleLineage=(t:ExecutionReadPublication["tuples"][number]):AccessResource[]=>[
   {kind:"ALPHA",id:t.alpha_id},{kind:"ALPHA_VERSION",id:t.alpha_version_id},{kind:"PORTFOLIO",id:t.portfolio_id},
   {kind:"DEPLOYMENT",id:t.deployment_id},{kind:"ACCOUNT",id:t.account_id},
 ];
+const requestProofResources=(requirement:ReadScopeRequirement,publication:ExecutionReadPublication):AccessResource[]=>{
+  const resource=requirement.resource;
+  if(!resource||resource.kind==="ROOT")return publication.resources;
+  const accounts=resource.kind==="BINDING"?new Set(publication.binding_lineage?.bindings
+    .filter(pair=>pair.binding_id===resource.id).map(pair=>pair.account_id)):null;
+  return [resource,...publication.tuples.filter(tuple=>accounts?accounts.has(tuple.account_id):
+    tupleLineage(tuple).some(item=>exactKey(item)===exactKey(resource))).flatMap(tupleLineage)];
+};
 
 /** Sticky per-workspace policy selection. V2 denial/error never falls back to
  * legacy. This service alone can mint scopes; every delivery is freshly fenced. */
@@ -166,11 +179,11 @@ export class ExecutionReadScopes {
     action:"maintenance.read"|"development.read"="maintenance.read"):Promise<AuthorizedExecutionReadScope> {
     const context=await this.access.readContext({user_id:principal.user.userId,
       session_id:principal.session.sessionId,session_generation:principal.session.sessionVersion},principal.workspaceId);
-    const roots=Object.keys(context.relationsFor(principal.user.userId).roots);
+    const roots=Object.keys(environmentRelations(context.relationsFor(principal.user.userId),binding.environment).roots);
     if(roots.length!==1)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
     const scope=await this.authorize(principal,binding,{action,resource:{kind:"ROOT",id:roots[0]}});
     const currentContext=minted.get(scope)!.context;
-    const current=currentContext?Object.keys(currentContext.relationsFor(principal.user.userId).roots):[];
+    const current=currentContext?Object.keys(environmentRelations(currentContext.relationsFor(principal.user.userId),binding.environment).roots):[];
     if(scope.mode!=="SCOPED_V2"||current.length!==1||current[0]!==roots[0])fail("EXECUTION_READ_ACCESS_CHANGED",409);
     return scope;
   }
@@ -272,7 +285,9 @@ export class ExecutionReadScopes {
         const actor={user_id:p.user.userId,session_id:p.session.sessionId,session_generation:p.session.sessionVersion};
         const fresh=await this.access.readContext({user_id:p.user.userId,session_id:p.session.sessionId,
           session_generation:p.session.sessionVersion},p.workspaceId);
-        if(accessDigest(contextProof(fresh))!==accessDigest(contextProof(context)))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+        const proofResources=requestProofResources(r,publication);
+        if(accessDigest(contextProof(fresh,b.environment,proofResources))!==accessDigest(contextProof(context,b.environment,proofResources)))
+          fail("EXECUTION_READ_ACCESS_CHANGED",409);
         // A linkage-only change during fresh.readContext's final relations
         // await does not change the DB policy fingerprint. Confirm publication
         // AFTER those awaits, then DB-only authority after the last adapter I/O.
@@ -280,7 +295,8 @@ export class ExecutionReadScopes {
         if(!confirmedPublication.success||accessDigest(confirmedPublication.data)!==accessDigest(publication))
           fail("EXECUTION_READ_ACCESS_CHANGED",409);
         context=await this.access.confirmReadContext(actor,p.workspaceId,fresh);
-        if(accessDigest(contextProof(context))!==accessDigest(contextProof(fresh)))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+        if(accessDigest(contextProof(context,b.environment,proofResources))!==accessDigest(contextProof(fresh,b.environment,proofResources)))
+          fail("EXECUTION_READ_ACCESS_CHANGED",409);
         if(publication.qualification!=="SOURCE_VERIFIED"&&!(context.allow_test_only&&publication.qualification==="TEST_ONLY")||
           publication.workspace_id!==p.workspaceId||publication.environment!==b.environment||publication.profile_id!==b.profileId||
           accessDigest(publication.binding)!==accessDigest(r.dataset)||publication.population_coverage!=="COMPLETE_FOR_DATASET_WINDOW")
@@ -354,8 +370,9 @@ export class ExecutionReadScopes {
           // qualified exact account lineage, not researcher ownership or ID sets.
           const bindingTuples=r.action==="binding.read"?
             publication.tuples.filter(purposeAllows):[];
-          const own=new Set(context.relationsFor(p.user.userId).own_alpha_ids);
-          const linked=new Set(context.relationsFor(p.user.userId).member_portfolio_ids);
+          const currentRelations=environmentRelations(context.relationsFor(p.user.userId),b.environment);
+          const own=new Set(currentRelations.own_alpha_ids);
+          const linked=new Set(currentRelations.member_portfolio_ids);
           const linkage=publication.current_linkage;
           const linkQualified=linkage&&(linkage.qualification==="SOURCE_VERIFIED"||context.allow_test_only&&linkage.qualification==="TEST_ONLY");
           if(!linkQualified&&!fullTuples.length&&!bindingTuples.length)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
@@ -419,7 +436,7 @@ export class ExecutionReadScopes {
       if(retained?(p.workspaceId!==this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID||
         !(identity.owner||identity.member||identity.retained.length>0)):!identity.member)fail("EXECUTION_READ_NOT_AVAILABLE",404);
     }
-    const authority=context?contextProof(context):identity;
+    const authority=context?contextProof(context,b.environment,[...resources,...(r.resource?[r.resource]:[])]):identity;
     const fingerprint=accessDigest({mode,actor:p.user.userId,session:p.session.sessionId,generation:p.session.sessionVersion,
       workspace:p.workspaceId,viewer:p.viewerWorkspaceId,binding:b,requirement:r,authority,
       publication:publication&&{revision:publication.publication_revision,binding:publication.binding,resources:publication.resources,

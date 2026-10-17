@@ -27,6 +27,7 @@ import { CONTROL_API_CONFIG } from "../src/tokens";
 import { AccessAction, AccessActor, GrantChange, ReviewedAccessPolicy,
   ScopedAccessGrant, TsMembershipAcceptance } from "../src/execution-v2/access.contract";
 import { AccessRelations, accessDigest, canonicalChange, canonicalSelector } from "../src/execution-v2/access-policy";
+import { grantBindingDigest, type CurrentAccessRelations } from "../src/execution-v2/access-current-relations";
 import { ExecutionAccessController } from "../src/execution-v2/access.controller";
 import { AccessReceipt, AccessRepository } from "../src/execution-v2/access.repository";
 import { ExecutionAccessService } from "../src/execution-v2/access.service";
@@ -78,6 +79,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
   class TestOnlyTrust implements AccessTrustProvider {
     readonly receipts = new Map<object, TsMembershipAcceptance>();
     readonly memberships = new Map<string, AccessRelations["membership"]>();
+    readonly currentAuthorities = new Map<string, CurrentAccessRelations>();
     beforeHumanMapping?: () => Promise<void>;
     constructor(readonly artifact: ReviewedPolicyArtifact, readonly resources: AccessRelations["roots"]) {}
     async verifyPolicy(input: unknown) { return input === this.artifact ? this.artifact : null; }
@@ -90,7 +92,8 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
       const membership = this.memberships.get(userId) ?? null;
       return { qualified: true, revision: `TEST_ONLY-relations:${membership?.revision ?? "none"}`,
         own_alpha_ids: userId === researcher.user.userId ? ["TEST_ONLY-alpha-1"] : [],
-        member_portfolio_ids: ["TEST_ONLY-portfolio-1"], roots: this.resources, membership };
+        member_portfolio_ids: ["TEST_ONLY-portfolio-1"], roots: this.resources, membership,
+        ...(this.currentAuthorities.has(userId)?{membership:null,current_authority:structuredClone(this.currentAuthorities.get(userId)!)}:{}) };
     }
     async verifiedHumanMapping(userId: string, workspace: string) {
       if (this.beforeHumanMapping) await this.beforeHumanMapping();
@@ -1026,6 +1029,53 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
       expect((await storedGrant(submitted.receipt.grant_id!)).ts_receipt?.receipt_id).toBe(fact.receipt_id);
     } finally {spy.mockRestore();await pool.end();}
   });
+
+  it("original08 ordinary versioned intake persists the verified FULL fact digest, not a matching receipt ID",async()=>{
+    const f=await fixture(),{submitted}=await business(f),fact=await tsFact(f,submitted);
+    const pending=await storedGrant(submitted.receipt.grant_id!);
+    const resource={kind:"PORTFOLIO" as const,id:"TEST_ONLY-portfolio-1"};
+    const current:CurrentAccessRelations={schema_version:"pma.core-current-relations.v1",
+      subject_user_id:pending.subject_user_id,workspace_id:f.workspace,ts_user_id:fact.ts_user_id,mapping_revision:fact.mapping_revision,
+      resources:pending.environments.map(environment=>({environment,revision:"TEST_ONLY:current-cut",own_alpha_ids:[],
+        member_portfolio_ids:[resource.id],roots:[]})),
+      grants:[{grant_id:pending.grant_id,binding_digest:grantBindingDigest(pending),accepted:structuredClone(fact),
+        targets:pending.environments.map(environment=>({environment,resource,revision:"TEST_ONLY:current-leg",
+          native_reference_digest:accessDigest(["TEST_ONLY:original-native",environment,resource]),
+          valid_from_ms:fact.effective_at_ms,valid_until_ms:fact.expires_at_ms!}))}]};
+    f.trust.currentAuthorities.set(pending.subject_user_id,current);
+    const proof=f.trust.seal(fact,false);
+    await withCurrentHuman(f,manager,async cell=>{
+      const held=delegatedTrust(f,cell.pool,fact);
+      expect((await cell.service(async()=>undefined,held.trust).acceptTsReceipt(proof)).receipt.outcome).toBe("TS_APPLIED");
+      expect(held.calls()).toBe(1);expect(held.releases()).toBe(1);expect(held.held()).toBe(0);
+      const stored=await storedGrant(pending.grant_id);
+      expect(stored.ts_acceptance_digest).toBe(accessDigest(fact));
+      expect(await ownGrant(f,{...submitted.receipt,grant_id:stored.grant_id})).toMatchObject({current:true});
+      current.grants[0].accepted={...fact,provenance_ref:"TEST_ONLY:different-original-provenance"};
+      expect(await ownGrant(f,{...submitted.receipt,grant_id:stored.grant_id})).toMatchObject({current:false});
+      expect(await storedGrant(pending.grant_id)).toEqual(stored);
+    });
+    // An authenticated immutable ACK remains a read even with the source now
+    // changed and no coordinator installed; it cannot regrant or open a drain.
+    const before=await authorityRows(f);
+    expect(await f.service.acceptTsReceipt(proof)).toMatchObject({replayed:true,receipt:{outcome:"TS_APPLIED"}});
+    expect(await authorityRows(f)).toEqual(before);
+  });
+
+  it.each(["subject","parent-only"] as const)(
+    "original08 %s versioned observations require the real held coordinator before ANY receipt writes",async mode=>{
+      const f=await fixture(),{submitted}=await business(f),fact=await tsFact(f,submitted);
+      const principal=mode==="subject"?fact.portal_user_id:manager.user.userId;
+      f.trust.currentAuthorities.set(principal,{schema_version:"pma.core-current-relations.v1",
+        subject_user_id:principal,workspace_id:f.workspace,ts_user_id:`TEST_ONLY-ts:${principal}`,
+        mapping_revision:fact.mapping_revision,resources:[{environment:"paper",revision:"TEST_ONLY:current-cut",
+          own_alpha_ids:[],member_portfolio_ids:["TEST_ONLY-portfolio-1"],roots:[]}],grants:[]});
+      const before=await authorityRows(f),grant=await storedGrant(submitted.receipt.grant_id!);
+      await expect(f.service.acceptTsReceipt(f.trust.seal(fact,false)))
+        .rejects.toMatchObject({code:"RECEIPT_NOT_QUALIFIED",status:503});
+      expect(await authorityRows(f)).toEqual(before);
+      expect(await storedGrant(submitted.receipt.grant_id!)).toEqual(grant);
+    });
 
   it("ELP2-10 revoking a ceiling during delegated mapping refuses acceptance without a stale write",async()=>{
     const f=await fixture(),{submitted}=await business(f),fact=await tsFact(f,submitted);

@@ -11045,3 +11045,98 @@ not added twice); exact[receipt and consumer mapping](execution_loop/evidence/EL
 Source bytes/runtime stable and own cells/network cleaned. One normal-hook
 commit is pending; Regime chain remains implementation work, not config-only.
 
+
+<a id="epg10-08-current-correspondence"></a>
+
+#### EPG10-08 / ELP2-03 — compatible current native correspondence
+
+**17/10/2026 Asia/Saigon, IN_PROGRESS, full08 NOT_MET.** Bobby explicitly
+assigns completing PM–Research backend authority and the reviewed schema/identity
+installation, then Edge acceptance in original08. Source-only compatibility
+below does not itself install a producer, policy, mapping, trust or membership.
+Authority: Edge Unified23.20.6 and linked EDGE08/backend-contract3–5/REVIEW3;
+this Unified14, execution_loop AGENT_WORKING_RULES and PM current-relations
+proposal a4b9a570ef0926776fe6b12e2ce9931e67a3720e5def7d3cd8b0153d418ca800.
+
+**Entry / one writer:** `/home/bobby/portal-research`,
+`docs/research-loop-plan`@fdab164ce0187ac164efbf30ee232e8f3e1d5f3a.
+Peer Composition commit fdab164c is retained unchanged as the source base.
+Own eight execution-v2 files: access-current-relations.ts, access-digest.ts,
+access-policy.ts, access.contract.ts, access.service.ts, access-root-receipt.ts,
+access-delegated-receipt.ts, read-scope.ts; three tests
+elp210-current-grant-relations.spec.ts, elp210-root-receipt.spec.ts and
+elp2-access-transaction.spec.ts, plus this
+append. The committed peer full-accounting-population addition to read-scope.ts
+is retained as base, not claimed as this slice. Repin current
+HEAD/index/owned-file hashes before promotion; never overwrite foreign hooks
+or other authority/schema/runtime changes.
+
+**Goal / invariants:** per-grant/resource/environment current proofs, original
+full acceptance digest stamped only by verified Core receipt intake, distinct
+ordinary/reviewed-root facts, exact original identity/mapping and finite complete
+ROOT census. No historical receipt rewrite, latest-receipt inference, auto-renewal,
+implicit grant splitting or invalid-new-source legacy fallback. Revoke one native
+leg denies that leg and dependent descendants, preserves independent legs.
+Unresolved dynamic DENY cannot disappear behind explicit ALLOW. Cache/cursor/
+realtime delivery proof must track the selected scope, not unrelated observations.
+No new ledger, browser entitlement, private route or source activation.
+
+**Validation / budget / rollback:** source-only draft correctness uses cached
+Node2CPU/1536MiB/300s/network-none under its own measurement lease; synthetic
+TEST_ONLY facts are never actual authority. Original focus131 cases:129PASS,
+2FAIL because the new mocked scope context omitted current actor_role; fixed
+fixture before retake, retain first failure receipt. Normal configured Git hook
+retains existing Node3CPU/3GiB+PG1CPU/1GiB serial build/restore envelope. Include
+real disposable PG receipt intake/storage/rollback tests and unchanged legacy
+policy suite. No hook bypass/push/merge/operational restart or DB mutation.
+Revert only additive unmounted compatibility if needed; preserve accepted facts,
+revocations and peer changes. Runtime deployment remains separate from source
+test evidence, not a claim of connected08 acceptance.
+
+**Actual remaining integration:** authenticated native correspondence producer,
+original correspondence provenance and finite source census, real held source
+fence through serve/physical COMMIT, coordinated held-human authority writer
+installation, stable identity/policy bootstrap and actual revoke/cache/cursor/SSE
+drill. Row locks that vanish after source connection loss are not crash-safe
+remote-COMMIT authority; candidate SQL cannot be installed alone against legacy
+writers. No blanket approval is required again, but the exact package must pass
+preflight and preserve current operational authority. Native03/command07/full09
+are not silently activated by this code. Runnable owned implementation is not
+external debt. Source/component PASS, installed authority and full acceptance
+will be recorded separately with exact receipt/commit and cleanup.
+
+**Focused terminal, 17/10/2026 14:34 Asia/Saigon:**135/135PASS,0FAIL/SKIP,
+72new current-correspondence vectors plus63legacy policy regressions. Protected
+8SGP tuples unchanged; own container and lease removed. Immutable overlay
+receipt sha256 ccdec6bcf121305d852d61844f27b5e1ba8a0fb1639fdebb062bd20e82a9f759,
+private `/tmp/epg10-current-relations-focus-cb3f1j1u/evidence/receipt.json`.
+Earlier runs131(129PASS/2FAIL) and135(132PASS/3FAIL) are retained, not acceptance:
+new fixtures omitted actor_role, used a null receipt in a technical-only source
+builder, or reused the issuer's envelope for a different delegation subject.
+Fixtures now exercise the actual required correlation. Independent review found
+and fixed common non-TS technical/new-delegation subject/workspace correlation;
+source code gate is not narrowed to business grants. Actual PG ordinary and root
+intake definitions additionally check saved full-fact digests and later altered
+provenance refusal; these are NOT_RUN until normal-hook PG verification.
+
+**Post-focus security review:** new ordinary intake with any required principal's
+versioned observations now requires the existing held coordinator before a write;
+detached observations cannot prove through-COMMIT authority. No TEST_ONLY bypass.
+Historical immutable ACK and genuinely absent legacy extensions remain unchanged.
+The new real-PG positive uses CurrentHumanMutations plus the held qualifier;
+subject-only/parent-only negatives assert zero grant/proposal/event writes.
+The135PASS receipt predates this additional change; final focus/build/PG hook
+must be retaken on the exact final bytes before claiming this gate PASS.
+The configured commit hook validates the final staged slice; its immutable
+terminal receipt/result is indexed by Edge Unified23.20.6 and the single08
+owner packet, without treating that source gate as installed authority.
+
+**Final exact-byte focus:**135PASS/0FAIL/0SKIP after the additional intake guard,
+72new correspondence plus63legacy cases; immutable overlay on current source,
+own container/lease removed and8SGP protected tuples unchanged. Receipt
+sha256 d3c18b3e42d33d9b154760823fca2561847d600451f7c0833820144dc50ce9c0,
+private `/tmp/epg10-current-relations-focus-iek8edbe/evidence/receipt.json`.
+This does not execute the new PG intake cases; those belong to the configured
+normal-hook build/PG/restore gate. PM readonly review confirms source boundary
+compatibility with proposal a4b9a570…; opaque revision/native-reference digest
+is an authenticated aggregate, not a native global sequence or installed fence.

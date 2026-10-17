@@ -1,24 +1,17 @@
-import { z } from "zod";
 import type { Pool, PoolClient } from "pg";
 import { withTransaction } from "../db/pool";
 import { randomId } from "../domain";
-import { AccessPolicyError, accessText, reviewedAccessPolicy, scopedAccessGrant,
-  tsBusinessAction, tsMembershipAcceptance } from "./access.contract";
+import { AccessPolicyError, reviewedAccessPolicy, scopedAccessGrant,
+  tsBusinessAction, tsRootMembershipAcceptance, type TsRootMembershipAcceptance } from "./access.contract";
 import { accessDigest, canonicalSelector, type AccessRelations } from "./access-policy";
 import { AccessRepository, type AccessEvent, type AccessReceipt } from "./access.repository";
 import { CurrentHumanLeaseError } from "./current-human-candidate";
 import type { CurrentHumanMutations } from "./current-human-mutations";
-
-const digest = z.string().regex(/^sha256:[0-9a-f]{64}$/);
+import { currentAcceptanceMatches, currentAccessRelations, type CurrentAccessRelations } from "./access-current-relations";
 
 /** Private normalized verifier output, NOT a declaration of an existing TS wire.
  * A policy artifact cannot qualify this fact or copy an ordinary proposal receipt. */
-export const tsRootMembershipAcceptance = tsMembershipAcceptance.omit({ proposal_id: true, proposal_digest: true }).extend({
-  context: z.literal("REVIEWED_POLICY_ROOT"), policy_revision: accessText,
-  policy_artifact_digest: digest, policy_install_digest: digest, approval_ref: accessText,
-  grant_id: accessText, grant_digest: digest, expected_grant_revision: accessText,
-}).strict();
-export type TsRootMembershipAcceptance = z.infer<typeof tsRootMembershipAcceptance>;
+export { tsRootMembershipAcceptance, type TsRootMembershipAcceptance } from "./access.contract";
 
 /** The provider resolves all I/O before returning, and holds the current human
  * mapping/membership fence through Core COMMIT. Guards inside Core are sync only.
@@ -27,6 +20,7 @@ export interface QualifiedRootMembershipReceipt {
   fact: TsRootMembershipAcceptance;
   mapping: { ts_user_id: string; revision: string };
   membership: AccessRelations["membership"];
+  current_authority?: CurrentAccessRelations | null;
   assertCurrent(): void;
   release(): Promise<void>;
 }
@@ -78,10 +72,14 @@ export async function acceptRootMembershipReceipt(pool: Pool,
     // Detach mutable verifier fields before the first await; the held guard
     // independently attests their continued authority, not their JS references.
     const mapping = structuredClone(lease.mapping), membership = structuredClone(lease.membership);
+    const versioned = Object.hasOwn(lease,"current_authority");
+    const authority = versioned ? currentAccessRelations.safeParse(structuredClone(lease.current_authority)) : null;
+    if (versioned && (!authority?.success || authority.data.subject_user_id!==fact.portal_user_id ||
+      authority.data.workspace_id!==fact.workspace_id || authority.data.mapping_revision!==mapping?.revision)) throw refusal();
     if (!mapping || mapping.ts_user_id !== fact.ts_user_id || mapping.revision !== fact.mapping_revision ||
       fact.previous_membership_revision !== null || fact.membership_revision === fact.previous_membership_revision)
       throw refusal();
-    if (fact.outcome === "ACCEPTED" && (!membership || membership.revision !== fact.membership_revision ||
+    if (!versioned && fact.outcome === "ACCEPTED" && (!membership || membership.revision !== fact.membership_revision ||
       membership.receipt_id !== fact.receipt_id || membership.mapping_revision !== fact.mapping_revision))
       throw new AccessPolicyError("TS_MEMBERSHIP_REVISION_CONFLICT", 409);
     guardNow(guard);
@@ -140,11 +138,14 @@ export async function acceptRootMembershipReceipt(pool: Pool,
           fact.expires_at_ms !== null && (fact.expires_at_ms <= now || fact.expires_at_ms <= fact.effective_at_ms) ||
           grant.valid_until_ms !== null && (fact.expires_at_ms === null || fact.expires_at_ms > grant.valid_until_ms))
           throw new AccessPolicyError("RECEIPT_REVISION_CONFLICT", 409);
+        if (versioned && fact.outcome==="ACCEPTED" && (!authority?.success ||
+          !currentAcceptanceMatches(fact,grant,authority.data,now)))
+          throw new AccessPolicyError("TS_MEMBERSHIP_REVISION_CONFLICT",409);
         if (currentGuard) guardNow(currentGuard);
       };
       const now = await dbNow(db); assertCurrent(now);
       if (!write) return null;
-      const updated = fact.outcome === "ACCEPTED" ? { ...grant, revision: randomId("acr"), ts_receipt: {
+      const updated = fact.outcome === "ACCEPTED" ? { ...grant, revision: randomId("acr"), ts_acceptance_digest:proofDigest, ts_receipt: {
         receipt_id: fact.receipt_id, membership_revision: fact.membership_revision, mapping_revision: fact.mapping_revision,
         effective_at_ms: fact.effective_at_ms, expires_at_ms: fact.expires_at_ms,
       } } : grant;
@@ -187,7 +188,7 @@ export async function acceptRootMembershipReceipt(pool: Pool,
       // the coordinator reacquires an exact fresh fence after recovery.
       initialLeaseHeld = false;
       try { await release(); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
-      const qualifiedDigest = accessDigest({ fact, mapping, membership });
+      const qualifiedDigest = accessDigest({ fact, mapping, membership, ...(versioned?{current_authority:authority!.success?authority!.data:null}:{}) });
       let currentGuard: (() => void) | null = null;
       return await authorityMutations.executeVerified({ family: "QUALIFIED_ROOT_RECEIPT", operation: "ROOT_RECEIPT",
         key_digest: accessDigest(["ROOT_RECEIPT", fact.source, fact.receipt_id]), request_digest: proofDigest,
@@ -203,7 +204,8 @@ export async function acceptRootMembershipReceipt(pool: Pool,
             if (typeof freshLease.assertCurrent !== "function") throw notQualified();
             const parsed = tsRootMembershipAcceptance.safeParse(freshLease.fact);
             if (!parsed.success || accessDigest({ fact: parsed.data,
-              mapping: structuredClone(freshLease.mapping), membership: structuredClone(freshLease.membership) }) !== qualifiedDigest)
+              mapping: structuredClone(freshLease.mapping), membership: structuredClone(freshLease.membership),
+              ...(Object.hasOwn(freshLease,"current_authority")?{current_authority:structuredClone(freshLease.current_authority)}:{}) }) !== qualifiedDigest)
               throw refusal();
             const assertCurrent = freshLease.assertCurrent.bind(freshLease);
             guardNow(assertCurrent);

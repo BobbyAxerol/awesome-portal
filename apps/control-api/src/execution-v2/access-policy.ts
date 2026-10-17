@@ -1,6 +1,9 @@
-import { createHash } from "node:crypto";
 import { AccessAction, AccessPolicyError, AccessResource, AccessRefusal, GrantChange,
   ReviewedAccessPolicy, ResourceSelector, ScopedAccessGrant, tsBusinessAction } from "./access.contract";
+import { currentAccessRelations, currentGrantProof, currentResources,
+  type CurrentAccessRelations, type AccessEnvironment } from "./access-current-relations";
+import { accessDigest, canonicalSelector } from "./access-digest";
+export { accessDigest, canonicalSelector } from "./access-digest";
 
 /** Trusted finite relations; no browser name, owner string or historical attribution. */
 export interface AccessRelations {
@@ -11,29 +14,63 @@ export interface AccessRelations {
   roots: Readonly<Record<string, readonly AccessResource[]>>;
   /** Current canonical TS revision/receipt, obtained by a qualified adapter. */
   membership: null | { revision: string; receipt_id: string; mapping_revision: string };
+  /** Opt-in versioned source result. Present-but-invalid NEVER falls back to
+   * the legacy single tuple. No authority is installed by adding this port. */
+  current_authority?: CurrentAccessRelations | null;
 }
 export const unqualifiedAccessRelations = (): AccessRelations => ({ qualified: false, revision: "UNQUALIFIED",
   own_alpha_ids: [], member_portfolio_ids: [], roots: {}, membership: null });
 
-/** Canonical object keys; arrays preserve order unless explicitly declared sets. */
-function canonical(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonical);
-  if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value)
-    .sort(([a],[b]) => a < b ? -1 : a > b ? 1 : 0).map(([key,item]) => [key,canonical(item)]));
-  return value;
+/** Legacy flattened fields must not override a versioned environment cut. */
+export function environmentRelations(relations: AccessRelations, env: AccessEnvironment): AccessRelations {
+  if (!Object.hasOwn(relations,"current_authority")) return relations;
+  const parsed=currentAccessRelations.safeParse(relations.current_authority);
+  const cut=parsed.success?parsed.data.resources.find(item=>item.environment===env):null;
+  if (!relations.qualified || !cut) return {...relations,qualified:false,own_alpha_ids:[],member_portfolio_ids:[],roots:{}};
+  return {...relations,own_alpha_ids:cut.own_alpha_ids,member_portfolio_ids:cut.member_portfolio_ids,
+    roots:Object.fromEntries(cut.roots.filter(root=>root.complete&&root.resources.length>0)
+      .map(root=>[root.root_id,root.resources]))};
 }
-export const accessDigest = (value: unknown): string => `sha256:${createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex")}`;
-export function canonicalSelector(selector: ResourceSelector): ResourceSelector {
-  if (selector.kind === "EXPLICIT_RESOURCE_SET") return { ...selector, ids: [...selector.ids].sort() };
-  if (selector.kind === "PORTFOLIO_MEMBERSHIP") return { ...selector, portfolio_ids: [...selector.portfolio_ids].sort() };
-  return selector;
+
+/** Source proof at a delivery boundary. Unrelated native legs and global
+ * observation revisions cannot invalidate this visible resource's identity. */
+export function currentBoundaryProof(context: AccessEvaluationContext, env: AccessEnvironment,
+  resources: readonly AccessResource[]) {
+  const selected=[...new Map(resources.map(resource=>[JSON.stringify([resource.kind,resource.id]),resource])).values()]
+    .sort((a,b)=>JSON.stringify(a)<JSON.stringify(b)?-1:JSON.stringify(a)>JSON.stringify(b)?1:0);
+  const principals=[...new Set(context.grants.flatMap(g=>[g.subject_user_id,g.issued_by]).concat(context.principal_id))].sort();
+  return principals.map(id=>{
+    const relations=context.relationsFor(id);
+    if (!Object.hasOwn(relations,"current_authority")) return [id,relations];
+    const parsed=currentAccessRelations.safeParse(relations.current_authority);
+    if (!relations.qualified || !parsed.success) return [id,"UNQUALIFIED_CURRENT_SOURCE"];
+    const source=parsed.data, cut=source.resources.find(item=>item.environment===env);
+    return [id,source.mapping_revision,selected.map(resource=>[resource,
+      cut?.own_alpha_ids.includes(resource.id)&&resource.kind==="ALPHA",
+      cut?.member_portfolio_ids.includes(resource.id)&&resource.kind==="PORTFOLIO",
+      context.grants.filter(g=>g.subject_user_id===id&&g.environments.includes(env)).map(g=>[
+        g.grant_id,currentGrantProof(g,source,resource,env,context.now_ms),
+        grantCurrent(g,context,new Set(),{resource,environment:env})])])];
+  });
 }
+
 export const canonicalChange = (change: GrantChange): GrantChange => ({ ...change,
   selector: canonicalSelector(change.selector), environments: [...change.environments].sort(),
   delegable_actions: [...change.delegable_actions].sort() });
 
-export function resolvedResources(selector: ResourceSelector, relations: AccessRelations): AccessResource[] {
+export function resolvedResources(selector: ResourceSelector, relations: AccessRelations,
+  environment?: AccessEnvironment): AccessResource[] {
+  // Explicit static IDs do not need a dynamic census (also permits proving
+  // that an explicit DENY is disjoint while another census is unavailable).
   if (selector.kind === "EXPLICIT_RESOURCE_SET") return selector.ids.map(id => ({ kind: selector.resource_kind, id }));
+  if (Object.hasOwn(relations,"current_authority")) {
+    const source = currentAccessRelations.safeParse(relations.current_authority);
+    if (!relations.qualified || !source.success || !environment)
+      throw new AccessPolicyError("SOURCE_RELATION_NOT_QUALIFIED");
+    const resources = currentResources(selector,source.data,environment);
+    if (!resources) throw new AccessPolicyError("SOURCE_RELATION_NOT_QUALIFIED");
+    return resources;
+  }
   if (!relations.qualified) throw new AccessPolicyError("SOURCE_RELATION_NOT_QUALIFIED");
   if (selector.kind === "OWN_ALPHA") return relations.own_alpha_ids.map(id => ({ kind: "ALPHA", id }));
   if (selector.kind === "PORTFOLIO_MEMBERSHIP") return selector.portfolio_ids
@@ -44,9 +81,10 @@ export function resolvedResources(selector: ResourceSelector, relations: AccessR
 }
 const resourceKey = (r: AccessResource) => JSON.stringify([r.kind,r.id]);
 const subset = <T>(child: readonly T[], parent: readonly T[]) => child.every(value => parent.includes(value));
-function selectorSubset(child: ResourceSelector, childRelations: AccessRelations, parent: ResourceSelector, parentRelations: AccessRelations) {
-  const allowed = new Set(resolvedResources(parent,parentRelations).map(resourceKey));
-  const requested = resolvedResources(child,childRelations);
+function selectorSubset(child: ResourceSelector, childRelations: AccessRelations, parent: ResourceSelector,
+  parentRelations: AccessRelations, environment?: AccessEnvironment) {
+  const allowed = new Set(resolvedResources(parent,parentRelations,environment).map(resourceKey));
+  const requested = resolvedResources(child,childRelations,environment);
   // A currently empty dynamic selector must not acquire future unbounded rights.
   return requested.length > 0 && requested.every(resource => allowed.has(resourceKey(resource)));
 }
@@ -75,26 +113,65 @@ export function policyReady(context: AccessEvaluationContext): boolean {
     (policy.qualification === "OWNER_VERIFIED" || context.allow_test_only === true && policy.qualification === "TEST_ONLY"));
 }
 
+/** Correlation is mandatory for ALL versioned relations, including technical
+ * grants and a new delegation subject that has no business grant yet. */
+function currentSourceMatchesPrincipal(context:AccessEvaluationContext,principalId:string):boolean {
+  const relations=context.relationsFor(principalId);
+  if(!Object.hasOwn(relations,"current_authority"))return true;
+  const parsed=currentAccessRelations.safeParse(relations.current_authority);
+  return relations.qualified&&parsed.success&&parsed.data.subject_user_id===principalId&&
+    parsed.data.workspace_id===context.workspace_id;
+}
+
 /** Re-evaluate the complete current chain on every use; no insert-time entitlement cache. */
-export function grantCurrent(grant: ScopedAccessGrant, context: AccessEvaluationContext, seen = new Set<string>()): boolean {
+export function grantCurrent(grant: ScopedAccessGrant, context: AccessEvaluationContext, seen = new Set<string>(),
+  scope?: { resource: AccessResource; environment: AccessEnvironment }): boolean {
   if (!policyReady(context) || seen.size >= 16 || seen.has(grant.grant_id) || grant.workspace_id !== context.workspace_id ||
     grant.policy_revision !== context.policy!.revision || grant.revoked_at_ms !== null || grant.valid_from_ms > context.now_ms ||
     grant.valid_until_ms !== null && grant.valid_until_ms <= context.now_ms ||
-    !context.active_principals.has(grant.subject_user_id) || !context.active_principals.has(grant.issued_by)) return false;
+    !context.active_principals.has(grant.subject_user_id) || !context.active_principals.has(grant.issued_by) ||
+    !currentSourceMatchesPrincipal(context,grant.subject_user_id)) return false;
   seen.add(grant.grant_id);
   // A reviewed Portal artifact cannot waive the independent TS authority gate.
   if (grant.requires_ts_acceptance || tsBusinessAction(grant.action)&&grant.effect==="ALLOW") {
-    const receipt=grant.ts_receipt, current=context.relationsFor(grant.subject_user_id).membership;
-    if (!receipt || !current || receipt.receipt_id !== current.receipt_id || receipt.membership_revision !== current.revision ||
-      receipt.mapping_revision !== current.mapping_revision || receipt.effective_at_ms > context.now_ms ||
-      receipt.expires_at_ms !== null && receipt.expires_at_ms <= context.now_ms) return false;
+    const relations=context.relationsFor(grant.subject_user_id);
+    if (Object.hasOwn(relations,"current_authority")) {
+      const source=currentAccessRelations.safeParse(relations.current_authority);
+      if (!relations.qualified || !source.success || source.data.subject_user_id!==grant.subject_user_id ||
+        source.data.workspace_id!==context.workspace_id) return false;
+      if (!scope) {
+        // Whole-grant queries/intake require EVERY declared resource/environment,
+        // not merely one good leg. Normal reads pass their exact use boundary.
+        try { return grant.environments.every(environment => {
+          const resources=resolvedResources(grant.selector,relations,environment);
+          return resources.length>0 && resources.every(resource=>grantCurrent(grant,context,new Set(),{resource,environment}));
+        }); } catch { return false; }
+      }
+      if (!grant.environments.includes(scope.environment) ||
+        !currentGrantProof(grant,source.data,scope.resource,scope.environment,context.now_ms)) return false;
+      try {
+        if (!resolvedResources(grant.selector,relations,scope.environment).some(resource=>resourceKey(resource)===resourceKey(scope.resource)))
+          return false;
+      } catch { return false; }
+    } else {
+      const receipt=grant.ts_receipt, current=relations.membership;
+      if (!receipt || !current || receipt.receipt_id !== current.receipt_id || receipt.membership_revision !== current.revision ||
+        receipt.mapping_revision !== current.mapping_revision || receipt.effective_at_ms > context.now_ms ||
+        receipt.expires_at_ms !== null && receipt.expires_at_ms <= context.now_ms) return false;
+    }
   }
   if (grant.parent_grant_id === null) return grant.issued_by === context.policy!.protected_owner_user_id;
   const parent=context.grants.find(item => item.grant_id === grant.parent_grant_id);
   if (!parent || parent.subject_user_id !== grant.issued_by || parent.effect !== "ALLOW" || parent.action !== "access.grant" ||
     !parent.delegable_actions.includes(grant.action) || !subset(grant.delegable_actions,parent.delegable_actions) ||
-    !subset(grant.environments,parent.environments) || !intervalWithin(grant,parent) || !grantCurrent(parent,context,seen)) return false;
-  try { return selectorSubset(grant.selector,context.relationsFor(grant.subject_user_id), parent.selector,context.relationsFor(parent.subject_user_id)); }
+    !subset(grant.environments,parent.environments) || !intervalWithin(grant,parent) || !grantCurrent(parent,context,seen,scope)) return false;
+  try {
+    const child=context.relationsFor(grant.subject_user_id), issuer=context.relationsFor(parent.subject_user_id);
+    if (scope && (Object.hasOwn(child,"current_authority") || Object.hasOwn(issuer,"current_authority")))
+      return resolvedResources(grant.selector,child,scope.environment).some(r=>resourceKey(r)===resourceKey(scope.resource)) &&
+        resolvedResources(parent.selector,issuer,scope.environment).some(r=>resourceKey(r)===resourceKey(scope.resource));
+    return grant.environments.every(environment=>selectorSubset(grant.selector,child,parent.selector,issuer,environment));
+  }
   catch { return false; }
 }
 
@@ -108,9 +185,9 @@ function ancestorDelegationDenied(grant: ScopedAccessGrant, context: AccessEvalu
   while(node?.parent_grant_id && !seen.has(node.grant_id)) {
     seen.add(node.grant_id);
     if(context.grants.some(deny=>deny.subject_user_id===node!.issued_by && deny.action==="access.grant" &&
-      deny.effect==="DENY" && deny.environments.includes(environment) && grantCurrent(deny,context) && (()=>{
-        try{return resolvedResources(deny.selector,context.relationsFor(deny.subject_user_id)).some(r=>resourceKey(r)===resourceKey(resource));}
-        catch{return false;}
+      deny.effect==="DENY" && deny.environments.includes(environment) && grantCurrent(deny,context,new Set(),{resource,environment}) && (()=>{
+        try{return resolvedResources(deny.selector,context.relationsFor(deny.subject_user_id),environment).some(r=>resourceKey(r)===resourceKey(resource));}
+        catch{return Object.hasOwn(context.relationsFor(deny.subject_user_id),"current_authority");}
       })())) return true;
     node=context.grants.find(item=>item.grant_id===node!.parent_grant_id);
   }
@@ -119,10 +196,10 @@ function ancestorDelegationDenied(grant: ScopedAccessGrant, context: AccessEvalu
 function matchingGrants(context:AccessEvaluationContext,action:AccessAction,resource:AccessResource,
   environment:"paper"|"sandbox"|"live") {
   return context.grants.filter(grant=>grant.subject_user_id===context.principal_id&&grant.action===action&&
-    grant.environments.includes(environment)&&grantCurrent(grant,context)&&
+    grant.environments.includes(environment)&&grantCurrent(grant,context,new Set(),{resource,environment})&&
     !ancestorDelegationDenied(grant,context,resource,environment)).filter(grant=>{
-      try{return resolvedResources(grant.selector,context.relationsFor(context.principal_id)).some(r=>resourceKey(r)===resourceKey(resource));}
-      catch{return false;}
+      try{return resolvedResources(grant.selector,context.relationsFor(context.principal_id),environment).some(r=>resourceKey(r)===resourceKey(resource));}
+      catch{return grant.effect==="DENY"&&Object.hasOwn(context.relationsFor(grant.subject_user_id),"current_authority");}
     });
 }
 export function evaluateAccess(context: AccessEvaluationContext, action: AccessAction, resource: AccessResource,
@@ -132,7 +209,15 @@ export function evaluateAccess(context: AccessEvaluationContext, action: AccessA
     let node: ScopedAccessGrant | undefined = grant;
     while (node && !seen.has(node.grant_id) && seen.size < 16) {
       seen.add(node.grant_id);
-      proof.push([node.grant_id,node.revision,node.revoked_at_ms,context.relationsFor(node.subject_user_id).revision]);
+      const relations=context.relationsFor(node.subject_user_id);
+      if (Object.hasOwn(relations,"current_authority")) {
+        const source=currentAccessRelations.safeParse(relations.current_authority);
+        const selected=source.success?currentGrantProof(node,source.data,resource,environment,context.now_ms):null;
+        const cut=source.success?source.data.resources.find(item=>item.environment===environment):null;
+        const root=node.selector.kind==="ROOT_SCOPE"?cut?.roots.find(item=>item.root_id===(node!.selector as {root_id:string}).root_id):null;
+        proof.push([node.grant_id,node.revision,node.revoked_at_ms,selected,
+          node.selector.kind==="ROOT_SCOPE"?root:node.selector.kind==="EXPLICIT_RESOURCE_SET"?null:cut?.revision]);
+      } else proof.push([node.grant_id,node.revision,node.revoked_at_ms,relations.revision]);
       node = node.parent_grant_id ? context.grants.find(item => item.grant_id === node!.parent_grant_id) : undefined;
     }
     return proof;
@@ -140,7 +225,8 @@ export function evaluateAccess(context: AccessEvaluationContext, action: AccessA
   const decide = (allowed: boolean, reason: AccessRefusal|null, grants: readonly ScopedAccessGrant[] = []): AccessDecision => ({
     allowed, reason_code: reason, decision_id: accessDigest([context.principal_id,context.workspace_id,action,resource,environment,
       grants.map(grant => [grant.grant_id,grant.revision]),reason]), policy_revision: context.policy?.revision ?? null,
-    scope_revision: accessDigest([context.principal_id,context.workspace_id,environment,context.relationsFor(context.principal_id).revision,
+    scope_revision: accessDigest([context.principal_id,context.workspace_id,environment,
+      Object.hasOwn(context.relationsFor(context.principal_id),"current_authority")?resource:context.relationsFor(context.principal_id).revision,
       [...grants].sort((a,b)=>a.grant_id < b.grant_id ? -1 : 1).map(chainProof)]),
     field_policy_ref: allowed ? grants.find(g => g.effect === "ALLOW")?.field_policy_ref ?? null : null });
   if (!context.actor_current || !context.active_principals.has(context.principal_id)) return decide(false,"CURRENT_ACTOR_AUTHORITY_REQUIRED");
@@ -190,11 +276,15 @@ export function validateDelegation(context: AccessEvaluationContext, change: Gra
   if (change.subject_user_id === context.policy!.protected_owner_user_id) throw new AccessPolicyError("PROTECTED_OWNER_CHANGE_DENIED");
   if (change.action === "owner.recovery") throw new AccessPolicyError("OWNER_RECOVERY_NOT_APPROVED");
   if (change.expected_policy_revision !== context.policy!.revision) throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
+  if(!currentSourceMatchesPrincipal(context,change.subject_user_id))throw new AccessPolicyError("SOURCE_RELATION_NOT_QUALIFIED");
   const ceiling=context.grants.find(g => g.grant_id === change.ceiling_grant_id && g.subject_user_id === context.principal_id);
-  if (!ceiling || ceiling.action !== "access.grant" || ceiling.effect !== "ALLOW" || !grantCurrent(ceiling,context) ||
+  if (!ceiling || ceiling.action !== "access.grant" || ceiling.effect !== "ALLOW" ||
     !ceiling.delegable_actions.includes(change.action) || !subset(change.delegable_actions,ceiling.delegable_actions) ||
     !subset(change.environments,ceiling.environments) || !intervalWithin(change,ceiling) ||
-    !selectorSubset(change.selector,context.relationsFor(change.subject_user_id),ceiling.selector,context.relationsFor(context.principal_id)))
+    !change.environments.every(environment=>selectorSubset(change.selector,context.relationsFor(change.subject_user_id),
+      ceiling.selector,context.relationsFor(context.principal_id),environment)) ||
+    !change.environments.every(environment=>resolvedResources(change.selector,context.relationsFor(change.subject_user_id),environment)
+      .every(resource=>grantCurrent(ceiling,context,new Set(),{resource,environment}))))
     throw new AccessPolicyError("DELEGATION_CEILING_EXCEEDED");
   if (ceiling.revision !== change.expected_ceiling_revision) throw new AccessPolicyError("GRANT_REVISION_CONFLICT",409);
   const ancestors = new Set<string>([change.subject_user_id]);
@@ -205,8 +295,8 @@ export function validateDelegation(context: AccessEvaluationContext, change: Gra
     node = node.parent_grant_id ? context.grants.find(g => g.grant_id === node!.parent_grant_id) : undefined;
   }
   // Explicit current DENY of access.grant cannot be bypassed by naming an ALLOW ceiling.
-  const resources=resolvedResources(change.selector,context.relationsFor(change.subject_user_id));
-  for (const resource of resources) for (const environment of change.environments) {
+  for (const environment of change.environments) for (const resource of
+    resolvedResources(change.selector,context.relationsFor(change.subject_user_id),environment)) {
     const decision=evaluateAccess(context,"access.grant",resource,environment);
     if (!decision.allowed) throw new AccessPolicyError("DELEGATION_CEILING_EXCEEDED");
   }

@@ -18,6 +18,7 @@ import { acceptRootMembershipReceipt, tsRootMembershipAcceptance, type Qualified
 import { CurrentHumanCandidate, type CurrentHumanBinding, type CurrentHumanCandidateConfig } from "../src/execution-v2/current-human-candidate";
 import { CurrentHumanMutations, type CurrentHumanRecoveryAttempt } from "../src/execution-v2/current-human-mutations";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
+import { grantBindingDigest, type CurrentAccessRelations } from "../src/execution-v2/access-current-relations";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL;
 const next = (label: string) => `elp210-root-${label}-${randomUUID()}`;
@@ -136,6 +137,17 @@ describe.skipIf(!DATABASE_URL)("ELP2-10 exact root receipt through reviewed poli
       onGuard(fn: (calls: number) => void) { onGuard = fn; } };
   }
   type Fixture = Awaited<ReturnType<typeof fixture>>;
+  function currentAuthority(f:Fixture):CurrentAccessRelations {
+    const portfolio={kind:"PORTFOLIO" as const,id:"TEST_ONLY:current-portfolio"},root={kind:"ROOT" as const,id:"TEST_ONLY-root"};
+    return {schema_version:"pma.core-current-relations.v1",subject_user_id:f.target,workspace_id:f.workspace,
+      ts_user_id:f.fact.ts_user_id,mapping_revision:f.fact.mapping_revision,
+      resources:f.grant.environments.map(environment=>({environment,revision:"TEST_ONLY:finite-cut",own_alpha_ids:[],
+        member_portfolio_ids:[portfolio.id],roots:[{root_id:root.id,revision:"TEST_ONLY:root-cut",complete:true,resources:[portfolio]}]})),
+      grants:[{grant_id:f.grant.grant_id,binding_digest:grantBindingDigest(f.grant),accepted:structuredClone(f.fact),
+        targets:f.grant.environments.flatMap(environment=>[root,portfolio].map(resource=>({resource,environment,
+          revision:"TEST_ONLY:current-native-leg",native_reference_digest:accessDigest(["TEST_ONLY:original-native",environment,resource]),
+          valid_from_ms:f.fact.effective_at_ms,valid_until_ms:f.fact.expires_at_ms!})))}]};
+  }
   async function changeGrant(f: Fixture, update: Partial<ScopedAccessGrant>) {
     await new AccessRepository(ctx.pool).saveGrant({ ...f.grant, ...update });
   }
@@ -282,6 +294,26 @@ describe.skipIf(!DATABASE_URL)("ELP2-10 exact root receipt through reviewed poli
     expect((await service.acceptRootTsReceipt(f.token)).receipt.outcome).toBe("TS_APPLIED");
     expect(verify).toHaveBeenCalledWith(f.token); expect((await f.stored())!.ts_receipt?.receipt_id).toBe(f.fact.receipt_id);
     expect(f.lease.release).toHaveBeenCalledOnce(); expect(await f.events()).toBe(1);
+  });
+  it("accepts distinct reviewed-root current targets without requiring a fictitious singleton native receipt",async()=>{
+    const f=await fixture();f.lease.current_authority=currentAuthority(f);f.lease.membership=null;
+    expect((await f.accept()).receipt.outcome).toBe("TS_APPLIED");
+    const stored=(await f.stored())!;expect(stored.ts_receipt?.receipt_id).toBe(f.fact.receipt_id);
+    expect(stored.ts_acceptance_digest).toBe(accessDigest(f.fact));
+    const context={principal_id:f.target,workspace_id:f.workspace,now_ms:Date.now(),actor_current:true,
+      policy:f.policy,grants:[stored],active_principals:new Set([owner,f.target]),allow_test_only:true,
+      relationsFor:()=>({qualified:true,revision:"TEST_ONLY:observation",own_alpha_ids:[],member_portfolio_ids:[],roots:{},
+        membership:null,current_authority:f.lease.current_authority})};
+    expect(grantCurrent(stored,context)).toBe(true);expect(await f.events()).toBe(1);expect(f.lease.release).toHaveBeenCalledOnce();
+    expect(f.lease.current_authority.grants[0].accepted).not.toHaveProperty("proposal_id");
+    f.lease.current_authority.grants[0].accepted={...f.fact,payload_digest:accessDigest("TEST_ONLY:changed-original-payload")};
+    expect(grantCurrent(stored,context)).toBe(false);expect(await f.stored()).toEqual(stored);
+  });
+  it("rolls back new root intake when one required resource/environment lacks current native correspondence",async()=>{
+    const f=await fixture();f.lease.current_authority=currentAuthority(f);
+    f.lease.current_authority.grants[0].targets.pop();
+    await expect(f.accept()).rejects.toMatchObject({code:"TS_MEMBERSHIP_REVISION_CONFLICT"});
+    expect((await f.stored())!.ts_receipt).toBeNull();expect(await f.events()).toBe(0);expect(f.lease.release).toHaveBeenCalledOnce();
   });
   it.each(["policy_revision", "policy_artifact_digest", "policy_install_digest", "approval_ref", "grant_digest", "expected_grant_revision",
     "action", "selector_digest", "environments", "human_requester_user_id", "previous_membership_revision"] as const)(

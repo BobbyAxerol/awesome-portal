@@ -74,6 +74,9 @@ export interface ScopedAccessGrant {
   requires_ts_acceptance: boolean;
   ts_receipt: null | { receipt_id: string; membership_revision: string; mapping_revision: string;
     effective_at_ms: number; expires_at_ms: number | null };
+  /** Core-stamped hash of the original verified full acceptance fact. Optional
+   * for legacy rows; never inferred from today's source or receipt-ID equality. */
+  ts_acceptance_digest?: string;
   field_policy_ref: string | null;
 }
 
@@ -127,9 +130,11 @@ export const scopedAccessGrant=z.object({grant_id:accessText,subject_user_id:acc
   issued_by:accessText,parent_grant_id:accessText.nullable(),revision:opaqueRevision,policy_revision:opaqueRevision,
   revoked_at_ms:utcMilliseconds.nullable(),requires_ts_acceptance:z.boolean(),
   ts_receipt:z.object({receipt_id:accessText,membership_revision:opaqueRevision,mapping_revision:opaqueRevision,
-    effective_at_ms:utcMilliseconds,expires_at_ms:utcMilliseconds.nullable()}).strict().nullable(),field_policy_ref:accessText.nullable(),
+    effective_at_ms:utcMilliseconds,expires_at_ms:utcMilliseconds.nullable()}).strict().nullable(),
+  ts_acceptance_digest:digest.optional(),field_policy_ref:accessText.nullable(),
 }).strict().refine(v=>v.valid_until_ms===null||v.valid_until_ms>v.valid_from_ms,"INVALID_INTERVAL")
-  .refine(v=>v.action==="access.grant"||v.delegable_actions.length===0,"INVALID_ONWARD_ACTIONS");
+  .refine(v=>v.action==="access.grant"||v.delegable_actions.length===0,"INVALID_ONWARD_ACTIONS")
+  .refine(v=>v.ts_acceptance_digest===undefined||v.ts_receipt!==null,"ACCEPTANCE_FACT_REQUIRES_RECEIPT");
 export const reviewedAccessPolicy=z.object({workspace_id:accessText,revision:opaqueRevision,artifact_digest:digest,
   approval_ref:accessText,state:z.enum(["REVIEWED","PENDING"]),qualification:z.enum(["OWNER_VERIFIED","TEST_ONLY","UNQUALIFIED"]),
   protected_owner_user_id:accessText,researcher_fields:z.object({state:z.enum(["PENDING","QUALIFIED"]),policy_ref:accessText.nullable(),
@@ -140,3 +145,12 @@ export const tsMembershipAcceptance=z.object({source:accessText,source_contract:
   previous_membership_revision:opaqueRevision.nullable(),membership_revision:opaqueRevision,effective_at_ms:utcMilliseconds,
   expires_at_ms:utcMilliseconds.nullable(),outcome:z.enum(["ACCEPTED","REJECTED","UNKNOWN"]),payload_digest:digest,provenance_ref:accessText,
 }).strict();
+
+/** Reviewed-root acceptance is a distinct original fact, never an ordinary
+ * proposal with fabricated proposal IDs. Shared only for private validation. */
+export const tsRootMembershipAcceptance = tsMembershipAcceptance.omit({ proposal_id: true, proposal_digest: true }).extend({
+  context: z.literal("REVIEWED_POLICY_ROOT"), policy_revision: accessText,
+  policy_artifact_digest: digest, policy_install_digest: digest, approval_ref: accessText,
+  grant_id: accessText, grant_digest: digest, expected_grant_revision: accessText,
+}).strict();
+export type TsRootMembershipAcceptance = z.infer<typeof tsRootMembershipAcceptance>;

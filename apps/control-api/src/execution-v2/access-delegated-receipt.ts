@@ -6,6 +6,7 @@ import { accessDigest, type AccessRelations } from "./access-policy";
 import type { AccessReceipt } from "./access.repository";
 import { CurrentHumanLeaseError } from "./current-human-candidate";
 import type { CurrentHumanMutations } from "./current-human-mutations";
+import { currentAccessRelations } from "./access-current-relations";
 
 /** Private adapter contract, not an existing TS wire or browser authority. */
 export interface DelegatedReceiptScope {
@@ -33,6 +34,7 @@ const sourceRelations = z.object({ qualified: z.boolean(), revision: z.string().
   roots: z.record(z.array(accessResource).refine(items =>
     new Set(items.map(item => JSON.stringify([item.kind, item.id]))).size === items.length, "DUPLICATE_SOURCE_RESOURCE")),
   membership: z.object({ revision, receipt_id: accessText, mapping_revision: revision }).strict().nullable(),
+  current_authority: currentAccessRelations.nullable().optional(),
 }).strict();
 const sourceSchema = z.object({ fact: tsMembershipAcceptance,
   mapping: z.object({ ts_user_id: accessText, revision }).strict().nullable(),

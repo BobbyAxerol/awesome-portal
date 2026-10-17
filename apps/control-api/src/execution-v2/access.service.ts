@@ -21,6 +21,7 @@ import { coordinateDelegatedMembershipReceipt, type DelegatedReceiptSource } fro
 import { captureCurrentHumanSnapshot } from "./current-human-snapshot";
 import { CurrentHumanLeaseError } from "./current-human-candidate";
 import { CurrentHumanMutations, type CurrentHumanMutationBinding, type CurrentHumanMutationHooks } from "./current-human-mutations";
+import { currentAcceptanceMatches, currentAccessRelations } from "./access-current-relations";
 
 type Tx={db:PoolClient;repo:AccessRepository;context:AccessEvaluationContext;recheck:(check:()=>void)=>void};
 type OperationResult={receipt:AccessReceipt;replayed:boolean};
@@ -281,8 +282,10 @@ export class ExecutionAccessService {
       grants:context.grants.filter(g=>g.subject_user_id===actor.user_id).map(g=>({grant_id:g.grant_id,action:g.action,effect:g.effect,
         selector:g.selector,environments:g.environments,valid_from_ms:g.valid_from_ms,valid_until_ms:g.valid_until_ms,
         revision:g.revision,current:grantCurrent(g,context) && (g.effect==="DENY" || (()=>{
-          try {const resources=resolvedResources(g.selector,context.relationsFor(g.subject_user_id));
-            return resources.length>0&&resources.every(r=>g.environments.every(env=>evaluateAccess(context,g.action,r,env).allowed));
+          try {return g.environments.every(env=>{
+            const resources=resolvedResources(g.selector,context.relationsFor(g.subject_user_id),env);
+            return resources.length>0&&resources.every(r=>evaluateAccess(context,g.action,r,env).allowed);
+          });
           }catch{return false;}
         })()),ts_authority:!g.requires_ts_acceptance?"NOT_REQUIRED":g.ts_receipt?"ACCEPTED":
           states.get(g.grant_id)==="TS_REJECTED"?"REJECTED":states.get(g.grant_id)==="TS_UNKNOWN"?"UNKNOWN":"PENDING"})),
@@ -398,10 +401,11 @@ export class ExecutionAccessService {
       if(!policyReady(tx.context)) throw new AccessPolicyError("POLICY_PENDING");
       this.assertConstraintRemoval(tx.context,actor,grant);
       tx.recheck(()=>{
-        const resources=resolvedResources(grant.selector,tx.context.relationsFor(grant.subject_user_id));
-        if(!resources.length)throw new AccessPolicyError("ACCESS_DENIED");
-        for(const resource of resources) for(const environment of grant.environments)
-          if(!evaluateAccess(tx.context,"access.revoke",resource,environment).allowed)throw new AccessPolicyError("ACCESS_DENIED");
+        for(const environment of grant.environments) {
+          const resources=resolvedResources(grant.selector,tx.context.relationsFor(grant.subject_user_id),environment);
+          if(!resources.length || !resources.every(resource=>evaluateAccess(tx.context,"access.revoke",resource,environment).allowed))
+            throw new AccessPolicyError("ACCESS_DENIED");
+        }
       });
       return grant;
   }
@@ -442,8 +446,10 @@ export class ExecutionAccessService {
       const grant=tx.context.grants.find(g=>g.grant_id===id);
       if(!grant||!policyReady(tx.context))throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
       tx.recheck(()=>{
-        const resources=resolvedResources(grant.selector,tx.context.relationsFor(grant.subject_user_id));
-        if(!resources.length||!resources.every(r=>grant.environments.every(env=>evaluateAccess(tx.context,"access.revoke",r,env).allowed)))
+        if(!grant.environments.every(env=>{
+          const resources=resolvedResources(grant.selector,tx.context.relationsFor(grant.subject_user_id),env);
+          return resources.length>0&&resources.every(r=>evaluateAccess(tx.context,"access.revoke",r,env).allowed);
+        }))
           throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
       });
       if(grant.subject_user_id===actor.user_id)throw new AccessPolicyError("SELF_PRIVILEGE_CHANGE_DENIED");
@@ -632,6 +638,11 @@ export class ExecutionAccessService {
     relations.set(prepared.grant.subject_user_id,
       structuredClone(await this.trust.relations(prepared.grant.subject_user_id,fact.workspace_id)));
     const initial:DelegatedReceiptSource={fact,mapping,relations:[...relations].map(([principal_id,relations])=>({principal_id,relations}))};
+    // New correspondence observations are not a held through-COMMIT fence.
+    // Historical ACKs returned above remain immutable reads; genuinely absent
+    // extensions retain legacy compatibility, not a TEST_ONLY bypass.
+    if(!this.authorityMutations&&initial.relations.some(entry=>Object.hasOwn(entry.relations,"current_authority")))
+      throw new AccessPolicyError("RECEIPT_NOT_QUALIFIED",503);
     const process=async(db:PoolClient,write:boolean,source:DelegatedReceiptSource,guard?:()=>void):Promise<OperationResult|null>=>{
       await db.query("SET LOCAL lock_timeout='1500ms'");
       await db.query("SET LOCAL statement_timeout='5000ms'");
@@ -655,10 +666,10 @@ export class ExecutionAccessService {
         guard?.();
       };
       assertCurrent();
-      this.validateTsBinding(fact,row,grant,policy,source.mapping,relationMap.get(grant.subject_user_id)?.membership??null);
+      this.validateTsBinding(fact,row,grant,policy,source.mapping,relationMap.get(grant.subject_user_id),context.now_ms);
       if(!write)return null;
       const outcome=fact.outcome==="ACCEPTED"?"TS_APPLIED":fact.outcome==="REJECTED"?"TS_REJECTED":"TS_UNKNOWN";
-      const updated=fact.outcome==="ACCEPTED"?{...grant,revision:randomId("acr"),ts_receipt:{receipt_id:fact.receipt_id,
+      const updated=fact.outcome==="ACCEPTED"?{...grant,revision:randomId("acr"),ts_acceptance_digest:digest,ts_receipt:{receipt_id:fact.receipt_id,
         membership_revision:fact.membership_revision,mapping_revision:fact.mapping_revision,effective_at_ms:fact.effective_at_ms,
         expires_at_ms:fact.expires_at_ms}}:grant;
       if(fact.outcome==="ACCEPTED")await repo.saveGrant(updated);
@@ -683,7 +694,7 @@ export class ExecutionAccessService {
   }
   private validateTsBinding(fact:TsMembershipAcceptance,row:{actor_user_id:string;request_digest:string;change:GrantChange},
     grant:ScopedAccessGrant,policy:ReviewedAccessPolicy,
-    mapping:Awaited<ReturnType<AccessTrustProvider["verifiedHumanMapping"]>>,current:AccessRelations["membership"]) {
+    mapping:Awaited<ReturnType<AccessTrustProvider["verifiedHumanMapping"]>>,relations:AccessRelations|undefined,now:number) {
     if(!mapping||!fact.source||!fact.source_contract||!fact.trust_profile||!fact.provenance_ref||!fact.payload_digest||
       fact.proposal_digest!==row.request_digest||fact.portal_user_id!==grant.subject_user_id||fact.ts_user_id!==mapping.ts_user_id||
       fact.mapping_revision!==mapping.revision||fact.human_requester_user_id!==row.actor_user_id||fact.action!==grant.action||
@@ -695,8 +706,17 @@ export class ExecutionAccessService {
       grant.valid_until_ms!==null&&(fact.expires_at_ms===null||fact.expires_at_ms>grant.valid_until_ms)||policy.state!=="REVIEWED")
       throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
     // Never compare opaque revisions lexically; exact current source revision is authoritative.
-    if(fact.outcome==="ACCEPTED"&&(!current||current.revision!==fact.membership_revision||current.receipt_id!==fact.receipt_id||
-      current.mapping_revision!==fact.mapping_revision)) throw new AccessPolicyError("TS_MEMBERSHIP_REVISION_CONFLICT",409);
+    if(fact.outcome==="ACCEPTED") {
+      if(relations && Object.hasOwn(relations,"current_authority")) {
+        const parsed=currentAccessRelations.safeParse(relations.current_authority);
+        if(!relations.qualified || !parsed.success || !currentAcceptanceMatches(fact,grant,parsed.data,now))
+          throw new AccessPolicyError("TS_MEMBERSHIP_REVISION_CONFLICT",409);
+      } else {
+        const current=relations?.membership;
+        if(!current||current.revision!==fact.membership_revision||current.receipt_id!==fact.receipt_id||
+          current.mapping_revision!==fact.mapping_revision) throw new AccessPolicyError("TS_MEMBERSHIP_REVISION_CONFLICT",409);
+      }
+    }
   }
 
   async audit(actor:AccessActor,workspace:string,subject:string,limit:number,after?:string) {
