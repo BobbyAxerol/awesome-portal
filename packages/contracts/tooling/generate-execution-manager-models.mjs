@@ -18,11 +18,14 @@ function load(path) {
   return module.exports;
 }
 const contract = load(resolve(sourceRoot, 'manager-model.contract.ts'));
+const revisions = load(resolve(sourceRoot, 'manager-score-revision.contract.ts'));
 function json(schema) {
   const d = schema._def, type = d.typeName;
   if (['ZodEffects','ZodDefault','ZodOptional'].includes(type)) return json(d.schema ?? d.innerType);
   if (type === 'ZodNullable') return { anyOf: [json(d.innerType), { type: 'null' }] };
+  if (type === 'ZodUnion') return { anyOf: d.options.map(json) };
   if (type === 'ZodNull') return { type: 'null' };
+  if (type === 'ZodBoolean') return { type: 'boolean' };
   if (type === 'ZodLiteral') return { const: d.value };
   if (type === 'ZodEnum') return { type: 'string', enum: d.values };
   if (type === 'ZodString') {
@@ -42,7 +45,7 @@ function json(schema) {
       else if (c.kind !== 'int') throw new Error('Unsupported number constraint');
     } return value;
   }
-  if (type === 'ZodArray') return { type: 'array', items: json(d.type), ...(d.minLength ? { minItems: d.minLength.value } : {}), ...(d.maxLength ? { maxItems: d.maxLength.value } : {}) };
+  if (type === 'ZodArray') return { type: 'array', items: json(d.type), ...(d.minLength ? { minItems: d.minLength.value } : {}), ...(d.maxLength ? { maxItems: d.maxLength.value } : {}), ...(d.exactLength ? {minItems:d.exactLength.value,maxItems:d.exactLength.value} : {}) };
   if (type === 'ZodRecord') return { type: 'object', propertyNames: json(d.keyType), additionalProperties: json(d.valueType) };
   if (type === 'ZodObject') {
     const shape = d.shape();
@@ -53,6 +56,8 @@ function json(schema) {
 }
 const response = json(contract.managerDatasetResponse), query = json(contract.managerModelQuery);
 const schemas = { ManagerDataset: response, ManagerDatasetQuery: query, ManagerMetric: json(contract.managerMetric), ManagerDatasetRow: json(contract.managerDatasetRow), ManagerScorePublication: json(contract.managerScorePublication), ManagerCompositionPublication: json(contract.managerCompositionPublication), ManagerRegimePublication: json(contract.managerRegimePublication) };
+Object.assign(schemas,{ManagerScoreRevisionQuery:json(revisions.managerScoreRevisionQuery),ManagerScoreRevisionHistoryQuery:json(revisions.managerScoreRevisionHistoryQuery),
+  ManagerScoreRevisionView:json(revisions.managerScoreRevisionView),ManagerScoreRevisionHistory:json(revisions.managerScoreRevisionHistory)});
 const routes = [['fund-overview','FundOverview'],['fleet','Fleet'],['portfolios/{id}/overview','Portfolio360'],['alphas/{id}/overview','Alpha360'],['accounts/{id}/overview','Account360'],['deployments/{id}/overview','Deployment360']];
 const paths = Object.fromEntries(routes.map(([route,operation]) => ['/api/v1/execution/manager/' + route, { get: {
   operationId: 'executionManager' + operation + 'GetV1', security: [{ PortalSession: [] }],
@@ -64,9 +69,23 @@ const paths = Object.fromEntries(routes.map(([route,operation]) => ['/api/v1/exe
   responses: { 200:{description:'Authorized current snapshot; absence and policy-pending remain typed',content:{'application/json':{schema:{$ref:'#/components/schemas/ManagerDataset'}}}},
     ...Object.fromEntries([400,401,404,409,503].map(code => [code,{description:({400:'Invalid closed query',401:'Session required',404:'Resource or current grant unavailable',409:'Authority, snapshot or cursor changed',503:'Source publication, field policy, projection or bounded capacity unavailable'})[code]}])) },
 } }]));
+for(const [route,operation,request,result] of [
+  ['score-view','executionManagerScoreRevisionGetV1','ManagerScoreRevisionQuery','ManagerScoreRevisionView'],
+  ['score-revisions','executionManagerScoreRevisionHistoryGetV1','ManagerScoreRevisionHistoryQuery','ManagerScoreRevisionHistory']]){
+  const q=schemas[request];paths['/api/v1/execution/manager/'+route]={get:{operationId:operation,security:[{PortalSession:[]}],
+    description:'Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK.',
+    parameters:Object.entries(q.properties).map(([name,schema])=>({name,in:'query',required:q.required.includes(name),
+      ...(name==='economic_partition'?{content:{'application/json':{schema}}}:{schema,...(schema.type==='array'?{style:'form',explode:false}:{})})})),
+    responses:{200:{description:'Explicit historical view or typed absence; null knowledge clocks are never inferred',content:{'application/json':{schema:{$ref:'#/components/schemas/'+result}}}},
+      ...Object.fromEntries([400,401,404,409,503].map(code=>[code,{description:({400:'Invalid closed query',401:'Session required',404:'Reference or current grant unavailable',409:'Authority/source/policy changed',503:'Qualified source or bounded capability unavailable'})[code]}]))}}};
+}
 const outputs = {
   'schemas/execution-manager-dataset.v1.schema.json': { $schema:'https://json-schema.org/draft/2020-12/schema',
     $id:'https://schemas.primusspark.com/portal/execution-manager-dataset.v1.schema.json', ...response },
+  'schemas/execution-manager-score-revision.v1.schema.json':{$schema:'https://json-schema.org/draft/2020-12/schema',
+    $id:'https://schemas.primusspark.com/portal/execution-manager-score-revision.v1.schema.json',...schemas.ManagerScoreRevisionView},
+  'schemas/execution-manager-score-history.v1.schema.json':{$schema:'https://json-schema.org/draft/2020-12/schema',
+    $id:'https://schemas.primusspark.com/portal/execution-manager-score-history.v1.schema.json',...schemas.ManagerScoreRevisionHistory},
   'openapi/execution-manager-models.openapi.json': { openapi:'3.1.0',info:{title:'Scoped Manager projections and 360',version:'1.0.0'},paths,
     components:{securitySchemes:{PortalSession:{type:'apiKey',in:'cookie',name:'portal_session'}},schemas} },
 };

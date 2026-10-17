@@ -433,6 +433,9 @@ const BRACKET_PARENT = [
 const BRACKET_LEG = [
   "bracket_group_id", "leg_id", "side", "quantity", "price", "status", "created_at", "updated_at", "submitted_at",
 ] as const;
+// Source-observed technical scalars only. No component/health interpretation,
+// instance topology, public-purpose admission or history/stream activation.
+const SERVICE_HEARTBEAT = ["service_name", "last_seen_at", "status"] as const;
 const JOURNAL = [
   "command_id", "command_kind", "contract_revision", "mode", "venue", "alpha_id", "account_id",
   "client_order_id", "aggregate_key", "state", "outcome_class", "accepted_at", "dispatched_at",
@@ -458,6 +461,7 @@ const FLEET: readonly ProfileProjectionBinding[] = [
   bind("broker_sync", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC),
   bind("brackets", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-brackets", "order_brackets", BRACKET_PARENT),
   bind("bracket_legs", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-bracket-legs", "order_bracket_legs", BRACKET_LEG),
+  bind("service_heartbeats", "EXECUTION_COMMAND_CENTER_SCREEN", "manager.current.service-heartbeats", "service_heartbeats", SERVICE_HEARTBEAT),
 ];
 
 const PAPER: readonly ProfileProjectionBinding[] = [

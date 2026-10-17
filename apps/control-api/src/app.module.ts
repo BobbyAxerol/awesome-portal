@@ -116,6 +116,8 @@ import { ManagerListsRepository } from "./manager-lists/manager-lists.repository
 import { ManagerListsService } from "./manager-lists/manager-lists.service";
 import { ManagerModelController } from "./execution-v2/manager-model.controller";
 import { ManagerModelService } from "./execution-v2/manager-model.service";
+import { ManagerScoreRevisionController } from "./execution-v2/manager-score-revision.controller";
+import { ManagerScoreRevisionService } from "./execution-v2/manager-score-revision.service";
 import { ResourceReadController } from "./resource-read/resource-read.controller";
 import { ResourceReadService } from "./resource-read/resource-read.service";
 import { PortalDerivationsController } from "./execution/portal-derivations.controller";
@@ -282,6 +284,7 @@ export class AppModule {
         ProfileReadController,
         ManagerListsController,
         ManagerModelController,
+        ManagerScoreRevisionController,
         ExecutionDurableMirrorIntegrityController,
         ResourceReadController,
         PortalDerivationsController,
@@ -491,6 +494,7 @@ export class AppModule {
         ManagerListsRepository,
         ManagerListsService,
         ManagerModelService,
+        ManagerScoreRevisionService,
         ResourceReadService,
         PortalDerivationsService,
         OperationalCompositionService,

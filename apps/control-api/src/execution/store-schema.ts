@@ -32,6 +32,8 @@ const managerForwards = [
     "366e1345dc1929bb9c1b19f1babff5ee913fc9b9753c46ae761aa41fc46cd7b2"],
   ["138.execution-manager-calculation-revisions.v1", "1723680000138_execution-manager-calculation-revisions.sql",
     "34bf8652a0b139d63db339736995da357b5c0b396928e0c2a5102440a24a48df"],
+  ["139.execution-manager-score-mode-heads.v1", "1723680000139_execution-manager-score-mode-heads.sql",
+    "520d4afe852862c31428ca38f3f2ca3091cf1f6664b97d4506d79a8976d7df76"],
 ] as const;
 export function executionStoreSql(dir = join(__dirname,"../../migrations")): string {
   let sql = `CREATE TABLE execution_workspace_references (

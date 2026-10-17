@@ -3,7 +3,8 @@ import { z } from "zod";
 import {
   calculateManagerQualityScore, calculateManagerScoreMetrics, MANAGER_SCORE_ATOMIC_WEIGHTS,
   MANAGER_SCORE_FORMULA, managerQualityBand, type ManagerQualityInput, type ManagerQualityResult,
-  type ManagerScoreMetrics, type ManagerScorePathInput, type ManagerScorePathResult, type ManagerScorePolicy,
+  type ManagerQualityRestatementEvaluation, type ManagerScoreMetrics, type ManagerScorePathInput,
+  type ManagerScorePathResult, type ManagerScorePolicy,
 } from "./manager-score";
 
 /** Private worker integration, not an HTTP input or an approval authority. */
@@ -144,6 +145,56 @@ export interface ManagerScoreRuntimeResult {
     formula_hash: string | null; approval_ref: string | null; approved_at_ms: number | null; policy_valid_until_ms: number | null;
   };
 }
+export type ManagerScoreWithheldMetricReasons = Partial<Record<keyof ManagerScoreMetrics, readonly string[]>>;
+/** Private custody-to-worker input, not a wire schema. The caller must verify that
+ * these exact original bytes/digest came from immutable source custody, including
+ * source availability at K and compatibility of retained economic methods. A
+ * byte match here is NOT source attestation or a policy-method receipt. */
+export interface ManagerScoreRestatementTask {
+  task: ManagerScoreRuntimeTask;
+  original_input_json: string;
+  original_input_digest: string;
+  knowledge_cutoff_ms: number;
+  withheld_metric_reasons?: ManagerScoreWithheldMetricReasons;
+}
+/** Mandatory historical wrapper; never install its inner result as an ordinary
+ * current Manager publication. Public selectors/storage are a separate integration. */
+export interface ManagerScoreHistoricalRestatement {
+  schema_version: "portal.execution.manager-score-restatement-worker.v1";
+  revision_mode: "RESTATED_CURRENT_POLICY";
+  purpose: "HISTORICAL_ANALYSIS_ONLY";
+  source_method_compatibility: "CALLER_CUSTODY_REQUIRED";
+  knowledge_cutoff_ms: number;
+  economic_as_of_ms: number;
+  original_input_digest: string;
+  derived_input_digest: string;
+  policy_identity_digest: string;
+  derivation_context_digest: string;
+  checked_at_ms: number;
+  operational_current: false;
+  feed_freshness: {
+    status: "WITHIN_CURRENT_FEED_FRESHNESS" | "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS";
+    source_age_ms: number;
+    maximum_input_age_ms: number;
+  };
+  withheld_metric_reasons: ManagerScoreWithheldMetricReasons;
+  result: ManagerScoreRuntimeResult;
+}
+interface RestatementContext {
+  record: PolicyRecord;
+  original: Omit<ManagerScoreRuntimeTask, "policy">;
+  original_input_digest: string;
+  knowledge_cutoff_ms: number;
+  withheld_metric_reasons: ManagerScoreWithheldMetricReasons;
+}
+const withheldReasonList = z.array(text).min(1).max(8).refine(items => new Set(items).size === items.length);
+const withheldReasonFields = Object.fromEntries(Object.keys(MANAGER_SCORE_ATOMIC_WEIGHTS)
+  .map(key => [key, withheldReasonList.optional()])) as Record<keyof ManagerScoreMetrics, z.ZodOptional<typeof withheldReasonList>>;
+const withheldReasonsSchema = z.object(withheldReasonFields).strict();
+const restatementMetadataSchema = z.object({
+  original_input_json: z.string().min(1), original_input_digest: digest, knowledge_cutoff_ms: ms,
+  withheld_metric_reasons: withheldReasonsSchema.optional(),
+}).strict();
 /** Read-time invalidation only, not a source/permission verifier or a score recalculation. */
 export function managerScorePublicationPolicyCurrent(handle: ApprovedManagerScorePolicy | null,
   result: Pick<ManagerScoreRuntimeResult, "quality" | "provenance">, nowMs: number): boolean {
@@ -191,6 +242,31 @@ export function managerScoreRecalculationPolicy(handle:ApprovedManagerScorePolic
     policy_revision:r.approval.policy_revision,stress_delta_bps:p.stress_delta_bps,
     approved_at_ms:r.approval.approved_at_ms,valid_until_ms:r.approval.valid_until_ms});
 }
+/** Explicit historical knowledge-cutoff eligibility, NOT original/current-feed
+ * eligibility. Keep the ordinary source-cutoff checker above unchanged. */
+export function managerScoreRestatementPolicy(handle:ApprovedManagerScorePolicy|null,
+  scope:ManagerScoreRuntimeTask["scope"],knowledgeCutoff:number,now:number) {
+  const r=handle?approvedPolicies.get(handle):undefined;
+  if(!r||!same(r.artifact.scope,scope)||!Number.isSafeInteger(knowledgeCutoff)||knowledgeCutoff<0||
+    !Number.isSafeInteger(now)||now<knowledgeCutoff||
+    r.artifact.policy.calibration_cutoff_ms>r.artifact.policy.issued_at_ms||
+    r.artifact.policy.issued_at_ms>r.approval.approved_at_ms||r.approval.approved_at_ms>knowledgeCutoff)
+    return null;
+  return managerScoreRecalculationPolicy(handle,knowledgeCutoff,now);
+}
+/** Read-only classification of verified historical policy metadata. No artifact
+ * JSON establishes current authority, no source/price freshness assertion and
+ * no current grant is minted by this helper. */
+export function managerScoreHistoricalPolicyState(handle:ApprovedManagerScorePolicy|null,
+  scope:ManagerScoreRuntimeTask["scope"],identityDigest:string,validUntilMs:number,nowMs:number):"CURRENT"|"NOT_CURRENT"|"UNKNOWN" {
+  if(!Number.isSafeInteger(nowMs)||nowMs<0||!Number.isSafeInteger(validUntilMs)||validUntilMs<0)return "UNKNOWN";
+  if(nowMs>=validUntilMs)return "NOT_CURRENT";
+  const current=handle?approvedPolicies.get(handle):undefined;
+  if(!current||!same(current.artifact.scope,scope)||current.approval.approved_at_ms>nowMs||
+    current.approval.valid_until_ms<=nowMs)return "UNKNOWN";
+  const currentIdentity=hash(canonical({artifact:current.artifact,approval:current.approval}));
+  return currentIdentity===identityDigest?"CURRENT":"NOT_CURRENT";
+}
 const metricsSchema = z.object(Object.fromEntries(Object.keys(MANAGER_SCORE_ATOMIC_WEIGHTS).map(key => [key, decimal.nullable()])) as Record<keyof ManagerScoreMetrics, z.ZodNullable<typeof decimal>>).strict();
 const qualityFields = { comparable_basis_id: text, individual_evidence_binding_id: text.nullable(),
   window_start_ms: ms, window_end_ms: ms, as_of_ms: ms, observed_duration_ms: ms, currency: text,
@@ -200,17 +276,79 @@ const qualityFields = { comparable_basis_id: text, individual_evidence_binding_i
 export class ManagerScoreRuntime {
   private inFlight = 0;
   private readonly limits: Readonly<ManagerScoreRuntimeLimits>;
-  constructor(limits: ManagerScoreRuntimeLimits) {
+  constructor(limits: ManagerScoreRuntimeLimits, private readonly restatementClock: () => number = () => Date.now()) {
     const ceilings: ManagerScoreRuntimeLimits = { maximum_observations: 50_000, maximum_blocks: 10_000,
       maximum_stress_subperiods: 100_000, maximum_input_bytes: 8 * 1024 * 1024, maximum_in_flight: 4 };
     if (Object.keys(ceilings).some(key => { const k = key as keyof ManagerScoreRuntimeLimits;
       return !Number.isSafeInteger(limits[k]) || limits[k] < 1 || limits[k] > ceilings[k]; }))
       throw new ManagerScoreRuntimeError("SCORE_RUNTIME_LIMIT_INVALID");
     this.limits = Object.freeze({ ...limits });
+    if (typeof restatementClock !== "function") throw new ManagerScoreRuntimeError("SCORE_RUNTIME_LIMIT_INVALID");
   }
 
   /** No queue: overload rejects before retaining a source payload. Primary worker coordinates scheduling/lease. */
   async calculate(task: ManagerScoreRuntimeTask): Promise<ManagerScoreRuntimeResult> {
+    return this.calculateTask(task);
+  }
+
+  /** Later-policy historical calculation only. Does not acquire source authority,
+   * renew policy, move economic as-of, or weaken the ordinary current-read fence. */
+  async calculateRestated(request: ManagerScoreRestatementTask): Promise<ManagerScoreHistoricalRestatement> {
+    if (this.inFlight >= this.limits.maximum_in_flight) throw new ManagerScoreRuntimeError("SCORE_RUNTIME_CAPACITY");
+    try {
+      if (!request || ![Object.prototype, null].includes(Object.getPrototypeOf(request)))
+        throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+      const fields = Object.getOwnPropertyDescriptors(request);
+      if (!fields.task || Object.values(fields).some(field => !Object.hasOwn(field, "value")))
+        throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+      const metadata = Object.fromEntries(Object.entries(fields).filter(([key]) => key !== "task")
+        .map(([key, field]) => [key, field.value]));
+      this.assertBoundedPayload(metadata as Omit<ManagerScoreRuntimeTask, "policy">);
+      const captured = restatementMetadataSchema.parse(JSON.parse(JSON.stringify(metadata)));
+      if (Buffer.byteLength(captured.original_input_json, "utf8") > this.limits.maximum_input_bytes)
+        throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_BOUND");
+      if (hash(captured.original_input_json) !== captured.original_input_digest)
+        throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+      const original = JSON.parse(captured.original_input_json) as Omit<ManagerScoreRuntimeTask, "policy">;
+      this.assertBoundedPayload(original);
+      if (!original || ![Object.prototype, null].includes(Object.getPrototypeOf(original)) || Object.hasOwn(original, "policy"))
+        throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+      const task = fields.task.value as ManagerScoreRuntimeTask;
+      if (!task || ![Object.prototype, null].includes(Object.getPrototypeOf(task)))
+        throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+      const taskFields = Object.getOwnPropertyDescriptors(task);
+      if (Object.values(taskFields).some(field => !Object.hasOwn(field, "value")))
+        throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+      const record = taskFields.policy?.value ? approvedPolicies.get(taskFields.policy.value) : undefined;
+      if (!record) throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+      const context: RestatementContext = { record, original, original_input_digest: captured.original_input_digest,
+        knowledge_cutoff_ms: captured.knowledge_cutoff_ms,
+        withheld_metric_reasons: captured.withheld_metric_reasons ?? {} };
+      const result = await this.calculateTask(task, context);
+      const checkedAt = this.assertRestatementTime(context, result.provenance.computed_at_ms);
+      const derivation = {
+        revision_mode: "RESTATED_CURRENT_POLICY" as const, purpose: "HISTORICAL_ANALYSIS_ONLY" as const,
+        source_method_compatibility: "CALLER_CUSTODY_REQUIRED" as const,
+        knowledge_cutoff_ms: context.knowledge_cutoff_ms, economic_as_of_ms: result.provenance.source_as_of_ms,
+        original_input_digest: context.original_input_digest, derived_input_digest: result.provenance.input_digest,
+        policy_identity_digest: hash(canonical({ artifact: record.artifact, approval: record.approval })),
+        withheld_metric_reasons: context.withheld_metric_reasons,
+      };
+      const age = checkedAt - result.provenance.source_as_of_ms;
+      return freeze({ schema_version: "portal.execution.manager-score-restatement-worker.v1" as const,
+        ...derivation, derivation_context_digest: hash(canonical(derivation)), checked_at_ms: checkedAt,
+        operational_current: false as const,
+        feed_freshness: { status: age > record.artifact.runtime_config.maximum_input_age_ms
+          ? "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS" as const : "WITHIN_CURRENT_FEED_FRESHNESS" as const,
+          source_age_ms: age, maximum_input_age_ms: record.artifact.runtime_config.maximum_input_age_ms },
+        result });
+    } catch (error) {
+      if (error instanceof ManagerScoreRuntimeError) throw error;
+      throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+    }
+  }
+
+  private async calculateTask(task: ManagerScoreRuntimeTask, restatement?: RestatementContext): Promise<ManagerScoreRuntimeResult> {
     if (this.inFlight >= this.limits.maximum_in_flight) throw new ManagerScoreRuntimeError("SCORE_RUNTIME_CAPACITY");
     this.inFlight += 1;
     try {
@@ -241,11 +379,17 @@ export class ManagerScoreRuntime {
       else {
         if (!same(scope, record.artifact.scope)) pendingReasons.push("SCORE_POLICY_SCOPE_MISMATCH");
         if (captured.expected_policy_revision !== record.approval.policy_revision) pendingReasons.push("SCORE_POLICY_REVISION_CHANGED");
-        if (record.approval.approved_at_ms > captured.input.quality.as_of_ms || record.approval.valid_until_ms <= captured.computed_at_ms)
+        if (restatement) {
+          if (record !== restatement.record || pendingReasons.length) throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+          this.assertRestatementTime(restatement, captured.computed_at_ms);
+          this.assertRestatedDerivation(restatement, captured);
+        } else if (record.approval.approved_at_ms > captured.input.quality.as_of_ms || record.approval.valid_until_ms <= captured.computed_at_ms)
           pendingReasons.push("SCORE_POLICY_NOT_AVAILABLE_AS_OF");
       }
+      if (restatement && !record) throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
       if (captured.source_qualification !== "SOURCE_VERIFIED") pendingReasons.push("SCORE_SOURCE_NOT_QUALIFIED");
       await Promise.resolve();
+      if (restatement) this.assertRestatementTime(restatement, captured.computed_at_ms);
       const policy = pendingReasons.length ? null : record!.artifact.policy;
       const config = record?.artifact.runtime_config;
       const q = captured.input.quality;
@@ -272,12 +416,28 @@ export class ManagerScoreRuntime {
           samples = pathResult.sample_count; blocks = pathResult.complete_block_count; }
       }
       const missing = Object.fromEntries(Object.keys(MANAGER_SCORE_ATOMIC_WEIGHTS).map(key => [key, null])) as ManagerScoreMetrics;
-      const quality = calculateManagerQualityScore({ ...base, policy, metrics: rawMetrics ?? missing,
+      const evaluation: ManagerQualityRestatementEvaluation | undefined = restatement
+        ? { revision_mode: "RESTATED_CURRENT_POLICY", knowledge_cutoff_ms: restatement.knowledge_cutoff_ms } : undefined;
+      const scoreInput: ManagerQualityInput = { ...base, policy, metrics: rawMetrics ?? missing,
         sample_count: samples, complete_block_count: blocks,
-        stale: base.stale || !!config && captured.computed_at_ms - base.as_of_ms > config.maximum_input_age_ms,
+        // Old feed age is disclosed in the mandatory historical wrapper. Source's
+        // own stale/data-invalid/gap/cost facts are never cleared by restatement.
+        stale: base.stale || !restatement && !!config && captured.computed_at_ms - base.as_of_ms > config.maximum_input_age_ms,
         data_valid: base.data_valid && !invalidWindow,
         reason_codes: [...new Set([...(base.reason_codes ?? []), ...pendingReasons, ...(invalidWindow ? ["SCORE_POLICY_WINDOW_NOT_SUPPORTED"] : []), ...(pathResult?.reason_codes ?? [])])],
-      });
+      };
+      if (restatement && captured.input.kind === "METRICS" && restatement.original.input.kind === "METRICS") {
+        // Source-custody nulling may withhold an unsupported metric, not cure a
+        // mathematically invalid original scalar such as negative drawdown.
+        const originalCheck = calculateManagerQualityScore({ ...scoreInput,
+          metrics: metricsSchema.parse(restatement.original.input.quality.metrics) }, evaluation);
+        if (originalCheck.status === "invalid_data") {
+          scoreInput.data_valid = false;
+          scoreInput.reason_codes = [...new Set([...(scoreInput.reason_codes ?? []), ...originalCheck.reason_codes])];
+        }
+      }
+      const quality = calculateManagerQualityScore(scoreInput, evaluation);
+      if (restatement) this.assertRestatementTime(restatement, captured.computed_at_ms);
       return freeze({ quality, raw_metrics: rawMetrics,
         path_summary: pathResult ? { sample_count: pathResult.sample_count, complete_block_count: pathResult.complete_block_count,
           incomplete_tail_duration_ms: pathResult.incomplete_tail_duration_ms, reason_codes: pathResult.reason_codes } : null,
@@ -293,6 +453,50 @@ export class ManagerScoreRuntime {
       if (error instanceof ManagerScoreRuntimeError) throw error;
       throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
     } finally { this.inFlight -= 1; }
+  }
+
+  private assertRestatementTime(context: RestatementContext, computed: number): number {
+    const now = ms.parse(this.restatementClock()), k = ms.parse(context.knowledge_cutoff_ms);
+    const { artifact, approval } = context.record;
+    if (!ms.safeParse(computed).success || artifact.policy.calibration_cutoff_ms > artifact.policy.issued_at_ms
+      || artifact.policy.issued_at_ms > approval.approved_at_ms || approval.approved_at_ms > k
+      || k > computed || computed > now || now >= approval.valid_until_ms)
+      throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+    return now;
+  }
+
+  private assertRestatedDerivation(context: RestatementContext, derived: Omit<ManagerScoreRuntimeTask, "policy">): void {
+    const original = context.original;
+    text.parse(original.calculation_revision); ms.parse(original.computed_at_ms);
+    text.nullable().parse(original.expected_policy_revision);
+    z.enum(["METRICS", "PATH"]).parse(original.input.kind);
+    const originalAsOf = ms.parse(original.input.quality.as_of_ms);
+    if (original.input.kind !== derived.input.kind || originalAsOf > context.knowledge_cutoff_ms
+      || original.computed_at_ms < originalAsOf || original.computed_at_ms > context.knowledge_cutoff_ms)
+      throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+    // Clone only the exact retained JSON; alter a finite explicit allowlist.
+    const expected = JSON.parse(JSON.stringify(original)) as Omit<ManagerScoreRuntimeTask, "policy">;
+    expected.calculation_revision = derived.calculation_revision;
+    expected.computed_at_ms = derived.computed_at_ms;
+    expected.expected_policy_revision = derived.expected_policy_revision;
+    const reasons = context.withheld_metric_reasons;
+    if (original.input.kind === "PATH" && derived.input.kind === "PATH" && expected.input.kind === "PATH") {
+      const path = this.parsePath(original.input.path);
+      if (!Number.isFinite(Number(path.stress_delta_bps)) || Number(path.stress_delta_bps) <= 0
+        || Object.keys(reasons).length || derived.input.path.stress_delta_bps !== context.record.artifact.policy.stress_delta_bps)
+        throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+      expected.input.path.stress_delta_bps = derived.input.path.stress_delta_bps;
+    } else if (original.input.kind === "METRICS" && derived.input.kind === "METRICS" && expected.input.kind === "METRICS") {
+      const before = metricsSchema.parse(original.input.quality.metrics), after = metricsSchema.parse(derived.input.quality.metrics);
+      for (const key of Object.keys(MANAGER_SCORE_ATOMIC_WEIGHTS) as (keyof ManagerScoreMetrics)[]) {
+        const changed = before[key] !== after[key];
+        if (changed ? before[key] === null || after[key] !== null || !reasons[key]?.length : reasons[key] !== undefined)
+          throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+      }
+      expected.input.quality.metrics = after;
+    } else throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
+    if (!same(original.scope, derived.scope) || !same(expected, derived))
+      throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
   }
 
   private parsePath(path: ManagerScorePathInput): ManagerScorePathInput {

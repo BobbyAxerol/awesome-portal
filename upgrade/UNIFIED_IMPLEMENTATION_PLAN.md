@@ -11367,3 +11367,61 @@ HK foreign measurement requires read-only HK; Edge journal reconciled afterward.
 Actual held source, owning COMMIT/final-send composition, installer and connected
 revoke/cache/cursor/SSE remain owned unfinished08 work, not config-only debt.
 No UI/push/merge/release activation. Qualification start is recorded in receipt.
+
+<a id="elp2-backend-original-restated-20261017"></a>
+
+**Current Research Execution backend continuation,2026-10-17T12:00UTC:**
+the separate original08 source-owner qualification above is preserved, not
+conflated with this Portal batch. `f1f5fc7d` landed29owned files +1,659/−56;
+normal hook716contracts,APIbuild,5,046API tests/3skip and scopedPGrestore PASS,
+eight protected runtimes unchanged, owned resources/lease clean.
+[Terminal receipt and full remaining-phase census](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-backend-return-20261017-1200).
+
+Next APPLIED/UNCOMMITTED slice:04 [exact heartbeat capture](execution_loop/evidence/ELP2-04/heartbeat-capture.md)
+(V2 purpose still refused);06 [immutable Original→explicit historical Restated](execution_loop/evidence/ELP2-06/original-restated.md)
+(custody, worker, SQL139, IDLE revisions and current-authorized named API);
+07/08 [pending/instance candidate codecs](execution_loop/evidence/ELP2-07/pm-management-candidates.md).
+All new tests NOT_RUN at entry, one coherent normal-hook batch pending.
+Independent source review defects corrected before freeze; genuine source,
+trust/held COMMIT/wire, missing readers/families/dependent restatement,
+budget/calibration/coexistence/G2 stay OPEN.11NOT_ENTRY_READY.
+Claude UXM00–10 NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW;
+new generated historical DTO/fixtures have an explicit future consumer handoff,
+not acceptance. No FE edit or runtime/source/command/Live activation, push,
+dev/main, release or deploy. Continue backend under existing02–11 assignment.
+
+**12:27UTC backend amendment:** normal gates719contracts/parity PASS but
+APIbuild FAIL in the new Score modules; diagnostics/corrections and exact
+terminal receipts retained in06 (PG/restore NOT_RUN). Next impacted build/PG
+before coherent normal-hook retry.04 now includes private exact heartbeat
+ROOT mint + initial-provider sanitizer and42 proposed regressions; public
+purpose, source qualification and all other null-purpose readers stay OPEN.
+No frontend assignment or runtime promotion follows from these code changes.
+
+**12:36UTC impacted gate:** buildPASS;18suites560PASS/1FAIL. Score custody/
+restatement/runtime/named BFF, heartbeat ROOT42, pending39/registration36 PASS;
+one new capture assertion corrected to the existing durable recovery/no-write
+semantics. [Actual receipt/cleanup and unchanged source limits](execution_loop/evidence/ELP2-06/original-restated.md#elp206-restated-focus-1235).
+Normal hook/commit still pending; no whole-phase/source/runtime PASS or FE
+acceptance. Existing phase-by-phase census and held UXM direction unchanged.
+
+<a id="elp2-backend-history-20261017"></a>
+
+**Current backend return,2026-10-17T13:15UTC:**
+[phase-by-phase remaining code/source/qualification gaps](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-backend-return-20261017-1315).
+Previous normal hook719contracts/APIbuild PASS,5,291API PASS/1FAIL/3skip;
+only139 migration-count assertion corrected, failed receipt preserved. New
+[scoped immutable Score History](execution_loop/evidence/ELP2-06/scoped-score-history.md)
+and [PM profile/reallocation candidates](execution_loop/evidence/ELP2-07/pm-management-candidates.md#profile-and-reallocation-follow-through-2026-10-17)
+are APPLIED/UNCOMMITTED, tests pending grouped gate. Source-compatible candidates
+are not authenticated commands; history is not operational-current Score.
+All genuine reader/Composition/Regime/family/realtime/source/trust/budget/
+calibration/coexistence/G2 debts stay OPEN;11NOT_ENTRY_READY. Claude
+UXM00–10 NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW. Exact generated
+handoff is in06; no FE or runtime/push/dev/main/sign/release/deploy action.
+
+**13:16UTC affected validation:** APIbuild and264/264 tests/11files PASS;
+overall post-test restore stopped at missing shared-Core base tables (selected
+suites use separate DBs). [Exact failure/cleanup and normal-hook next step](execution_loop/evidence/ELP2-06/scoped-score-history.md#impacted-gate-terminal-2026-10-17t1316utc).
+No source/runtime/restore PASS inferred; source/index/eight runtime tuples
+unchanged. Land one coherent normal hook, not another full focused retest.

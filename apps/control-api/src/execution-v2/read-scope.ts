@@ -49,9 +49,27 @@ const minted=new WeakMap<object,ScopeState>();
 const businessReads=new Set<AccessAction>(["business.read_all","alpha.read","portfolio.read","portfolio.read_restricted",
   "portfolio.discover_linked","account.read","binding.read"]);
 const exactKey=(r:AccessResource)=>JSON.stringify([r.kind,r.id]);
+/** One private retained technical input, not a public alias/grant/purpose
+ * registry. Other technical datasets still need their own reviewed branch. */
+const heartbeatTechnicalDataset=(dataset:ReadDatasetBinding):boolean=>
+  dataset.dataset_id==="relation:manager.current.service-heartbeats:service_heartbeats"&&
+  dataset.window===null&&typeof dataset.projection_generation==="string"&&
+  dataset.catalogue_revision!==undefined;
 const resourceAction=(r:AccessResource):ReadScopeRequirement["action"]=>({ROOT:"business.read_all",ALPHA:"alpha.read",
   ALPHA_VERSION:"alpha.read",DEPLOYMENT:"alpha.read",PORTFOLIO:"portfolio.read",ACCOUNT:"account.read",BINDING:"binding.read",USER:"business.read_all"} as const)[r.kind];
 function fail(code:ReadScopeErrorCode,status=403):never {throw new ExecutionReadScopeError(code,status);}
+/** One safe boundary for native Core/provider failures, including root lookup
+ * before the main scope issuer. Never disclose adapter/SQL exception prose. */
+function rethrowReadScopeError(error:unknown):never {
+  if(error instanceof ExecutionReadScopeError)throw error;
+  if(error instanceof AccessPolicyError){
+    if(error.code==="ACCESS_RETRY_REQUIRED")fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    if(error.code==="CURRENT_ACTOR_AUTHORITY_REQUIRED"||error.code==="ACCESS_RESOURCE_NOT_FOUND")fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    if(error.code==="POLICY_PENDING")fail("EXECUTION_READ_POLICY_PENDING");
+    if(error.code==="ACCESS_SCOPE_LIMIT_EXCEEDED")fail("EXECUTION_READ_SCOPE_LIMIT",503);
+  }
+  throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+}
 
 export function assertExecutionReadScope(scope:AuthorizedExecutionReadScope):void {
   if(!scope||!minted.has(scope))fail("EXECUTION_READ_SCOPE_REQUIRED");
@@ -176,16 +194,26 @@ export class ExecutionReadScopes {
    * profile-wide diagnostic requires one unambiguous published authority root;
    * absence/ambiguity cannot be filled using a workspace or guessed root ID. */
   async authorizeTechnicalProfile(principal:ReadScopePrincipal,binding:ReadScopeBinding,
-    action:"maintenance.read"|"development.read"="maintenance.read"):Promise<AuthorizedExecutionReadScope> {
-    const context=await this.access.readContext({user_id:principal.user.userId,
-      session_id:principal.session.sessionId,session_generation:principal.session.sessionVersion},principal.workspaceId);
-    const roots=Object.keys(environmentRelations(context.relationsFor(principal.user.userId),binding.environment).roots);
+    action:"maintenance.read"|"development.read"="maintenance.read",
+    dataset?:ReadDatasetBinding):Promise<AuthorizedExecutionReadScope> {
+    try {
+    // Snapshot before root-provider I/O; caller mutation cannot retarget the
+    // internal publication capability or replace its Core actor/workspace.
+    const p={user:{...principal.user},session:{...principal.session},workspaceId:principal.workspaceId,
+      viewerWorkspaceId:principal.viewerWorkspaceId??principal.workspaceId};
+    const b=structuredClone(binding),d=dataset===undefined?undefined:structuredClone(dataset);
+    if(d!==undefined&&(action!=="maintenance.read"||!readDatasetBinding.safeParse(d).success||!heartbeatTechnicalDataset(d)))
+      fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+    const context=await this.access.readContext({user_id:p.user.userId,
+      session_id:p.session.sessionId,session_generation:p.session.sessionVersion},p.workspaceId);
+    const roots=Object.keys(environmentRelations(context.relationsFor(p.user.userId),b.environment).roots);
     if(roots.length!==1)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
-    const scope=await this.authorize(principal,binding,{action,resource:{kind:"ROOT",id:roots[0]}});
+    const scope=await this.authorize(p,b,{action,resource:{kind:"ROOT",id:roots[0]},...(d?{dataset:d}:{})});
     const currentContext=minted.get(scope)!.context;
-    const current=currentContext?Object.keys(environmentRelations(currentContext.relationsFor(principal.user.userId),binding.environment).roots):[];
+    const current=currentContext?Object.keys(environmentRelations(currentContext.relationsFor(p.user.userId),b.environment).roots):[];
     if(scope.mode!=="SCOPED_V2"||current.length!==1||current[0]!==roots[0])fail("EXECUTION_READ_ACCESS_CHANGED",409);
     return scope;
+    }catch(error){return rethrowReadScopeError(error);}
   }
 
   /** Existing unscoped transports are compatibility-only. A policy activation
@@ -211,19 +239,14 @@ export class ExecutionReadScopes {
     if(r.resource&&!accessResource.safeParse(r.resource).success||r.dataset&&!readDatasetBinding.safeParse(r.dataset).success)
       fail("EXECUTION_READ_SCOPE_REQUIRED");
     if(!businessReads.has(r.action)&&!r.resource)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    // Do not let a generic technical dataset enter the business/researcher
+    // fallback below. The finite private heartbeat branch is maintenance-only.
+    if(r.dataset&&(r.action==="maintenance.read"||r.action==="development.read")&&
+      (r.action!=="maintenance.read"||r.resource?.kind!=="ROOT"||!heartbeatTechnicalDataset(r.dataset)))
+      fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
     // A resource check alone cannot prove a complete dataset population.
     if(r.requireWholePopulation&&!r.dataset)fail("EXECUTION_READ_NOT_AVAILABLE",404);
-    try{return await this.mint(p,b,r);}catch(error){
-      if(error instanceof ExecutionReadScopeError)throw error;
-      if(error instanceof AccessPolicyError){
-        if(error.code==="ACCESS_RETRY_REQUIRED")fail("EXECUTION_READ_ACCESS_CHANGED",409);
-        if(error.code==="CURRENT_ACTOR_AUTHORITY_REQUIRED"||error.code==="ACCESS_RESOURCE_NOT_FOUND")fail("EXECUTION_READ_NOT_AVAILABLE",404);
-        if(error.code==="POLICY_PENDING")fail("EXECUTION_READ_POLICY_PENDING");
-        if(error.code==="ACCESS_SCOPE_LIMIT_EXCEEDED")fail("EXECUTION_READ_SCOPE_LIMIT",503);
-      }
-      // No DB/adapter/parser error is a successful compatibility read.
-      throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
-    }
+    try{return await this.mint(p,b,r);}catch(error){return rethrowReadScopeError(error);}
   }
 
   private async identity(principal:ReadScopePrincipal) {
@@ -310,6 +333,17 @@ export class ExecutionReadScopes {
           if(tupleKeys.has(tupleKey)||lineage.some(x=>!keys.has(exactKey(x))))fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
           tupleKeys.add(tupleKey);
         }
+        if(r.action==="maintenance.read"&&r.resource?.kind==="ROOT"&&heartbeatTechnicalDataset(r.dataset)){
+          // Reuse the common exact publication/current-context/double-read
+          // fences above, not business ALL or researcher discovery below.
+          // ROOT is the technical collection; it supplies no economic census.
+          if(publication.resources.length!==1||exactKey(publication.resources[0])!==exactKey(r.resource)||
+            publication.tuples.length!==0||publication.current_linkage!==null||
+            publication.binding_lineage!=null||publication.strategy_lineage!=null)
+            fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+          if(r.requireWholePopulation)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+          resources=[{...r.resource}];tuples=[];whole=false;
+        }else{
         if(publication.strategy_lineage?.pairs.some(pair=>
           !keys.has(exactKey({kind:"ALPHA",id:pair.alpha_id}))||!publication!.tuples.some(t=>t.alpha_id===pair.alpha_id)))
           fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
@@ -411,6 +445,7 @@ export class ExecutionReadScopes {
         }
         if(r.resource&&(r.action==="portfolio.discover_linked"||r.action==="portfolio.read_restricted")&&
           !tuples.some(t=>t.portfolio_id===r.resource!.id))fail("EXECUTION_READ_NOT_AVAILABLE",404);
+        }
       }else{
         if(!r.resource)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
         resources=[r.resource];whole=false;

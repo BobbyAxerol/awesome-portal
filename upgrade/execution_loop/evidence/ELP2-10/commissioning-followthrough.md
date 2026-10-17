@@ -1,5 +1,142 @@
 # ELP2-10 — three-gate commissioning follow-through
 
+<a id="elp210-backend-return-20261017-1315"></a>
+
+## Current backend return —2026-10-17T13:15UTC
+
+Entry still`f1f5fc7d541a2bd9b4aeb324e932d2b4f223ade7`, same integration
+branch; owned backend batch UNCOMMITTED. Latest normal hook ended13:04UTC:
+719contracts PASS,APIbuild PASS,5,291API PASS/1FAIL/3skip. Only migration
+census expected4 rather than5 after139; corrected exact assertion, failure
+and cleanup preserved in [scoped History packet](../ELP2-06/scoped-score-history.md).
+No restore/commit PASS claimed from that attempt. New source inspection,
+bounded History and PM candidates below are not covered by the old result.
+
+**APPLIED, pending grouped impacted validation:** scoped Score history now
+has actual immutable custody decoding, authorized counts/nearest predecessor,
+two-way opaque cursors, bounded RR reads and archived policy classification.
+No coordinator is required to read retained facts. Synthetic available fixture,
+generated union and actual-PG regressions added. PM source-compatible profile
+and budget reallocation codecs added after exact read-only HK source repin;
+still NOT_AUTHENTICATED with no sender or business-status promotion.
+
+| Phase | Actual remaining gap / next backend action |
+|---|---|
+|00–01|Maintain affected inventories;00-005 requires approved runtime calibration, not choosing the formula again|
+|02–03|Accepted issuer/mapping/current-grant installation and exact delegated field ceiling; local OwnProfile/scope/final-clock code already landed|
+|04|29 remaining null-purpose reader relations need named purpose/authorization/source proof. Heartbeat capture/private ROOT code awaits this batch's gate; public alias remains closed|
+|05–06|Land scoped History and Original/Restated tests; PATH method proof, dependent Composition/Regime historical-policy recalculation and qualified economic provider installation/tie-out still OPEN|
+|07–08|Candidate profile/reallocation is not a full bridge. Family-specific public DTO/policy/result binding, assignment/rebind/lifecycle/monitor, authenticated factory and held current-human owning-COMMIT remain; RETURN needs its own writer|
+|09|Local coordinator/PgScopedReplaySource exists; accepted serialized authenticated wire/factory/listener and connected snapshot/tail/correction/floor/hidden/revoke proof still OPEN|
+|10|Actual trust/current-human installation,14 approved numeric budget groups,Score/Regime calibration and matched coexistence/applicable P184G2; correctness cells cannot supply these facts|
+|11|NOT_ENTRY_READY. Required upstream/source/performance/product gates remain; no automatic merge/release/deploy|
+
+Claude UXM00–10 NOT_STARTED_BY_OWNER_DIRECTION, handoffs
+AWAITING_CONSUMER_REVIEW. [History operation/types/fixtures and exact future
+consumer states](../ELP2-06/scoped-score-history.md#published-contract-and-future-claude-handoff).
+Private PM codecs introduce no FE field. No FE edit,push,dev/main,source/
+SSE/command/Live activation, runtime migration/restart or credential change.
+Independent backend continues within approved02–11 scope after coherent gate;
+remaining code debt is not disguised as only a frontend or calibration blocker.
+
+**13:16UTC impacted terminal:** [APIbuild and264/264 tests in11files PASS](../ELP2-06/scoped-score-history.md#impacted-gate-terminal-2026-10-17t1316utc).
+Overall controller incomplete only at post-test restore fixture: this narrow
+selection created separate suite DBs, not shared Core `portal_users`. Actual
+source/index/eight runtimes unchanged and owned resources/lease empty. No
+second full focus; coherent normal hook supplies complete Core harness and
+restore. New History/PM code is not yet committed or operationally qualified.
+
+<a id="elp210-backend-return-20261017-1200"></a>
+
+## Current backend return and coherent next slice —2026-10-17T12:00UTC
+
+**Terminal previous batch:** `f1f5fc7d541a2bd9b4aeb324e932d2b4f223ade7`
+landed29files +1,659/−56 versus322e2347. Normal controller
+`20261017/finite-followthrough-land-111151` under local-state
+`portal-execution-elp210` ended PASS at11:38:52.719669UTC, exit0.
+716contracts/64files, APIbuild and5,046API tests PASS/3skip across348files
+(346PASS,2skipped); scoped PG restore four access-row digests PASS. Logsha256
+`53eb3672fc0b3ce7efd07a2aa83fb76fecbfbf1b328464c0cf3ff565c83c94af`.
+Source/index checks PASS; eight protected runtime image/start/restart tuples
+unchanged; remaining_owned_resources empty, lease released. This supersedes
+only that batch's pending gate, not its preserved earlier failed attempt or
+full source/runtime/calibration/G2 acceptance.
+
+**Next batch is APPLIED/UNCOMMITTED, new tests NOT_RUN at entry:**
+
+-04 [heartbeat static collector/declared PK](../ELP2-04/heartbeat-capture.md).
+  V2 purpose remains null; deploying into an enabled worker later adds calls.
+  No deployment or source job occurred. Existing legacy reader can surface
+  captured allowlisted fields; do not describe them as necessarily private.
+-06 [Original/Restated full local chain](../ELP2-06/original-restated.md):
+  immutable original custody, bounded IDLE historical worker/store/mode heads,
+  exact current-authorized named reads and generated fixture/contracts.
+  Migration139 disposable only; old source bytes/ACK/current DTO unchanged.
+  Review corrected two source input-limit regressions, omitted feed-age
+  disclosure and operational503 classification before validation.
+-07/08 [pending control and REGISTER_INSTANCE candidate codecs](../ELP2-07/pm-management-candidates.md).
+  Rechecked exact PM source bytes at HEAD49a6acc3; owner WIP preserved.
+  Candidates remain NOT_AUTHENTICATED and never mount/send or create grants.
+
+One coherent normal-hook gate will cover contracts/build/actual disposablePG/
+scoped restore. No repeated unchanged engine/browser/load/DR runs. New tests
+are not called PASS until controller terminal; source/CPU/RAM/latency/G2 are
+not qualified by disposable correctness. Source SHA/dirty metadata is not
+deployment proof. No frontend, runtime/config/credential/grant, source/SSE/
+command/Live, push/dev/main, sign or deploy change.
+
+**12:03UTC gate terminal:** the current batch did not land: contracts
+63files/690tests passed but the Manager suite could not import the newly
+added pure validator in the networkless test copy. APIbuild/PG/restore
+NOT_RUN. [Failure and exact copy-list correction](../ELP2-06/original-restated.md#first-contract-gate-terminal-and-exact-isolation-copy-correction).
+Owned resources/lease cleaned; source/index and all eight protected runtimes
+unchanged. Retry the normal hook with that one test-cell dependency added;
+no weakened contract, runtime mount or network access.
+
+**12:07UTC correction:** next hook preserved718PASS/1FAIL (duplicate schema
+registration in the new test), before API/PG. Reuse the compiled Ajv validator;
+focused Manager contract29/29PASS, no production semantics change. Both failed
+hooks and their exact cleanup/runtime checks remain in the linked06 packet.
+
+**12:27UTC qualification correction:** subsequent normal hooks passed719
+contracts/parity but failed API build (first syntax, then null-flow narrowing
+in two new modules). No API/PG/restore PASS is claimed. Both terminal receipts,
+exact corrections and cleanup are preserved in06. Use impacted build/PG before
+the next normal hook. The04 heartbeat exact private ROOT branch is now also
+applied, with independent review's initial-provider error sanitizer and42
+proposed PG regressions; public alias/source commissioning remain closed.
+
+**12:36UTC actual impacted gate:** APIbuild PASS;18suites560PASS/1FAIL,
+including successful original/restated coordinator→PG→named BFF, ROOT42 and
+PM candidate39/36 cases. One new capture assertion misdescribed existing
+durable recovery behavior; corrected assertion now checks recovery/no Paper
+mirror/independent profiles, without changing product behavior. [Terminal
+receipt/hash and exact limits](../ELP2-06/original-restated.md#elp206-restated-focus-1235).
+Restore NOT_RUN after failure; source/index/eight protected runtimes unchanged,
+all owned resources/lease clean. Required coherent normal hook next; current
+batch not yet committed or globally PASS. All source/public/command/calibration/
+G2/consumer debt in the table remains independently OPEN.
+
+### Remaining phases — current, not all external dependencies
+
+| Phase | Still required | Backend next within existing approval |
+|---|---|---|
+|00–01|Affected inventory/contract upkeep,00-005 runtime calibration approval|Maintain source/schema pins; fixed formula is not reopened|
+|02–03|Real accepted issuer/mapping/current grants installation and exact delegated field-ceiling qualification|Local OwnProfile/exact scope/resource/grant/clock implementation already landed; do not repeat as new work|
+|04|29 null-purpose relations and reviewed public mapping; source/delivery proof|Heartbeat capture and private exact ROOT mint are applied, awaiting tests; no public reader commissioned. Remaining named readers/authorization remain real local debt|
+|05–06|Qualified economic provider installed/tie-out, PATH method proof, scoped history and archived policy classification, dependent Composition/Regime policy restatement|Validate and land the applied Original/Restated chain, then remaining independent adapters; numeric fixtures are not production config|
+|07–08|Reallocation/profile/assignment/rebind/lifecycle/monitor family bridges, full authenticated outcomes/current-human owning-COMMIT|Finite candidate codecs are not complete command commissioning; RETURN still needs its own economic writer|
+|09|Jointly frozen authenticated scoped wire/factory/listener and connected continuity/correction/revoke|Existing local Hub/coordinator and source Pg bridge do not prove a mounted end-to-end source|
+|10|Actual trust/current-human installation,14 numeric group budgets and calibration approved; matched coexistence/original applicable P184G2|Complete implementable code and prepare exact qualification; no invented production thresholds|
+|11|Mandatory upstream acceptance + selected product/browser/owner gates|NOT_ENTRY_READY; no merge/release/deploy|
+
+Claude UXM00–10 **NOT_STARTED_BY_OWNER_DIRECTION**. Generated historical
+contract/fixtures have a concrete [handoff](../ELP2-06/original-restated.md#published-contract-and-claude-handoff)
+for later consumption, **AWAITING_CONSUMER_REVIEW**. Future UI must distinguish
+historical K/compute/feed-age and original policy absence from operational
+currentness. No new product field from heartbeat or candidate PM codecs.
+Producer delivery does not close integration or assign Claude automatically.
+
 ## Current grouped validation correction — 2026-10-17T11:06UTC
 
 The next20-file slice's focus is TERMINAL: build PASS,329/330API tests PASS,

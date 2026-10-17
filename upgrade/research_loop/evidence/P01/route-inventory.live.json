@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 292,
+  "route_count": 294,
   "routes": [
     {
       "method": "DELETE",
@@ -538,6 +538,16 @@
       "method": "GET",
       "path": "/api/v1/execution/manager/portfolios/:id/overview",
       "owner": "apps/control-api/src/execution-v2/manager-model.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/manager/score-revisions",
+      "owner": "apps/control-api/src/execution-v2/manager-score-revision.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/manager/score-view",
+      "owner": "apps/control-api/src/execution-v2/manager-score-revision.controller.ts"
     },
     {
       "method": "GET",

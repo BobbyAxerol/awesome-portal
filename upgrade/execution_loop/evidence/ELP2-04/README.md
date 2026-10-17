@@ -558,3 +558,11 @@ positive source commissioning is separate from safety refusals. The generated
 assigns it. No frontend, runtime policy, upstream service, push/dev/main merge,
 goal or next-phase activation occurs in this closeout. Original external
 source/policy dependencies remain explicit; fixtures cannot close them.
+
+### Current04 continuation —2026-10-17
+
+Read [exact heartbeat capture and activation boundary](heartbeat-capture.md).
+Collector/PK code is APPLIED/UNCOMMITTED;15 actual-PG synthetic-source cases
+NOT_RUN until grouped gate. All29 V2 null purposes remain uncommissioned.
+This catalogue can add calls if later deployed into an enabled worker; no such
+deployment occurred. Existing legacy retained disclosure is not called private.

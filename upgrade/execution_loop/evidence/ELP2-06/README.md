@@ -1,5 +1,11 @@
 # ELP2-06 — Manager read models và 360 datasets
 
+Latest continuation: [bounded scoped Score history](scoped-score-history.md)
+replaces enumeration stub and adds archived policy classification/older public
+refs, preserving current access/original bytes. APPLIED/UNCOMMITTED at entry;
+new validation/normal-hook terminal required. Prior hook719contracts/build PASS,
+5,291API PASS/1migration-census assertionFAIL preserved there. Claude held.
+
 Latest assigned backend continuation: [Composition publication chain](composition-publication.md)
 landed `fdab164c`; [descriptive Regime publication chain](regime-publication.md)
 is in the coherent normal-hook batch. These supersede earlier always-null or
@@ -226,3 +232,14 @@ locked formula, causal/archive/numerical corrections and explicit chain still
 missing. Shared identity/recovery + Regime normal-hook batching avoids duplicate
 full gates. No actual source/config/worker/public Regime projection is installed;
 06-002/00-005 remain OPEN, and Claude remains NOT_STARTED_BY_OWNER_DIRECTION.
+
+### Original/Restated continuation —2026-10-17
+
+[Actual custody/worker/store/named-read implementation and handoff](original-restated.md)
+now supersedes the earlier unimplemented design entry only for this finite
+slice. New SQL139, exact original input custody, off-request later-policy
+historical result and two explicit named reads are APPLIED/UNCOMMITTED;
+new contract/PG tests NOT_RUN before the grouped gate. Scoped history,
+PATH proof, dependent Composition/Regime restatement and actual source/config
+installation remain OPEN; ordinary current Manager DTO is unchanged. Claude
+consumer remains owner-held, not accepted by producer delivery.

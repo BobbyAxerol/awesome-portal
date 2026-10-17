@@ -59,6 +59,12 @@ export interface ManagerQualityInput {
   allow_test_only?: boolean;
   reason_codes?: readonly string[];
 }
+/** Explicit numerical evaluation only. The trusted historical worker must independently
+ * validate the approved policy handle and knowledge cutoff; this is not authority. */
+export interface ManagerQualityRestatementEvaluation {
+  revision_mode: "RESTATED_CURRENT_POLICY";
+  knowledge_cutoff_ms: number;
+}
 export interface ManagerQualityCalculation {
   value: string | null;
   status: "available" | "provisional" | "partial_components";
@@ -142,7 +148,8 @@ export function managerQualityBand(value: string | null): ManagerQualityBand | n
   return q.units < 40n * one ? "weak" : q.units < 60n * one ? "neutral" : q.units < 75n * one ? "fair" : q.units < 90n * one ? "good" : "very_good";
 }
 
-function policyReasons(policy: ManagerScorePolicy | null, input: ManagerQualityInput): string[] {
+function policyReasons(policy: ManagerScorePolicy | null, input: ManagerQualityInput,
+  evaluation?: ManagerQualityRestatementEvaluation): string[] {
   if (!policy) return ["RUNTIME_CALIBRATION_NOT_APPROVED"];
   const reasons: string[] = [];
   if (policy.formula_id !== MANAGER_SCORE_FORMULA) reasons.push("INVALID_FORMULA_POLICY");
@@ -154,8 +161,12 @@ function policyReasons(policy: ManagerScorePolicy | null, input: ManagerQualityI
   if (policy.qualification === "RUNTIME_APPROVED" && !NONEMPTY(policy.approved_policy_id)) reasons.push("RUNTIME_CALIBRATION_NOT_APPROVED");
   if (policy.qualification === "TEST_ONLY" && !input.allow_test_only) reasons.push("TEST_ONLY_POLICY_NOT_RUNTIME_AUTHORITY");
   if (policy.comparable_basis_id !== input.comparable_basis_id || policy.currency !== input.currency) reasons.push("POLICY_BASIS_MISMATCH");
+  const policyCutoff = evaluation ? evaluation.knowledge_cutoff_ms : input.as_of_ms;
+  if (evaluation && (evaluation.revision_mode !== "RESTATED_CURRENT_POLICY"
+    || !safeCount(policyCutoff) || policyCutoff < input.as_of_ms))
+    reasons.push("INVALID_RESTATEMENT_KNOWLEDGE_CUTOFF");
   if (!safeCount(policy.issued_at_ms) || !safeCount(policy.calibration_cutoff_ms)
-    || policy.calibration_cutoff_ms > policy.issued_at_ms || policy.issued_at_ms > input.as_of_ms) reasons.push("POLICY_NOT_AVAILABLE_AS_OF");
+    || policy.calibration_cutoff_ms > policy.issued_at_ms || policy.issued_at_ms > policyCutoff) reasons.push("POLICY_NOT_AVAILABLE_AS_OF");
   if (!Number.isInteger(policy.canonical_decimal_places) || policy.canonical_decimal_places < 0 || policy.canonical_decimal_places > 15
     || !policy.maturity || !Object.values(policy.maturity).every(safeCount)
     || !Array.isArray(policy.required_costs) || policy.required_costs.some(cost => !NONEMPTY(cost))) reasons.push("INVALID_POLICY_CONFIG");
@@ -207,7 +218,8 @@ function calculateReference(metrics: ManagerScoreMetrics, policy: ManagerScorePo
 }
 
 /** Runtime qualifiers must be supplied by the trusted worker; a policy object is not approval evidence. */
-export function calculateManagerQualityScore(input: ManagerQualityInput): ManagerQualityResult {
+export function calculateManagerQualityScore(input: ManagerQualityInput,
+  evaluation?: ManagerQualityRestatementEvaluation): ManagerQualityResult {
   const policy = input.policy;
   const result: ManagerQualityResult = { formula_id: MANAGER_SCORE_FORMULA, qualification: policy?.qualification ?? "UNQUALIFIED",
     status: "policy_pending", reason_codes: [], value: null, band_code: null, components: null,
@@ -215,7 +227,7 @@ export function calculateManagerQualityScore(input: ManagerQualityInput): Manage
     policy_id: policy?.policy_id ?? null, policy_hash: policy?.policy_hash ?? null,
     approved_policy_id: policy?.approved_policy_id ?? null, comparable_basis_id: input.comparable_basis_id,
     individual_evidence_binding_id: input.individual_evidence_binding_id };
-  const faults = [...(input.reason_codes ?? []), ...policyReasons(policy, input)];
+  const faults = [...(input.reason_codes ?? []), ...policyReasons(policy, input, evaluation)];
   const policyFault = faults.length > (input.reason_codes?.length ?? 0);
   if (!NONEMPTY(input.individual_evidence_binding_id)) faults.push("SCORE_BINDING_NOT_VERIFIED");
   if (!input.data_valid || ![input.window_start_ms, input.window_end_ms, input.as_of_ms,

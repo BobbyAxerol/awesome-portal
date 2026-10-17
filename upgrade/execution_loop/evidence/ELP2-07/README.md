@@ -1,5 +1,12 @@
 # ELP2-07 — Trusted command và status bridge
 
+**Current finite source-compatible follow-through:**
+[management/profile/reallocation candidate codecs](pm-management-candidates.md)
+are separate from the public trusted bridge. Profile and reallocation are
+APPLIED/UNCOMMITTED with validation pending; no sender, installed authority,
+new grant or command activation follows from these codecs. Earlier entry and
+failure receipts remain historical; full-family commissioning is still OPEN.
+
 ## Entry / approved scope
 
 Bobby assigned ELP2-07 on2026-10-16. Integration checkout
@@ -189,3 +196,12 @@ effects, reset keys or restore revoked rights. No shared runtime changed here.
   actual activation/next phase requires its own qualification/assignment.
 - **Recommended next assignment:** ELP2-08 bounded workflow/state/fixture
   contracts with an explicit Claude design handoff. No08 work started here.
+
+### Current07/08 continuation —2026-10-17
+
+[Pending-control and instance-registration candidate codecs](pm-management-candidates.md)
+are APPLIED/UNCOMMITTED, tests NOT_RUN at entry; exact PM source hashes rechecked
+read-only. No authenticated Outcome, target identity, action/grant or command
+runtime is inferred. Other families/current-human/owning-COMMIT remain OPEN.
+08 has since been assigned in the approved batch; the older next-assignment
+wording above is historical, not a new approval request.

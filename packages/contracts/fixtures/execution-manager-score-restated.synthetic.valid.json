@@ -1,0 +1,127 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.manager-score-revision.v1",
+    "target": {
+      "surface": "ALPHA",
+      "id": "SYNTHETIC:alpha"
+    },
+    "workspace_id": "TEST_ONLY-workspace",
+    "environment": "paper",
+    "revision_mode": "RESTATED_CURRENT_POLICY",
+    "purpose": "HISTORICAL_ANALYSIS_ONLY",
+    "operational_current": false,
+    "revision_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "supersedes_revision_ref": null,
+    "supersedes_reason": "TARGET_HISTORY_LINEAGE_NOT_PROJECTED",
+    "source": {
+      "authorized_source_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "source_revision": "TEST_ONLY-source-r1",
+      "source_as_of_ms": 1000,
+      "recorded_through_ms": 1000,
+      "facts_through_ms": 1000
+    },
+    "knowledge_cutoff_ms": 1050,
+    "knowledge_cutoff_reason": null,
+    "computed_at_ms": 1100,
+    "computed_at_reason": null,
+    "eligibility": {
+      "policy_current": true,
+      "policy_state": "CURRENT",
+      "reason_code": null,
+      "economic_source": "RETAINED_EXACT_REVISION",
+      "usable_as_current_operational_score": false
+    },
+    "availability": "AVAILABLE",
+    "reason_codes": [],
+    "score_details": [
+      {
+        "slot": "RAW",
+        "binding": {
+          "subject_type": "alpha",
+          "subject_id": "SYNTHETIC:alpha",
+          "tuple_population_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "partition_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "stage_filter": [
+            "PAPER"
+          ],
+          "window_start_ms": 100,
+          "window_end_ms": 1000,
+          "comparable_basis_id": "SYNTHETIC:basis",
+          "individual_evidence_binding_id": "SYNTHETIC:ledger"
+        },
+        "original_input_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "derived_input_ref": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "availability": "AVAILABLE",
+        "reason_codes": [],
+        "score": {
+          "quality": {
+            "formula_id": "qbts_prb_v1_1",
+            "qualification": "RUNTIME_APPROVED",
+            "status": "provisional",
+            "reason_codes": [
+              "SYNTHETIC_MATURITY_LIMITED"
+            ],
+            "value": "73.3",
+            "band_code": "fair",
+            "components": {
+              "P": "80",
+              "R": "66",
+              "B": "70"
+            },
+            "normalized_points": {
+              "net_excess_twr": "80",
+              "sharpe_period": "80",
+              "mdd": "60",
+              "add": "75",
+              "positive_block_ratio": "75",
+              "stress_excess_twr": "65"
+            },
+            "atomic_contributions": {
+              "net_excess_twr": "25.2",
+              "sharpe_period": "10.8",
+              "mdd": "10.8",
+              "add": "9",
+              "positive_block_ratio": "9.375",
+              "stress_excess_twr": "8.125"
+            },
+            "bounds": null,
+            "policy_id": "SYNTHETIC:policy",
+            "policy_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            "approved_policy_id": "SYNTHETIC_NOT_OWNER_APPROVAL",
+            "comparable_basis_id": "SYNTHETIC:basis",
+            "individual_evidence_binding_id": "SYNTHETIC:ledger"
+          },
+          "raw_metrics": {
+            "net_excess_twr": "0.06",
+            "sharpe_period": "0.12",
+            "mdd": "0.04",
+            "add": "0.01",
+            "positive_block_ratio": "0.75",
+            "stress_excess_twr": "0.045"
+          },
+          "input_ref": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "computed_at_ms": 1100,
+          "calculation_revision": "SYNTHETIC:calc",
+          "policy_revision": "SYNTHETIC:policy-r1",
+          "config_ref": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        },
+        "feed_freshness": {
+          "availability": "AVAILABLE",
+          "status": "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS",
+        "checked_at_ms": 1100,
+          "source_age_ms": 100,
+          "maximum_input_age_ms": 50
+        }
+      }
+    ],
+    "composition": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED"
+    },
+    "regime": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "INDEPENDENT_REGIME_REVISION_NOT_SELECTED"
+    }
+  }
+}

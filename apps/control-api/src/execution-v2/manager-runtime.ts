@@ -23,6 +23,8 @@ import type { ManagerRegimeSubjectBinding, ManagerRegimePublication } from "./ma
 import type { ScopedReplayHub } from "./realtime";
 import { ManagerScoreRecalculation, type ManagerScoreRecalculationConfig,
   type ManagerScoreRecalculationTask } from "./manager-score-recalculation";
+import { ManagerScoreRestatement } from "./manager-score-restatement";
+import { captureManagerScoreOriginalInputs } from "./manager-score-original-custody";
 
 export interface ManagerRuntimePartition {
   scope: ManagerLeaseScope;
@@ -34,6 +36,8 @@ export interface ManagerRuntimePartition {
   score?: { runtime: ManagerScoreRuntime; maximum_tasks_per_revision: number; currentPolicy(): ApprovedManagerScorePolicy | null;
     /** Explicit opt-in only; no extra timer, source checkpoint or runtime default. */
     recalculation?: ManagerScoreRecalculationConfig;
+    /** Additive explicit historical mode; cannot share an initial writer with v1. */
+    restatement?: ManagerScoreRecalculationConfig;
     tasks(delivery: ManagerConsumerDelivery, signal: AbortSignal): Promise<ManagerScoreRecalculationTask[]> };
   composition?: { runtime:ManagerCompositionRuntime;maximum_tasks_per_revision:number;currentAllocation():ApprovedManagerAllocation|null;
     tasks(delivery:ManagerConsumerDelivery,signal:AbortSignal):Promise<Array<Omit<ManagerCompositionRuntimeTask,"allocation"|"raw_scores">>> };
@@ -70,6 +74,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
   private lastState: "SOURCE_PROVIDER_NOT_INSTALLED" | "READY" | "TICK_OK" | "TICK_REFUSED" | "STOPPED";
   private readonly repository: ManagerModelRepository;
   private readonly recalculations=new Map<string,ManagerScoreRecalculation>();
+  private readonly restatements=new Map<string,ManagerScoreRestatement>();
   private readonly cadenceMs: number;
   private readonly publicationReadLimit: number;
   private readonly installedTrust?: AccessTrustProvider;
@@ -102,12 +107,17 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
         p.regime.maximum_tasks_per_revision > 128 || (p.score?.maximum_tasks_per_revision ?? 0) +
         (p.composition?.maximum_tasks_per_revision ?? 0) + p.regime.maximum_tasks_per_revision > 128))
         throw new Error("MANAGER_REGIME_TASK_BOUND");
+      if(p.score?.recalculation&&p.score.restatement)throw new Error("MANAGER_SCORE_CUSTODY_MODE_CONFLICT");
       const recalculation=p.score?.recalculation?new ManagerScoreRecalculation({pool,runtime:p.score.runtime,
         currentPolicy:()=>p.score!.currentPolicy(),commissioning:p.commissioning,source:p.source,
         publication:(request,signal)=>p.publication(request,signal),config:p.score.recalculation}):undefined;
       if(recalculation)this.recalculations.set(key(p.scope),recalculation);
-      return new ManagerProjectionConsumer({pool,source:this.materializingSource(p,recalculation),scope:p.scope,bounds:p.bounds,
-        commissioning:p.commissioning,recalculation});
+      const restatement=p.score?.restatement?new ManagerScoreRestatement({pool,runtime:p.score.runtime,
+        currentPolicy:()=>p.score!.currentPolicy(),commissioning:p.commissioning,source:p.source,
+        publication:(request,signal)=>p.publication(request,signal),config:p.score.restatement}):undefined;
+      if(restatement)this.restatements.set(key(p.scope),restatement);
+      return new ManagerProjectionConsumer({pool,source:this.materializingSource(p,recalculation,restatement),scope:p.scope,bounds:p.bounds,
+        commissioning:p.commissioning,recalculation:restatement??recalculation});
     });
     this.lastState="READY";
   }
@@ -115,6 +125,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
   status() { return {state:this.lastState,partitions:this.partitions.length,automatic_loop:this.timer!==null}; }
   /** Private reader dependency, never reconstructed from browser input. */
   recalculationFor(scope:ManagerLeaseScope):ManagerScoreRecalculation|undefined{return this.recalculations.get(key(scope));}
+  restatementFor(scope:ManagerLeaseScope):ManagerScoreRestatement|undefined{return this.restatements.get(key(scope));}
   accessTrust(base?: AccessTrustProvider): AccessTrustProvider | undefined {
     if (!this.installation) return base;
     if (base && base !== this.installedTrust) throw new Error("MANAGER_RUNTIME_TRUST_CONFLICT");
@@ -193,7 +204,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     await Promise.allSettled([...this.publicationFlights]);
     await Promise.all(this.consumers.map(c=>c.stop()));await this.flight;this.lastState="STOPPED";
   }
-  private materializingSource(p: ManagerRuntimePartition,recalculation?:ManagerScoreRecalculation): ManagerProjectionSource {
+  private materializingSource(p: ManagerRuntimePartition,recalculation?:ManagerScoreRecalculation,restatement?:ManagerScoreRestatement): ManagerProjectionSource {
     return {read:async input=>{
       const raw=await p.source.read(input);if(!raw)return null;
       if(Buffer.byteLength(JSON.stringify(raw.document))>p.bounds.maximum_document_bytes)throw new Error("MANAGER_PROJECTION_LIMIT");
@@ -217,7 +228,13 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
           ...(regimes===undefined?{}:{precomputed_regimes:regimes})}};
       }
       if(!p.score&&!p.composition&&!p.regime)return {...delivery,document};
-      const tasks=p.score?await p.score.tasks(delivery,input.signal):[];
+      const provided=p.score?await p.score.tasks(delivery,input.signal):[];
+      // The exact detached values drive BOTH original calculation and custody.
+      // Capturing only in late attach would adopt provider mutation after yield.
+      const originals=restatement?captureManagerScoreOriginalInputs(provided,p.bounds.maximum_document_bytes):undefined;
+      // Custody's duplicate exact input_json bytes have their OWN optional cap;
+      // they must not reduce admission of the original worker envelope.
+      const tasks=originals?.map(({input_json:_bytes,...item})=>item)??provided;
       if(tasks.length>(p.score?.maximum_tasks_per_revision??0)||Buffer.byteLength(JSON.stringify(tasks))>p.bounds.maximum_document_bytes)
         throw new Error("MANAGER_SCORE_TASK_BOUND");
       const scores:ManagerScorePublication[]=[];
@@ -273,6 +290,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
       if(Buffer.byteLength(JSON.stringify(materialized))>p.bounds.maximum_document_bytes)throw new Error("MANAGER_PROJECTION_LIMIT");
       const result={...delivery,document:materialized};
       recalculation?.attach(result,tasks);
+      if(originals)restatement!.attach(result,originals);
       return result;
     },recheck:i=>p.source.recheck(i),acknowledge:(r,s)=>p.source.acknowledge(r,s)};
   }

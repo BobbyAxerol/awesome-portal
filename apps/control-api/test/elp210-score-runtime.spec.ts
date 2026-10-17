@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calculateManagerQualityScore, calculateManagerScoreMetrics, type ManagerScoreMetrics,
   type ManagerScorePathInput, type ManagerScorePolicy } from "../src/execution-v2/manager-score";
 import { loadApprovedManagerScorePolicy, ManagerScoreRuntime, managerScorePolicyHash, managerScorePublicationCurrent, managerScorePublicationPolicyCurrent,
+  managerScoreHistoricalPolicyState, managerScoreRecalculationPolicy,
   type ApprovedManagerScorePolicy, type ManagerScorePolicyApprovalPin, type ManagerScoreRuntimePolicyArtifact,
   type ManagerScoreRuntimeScope, type ManagerScoreRuntimeTask } from "../src/execution-v2/manager-score-runtime";
 
@@ -71,6 +72,30 @@ function pathTask(policy = load()): ManagerScoreRuntimeTask & { input: { kind: "
 }
 
 describe("ELP2-10 independently pinned Score worker runtime — synthetic fixtures only", () => {
+  it("classifies exact historical identity without applying source freshness or inventing operational currentness", () => {
+    const handle=load(),p=managerScoreRecalculationPolicy(handle,510,510)!;
+    expect(managerScoreHistoricalPolicyState(handle,scope,p.identity_digest,p.valid_until_ms,510)).toBe("CURRENT");
+    // Source freshness for this worker would expire at600; archived policy
+    // classification is independent and does not assert current feed quality.
+    expect(managerScoreHistoricalPolicyState(handle,scope,p.identity_digest,p.valid_until_ms,601)).toBe("CURRENT");
+    expect(managerScoreHistoricalPolicyState(handle,scope,p.identity_digest,p.valid_until_ms,5000)).toBe("NOT_CURRENT");
+    expect(managerScoreHistoricalPolicyState(null,scope,p.identity_digest,p.valid_until_ms,5000)).toBe("NOT_CURRENT");
+  });
+  it("classifies a replaced exact policy as NOT_CURRENT but absent/forged/wrong-scope authority as UNKNOWN", () => {
+    const handle=load(),p=managerScoreRecalculationPolicy(handle,510,510)!;
+    const replacement=load(fixture(a=>{a.policy.anchors.twr=["-0.03","0.08"];}));
+    expect(managerScoreHistoricalPolicyState(replacement,scope,p.identity_digest,p.valid_until_ms,510)).toBe("NOT_CURRENT");
+    for(const unknown of [null,{} as ApprovedManagerScorePolicy,structuredClone(handle)])
+      expect(managerScoreHistoricalPolicyState(unknown,scope,p.identity_digest,p.valid_until_ms,510)).toBe("UNKNOWN");
+    expect(managerScoreHistoricalPolicyState(handle,{...scope,profile_id:"different"},p.identity_digest,p.valid_until_ms,510)).toBe("UNKNOWN");
+  });
+  it("never revives historical policy with a future approval or invalid caller clock", () => {
+    const handle=load(),p=managerScoreRecalculationPolicy(handle,510,510)!;
+    expect(managerScoreHistoricalPolicyState(handle,scope,p.identity_digest,p.valid_until_ms,9)).toBe("UNKNOWN");
+    for(const time of [NaN,Infinity,-1,1.1])
+      expect(managerScoreHistoricalPolicyState(handle,scope,p.identity_digest,p.valid_until_ms,time)).toBe("UNKNOWN");
+    expect(managerScoreHistoricalPolicyState(handle,scope,p.identity_digest,NaN,510)).toBe("UNKNOWN");
+  });
   it("does not treat JSON RUNTIME_APPROVED, an approval-shaped id or absent policy as authority", async () => {
     const f = fixture();
     expect(loadApprovedManagerScorePolicy({ artifact_bytes: f.bytes, approval_pin: null, scope, as_of_ms: 500 }))

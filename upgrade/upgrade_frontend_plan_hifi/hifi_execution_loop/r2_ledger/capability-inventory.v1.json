@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-10-16",
- "route_count": 236,
+ "route_count": 238,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -12,6 +12,8 @@
  "taxonomy_gap": "The R2-0 enum has no class for a route that is published, healthy and has no consumer. Six such routes are recorded as INTERACTION_READ with unused_capability=true. Codex to decide whether to add PUBLISHED_UNCONSUMED.",
  "edge_command_activation_note": "ELP2-07 adds one named EDGE_COMMAND dispatch route, default source-dark. No verified source adapter is mounted or activated; TEST_ONLY component receipts are not runtime financial authority. route_count counts this ledger, not the separate repository-wide live route census.",
  "routes": [
+  {"route":"GET /api/v1/execution/manager/score-view","controller":"execution-v2/manager-score-revision.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-06 explicit authorized ORIGINAL/RESTATED historical view; current resource/field and exact retained-source binding, no GET calculation/ACK or operational-current relabel. Consumer owner-held; synthetic/disposable correctness is not source commissioning."},
+  {"route":"GET /api/v1/execution/manager/score-revisions","controller":"execution-v2/manager-score-revision.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-06 current-authorized finite history capability response; enumeration not installed, null counts/cursors rather than fabricated complete empty history. Consumer not assigned; no runtime source activation."},
   {"route":"GET /api/v1/execution/runtime-manifest/v2","controller":"execution/scoped-runtime-manifest.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-04 positive-readers: explicit finite local technical observations; Core per-profile maintenance and independent storage access fences; V1 unchanged. TEST_ONLY component proof, consumer not assigned, no source/runtime commissioning."},
   {"route":"POST /api/v1/execution/capital-commands/preview","controller":"execution-v2/command.controller.ts","interaction_class":"PORTAL_MUTATION","owner":"codex","test_owner":"codex","evidence":"ELP2-07: named capital preview; default unqualified and retained mutation guard; TEST_ONLY component proof is not runtime authority."},
   {"route":"POST /api/v1/execution/capital-commands","controller":"execution-v2/command.controller.ts","interaction_class":"EDGE_COMMAND","owner":"codex","test_owner":"codex","evidence":"ELP2-07: source-dark trusted dispatch; current policy/step-up/TS authority required. No source adapter activated; no generic CLI."},

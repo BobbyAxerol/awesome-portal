@@ -4,6 +4,7 @@ import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 import { managerDatasetResponse, managerMetric, managerModelQuery, managerQuality, managerScorePublication,managerCompositionPublication } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
 import { managerRegimePublication } from "../../../apps/control-api/src/execution-v2/manager-regime-publication.contract";
+import { managerScoreRevisionView, managerScoreRevisionHistory } from "../../../apps/control-api/src/execution-v2/manager-score-revision.contract";
 const root = resolve(__dirname,"..");
 const load = (file:string) => JSON.parse(readFileSync(resolve(root,file),"utf8"));
 const api = load("openapi/execution-manager-models.openapi.json");
@@ -12,6 +13,52 @@ const fixture = load("fixtures/execution-manager-dataset.synthetic.valid.json");
 const ajv = new Ajv2020({strict:true,allErrors:true});
 const validate = ajv.compile(schema);
 describe("ELP2-06 generated named Manager BFF contract",()=>{
+  it.each(["original","restated"])("publishes %s historical fixture in Zod, JSON Schema and OpenAPI without operational authority",mode=>{
+    const sample=load(`fixtures/execution-manager-score-${mode}.synthetic.valid.json`);
+    expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    const json=load("schemas/execution-manager-score-revision.v1.schema.json");
+    expect(api.components.schemas.ManagerScoreRevisionView).toEqual(Object.fromEntries(Object.entries(json).filter(([k])=>!["$schema","$id"].includes(k))));
+    const check=ajv.getSchema(json.$id)??ajv.compile(json);
+    expect(check(sample.value),JSON.stringify(check.errors)).toBe(true);
+    expect(managerScoreRevisionView.parse(sample.value)).toEqual(sample.value);
+    expect(check({...sample.value,operational_current:true})).toBe(false);
+    expect(managerScoreRevisionView.safeParse({...sample.value,operational_current:true}).success).toBe(false);
+    expect(managerScoreRevisionView.safeParse({...sample.value,knowledge_cutoff_ms:0,computed_at_ms:0}).success).toBe(false);
+    expect(managerScoreRevisionView.safeParse({...sample.value,eligibility:{...sample.value.eligibility,policy_current:!sample.value.eligibility.policy_current}}).success).toBe(false);
+    expect(check({...sample.value,source_set_digest:"PRIVATE"})).toBe(false);
+  });
+  it("does not publish a fake empty complete history, numeric count or unscoped private revision",()=>{
+    const sample=load("fixtures/execution-manager-score-history.synthetic.valid.json");
+    expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    const json=load("schemas/execution-manager-score-history.v1.schema.json"),check=ajv.getSchema(json.$id)??ajv.compile(json);
+    expect(check(sample.value),JSON.stringify(check.errors)).toBe(true);
+    expect(managerScoreRevisionHistory.parse(sample.value)).toEqual(sample.value);
+    for(const invalid of [{...sample.value,page:{...sample.value.page,returned_count:0}},
+      {...sample.value,items:[load("fixtures/execution-manager-score-original.synthetic.valid.json").value]}]){
+      expect(check(invalid)).toBe(false);expect(managerScoreRevisionHistory.safeParse(invalid).success).toBe(false);
+    }
+    expect(api.paths["/api/v1/execution/manager/score-view"].get.operationId).toBe("executionManagerScoreRevisionGetV1");
+    expect(api.paths["/api/v1/execution/manager/score-revisions"].get.operationId).toBe("executionManagerScoreRevisionHistoryGetV1");
+  });
+  it("publishes scoped historical counts/lineage and expired-policy facts, not private keys or operational values",()=>{
+    const sample=load("fixtures/execution-manager-score-history.available.synthetic.valid.json"),json=load("schemas/execution-manager-score-history.v1.schema.json");
+    const check=ajv.getSchema(json.$id)??ajv.compile(json);
+    expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    expect(check(sample.value),JSON.stringify(check.errors)).toBe(true);
+    expect(managerScoreRevisionHistory.parse(sample.value)).toEqual(sample.value);
+    expect(sample.value.items[0].supersedes_revision_ref).toBe(sample.value.items[1].revision_ref);
+    expect(sample.value.items.every((v:any)=>v.eligibility.policy_state==="NOT_CURRENT")).toBe(true);
+    for(const patch of [{reason_code:"SCOPED_HISTORY_ENUMERATION_NOT_INSTALLED"},
+      {page:{...sample.value.page,authorized_total_count:null}},
+      {items:[{...sample.value.items[0],calculation_key:"private"}]}]){
+      expect(check({...sample.value,...patch})).toBe(false);
+      expect(managerScoreRevisionHistory.safeParse({...sample.value,...patch}).success).toBe(false);
+    }
+    for(const patch of [{page:{...sample.value.page,returned_count:1}},
+      {items:[sample.value.items[0],sample.value.items[0]]},
+      {items:[{...sample.value.items[0],supersedes_revision_ref:null}]}])
+      expect(managerScoreRevisionHistory.safeParse({...sample.value,...patch}).success).toBe(false);
+  });
   it("preserves source plus derived metric reasons up to 64 without widening source-quality admission",()=>{
     const sample=load("fixtures/execution-manager-metric.derived-reasons.synthetic.valid.json");
     expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
@@ -99,9 +146,9 @@ describe("ELP2-06 generated named Manager BFF contract",()=>{
     invalid.quality.status="partial_components";invalid.quality.band_code=null;
     expect(managerScorePublication.safeParse(invalid).success).toBe(true);
   });
-  it("publishes exactly six named reads and one identical Zod/public DTO",()=>{
-    expect(Object.keys(api.paths)).toHaveLength(6);
-    expect(new Set(Object.values(api.paths).map((p:any)=>p.get.operationId)).size).toBe(6);
+  it("publishes six current and two explicit historical reads, preserving the current DTO",()=>{
+    expect(Object.keys(api.paths)).toHaveLength(8);
+    expect(new Set(Object.values(api.paths).map((p:any)=>p.get.operationId)).size).toBe(8);
     expect(api.components.schemas.ManagerDataset).toEqual(Object.fromEntries(Object.entries(schema).filter(([k])=>!["$schema","$id"].includes(k))));
     expect(fixture.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
     expect(validate(fixture.value),JSON.stringify(validate.errors)).toBe(true);

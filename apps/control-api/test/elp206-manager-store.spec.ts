@@ -443,10 +443,11 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 actual PostgreSQL Manag
   it("T06-08 fresh Execution store applies pinned135 once and reuses frozen131 ledger unchanged", async () => {
     const digest = await migrateExecutionStore(fresh);
     const first = (await fresh.query("SELECT version,digest FROM execution_store_migrations ORDER BY version")).rows;
-    expect(first).toHaveLength(4); expect(first.find(row => row.version === EXECUTION_STORE_VERSION)?.digest).toBe(digest);
+    expect(first).toHaveLength(5); expect(first.find(row => row.version === EXECUTION_STORE_VERSION)?.digest).toBe(digest);
     expect(first.some(row => row.version === "135.execution-manager-models.v1")).toBe(true);
     expect(first.some(row => row.version === "137.execution-manager-consumer-fence.v1")).toBe(true);
     expect(first.some(row => row.version === "138.execution-manager-calculation-revisions.v1")).toBe(true);
+    expect(first.some(row => row.version === "139.execution-manager-score-mode-heads.v1")).toBe(true);
     expect((await fresh.query("SELECT to_regclass('execution_manager_model_revisions') AS revisions,to_regclass('execution_manager_model_heads') AS heads,to_regclass('portal_users') AS users,to_regclass('workspaces') AS workspaces")).rows[0])
       .toEqual({ revisions: "execution_manager_model_revisions", heads: "execution_manager_model_heads", users: null, workspaces: null });
     expect(await migrateExecutionStore(fresh)).toBe(digest);

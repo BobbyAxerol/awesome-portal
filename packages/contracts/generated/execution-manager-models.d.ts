@@ -106,6 +106,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/manager/score-view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK. */
+        get: operations["executionManagerScoreRevisionGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/manager/score-revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK. */
+        get: operations["executionManagerScoreRevisionHistoryGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1150,6 +1184,557 @@ export interface components {
                 evaluation_at_ms: number;
             };
         };
+        ManagerScoreRevisionQuery: {
+            workspace_id?: string;
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            /** @enum {string} */
+            surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
+            id?: string;
+            stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+            economic_partition: {
+                /** @enum {string} */
+                economic_domain: "ACTUAL" | "PAPER" | "SANDBOX";
+                currency: string;
+                basis: string;
+                native_profile_ref: string;
+                domain_proof_ref: string;
+            };
+            /** @enum {string} */
+            source_selector: "CURRENT_HEAD" | "RETAINED_REVISION";
+            source_revision?: string;
+            /** @enum {string} */
+            revision_mode: "ORIGINAL_AS_PUBLISHED" | "RESTATED_CURRENT_POLICY";
+            revision_ref?: string;
+        };
+        ManagerScoreRevisionHistoryQuery: {
+            workspace_id?: string;
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            /** @enum {string} */
+            surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
+            id?: string;
+            stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+            economic_partition: {
+                /** @enum {string} */
+                economic_domain: "ACTUAL" | "PAPER" | "SANDBOX";
+                currency: string;
+                basis: string;
+                native_profile_ref: string;
+                domain_proof_ref: string;
+            };
+            /** @enum {string} */
+            source_selector: "CURRENT_HEAD" | "RETAINED_REVISION";
+            source_revision?: string;
+            /** @enum {string} */
+            revision_mode: "ORIGINAL_AS_PUBLISHED" | "RESTATED_CURRENT_POLICY";
+            limit?: number;
+            after?: string;
+            before?: string;
+        };
+        ManagerScoreRevisionView: {
+            /** @constant */
+            schema_version: "portal.execution.manager-score-revision.v1";
+            target: {
+                /** @enum {string} */
+                surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
+                id: string | null;
+            };
+            workspace_id: string;
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            /** @enum {string} */
+            revision_mode: "ORIGINAL_AS_PUBLISHED" | "RESTATED_CURRENT_POLICY";
+            /** @constant */
+            purpose: "HISTORICAL_ANALYSIS_ONLY";
+            /** @constant */
+            operational_current: false;
+            revision_ref: string;
+            supersedes_revision_ref: string | null;
+            /** @enum {string} */
+            supersedes_reason: "TARGET_HISTORY_LINEAGE_NOT_PROJECTED" | "ORIGINAL_HAS_NO_PREDECESSOR" | "NO_AUTHORIZED_PREDECESSOR" | "AUTHORIZED_PREDECESSOR";
+            source: {
+                authorized_source_ref: string;
+                source_revision: string;
+                source_as_of_ms: number;
+                recorded_through_ms: number;
+                facts_through_ms: number | null;
+            };
+            knowledge_cutoff_ms: number | null;
+            knowledge_cutoff_reason: ("ORIGINAL_KNOWLEDGE_CUTOFF_NOT_RECORDED" | "RESTATEMENT_NOT_PUBLISHED") | null;
+            computed_at_ms: number | null;
+            computed_at_reason: ("ORIGINAL_COMPUTE_TIMES_ARE_PER_ENTRY" | "RESTATEMENT_NOT_PUBLISHED") | null;
+            eligibility: {
+                policy_current: boolean;
+                /** @enum {string} */
+                policy_state: "CURRENT" | "NOT_CURRENT" | "UNKNOWN";
+                reason_code: ("POLICY_STATE_NOT_CLASSIFIED" | "CURRENT_POLICY_NOT_CONFIRMED") | null;
+                /** @enum {string} */
+                economic_source: "CURRENT_HEAD" | "RETAINED_EXACT_REVISION";
+                /** @constant */
+                usable_as_current_operational_score: false;
+            };
+            /** @enum {string} */
+            availability: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+            reason_codes: string[];
+            score_details: {
+                /** @enum {string} */
+                slot: "RAW" | "DIRECT_NAV";
+                binding: {
+                    /** @enum {string} */
+                    subject_type: "alpha" | "deployment" | "account" | "portfolio" | "manager_book";
+                    subject_id: string;
+                    tuple_population_digest: string;
+                    partition_digest: string;
+                    stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                    window_start_ms: number;
+                    window_end_ms: number;
+                    comparable_basis_id: string;
+                    individual_evidence_binding_id: string;
+                };
+                original_input_ref: string;
+                derived_input_ref: string | null;
+                feed_freshness: {
+                    /** @constant */
+                    availability: "AVAILABLE";
+                    /** @enum {string} */
+                    status: "WITHIN_CURRENT_FEED_FRESHNESS" | "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS";
+                    checked_at_ms: number;
+                    source_age_ms: number;
+                    maximum_input_age_ms: number;
+                } | {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "ORIGINAL_FEED_FRESHNESS_NOT_RECORDED" | "HISTORICAL_CALCULATION_NOT_PUBLISHED";
+                };
+                /** @enum {string} */
+                availability: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                reason_codes: string[];
+                score: {
+                    quality: {
+                        /** @constant */
+                        formula_id: "qbts_prb_v1_1";
+                        /** @enum {string} */
+                        qualification: "RUNTIME_APPROVED" | "TEST_ONLY" | "UNQUALIFIED";
+                        /** @enum {string} */
+                        status: "available" | "provisional" | "policy_pending" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data";
+                        reason_codes: string[];
+                        value: string | null;
+                        band_code: ("weak" | "neutral" | "fair" | "good" | "very_good") | null;
+                        components: {
+                            P: string | null;
+                            R: string | null;
+                            B: string | null;
+                        } | null;
+                        normalized_points: {
+                            net_excess_twr: string | null;
+                            sharpe_period: string | null;
+                            mdd: string | null;
+                            add: string | null;
+                            positive_block_ratio: string | null;
+                            stress_excess_twr: string | null;
+                        } | null;
+                        atomic_contributions: {
+                            net_excess_twr: string | null;
+                            sharpe_period: string | null;
+                            mdd: string | null;
+                            add: string | null;
+                            positive_block_ratio: string | null;
+                            stress_excess_twr: string | null;
+                        } | null;
+                        bounds: {
+                            lower: string;
+                            upper: string;
+                        } | null;
+                        policy_id: string | null;
+                        policy_hash: string | null;
+                        approved_policy_id: string | null;
+                        comparable_basis_id: string;
+                        individual_evidence_binding_id: string | null;
+                    };
+                    raw_metrics: {
+                        net_excess_twr: string | null;
+                        sharpe_period: string | null;
+                        mdd: string | null;
+                        add: string | null;
+                        positive_block_ratio: string | null;
+                        stress_excess_twr: string | null;
+                    } | null;
+                    input_ref: string;
+                    computed_at_ms: number;
+                    calculation_revision: string;
+                    policy_revision: string | null;
+                    config_ref: string | null;
+                } | null;
+            }[];
+            composition: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @enum {string} */
+                reason_code: "COMPOSITION_REVISION_NOT_SELECTED" | "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED";
+            };
+            regime: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "INDEPENDENT_REGIME_REVISION_NOT_SELECTED";
+            };
+        };
+        ManagerScoreRevisionHistory: {
+            /** @constant */
+            schema_version: "portal.execution.manager-score-history.v1";
+            target: {
+                /** @enum {string} */
+                surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
+                id: string | null;
+            };
+            workspace_id: string;
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            /** @enum {string} */
+            revision_mode: "ORIGINAL_AS_PUBLISHED" | "RESTATED_CURRENT_POLICY";
+            /** @constant */
+            purpose: "HISTORICAL_ANALYSIS_ONLY";
+            /** @constant */
+            operational_current: false;
+            /** @constant */
+            availability: "AVAILABLE";
+            reason_code: null;
+            page: {
+                limit: number;
+                returned_count: number;
+                authorized_total_count: number;
+                next_cursor: string | null;
+                previous_cursor: string | null;
+            };
+            items: {
+                /** @constant */
+                schema_version: "portal.execution.manager-score-revision.v1";
+                target: {
+                    /** @enum {string} */
+                    surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
+                    id: string | null;
+                };
+                workspace_id: string;
+                /** @enum {string} */
+                environment: "paper" | "sandbox" | "live";
+                /** @enum {string} */
+                revision_mode: "ORIGINAL_AS_PUBLISHED" | "RESTATED_CURRENT_POLICY";
+                /** @constant */
+                purpose: "HISTORICAL_ANALYSIS_ONLY";
+                /** @constant */
+                operational_current: false;
+                revision_ref: string;
+                supersedes_revision_ref: string | null;
+                /** @enum {string} */
+                supersedes_reason: "TARGET_HISTORY_LINEAGE_NOT_PROJECTED" | "ORIGINAL_HAS_NO_PREDECESSOR" | "NO_AUTHORIZED_PREDECESSOR" | "AUTHORIZED_PREDECESSOR";
+                source: {
+                    authorized_source_ref: string;
+                    source_revision: string;
+                    source_as_of_ms: number;
+                    recorded_through_ms: number;
+                    facts_through_ms: number | null;
+                };
+                knowledge_cutoff_ms: number | null;
+                knowledge_cutoff_reason: ("ORIGINAL_KNOWLEDGE_CUTOFF_NOT_RECORDED" | "RESTATEMENT_NOT_PUBLISHED") | null;
+                computed_at_ms: number | null;
+                computed_at_reason: ("ORIGINAL_COMPUTE_TIMES_ARE_PER_ENTRY" | "RESTATEMENT_NOT_PUBLISHED") | null;
+                eligibility: {
+                    policy_current: boolean;
+                    /** @enum {string} */
+                    policy_state: "CURRENT" | "NOT_CURRENT" | "UNKNOWN";
+                    reason_code: ("POLICY_STATE_NOT_CLASSIFIED" | "CURRENT_POLICY_NOT_CONFIRMED") | null;
+                    /** @enum {string} */
+                    economic_source: "CURRENT_HEAD" | "RETAINED_EXACT_REVISION";
+                    /** @constant */
+                    usable_as_current_operational_score: false;
+                };
+                /** @enum {string} */
+                availability: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                reason_codes: string[];
+                score_details: {
+                    /** @enum {string} */
+                    slot: "RAW" | "DIRECT_NAV";
+                    binding: {
+                        /** @enum {string} */
+                        subject_type: "alpha" | "deployment" | "account" | "portfolio" | "manager_book";
+                        subject_id: string;
+                        tuple_population_digest: string;
+                        partition_digest: string;
+                        stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                        window_start_ms: number;
+                        window_end_ms: number;
+                        comparable_basis_id: string;
+                        individual_evidence_binding_id: string;
+                    };
+                    original_input_ref: string;
+                    derived_input_ref: string | null;
+                    feed_freshness: {
+                        /** @constant */
+                        availability: "AVAILABLE";
+                        /** @enum {string} */
+                        status: "WITHIN_CURRENT_FEED_FRESHNESS" | "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS";
+                        checked_at_ms: number;
+                        source_age_ms: number;
+                        maximum_input_age_ms: number;
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        /** @enum {string} */
+                        reason_code: "ORIGINAL_FEED_FRESHNESS_NOT_RECORDED" | "HISTORICAL_CALCULATION_NOT_PUBLISHED";
+                    };
+                    /** @enum {string} */
+                    availability: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                    reason_codes: string[];
+                    score: {
+                        quality: {
+                            /** @constant */
+                            formula_id: "qbts_prb_v1_1";
+                            /** @enum {string} */
+                            qualification: "RUNTIME_APPROVED" | "TEST_ONLY" | "UNQUALIFIED";
+                            /** @enum {string} */
+                            status: "available" | "provisional" | "policy_pending" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data";
+                            reason_codes: string[];
+                            value: string | null;
+                            band_code: ("weak" | "neutral" | "fair" | "good" | "very_good") | null;
+                            components: {
+                                P: string | null;
+                                R: string | null;
+                                B: string | null;
+                            } | null;
+                            normalized_points: {
+                                net_excess_twr: string | null;
+                                sharpe_period: string | null;
+                                mdd: string | null;
+                                add: string | null;
+                                positive_block_ratio: string | null;
+                                stress_excess_twr: string | null;
+                            } | null;
+                            atomic_contributions: {
+                                net_excess_twr: string | null;
+                                sharpe_period: string | null;
+                                mdd: string | null;
+                                add: string | null;
+                                positive_block_ratio: string | null;
+                                stress_excess_twr: string | null;
+                            } | null;
+                            bounds: {
+                                lower: string;
+                                upper: string;
+                            } | null;
+                            policy_id: string | null;
+                            policy_hash: string | null;
+                            approved_policy_id: string | null;
+                            comparable_basis_id: string;
+                            individual_evidence_binding_id: string | null;
+                        };
+                        raw_metrics: {
+                            net_excess_twr: string | null;
+                            sharpe_period: string | null;
+                            mdd: string | null;
+                            add: string | null;
+                            positive_block_ratio: string | null;
+                            stress_excess_twr: string | null;
+                        } | null;
+                        input_ref: string;
+                        computed_at_ms: number;
+                        calculation_revision: string;
+                        policy_revision: string | null;
+                        config_ref: string | null;
+                    } | null;
+                }[];
+                composition: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "COMPOSITION_REVISION_NOT_SELECTED" | "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED";
+                };
+                regime: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    reason_code: "INDEPENDENT_REGIME_REVISION_NOT_SELECTED";
+                };
+            }[];
+        } | {
+            /** @constant */
+            schema_version: "portal.execution.manager-score-history.v1";
+            target: {
+                /** @enum {string} */
+                surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
+                id: string | null;
+            };
+            workspace_id: string;
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            /** @enum {string} */
+            revision_mode: "ORIGINAL_AS_PUBLISHED" | "RESTATED_CURRENT_POLICY";
+            /** @constant */
+            purpose: "HISTORICAL_ANALYSIS_ONLY";
+            /** @constant */
+            operational_current: false;
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            /** @constant */
+            reason_code: "SCOPED_HISTORY_ENUMERATION_NOT_INSTALLED";
+            page: {
+                limit: number;
+                returned_count: null;
+                authorized_total_count: null;
+                next_cursor: null;
+                previous_cursor: null;
+            };
+            items: {
+                /** @constant */
+                schema_version: "portal.execution.manager-score-revision.v1";
+                target: {
+                    /** @enum {string} */
+                    surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
+                    id: string | null;
+                };
+                workspace_id: string;
+                /** @enum {string} */
+                environment: "paper" | "sandbox" | "live";
+                /** @enum {string} */
+                revision_mode: "ORIGINAL_AS_PUBLISHED" | "RESTATED_CURRENT_POLICY";
+                /** @constant */
+                purpose: "HISTORICAL_ANALYSIS_ONLY";
+                /** @constant */
+                operational_current: false;
+                revision_ref: string;
+                supersedes_revision_ref: string | null;
+                /** @enum {string} */
+                supersedes_reason: "TARGET_HISTORY_LINEAGE_NOT_PROJECTED" | "ORIGINAL_HAS_NO_PREDECESSOR" | "NO_AUTHORIZED_PREDECESSOR" | "AUTHORIZED_PREDECESSOR";
+                source: {
+                    authorized_source_ref: string;
+                    source_revision: string;
+                    source_as_of_ms: number;
+                    recorded_through_ms: number;
+                    facts_through_ms: number | null;
+                };
+                knowledge_cutoff_ms: number | null;
+                knowledge_cutoff_reason: ("ORIGINAL_KNOWLEDGE_CUTOFF_NOT_RECORDED" | "RESTATEMENT_NOT_PUBLISHED") | null;
+                computed_at_ms: number | null;
+                computed_at_reason: ("ORIGINAL_COMPUTE_TIMES_ARE_PER_ENTRY" | "RESTATEMENT_NOT_PUBLISHED") | null;
+                eligibility: {
+                    policy_current: boolean;
+                    /** @enum {string} */
+                    policy_state: "CURRENT" | "NOT_CURRENT" | "UNKNOWN";
+                    reason_code: ("POLICY_STATE_NOT_CLASSIFIED" | "CURRENT_POLICY_NOT_CONFIRMED") | null;
+                    /** @enum {string} */
+                    economic_source: "CURRENT_HEAD" | "RETAINED_EXACT_REVISION";
+                    /** @constant */
+                    usable_as_current_operational_score: false;
+                };
+                /** @enum {string} */
+                availability: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                reason_codes: string[];
+                score_details: {
+                    /** @enum {string} */
+                    slot: "RAW" | "DIRECT_NAV";
+                    binding: {
+                        /** @enum {string} */
+                        subject_type: "alpha" | "deployment" | "account" | "portfolio" | "manager_book";
+                        subject_id: string;
+                        tuple_population_digest: string;
+                        partition_digest: string;
+                        stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                        window_start_ms: number;
+                        window_end_ms: number;
+                        comparable_basis_id: string;
+                        individual_evidence_binding_id: string;
+                    };
+                    original_input_ref: string;
+                    derived_input_ref: string | null;
+                    feed_freshness: {
+                        /** @constant */
+                        availability: "AVAILABLE";
+                        /** @enum {string} */
+                        status: "WITHIN_CURRENT_FEED_FRESHNESS" | "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS";
+                        checked_at_ms: number;
+                        source_age_ms: number;
+                        maximum_input_age_ms: number;
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        /** @enum {string} */
+                        reason_code: "ORIGINAL_FEED_FRESHNESS_NOT_RECORDED" | "HISTORICAL_CALCULATION_NOT_PUBLISHED";
+                    };
+                    /** @enum {string} */
+                    availability: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                    reason_codes: string[];
+                    score: {
+                        quality: {
+                            /** @constant */
+                            formula_id: "qbts_prb_v1_1";
+                            /** @enum {string} */
+                            qualification: "RUNTIME_APPROVED" | "TEST_ONLY" | "UNQUALIFIED";
+                            /** @enum {string} */
+                            status: "available" | "provisional" | "policy_pending" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data";
+                            reason_codes: string[];
+                            value: string | null;
+                            band_code: ("weak" | "neutral" | "fair" | "good" | "very_good") | null;
+                            components: {
+                                P: string | null;
+                                R: string | null;
+                                B: string | null;
+                            } | null;
+                            normalized_points: {
+                                net_excess_twr: string | null;
+                                sharpe_period: string | null;
+                                mdd: string | null;
+                                add: string | null;
+                                positive_block_ratio: string | null;
+                                stress_excess_twr: string | null;
+                            } | null;
+                            atomic_contributions: {
+                                net_excess_twr: string | null;
+                                sharpe_period: string | null;
+                                mdd: string | null;
+                                add: string | null;
+                                positive_block_ratio: string | null;
+                                stress_excess_twr: string | null;
+                            } | null;
+                            bounds: {
+                                lower: string;
+                                upper: string;
+                            } | null;
+                            policy_id: string | null;
+                            policy_hash: string | null;
+                            approved_policy_id: string | null;
+                            comparable_basis_id: string;
+                            individual_evidence_binding_id: string | null;
+                        };
+                        raw_metrics: {
+                            net_excess_twr: string | null;
+                            sharpe_period: string | null;
+                            mdd: string | null;
+                            add: string | null;
+                            positive_block_ratio: string | null;
+                            stress_excess_twr: string | null;
+                        } | null;
+                        input_ref: string;
+                        computed_at_ms: number;
+                        calculation_revision: string;
+                        policy_revision: string | null;
+                        config_ref: string | null;
+                    } | null;
+                }[];
+                composition: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "COMPOSITION_REVISION_NOT_SELECTED" | "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED";
+                };
+                regime: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    reason_code: "INDEPENDENT_REGIME_REVISION_NOT_SELECTED";
+                };
+            }[];
+        };
     };
     responses: never;
     parameters: never;
@@ -1561,6 +2146,140 @@ export interface operations {
                 content?: never;
             };
             /** @description Source publication, field policy, projection or bounded capacity unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    executionManagerScoreRevisionGetV1: {
+        parameters: {
+            query: {
+                workspace_id?: string;
+                environment: "paper" | "sandbox" | "live";
+                surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
+                id?: string;
+                stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                economic_partition: string;
+                source_selector: "CURRENT_HEAD" | "RETAINED_REVISION";
+                source_revision?: string;
+                revision_mode: "ORIGINAL_AS_PUBLISHED" | "RESTATED_CURRENT_POLICY";
+                revision_ref?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Explicit historical view or typed absence; null knowledge clocks are never inferred */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagerScoreRevisionView"];
+                };
+            };
+            /** @description Invalid closed query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Reference or current grant unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authority/source/policy changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Qualified source or bounded capability unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    executionManagerScoreRevisionHistoryGetV1: {
+        parameters: {
+            query: {
+                workspace_id?: string;
+                environment: "paper" | "sandbox" | "live";
+                surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
+                id?: string;
+                stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                economic_partition: string;
+                source_selector: "CURRENT_HEAD" | "RETAINED_REVISION";
+                source_revision?: string;
+                revision_mode: "ORIGINAL_AS_PUBLISHED" | "RESTATED_CURRENT_POLICY";
+                limit?: number;
+                after?: string;
+                before?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Explicit historical view or typed absence; null knowledge clocks are never inferred */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagerScoreRevisionHistory"];
+                };
+            };
+            /** @description Invalid closed query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Reference or current grant unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authority/source/policy changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Qualified source or bounded capability unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;

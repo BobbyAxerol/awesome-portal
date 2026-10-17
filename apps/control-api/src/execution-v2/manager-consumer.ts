@@ -11,6 +11,9 @@ import { publicationCommissioningCurrent, publicationCommissioningDeadline,
   type PublicationCommissioning, type PublicationContinuity } from "./publication-adapter";
 import type { ManagerScoreRecalculation } from "./manager-score-recalculation";
 
+/** Mutually exclusive private custody/IDLE lifecycle; never a new timer or ACK. */
+type ManagerCalculationLifecycle=Pick<ManagerScoreRecalculation,"attachedDeadline"|"assertAttached"|"persistAttached"|"idle">;
+
 const scopeSchema = z.object({ workspace_id: z.string().min(1).max(256),
   environment: z.enum(["paper", "sandbox", "live"]), profile_id: z.string().min(1).max(256) }).strict();
 const boundsSchema = z.object({
@@ -72,7 +75,7 @@ export class ManagerProjectionConsumer {
 
   constructor(private readonly options: { pool: Pool; source: ManagerProjectionSource; scope: ManagerLeaseScope;
     bounds: ManagerConsumerBounds; holder_id?: string; commissioning?: PublicationCommissioning;
-    allowTestOnly?: boolean; now?: () => number; recalculation?: ManagerScoreRecalculation }) {
+    allowTestOnly?: boolean; now?: () => number; recalculation?: ManagerCalculationLifecycle }) {
     this.scope = Object.freeze(scopeSchema.parse(options.scope));
     this.bounds = Object.freeze(boundsSchema.parse(options.bounds));
     this.options = Object.freeze({ ...options });
