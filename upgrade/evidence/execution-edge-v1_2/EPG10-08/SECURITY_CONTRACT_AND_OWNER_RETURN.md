@@ -31,6 +31,61 @@ TS commit. Paper/sandbox/live are structural scopes; Canary is a live stage.
 
 ## Current round2 delta —17/10/2026, Asia/Saigon
 
+**Original08 compatibility continuation:** main§23.20.6 records approved
+PM–Research authority completion and reviewed installation. Current Core
+has135/135focused PASS (72new vectors+63legacy),0FAIL/SKIP, including exact
+resource/environment revocation, unaffected-scope controls, missing ROOT,
+original full-fact digest, common technical/delegation identity correlation and
+actual scope mint/revalidation paths. See [bounded qualification](current-correspondence-qualification.json).
+Research commit `d483357a416f7944d06ab8d4e2a80062656dac92` has now landed through
+the configured normal hook:715contractsPASS,4825API PASS/3SKIP, TypeScript build
+and scoped-access PostgreSQL restore PASS (four row digests). The enclosing
+whole-working-tree guard is NOT_PASS due17concurrent peer code/test/doc changes;
+all11owned source/test paths still match qualified commit pins. No hook bypass,
+history rewrite, push/merge or runtime authority from that source commit.
+
+Owner governance is settled: Bobby protected OWNER full authority; Stan may
+manage subordinate grants within Bobby's ceiling, never change/revoke Bobby,
+change protected owner, self-elevate or exceed the delegation ceiling. No actual
+native grants/command/financial activation. Native selected-reader canonical
+**148PASS** (69unit including18owner-policy +7newPG +72native regressions),
+PM commit003d08d498fe6db0b6a6639f2cf45852c42b63fc. Earlier private123/7failure
+and130PASS remain separate. Corrected private fence experiment58PASS is not
+canonical product source or complete native-writer/capacity proof. Neither supplies
+the genuine census, accepted inputs, complete source bridge or runtime provider.
+See [source/runtime/cleanup reconciliation](current-correspondence-runtime.json):
+18HK+10SGP unchanged tuples; removed exactly2,262,040B HK and2,128,920B SGP
+terminal source/archive copies, retaining bounded receipts and active draft.
+No new image/build/cache, shared prune, DB/schema/user/grant/runtime change.
+Full08 NOT_MET; continue owned bridge/physical terminal/installer/connected
+revocation in original08, not generic approval or connected09.
+
+**Historical attempts, retained rather than summed:**
+first configured hook exit1: contracts712PASS/0FAIL/SKIP, buildPASS and API
+4773PASS/1FAIL/3SKIP. All own ordinary122/root64 intake file cases passed on
+disposable PG; access dump/restore NOT_REACHED after the API failure. Sole failure
+is parallel Regime fixture resolution, since corrected by its owner using the
+existing contracts mount; no primary edit of that WIP, bypass or commit at that attempt.
+Terminal receipt68fb6deb…; own process/cells/lease removed and8SGP tuples
+unchanged. Retry respects the peer correctness window. No schema,
+identity, grant, session, credential or operational runtime change in this slice.
+Post-focus review also removed new ordinary intake's uncoordinated detached-
+source write path. Subject OR parent versioned observations require the held
+coordinator, including TEST_ONLY; immutable historical replay and absent-extension
+legacy behavior remain compatible. Final exact-byte focus/real-PG verification
+was retaken after that correction: final135PASS/0FAIL/SKIP, receipt d3c18b3e…;
+real-PG/build pass as components; the later terminal result above supersedes the pending retry. PM source-only review
+confirms the normalized boundary; native-reference aggregate is not a native
+sequence or a held runtime fence. Peer Composition fdab164c is preserved base.
+
+Subsequent retry receipts remain separate: metadata refusal511uu17n started no
+lease/hook/job (exact1840byte peer journal insertion now hash-preserved); normal
+hook29yp4ma1 refused peer workflow contract snapshot drift before product suites.
+No peer contract/snapshot/index edits or hook bypass. Native selected-source now validates
+original receipts/revisions and full ROOT resource→scope coverage, with explicit
+OBSERVATION_ONLY_NOT_HELD wrapper and separate SELECT-only-login PG definitions.
+Its first executed qualification is recorded above; it cannot commission a held source.
+
 **Latest volume correction / source intake:** [actual route/DB/volume audit](database-volume-audit.json)
 and main§23.20.5 supersede the earlier blanket identity status. Released
 `portal.primusspark.com` uses volume
@@ -100,6 +155,31 @@ or implicit all-business-to-single-portfolio restriction. Mapping completion
 is not completion of both producers. PM source `_snapshot` takes `FOR UPDATE`;
 a SELECT-only producer must not copy it unchanged. See main23.20.4 for exact
 owner/decision/test boundary; no connected09 or repeated blanket approval.
+
+**Fresh exact source boundary (PMa156f21a):** manager permission scopes may use
+the real finite portfolio census across approved Paper/Sandbox/Live; that alone
+is not complete ROOT account/deployment/binding coverage. Thanh's predicate is
+the existing `current_linked_heads`: verified TS owner UUID + current assignment
+and instance/environment. Missing source coverage is UNAVAILABLE, not empty;
+only a complete authoritative zero-match result may mean empty. Existing native
+lineage requires membership.manage at a child grant's parent. Root bootstrap is
+an explicit native decision, not an inference from Portal ACTIVE/ADMIN/name.
+Minimal Bobby report.read+membership.manage / delegable report.read, Stan
+report.read only / no onward grants, was offered to Bobby as a bounded choice;
+no such permission was silently installed. This does not reopen already-approved
+Bobby/Stan business visibility, Thanh R1 fields, or financial command ceilings.
+
+No existing PM business lease can be mounted as an actual crash-safe PM→Core
+fence: the tested human candidate goes in the reverse direction (Core human
+authority held while PM commits). Its real human session/JWT fields must not be
+forged or reinterpreted as a business source lease. Reuse the TLS parser/peer
+gate, bounded lifecycle and authenticated terminal-readback pattern, not its
+purpose/table/receipt. Remaining owned components are purpose-specific native
+read lease/quarantine, affected native writer guards and authenticated Core
+terminal/status recovery. UNKNOWN survives timeout/disconnect until genuine
+terminal proof; short socket/TTL or an observation digest is not equivalent.
+This is lease/outcome metadata, not another grant ledger. Do not deploy partial
+guard SQL or label the missing producer implementation external debt.
 
 **Historical integration-only intake, not released stable:** all three named
 Portal accounts already existed on `portal-control-api-1`'s dev/integration store:

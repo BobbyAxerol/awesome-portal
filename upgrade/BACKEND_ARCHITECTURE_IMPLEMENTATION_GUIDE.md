@@ -788,6 +788,28 @@ deep-dive → ADR → slice → evidence discipline documented above.
   authenticated producer or installed authority. Restricted-r1 source c7c3997f
   is qualified, not unfinished code/missing approval; actual source installation
   remains open. Preserve current peer source/index and active correctness windows.
+  New [original08 continuation§23.20.6](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23206-original08--resource-scoped-authority-completion-and-reviewed-installation)
+  has final135focused PASS (72new+63legacy), compatible per-resource/environment
+  current proof and original full-fact digest; PM source-only review agrees.
+  Research commitd483357a landed through its normal hook:715contractsPASS,
+  4825API PASS/3SKIP, build and scoped-access PostgreSQL restore PASS. The
+  enclosing whole-worktree guard remains NOT_PASS:17peer code/test/doc paths
+  changed concurrently; all11owned source/test paths still match qualified pins.
+  Earlier failures/refusals are retained separately, not erased or summed.
+  See [bounded receipt](evidence/execution-edge-v1_2/EPG10-08/current-correspondence-qualification.json).
+  Owner has resolved governance: Bobby protected OWNER full authority, Stan may
+  manage subordinate grants inside Bobby's ceiling, never Bobby/self-elevation.
+  This is not command/financial activation. Native SELECT-only observer private
+  run130PASS; final canonical source148PASS includes18owner-policy cases,
+  committed on PM branch as003d08d4. Separate private/uninstalled fence58PASS
+  is an experiment, not canonical product/complete writer/capacity qualification;
+  observations/component tests are not held/runtime authority.
+  Native authenticated producer/census/held fence and reviewed bootstrap/runtime
+  installation remain incomplete, not config-only external debt. Full08 NOT_MET,
+  no connected09/authority activation or repeated general phase approval.
+  Latest [source/runtime/cleanup reconciliation](evidence/execution-edge-v1_2/EPG10-08/current-correspondence-runtime.json)
+  records18HK+10SGP unchanged tuples,2,262,040B HK and2,128,920B SGP terminal
+  source/archive cleanup; no new image/build/cache or operational change.
   Actual connected08→09→10→11 NOT_MET; no runtime mutation.18HK+8SGP protected
   tuples unchanged; exact test cells/lease cleaned and49,616,770B source copies
   removed. Shared Docker/cache pruning deferred under active peer jobs.

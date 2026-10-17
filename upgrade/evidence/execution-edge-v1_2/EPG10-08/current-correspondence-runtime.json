@@ -1,0 +1,1167 @@
+{
+  "schema_version": "epg10.original08-source-runtime-cleanup.v1",
+  "qualification": "READ_ONLY_IDENTIFIERS_AND_BOUNDED_METRICS_NOT_RUNTIME_ACCEPTANCE",
+  "hosts": [
+    {
+      "host": "HK",
+      "observed_utc": "2026-10-17T09:41:27.227006+00:00",
+      "sources_at_observation": [
+        {
+          "path": "/home/bobby/.worktrees/portal-execution-manager-v2",
+          "branch": "feat/manager-v2-paper-read",
+          "commit": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4"
+        },
+        {
+          "path": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+          "branch": "feat/execution-edge-upgrade-v1_2",
+          "commit": "5ff6c1dd1b852289b52180185ee4caf725009801"
+        },
+        {
+          "path": "/home/bobby/trading_system",
+          "branch": "fix/dev-consumer-recovery-integration",
+          "commit": "668e10320c0bf5a9089e33b72f317d8d7c7215c3"
+        },
+        {
+          "path": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+          "branch": "feat/portfolio-account-v1_1-parallel",
+          "commit": "e14f0b4c8a6bc5d4f3e07496753ff5fd60ebee01"
+        },
+        {
+          "path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+          "branch": "feat/v2-rust-first-okx-demo",
+          "commit": "a904e91326ed5ad0da4b8854b8dbe28c94b579a1"
+        },
+        {
+          "path": "/home/bobby/data_layer",
+          "branch": "main",
+          "commit": "5bf5cd540498b82959342c7cfb2ebeaac3007426"
+        }
+      ],
+      "runtime": [
+        {
+          "name": "/portal-execution-edge-execution-edge-1",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "6180b9bf3d7d16cc8b9ada67ccb6c860e3c83430412de14758961f9857db90f6",
+          "started": "2026-09-15T04:31:56.222432627Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-execution-edge-source-proxy-1",
+          "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+          "config": "21786bb09a2c5e94481b457a19a262c0cb2bf3fc6edb86629b053247ca329de8",
+          "started": "2026-09-15T04:31:56.153396054Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-execution-edge-manager-projection-worker-1",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "95e96a9b2c547f91b6175a0055de71aaee7197db3b37ed48012509cacee73801",
+          "started": "2026-09-15T04:31:56.212450549Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-execution-edge-projection-postgres-1",
+          "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+          "started": "2026-09-15T04:31:56.1391836Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-execution-edge-sandbox-execution-edge-1",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "cd79e9c68f67595e5ddbb88bddb95e4694a5b286ac25a72fb29bbe38d15190a1",
+          "started": "2026-09-15T04:31:56.220112038Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-execution-edge-sandbox-source-proxy-1",
+          "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+          "config": "da4b44c00580f3e4dfa42b77fd160f72c79300d6ab3f226e595ec42ee7f26b77",
+          "started": "2026-09-15T04:31:56.163786113Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-execution-edge-sandbox-manager-projection-worker-1",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "12294191799e7d112a3c8c8eff86f32dce1531fc40ec87062d87b13b53b23caa",
+          "started": "2026-09-15T04:31:56.210734102Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-execution-edge-sandbox-projection-postgres-1",
+          "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+          "started": "2026-09-15T04:31:56.134189771Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-execution-edge-live-execution-edge-1",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "98a191c75adf491d5b61de58f2e7d3b7e022a1f15533150d406ae9dc7f55ab0f",
+          "started": "2026-09-15T04:31:56.216153683Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-execution-edge-live-source-proxy-1",
+          "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+          "config": "9bb20c8894a71aa620bce6a62828f66336618526a0f8e6fcb4a1f46449d6384c",
+          "started": "2026-09-15T04:31:56.200743474Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-execution-edge-live-manager-projection-worker-1",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "1582b40cffaa5fb00350fa79da5f32519d03271fdb6f6dc59e719bc73ca68d53",
+          "started": "2026-09-15T04:31:56.216377234Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-execution-edge-live-projection-postgres-1",
+          "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+          "started": "2026-09-15T04:31:56.196296887Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-manager-read-paper-v2-portal_manager_read-1",
+          "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+          "config": "225db7755ea8ca9317e18af8febf06c7f3a4f92892a57f344a626126c98bf889",
+          "started": "2026-10-16T12:39:24.779624184Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-manager-read-paper-v2-portal_manager_issuer-1",
+          "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+          "config": "7710fc8e206a9812eb2abea7d7d222a1c568217a2f7ee6d8b122ed0009043342",
+          "started": "2026-10-16T12:39:25.023819622Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/trading-system-manager-read-sandbox-portal_manager_read-1",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "config": "453f59be45d1935795155c1aa2e44ceb7c6e10d636878f54f7319e4fa831a5bd",
+          "started": "2026-10-16T12:39:25.285275074Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/trading-system-manager-read-sandbox-portal_manager_issuer-1",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "config": "a97d6be022ee4c9c11e61539980aa80a15a96d77f18d2af94b057cae1d89c4df",
+          "started": "2026-10-16T12:39:25.541952691Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/trading-system-manager-read-live-portal_manager_read-1",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "config": "976ebe89ed6839c23119c4ed7b927a6465de0cd333941c93fcbe077d740f8111",
+          "started": "2026-10-16T12:39:25.821076411Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/trading-system-manager-read-live-portal_manager_issuer-1",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "config": "e68c442990013c2c22a55a0816d62124823aa5d0aabfc95ad27278a2d76664ba",
+          "started": "2026-10-16T12:39:26.074285865Z",
+          "restarts": 0,
+          "running": true
+        }
+      ],
+      "docker_disk_summary": "TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\nImages          104       40        31.8GB    8.549GB (26%)\nContainers      79        50        608.1MB   17.29MB (2%)\nLocal Volumes   41        14        101.6GB   218.3MB (0%)\nBuild Cache     392       47        29.54GB   455.5MB\n",
+      "image_output_rows": 105,
+      "unique_image_ids": 100,
+      "build_cache_output_lines": 392,
+      "inventory_sha256": "f42ea27fa84486d20fcecdef764fd021041726c4942dd14755046c107ee27fe6",
+      "cleanup": {
+        "schema_version": "epg10.original08-native-copy-cleanup.v1",
+        "host": "HK",
+        "started_utc": "2026-10-17T09:46:55.842607+00:00",
+        "targets": [
+          {
+            "path": "/tmp/epg10-08-native-qualification-eMuef8zI/source",
+            "kind": "OWNED_TERMINAL_SOURCE_COPY",
+            "logical_bytes": 262177
+          },
+          {
+            "path": "/tmp/epg10-08-native-qualification-eMuef8zI/native-source.tar",
+            "kind": "OWNED_TRANSFER_ARCHIVE",
+            "logical_bytes": 327680,
+            "sha256": "7db58123fdfab04275217cfd0cf49b31d7b7def331c6abbdd4a0d0892f2a507a"
+          },
+          {
+            "path": "/tmp/epg10-08-native-qualification-TsaYaJSR/source",
+            "kind": "OWNED_TERMINAL_SOURCE_COPY",
+            "logical_bytes": 262345
+          },
+          {
+            "path": "/tmp/epg10-08-native-qualification-TsaYaJSR/native-source.tar",
+            "kind": "OWNED_TRANSFER_ARCHIVE",
+            "logical_bytes": 327680,
+            "sha256": "90dafa103cbf82dc9e2ea10672b2e662c97db126fb2380c394d2f7c779cb0c84"
+          },
+          {
+            "path": "/tmp/epg10-08-native-final-Sj3i7sy7/source",
+            "kind": "OWNED_TERMINAL_SOURCE_COPY",
+            "logical_bytes": 265012
+          },
+          {
+            "path": "/tmp/epg10-08-native-final-Sj3i7sy7/native-source.tar",
+            "kind": "OWNED_TRANSFER_ARCHIVE",
+            "logical_bytes": 327680,
+            "sha256": "0c2f3741fc0b403522e567e4aac8d8b436a4f4df56380db449f16adf2d02ff27"
+          },
+          {
+            "path": "/tmp/epg10-08-fence-qualification-MrKgRdau/source",
+            "kind": "OWNED_TERMINAL_SOURCE_COPY",
+            "logical_bytes": 103679
+          },
+          {
+            "path": "/tmp/epg10-08-fence-qualification-MrKgRdau/fence-source.tar",
+            "kind": "OWNED_TRANSFER_ARCHIVE",
+            "logical_bytes": 133120,
+            "sha256": "44dce0ee5cefa4a3f28e7b5cc2daab2a41537d68e642c9a198a770217b0cf858"
+          },
+          {
+            "path": "/tmp/epg10-08-fence-final-eaVzK3Ic/source",
+            "kind": "OWNED_TERMINAL_SOURCE_COPY",
+            "logical_bytes": 109307
+          },
+          {
+            "path": "/tmp/epg10-08-fence-final-eaVzK3Ic/fence-source.tar",
+            "kind": "OWNED_TRANSFER_ARCHIVE",
+            "logical_bytes": 143360,
+            "sha256": "6346d97b2a91f68c68dadb2a099d4aee93042061b68e69874a77cc7da4406db6"
+          }
+        ],
+        "free_before": 233028554752,
+        "retained": "Bounded receipts/JUnit/logs/pins/runners; canonical committed observer; one active uninstalled fence draft",
+        "images_cache_volumes_networks_state_peer_source_removed": 0,
+        "result": "PASS",
+        "ended_utc": "2026-10-17T09:46:55.903463+00:00",
+        "logical_bytes_removed": 2262040,
+        "free_after": 233031102464,
+        "disk_delta_exclusive_attribution": false,
+        "protected_runtime_tuples_unchanged": 18
+      },
+      "cleanup_receipt_sha256": "d9393a640d49bbf6728940d8e51821b2855cb677ed8bfadae66f1b6e9b8c8423"
+    },
+    {
+      "host": "SGP",
+      "observed_utc": "2026-10-17T09:41:36.316843+00:00",
+      "sources_at_observation": [
+        {
+          "path": "/home/bobby/portal-research",
+          "branch": "docs/research-loop-plan",
+          "commit": "d483357a416f7944d06ab8d4e2a80062656dac92"
+        }
+      ],
+      "runtime": [
+        {
+          "name": "/portal-control-api-1",
+          "image": "sha256:8400439bc2cea6baf9bb86d3b4e851d4a0601531de86a7c1a47347f5837b7641",
+          "config": "963a3d8436bd48220cc41cafb73a18e8c6d0d4fd6abe72eddb843539b8918f60",
+          "started": "2026-09-19T09:03:33.22089525Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-portal-api-1",
+          "image": "sha256:4b094ff0d98ad8d6821cca670ab574bc54ae0f31fb38c72ff5edba45da114fed",
+          "config": "2056027ecff00524d57dc45dffc08475fe16612b0ae651acc59560083a261f7e",
+          "started": "2026-09-19T09:03:31.18473303Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-portal-web-1",
+          "image": "sha256:c2fb7a8c1122f8b737c3cefee1b78cafda7b025a0f8c36b56b5b9424a1b9ea31",
+          "config": "e0e3c404d22c6ae26fa993e3d56433591bcaf7c77fc89a675b21f4856ff87840",
+          "started": "2026-09-19T09:03:38.883641001Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-portal-postgres-1",
+          "image": "sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6",
+          "config": "b57b92f6b7e971291ff8e546b587e5145743b1c9234b88574949f0db14b40a7d",
+          "started": "2026-09-07T15:44:49.550112056Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-portal-nats-1",
+          "image": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+          "config": "63741aa5d84c9fa91aadcfbc138c88da7d44e90a8acfb326801d235aa8dfec39",
+          "started": "2026-09-07T15:44:49.548980272Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-stable-v1-0-1-control-api-1",
+          "image": "sha256:d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263",
+          "config": "26c0d954d1f3af2133b2a528f39430f814e3c35d350095aecf7178f3bc90cedb",
+          "started": "2026-09-18T16:24:22.016887481Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-stable-v1-0-1-portal-api-1",
+          "image": "sha256:243c9de8b62c4718a64b2f839537c760c102b0e2fa6eb0d7ddc0cb6ce33ffdbf",
+          "config": "7d1004a5207f1ad4f70b9a3d9816f9491f6d8fffd0181517f7c59f413e99c633",
+          "started": "2026-09-18T16:24:19.435272729Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-stable-v1-0-1-portal-web-1",
+          "image": "sha256:e237aabba580445fd43ae839b057e2cdc001b0ab7f1be120e5056c199173cadc",
+          "config": "4326852fe0f34ccf15ae7c22b9a7897be24f15bbc50ccef5ebcd9971130bf187",
+          "started": "2026-09-18T16:24:27.734684222Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-stable-v1-0-1-portal-postgres-1",
+          "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "config": "b57b92f6b7e971291ff8e546b587e5145743b1c9234b88574949f0db14b40a7d",
+          "started": "2026-09-08T18:25:13.289175039Z",
+          "restarts": 0,
+          "running": true
+        },
+        {
+          "name": "/portal-stable-v1-0-1-portal-nats-1",
+          "image": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+          "config": "63741aa5d84c9fa91aadcfbc138c88da7d44e90a8acfb326801d235aa8dfec39",
+          "started": "2026-09-08T18:25:13.291218374Z",
+          "restarts": 0,
+          "running": true
+        }
+      ],
+      "docker_disk_summary": "TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\nImages          328       25        88.82GB   74.4GB (83%)\nContainers      59        51        2.458MB   471kB (19%)\nLocal Volumes   97        22        32.51GB   13.78GB (42%)\nBuild Cache     3770      93        195.9GB   62.89GB\n",
+      "image_output_rows": 382,
+      "unique_image_ids": 318,
+      "build_cache_output_lines": 3770,
+      "inventory_sha256": "5337ad2d154703292d8d42b80aa6ddcb1a2a946dea36bada19bfb54ddd9f5394",
+      "cleanup": {
+        "schema_version": "epg10.original08-native-copy-cleanup.v1",
+        "host": "SGP",
+        "started_utc": "2026-10-17T09:47:00.917442+00:00",
+        "targets": [
+          {
+            "path": "/tmp/epg10-08-native-qualification-eMuef8zI/source",
+            "kind": "OWNED_TERMINAL_SOURCE_COPY",
+            "logical_bytes": 262177
+          },
+          {
+            "path": "/tmp/epg10-08-native-qualification-eMuef8zI/native-source.tar",
+            "kind": "OWNED_TRANSFER_ARCHIVE",
+            "logical_bytes": 327680,
+            "sha256": "7db58123fdfab04275217cfd0cf49b31d7b7def331c6abbdd4a0d0892f2a507a"
+          },
+          {
+            "path": "/tmp/epg10-08-native-qualification-TsaYaJSR/source",
+            "kind": "OWNED_TERMINAL_SOURCE_COPY",
+            "logical_bytes": 262345
+          },
+          {
+            "path": "/tmp/epg10-08-native-qualification-TsaYaJSR/native-source.tar",
+            "kind": "OWNED_TRANSFER_ARCHIVE",
+            "logical_bytes": 327680,
+            "sha256": "90dafa103cbf82dc9e2ea10672b2e662c97db126fb2380c394d2f7c779cb0c84"
+          },
+          {
+            "path": "/tmp/epg10-08-native-final-Sj3i7sy7/source",
+            "kind": "OWNED_TERMINAL_SOURCE_COPY",
+            "logical_bytes": 265012
+          },
+          {
+            "path": "/tmp/epg10-08-native-final-Sj3i7sy7/native-source.tar",
+            "kind": "OWNED_TRANSFER_ARCHIVE",
+            "logical_bytes": 327680,
+            "sha256": "0c2f3741fc0b403522e567e4aac8d8b436a4f4df56380db449f16adf2d02ff27"
+          },
+          {
+            "path": "/tmp/epg10-08-fence-qualification-MrKgRdau/source",
+            "kind": "OWNED_TERMINAL_SOURCE_COPY",
+            "logical_bytes": 103679
+          },
+          {
+            "path": "/tmp/epg10-08-fence-final-eaVzK3Ic/source",
+            "kind": "OWNED_TERMINAL_SOURCE_COPY",
+            "logical_bytes": 109307
+          },
+          {
+            "path": "/tmp/epg10-08-fence-final-eaVzK3Ic/fence-source.tar",
+            "kind": "OWNED_TRANSFER_ARCHIVE",
+            "logical_bytes": 143360,
+            "sha256": "6346d97b2a91f68c68dadb2a099d4aee93042061b68e69874a77cc7da4406db6"
+          }
+        ],
+        "free_before": 166903541760,
+        "retained": "Bounded receipts/JUnit/logs/pins/runners; canonical committed observer; one active uninstalled fence draft",
+        "images_cache_volumes_networks_state_peer_source_removed": 0,
+        "result": "PASS",
+        "ended_utc": "2026-10-17T09:47:00.985178+00:00",
+        "logical_bytes_removed": 2128920,
+        "free_after": 166906085376,
+        "disk_delta_exclusive_attribution": false,
+        "protected_runtime_tuples_unchanged": 10
+      },
+      "cleanup_receipt_sha256": "f54a08f874de482b36bf567698df0dc817e1a76e144a512556696bda2cce8796"
+    }
+  ],
+  "owned_source_commits": {
+    "research": "d483357a416f7944d06ab8d4e2a80062656dac92",
+    "pm": "003d08d498fe6db0b6a6639f2cf45852c42b63fc",
+    "edge_base_before_tracking_commit": "5ff6c1dd1b852289b52180185ee4caf725009801"
+  },
+  "release_roots": {
+    "HK": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+    "SGP": "/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose"
+  },
+  "retained_rollback": {
+    "pki": "/home/bobby/secure/portal-manager-read-v2/renewal-epg10-08-64qjgx59",
+    "valid_pki_fallback_expires": "2026-11-15",
+    "ts_r59_image": "sha256:9150385e2bb3596793b6ee209dbc99696c3ed07439d6f4199356f417a97b6105",
+    "ts_r49_image": "sha256:b4e7a6c0bad754ddb6fa8a1f3f6e980ce0d165feae2a8921875129de8b2b0052",
+    "portal": "Existing stable release, unchanged by this slice"
+  },
+  "operational_mutations": 0,
+  "push_merge": false,
+  "full08": "NOT_MET",
+  "connected09": "NOT_STARTED",
+  "worktree_inventory_scope": "Registered paths from inspected repositories only; peer activity/prunability not attested, no peer worktree or branch removed",
+  "registered_worktree_paths_at_observation": [
+    {
+      "worktree": "/home/bobby/.worktrees/portal-execution-manager-v2",
+      "HEAD": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+      "branch": "refs/heads/feat/manager-v2-paper-read"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/portal-eds-current-bff",
+      "HEAD": "bab79402be7ca65adb529080865a4fe1a7d5a0bb",
+      "branch": "refs/heads/feat/eds-current-bff"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/portal-eds09-owner-return-handoff",
+      "HEAD": "ec97c4835acd1d68e9b58dd8b68015ceecd96864",
+      "branch": "refs/heads/docs/eds09-ts-owner-return-handoff"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/portal-elp210-edge-provider-candidate",
+      "HEAD": "9db77811fb0845344422f1c77968f6fcbc64b66f",
+      "branch": "refs/heads/feat/portal-elp210-edge-provider-candidate"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/portal-execution-data-activation",
+      "HEAD": "6f6503ea21327bc39946f48c697b4287c673f12c",
+      "branch": "refs/heads/feat/execution-data-activation"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+      "HEAD": "5ff6c1dd1b852289b52180185ee4caf725009801",
+      "branch": "refs/heads/feat/execution-edge-upgrade-v1_2"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/portal-r4r5-activation",
+      "HEAD": "d63a650112eca3b2b17f4df1faedd1a0ab06ceaa",
+      "branch": "refs/heads/deploy/r4r5-activation"
+    },
+    {
+      "worktree": "/home/bobby/trading_system",
+      "HEAD": "668e10320c0bf5a9089e33b72f317d8d7c7215c3",
+      "branch": "refs/heads/fix/dev-consumer-recovery-integration"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/portal-elp210-pm-provider-candidate",
+      "HEAD": "a03500ac716e337b136b175267803eaddaf6cb3c",
+      "branch": "refs/heads/feat/portal-elp210-pm-provider-candidate"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-eds11r-market-context",
+      "HEAD": "10fb177d10a95ad8a13a2ce2bf681b82697ad3c5",
+      "branch": "refs/heads/feat/eds11r-r4-r5-activation"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-final-run-1401ccb1",
+      "HEAD": "1401ccb1a79e2fd06dd3ba4e976f7361ebcd0d4b",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-final-run-68f2572f",
+      "HEAD": "68f2572fbc1c64520803cbfc1dfd22bfc5470cff",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-final-run-77a6d671",
+      "HEAD": "77a6d6710ae7b2b11da05b6049c7dbc7fd1e8616",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-final-run-ba096818",
+      "HEAD": "ba0968187a7612e9730a4148e73b113fd2187517",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-final-run-c385aaf6",
+      "HEAD": "c385aaf6ea686eb4a5f27707221dc4db98730b65",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-final-run-ca435a18",
+      "HEAD": "ca435a18feb46ef497fef5b6c3bc359ee57e3376",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-final-run-f60e7fe5",
+      "HEAD": "f60e7fe563ed0196b1651a14a8f01c87875a07f4",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-next-upgrade",
+      "HEAD": "a904e91326ed5ad0da4b8854b8dbe28c94b579a1",
+      "branch": "refs/heads/feat/v2-rust-first-okx-demo"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-next-upgrade-claude",
+      "HEAD": "1137413a11e562f2591563145ad3b858ff4ce091",
+      "branch": "refs/heads/feat/v2-rust-first-okx-demo-claude"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-p01-r4r5-integration",
+      "HEAD": "53263fd1970ab5c7ff25f4306f25173937517d5c",
+      "branch": "refs/heads/integration/portal-r4r5-p01-final"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+      "HEAD": "e14f0b4c8a6bc5d4f3e07496753ff5fd60ebee01",
+      "branch": "refs/heads/feat/portfolio-account-v1_1-parallel"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/ts-codex-p184-review",
+      "HEAD": "c15c328d85b6700ed121f5c3c45979e143ca9d49",
+      "branch": "refs/heads/codex/p184-evidence-review"
+    },
+    {
+      "worktree": "/home/bobby/data_layer",
+      "HEAD": "5bf5cd540498b82959342c7cfb2ebeaac3007426",
+      "branch": "refs/heads/main"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/data-layer-p184-closure",
+      "HEAD": "a1589da195b6f85718f6fb44865b54ee7eee4b11",
+      "branch": "refs/heads/fix/p184-dl-closure"
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/data-layer-p184-final-run-6506d011",
+      "HEAD": "6506d011051087a83dcf555b14dc8115c50f3797",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/data-layer-p184-final-run-860b79ba",
+      "HEAD": "860b79bacbb70d20b4c895da6f4664245e637dd2",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/data-layer-p184-final-run-b6d21c9e",
+      "HEAD": "b6d21c9e50e8b489b6fdbbb7680f6cd1d1fa14cd",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/data-layer-p184-final-run-d03cd679",
+      "HEAD": "d03cd6792d361ceb868bb01ea70dde57fa247576",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/data-layer-p184-final-run-f6db0b82",
+      "HEAD": "f6db0b82ef255a5731257c73ce0364e27fd18d42",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/.worktrees/data-layer-p184-s100-7285868",
+      "HEAD": "aee094554579b0bcb40022e7942d18b8e08bb444",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal",
+      "HEAD": "87d9d98c3a80400a72de759e63dfc50af70e0436",
+      "branch": "refs/heads/fix/stan-context-password-change-origin"
+    },
+    {
+      "worktree": "/home/bobby/portal-dev-certified",
+      "HEAD": "533162635f56584d630e3d971d77d50860595f15",
+      "branch": "refs/heads/dev"
+    },
+    {
+      "worktree": "/home/bobby/portal-integration",
+      "HEAD": "c43ee0317a439b4566decd5fddfc8be839db239e",
+      "branch": "refs/heads/docs/consolidation-closeout-20260919"
+    },
+    {
+      "worktree": "/home/bobby/portal-main-release",
+      "HEAD": "533162635f56584d630e3d971d77d50860595f15",
+      "branch": "refs/heads/main"
+    },
+    {
+      "worktree": "/home/bobby/portal-research",
+      "HEAD": "d483357a416f7944d06ab8d4e2a80062656dac92",
+      "branch": "refs/heads/docs/research-loop-plan"
+    },
+    {
+      "worktree": "/home/bobby/portal-research-be",
+      "HEAD": "d5d31cbd7adf3db658508b3cc9aedb280c1be2f1",
+      "branch": "refs/heads/codex/be-gaps"
+    },
+    {
+      "worktree": "/home/bobby/portal-research-fe",
+      "HEAD": "be56efdf8a44b0fd8cd44202b04ada582293a1dd",
+      "branch": "refs/heads/claude/fe-parity"
+    },
+    {
+      "worktree": "/home/bobby/portal-research-ol-p22-p24",
+      "HEAD": "73af8d21e2935a1176c3a7f576c436204e081dad",
+      "branch": "refs/heads/codex/research-ol-p22-p24"
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a047872ba400a7c1f",
+      "HEAD": "8bd781ed53c2267c85976483c8df6530175df027",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a0835a78910892924",
+      "HEAD": "9a2571db03439e4bd8c8a9a598a52c275986a099",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a0e9b2eced3399e93",
+      "HEAD": "ba605889e6d94b795aa4685cefa162f88275e6d4",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a144126d17b045e45",
+      "HEAD": "b965741e062b950cb5b80c4673567bfa90168a21",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a1faf5d04249de1a0",
+      "HEAD": "9a2571db03439e4bd8c8a9a598a52c275986a099",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a2acbdb0686502ba8",
+      "HEAD": "b965741e062b950cb5b80c4673567bfa90168a21",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a434af4d2a70dddf9",
+      "HEAD": "e9c64d1c6019923e45278cfea142a4faad6951db",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a457164d11b642327",
+      "HEAD": "e9c64d1c6019923e45278cfea142a4faad6951db",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a4a687fe69ac798bf",
+      "HEAD": "d263900abe47919a520346ff50fcafe8a146f9dc",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a502116f0cd535367",
+      "HEAD": "ba605889e6d94b795aa4685cefa162f88275e6d4",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a53ea6e856ad76daf",
+      "HEAD": "8fc17a032caa68f0058de947aad911d0ed48c2bd",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a58a5fc5feb3a0d88",
+      "HEAD": "9a2571db03439e4bd8c8a9a598a52c275986a099",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a5fbbe822077f8963",
+      "HEAD": "b965741e062b950cb5b80c4673567bfa90168a21",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a6c3f2711a4932aa5",
+      "HEAD": "8fc17a032caa68f0058de947aad911d0ed48c2bd",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a72c661b488ca361c",
+      "HEAD": "b965741e062b950cb5b80c4673567bfa90168a21",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a73475d5584facff0",
+      "HEAD": "e9c64d1c6019923e45278cfea142a4faad6951db",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a7ba69da02d66721b",
+      "HEAD": "b33947025935a31de976d532e8cae591b05004f0",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a7e7c64a8d32ee713",
+      "HEAD": "e9c64d1c6019923e45278cfea142a4faad6951db",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a852f7e14bb63ceec",
+      "HEAD": "b33947025935a31de976d532e8cae591b05004f0",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a9479bc47ac9b006f",
+      "HEAD": "bfbf5ca47550b34d885477e6bd4bc99bef18d2b7",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a9584db73d310afe1",
+      "HEAD": "09acc900fc7af6b287a65feb8ab8a8c040983d79",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-a9b399ae79d28c7ef",
+      "HEAD": "267b8934a4e110fb63d61686f221e0911e5ca1e1",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-aa2731577bc07a836",
+      "HEAD": "9a2571db03439e4bd8c8a9a598a52c275986a099",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-aab81d9b0b4ea1757",
+      "HEAD": "da185d7a28569c1b7be9263af300edb3fafd2bb6",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-aac96ea627043272c",
+      "HEAD": "da185d7a28569c1b7be9263af300edb3fafd2bb6",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-aaea6e3ed8a697997",
+      "HEAD": "ba605889e6d94b795aa4685cefa162f88275e6d4",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-ab7ebe12d3ad72926",
+      "HEAD": "8bd781ed53c2267c85976483c8df6530175df027",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-abec7110f45353f54",
+      "HEAD": "9a2571db03439e4bd8c8a9a598a52c275986a099",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-abf0b5cfd0dffa172",
+      "HEAD": "b965741e062b950cb5b80c4673567bfa90168a21",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-ac3b82bccc624aa8b",
+      "HEAD": "9a2571db03439e4bd8c8a9a598a52c275986a099",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-ac9765ffb9cbb7cef",
+      "HEAD": "b33947025935a31de976d532e8cae591b05004f0",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-ad3ba5393e0f0020c",
+      "HEAD": "c1276a7d37c344a020f1c99043226fc38b49f1ac",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-ad7f1ca082be7af26",
+      "HEAD": "8fc17a032caa68f0058de947aad911d0ed48c2bd",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-adb15d46191da1ab2",
+      "HEAD": "bfbf5ca47550b34d885477e6bd4bc99bef18d2b7",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-addd23c4095cf2ba9",
+      "HEAD": "d263900abe47919a520346ff50fcafe8a146f9dc",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-ae544b4b974c3d6e7",
+      "HEAD": "e9c64d1c6019923e45278cfea142a4faad6951db",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-aea53e181037fabc0",
+      "HEAD": "267b8934a4e110fb63d61686f221e0911e5ca1e1",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-aec75006dc22bf172",
+      "HEAD": "9a2571db03439e4bd8c8a9a598a52c275986a099",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-af28f290fcfee5d5b",
+      "HEAD": "8bd781ed53c2267c85976483c8df6530175df027",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-af3ef9489c632d311",
+      "HEAD": "8bd781ed53c2267c85976483c8df6530175df027",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-af48003d7d331fdb4",
+      "HEAD": "da185d7a28569c1b7be9263af300edb3fafd2bb6",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-af6c4637657b33924",
+      "HEAD": "bfbf5ca47550b34d885477e6bd4bc99bef18d2b7",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-af6d36db65ad9c8d5",
+      "HEAD": "b965741e062b950cb5b80c4673567bfa90168a21",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/agent-aff3b88024ea0474c",
+      "HEAD": "bfbf5ca47550b34d885477e6bd4bc99bef18d2b7",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/p24-AA",
+      "HEAD": "d0569d49b6b6102b927f0663b789fce24832086a",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/p24-AB",
+      "HEAD": "d0569d49b6b6102b927f0663b789fce24832086a",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/p24-AC",
+      "HEAD": "d0569d49b6b6102b927f0663b789fce24832086a",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/p24-AD",
+      "HEAD": "072bb31e9603351e11874cfc1d9441cf892678d6",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/p25-AE",
+      "HEAD": "3fdd33499674ee489ff66a4a141afee1bc295748",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/p25-AF",
+      "HEAD": "3fdd33499674ee489ff66a4a141afee1bc295748",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5-A",
+      "HEAD": "c1276a7d37c344a020f1c99043226fc38b49f1ac",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5-B",
+      "HEAD": "c1276a7d37c344a020f1c99043226fc38b49f1ac",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5-C",
+      "HEAD": "c1276a7d37c344a020f1c99043226fc38b49f1ac",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5-D",
+      "HEAD": "c1276a7d37c344a020f1c99043226fc38b49f1ac",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5-E",
+      "HEAD": "c1276a7d37c344a020f1c99043226fc38b49f1ac",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5-F",
+      "HEAD": "c1276a7d37c344a020f1c99043226fc38b49f1ac",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5-G",
+      "HEAD": "c1276a7d37c344a020f1c99043226fc38b49f1ac",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5-base",
+      "HEAD": "c1276a7d37c344a020f1c99043226fc38b49f1ac",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5x-H",
+      "HEAD": "14740755fa09fe60000916118d9c40bd4b6ef7cd",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5x-I",
+      "HEAD": "14740755fa09fe60000916118d9c40bd4b6ef7cd",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5x-J",
+      "HEAD": "14740755fa09fe60000916118d9c40bd4b6ef7cd",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5y-K",
+      "HEAD": "3d5f469633f7b05936442c412eb5587ac33a877c",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w5y-L",
+      "HEAD": "3d5f469633f7b05936442c412eb5587ac33a877c",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w6-M",
+      "HEAD": "c5795c71e14e225f27c323c4118eab43add89a5e",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w6-N",
+      "HEAD": "c5795c71e14e225f27c323c4118eab43add89a5e",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w6-P",
+      "HEAD": "c5795c71e14e225f27c323c4118eab43add89a5e",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w6-Q",
+      "HEAD": "c5795c71e14e225f27c323c4118eab43add89a5e",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w7-R",
+      "HEAD": "2cf6b904ae79f096f23a312ee548cc34fa958247",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w7-S",
+      "HEAD": "2cf6b904ae79f096f23a312ee548cc34fa958247",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w7-T",
+      "HEAD": "2cf6b904ae79f096f23a312ee548cc34fa958247",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w7-V",
+      "HEAD": "2cf6b904ae79f096f23a312ee548cc34fa958247",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w7-W",
+      "HEAD": "2cf6b904ae79f096f23a312ee548cc34fa958247",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w8-X",
+      "HEAD": "d2028d133e5d1dd715b9d104df4131bc3a479284",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/w9-Y",
+      "HEAD": "4c443cec13ab5dce56f8980b1f4a6f5c60903f75",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_0bd98f96-5b6-1",
+      "HEAD": "8dc79b7a899f95479cb48dea25a4a824b3f2771d",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_0bd98f96-5b6-2",
+      "HEAD": "8dc79b7a899f95479cb48dea25a4a824b3f2771d",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_0bd98f96-5b6-3",
+      "HEAD": "8dc79b7a899f95479cb48dea25a4a824b3f2771d",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_0bd98f96-5b6-4",
+      "HEAD": "8dc79b7a899f95479cb48dea25a4a824b3f2771d",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_0bd98f96-5b6-5",
+      "HEAD": "8dc79b7a899f95479cb48dea25a4a824b3f2771d",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_0bd98f96-5b6-6",
+      "HEAD": "8dc79b7a899f95479cb48dea25a4a824b3f2771d",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_0bd98f96-5b6-7",
+      "HEAD": "8dc79b7a899f95479cb48dea25a4a824b3f2771d",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_0bd98f96-5b6-8",
+      "HEAD": "8dc79b7a899f95479cb48dea25a4a824b3f2771d",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_0bd98f96-5b6-9",
+      "HEAD": "8dc79b7a899f95479cb48dea25a4a824b3f2771d",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_65b991ca-e31-1",
+      "HEAD": "eae8a7b5b6c033e4e0fdcfd1c0a4ca1e2fb1a895",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_65b991ca-e31-2",
+      "HEAD": "eae8a7b5b6c033e4e0fdcfd1c0a4ca1e2fb1a895",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_a365dfa8-14c-1",
+      "HEAD": "533162635f56584d630e3d971d77d50860595f15",
+      "branch": "refs/heads/worktree-wf_a365dfa8-14c-1"
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_a365dfa8-14c-2",
+      "HEAD": "533162635f56584d630e3d971d77d50860595f15",
+      "branch": "refs/heads/worktree-wf_a365dfa8-14c-2"
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_a365dfa8-14c-3",
+      "HEAD": "533162635f56584d630e3d971d77d50860595f15",
+      "branch": "refs/heads/worktree-wf_a365dfa8-14c-3"
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_a365dfa8-14c-4",
+      "HEAD": "533162635f56584d630e3d971d77d50860595f15",
+      "branch": "refs/heads/worktree-wf_a365dfa8-14c-4"
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_a365dfa8-14c-5",
+      "HEAD": "533162635f56584d630e3d971d77d50860595f15",
+      "branch": "refs/heads/worktree-wf_a365dfa8-14c-5"
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_a365dfa8-14c-6",
+      "HEAD": "533162635f56584d630e3d971d77d50860595f15",
+      "branch": "refs/heads/worktree-wf_a365dfa8-14c-6"
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_a365dfa8-14c-7",
+      "HEAD": "533162635f56584d630e3d971d77d50860595f15",
+      "branch": "refs/heads/worktree-wf_a365dfa8-14c-7"
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_a365dfa8-14c-8",
+      "HEAD": "533162635f56584d630e3d971d77d50860595f15",
+      "branch": "refs/heads/worktree-wf_a365dfa8-14c-8"
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_b30fa77c-6d3-1",
+      "HEAD": "40e8cb50c55ed03e0d1cd0c52c62954202440ea0",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_b30fa77c-6d3-2",
+      "HEAD": "40e8cb50c55ed03e0d1cd0c52c62954202440ea0",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_b30fa77c-6d3-3",
+      "HEAD": "40e8cb50c55ed03e0d1cd0c52c62954202440ea0",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_b30fa77c-6d3-4",
+      "HEAD": "40e8cb50c55ed03e0d1cd0c52c62954202440ea0",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_b30fa77c-6d3-5",
+      "HEAD": "40e8cb50c55ed03e0d1cd0c52c62954202440ea0",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_b30fa77c-6d3-6",
+      "HEAD": "40e8cb50c55ed03e0d1cd0c52c62954202440ea0",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_b30fa77c-6d3-7",
+      "HEAD": "40e8cb50c55ed03e0d1cd0c52c62954202440ea0",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_b30fa77c-6d3-8",
+      "HEAD": "40e8cb50c55ed03e0d1cd0c52c62954202440ea0",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_bc998704-f7e-1",
+      "HEAD": "138300f10e660866375d9e45b6f847ac1dd234ee",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_bc998704-f7e-2",
+      "HEAD": "138300f10e660866375d9e45b6f847ac1dd234ee",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_cce646e9-5ff-1",
+      "HEAD": "eae8a7b5b6c033e4e0fdcfd1c0a4ca1e2fb1a895",
+      "detached": true
+    },
+    {
+      "worktree": "/home/bobby/portal/.claude/worktrees/wf_e91f5ac1-0d9-1",
+      "HEAD": "494c539a2545e6d7c25fbb07edb66c18738df72a",
+      "detached": true
+    }
+  ]
+}

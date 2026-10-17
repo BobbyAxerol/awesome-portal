@@ -83,9 +83,33 @@ Chúng không thay thế phase hoặc exit gate trong
   DB; PM authority relations are not deployed on its checked cluster. PMd95bf36a
   native correspondence263owner PASS is a proposal/oracle, not a Core adapter.
   R1 current source c7c3997f is qualified; no longer missing r1 code/approval.
+  New original08 continuation [main§23.20.6](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23206-original08--resource-scoped-authority-completion-and-reviewed-installation)
+  has135/135focused Core correspondence PASS (72new+63legacy),0FAIL/SKIP;
+  [exact bounded qualification](../evidence/execution-edge-v1_2/EPG10-08/current-correspondence-qualification.json).
+  Full original acceptance digest and all-grant subject/workspace correlation
+  are required; invalid new authority never falls back to legacy. This is an
+  TEST_ONLY source compatibility, not authenticated runtime authority.
+  Research commitd483357a now landed through normal hooks:715contractsPASS,
+  4825API PASS/3SKIP, build and PostgreSQL scoped-access restore PASS. Its whole
+  working-tree wrapper remains NOT_PASS because17peer paths drifted concurrently;
+  all11owned source/test paths still match qualified pins. Earlier failures and
+  zero-case refusals remain in the receipt, no bypass or history rewrite.
+  Bobby protected OWNER full authority and Stan subordinate-grant management
+  within Bobby's ceiling are now owner-approved, not command/financial activation.
+  Native SELECT-only observer final canonical148PASS (18owner-policy cases),
+  committed PM003d08d4, unmounted. Separate private fence58PASS remains an
+  uninstalled experiment, not canonical product/full writer/capacity proof.
+  Neither is an installed held authority;
+  source/client/writer-fence integration is still owned work.
+  Latest [source/runtime/cleanup reconciliation](../evidence/execution-edge-v1_2/EPG10-08/current-correspondence-runtime.json)
+  has18HK+10SGP unchanged tuples and exact terminal source/archive cleanup
+  (HK2,262,040B; SGP2,128,920B), no new images/cache or operational changes.
+  Actual producer/fence/bootstrap/installation and Edge08 are still unfinished.
   No account/activation/grant/runtime change; preserve active peer hook/source.
-  18HK+8SGP protected tuples unchanged, exact own cells/lease removed,49,616,770B
-  finished source copies cleaned. No shared Docker/cache prune during peer jobs.
+  18HK+8SGP protected tuples unchanged, exact own cells/lease removed; current
+  continuation removed54,584,746B terminal source copies (previous continuation
+  separately removed49,616,770B). Active draft/staged source and bounded receipts
+  retained for retry. No shared Docker/cache prune during peer jobs.
   Historical08 completion round after earlier deferral recorded PM
   `c401a023` still publishes no actual human/workload/COMMIT provider and Research
   `169195ca` remains unqualified/UNMAPPED. Single owner packet now specifies
