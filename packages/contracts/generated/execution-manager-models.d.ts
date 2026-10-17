@@ -113,7 +113,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK. */
+        /** @description Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Optional metric_family=COMPOSITION selects Fund/Portfolio full-accounting allocation-bound history; omitted/explicit SCORE preserves the Score projection. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK. */
         get: operations["executionManagerScoreRevisionGetV1"];
         put?: never;
         post?: never;
@@ -130,7 +130,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK. */
+        /** @description Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Optional metric_family=COMPOSITION selects Fund/Portfolio full-accounting allocation-bound history; omitted/explicit SCORE preserves the Score projection. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK. */
         get: operations["executionManagerScoreRevisionHistoryGetV1"];
         put?: never;
         post?: never;
@@ -1191,6 +1191,8 @@ export interface components {
             /** @enum {string} */
             surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
             id?: string;
+            /** @enum {string} */
+            metric_family?: "SCORE" | "COMPOSITION";
             stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
             economic_partition: {
                 /** @enum {string} */
@@ -1214,6 +1216,8 @@ export interface components {
             /** @enum {string} */
             surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
             id?: string;
+            /** @enum {string} */
+            metric_family?: "SCORE" | "COMPOSITION";
             stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
             economic_partition: {
                 /** @enum {string} */
@@ -1372,7 +1376,71 @@ export interface components {
                 /** @constant */
                 availability: "NOT_PUBLISHED";
                 /** @enum {string} */
-                reason_code: "COMPOSITION_REVISION_NOT_SELECTED" | "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED";
+                reason_code: "COMPOSITION_REVISION_NOT_SELECTED" | "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED" | "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED" | "ORIGINAL_ALLOCATION_NOT_RETAINED";
+            } | {
+                /** @enum {string} */
+                availability: "AVAILABLE" | "PARTIAL";
+                reason_codes: string[];
+                binding: {
+                    /** @enum {string} */
+                    subject_type: "portfolio" | "manager_book";
+                    subject_id: string;
+                    tuple_population_digest: string;
+                    partition_digest: string;
+                    stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                    window_start_ms: number;
+                    window_end_ms: number;
+                    comparable_basis_id: string;
+                    individual_evidence_binding_id: string;
+                };
+                result: {
+                    value: string | null;
+                    /** @enum {string} */
+                    status: "available" | "provisional" | "partial_coverage" | "incomparable_basis" | "no_allocation" | "invalid_data";
+                    reason_codes: string[];
+                    band_code: ("weak" | "neutral" | "fair" | "good" | "very_good") | null;
+                    /** @constant */
+                    weight_basis: "allocated_economic_capital";
+                    allocation_snapshot_id: string;
+                    total_allocated_capital: string | null;
+                    score_coverage_allocated: string | null;
+                    unscored_allocated_weight: string | null;
+                    provisional_allocated_weight: string | null;
+                    mature_allocated_weight: string | null;
+                    allocation_coverage_nav: string | null;
+                    scored_nav_weight: string | null;
+                    idle_cash_weight: string | null;
+                    nav_coverage_reason: string | null;
+                    bounds: {
+                        lower: string;
+                        upper: string;
+                    } | null;
+                    contributions: {
+                        subject_id: string;
+                        allocation_weight: string;
+                        value: string | null;
+                        band_code: null;
+                    }[];
+                    diagnostics: {
+                        allocation_hhi: string | null;
+                        score_contribution_hhi: string | null;
+                        score_dispersion: string | null;
+                        reason_codes: string[];
+                    };
+                };
+                allocation_ref: string;
+                allocation_effective_at_ms: number;
+                original_publication_ref: string;
+                computed_at_ms: number;
+                calculation_revision: string;
+                raw_dependencies: {
+                    subject_id: string;
+                    /** @enum {string} */
+                    availability: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                    reason_codes: string[];
+                    original_input_ref: string | null;
+                    derived_input_ref: string | null;
+                }[];
             };
             regime: {
                 /** @constant */
@@ -1548,7 +1616,71 @@ export interface components {
                     /** @constant */
                     availability: "NOT_PUBLISHED";
                     /** @enum {string} */
-                    reason_code: "COMPOSITION_REVISION_NOT_SELECTED" | "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED";
+                    reason_code: "COMPOSITION_REVISION_NOT_SELECTED" | "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED" | "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED" | "ORIGINAL_ALLOCATION_NOT_RETAINED";
+                } | {
+                    /** @enum {string} */
+                    availability: "AVAILABLE" | "PARTIAL";
+                    reason_codes: string[];
+                    binding: {
+                        /** @enum {string} */
+                        subject_type: "portfolio" | "manager_book";
+                        subject_id: string;
+                        tuple_population_digest: string;
+                        partition_digest: string;
+                        stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                        window_start_ms: number;
+                        window_end_ms: number;
+                        comparable_basis_id: string;
+                        individual_evidence_binding_id: string;
+                    };
+                    result: {
+                        value: string | null;
+                        /** @enum {string} */
+                        status: "available" | "provisional" | "partial_coverage" | "incomparable_basis" | "no_allocation" | "invalid_data";
+                        reason_codes: string[];
+                        band_code: ("weak" | "neutral" | "fair" | "good" | "very_good") | null;
+                        /** @constant */
+                        weight_basis: "allocated_economic_capital";
+                        allocation_snapshot_id: string;
+                        total_allocated_capital: string | null;
+                        score_coverage_allocated: string | null;
+                        unscored_allocated_weight: string | null;
+                        provisional_allocated_weight: string | null;
+                        mature_allocated_weight: string | null;
+                        allocation_coverage_nav: string | null;
+                        scored_nav_weight: string | null;
+                        idle_cash_weight: string | null;
+                        nav_coverage_reason: string | null;
+                        bounds: {
+                            lower: string;
+                            upper: string;
+                        } | null;
+                        contributions: {
+                            subject_id: string;
+                            allocation_weight: string;
+                            value: string | null;
+                            band_code: null;
+                        }[];
+                        diagnostics: {
+                            allocation_hhi: string | null;
+                            score_contribution_hhi: string | null;
+                            score_dispersion: string | null;
+                            reason_codes: string[];
+                        };
+                    };
+                    allocation_ref: string;
+                    allocation_effective_at_ms: number;
+                    original_publication_ref: string;
+                    computed_at_ms: number;
+                    calculation_revision: string;
+                    raw_dependencies: {
+                        subject_id: string;
+                        /** @enum {string} */
+                        availability: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                        reason_codes: string[];
+                        original_input_ref: string | null;
+                        derived_input_ref: string | null;
+                    }[];
                 };
                 regime: {
                     /** @constant */
@@ -1725,7 +1857,71 @@ export interface components {
                     /** @constant */
                     availability: "NOT_PUBLISHED";
                     /** @enum {string} */
-                    reason_code: "COMPOSITION_REVISION_NOT_SELECTED" | "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED";
+                    reason_code: "COMPOSITION_REVISION_NOT_SELECTED" | "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED" | "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED" | "ORIGINAL_ALLOCATION_NOT_RETAINED";
+                } | {
+                    /** @enum {string} */
+                    availability: "AVAILABLE" | "PARTIAL";
+                    reason_codes: string[];
+                    binding: {
+                        /** @enum {string} */
+                        subject_type: "portfolio" | "manager_book";
+                        subject_id: string;
+                        tuple_population_digest: string;
+                        partition_digest: string;
+                        stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                        window_start_ms: number;
+                        window_end_ms: number;
+                        comparable_basis_id: string;
+                        individual_evidence_binding_id: string;
+                    };
+                    result: {
+                        value: string | null;
+                        /** @enum {string} */
+                        status: "available" | "provisional" | "partial_coverage" | "incomparable_basis" | "no_allocation" | "invalid_data";
+                        reason_codes: string[];
+                        band_code: ("weak" | "neutral" | "fair" | "good" | "very_good") | null;
+                        /** @constant */
+                        weight_basis: "allocated_economic_capital";
+                        allocation_snapshot_id: string;
+                        total_allocated_capital: string | null;
+                        score_coverage_allocated: string | null;
+                        unscored_allocated_weight: string | null;
+                        provisional_allocated_weight: string | null;
+                        mature_allocated_weight: string | null;
+                        allocation_coverage_nav: string | null;
+                        scored_nav_weight: string | null;
+                        idle_cash_weight: string | null;
+                        nav_coverage_reason: string | null;
+                        bounds: {
+                            lower: string;
+                            upper: string;
+                        } | null;
+                        contributions: {
+                            subject_id: string;
+                            allocation_weight: string;
+                            value: string | null;
+                            band_code: null;
+                        }[];
+                        diagnostics: {
+                            allocation_hhi: string | null;
+                            score_contribution_hhi: string | null;
+                            score_dispersion: string | null;
+                            reason_codes: string[];
+                        };
+                    };
+                    allocation_ref: string;
+                    allocation_effective_at_ms: number;
+                    original_publication_ref: string;
+                    computed_at_ms: number;
+                    calculation_revision: string;
+                    raw_dependencies: {
+                        subject_id: string;
+                        /** @enum {string} */
+                        availability: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                        reason_codes: string[];
+                        original_input_ref: string | null;
+                        derived_input_ref: string | null;
+                    }[];
                 };
                 regime: {
                     /** @constant */
@@ -1733,6 +1929,76 @@ export interface components {
                     /** @constant */
                     reason_code: "INDEPENDENT_REGIME_REVISION_NOT_SELECTED";
                 };
+            }[];
+        };
+        ManagerHistoricalComposition: {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            /** @enum {string} */
+            reason_code: "COMPOSITION_REVISION_NOT_SELECTED" | "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED" | "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED" | "ORIGINAL_ALLOCATION_NOT_RETAINED";
+        } | {
+            /** @enum {string} */
+            availability: "AVAILABLE" | "PARTIAL";
+            reason_codes: string[];
+            binding: {
+                /** @enum {string} */
+                subject_type: "portfolio" | "manager_book";
+                subject_id: string;
+                tuple_population_digest: string;
+                partition_digest: string;
+                stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                window_start_ms: number;
+                window_end_ms: number;
+                comparable_basis_id: string;
+                individual_evidence_binding_id: string;
+            };
+            result: {
+                value: string | null;
+                /** @enum {string} */
+                status: "available" | "provisional" | "partial_coverage" | "incomparable_basis" | "no_allocation" | "invalid_data";
+                reason_codes: string[];
+                band_code: ("weak" | "neutral" | "fair" | "good" | "very_good") | null;
+                /** @constant */
+                weight_basis: "allocated_economic_capital";
+                allocation_snapshot_id: string;
+                total_allocated_capital: string | null;
+                score_coverage_allocated: string | null;
+                unscored_allocated_weight: string | null;
+                provisional_allocated_weight: string | null;
+                mature_allocated_weight: string | null;
+                allocation_coverage_nav: string | null;
+                scored_nav_weight: string | null;
+                idle_cash_weight: string | null;
+                nav_coverage_reason: string | null;
+                bounds: {
+                    lower: string;
+                    upper: string;
+                } | null;
+                contributions: {
+                    subject_id: string;
+                    allocation_weight: string;
+                    value: string | null;
+                    band_code: null;
+                }[];
+                diagnostics: {
+                    allocation_hhi: string | null;
+                    score_contribution_hhi: string | null;
+                    score_dispersion: string | null;
+                    reason_codes: string[];
+                };
+            };
+            allocation_ref: string;
+            allocation_effective_at_ms: number;
+            original_publication_ref: string;
+            computed_at_ms: number;
+            calculation_revision: string;
+            raw_dependencies: {
+                subject_id: string;
+                /** @enum {string} */
+                availability: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                reason_codes: string[];
+                original_input_ref: string | null;
+                derived_input_ref: string | null;
             }[];
         };
     };
@@ -2161,6 +2427,7 @@ export interface operations {
                 environment: "paper" | "sandbox" | "live";
                 surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
                 id?: string;
+                metric_family?: "SCORE" | "COMPOSITION";
                 stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
                 economic_partition: string;
                 source_selector: "CURRENT_HEAD" | "RETAINED_REVISION";
@@ -2227,6 +2494,7 @@ export interface operations {
                 environment: "paper" | "sandbox" | "live";
                 surface: "FUND" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
                 id?: string;
+                metric_family?: "SCORE" | "COMPOSITION";
                 stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
                 economic_partition: string;
                 source_selector: "CURRENT_HEAD" | "RETAINED_REVISION";

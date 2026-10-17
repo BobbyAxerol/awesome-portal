@@ -11570,3 +11570,38 @@ OPEN;11NOT_ENTRY_READY. Claude NOT_STARTED_BY_OWNER_DIRECTION /
 AWAITING_CONSUMER_REVIEW. Intake rules §7.3 retain canonical request IDs and
 require an actual acknowledgement before consumer closure. No push, dev/main
 merge, signed release or deploy.
+
+<a id="elp2-composition-dependent-history-20261017"></a>
+
+**Original allocation terminal16:32UTC:** [normal-hook/restore/cleanup receipt](execution_loop/evidence/ELP2-06/composition-original-custody.md#composition-original-terminal-20261017-1632)
+landed `f9034d52d31fa8000e5d741b02a5b931e1e21fa2`,13files,+1,339/−75;
+760contracts,APIbuild,5,654API PASS/3existing skips and scoped PG restore PASS.
+No protected runtime change or owned cell leak; exact source/index pinned.
+
+**Approved06-002 continuation:** [requirement matrix, implementation and Claude
+handoff](execution_loop/evidence/ELP2-06/composition-dependent-restatement.md)
+now has original-bound historical Composition worker, opt-in immutable combined
+v2 revision through existing138/139, strict actual135/v3 decoder and current
+full-accounting authorized History/API (`metric_family=COMPOSITION`). Default
+SCORE refs/DTO unchanged; source/target/family selection precedes visible
+lineage/count/cursor, identifiers scoped HMAC. APPLIED_UNCOMMITTED/new tests
+NOT_RUN before one affected gate. No new migration, source grant/current
+allocation substitute, GET calculation or source ACK.
+
+Latest relevant Claude intake checked per campaign§7.3; canonical06-001/002
+not duplicated, no new consumer acknowledgement observed. Generated types/
+fixtures are a future owner-held handoff, not UI/browser acceptance. Historical
+Regime chain, qualified source/config/economic tie-out/ALL and10commissioning/
+14budgets/calibration/coexistence/P184G2 remain OPEN;11NOT_ENTRY_READY.
+No FE/push/merge dev/main/sign/release/deploy/runtime activation.
+
+**Composition affected validation16:47UTC:** [two preserved failed terminals,
+review disposition and correction](execution_loop/evidence/ELP2-06/composition-dependent-restatement.md#second-affected-terminal-2026-10-17t164742utc).
+APIbuild PASS;323/324API PASS, including all44Composition BFF cases. A fixture
+replaced an explicit historical NAV approval timestamp with its unshifted
+module clock; corrected and assertions strengthened, not a product-guard
+relaxation. Coherent normal hook still required; no contract/restore result
+fabricated. Canonical06-002 also retains independent pre-E freeze-witness
+requirement for a later-approved historical Regime policy; original custody
+may proceed independently. Recurring Claude intake and owner-held UXM state
+remain unchanged.

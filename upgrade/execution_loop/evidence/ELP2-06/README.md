@@ -265,3 +265,24 @@ New [Original PATH proof → worker → retained History slice](path-original-re
 is APPLIED/UNCOMMITTED, new tests NOT_RUN at entry. v1 history remains untouched,
 actual source manifest/installation NOT_PROVIDED. This is not dependent
 Composition/Regime restatement or approved calibration. FE stays owner-held.
+
+### Composition historical chain continuation —2026-10-17
+
+[Original-v3 exact allocation custody terminal](composition-original-custody.md#composition-original-terminal-20261017-1632)
+landed `f9034d52`:760contracts/APIbuild/5,654API PASS/3existing skips,
+scoped PG restore and exact resource cleanup PASS, not source qualification.
+[Named dependent worker, strict v2 coordinator/codec and current-authorized
+Composition History API](composition-dependent-restatement.md) is now
+APPLIED_UNCOMMITTED; affected build/contracts/real-PG tests pending. Existing
+06-002 remains OPEN, refined by that requirement/validation matrix rather than
+duplicated IDs. Historical Regime, actual source/config/economic tie-out,
+compatible ALL and Claude consumer remain OPEN; no runtime or UI activation.
+
+Affected-gate addendum16:47UTC: [actual failed receipts and corrections](composition-dependent-restatement.md#second-affected-terminal-2026-10-17t164742utc)
+records build PASS,323/324API PASS (all44Composition BFF cases PASS); the one
+fixture-clock NAV failure is corrected without weakening product checks.
+Independent ORIGINAL census/RAW/future-time guards are integrated. New contract
+cases and correction remain pending coherent normal-hook terminal, not claimed
+PASS. No redundant unaffected load/browser/engine gates. Regime's later-policy
+worker also needs independent pre-E freeze evidence or explicit typed refusal;
+accepted under06-002, separate original custody can continue independently.

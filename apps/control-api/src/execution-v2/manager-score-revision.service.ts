@@ -12,10 +12,11 @@ import {ManagerModelRepository,type ManagerModelHead} from "./manager-model.stor
 import type {ManagerMember,ManagerModelDocument} from "./manager-model.contract";
 import {managerScorePopulationDigest} from "./manager-score-publication";
 import {managerScorePublication,type ManagerScorePublication} from "./manager-score-publication.contract";
+import type {ManagerCompositionBinding} from "./manager-composition-publication.contract";
 import type {ManagerScoreRestatementSnapshot} from "./manager-score-restatement";
 import {ManagerScoreHistoryStore,ManagerScoreHistoryStoreError,type ManagerScoreHistorySnapshot} from "./manager-score-history.store";
 import {projectionRowVisible} from "./read-projection";
-import {ExecutionReadScopes,ExecutionReadScopeError,scopeAllowsField,scopeAllowsFullAccountingPopulation,scopeReadPopulation,
+import {ExecutionReadScopes,ExecutionReadScopeError,scopeAllowsField,scopeAllowsFullAccountingPopulation,scopeReadPopulation,scopeResources,
   type AuthorizedExecutionReadScope,type ReadScopePrincipal,type ReadScopeRequirement} from "./read-scope";
 import {managerScoreRevisionQuery,managerScoreRevisionHistoryQuery,managerScoreRevisionView,managerScoreRevisionHistory,
   type ManagerScoreRevisionQuery,type ManagerScoreRevisionHistoryQuery,type ManagerScoreRevisionView} from "./manager-score-revision.contract";
@@ -23,6 +24,7 @@ import {managerScoreRevisionQuery,managerScoreRevisionHistoryQuery,managerScoreR
 type Query=ManagerScoreRevisionQuery|ManagerScoreRevisionHistoryQuery;
 type Gate={q:Query;scope:AuthorizedExecutionReadScope;document:ManagerModelDocument;head:ManagerModelHead|null;digest:string};
 type Entry=ManagerScoreRevisionView["score_details"][number];
+type Composition=ManagerScoreRevisionView["composition"];
 type Projected={view:ManagerScoreRevisionView;retained:ManagerScoreRestatementSnapshot|null};
 const notFound=():never=>{throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE",404);};
 const changed=():never=>{throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);};
@@ -57,6 +59,9 @@ export class ManagerScoreRevisionService {
     const context={key:this.config.QUERY_CURSOR_ACTIVE_KEY_ID,scope:g.scope.fingerprint,
       target:{surface:g.q.surface,id:g.q.id??null},workspace:g.document.workspace_id,environment:g.document.environment,
       profile:g.document.profile_id,revision:g.document.revision,stages:[...g.q.stage_filter].sort(),partition:g.q.economic_partition};
+    // Preserve all default/explicit SCORE references exactly; only this new
+    // financial family receives a separate public correlation domain.
+    if(g.q.metric_family==="COMPOSITION")Object.assign(context,{metric_family:"COMPOSITION"});
     return "sha256:"+createHmac("sha256",this.referenceKey).update("portal-manager-score-revision-v1\0"+label+"\0"+
       accessDigest({context,value})).digest("hex");
   }
@@ -96,6 +101,8 @@ export class ManagerScoreRevisionService {
     if(scope.mode!=="SCOPED_V2")notFound();
     for(const field of ["score","provenance_ref","revision","source_as_of","as_of","stage","profile_id","currency",
       "alpha_id","alpha_version_id","portfolio_id","deployment_id","account_id"])if(!scopeAllowsField(scope,field))notFound();
+    if(q.metric_family==="COMPOSITION")for(const field of ["allocation","balance_total"])
+      if(!scopeAllowsField(scope,field))notFound();
     if((q.surface==="FUND"||q.surface==="PORTFOLIO")&&
       !scopeAllowsFullAccountingPopulation(scope,q.surface==="PORTFOLIO"?q.id:undefined))notFound();
     if(q.surface==="DEPLOYMENT"&&!scopeReadPopulation(scope).allowedTuples.some(t=>t.deployment_id===q.id))notFound();
@@ -138,6 +145,120 @@ export class ManagerScoreRevisionService {
       feed_freshness:{availability:"NOT_PUBLISHED" as const,reason_code:"ORIGINAL_FEED_FRESHNESS_NOT_RECORDED" as const},
       availability:p.quality.value===null?"NOT_PUBLISHED":"AVAILABLE",reason_codes:p.quality.reason_codes,score:plainScore(p,(label,value)=>this.ref(g,label,value))}));
   }
+  /** A verified empty dataset is different from a researcher's empty visible
+   * slice. Preserve SCORE's nonempty guard; only full-accounting named targets
+   * may use this independent current publication/resource census proof. */
+  private compositionEmptyTarget(g:Gate):boolean{
+    if(g.q.metric_family!=="COMPOSITION"||g.q.surface!=="FUND"&&g.q.surface!=="PORTFOLIO"||
+      !scopeAllowsFullAccountingPopulation(g.scope,g.q.surface==="PORTFOLIO"?g.q.id:undefined))return false;
+    const target=(tuple:{portfolio_id:string})=>g.q.surface==="FUND"||tuple.portfolio_id===g.q.id;
+    const population=scopeReadPopulation(g.scope),resources=scopeResources(g.scope);
+    if(population.populationTuples.some(target)||population.allowedTuples.some(target)||this.members(g).length)return false;
+    return g.q.surface==="FUND"?g.scope.wholePopulation&&resources.some(r=>r.kind==="ROOT"):
+      resources.some(r=>r.kind==="PORTFOLIO"&&r.id===g.q.id);
+  }
+  private compositionMatches(g:Gate,members:readonly ManagerMember[],binding:ManagerCompositionBinding):boolean{
+    if(members.length)return this.matching(g,members,binding);
+    if(!this.compositionEmptyTarget(g))return false;
+    const selectedStages=g.q.stage_filter.length?g.q.stage_filter:binding.stage_filter;
+    const expected=subject(g.q);
+    return binding.subject_type===expected.type&&binding.subject_id===(expected.id??g.document.workspace_id)&&
+      binding.tuple_population_digest===managerScorePopulationDigest([])&&
+      binding.partition_digest===accessDigest(g.q.economic_partition)&&
+      accessDigest([...binding.stage_filter].sort())===accessDigest([...selectedStages].sort())&&
+      binding.stage_filter.every(s=>(g.q.environment==="paper"?["PAPER"]:g.q.environment==="sandbox"?["SANDBOX"]:["CANARY","LIVE"]).includes(s))&&
+      binding.window_start_ms<binding.window_end_ms&&binding.window_end_ms<=g.document.as_of_ms;
+  }
+  private originalComposition(g:Gate,members:readonly ManagerMember[]):Composition|null{
+    const d=g.document,selected=(d.precomputed_compositions??[]).filter(p=>{
+      const x=p.provenance;
+      return this.compositionMatches(g,members,x.binding)&&x.source_revision===d.revision&&
+        x.source_set_digest===d.source_set_digest&&x.source_as_of_ms===d.as_of_ms&&x.source_qualification==="SOURCE_VERIFIED"&&
+        x.scope.workspace_id===d.workspace_id&&x.scope.environment===d.environment&&x.scope.profile_id===d.profile_id&&
+        x.scope.catalogue_digest===d.catalogue_digest;
+    });
+    if(selected.length>1)notFound();if(!selected.length)return null;
+    const p=selected[0],readAtMs=Date.now(),used=new Map(p.provenance.raw_score_refs.map(r=>[r.subject_id,r.publication_digest]));
+    // The original immutable publication is historical evidence, not a grant
+    // to disclose a contribution outside this currently authorized census.
+    // Zero allocation may omit members; it may never add a foreign subject.
+    const alphaMembers=new Map<string,ManagerMember[]>();
+    for(const member of members){const rows=alphaMembers.get(member.tuple.alpha_id)??[];
+      rows.push(member);alphaMembers.set(member.tuple.alpha_id,rows);}
+    if(p.provenance.computed_at_ms>readAtMs||
+      p.result.contributions.some(row=>!alphaMembers.has(row.subject_id)))notFound();
+    const eligibleRaw=(raw:ManagerScorePublication,subjectId:string):boolean=>{
+      const x=raw.provenance,b=x.binding,pb=p.provenance.binding,q=raw.quality;
+      const population=alphaMembers.get(subjectId);
+      return population!==undefined&&raw.slot==="RAW"&&b.subject_type==="alpha"&&b.subject_id===subjectId&&
+        b.tuple_population_digest===managerScorePopulationDigest(population)&&
+        b.partition_digest===pb.partition_digest&&b.window_start_ms===pb.window_start_ms&&b.window_end_ms===pb.window_end_ms&&
+        b.comparable_basis_id===pb.comparable_basis_id&&
+        accessDigest([...b.stage_filter].sort())===accessDigest([...pb.stage_filter].sort())&&
+        x.source_revision===d.revision&&x.source_set_digest===d.source_set_digest&&x.source_as_of_ms===d.as_of_ms&&
+        x.source_qualification==="SOURCE_VERIFIED"&&x.scope.workspace_id===d.workspace_id&&
+        x.scope.environment===d.environment&&x.scope.profile_id===d.profile_id&&x.scope.catalogue_digest===d.catalogue_digest&&
+        q.qualification==="RUNTIME_APPROVED"&&(q.status==="available"||q.status==="provisional")&&q.value!==null&&
+        q.comparable_basis_id===b.comparable_basis_id&&q.individual_evidence_binding_id===b.individual_evidence_binding_id&&
+        x.computed_at_ms>=x.source_as_of_ms&&x.computed_at_ms<=p.provenance.computed_at_ms;
+    };
+    return {availability:p.result.value===null?"PARTIAL":"AVAILABLE",reason_codes:p.result.reason_codes,
+      binding:p.provenance.binding,result:{...structuredClone(p.result),
+        allocation_snapshot_id:this.ref(g,"allocation-snapshot",p.result.allocation_snapshot_id)},
+      allocation_ref:this.ref(g,"allocation",p.provenance.allocation_artifact_sha256),
+      allocation_effective_at_ms:p.provenance.allocation_effective_at_ms,
+      original_publication_ref:this.ref(g,"composition-original-publication",accessDigest(p)),
+      computed_at_ms:p.provenance.computed_at_ms,calculation_revision:p.provenance.calculation_revision,
+      raw_dependencies:p.result.contributions.map(row=>{
+        // Missing and misbound references have the same public absence. A
+        // digest resolving somewhere in this private source is not authority.
+        const raw=(d.precomputed_scores??[]).find(score=>accessDigest(score)===used.get(row.subject_id)&&
+          eligibleRaw(score,row.subject_id));
+        return {subject_id:row.subject_id,availability:raw?"AVAILABLE":"NOT_PUBLISHED",
+          reason_codes:raw?[]:["ORIGINAL_ROW_REASON_NOT_RECORDED"],
+          original_input_ref:raw?this.ref(g,"input",raw.provenance.input_digest):null,derived_input_ref:null};
+      })};
+  }
+  private restatedComposition(g:Gate,members:readonly ManagerMember[],view:ManagerScoreRestatementSnapshot):Composition|null{
+    if(view.schema_version!=="portal.execution.manager-score-restatement.v2")return null;
+    const selected=view.composition_entries.filter(entry=>this.compositionMatches(g,members,entry.binding));
+    if(selected.length>1)notFound();if(!selected.length)return null;
+    const h=selected[0].historical,raw=new Map(view.entries.map(entry=>[accessDigest(entry),entry]));
+    return {availability:h.result.value===null?"PARTIAL":"AVAILABLE",reason_codes:h.result.reason_codes,
+      binding:h.binding,result:{...structuredClone(h.result),
+        allocation_snapshot_id:this.ref(g,"allocation-snapshot",h.result.allocation_snapshot_id)},
+      allocation_ref:this.ref(g,"allocation",h.allocation_artifact_sha256),
+      allocation_effective_at_ms:h.allocation_effective_at_ms,
+      original_publication_ref:this.ref(g,"composition-original-publication",h.original_publication_digest),
+      computed_at_ms:h.computed_at_ms,calculation_revision:h.calculation_revision,
+      raw_dependencies:h.raw_inputs.map(input=>{
+        const entry=input.entry_digest===null?undefined:raw.get(input.entry_digest);
+        return {subject_id:input.subject_id,availability:input.disposition==="USED"?"AVAILABLE":
+          entry?.historical?"PARTIAL":"NOT_PUBLISHED",reason_codes:input.reason_code?[input.reason_code]:[],
+          original_input_ref:input.original_input_digest===null?null:this.ref(g,"input",input.original_input_digest),
+          derived_input_ref:entry?.historical?this.ref(g,"input",entry.historical.derived_input_digest):null};
+      })};
+  }
+  private projectCompositionHistory(g:Gate,snapshot:ManagerScoreHistorySnapshot,members:readonly ManagerMember[]):Projected[]{
+    const original=this.originalComposition(g,members);
+    if(g.q.revision_mode==="ORIGINAL_AS_PUBLISHED")return original?[this.project(g,[],null,original)]:[];
+    const map=new Map(snapshot.restatements.map(view=>[view.calculation_key,view]));
+    const ordered:ManagerScoreRestatementSnapshot[]=[],seen=new Set<string>();let key=snapshot.restated_head_key;
+    while(key!==null){const view=map.get(key);if(!view||seen.has(key))throw new Error("HISTORY_LINEAGE_INVALID");
+      seen.add(key);ordered.push(view);key=view.supersedes_calculation_key;}
+    const projected=ordered.reverse().flatMap(view=>{
+      const composition=this.restatedComposition(g,members,view);
+      return composition?[this.project(g,[],view,composition)]:[];
+    });
+    const originalGate={...g,q:{...g.q,revision_mode:"ORIGINAL_AS_PUBLISHED" as const}};
+    let predecessor=original?this.project(originalGate,[],null,original).view.revision_ref:null;
+    for(const item of projected){
+      item.view.supersedes_revision_ref=predecessor;
+      item.view.supersedes_reason=predecessor===null?"NO_AUTHORIZED_PREDECESSOR":"AUTHORIZED_PREDECESSOR";
+      predecessor=item.view.revision_ref;
+    }
+    return projected.reverse();
+  }
   private restated(g:Gate,members:readonly ManagerMember[],view:ManagerScoreRestatementSnapshot):Entry[]{
     return view.entries.filter(e=>this.matching(g,members,e.binding)).map(e=>{
       const h=e.historical;
@@ -150,16 +271,18 @@ export class ManagerScoreRevisionService {
         availability:e.availability,reason_codes:e.reason_codes,score:p?plainScore(p,(label,value)=>this.ref(g,label,value)):null};
     });
   }
-  private project(g:Gate,entries:Entry[],retained:ManagerScoreRestatementSnapshot|null):Projected {
+  private project(g:Gate,entries:Entry[],retained:ManagerScoreRestatementSnapshot|null,composition?:Composition):Projected {
     const q=g.q,d=g.document,original=q.revision_mode==="ORIGINAL_AS_PUBLISHED";
     if(new Set(entries.map(e=>e.slot)).size!==entries.length)notFound();
     const K=retained?.knowledge_cutoff_ms??null,computed=retained?.computed_at_ms??null;
     const target={surface:q.surface,id:q.id??null};
     const sourceRef=this.ref(g,"source",{target,workspace:d.workspace_id,environment:d.environment,profile:d.profile_id,
       revision:d.revision,stages:[...q.stage_filter].sort(),partition:q.economic_partition});
-    const revisionRef=this.ref(g,"revision",{sourceRef,mode:q.revision_mode,K,computed,entries});
+    const selectedComposition=composition!==undefined&&composition.availability!=="NOT_PUBLISHED";
+    const revisionRef=this.ref(g,"revision",{sourceRef,mode:q.revision_mode,K,computed,entries,
+      ...(q.metric_family==="COMPOSITION"?{composition:composition??null}:{})});
     const available=entries.filter(e=>e.availability==="AVAILABLE").length;
-    const availability=entries.length>0&&available===entries.length?"AVAILABLE":
+    const availability=selectedComposition?composition.availability:entries.length>0&&available===entries.length?"AVAILABLE":
       entries.some(e=>e.availability!=="NOT_PUBLISHED")?"PARTIAL":"NOT_PUBLISHED";
     const view=managerScoreRevisionView.parse({schema_version:"portal.execution.manager-score-revision.v1",target,
       workspace_id:d.workspace_id,environment:d.environment,revision_mode:q.revision_mode,purpose:"HISTORICAL_ANALYSIS_ONLY",
@@ -171,14 +294,16 @@ export class ManagerScoreRevisionService {
       computed_at_ms:computed,computed_at_reason:original?"ORIGINAL_COMPUTE_TIMES_ARE_PER_ENTRY":computed===null?"RESTATEMENT_NOT_PUBLISHED":null,
       eligibility:{policy_current:false,policy_state:"UNKNOWN",reason_code:"POLICY_STATE_NOT_CLASSIFIED",
         economic_source:q.source_selector==="CURRENT_HEAD"?"CURRENT_HEAD":"RETAINED_EXACT_REVISION",usable_as_current_operational_score:false},
-      availability,reason_codes:entries.length?[]:[original?"SELECTED_SCORE_REVISION_NOT_PUBLISHED":"RESTATEMENT_NOT_PUBLISHED"],
-      score_details:entries,composition:{availability:"NOT_PUBLISHED",reason_code:original?
-        "COMPOSITION_REVISION_NOT_SELECTED":"DEPENDENT_RESTATEMENT_NOT_MATERIALIZED"},
+      availability,reason_codes:selectedComposition||entries.length?[]:[q.metric_family==="COMPOSITION"?
+        "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED":original?"SELECTED_SCORE_REVISION_NOT_PUBLISHED":"RESTATEMENT_NOT_PUBLISHED"],
+      score_details:entries,composition:composition??{availability:"NOT_PUBLISHED",reason_code:q.metric_family==="COMPOSITION"?
+        "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED":original?"COMPOSITION_REVISION_NOT_SELECTED":"DEPENDENT_RESTATEMENT_NOT_MATERIALIZED"},
       regime:{availability:"NOT_PUBLISHED",reason_code:"INDEPENDENT_REGIME_REVISION_NOT_SELECTED"}});
     return {view,retained};
   }
   private projectHistory(g:Gate,snapshot:ManagerScoreHistorySnapshot):Projected[]{
-    const members=this.members(g);if(!members.length)notFound();
+    const members=this.members(g);if(!members.length&&!this.compositionEmptyTarget(g))notFound();
+    if(g.q.metric_family==="COMPOSITION")return this.projectCompositionHistory(g,snapshot,members);
     const originals=this.original(g,members);
     if(g.q.revision_mode==="ORIGINAL_AS_PUBLISHED")return originals.length?[this.project(g,originals,null)]:[];
     // Pointer order is causal, even for equal wall clocks. Hidden-only nodes
@@ -188,8 +313,13 @@ export class ManagerScoreRevisionService {
     const seen=new Set<string>();
     while(key!==null){const v=map.get(key);if(!v||seen.has(key))throw new Error("HISTORY_LINEAGE_INVALID");
       seen.add(key);ordered.push(v);key=v.supersedes_calculation_key;}
+    const visible=new Set<string>();
     const projected=ordered.reverse().map(v=>({v,entries:this.restated(g,members,v)})).filter(p=>p.entries.length)
-      .map(p=>this.project(g,p.entries,p.v));
+      .map(p=>this.project(g,p.entries,p.v)).filter(p=>{
+        // A v1→combined-v2 append can have the same millisecond and exact RAW
+        // projection. It is not a second visible Score fact or private-node ID.
+        if(visible.has(p.view.revision_ref))return false;visible.add(p.view.revision_ref);return true;
+      });
     // Cross-mode origin is scoped with the ORIGINAL query, not re-labelled as
     // a RESTATED calculation. It is a public predecessor only, not a list item.
     const originalGate={...g,q:{...g.q,revision_mode:"ORIGINAL_AS_PUBLISHED" as const}};
@@ -205,7 +335,7 @@ export class ManagerScoreRevisionService {
   private async retained(g:Gate):Promise<Projected[]>{
     // Current named resource/fields/population have already been authorized.
     // No remote authority await is held inside the short READ ONLY snapshot.
-    if(!this.members(g).length)notFound();
+    if(!this.members(g).length&&!this.compositionEmptyTarget(g))notFound();
     let snapshot=await this.historyStore.scan(g.document,5000),items=this.projectHistory(g,snapshot);
     if(!await this.historyStore.unchanged(g.document,snapshot,5000)){
       const first=this.signature(items);snapshot=await this.historyStore.scan(g.document,5000);
@@ -268,7 +398,8 @@ export class ManagerScoreRevisionService {
           target:{surface:q.surface,id:q.id??null},workspace:g.document.workspace_id,environment:q.environment,
           profile:g.document.profile_id,revision:g.document.revision,generation:g.document.projection_generation,
           catalogue:g.document.catalogue_digest,mode:q.revision_mode,stages:[...q.stage_filter].sort(),partition:q.economic_partition,
-          limit:q.limit,key:this.config.QUERY_CURSOR_ACTIVE_KEY_ID,authorized:this.signature(all)});
+          limit:q.limit,key:this.config.QUERY_CURSOR_ACTIVE_KEY_ID,authorized:this.signature(all),
+          ...(q.metric_family==="COMPOSITION"?{metric_family:"COMPOSITION"}:{})});
         const context={resourceId:"execution-manager-score-history-v1",workspaceId:principal.workspaceId,
           direction,queryFingerprint:fingerprint,boundarySize:1} as const;
         const token=q.before??q.after;

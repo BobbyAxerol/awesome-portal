@@ -2,6 +2,7 @@
  * providers/pins only. This is not source transport, calibration or runtime acceptance. */
 import "reflect-metadata";
 import { createHash, randomUUID } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Pool, type PoolClient } from "pg";
@@ -14,11 +15,16 @@ import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "../src
 import { loadPublicationCommissioning, qualifyDatasetPublication, withCataloguePublications } from "../src/execution-v2/publication-adapter";
 import { EXECUTION_PUBLICATION_CATALOGUE } from "../src/execution-v2/publication-source.generated";
 import { ManagerScoreRuntime, loadApprovedManagerScorePolicy, managerScorePolicyHash, managerScorePublicationCurrent, managerScorePublicationPolicyCurrent,
+  managerScoreRestatementPolicy, type ApprovedManagerScorePolicy,
   type ManagerScoreRuntimePolicyArtifact, type ManagerScoreRuntimeTask } from "../src/execution-v2/manager-score-runtime";
 import { managerScorePublication, type ManagerScorePublication } from "../src/execution-v2/manager-score-publication.contract";
 import { ManagerScoreOriginalCustody, captureManagerScoreOriginalInputs, decodeRetainedManagerScoreOriginal,
   type ManagerScoreOriginalCustodySnapshot } from "../src/execution-v2/manager-score-original-custody";
-import { ManagerScoreRestatement } from "../src/execution-v2/manager-score-restatement";
+import { ManagerScoreRestatement, decodeRetainedManagerScoreRestatement,
+  type ManagerScoreRestatementSnapshot } from "../src/execution-v2/manager-score-restatement";
+import type { ManagerScoreRecalculationTask } from "../src/execution-v2/manager-score-recalculation";
+import { ManagerCompositionHistoricalRuntime, decodeRetainedManagerCompositionRestatement }
+  from "../src/execution-v2/manager-composition-restatement";
 import { ManagerScoreHistoryStore } from "../src/execution-v2/manager-score-history.store";
 import { managerScorePopulationDigest } from "../src/execution-v2/manager-score-publication";
 import { ManagerModelRepository } from "../src/execution-v2/manager-model.store";
@@ -180,9 +186,9 @@ function compositionCandidate(fx:ReturnType<typeof compositionInput>,artifact=st
     source_set_digest:artifact.source_set_digest,source_as_of_ms:artifact.source_as_of_ms,allocation_revision:artifact.allocation_revision,
     ownership_manifest_ref:artifact.ownership_manifest_ref,full_accounting_manifest_ref:artifact.full_accounting_manifest_ref,
     grouping_pin:artifact.grouping===null?null:{artifact_digest:accessDigest(artifact.grouping),approval_ref:"SYNTHETIC_NOT_OWNER_GROUPING_APPROVAL",
-      approved_at_ms:now-10_000,valid_until_ms:fx.pin.valid_until_ms},
+      approved_at_ms:fx.pin.grouping_pin?.approved_at_ms??fx.pin.approved_at_ms,valid_until_ms:fx.pin.valid_until_ms},
     nav_pin:artifact.nav_partition===null?null:{artifact_digest:accessDigest(artifact.nav_partition),approval_ref:"SYNTHETIC_NOT_OWNER_NAV_APPROVAL",
-      approved_at_ms:now-10_000,valid_until_ms:fx.pin.valid_until_ms}};
+      approved_at_ms:fx.pin.nav_pin?.approved_at_ms??fx.pin.approved_at_ms,valid_until_ms:fx.pin.valid_until_ms}};
   const load=()=>loadApprovedManagerAllocation({artifact_bytes:bytes,approval_pin:pin,scope:artifact.scope,as_of_ms:now});
   return {artifact,bytes,pin,load};
 }
@@ -938,6 +944,73 @@ async function compositionV3Fixture(kind:"full"|"partial"|"composition-only"|"em
   const inputs=captureManagerScoreOriginalInputs(compositionV3ScoreInputs(fx),compositionV3Limits.maximum_bundle_bytes);
   const f=await compositionOriginal(fx,allocation);return {...f,inputs};
 }
+/** Proposed helpers appended after commissioning fixture helpers, before its
+ * describes. SYNTHETIC method/allocation/calibration/commissioning only.
+ * No spec imports or production source/defaults. */
+function dependentCompositionPolicy(asOf:number,name="B",upper="0.08"){
+  const at=Date.now(),approved=at-500;
+  const artifact:ManagerScoreRuntimePolicyArtifact={schema_version:"portal.execution.manager-score-policy-runtime.v1",
+    scope:{...scope,catalogue_digest:catalogue},policy:{formula_id:"qbts_prb_v1_1",qualification:"RUNTIME_APPROVED",
+      policy_id:"SYNTHETIC:dependent-policy-"+name,policy_hash:hash("unset"),formula_hash:hash("SYNTHETIC:formula"),
+      calibration_snapshot_id:"SYNTHETIC:calibration-"+name,approved_policy_id:"SYNTHETIC:approval-"+name,
+      comparable_basis_id:"SYNTHETIC:basis",duration_key:"SYNTHETIC:window",observation_frequency:"1h",calendar:"SYNTHETIC:calendar",
+      timezone:"UTC",currency:"USDT",cash_reference_id:"SYNTHETIC:cash",cost_method:"SYNTHETIC:net",required_costs:["fees"],
+      block_manifest_id:"SYNTHETIC:blocks",stress_policy_id:"SYNTHETIC:stress",stress_delta_bps:"5",
+      anchors:{twr:["-0.02",upper],sharpe:["0","0.15"],mdd:["0","0.1"],add:["0","0.04"]},
+      maturity:{minimum_samples:5,minimum_complete_blocks:2,minimum_duration_ms:100},canonical_decimal_places:12,
+      issued_at_ms:approved-100,calibration_cutoff_ms:approved-200},
+    runtime_config:{maximum_input_age_ms:100,minimum_window_ms:100,maximum_window_ms:10000,grid_method_ref:"SYNTHETIC:grid",
+      flow_adjustment_method_ref:"SYNTHETIC:flows",ownership_method_ref:"SYNTHETIC:ownership",fx_method_ref:"SYNTHETIC:FX"}};
+  artifact.policy.policy_hash=managerScorePolicyHash(artifact.policy);const bytes=JSON.stringify(artifact);
+  const loaded=loadApprovedManagerScorePolicy({artifact_bytes:bytes,scope:artifact.scope,as_of_ms:at,
+    approval_pin:{artifact_sha256:hash(bytes),scope:artifact.scope,policy_id:artifact.policy.policy_id,policy_hash:artifact.policy.policy_hash,
+      formula_hash:artifact.policy.formula_hash,approved_policy_id:artifact.policy.approved_policy_id!,policy_revision:"SYNTHETIC:dependent-"+name,
+      approval_ref:"SYNTHETIC_NOT_OWNER_APPROVAL:"+name,approved_at_ms:approved,valid_until_ms:at+120_000}});
+  if(loaded.status!=="READY")throw new Error(JSON.stringify(loaded));
+  const policy=managerScoreRestatementPolicy(loaded.handle,artifact.scope,at,at);
+  if(!policy||approved<=asOf)throw new Error("SYNTHETIC_EXPECTED_LATER_POLICY");
+  return {handle:loaded.handle,policy};
+}
+function dependentCompositionFixture(options:{missingMethod?:boolean;empty?:boolean;allZero?:boolean;compositionOnly?:boolean;stalePeer?:boolean}={}){
+  const fx=compositionInput(),at=Date.now(),asOf=at-20_000,offset=asOf-fx.d.document.as_of_ms;
+  // Shift known absolute times BEFORE any original worker/input hashing. Do not
+  // shift durations, caps or ratios; one shared seen-set handles fixture aliases.
+  const absolute=new Set(["as_of_ms","source_as_of_ms","recorded_through_ms","facts_through_ms","observed_at_ms",
+    "effective_at_ms","recorded_at_ms","valid_from_ms","valid_to_ms","window_start_ms","window_end_ms","computed_at_ms",
+    "approved_at_ms","valid_until_ms","issued_at_ms","expires_at_ms"]),seen=new Set<object>();
+  const shift=(value:unknown):void=>{if(!value||typeof value!=="object"||seen.has(value))return;seen.add(value);
+    for(const [key,item]of Object.entries(value)){if(absolute.has(key)&&typeof item==="number")Reflect.set(value,key,item+offset);else shift(item);}};
+  for(const value of [fx.d,fx.artifact,fx.pin,fx.task,fx.scoreTasks])shift(value);
+  fx.artifact.maximum_source_age_ms=120_000;fx.pin.valid_until_ms=at+120_000;
+  if(fx.pin.nav_pin)fx.pin.nav_pin.valid_until_ms=at+120_000;
+  fx.d.publication.expires_at_ms=at+120_000;
+  if(options.stalePeer){const peer=fx.scoreTasks.find(item=>item.slot==="RAW"&&item.task.binding.subject_id===PEER.alpha_id)!;
+    peer.task.input.quality.stale=true;}
+  if(options.compositionOnly)fx.scoreTasks=[];
+  if(options.allZero){for(const row of fx.artifact.rows)row.allocated_economic_capital="0";
+    for(const fact of fx.d.document.facts)if(fact.kind==="allocation"||fact.kind==="current_nav")fact.metric.value="0";
+    for(const row of fx.artifact.nav_partition!.rows)row.current_nav_allocated_capital="0";
+    fx.artifact.nav_partition!.idle_cash=fx.artifact.nav_partition!.nav;}
+  if(options.empty){fx.d.document.members=[];fx.d.document.facts=[];fx.scoreTasks=[];fx.d.publication.authority.tuples=[];
+    fx.artifact.population=[];fx.artifact.rows=[];fx.artifact.grouping=null;fx.artifact.nav_partition=null;
+    fx.artifact.source_set_digest=accessDigest([]);fx.artifact.binding.tuple_population_digest=accessDigest([]);
+    fx.d.document.source_set_digest=accessDigest([]);fx.task.source_set_digest=accessDigest([]);}
+  const candidate=compositionCandidate(fx),allocation=loadApprovedManagerAllocation({artifact_bytes:candidate.bytes,approval_pin:candidate.pin,
+    scope:candidate.artifact.scope,as_of_ms:at});
+  if(allocation.status!=="READY")throw new Error(JSON.stringify(allocation));fx.handle=allocation.handle;
+  const later=dependentCompositionPolicy(asOf);
+  const items:ManagerScoreRecalculationTask[]=compositionV3ScoreInputs(fx).map(item=>{
+    const {task}=item;task.expected_policy_revision=null;
+    // Explicit TEST_ONLY stand-in for independent SOURCE method proof known
+    // before original calculation. The current policy does not mint this fact.
+    if(options.missingMethod&&item.slot==="RAW"&&task.binding.subject_id===PEER.alpha_id)return item;
+    const dep={source_revision:task.source_revision,source_set_digest:task.source_set_digest,source_as_of_ms:asOf,
+      metrics_input_digest:accessDigest(task.input),method_digest:later.policy.method_digest,stress_delta_bps:"5",
+      source_locator:"SYNTHETIC:pre-original-method-NOT-source-qualification"};
+    task.metrics_dependency_digest=accessDigest(dep);return {...item,metrics_dependency:dep};
+  });
+  return {fx,items,later,asOf};
+}
 type CompositionV3Fixture=Awaited<ReturnType<typeof compositionV3Fixture>>;
 type CompositionV3Snapshot=Extract<ManagerScoreOriginalCustodySnapshot,{schema_version:"portal.execution.manager-score-original-inputs.v3"}>;
 
@@ -985,6 +1058,312 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 ORIGINAL v3 — actual 
   function requireV3(snapshot:ManagerScoreOriginalCustodySnapshot|null):CompositionV3Snapshot{
     if(snapshot?.schema_version!=="portal.execution.manager-score-original-inputs.v3")throw new Error("TEST_ONLY_EXPECTED_V3");return snapshot;}
 
+  /** Insert INSIDE the existing ORIGINAL-v3 disposable-PG describe after its
+   * helper declarations. Reuse pg/tx/count/originalRow/financialRows/putSource/
+   * ownedRuntimes; do not import a spec or create another DB/pool/harness.
+   * All authority/source/method/policy pins SYNTHETIC. */
+  const dependentCompositionRevision="SYNTHETIC:historical-composition-r1";
+  const dependentConfig={...compositionV3Config,maximum_revisions_per_source:6};
+  type DependentFixture=ReturnType<typeof dependentCompositionFixture>;
+  type DependentV2=Extract<ManagerScoreRestatementSnapshot,{schema_version:"portal.execution.manager-score-restatement.v2"}>;
+  function requireDependentV2(value:ManagerScoreRestatementSnapshot|null):DependentV2{
+    if(value?.schema_version!=="portal.execution.manager-score-restatement.v2")throw new Error("SYNTHETIC_EXPECTED_RESTATED_V2");return value;
+  }
+  function dependentTransactionPool(after:(sql:string,client:PoolClient)=>Promise<void>):Pool{
+    // Fault seam wraps only genuine calls on the disposable Pool/PoolClient;
+    // actual INSERT/CAS/ROLLBACK/COMMIT and returned rows are not mocked.
+    return new Proxy(pg,{get(target,key){if(key==="connect")return async()=>{
+      const client=await target.connect();return new Proxy(client,{get(real,field){if(field==="query")return async(...args:unknown[])=>{
+        const result=await(real.query.bind(real) as unknown as (...args:unknown[])=>Promise<unknown>)(...args);
+        await after(String(args[0]),real);return result;};const value=Reflect.get(real,field,real);return typeof value==="function"?value.bind(real):value;}});
+    };const value=Reflect.get(target,key,target);return typeof value==="function"?value.bind(target):value;}});
+  }
+  function installedDependent(data:DependentFixture=dependentCompositionFixture(),selectedPool=pg,extra:Partial<typeof dependentConfig>={}){
+    const state:{policy:ApprovedManagerScorePolicy|null;pending:boolean;sourceRefused:boolean}={policy:null,pending:true,sourceRefused:false};
+    const acknowledge=vi.fn(async()=>{state.pending=false;}),installed=compositionInstallation(data.fx,acknowledge);
+    const partition=installed.installation.partitions[0],fixtureCommissioning=commissioning(),at=Date.now();
+    fixtureCommissioning.pin.approved_at_ms=data.asOf-1000;fixtureCommissioning.pin.valid_until_ms=at+240_000;
+    data.fx.d.publication.expires_at_ms=at+240_000; // Isolate Score expiry fault from source expiry below.
+    partition.commissioning=loadPublicationCommissioning(fixtureCommissioning.bytes,fixtureCommissioning.pin,at);
+    const historical=new ManagerCompositionHistoricalRuntime({maximum_rows:10,maximum_input_bytes:262_144,maximum_in_flight:1});
+    const tasks=vi.fn(async()=>data.items),source={
+      read:vi.fn(async()=>state.pending?structuredClone(data.fx.d):null),acknowledge,
+      recheck:vi.fn(async()=>({assertCurrent:()=>{if(state.sourceRefused)throw new Error("SYNTHETIC_DEPENDENT_SOURCE_REFUSAL");}}))};
+    partition.source=source;partition.score!.tasks=tasks;partition.score!.currentPolicy=()=>state.policy;
+    partition.score!.restatement={...dependentConfig,...extra,composition:{runtime:historical,calculation_revision:dependentCompositionRevision}};
+    // Retain original allocation handle in ordinary materializer. Later changes
+    // below are a separate current allocation and must not alter retained inputs.
+    installed.state.allocation=data.fx.handle;
+    const runtime=new ExecutionManagerRuntime(selectedPool,installed.installation);ownedRuntimes.push(runtime);
+    const coordinator=runtime.restatementFor(scope)!;
+    const restart=(enabled=true,database=selectedPool,config=extra)=>new ManagerScoreRestatement({pool:database,
+      runtime:partition.score!.runtime,currentPolicy:()=>state.policy,source,commissioning:partition.commissioning,
+      publication:async()=>data.fx.d.publication,config:{...dependentConfig,...config},
+      ...(enabled?{composition:{runtime:historical,calculation_revision:dependentCompositionRevision}}:{})});
+    const idle=async(selected=coordinator)=>{
+      const lease=(await pg.query("SELECT workspace_id,environment,profile_id,holder_id::text,fencing_token::text,lease_epoch::text FROM execution_manager_consumer_fences")).rows[0];
+      if(!lease?.holder_id)throw new Error("SYNTHETIC_OWNED_LEASE_REQUIRED");
+      await selected.idle({lease,signal:new AbortController().signal,deadline_ms:performance.now()+5000,transaction_timeout_ms:2000,lease_ttl_ms:4000});
+    };
+    const document=async()=>{const d=await new ManagerModelRepository(pg).document(scope.workspace_id,scope.environment,scope.profile_id,data.fx.d.document.revision);
+      if(!d)throw new Error("SYNTHETIC_SOURCE_NOT_MATERIALIZED");return d;};
+    return {data,state,installed,runtime,coordinator,historical,tasks,source,acknowledge,restart,idle,document};
+  }
+  type DependentHarness=ReturnType<typeof installedDependent>;
+  async function retainedDependent(h:DependentHarness){const document=await h.document();
+    return {document,snapshot:await h.coordinator.snapshot(document)};}
+  async function restatedDependentRow(){return(await pg.query(`SELECT r.calculation_key,r.payload_digest,r.payload,r.created_at::text
+    FROM execution_manager_score_mode_heads h JOIN execution_manager_calculation_revisions r
+    USING(workspace_id,environment,profile_id,source_revision,calculation_key) WHERE h.head_kind='RESTATED_CURRENT_POLICY'`)).rows[0];}
+
+  it("installed original-v3 → genuine later-policy RAW → historical Composition → same138/139, preserving original/source and one financial ACK",async()=>{
+    const h=installedDependent();await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_OK");
+    const document=await h.document(),financial=await financialRows(),original=await originalRow(),score=vi.spyOn(h.installed.installation.partitions[0].score!.runtime,"calculateRestated");
+    expect(original.payload.schema_version).toBe("portal.execution.manager-score-original-inputs.v3");
+    expect(document.precomputed_compositions![0].result).toMatchObject({value:null,status:"partial_coverage",total_allocated_capital:"80"});
+    h.state.policy=h.data.later.handle;await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_OK");
+    const view=requireDependentV2((await h.coordinator.snapshot(document)).view),c=view.composition_entries[0].historical;
+    expect(view.entries).toHaveLength(3);expect(view.composition_entries).toHaveLength(1);expect(score).toHaveBeenCalledTimes(3);
+    expect(c).toMatchObject({revision_mode:"RESTATED_CURRENT_POLICY",purpose:"HISTORICAL_ANALYSIS_ONLY",operational_current:false,
+      source:{as_of_ms:document.as_of_ms},result:{value:"80",status:"available",total_allocated_capital:"80",score_coverage_allocated:"1"}});
+    expect(c.knowledge_cutoff_ms).toBe(view.knowledge_cutoff_ms);expect(c.computed_at_ms).toBe(view.computed_at_ms);
+    expect(view.policy.approved_at_ms).toBeGreaterThan(document.as_of_ms);expect(c.knowledge_cutoff_ms).toBeGreaterThanOrEqual(original.payload.retained_compositions[0].custody.captured_at_ms);
+    expect(view.entries.every(e=>e.historical?.feed_freshness.status==="HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS")).toBe(true);
+    expect(managerScorePublicationPolicyCurrent(h.state.policy,view.entries[0].historical!.result,Date.now())).toBe(false);
+    expect(await financialRows()).toEqual(financial);expect(await originalRow()).toEqual(original);expect(h.acknowledge).toHaveBeenCalledOnce();
+    expect(await count("execution_manager_calculation_revisions")).toBe("2");expect(await count("execution_manager_calculation_heads")).toBe("0");
+  });
+  it("uses original60/20 despite today's20/80 and revoked original handle; archived allocation is not today's grant",async()=>{
+    const h=installedDependent();await h.runtime.tick();const document=await h.document(),financial=await financialRows(),original=await originalRow();
+    const artifact=structuredClone(h.data.fx.artifact);artifact.rows[0].allocated_economic_capital="20";artifact.rows[1].allocated_economic_capital="80";
+    artifact.allocation_revision="SYNTHETIC:today-r2";artifact.allocation_snapshot_id="SYNTHETIC:today-snapshot";
+    artifact.nav_partition!.rows[0].current_nav_allocated_capital="20";artifact.nav_partition!.rows[1].current_nav_allocated_capital="80";artifact.nav_partition!.idle_cash="0";
+    const candidate=compositionCandidate(h.data.fx,artifact),loaded=loadApprovedManagerAllocation({artifact_bytes:candidate.bytes,approval_pin:candidate.pin,scope:artifact.scope,as_of_ms:Date.now()});
+    if(loaded.status!=="READY")throw new Error(JSON.stringify(loaded));h.installed.state.allocation=loaded.handle;
+    expect(revokeApprovedManagerAllocation(h.data.fx.handle)).toBe(true);h.state.policy=h.data.later.handle;await h.idle();
+    const c=requireDependentV2((await h.coordinator.snapshot(document)).view).composition_entries[0].historical;
+    expect(c.result).toMatchObject({value:"80",total_allocated_capital:"80"});
+    expect(c.result.contributions.map(r=>[r.subject_id,r.allocation_weight])).toEqual([[OWN.alpha_id,"0.75"],[PEER.alpha_id,"0.25"]]);
+    expect(c.result.allocation_snapshot_id).toBe(h.data.fx.artifact.allocation_snapshot_id);
+    expect(await financialRows()).toEqual(financial);expect(await originalRow()).toEqual(original);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+  it.each(["missing method","intrinsic stale"] as const)("keeps %s RAW in the full original denominator with truthful partial bounds",async fault=>{
+    const h=installedDependent(dependentCompositionFixture({missingMethod:fault==="missing method",stalePeer:fault==="intrinsic stale"}));
+    await h.runtime.tick();h.state.policy=h.data.later.handle;await h.idle();const {snapshot}=await retainedDependent(h),v=requireDependentV2(snapshot.view);
+    expect(v.composition_entries[0].historical.result).toMatchObject({value:null,status:"partial_coverage",total_allocated_capital:"80",
+      score_coverage_allocated:"0.75",unscored_allocated_weight:"0.25",bounds:{lower:"67.5",upper:"92.5"}});
+    const peer=v.entries.find(e=>e.slot==="RAW"&&e.binding.subject_id===PEER.alpha_id)!;
+    if(fault==="missing method")expect(peer).toMatchObject({availability:"NOT_PUBLISHED",historical:null,reason_codes:["METRIC_DEPENDENCIES_NOT_RETAINED"]});
+    else expect(peer.historical!.result.quality).toMatchObject({value:null,status:"stale"});
+    expect(v.composition_entries[0].historical.raw_inputs.find(r=>r.subject_id===PEER.alpha_id)).toMatchObject({disposition:"UNSCORED"});
+  });
+  it.each(["composition-only","verified-empty"] as const)("retains %s as v2 historical fact, never an invented numeric zero",async kind=>{
+    const h=installedDependent(dependentCompositionFixture(kind==="verified-empty"?{empty:true}:{compositionOnly:true}));
+    await h.runtime.tick();h.state.policy=h.data.later.handle;await h.idle();const {snapshot}=await retainedDependent(h),v=requireDependentV2(snapshot.view);
+    expect(v.entries).toEqual([]);expect(v.composition_entries).toHaveLength(1);
+    expect(v.composition_entries[0].historical.result).toMatchObject(kind==="verified-empty"?
+      {value:null,status:"no_allocation",total_allocated_capital:"0"}:{value:null,status:"partial_coverage",total_allocated_capital:"80",score_coverage_allocated:"0"});
+    expect(h.acknowledge).toHaveBeenCalledOnce();expect(await count("execution_manager_calculation_revisions")).toBe("2");
+  });
+  it("reuses immutable v2 key/K/C/RAW/Composition after retry and coordinator restart, before any new worker call",async()=>{
+    const h=installedDependent();await h.runtime.tick();h.state.policy=h.data.later.handle;await h.idle();const document=await h.document(),stored=await restatedDependentRow();
+    const raw=vi.spyOn(h.installed.installation.partitions[0].score!.runtime,"calculateRestated"),composition=vi.spyOn(h.historical,"calculateHistoricalComposition");
+    await h.idle();const restarted=h.restart();await h.idle(restarted);
+    expect(await restatedDependentRow()).toEqual(stored);expect(await restarted.snapshot(document)).toEqual(await h.coordinator.snapshot(document));
+    expect(raw).not.toHaveBeenCalled();expect(composition).not.toHaveBeenCalled();expect(h.acknowledge).toHaveBeenCalledOnce();
+    expect(await count("execution_manager_calculation_revisions")).toBe("2");
+    const noWorker=h.restart(false);expect(await noWorker.restoreRetained(document,stored.calculation_key)).toEqual(stored.payload);
+  });
+  it("appends v2 after a real v1 RAW-only result in the one139 causal lineage, without mutating v1 or ORIGINAL",async()=>{
+    const h=installedDependent();await h.runtime.tick();h.state.policy=h.data.later.handle;const document=await h.document(),legacy=h.restart(false);
+    await h.idle(legacy);const first=await restatedDependentRow();expect(first.payload.schema_version).toBe("portal.execution.manager-score-restatement.v1");
+    await h.idle();const second=await restatedDependentRow();expect(second.calculation_key).not.toBe(first.calculation_key);
+    expect(second.payload).toMatchObject({schema_version:"portal.execution.manager-score-restatement.v2",supersedes_calculation_key:first.calculation_key});
+    expect((await pg.query("SELECT payload,payload_digest FROM execution_manager_calculation_revisions WHERE calculation_key=$1",[first.calculation_key])).rows[0])
+      .toEqual({payload:first.payload,payload_digest:first.payload_digest});
+    const history=await new ManagerScoreHistoryStore(pg).scan(document,3000);
+    expect(history.restatements.map(r=>r.schema_version).sort()).toEqual(["portal.execution.manager-score-restatement.v1","portal.execution.manager-score-restatement.v2"]);
+    expect(history.restated_head_key).toBe(second.calculation_key);expect(await count("execution_manager_calculation_revisions")).toBe("3");
+  });
+  it("original allocation approval may expire today without erasing captured inputs or requiring today's allocation",async()=>{
+    const data=dependentCompositionFixture(),expires=Date.now()+30_000;data.fx.pin.valid_until_ms=expires;
+    if(data.fx.pin.nav_pin)data.fx.pin.nav_pin.valid_until_ms=expires;
+    const candidate=compositionCandidate(data.fx),loaded=loadApprovedManagerAllocation({artifact_bytes:candidate.bytes,approval_pin:candidate.pin,
+      scope:candidate.artifact.scope,as_of_ms:Date.now()});if(loaded.status!=="READY")throw new Error(JSON.stringify(loaded));data.fx.handle=loaded.handle;
+    const h=installedDependent(data);await h.runtime.tick();h.state.policy=data.later.handle;
+    const document=await h.document(),financial=await financialRows(),original=await originalRow();
+    expect(candidate.pin.nav_pin!.approved_at_ms).toBeLessThanOrEqual(data.asOf);
+    expect(document.precomputed_compositions![0].result.allocation_coverage_nav).toBe("0.8");
+    const clock=vi.spyOn(Date,"now").mockReturnValue(expires+1);
+    try{await h.idle();const c=requireDependentV2((await h.coordinator.snapshot(document)).view).composition_entries[0].historical;
+      expect(c.result.value).toBe("80");expect(c.result.allocation_coverage_nav).toBe("0.8");
+      expect(c.knowledge_cutoff_ms).toBeGreaterThan(expires);
+    }finally{clock.mockRestore();}
+    expect(await financialRows()).toEqual(financial);expect(await originalRow()).toEqual(original);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+  it.each(["revoke","expiry","source"] as const)("%s after genuine v2 INSERT refuses final COMMIT and rolls back derived/head only",async fault=>{
+    let h:DependentHarness|undefined,armed=false,witness=false;let restoreClock:(()=>void)|undefined;
+    const database=dependentTransactionPool(async(sql,client)=>{if(armed&&sql.startsWith("INSERT INTO execution_manager_calculation_revisions")){
+      armed=false;witness=true;expect((await client.query("SELECT count(*)::text AS n FROM execution_manager_calculation_revisions")).rows[0].n).toBe("2");
+      if(fault==="revoke")h!.state.policy=null;
+      else if(fault==="source")h!.state.sourceRefused=true;
+      else{const clock=vi.spyOn(Date,"now").mockReturnValue(h!.data.later.policy.valid_until_ms);restoreClock=()=>clock.mockRestore();}
+    }});
+    h=installedDependent(undefined,database);await h.runtime.tick();const financial=await financialRows(),original=await originalRow();
+    h.state.policy=h.data.later.handle;armed=true;
+    try{await expect(h.idle()).rejects.toThrow(fault==="source"?"SYNTHETIC_DEPENDENT_SOURCE_REFUSAL":"MANAGER_RESTATED_POLICY_CHANGED");}
+    finally{restoreClock?.();}
+    expect(witness).toBe(true);expect(await restatedDependentRow()).toBeUndefined();expect(await count("execution_manager_calculation_revisions")).toBe("1");
+    expect(await financialRows()).toEqual(financial);expect(await originalRow()).toEqual(original);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+  it("deferred real lease expiry after v2 INSERT rejects physical COMMIT without sleeping or acknowledging derived work",async()=>{
+    let armed=false,witness=false;
+    const database=dependentTransactionPool(async(sql,client)=>{if(armed&&sql.startsWith("INSERT INTO execution_manager_calculation_revisions")){
+      armed=false;witness=true;await client.query("UPDATE execution_manager_consumer_fences SET expires_at=clock_timestamp()");}});
+    const h=installedDependent(undefined,database);await h.runtime.tick();const financial=await financialRows(),original=await originalRow();
+    h.state.policy=h.data.later.handle;armed=true;await expect(h.idle()).rejects.toThrow("MANAGER_LEASE_LOST");
+    expect(witness).toBe(true);expect(await restatedDependentRow()).toBeUndefined();expect(await count("execution_manager_calculation_revisions")).toBe("1");
+    expect(await financialRows()).toEqual(financial);expect(await originalRow()).toEqual(original);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+  it("detects source-head change during final async source recheck before derived persistence",async()=>{
+    const h=installedDependent();await h.runtime.tick();const financial=await financialRows(),original=await originalRow();
+    h.state.policy=h.data.later.handle;h.source.recheck.mockImplementation(async()=>{
+      await pg.query("UPDATE execution_manager_model_heads SET payload_digest=$1",[hash("SYNTHETIC_SOURCE_HEAD_FAULT")]);
+      return {assertCurrent:()=>undefined};
+    });
+    await expect(h.idle()).rejects.toThrow("MANAGER_RESTATED_SOURCE_CHANGED");expect(await restatedDependentRow()).toBeUndefined();
+    expect(await financialRows()).toEqual(financial);expect(await originalRow()).toEqual(original);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+  it("v2 CAS refuses a same-transaction competing restated head and rolls it back to the previous immutable result",async()=>{
+    let armed=false,witness=false,originalKey="";
+    const database=dependentTransactionPool(async(sql,client)=>{if(armed&&sql.startsWith("SELECT calculation_key FROM execution_manager_score_mode_heads")&&sql.endsWith("FOR UPDATE")){
+      armed=false;witness=true;await client.query("UPDATE execution_manager_score_mode_heads SET calculation_key=$1 WHERE head_kind='RESTATED_CURRENT_POLICY'",[originalKey]);}});
+    const h=installedDependent(undefined,database);await h.runtime.tick();h.state.policy=h.data.later.handle;await h.idle();
+    const previous=await restatedDependentRow(),financial=await financialRows(),original=await originalRow();originalKey=original.calculation_key;
+    h.state.policy=dependentCompositionPolicy(h.data.asOf,"C","0.2").handle;armed=true;
+    await expect(h.idle()).rejects.toThrow("MANAGER_RESTATED_HEAD_CHANGED");expect(witness).toBe(true);
+    expect(await restatedDependentRow()).toEqual(previous);expect(await count("execution_manager_calculation_revisions")).toBe("2");
+    expect(await financialRows()).toEqual(financial);expect(await originalRow()).toEqual(original);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+  it("shared138 row cap refuses a new combined revision while preserving prior v2 head/source/original",async()=>{
+    const h=installedDependent(undefined,pg,{maximum_revisions_per_source:2});await h.runtime.tick();h.state.policy=h.data.later.handle;await h.idle();
+    const previous=await restatedDependentRow(),financial=await financialRows(),original=await originalRow();
+    h.state.policy=dependentCompositionPolicy(h.data.asOf,"C","0.2").handle;
+    await expect(h.idle()).rejects.toThrow("MANAGER_DERIVED_RETENTION_CAP_REACHED");expect(await restatedDependentRow()).toEqual(previous);
+    expect(await count("execution_manager_calculation_revisions")).toBe("2");expect(await financialRows()).toEqual(financial);
+    expect(await originalRow()).toEqual(original);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+  it("actual shared JSONB byte cap is not bypassed by separate Score/Composition arrays",async()=>{
+    const cap=dependentConfig.maximum_bundle_bytes,h=installedDependent(undefined,pg,{maximum_retained_bytes_per_source:cap});
+    await h.runtime.tick();h.state.policy=h.data.later.handle;await h.idle();const previous=await restatedDependentRow(),original=await originalRow(),d=await h.document();
+    const used=Number((await pg.query("SELECT sum(octet_length(payload::text))::text AS bytes FROM execution_manager_calculation_revisions")).rows[0].bytes);
+    expect(used).toBeLessThan(cap-1024);const padding={schema_version:"SYNTHETIC:shared-existing-row",padding:"x".repeat(cap-used-512)};
+    await pg.query("INSERT INTO execution_manager_calculation_revisions (workspace_id,environment,profile_id,source_revision,calculation_key,payload_digest,payload) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)",
+      [d.workspace_id,d.environment,d.profile_id,d.revision,hash("SYNTHETIC:byte-row"),accessDigest(padding),JSON.stringify(padding)]);
+    h.state.policy=dependentCompositionPolicy(h.data.asOf,"C","0.2").handle;
+    await expect(h.idle()).rejects.toThrow("MANAGER_DERIVED_RETENTION_CAP_REACHED");expect(await restatedDependentRow()).toEqual(previous);
+    expect(await count("execution_manager_calculation_revisions")).toBe("3");expect(await originalRow()).toEqual(original);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+  it("policy changes after awaited historical Composition worker: no partial combined revision is retained",async()=>{
+    const h=installedDependent();await h.runtime.tick();h.state.policy=h.data.later.handle;
+    const calculate=h.historical.calculateHistoricalComposition.bind(h.historical),financial=await financialRows(),original=await originalRow();
+    vi.spyOn(h.historical,"calculateHistoricalComposition").mockImplementation(async(...args)=>{const result=await calculate(...args);h.state.policy=null;return result;});
+    await expect(h.idle()).rejects.toThrow("MANAGER_RESTATED_POLICY_CHANGED");expect(await restatedDependentRow()).toBeUndefined();
+    expect(await count("execution_manager_calculation_revisions")).toBe("1");expect(await financialRows()).toEqual(financial);
+    expect(await originalRow()).toEqual(original);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+
+  async function dependentWorkerContext(h:DependentHarness){
+    const document=await h.document(),original=requireV3(await tx(client=>new ManagerScoreOriginalCustody(compositionV3Limits).restore(client,document))),
+      v=requireDependentV2((await h.coordinator.snapshot(document)).view),child=original.retained_compositions[0];
+    const restored=restoreManagerCompositionOriginalAllocation({custody:child.custody,expected_custody_digest:child.custody_digest,
+      document,maximum_bytes:dependentConfig.maximum_bundle_bytes});
+    if(restored.status!=="READY")throw new Error(JSON.stringify(restored));
+    const context={allocation:restored.handle,original_custody_key:original.calculation_key,original_inputs_digest:original.inputs_digest,
+      policy:v.policy,knowledge_cutoff_ms:v.knowledge_cutoff_ms,computed_at_ms:v.computed_at_ms,
+      calculation_revision:v.composition_calculation_revision,raw_entries:v.entries};
+    // TEST_ONLY identity fence over entries ALREADY produced and validated by the
+    // real coordinator from original/method custody; not a source proof fixture.
+    const accepted=new Set(v.entries),fence={accepts:(entry:typeof v.entries[number])=>accepted.has(entry)};
+    return {document,original,v,context,fence,task:{...context,policy:h.state.policy}};
+  }
+  it.each(["verified-empty","all-zero"] as const)("genuine %s allocation calculates AND decodes no_allocation/null, not numeric0",async kind=>{
+    const h=installedDependent(dependentCompositionFixture(kind==="verified-empty"?{empty:true}:{allZero:true}));
+    await h.runtime.tick();h.state.policy=h.data.later.handle;await h.idle();const x=await dependentWorkerContext(h),c=x.v.composition_entries[0].historical;
+    const calculated=await h.historical.calculateHistoricalComposition(x.task,x.fence);
+    for(const value of [c,calculated,decodeRetainedManagerCompositionRestatement(c,x.context,262_144)])
+      expect(value.result).toMatchObject({value:null,status:"no_allocation",total_allocated_capital:"0",score_coverage_allocated:null,contributions:[]});
+    expect(kind==="all-zero"?h.data.fx.artifact.rows.length:0).toBe(kind==="all-zero"?2:0);
+    expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+  it("lost ORIGINAL ACK retries the same original children, then v2 retry/restart never ACKs derived work",async()=>{
+    const h=installedDependent();let acknowledgements=0;
+    h.acknowledge.mockImplementation(async()=>{if(++acknowledgements===1)throw new Error("SYNTHETIC_ACK_LOST");h.state.pending=false;});
+    await h.runtime.tick();const original=await originalRow(),financial=await financialRows();expect(original).toBeDefined();
+    await h.runtime.tick();expect(await originalRow()).toEqual(original);expect(await financialRows()).toEqual(financial);
+    h.state.policy=h.data.later.handle;await h.idle();const derived=await restatedDependentRow();await h.idle(h.restart());
+    expect(await restatedDependentRow()).toEqual(derived);expect(h.acknowledge).toHaveBeenCalledTimes(2);
+    expect(await count("execution_manager_calculation_revisions")).toBe("2");
+  });
+  it("v2 strict decoder requires ACTUAL135 and exact full child/RAW/source/K/C census even when payload hash is recomputed",async()=>{
+    const h=installedDependent();await h.runtime.tick();h.state.policy=h.data.later.handle;await h.idle();
+    const x=await dependentWorkerContext(h),row=await restatedDependentRow(),financial=await financialRows(),original=await originalRow();
+    const decode=(b:DependentV2,document:ManagerModelDocument=x.document)=>decodeRetainedManagerScoreRestatement(
+      {calculation_key:b.calculation_key,payload:b,payload_digest:accessDigest(b)},x.original,262_144,document);
+    expect(()=>decodeRetainedManagerScoreRestatement(row,x.original,262_144)).toThrow("MANAGER_RESTATED_COMPOSITION_SOURCE_REQUIRED");
+    const edits:((b:DependentV2)=>void)[]=[
+      b=>{b.composition_entries=[];},b=>{b.composition_entries.push(structuredClone(b.composition_entries[0]));},
+      b=>{b.composition_entries[0].allocation_custody_digest=hash("SYNTHETIC:wrong-child");},
+      b=>{b.composition_entries[0].binding.subject_id="SYNTHETIC:foreign-portfolio";},
+      b=>{b.entries[0].original_input_digest=hash("SYNTHETIC:wrong-raw-original");},
+      b=>{b.entries.push(structuredClone(b.entries[0]));},
+      b=>{b.source.projection_generation="SYNTHETIC:foreign-generation";},
+      b=>{b.knowledge_cutoff_ms=x.original.source.as_of_ms;},
+      b=>{b.composition_entries[0].historical.computed_at_ms--;},
+      b=>{b.composition_entries[0].historical.original_publication_digest=hash("SYNTHETIC:wrong-original-publication");},
+      b=>{b.composition_entries[0].historical.raw_inputs[0].entry_digest=hash("SYNTHETIC:wrong-raw-entry");},
+      b=>{b.composition_entries[0].historical.result.contributions.pop();},
+      b=>{Reflect.set(b.composition_entries[0].historical,"invented_authority",true);},
+    ];
+    for(const edit of edits){const b=structuredClone(x.v);edit(b);expect(()=>decode(b)).toThrow();}
+    const wrong=structuredClone(x.document);wrong.observed_at_ms--;expect(()=>decode(x.v,wrong)).toThrow("MANAGER_RESTATED_COMPOSITION_ORIGINAL_REQUIRED");
+    h.state.policy=null;const worker=vi.spyOn(h.historical,"calculateHistoricalComposition");
+    expect(await h.restart(false).restoreRetained(x.document,row.calculation_key)).toEqual(row.payload);
+    expect(decode(x.v)).toEqual(x.v);expect(worker).not.toHaveBeenCalled();
+    expect(await financialRows()).toEqual(financial);expect(await originalRow()).toEqual(original);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+  it("worker refuses forged/live allocation, cloned RAW identities and conflicting RAW before creating a result",async()=>{
+    const h=installedDependent();await h.runtime.tick();h.state.policy=h.data.later.handle;await h.idle();const x=await dependentWorkerContext(h);
+    for(const allocation of [{},h.data.fx.handle,structuredClone(x.context.allocation)])
+      await expect(h.historical.calculateHistoricalComposition({...x.task,allocation:allocation as typeof x.task.allocation},x.fence))
+        .rejects.toMatchObject({code:"COMPOSITION_RESTATED_ORIGINAL_NOT_RETAINED"});
+    await expect(h.historical.calculateHistoricalComposition({...x.task,raw_entries:structuredClone(x.task.raw_entries)},x.fence))
+      .rejects.toMatchObject({code:"COMPOSITION_RESTATED_RAW_NOT_VERIFIED"});
+    await expect(h.historical.calculateHistoricalComposition({...x.task,raw_entries:[...x.task.raw_entries,x.task.raw_entries[0]]},x.fence))
+      .rejects.toMatchObject({code:"COMPOSITION_RESTATED_RAW_CONFLICT"});
+    expect((await h.historical.calculateHistoricalComposition(x.task,x.fence)).result.value).toBe("80");
+  });
+  it("own-data/getter/Proxy boundaries do not execute traps; bounded failures release private worker capacity",async()=>{
+    const h=installedDependent();await h.runtime.tick();h.state.policy=h.data.later.handle;await h.idle();const x=await dependentWorkerContext(h);let traps=0;
+    const proxy=<T extends object>(value:T)=>new Proxy(value,{get(){traps++;throw new Error("SYNTHETIC_PRIVATE_DIAGNOSTIC");},
+      ownKeys(){traps++;throw new Error("SYNTHETIC_PRIVATE_DIAGNOSTIC");},getPrototypeOf(){traps++;throw new Error("SYNTHETIC_PRIVATE_DIAGNOSTIC");},
+      getOwnPropertyDescriptor(){traps++;throw new Error("SYNTHETIC_PRIVATE_DIAGNOSTIC");}});
+    const getter={...x.task};Object.defineProperty(getter,"raw_entries",{enumerable:true,get(){traps++;throw new Error("SYNTHETIC_PRIVATE_DIAGNOSTIC");}});
+    const nested=structuredClone(x.task.raw_entries);nested[0]=proxy(nested[0]);
+    for(const task of [proxy(x.task),getter,{...x.task,raw_entries:proxy(x.task.raw_entries)},{...x.task,raw_entries:nested},
+      Object.assign(Object.create({unexpected:true}),x.task),Object.assign({...x.task},{[Symbol("unexpected")]:true})])
+      await expect(h.historical.calculateHistoricalComposition(task,x.fence)).rejects.toMatchObject({code:"COMPOSITION_RESTATED_INPUT_INVALID"});
+    expect(traps).toBe(0);
+    await expect(h.historical.calculateHistoricalComposition(x.task,proxy(x.fence))).rejects.toMatchObject({code:"COMPOSITION_RESTATED_INPUT_INVALID"});
+    expect(traps).toBe(0);
+    const narrow=new ManagerCompositionHistoricalRuntime({maximum_rows:10,maximum_input_bytes:1,maximum_in_flight:1});
+    await expect(narrow.calculateHistoricalComposition(x.task,x.fence)).rejects.toMatchObject({code:"COMPOSITION_RESTATED_INPUT_BOUND"});
+    expect(()=>decodeRetainedManagerCompositionRestatement(x.v.composition_entries[0].historical,x.context,1))
+      .toThrow("COMPOSITION_RESTATED_INPUT_BOUND");
+    const aborted=new AbortController();aborted.abort();await expect(h.historical.calculateHistoricalComposition(x.task,x.fence,aborted.signal))
+      .rejects.toMatchObject({code:"COMPOSITION_RESTATED_CANCELLED"});
+    expect((await h.historical.calculateHistoricalComposition(x.task,x.fence)).result.value).toBe("80");
+  });
   function installedV3(options:{compositionOnly?:boolean;maximumBundleBytes?:number;loseFirstAck?:boolean;optIn?:boolean}={}){
     const fx=compositionInput();if(options.compositionOnly)fx.scoreTasks=[];
     // TEST_ONLY fixture lifetime, not a production policy/default. The original

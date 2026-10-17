@@ -1937,7 +1937,7 @@
             "PortalSession": []
           }
         ],
-        "description": "Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK.",
+        "description": "Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Optional metric_family=COMPOSITION selects Fund/Portfolio full-accounting allocation-bound history; omitted/explicit SCORE preserves the Score projection. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK.",
         "parameters": [
           {
             "name": "workspace_id",
@@ -1987,6 +1987,18 @@
               "minLength": 1,
               "maxLength": 256,
               "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "metric_family",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SCORE",
+                "COMPOSITION"
+              ]
             }
           },
           {
@@ -2145,7 +2157,7 @@
             "PortalSession": []
           }
         ],
-        "description": "Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK.",
+        "description": "Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Optional metric_family=COMPOSITION selects Fund/Portfolio full-accounting allocation-bound history; omitted/explicit SCORE preserves the Score projection. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK.",
         "parameters": [
           {
             "name": "workspace_id",
@@ -2195,6 +2207,18 @@
               "minLength": 1,
               "maxLength": 256,
               "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "metric_family",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SCORE",
+                "COMPOSITION"
+              ]
             }
           },
           {
@@ -9723,6 +9747,13 @@
             "maxLength": 256,
             "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
           },
+          "metric_family": {
+            "type": "string",
+            "enum": [
+              "SCORE",
+              "COMPOSITION"
+            ]
+          },
           "stage_filter": {
             "type": "array",
             "items": {
@@ -9847,6 +9878,13 @@
             "minLength": 1,
             "maxLength": 256,
             "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "metric_family": {
+            "type": "string",
+            "enum": [
+              "SCORE",
+              "COMPOSITION"
+            ]
           },
           "stage_filter": {
             "type": "array",
@@ -10960,23 +10998,546 @@
             "maxItems": 128
           },
           "composition": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "availability": {
-                "const": "NOT_PUBLISHED"
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason_code": {
+                    "type": "string",
+                    "enum": [
+                      "COMPOSITION_REVISION_NOT_SELECTED",
+                      "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED",
+                      "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED",
+                      "ORIGINAL_ALLOCATION_NOT_RETAINED"
+                    ]
+                  }
+                },
+                "required": [
+                  "availability",
+                  "reason_code"
+                ]
               },
-              "reason_code": {
-                "type": "string",
-                "enum": [
-                  "COMPOSITION_REVISION_NOT_SELECTED",
-                  "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED"
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "PARTIAL"
+                    ]
+                  },
+                  "reason_codes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                    },
+                    "maxItems": 64
+                  },
+                  "binding": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "subject_type": {
+                        "type": "string",
+                        "enum": [
+                          "portfolio",
+                          "manager_book"
+                        ]
+                      },
+                      "subject_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "tuple_population_digest": {
+                        "type": "string",
+                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                      },
+                      "partition_digest": {
+                        "type": "string",
+                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                      },
+                      "stage_filter": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "PAPER",
+                            "SANDBOX",
+                            "CANARY",
+                            "LIVE"
+                          ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 4
+                      },
+                      "window_start_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "window_end_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "comparable_basis_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "individual_evidence_binding_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      }
+                    },
+                    "required": [
+                      "subject_type",
+                      "subject_id",
+                      "tuple_population_digest",
+                      "partition_digest",
+                      "stage_filter",
+                      "window_start_ms",
+                      "window_end_ms",
+                      "comparable_basis_id",
+                      "individual_evidence_binding_id"
+                    ]
+                  },
+                  "result": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "value": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "available",
+                          "provisional",
+                          "partial_coverage",
+                          "incomparable_basis",
+                          "no_allocation",
+                          "invalid_data"
+                        ]
+                      },
+                      "reason_codes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "maxItems": 64
+                      },
+                      "band_code": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "weak",
+                              "neutral",
+                              "fair",
+                              "good",
+                              "very_good"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "weight_basis": {
+                        "const": "allocated_economic_capital"
+                      },
+                      "allocation_snapshot_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "total_allocated_capital": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "score_coverage_allocated": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "unscored_allocated_weight": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "provisional_allocated_weight": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "mature_allocated_weight": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "allocation_coverage_nav": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "scored_nav_weight": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "idle_cash_weight": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "nav_coverage_reason": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256,
+                            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "bounds": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "lower": {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                              },
+                              "upper": {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                              }
+                            },
+                            "required": [
+                              "lower",
+                              "upper"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "contributions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "subject_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                            },
+                            "allocation_weight": {
+                              "type": "string",
+                              "maxLength": 128,
+                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 128,
+                                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "band_code": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "subject_id",
+                            "allocation_weight",
+                            "value",
+                            "band_code"
+                          ]
+                        },
+                        "maxItems": 10000
+                      },
+                      "diagnostics": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "allocation_hhi": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "score_contribution_hhi": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "score_dispersion": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reason_codes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                            },
+                            "maxItems": 64
+                          }
+                        },
+                        "required": [
+                          "allocation_hhi",
+                          "score_contribution_hhi",
+                          "score_dispersion",
+                          "reason_codes"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "status",
+                      "reason_codes",
+                      "band_code",
+                      "weight_basis",
+                      "allocation_snapshot_id",
+                      "total_allocated_capital",
+                      "score_coverage_allocated",
+                      "unscored_allocated_weight",
+                      "provisional_allocated_weight",
+                      "mature_allocated_weight",
+                      "allocation_coverage_nav",
+                      "scored_nav_weight",
+                      "idle_cash_weight",
+                      "nav_coverage_reason",
+                      "bounds",
+                      "contributions",
+                      "diagnostics"
+                    ]
+                  },
+                  "allocation_ref": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                  },
+                  "allocation_effective_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "original_publication_ref": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                  },
+                  "computed_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "calculation_revision": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "raw_dependencies": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "subject_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "availability": {
+                          "type": "string",
+                          "enum": [
+                            "AVAILABLE",
+                            "PARTIAL",
+                            "NOT_PUBLISHED"
+                          ]
+                        },
+                        "reason_codes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256,
+                            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                          },
+                          "maxItems": 64
+                        },
+                        "original_input_ref": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "derived_input_ref": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "subject_id",
+                        "availability",
+                        "reason_codes",
+                        "original_input_ref",
+                        "derived_input_ref"
+                      ]
+                    },
+                    "maxItems": 10000
+                  }
+                },
+                "required": [
+                  "availability",
+                  "reason_codes",
+                  "binding",
+                  "result",
+                  "allocation_ref",
+                  "allocation_effective_at_ms",
+                  "original_publication_ref",
+                  "computed_at_ms",
+                  "calculation_revision",
+                  "raw_dependencies"
                 ]
               }
-            },
-            "required": [
-              "availability",
-              "reason_code"
             ]
           },
           "regime": {
@@ -12159,23 +12720,546 @@
                       "maxItems": 128
                     },
                     "composition": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "availability": {
-                          "const": "NOT_PUBLISHED"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "const": "NOT_PUBLISHED"
+                            },
+                            "reason_code": {
+                              "type": "string",
+                              "enum": [
+                                "COMPOSITION_REVISION_NOT_SELECTED",
+                                "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED",
+                                "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED",
+                                "ORIGINAL_ALLOCATION_NOT_RETAINED"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "reason_code"
+                          ]
                         },
-                        "reason_code": {
-                          "type": "string",
-                          "enum": [
-                            "COMPOSITION_REVISION_NOT_SELECTED",
-                            "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED"
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "type": "string",
+                              "enum": [
+                                "AVAILABLE",
+                                "PARTIAL"
+                              ]
+                            },
+                            "reason_codes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256,
+                                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                              },
+                              "maxItems": 64
+                            },
+                            "binding": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "subject_type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "portfolio",
+                                    "manager_book"
+                                  ]
+                                },
+                                "subject_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                },
+                                "tuple_population_digest": {
+                                  "type": "string",
+                                  "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                },
+                                "partition_digest": {
+                                  "type": "string",
+                                  "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                },
+                                "stage_filter": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "PAPER",
+                                      "SANDBOX",
+                                      "CANARY",
+                                      "LIVE"
+                                    ]
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 4
+                                },
+                                "window_start_ms": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "window_end_ms": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "comparable_basis_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                },
+                                "individual_evidence_binding_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                }
+                              },
+                              "required": [
+                                "subject_type",
+                                "subject_id",
+                                "tuple_population_digest",
+                                "partition_digest",
+                                "stage_filter",
+                                "window_start_ms",
+                                "window_end_ms",
+                                "comparable_basis_id",
+                                "individual_evidence_binding_id"
+                              ]
+                            },
+                            "result": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available",
+                                    "provisional",
+                                    "partial_coverage",
+                                    "incomparable_basis",
+                                    "no_allocation",
+                                    "invalid_data"
+                                  ]
+                                },
+                                "reason_codes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                  },
+                                  "maxItems": 64
+                                },
+                                "band_code": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "weak",
+                                        "neutral",
+                                        "fair",
+                                        "good",
+                                        "very_good"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "weight_basis": {
+                                  "const": "allocated_economic_capital"
+                                },
+                                "allocation_snapshot_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                },
+                                "total_allocated_capital": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "score_coverage_allocated": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "unscored_allocated_weight": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "provisional_allocated_weight": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "mature_allocated_weight": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "allocation_coverage_nav": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "scored_nav_weight": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "idle_cash_weight": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "nav_coverage_reason": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256,
+                                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "bounds": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "lower": {
+                                          "type": "string",
+                                          "maxLength": 128,
+                                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                        },
+                                        "upper": {
+                                          "type": "string",
+                                          "maxLength": 128,
+                                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                        }
+                                      },
+                                      "required": [
+                                        "lower",
+                                        "upper"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "contributions": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "subject_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                      },
+                                      "allocation_weight": {
+                                        "type": "string",
+                                        "maxLength": 128,
+                                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                      },
+                                      "value": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 128,
+                                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "band_code": {
+                                        "type": "null"
+                                      }
+                                    },
+                                    "required": [
+                                      "subject_id",
+                                      "allocation_weight",
+                                      "value",
+                                      "band_code"
+                                    ]
+                                  },
+                                  "maxItems": 10000
+                                },
+                                "diagnostics": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "allocation_hhi": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 128,
+                                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "score_contribution_hhi": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 128,
+                                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "score_dispersion": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 128,
+                                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "reason_codes": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                      },
+                                      "maxItems": 64
+                                    }
+                                  },
+                                  "required": [
+                                    "allocation_hhi",
+                                    "score_contribution_hhi",
+                                    "score_dispersion",
+                                    "reason_codes"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "status",
+                                "reason_codes",
+                                "band_code",
+                                "weight_basis",
+                                "allocation_snapshot_id",
+                                "total_allocated_capital",
+                                "score_coverage_allocated",
+                                "unscored_allocated_weight",
+                                "provisional_allocated_weight",
+                                "mature_allocated_weight",
+                                "allocation_coverage_nav",
+                                "scored_nav_weight",
+                                "idle_cash_weight",
+                                "nav_coverage_reason",
+                                "bounds",
+                                "contributions",
+                                "diagnostics"
+                              ]
+                            },
+                            "allocation_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "allocation_effective_at_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "original_publication_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "computed_at_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "calculation_revision": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                            },
+                            "raw_dependencies": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "subject_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                  },
+                                  "availability": {
+                                    "type": "string",
+                                    "enum": [
+                                      "AVAILABLE",
+                                      "PARTIAL",
+                                      "NOT_PUBLISHED"
+                                    ]
+                                  },
+                                  "reason_codes": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256,
+                                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                    },
+                                    "maxItems": 64
+                                  },
+                                  "original_input_ref": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "derived_input_ref": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "subject_id",
+                                  "availability",
+                                  "reason_codes",
+                                  "original_input_ref",
+                                  "derived_input_ref"
+                                ]
+                              },
+                              "maxItems": 10000
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "reason_codes",
+                            "binding",
+                            "result",
+                            "allocation_ref",
+                            "allocation_effective_at_ms",
+                            "original_publication_ref",
+                            "computed_at_ms",
+                            "calculation_revision",
+                            "raw_dependencies"
                           ]
                         }
-                      },
-                      "required": [
-                        "availability",
-                        "reason_code"
                       ]
                     },
                     "regime": {
@@ -13351,23 +14435,546 @@
                       "maxItems": 128
                     },
                     "composition": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "availability": {
-                          "const": "NOT_PUBLISHED"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "const": "NOT_PUBLISHED"
+                            },
+                            "reason_code": {
+                              "type": "string",
+                              "enum": [
+                                "COMPOSITION_REVISION_NOT_SELECTED",
+                                "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED",
+                                "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED",
+                                "ORIGINAL_ALLOCATION_NOT_RETAINED"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "reason_code"
+                          ]
                         },
-                        "reason_code": {
-                          "type": "string",
-                          "enum": [
-                            "COMPOSITION_REVISION_NOT_SELECTED",
-                            "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED"
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "type": "string",
+                              "enum": [
+                                "AVAILABLE",
+                                "PARTIAL"
+                              ]
+                            },
+                            "reason_codes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256,
+                                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                              },
+                              "maxItems": 64
+                            },
+                            "binding": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "subject_type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "portfolio",
+                                    "manager_book"
+                                  ]
+                                },
+                                "subject_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                },
+                                "tuple_population_digest": {
+                                  "type": "string",
+                                  "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                },
+                                "partition_digest": {
+                                  "type": "string",
+                                  "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                },
+                                "stage_filter": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "PAPER",
+                                      "SANDBOX",
+                                      "CANARY",
+                                      "LIVE"
+                                    ]
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 4
+                                },
+                                "window_start_ms": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "window_end_ms": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "comparable_basis_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                },
+                                "individual_evidence_binding_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                }
+                              },
+                              "required": [
+                                "subject_type",
+                                "subject_id",
+                                "tuple_population_digest",
+                                "partition_digest",
+                                "stage_filter",
+                                "window_start_ms",
+                                "window_end_ms",
+                                "comparable_basis_id",
+                                "individual_evidence_binding_id"
+                              ]
+                            },
+                            "result": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "available",
+                                    "provisional",
+                                    "partial_coverage",
+                                    "incomparable_basis",
+                                    "no_allocation",
+                                    "invalid_data"
+                                  ]
+                                },
+                                "reason_codes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                  },
+                                  "maxItems": 64
+                                },
+                                "band_code": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "weak",
+                                        "neutral",
+                                        "fair",
+                                        "good",
+                                        "very_good"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "weight_basis": {
+                                  "const": "allocated_economic_capital"
+                                },
+                                "allocation_snapshot_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                },
+                                "total_allocated_capital": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "score_coverage_allocated": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "unscored_allocated_weight": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "provisional_allocated_weight": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "mature_allocated_weight": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "allocation_coverage_nav": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "scored_nav_weight": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "idle_cash_weight": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 128,
+                                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "nav_coverage_reason": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256,
+                                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "bounds": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "lower": {
+                                          "type": "string",
+                                          "maxLength": 128,
+                                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                        },
+                                        "upper": {
+                                          "type": "string",
+                                          "maxLength": 128,
+                                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                        }
+                                      },
+                                      "required": [
+                                        "lower",
+                                        "upper"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "contributions": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "subject_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                      },
+                                      "allocation_weight": {
+                                        "type": "string",
+                                        "maxLength": 128,
+                                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                      },
+                                      "value": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 128,
+                                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "band_code": {
+                                        "type": "null"
+                                      }
+                                    },
+                                    "required": [
+                                      "subject_id",
+                                      "allocation_weight",
+                                      "value",
+                                      "band_code"
+                                    ]
+                                  },
+                                  "maxItems": 10000
+                                },
+                                "diagnostics": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "allocation_hhi": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 128,
+                                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "score_contribution_hhi": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 128,
+                                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "score_dispersion": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 128,
+                                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "reason_codes": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                      },
+                                      "maxItems": 64
+                                    }
+                                  },
+                                  "required": [
+                                    "allocation_hhi",
+                                    "score_contribution_hhi",
+                                    "score_dispersion",
+                                    "reason_codes"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "status",
+                                "reason_codes",
+                                "band_code",
+                                "weight_basis",
+                                "allocation_snapshot_id",
+                                "total_allocated_capital",
+                                "score_coverage_allocated",
+                                "unscored_allocated_weight",
+                                "provisional_allocated_weight",
+                                "mature_allocated_weight",
+                                "allocation_coverage_nav",
+                                "scored_nav_weight",
+                                "idle_cash_weight",
+                                "nav_coverage_reason",
+                                "bounds",
+                                "contributions",
+                                "diagnostics"
+                              ]
+                            },
+                            "allocation_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "allocation_effective_at_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "original_publication_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "computed_at_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "calculation_revision": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                            },
+                            "raw_dependencies": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "subject_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                  },
+                                  "availability": {
+                                    "type": "string",
+                                    "enum": [
+                                      "AVAILABLE",
+                                      "PARTIAL",
+                                      "NOT_PUBLISHED"
+                                    ]
+                                  },
+                                  "reason_codes": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256,
+                                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                    },
+                                    "maxItems": 64
+                                  },
+                                  "original_input_ref": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "derived_input_ref": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "subject_id",
+                                  "availability",
+                                  "reason_codes",
+                                  "original_input_ref",
+                                  "derived_input_ref"
+                                ]
+                              },
+                              "maxItems": 10000
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "reason_codes",
+                            "binding",
+                            "result",
+                            "allocation_ref",
+                            "allocation_effective_at_ms",
+                            "original_publication_ref",
+                            "computed_at_ms",
+                            "calculation_revision",
+                            "raw_dependencies"
                           ]
                         }
-                      },
-                      "required": [
-                        "availability",
-                        "reason_code"
                       ]
                     },
                     "regime": {
@@ -13427,6 +15034,549 @@
               "reason_code",
               "page",
               "items"
+            ]
+          }
+        ]
+      },
+      "ManagerHistoricalComposition": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "reason_code": {
+                "type": "string",
+                "enum": [
+                  "COMPOSITION_REVISION_NOT_SELECTED",
+                  "DEPENDENT_RESTATEMENT_NOT_MATERIALIZED",
+                  "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED",
+                  "ORIGINAL_ALLOCATION_NOT_RETAINED"
+                ]
+              }
+            },
+            "required": [
+              "availability",
+              "reason_code"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "type": "string",
+                "enum": [
+                  "AVAILABLE",
+                  "PARTIAL"
+                ]
+              },
+              "reason_codes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                "maxItems": 64
+              },
+              "binding": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "subject_type": {
+                    "type": "string",
+                    "enum": [
+                      "portfolio",
+                      "manager_book"
+                    ]
+                  },
+                  "subject_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "tuple_population_digest": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                  },
+                  "partition_digest": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                  },
+                  "stage_filter": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "PAPER",
+                        "SANDBOX",
+                        "CANARY",
+                        "LIVE"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 4
+                  },
+                  "window_start_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "window_end_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "comparable_basis_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "individual_evidence_binding_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  }
+                },
+                "required": [
+                  "subject_type",
+                  "subject_id",
+                  "tuple_population_digest",
+                  "partition_digest",
+                  "stage_filter",
+                  "window_start_ms",
+                  "window_end_ms",
+                  "comparable_basis_id",
+                  "individual_evidence_binding_id"
+                ]
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "provisional",
+                      "partial_coverage",
+                      "incomparable_basis",
+                      "no_allocation",
+                      "invalid_data"
+                    ]
+                  },
+                  "reason_codes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                    },
+                    "maxItems": 64
+                  },
+                  "band_code": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "weak",
+                          "neutral",
+                          "fair",
+                          "good",
+                          "very_good"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "weight_basis": {
+                    "const": "allocated_economic_capital"
+                  },
+                  "allocation_snapshot_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "total_allocated_capital": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "score_coverage_allocated": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "unscored_allocated_weight": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "provisional_allocated_weight": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "mature_allocated_weight": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "allocation_coverage_nav": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "scored_nav_weight": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "idle_cash_weight": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "nav_coverage_reason": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "bounds": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "lower": {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          "upper": {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          }
+                        },
+                        "required": [
+                          "lower",
+                          "upper"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "contributions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "subject_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "allocation_weight": {
+                          "type": "string",
+                          "maxLength": 128,
+                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 128,
+                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "band_code": {
+                          "type": "null"
+                        }
+                      },
+                      "required": [
+                        "subject_id",
+                        "allocation_weight",
+                        "value",
+                        "band_code"
+                      ]
+                    },
+                    "maxItems": 10000
+                  },
+                  "diagnostics": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "allocation_hhi": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "score_contribution_hhi": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "score_dispersion": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "reason_codes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "maxItems": 64
+                      }
+                    },
+                    "required": [
+                      "allocation_hhi",
+                      "score_contribution_hhi",
+                      "score_dispersion",
+                      "reason_codes"
+                    ]
+                  }
+                },
+                "required": [
+                  "value",
+                  "status",
+                  "reason_codes",
+                  "band_code",
+                  "weight_basis",
+                  "allocation_snapshot_id",
+                  "total_allocated_capital",
+                  "score_coverage_allocated",
+                  "unscored_allocated_weight",
+                  "provisional_allocated_weight",
+                  "mature_allocated_weight",
+                  "allocation_coverage_nav",
+                  "scored_nav_weight",
+                  "idle_cash_weight",
+                  "nav_coverage_reason",
+                  "bounds",
+                  "contributions",
+                  "diagnostics"
+                ]
+              },
+              "allocation_ref": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "allocation_effective_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "original_publication_ref": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "computed_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "calculation_revision": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              "raw_dependencies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "subject_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                    },
+                    "availability": {
+                      "type": "string",
+                      "enum": [
+                        "AVAILABLE",
+                        "PARTIAL",
+                        "NOT_PUBLISHED"
+                      ]
+                    },
+                    "reason_codes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "maxItems": 64
+                    },
+                    "original_input_ref": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "derived_input_ref": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "subject_id",
+                    "availability",
+                    "reason_codes",
+                    "original_input_ref",
+                    "derived_input_ref"
+                  ]
+                },
+                "maxItems": 10000
+              }
+            },
+            "required": [
+              "availability",
+              "reason_codes",
+              "binding",
+              "result",
+              "allocation_ref",
+              "allocation_effective_at_ms",
+              "original_publication_ref",
+              "computed_at_ms",
+              "calculation_revision",
+              "raw_dependencies"
             ]
           }
         ]

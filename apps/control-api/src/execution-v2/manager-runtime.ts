@@ -25,7 +25,7 @@ import type { ManagerRegimeSubjectBinding, ManagerRegimePublication } from "./ma
 import type { ScopedReplayHub } from "./realtime";
 import { ManagerScoreRecalculation, type ManagerScoreRecalculationConfig,
   type ManagerScoreRecalculationTask } from "./manager-score-recalculation";
-import { ManagerScoreRestatement } from "./manager-score-restatement";
+import { ManagerScoreRestatement, type ManagerScoreDependentComposition } from "./manager-score-restatement";
 import { captureManagerScoreOriginalInputs } from "./manager-score-original-custody";
 
 export interface ManagerRuntimePartition {
@@ -39,7 +39,7 @@ export interface ManagerRuntimePartition {
     /** Explicit opt-in only; no extra timer, source checkpoint or runtime default. */
     recalculation?: ManagerScoreRecalculationConfig;
     /** Additive explicit historical mode; cannot share an initial writer with v1. */
-    restatement?: ManagerScoreRecalculationConfig;
+    restatement?: ManagerScoreRecalculationConfig & {composition?:ManagerScoreDependentComposition};
     tasks(delivery: ManagerConsumerDelivery, signal: AbortSignal): Promise<ManagerScoreRecalculationTask[]> };
   composition?: { runtime:ManagerCompositionRuntime;maximum_tasks_per_revision:number;currentAllocation():ApprovedManagerAllocation|null;
     tasks(delivery:ManagerConsumerDelivery,signal:AbortSignal):Promise<Array<Omit<ManagerCompositionRuntimeTask,"allocation"|"raw_scores">>> };
@@ -97,7 +97,9 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     if ([pool.options.connectionTimeoutMillis,pool.options.query_timeout].some(n=>!Number.isSafeInteger(n)||Number(n)<1||Number(n)>60_000))
       throw new Error("MANAGER_RUNTIME_POOL_TIMEOUT_REQUIRED");
     this.partitions = installation.partitions.map(p=>({...p,scope:Object.freeze({...p.scope}),bounds:Object.freeze({...p.bounds}),
-      ...(p.score?{score:Object.freeze({...p.score})}:{}),...(p.composition?{composition:Object.freeze({...p.composition})}:{}),...(p.regime?{regime:Object.freeze({...p.regime})}:{})}));
+      ...(p.score?{score:Object.freeze({...p.score,...(p.score.restatement?{restatement:Object.freeze({...p.score.restatement,
+        ...(p.score.restatement.composition?{composition:Object.freeze({...p.score.restatement.composition})}:{})})}:{})})}:{}),
+      ...(p.composition?{composition:Object.freeze({...p.composition})}:{}),...(p.regime?{regime:Object.freeze({...p.regime})}:{})}));
     this.consumers = this.partitions.map(p=> {
       if (!publicationCommissioningCurrent(p.commissioning,p.scope,Date.now())) throw new Error("MANAGER_RUNTIME_COMMISSIONING_REQUIRED");
       if(p.score && (!Number.isSafeInteger(p.score.maximum_tasks_per_revision)||p.score.maximum_tasks_per_revision<1||p.score.maximum_tasks_per_revision>128))
@@ -116,7 +118,8 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
       if(recalculation)this.recalculations.set(key(p.scope),recalculation);
       const restatement=p.score?.restatement?new ManagerScoreRestatement({pool,runtime:p.score.runtime,
         currentPolicy:()=>p.score!.currentPolicy(),commissioning:p.commissioning,source:p.source,
-        publication:(request,signal)=>p.publication(request,signal),config:p.score.restatement}):undefined;
+        publication:(request,signal)=>p.publication(request,signal),config:p.score.restatement,
+        ...(p.score.restatement.composition?{composition:p.score.restatement.composition}:{})}):undefined;
       if(restatement)this.restatements.set(key(p.scope),restatement);
       return new ManagerProjectionConsumer({pool,source:this.materializingSource(p,recalculation,restatement),scope:p.scope,bounds:p.bounds,
         commissioning:p.commissioning,recalculation:restatement??recalculation});

@@ -3,14 +3,18 @@ import {executionEnvironment,financialStage,utcMilliseconds} from "./foundation.
 import {publicationDigest} from "./publication.contract";
 import {managerPartition} from "./manager-model.contract";
 import {managerScoreBinding,managerScoreQuality,managerScorePublication} from "./manager-score-publication.contract";
+import {managerCompositionBinding,managerCompositionResult} from "./manager-composition-publication.contract";
 
 const text=z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$(?![\s\S])/);
 export const managerScoreRevisionMode=z.enum(["ORIGINAL_AS_PUBLISHED","RESTATED_CURRENT_POLICY"]);
 const target=z.object({surface:z.enum(["FUND","PORTFOLIO","ALPHA","ACCOUNT","DEPLOYMENT"]),id:text.nullable()}).strict();
 const base=z.object({workspace_id:text.optional(),environment:executionEnvironment,surface:target.shape.surface,id:text.optional(),
+  metric_family:z.enum(["SCORE","COMPOSITION"]).optional(),
   stage_filter:z.array(financialStage).max(4).default([]),economic_partition:managerPartition,
   source_selector:z.enum(["CURRENT_HEAD","RETAINED_REVISION"]),source_revision:text.optional()}).strict();
 function queryIssues(q:z.infer<typeof base>,c:z.RefinementCtx){
+  if(q.metric_family==="COMPOSITION"&&q.surface!=="FUND"&&q.surface!=="PORTFOLIO")
+    c.addIssue({code:"custom",message:"COMPOSITION_REVISION_TARGET_INVALID"});
   if((q.surface==="FUND")!==(q.id===undefined)||(q.source_selector==="RETAINED_REVISION")!==(q.source_revision!==undefined)||
     new Set(q.stage_filter).size!==q.stage_filter.length)c.addIssue({code:"custom",message:"SCORE_REVISION_QUERY_INVALID"});
   const domain=q.environment==="paper"?["PAPER"]:q.environment==="sandbox"?["SANDBOX"]:["CANARY","LIVE"];
@@ -57,6 +61,31 @@ const policy=z.object({policy_current:z.boolean(),policy_state:z.enum(["CURRENT"
   economic_source:z.enum(["CURRENT_HEAD","RETAINED_EXACT_REVISION"]),usable_as_current_operational_score:z.literal(false)}).strict()
   .superRefine((p,c)=>{if(p.policy_current!==(p.policy_state==="CURRENT")||(p.policy_state==="CURRENT")!==(p.reason_code===null))
     c.addIssue({code:"custom",message:"SCORE_REVISION_POLICY_INVALID"});});
+/** Current full-accounting authorization is mandatory before this detail is
+ * selected. allocation_snapshot_id below is an opaque scoped public reference,
+ * never the original artifact id, approval pin or a private calculation key. */
+export const managerHistoricalComposition=z.union([
+  z.object({availability:z.literal("NOT_PUBLISHED"),reason_code:z.enum([
+    "COMPOSITION_REVISION_NOT_SELECTED","DEPENDENT_RESTATEMENT_NOT_MATERIALIZED",
+    "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED","ORIGINAL_ALLOCATION_NOT_RETAINED"])}).strict(),
+  z.object({availability:z.enum(["AVAILABLE","PARTIAL"]),reason_codes:z.array(text).max(64),
+    binding:managerCompositionBinding,result:managerCompositionResult,
+    allocation_ref:publicationDigest,allocation_effective_at_ms:utcMilliseconds,
+    original_publication_ref:publicationDigest,computed_at_ms:utcMilliseconds,calculation_revision:text,
+    raw_dependencies:z.array(z.object({subject_id:text,availability:z.enum(["AVAILABLE","PARTIAL","NOT_PUBLISHED"]),
+      reason_codes:z.array(text).max(64),original_input_ref:publicationDigest.nullable(),
+      derived_input_ref:publicationDigest.nullable()}).strict()).max(10_000),
+  }).strict().superRefine((value,c)=>{
+    if((value.availability==="AVAILABLE")!==(value.result.value!==null)||
+      !publicationDigest.safeParse(value.result.allocation_snapshot_id).success||
+      new Set(value.raw_dependencies.map(row=>row.subject_id)).size!==value.raw_dependencies.length||
+      [...value.raw_dependencies.map(row=>row.subject_id)].sort().join("\u0000")!==
+        [...value.result.contributions.map(row=>row.subject_id)].sort().join("\u0000")||
+      value.raw_dependencies.some(row=>row.availability==="AVAILABLE"?
+        row.original_input_ref===null||row.reason_codes.length!==0:row.reason_codes.length===0))
+      c.addIssue({code:"custom",message:"COMPOSITION_REVISION_DETAIL_INVALID"});
+  }),
+]);
 export const managerScoreRevisionView=z.object({schema_version:z.literal("portal.execution.manager-score-revision.v1"),
   target,workspace_id:text,environment:executionEnvironment,revision_mode:managerScoreRevisionMode,
   purpose:z.literal("HISTORICAL_ANALYSIS_ONLY"),operational_current:z.literal(false),revision_ref:publicationDigest,
@@ -67,8 +96,7 @@ export const managerScoreRevisionView=z.object({schema_version:z.literal("portal
   computed_at_ms:utcMilliseconds.nullable(),computed_at_reason:z.enum(["ORIGINAL_COMPUTE_TIMES_ARE_PER_ENTRY","RESTATEMENT_NOT_PUBLISHED"]).nullable(),
   eligibility:policy,availability:z.enum(["AVAILABLE","PARTIAL","NOT_PUBLISHED"]),
   reason_codes:z.array(text).max(64),score_details:z.array(managerHistoricalScoreEntry).max(128),
-  composition:z.object({availability:z.literal("NOT_PUBLISHED"),reason_code:z.enum([
-    "COMPOSITION_REVISION_NOT_SELECTED","DEPENDENT_RESTATEMENT_NOT_MATERIALIZED"])}).strict(),
+  composition:managerHistoricalComposition,
   regime:z.object({availability:z.literal("NOT_PUBLISHED"),reason_code:z.literal("INDEPENDENT_REGIME_REVISION_NOT_SELECTED")}).strict(),
 }).strict().superRefine((view,c)=>{
   if((view.supersedes_reason==="AUTHORIZED_PREDECESSOR")!==(view.supersedes_revision_ref!==null)||
@@ -84,8 +112,22 @@ export const managerScoreRevisionView=z.object({schema_version:z.literal("portal
     !missingRestated&&(view.knowledge_cutoff_ms===null||view.knowledge_cutoff_reason!==null||view.computed_at_ms===null||view.computed_at_reason!==null||
       view.knowledge_cutoff_ms<view.source.source_as_of_ms||view.computed_at_ms<view.knowledge_cutoff_ms))
     c.addIssue({code:"custom",message:"SCORE_REVISION_CLOCK_INVALID"});
-  if(view.availability==="AVAILABLE"&&(!view.score_details.length||view.score_details.some(e=>e.availability!=="AVAILABLE")))
+  const compositionSelected=view.composition.availability!=="NOT_PUBLISHED";
+  if(view.composition.availability!=="NOT_PUBLISHED"){
+    const detail=view.composition;
+    if(view.score_details.length!==0||
+      (view.target.surface!=="FUND"&&view.target.surface!=="PORTFOLIO")||
+      detail.computed_at_ms<view.source.source_as_of_ms||
+      detail.binding.window_end_ms>view.source.source_as_of_ms||
+      detail.allocation_effective_at_ms>view.source.source_as_of_ms||
+      !original&&detail.computed_at_ms!==view.computed_at_ms)
+      c.addIssue({code:"custom",message:"COMPOSITION_REVISION_CONTEXT_INVALID"});
+  }
+  if(view.availability==="AVAILABLE"&&(compositionSelected?
+    view.composition.availability!=="AVAILABLE":!view.score_details.length||view.score_details.some(e=>e.availability!=="AVAILABLE")))
     c.addIssue({code:"custom",message:"SCORE_REVISION_AVAILABILITY_INVALID"});
+  if(compositionSelected&&view.availability!==view.composition.availability)
+    c.addIssue({code:"custom",message:"COMPOSITION_REVISION_AVAILABILITY_INVALID"});
   for(const entry of view.score_details)if(entry.feed_freshness.availability==="AVAILABLE"&&
     (original||entry.feed_freshness.checked_at_ms-view.source.source_as_of_ms!==entry.feed_freshness.source_age_ms))
     c.addIssue({code:"custom",message:"SCORE_REVISION_FEED_CLOCK_INVALID"});

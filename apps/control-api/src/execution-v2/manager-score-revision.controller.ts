@@ -20,7 +20,7 @@ export class ManagerScoreRevisionController{
       if(!raw||typeof raw!=="object"||Array.isArray(raw)||![Object.prototype,null].includes(Object.getPrototypeOf(raw)))
         throw new Error("QUERY_INVALID");
       const descriptors=Object.getOwnPropertyDescriptors(raw);
-      if(Reflect.ownKeys(raw).length>12||Reflect.ownKeys(raw).some(k=>typeof k!=="string")||
+      if(Reflect.ownKeys(raw).length>13||Reflect.ownKeys(raw).some(k=>typeof k!=="string")||
         Object.values(descriptors).some(d=>!d.enumerable||!Object.hasOwn(d,"value")))throw new Error("QUERY_INVALID");
       const query=Object.fromEntries(Object.entries(descriptors).map(([key,value])=>[key,value.value]));
       // HTTP query values are strings (or a finite repeated-string array), not

@@ -137,7 +137,7 @@ export class ManagerScoreHistoryStore {
     // budget. A newer/unknown mode cannot be erased into a complete empty list.
     if(rows.some(r=>!["portal.execution.manager-score-recalculation.v1","portal.execution.manager-score-original-inputs.v1",
       "portal.execution.manager-score-original-inputs.v2","portal.execution.manager-score-original-inputs.v3",
-      "portal.execution.manager-score-restatement.v1"].includes(r.schema_version??"")))fail("HISTORY_SCHEMA_UNSUPPORTED");
+      "portal.execution.manager-score-restatement.v1","portal.execution.manager-score-restatement.v2"].includes(r.schema_version??"")))fail("HISTORY_SCHEMA_UNSUPPORTED");
     const heads=await query<Head>("SELECT head_kind,calculation_key FROM execution_manager_score_mode_heads WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND source_revision=$4 ORDER BY head_kind",args);
     if(heads.length>2||new Set(heads.map(h=>h.head_kind)).size!==heads.length||heads.some(h=>
       !["ORIGINAL_INPUTS","RESTATED_CURRENT_POLICY"].includes(h.head_kind)||!finiteDigest(h.calculation_key)||!rows.some(r=>r.calculation_key===h.calculation_key)))fail("HISTORY_DATA_INVALID");
@@ -157,10 +157,12 @@ export class ManagerScoreHistoryStore {
       const restatedKey=inventory.heads.find(h=>h.head_kind==="RESTATED_CURRENT_POLICY")?.calculation_key??null;
       const originals=inventory.rows.filter(r=>r.schema_version==="portal.execution.manager-score-original-inputs.v1"||
         r.schema_version==="portal.execution.manager-score-original-inputs.v2"||r.schema_version==="portal.execution.manager-score-original-inputs.v3");
-      const calculations=inventory.rows.filter(r=>r.schema_version==="portal.execution.manager-score-restatement.v1");
+      const isRestated=(r:Meta)=>r.schema_version==="portal.execution.manager-score-restatement.v1"||
+        r.schema_version==="portal.execution.manager-score-restatement.v2";
+      const calculations=inventory.rows.filter(isRestated);
       if(originals.length!==(originalKey===null?0:1)||originalKey!==null&&originals[0]?.calculation_key!==originalKey||
         calculations.length>0&&originalKey===null)fail("HISTORY_DATA_INVALID");
-      const selected=inventory.rows.filter(r=>r.calculation_key===originalKey||r.schema_version==="portal.execution.manager-score-restatement.v1");
+      const selected=inventory.rows.filter(r=>r.calculation_key===originalKey||isRestated(r));
       const stored=selected.length?await query<Stored>("SELECT calculation_key,payload_digest,payload FROM execution_manager_calculation_revisions WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND source_revision=$4 AND calculation_key=ANY($5::text[]) ORDER BY calculation_key",[...args,selected.map(r=>r.calculation_key)]):[];
       if(stored.length!==selected.length)fail("HISTORY_DATA_INVALID");
       let original:ManagerScoreOriginalCustodySnapshot|null=null,restatements:ManagerScoreRestatementSnapshot[]=[];
@@ -169,7 +171,7 @@ export class ManagerScoreHistoryStore {
           original=decodeRetainedManagerScoreOriginal(source,row,MAX_BUNDLE);}
         if(original)restatements=calculations.map(meta=>{
           const row=stored.find(r=>r.calculation_key===meta.calculation_key);if(!row)fail("HISTORY_DATA_INVALID");
-          return decodeRetainedManagerScoreRestatement(row,original!,MAX_BUNDLE);
+          return decodeRetainedManagerScoreRestatement(row,original!,MAX_BUNDLE,source);
         });
         lineage(restatements,restatedKey);
       }catch{fail("HISTORY_DATA_INVALID");}

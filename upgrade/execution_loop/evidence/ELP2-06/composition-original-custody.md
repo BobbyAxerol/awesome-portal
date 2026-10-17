@@ -120,3 +120,21 @@ Composition code/tests APPLIED_UNCOMMITTED. Next gate is one coherent normal
 hook using `20261017/composition-history-gate.py land`, not a second redundant
 full focus. Terminal path/hash/SHA/cleanup PENDING at this preparation point;
 no planned gate or wrapper exit is promoted to PASS.
+
+<a id="composition-original-terminal-20261017-1632"></a>
+
+### Actual original-custody terminal16:32UTC
+
+Landed `f9034d52d31fa8000e5d741b02a5b931e1e21fa2`,13files,+1,339/−75;
+normal hook `20261017/composition-history-land-160629` ended16:32:37UTC.
+760contracts/65files, APIbuild,5,654API PASS/3existing skips
+(364files PASS/2skip), scoped PG restore/four row digests PASS. The36new
+Composition cases are included, not a second independently counted campaign.
+LogSHA256 `7958038f91c3a15a5ebbb3ee701905711b1850562190f87e82dc7d473030ac73`;
+controllerSHA `6908aafa1dae3f8e945454e83f99b022d4b591144d22884dffa9f5adac7981ef`.
+Source/index and eight protected runtime tuples unchanged; exact-owned Node/PG/
+network removed, remaining_owned_resources[], matching lease released. No
+source/runtime/calibration/budget/coexistence or consumer acceptance is implied.
+
+Next [dependent worker → combined revision → scoped public history](composition-dependent-restatement.md)
+is a separate applied continuation; its new tests are NOT_RUN before its gate.

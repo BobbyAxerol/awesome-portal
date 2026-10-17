@@ -1,0 +1,121 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.manager-score-revision.v1",
+    "target": {
+      "surface": "PORTFOLIO",
+      "id": "TEST_ONLY:portfolio"
+    },
+    "workspace_id": "TEST_ONLY:workspace",
+    "environment": "paper",
+    "revision_mode": "RESTATED_CURRENT_POLICY",
+    "purpose": "HISTORICAL_ANALYSIS_ONLY",
+    "operational_current": false,
+    "revision_ref": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "supersedes_revision_ref": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "supersedes_reason": "AUTHORIZED_PREDECESSOR",
+    "source": {
+      "authorized_source_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "source_revision": "TEST_ONLY-source-r1",
+      "source_as_of_ms": 1000,
+      "recorded_through_ms": 1000,
+      "facts_through_ms": 1000
+    },
+    "knowledge_cutoff_ms": 3000,
+    "knowledge_cutoff_reason": null,
+    "computed_at_ms": 3100,
+    "computed_at_reason": null,
+    "eligibility": {
+      "policy_current": false,
+      "policy_state": "NOT_CURRENT",
+      "reason_code": "CURRENT_POLICY_NOT_CONFIRMED",
+      "economic_source": "RETAINED_EXACT_REVISION",
+      "usable_as_current_operational_score": false
+    },
+    "availability": "AVAILABLE",
+    "reason_codes": [],
+    "score_details": [],
+    "composition": {
+      "availability": "AVAILABLE",
+      "reason_codes": [],
+      "binding": {
+        "subject_type": "portfolio",
+        "subject_id": "TEST_ONLY:portfolio",
+        "tuple_population_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "partition_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "stage_filter": [
+          "PAPER"
+        ],
+        "window_start_ms": 0,
+        "window_end_ms": 1000,
+        "comparable_basis_id": "TEST_ONLY:basis",
+        "individual_evidence_binding_id": "TEST_ONLY:ledger"
+      },
+      "result": {
+        "value": "80",
+        "status": "available",
+        "reason_codes": [],
+        "band_code": "good",
+        "weight_basis": "allocated_economic_capital",
+        "allocation_snapshot_id": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "total_allocated_capital": "80",
+        "score_coverage_allocated": "1",
+        "unscored_allocated_weight": "0",
+        "provisional_allocated_weight": "0",
+        "mature_allocated_weight": "1",
+        "allocation_coverage_nav": "0.8",
+        "scored_nav_weight": "0.8",
+        "idle_cash_weight": "0.2",
+        "nav_coverage_reason": null,
+        "bounds": null,
+        "contributions": [
+          {
+            "subject_id": "TEST_ONLY:alpha-a",
+            "allocation_weight": "0.75",
+            "value": "67.5",
+            "band_code": null
+          },
+          {
+            "subject_id": "TEST_ONLY:alpha-b",
+            "allocation_weight": "0.25",
+            "value": "12.5",
+            "band_code": null
+          }
+        ],
+        "diagnostics": {
+          "allocation_hhi": null,
+          "score_contribution_hhi": null,
+          "score_dispersion": "17.320508075689",
+          "reason_codes": [
+            "GROUPING_NOT_APPROVED"
+          ]
+        }
+      },
+      "allocation_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "allocation_effective_at_ms": 1000,
+      "original_publication_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "computed_at_ms": 3100,
+      "calculation_revision": "TEST_ONLY:historical-composition",
+      "raw_dependencies": [
+        {
+          "subject_id": "TEST_ONLY:alpha-a",
+          "availability": "AVAILABLE",
+          "reason_codes": [],
+          "original_input_ref": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "derived_input_ref": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+        },
+        {
+          "subject_id": "TEST_ONLY:alpha-b",
+          "availability": "AVAILABLE",
+          "reason_codes": [],
+          "original_input_ref": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+          "derived_input_ref": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+        }
+      ]
+    },
+    "regime": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "INDEPENDENT_REGIME_REVISION_NOT_SELECTED"
+    }
+  }
+}

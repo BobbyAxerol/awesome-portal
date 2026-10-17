@@ -2354,3 +2354,27 @@ external. Claude UXM00–10 remains NOT_STARTED_BY_OWNER_DIRECTION /
 AWAITING_CONSUMER_REVIEW. Existing generated handoffs are ready for future
 assignment only. Recurring intake §7.3 applies before freeze/landing/exit; no
 new Execution consumer acknowledgement is claimed after the selected repin.
+
+### Original allocation terminal and dependent history continuation16:32UTC
+
+[Actual normal-hook terminal](../ELP2-06/composition-original-custody.md#composition-original-terminal-20261017-1632)
+landed `f9034d52`,760contracts/APIbuild/5,654API PASS/3existing skips and scoped
+PG restore PASS; eight runtimes/source/index unchanged, exact cell/lease clean.
+This closes original allocation custody correctness only. The [dependent
+Composition worker/coordinator/History chain](../ELP2-06/composition-dependent-restatement.md)
+is APPLIED_UNCOMMITTED/new-tests-NOT_RUN at entry. Method-compatible RAW,
+original full denominator and historical K/C are preserved; no GET calculator,
+source ACK/current allocation substitution or producer authority invented.
+Same06-002 requirement remains OPEN until affected gates and its full source/
+config/tie-out/ALL/consumer criteria; historical Regime remains code work.
+10 actual trust/current-human/native durable terminal, approved14budgets/
+calibration/coexistence/P184G2 unchanged;11NOT_ENTRY_READY. Claude intake checked
+existing requests, no new acknowledgement. No FE/push/dev/main/runtime change.
+
+Composition gate16:47UTC: API build PASS,323/324API PASS, one synthetic NAV
+approval-clock failure fixed with original explicit timestamps and stronger
+before/after-expiry assertions. [Exact failed log, review fixes, resources and
+next normal-hook requirement](../ELP2-06/composition-dependent-restatement.md#second-affected-terminal-2026-10-17t164742utc)
+remain visible; no contracts/restore PASS inferred from that stopped gate.
+All44current-authorized Composition BFF cases passed, including the24 census/
+RAW/time regressions. Production budgets/source/trust/browser remain unproven.
