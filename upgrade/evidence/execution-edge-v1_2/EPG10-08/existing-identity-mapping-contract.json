@@ -1,0 +1,69 @@
+{
+  "schema": "epg10.existing-identity-mapping-contract.v1",
+  "qualification": "SOURCE_CONTRACT_NOT_INSTALLED_AUTHORITY",
+  "phase": "Original EPG10-08 round2; producer implementation before Edge acceptance",
+  "operation": "READ_EXISTING_MAPPING",
+  "transport": {
+    "method": "POST",
+    "path": "/internal/elp210/current-human/mapping",
+    "listener": "Existing PM PortalHumanRecoveryServer, optional mapping source",
+    "authentication": "TLS1.3 mutual CA verification and exact current peer leaf pin, checked before HTTP metadata",
+    "content_type": "application/json",
+    "request_bytes_max": 8192,
+    "response_bytes_max": 8192,
+    "deadline_seconds_max": 10,
+    "redirects": false,
+    "automatic_retries": false,
+    "permission_cache": false
+  },
+  "request": {
+    "schema_version": "pma.existing-human-mapping.v1",
+    "exact_fields": ["schema_version", "request_id", "human_issuer", "subject", "workspace_id", "environment", "workload_id"],
+    "request_id": "Fresh canonical UUID; exact response correlation, not a permission or idempotency key",
+    "server_pinned_tuple": ["human_issuer", "workspace_id", "environment", "workload_id"],
+    "identity_component_bound": "Each issuer/subject/workspace/workload is 1..512 UTF-8 bytes, exact trimmed text with no control characters",
+    "subject": "Exact stable Portal subject, including an authorized target lookup; never display-name/email inference or target-session impersonation",
+    "environment_values": ["paper", "sandbox", "live"]
+  },
+  "response": {
+    "schema_version": "pma.existing-human-mapping-result.v1",
+    "exact_base_fields": ["schema_version", "request_id", "human_issuer", "subject", "workspace_id", "environment", "workload_id", "status"],
+    "binding": "All six request binding fields must match exactly",
+    "found": {
+      "status": "FOUND",
+      "additional_exact_fields": ["ts_user_id", "revision"],
+      "ts_user_id": "Canonical existing ts_users UUID",
+      "revision": "ts-user:<same canonical UUID>:<canonical positive source version, <=9223372036854775807, <=19 digits, never JS Number>"
+    },
+    "not_found": {
+      "status": "NOT_FOUND",
+      "additional_exact_fields": [],
+      "meaning": "No exact existing active mapping; unknown and inactive are intentionally indistinguishable"
+    },
+    "grammar": "Flat strict JSON objects only; duplicate keys, escaped aliases, invalid UTF-8, extra fields and nonfinite values rejected"
+  },
+  "source": {
+    "authority": "Existing TS ts_users unique issuer+subject, not a new identity store",
+    "query": "Parameterized exact pair SELECT; read-only transaction; pinned database name/session login/current role and trusted pool target; explicit acquire, lock and statement bounds",
+    "user_creation": false,
+    "display_updates": false,
+    "reactivation": false,
+    "business_grants": false,
+    "schema_or_role_changes": false
+  },
+  "consumer": {
+    "method": "AccessTrustProvider.verifiedHumanMapping(subject,workspace)",
+    "installation": "Mandatory finite max_inflight and independently accepted installation_expires_at_utc_ms; no default TTL or queue. Reject expired/busy before I/O, recheck expiry after I/O, release every owned slot on all terminal paths. These private configuration pins do not grant business authority.",
+    "found": "Return actual {ts_user_id,revision}",
+    "not_found": "Return null",
+    "unavailable_or_invalid": "Fail closed without source body, URL or credential disclosure",
+    "other_authority_callbacks": "Preserved; mapping cannot supply policy, membership, publication, command or field grants"
+  },
+  "decision_boundary": "Fresh transport-authenticated preflight observation only. It does not hold source revocation across later Core/TS COMMIT; final receipt/business paths must retain their existing qualified source fence. A candidate issuer is a different identity and must not alias accepted TS users.",
+  "activation": {
+    "runtime_installed": false,
+    "actual_edge08_accepted": false,
+    "connected09_started": false,
+    "required": "Genuine independently accepted identity tuple/trust/current grants, qualified producer return and actual Edge revoke/cache/cursor/SSE measurements"
+  }
+}

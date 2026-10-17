@@ -759,7 +759,31 @@ deep-dive → ADR → slice → evidence discipline documented above.
   session/read wrappers are implemented; do not rewrite them or invent grants.
   See [current08 intake](evidence/execution-edge-v1_2/EPG10-08/commissioning-intake.json)
   and its single owner packet for exact callbacks and split read/command work.
-  Actual connected08→09→10→11 NOT_MET; no new product test/runtime mutation.
+  Bobby now assigns producer implementation itself (main plan§23.20.4): preserve
+  PM accepted-current-source WIP, implement existing-only TS identity lookup on
+  its private listener plus Research authenticated client/AccessTrust composition.
+  [Wire boundary](evidence/execution-edge-v1_2/EPG10-08/existing-identity-mapping-contract.json)
+  is preflight only, never user creation/business permission/COMMIT proof.
+  [Producer qualification](evidence/execution-edge-v1_2/EPG10-08/producer-qualification.json):
+  PM mappingf9b5b32c61freshPASS; Research103fresh focusPASS including admission/
+  installation-expiry fixes; Research8ba33de3 normal hook exit0 with691contracts
+  PASS/4463API PASS/3SKIP, source build and PG restore. Whole-source monitor
+  NOT_PASS retained for two concurrent peer files; exact own source/test/journal
+  pins match. No immutable whole-branch/runtime acceptance. PM74474c96
+  current source/importer has separate owner292functional/25offline receipt.
+  Actual stable identity/trust/source installation still unqualified; actual08
+  not accepted, no connected09. PM stored BUSINESS report66743c88 is now
+  source-qualified (416ownerPASS); restricted-r1 projection remains PM-owned.
+  Concrete current-relations producer is also still missing: PM per-scope
+  native receipts have no agreed normalization to Core's one membership tuple.
+  This is producer contract/implementation work, not config-only debt. Existing
+  Portal principals all exist (one still invited); do not create duplicate users.
+  Existing Manager target has none of seven requested new identity/authority
+  relations in bounded catalogue read; do not repurpose it as the PM target.
+  bobby/thanhvuong ACTIVE; stan INVITED. No duplicate identity or grants created.
+  Actual connected08→09→10→11 NOT_MET; no runtime mutation.18HK+8SGP protected
+  tuples unchanged; exact test cells/lease cleaned and49,616,770B source copies
+  removed. Shared Docker/cache pruning deferred under active peer jobs.
   Historical08 completion round after the earlier PM deferral recorded
   PM`c401a023` still explicitly NOT_PUBLISHED for runtime authority/COMMIT proof;
   Research`169195ca` has no production provider and UNMAPPED identity. The single

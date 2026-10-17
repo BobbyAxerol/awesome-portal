@@ -6,7 +6,8 @@ EDGE08 and BE§§3–5/9.2/14.2/ELP2-02/03/04/09. This is the single08
 security/owner return, not another roadmap or permission to change a peer.
 
 Current recorded status: **IN_PROGRESS / TLS_RUNTIME_QUALIFIED /
-ACTUAL_PROVIDER_IMPLEMENTATION_REQUIRED** (original round2 remains approved).
+MAPPING_SOURCE_QUALIFIED_RELATIONS_PRODUCER_OPEN** (original round2 approved;
+mapping source committed, not actual08 acceptance).
 **Parallel-round disposition:** independent Edge implementation/tests/TLS/
 cleanup COMPLETE; **three integration debt items OPEN for round2**, tracked in
 main phase08: `08-READ-TRUST`, `08-RESEARCHER-POLICY`, `08-COMMAND-COMMIT`.
@@ -30,7 +31,79 @@ TS commit. Paper/sandbox/live are structural scopes; Canary is a live stage.
 
 ## Current round2 delta —17/10/2026, Asia/Saigon
 
-**Latest10:24:** current [commissioning intake](commissioning-intake.json)
+**Latest approved producer implementation:** Bobby assigns completing PM and
+Research producers, then actual Edge08 qualification; connected09 stays stopped.
+Main journal23.20.4 owns this continuation. PM now has qualified accepted-current-
+access/importer source; do not duplicate it or describe that source as absent.
+The disjoint owned addition is an existing-only identity lookup on the current
+private mTLS listener plus a concrete Research client/AccessTrust composition.
+See the [exact identity wire and decision boundary](existing-identity-mapping-contract.json).
+It never creates/aliases a user, grants rights, impersonates a target session,
+or substitutes a point lookup for a held COMMIT proof. PM mappingf9b5b32c now
+has61fresh source/PG PASS; Research client has103fresh focused PASS (86mapping+
+17old transport), including the two peer admission/expiry fixes. Research commit
+`8ba33de3` landed with unchanged normal hooks: contracts691PASS and Control API
+4463PASS/3SKIP, locked source build and PG restore passed. These counts overlap
+the focus suite. Whole-worktree guard remains NOT_PASS for concurrent peer-source
+drift; exact two owned blobs and76-line journal match their tested/staged pins.
+No whole-branch immutable or runtime/actual connected acceptance follows. PM
+current source/importer74474c96 also has its own
+292functional/25offline source return, consumed rather than added to these counts.
+See [current bounded producer qualification](producer-qualification.json).
+Candidate trust installation remains human-only, not accepted business authority.
+Align the actual accepted stable issuer/subject across assertion/mapping/listener/
+current-source user; the candidate-only urn issuer cannot alias an existing user.
+PM stored BUSINESS report source66743c88 now has416unique owner PASS (122PG+
+294unit;25offline separate), source139a8164…; no longer an unfinished adapter.
+Restricted-r1 source projection remains PM-owned code, not missing r1 approval.
+Only actual qualified source/trust/installation inputs can make Edge08 binding
+runnable. Generic `CurrentHumanCandidate.create` already accepts an explicit
+stable issuer and existing `createControlApiApp` dependency injection accepts
+`withExistingIdentityMapping(base, client)` without editing the candidate-only
+installation helper. No new issuer factory is needed. Missing independently
+accepted identity/policy/target inputs, not an inherent candidate-issuer API
+restriction, prevent actual identity commissioning. Do not wrap unqualified base policy
+and call it an accepted provider; unknown IDs/absent grants still deny.
+
+**Remaining producer work, not config-only debt:** the concrete current
+`relations(user,workspace)` adapter is absent. Native PM membership/version
+and receipts are per scope/command; Core currently expects one membership tuple
+across a principal's grants, without environment/resource arguments. The two
+owners must freeze exact native-receipt correlation, multi-scope/environment
+revoke/renewal/expiry and bounded authoritative ROOT/owner/member coverage in
+this same08, then implement the thin authenticated projection/client. Existing
+workload acceptance or an old Core receipt does not define that normalization.
+No 'latest receipt', synthetic workspace acceptance hash, new authority ledger,
+or implicit all-business-to-single-portfolio restriction. Mapping completion
+is not completion of both producers. PM source `_snapshot` takes `FOR UPDATE`;
+a SELECT-only producer must not copy it unchanged. See main23.20.4 for exact
+owner/decision/test boundary; no connected09 or repeated blanket approval.
+
+**Owner onboarding clarification / actual read-only intake:** all three named
+Portal accounts already exist on the canonical running Control API store:
+bobby and thanhvuong are ACTIVE; stan remains INVITED/forced-password-change.
+These names are discovery labels, not authorization keys. Do not create
+duplicate Portal accounts or force activation to make a test pass. Reuse the
+verified stable IDs through the ordinary auth flow, then commission the actual
+TS issuer/user mapping and accepted policy on the correct target. Seven exact
+new TS/PM identity/current-authority relations are absent on the existing Paper
+Manager read target's catalogue. That observation does not identify the PM
+target or prove all TS DBs lack these tables; do not migrate/switch that runtime
+implicitly. No user/grant/session/password change follows from these queries.
+
+**Terminal reconciliation05:31UTC:** unchanged18HK and8SGP protected service
+image/config/start/restart tuples; no own test container/process/lease remains.
+Four exact finished source copies removed (49,616,770logical bytes), cleanup
+receipt9d6b142e…; diagnostics retained privately. Cached build ran normally;
+SGP image/cache counts remain328/3774. No shared prune under active HK/PM jobs,
+no user/grant/secret mutation or operational restart; active/rollback resources
+retained. Full08 remains NOT_MET: native receipt→Core per-grant normalization
+and its concrete authenticated relations producer still require implementation
+in this same approved08 before genuine identity/policy/target commissioning and
+Edge revoke/cache/cursor/SSE qualification. Do not call that unfinished producer
+external config debt or request the phase approval again.
+
+**Historical10:24:** original [commissioning intake](commissioning-intake.json)
 pins PM5f0d60b2 and Research clean9a3a27c8. The next work is concrete producer
 implementation, not just deployment/configuration or another generic approval:
 

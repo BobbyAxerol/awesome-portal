@@ -57,6 +57,28 @@ Chúng không thay thế phase hoặc exit gate trong
   implementation, not a switch or more Edge codecs. Human mTLS/session/read
   wrappers already exist; use them unchanged. Current provider binding is not
   executable from returned inputs; full connected gates remain NOT_MET.
+  The newer approved producer implementation is tracked in main plan§23.20.4:
+  disjoint PM existing-identity SELECT-only wire and Research pinned-mTLS client,
+  preserving PM accepted-current-access/importer and Research installation WIP.
+  [Exact mapping contract](../evidence/execution-edge-v1_2/EPG10-08/existing-identity-mapping-contract.json)
+  grants no read/command rights. [Current producer receipt](../evidence/execution-edge-v1_2/EPG10-08/producer-qualification.json):
+  PM mappingf9b5b32c61freshPASS, Research103focusPASS (admission/expiry fixed),
+  Research8ba33de3 normal hook exit0:691contractsPASS,4463API PASS/3SKIP,
+  build/restore passed. Whole-source monitor NOT_PASS retained for two peer
+  WIP files; own committed source/test/journal pins verified, not whole-branch
+  immutable/runtime acceptance. PM current source/importer74474c96 is also
+  source-qualified separately, not installed grants. Actual identity/trust/source
+  alignment/installation and Edge08 remain open; no connected09. Preserve PM's
+  restricted-r1 producer work; stored BUSINESS report66743c88 is now source-
+  qualified (416ownerPASS), not external debt or an unfinished adapter.
+  Current-relations producer/PM native receipt→Core membership normalization
+  remains real implementation work, not just missing config. All three Portal
+  principals exist (one invited); no duplicate account creation. Seven requested
+  new PM identity/authority relations are absent on the existing Manager target;
+  this does not identify/commission the actual PM target. See current08 receipt.
+  bobby/thanhvuong ACTIVE, stan INVITED; no new account/activation/grant changes.
+  18HK+8SGP protected tuples unchanged, exact own cells/lease removed,49,616,770B
+  finished source copies cleaned. No shared Docker/cache prune during peer jobs.
   Historical08 completion round after earlier deferral recorded PM
   `c401a023` still publishes no actual human/workload/COMMIT provider and Research
   `169195ca` remains unqualified/UNMAPPED. Single owner packet now specifies

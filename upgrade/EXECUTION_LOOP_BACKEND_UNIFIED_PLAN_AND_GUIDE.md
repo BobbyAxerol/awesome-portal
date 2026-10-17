@@ -10151,13 +10151,23 @@ No financial command activation, arbitrary grants, peer-history rewrite,
 unapproved business field matrix or09…11 activation follows from this approval.
 **Latest owner disposition (2026-10-17):** Bobby approves08-READ-TRUST first,
 07/08-command separately, parallel03/01/06 then connected09→10→11; no new
-approval or phase. Fresh PM5f0d60b2 and Research9a3a27c8 now contain the human
+approval or phase. Historical intake PM5f0d60b2 and Research9a3a27c8 contains the human
 transport, leased-reader/composition and receipt coordination source, but lack
 concrete workload/app/field providers and verifiedHumanMapping implementation.
 Status: **RESUMED / ACTUAL_PROVIDER_IMPLEMENTATION_REQUIRED**, not merely a
 deployment switch. Exact injection ports, producer tasks and bounded receipts
 are recorded in [§23.20.3](#23203-approved-round2--current-provider-commissioning-intake-2026-10-17)
 and the [08 owner packet](evidence/execution-edge-v1_2/EPG10-08/SECURITY_CONTRACT_AND_OWNER_RETURN.md).
+Latest [§23.20.4](#23204-original08--approved-producer-implementation-and-binding)
+supersedes those progress pins: PM existing-identity mappingf9b5b32c has61fresh
+PASS; Research mapper8ba33de3 has103focused PASS and normal hook exit0
+(691contractsPASS,4463API PASS/3SKIP, build/restore). Whole-source guard NOT_PASS
+is retained for concurrent peer changes, not erased by these test results.
+PM current-source74474c96/stored-report66743c88 are source-qualified, not installed
+authority. **Current-relations producer/native-receipt→Core grant normalization
+remains unfinished producer work**, not config-only debt or a new phase gate.
+All three Portal accounts exist: bobby/thanhvuong ACTIVE, stan INVITED; no
+duplicate account/activation/grant mutation. Full08 remains NOT_MET.
 Read does not wait for command07, native publication or the whole PM roadmap.
 Historical16/10 pins below do not override this fresh disposition.
 **Owned package:** QUALIFIED_ISOLATED_SOURCE_DARK; full runtime security acceptance
@@ -14707,6 +14717,475 @@ link or product code, then reran the whole metadata check successfully.
 tests. Bobby identity verified; commit only seven owned tracking Markdowns and
 two bounded JSON receipts. Preserve unrelated review. No full-monorepo hook/
 verification PASS claimed; no hooks bypassed, push or merge performed.
+
+### 23.20.4 Original08 — approved producer implementation and binding
+
+**Entry / scope / approval2026-10-17:** Bobby explicitly assigns implementing
+the missing PM/Research producers before Edge binding/actual08 acceptance;
+do not repeat the previous audit-only handoff or start connected09. Status
+IN_PROGRESS_IMPLEMENTATION, baseline Edge20dc3f94. Existing original08/r1/TLS
+decisions remain authoritative. Read EDGE08, BE§3/4/14.2, REVIEW§3, current
+PM§58.99/guide5.1.1/5.2.1 and Research scoped campaign rules before edits.
+
+**Parallel source / owned boundary:** PM866b8e72 now has active owner WIP
+`AcceptedCurrentAccess`, opt-in accepted-source tables and actual PG tests;
+reuse this implementation, do not duplicate or overwrite it. Research9a3a27c8
+has staged human-only trust installation/provisioning; its manifest explicitly
+does not install TS mapping/business grants. Protect all peer staged/WIP files
+and shared Git index. Determine the smallest disjoint actual identity/policy
+producer change from their current code and freeze any new private wire before
+implementation. Current HumanIdentityService/PortalHumanCandidate, accepted
+TS users and current source grants are the only authority inputs; browser
+IDs, role names, static allow-all values and TEST_ONLY grants cannot activate it.
+
+**Goal / invariants:** actual source-backed verified Portal↔TS mapping plus
+accepted workload/app/field policy, separate from business publication and
+command execution. Reuse real crypto/current session/COMMIT fences and immutable
+accepted identity; no inferred name mapping, no permission TTL cache, no new
+capital/native writer or direct TS DB access from Research/Edge. Missing real
+accepted policy/source remains denied. Identity mapping alone grants no read,
+command or publication authority. Keep all existing Manager/V1 consumers intact.
+
+**Tests / resource / exit / rollback:** focused producer crypto/identity/source
+correlation/current-revoke/malformed/timeout bounds first, then actual connected
+08 revoke/cache/cursor/SSE and unaffected-scope controls when real installation
+is available. Do not present generated users/grants as runtime proof. Foreign
+HK lock until12:48:38Asia/Saigon and SGP correctness lease until11:39:33 prevent
+new heavy jobs there until released; implementation/contract preparation proceeds.
+Before each test/build, refresh host lock and reserve exact isolated resources;
+no operational restart, broad migration, grant import or traffic cutover from
+source tests. Rollback removes only new unmounted composition; preserve all
+accepted identity/grant/economic history. Update both affected project journals
+for any peer-source implementation, preserve concurrent changes and commit only
+the tested owned slice. Full08 exits only with actual source/current-authority
+receipts and measured connected cases, not a new constructor or fixture PASS.
+
+**Implementation decision before edits:** reuse PM's existing private human
+recovery mTLS listener for one fixed READ_EXISTING_MAPPING operation, not a new
+service/directory or the auto-creating `/v2/identity/resolve` route. Trusted
+installation pins the exact accepted human issuer/workspace/environment/workload
+and current Core client leaf. Look up exact existing issuer+subject using a
+bounded read-only transaction; unknown/suspended/archived returns no mapping,
+never inserts, renames or reactivates a user. Request/response correlation and
+exact bytes/scope are mandatory. A fresh authenticated lookup is an observation,
+not a held revocation lease or business permission. Target-subject lookup never
+impersonates that person's session. Research gets a concrete pinned mTLS client
+and AccessTrust composition preserving all other authority callbacks. No extra
+JWT/proof signer is needed for this transport-authenticated preflight; final
+receipt/business writes still require their existing held source fence through
+Core/TS COMMIT. The candidate-only `.invalid` PKI/issuer manifest is not accepted
+identity configuration and remains explicitly unqualified for business use.
+PM accepted-source/importer WIP remains its owner's work. Disjoint source/tests
+may be delegated; primary owns contracts, journals, test reservation and review.
+
+**Concurrent qualification protection:** Research's live normal-hook monitor
+pins its shared main plan as an exact input. Withdraw only our temporary
+unstaged37-line append and hold the journal/client/test outside that repository
+until its landing is terminal; the original peer plan hash is restored exactly.
+No peer staged content/index is changed. Reapply the prepared scope journal
+before installing our source after that gate. PM disjoint source preparation
+continues; no source test or job was started under either foreign lease.
+
+**Prepared tested-slice target / no job yet:** own SGP
+`/tmp/epg08-producer-qualification-pyX6z2` receives exactly11public source/test/SQL
+files, hash manifest and finite executor. Cached Python91681097…/PGfe0737ba…;
+2CPU/1536MiB/300s aggregate hard limits, internal network, no host ports/volumes,
+test-only database `pma11_existing_mapping_test`, actual99schema and SELECT-only
+non-superuser fixture. Source/HTTP regressions plus5PG cases are selected; counts
+remain NOT_RUN until execution. No new image/build/pull/dependency install.
+Research69prospective client cases remain outside the shared repo until its
+foreign lease is released/expired. Root review aligned512UTF8-byte identities
+and exact signed-bigint revision bounds on both sides, no Number conversion.
+
+**First scheduling attempt / peer landing:** source executor04:30:57UTC refused
+before any Docker command: PM acquired the free SGP window04:30:51→04:35:51.
+Own attempt created no resources/tests; retain NOT_RUN receipt, do not call it a
+failed product test or bypass/release the foreign lease. Research peer normal
+hook actually completed and committed0d8bbaee at04:24:47, all7exact paths landed,
+all runtime tuples unchanged/resources cleaned. Its monitor alone recorded
+source_unchanged=false because our temporary37-line unstaged journal append was
+visible during closeout; we removed only that append, verified all7original
+source hashes exactly restored and clean worktree (plan861bbb6c…). Preserve its
+original FAIL_OR_INCOMPLETE monitor receipt; do not rewrite it as a new PASS.
+After that terminal verification, reapply our scope journal and install exactly
+the two new client/test files. No shared index or ongoing hook/test is touched.
+
+**PM source slice qualified and committed:** `f9b5b32c6f1f9766060dabd34d89de983955265d`
+on `feat/portfolio-account-v1_1-parallel`, Bobby identity. Exactly five owned
+source/test files, bounded mapping evidence and only journal58.99.1 landed;
+all peer58.99/source/importer WIP remains unstaged and preserved. Actual
+PostgreSQL/source/old transport suite61PASS/0FAIL/ERROR/SKIP (1.40s), controller
+`ed1b8b2c2b8cce5144e7e9670b90d10ab0e1df5d11cbbaacf3708940c83140a0`,
+JUnit `d857156308a5a8cc38eb61aee54876ec9583055c4bafec1d6c49e6530a4826cb`.
+One earlier collection error came from absent disposable fixture package init
+files; copied the two existing init files and reran unchanged assertions.
+All2own containers/internal network removed,8protected SGP runtime tuples
+unchanged, own lease released; no new image/build/install/cache. Source-copy
+cleanup remains tracked below. No grant/identity creation or actual08 claimed.
+
+**Research focused test target:** installed only the two disjoint new source/
+test files and own14.12.1 journal, preserving peer plan/commissioning updates.
+Prepare existing-dependencies full TypeScript check then mapping+old human
+transport socket tests in one finite cached Node container:2CPU/1536MiB/300s,
+network none, unprivileged/read-only source+dependencies, no install/build/pull.
+Runner checks/acquires SGP lease atomically, refuses foreign heavy jobs,
+pin-checks source/dependency hashes, removes its exact container in finally
+and observes eight protected runtime tuples. Expected69new mapping cases are
+NOT_RUN until receipt; isolated TLS vectors are not accepted TS human/grants.
+
+**Research review / fix before mounting:** peer independently accepts the fixed
+wire/source-only composition, but requires finite aggregate inflight admission
+and explicit installation expiry checked before and after I/O. These are owned
+producer defects, not external debt. Add mandatory private client configuration
+for the accepted installation expiry and finite inflight ceiling, no guessed
+TTL/default/queue; deny expired/busy before outgoing metadata and release every
+owned slot on terminal paths. Add real-socket expiry/admission/recovery tests;
+preserve the old69-case source pins and failure receipt. No public wire change,
+trust relaxation or candidate-issuer alias follows. Research peer withdrew only
+its duplicate unpublished adapter, preserving this single writer/composition.
+The first finite Node run did NOT_PASS at typecheck, receipt
+`70abb825eef0d3b63e1bca3a1fe9768165c053936df4ed0c443da008d866b2ca`;
+no product tests yet, exact container/lease removed and runtime unchanged.
+Diagnose its bounded log before rerun; full normal-hook build/typecheck uses
+the already approved canonical4CPU/4GiB correctness envelope, not a new load
+or capacity claim. Source grants/identity alignment remain distinct real gates.
+
+**PM producer return refreshed04:45UTC:** owner landed
+`74474c96aa8ce9842991d2f9b79e1b7ff513cee4` (parent our mappingf9b5b32c).
+Consume its durable-current-authority and pinned-importer contracts/evidence:
+292functionalPASS (69PG+223unit),25offline separately, not rerun/inherited as
+this Edge test count or actual authority. Real SQL shared/exclusive revoke
+fence, exact owning pool/task/context, acceptance revision and UNKNOWN COMMIT
+import/status recovery now source-qualified. Do not keep saying those concrete
+ports are missing. Runtime/grants/install remain false. A source-owned
+`stored_report_source.py` is newly active PM WIP; current report/census/valuation
+producer is owned runnable work, not an external-debt label and not ours to
+overwrite. Actual independently accepted source bundle/identity/target remains
+the distinct commissioning input. TSnexta3234cd8 and DL5bf5cd54 refreshed;
+native publication.rs13f21d53/SQL590115a6bc decisive bytes still unchanged per
+current PM receipt; unrelated TS progress is not original03 acceptance.
+
+**Research corrected focus qualified04:46UTC:**103PASS/0FAIL/SKIP,
+86mapping+17old human transport. Sourcea9e0355c…/test00f55371…; controller
+`9b7876080ba5ac497c56d64eaad7eaf182031cf1660877931847647e52e24b57`,
+JUnit `cc44f490c6dbaab99bcb4c2f9462c1b82f039ce6c034096c10e69b80030d2013`.
+Actual loopback mTLS covers peer/CA/hostname denial before metadata, closed
+wire/correlation/UTF8/BIGINT/null, finite admission without queue, installation
+expiry pre/post I/O and slot release/recovery. Both peer findings are fixed,
+not deferred. Existing read-only dependencies only, full locked install/build/
+typecheck remains mandatory in normal hook. Its source and dependencies stayed
+identical; exact own container/lease cleaned,8runtime tuples unchanged. First
+1024MiB heap diagnostic was OOM/SIGABRT, zero product tests, not a product PASS.
+No silent focused ceiling increase: corrected focus omits full typecheck and
+uses the existing normal-hook3GiB Node stage to qualify it. No runtime activation.
+
+**Research landing scope frozen:** stage exactly clienta9e0355c, test00f55371
+and only76owned journal lines14.12.1, not peer commissioning/main-plan edits.
+Index treedb6d5c06…/staged journald404b8e9… at parent0d8bbaee. Run one normal
+`git commit` with current configured hooks, Bobby identity and exact paths;
+no hook bypass, push, merge or source checkout switch. Finite2400s guarded
+executor reserves SGP exclusively and monitors its own normal helper processes/
+containers; existing canonical Node3CPU/3GiB+PG1CPU/1GiB correctness/restore
+envelope only, no capacity claim. Its pinned input/source/index and eight
+protected runtime tuples must remain intact; shared peer docs are recorded
+separately rather than treated as a business-source change. Retain failed
+receipts and exact owned cleanup. HK foreign lock remains respected; no local
+heavy job. Actual connected08 still needs real accepted installation inputs.
+
+**Landing scheduling refusal04:49UTC:** PM independently reserved SGP
+04:48:56→04:53:56 for its actual stored-report-source correctness. Our normal
+commit executor refused the foreign lease before starting Git hook/test/cells;
+receipt2dead85e… retains unchanged HEAD/index and no owned resource/lease.
+This is NOT_RUN scheduling, not a failed product test or extra permission gate.
+Keep its lease/resources intact, finish independent tracking/review now and
+retry the same landing only after terminal/free fresh admission. PM report
+producer remains its active owned implementation, not an invented external gap.
+
+**Second landing preflight04:51:** SGP lease was free, but the executor's
+process classifier incorrectly treated14retained Vite development servers as
+active builds (including config filenames beginning vite). Refused before Git
+hook/tests, receiptbf2694b2…; own lease released, no cells/runtime action. Exact
+read-only process inspection confirms existing dev servers in retained SSH
+scopes, not test/build processes; never stop them. Correct only the off-repo
+guard to distinguish actual Vite build/optimize/force work from serve/config
+arguments, retaining cargo/rustc/pytest/tsc/Vitest/npm and all lease/index/runtime
+checks. This owned harness false positive is not a source permission gate.
+
+**Owned source-copy cleanup scope:** after exact terminal receipt and absent
+resource-ID verification, remove only PM043214/043315 `source/` copies and Node
+vmmldukm/z2o_wdkz `work/` copies. Preserve controllers/JUnit/bounded logs/hash
+manifests/recipes; no active normal-hook target/shared dependency/source, image,
+BuildKit, network, volume or operational resource is a deletion target. Root
+pre/post free bytes and exact logical bytes must be recorded, with shared disk
+deltas not attributed as exclusive reclaim. SGP normal hook remains isolated
+in its own lkdljgpy target. HK readonly inventory102images/30.57GB,371cache/
+28.3GB, free233674657792B; SGP328images/88.82GB,3774cache/195.9GB,
+free167343878144B. Before the normal-hook run no owned image/build/cache was
+created; retain active/explicit
+rollback and shared active-owner executor cache, no broad prune under any job.
+
+**Producer return refreshed05:01UTC:** PM clean
+`66743c88e12952302a976e92abda65d0785702f7` now lands actual BUSINESS
+`StoredReportSource`, accepted immutable definitions and publisher/read advisory
+ordering. Owner evidence416uniquePASS (122PG+294unit),25offline separately;
+receipt`ea5f2f6df1b19863d8a75cb97cced37b2012ca73547a9c529ebd3ec769b46e6e`.
+Source139a8164… composes with `AcceptedCurrentAccess(report_source=...)` and
+existing OperatorSession/router. These are owner tests, not new Edge executions
+or installed authority. Do not keep the stored BUSINESS adapter labelled WIP.
+Restricted r1 source projection remains PM-owned implementation, not missing
+r1 approval; ordinary manager read need not wait for all history/native03.
+Current artifacts still explicitly runtime=false/installed=false; supplied
+source definitions and grants are TEST_ONLY. No qualified actual issuer/user,
+accepted policy manifest/target or source-definition installation returned.
+
+**Normal-hook monitor correction / no skipped gate:** third scheduling attempt
+refused a fresh PM lease (3b0c0237…), no hook. Actual04:53 attempt lkdljgpy began
+the unchanged normal hook, then the off-repo monitor misclassified its legacy
+N17A disposable PostgreSQL test as foreign; aborted own group, no commit,
+receipt`c58ad5e0943bd19772b4ffc39f6b217946ecd3314b21d234996ee86b407e78d4`.
+Its initial cleanup observation was incomplete; retain that failed observation,
+verify terminal processes/resources before retry. Correct only ownership
+attribution: exact empty prelaunch namespace, pinned unchanged N17A script in
+the owned process group, pinned PG image/internal network/named volume. Normal
+hook also invokes cached D4 nginx syntax imagea6566e23… (created2026-08-24);
+record its private target mount and image rather than claiming only Node/PG.
+Legacy syntax/PITR cells have no cgroup bounds in the existing hook; record this
+honestly, do not advertise them as the bounded Control API envelope or capacity
+proof. Foreign jobs/leases remain refused; no repository hook or test is edited,
+disabled or bypassed. Fresh guarded normal commit7r78hfz0 began05:00:23UTC;
+full source/type/build/restore result remains pending its terminal receipt.
+
+**Finished source-copy cleanup executed04:56:26UTC:** exact four paths above
+removed only after terminal receipt/resource-ID proof;49,616,770logical bytes.
+SGP root free167330922496→167385882624B, shared observational delta, not an
+exclusive reclaimed-byte claim. Controllers/JUnit/logs/manifests/recipes retained
+privately. No image/cache/volume/network/operational resource removed by this
+cleanup. The first cleanup refused before deleting anything on a case-sensitive
+Docker absence message; normalized only that exact check and reran. Active
+normal-hook target, source/dependencies and all rollback sets retained.
+
+**Stable-issuer source-gap check05:02UTC:** Research peer read-only review
+confirms generic `CurrentHumanCandidate.create(pool,input)` already accepts
+explicit stable issuer/audience/kid/Ed25519 keys and signs that issuer; only the
+candidate-specific loader mandates fresh `urn:<candidate_id>:core/pm` identities.
+Use the existing `createControlApiApp(...,dependencies)` /
+`ControlApiDependencies.executionAccessTrust` injection and
+`withExistingIdentityMapping(base,client)`; no new factory or candidate-loader
+relaxation is required. Missing independently accepted stable identity and
+installed policy/source pins remain commissioning inputs, not unfinished
+stable-issuer cryptography. Review also found that the generic base
+`AccessTrustProvider` is still an interface/default denial, NOT a concrete
+current-relations producer. Ordinary manager reads need current TS membership
+tuple/relations matching already accepted Core grants; mapping alone supplies
+none of that. Distinguish this remaining producer/binding implementation from
+external accepted configuration. Trace actual PM membership/source semantics
+before choosing a concrete adapter; never infer membership from historical Core
+receipts, static config or TEST_ONLY values. An unqualified base remains denied
+even when its mapping callback is real. Review did not query actual DB
+identity/grant rows and does not assert they are absent.
+
+**Concrete relations contract gap / decision boundary05:06UTC:** independent
+PM and Research source traces agree: `MembershipRepository` publishes native
+membership heads by portfolio/environment and command receipts by command;
+Research `relations(user,workspace)` expects ONE current
+`{revision,receipt_id,mapping_revision}` across that principal's grants, with
+no resource/environment argument. No current authenticated relation endpoint or
+canonical native→Core normalization is present. Accepted workload scopes do not
+attest a ROOT descendant universe. `_snapshot` also takes policy `FOR UPDATE`;
+do not transplant it into a SELECT-only/read-only producer unchanged.
+
+This is **remaining PM/Research producer contract/implementation**, not merely
+an external config file, another generic approval gate or finished08 work.
+Before coding its adapter, freeze in this original08: which independently
+accepted native receipt/revision(s) correlate with Core grants; multi-scope/
+environment behavior and revoke/renewal/expiry invalidation; authoritative
+finite ROOT/resource/owner/member projection and coverage; linkage to current
+accepted workload/application/r1 field scopes. PM owns the source meaning,
+Research owns Core grant normalization; Edge consumes their jointly agreed
+versioned read contract. Do not choose 'latest receipt', hash a synthetic
+workspace acceptance, use historical Core receipt as current TS fact, invent
+root completeness, or silently reduce all-business-read to one portfolio.
+No new ledger/table or permission-model migration is authorized by an identity
+lookup. The runnable mapping source/client/tests/commit/cleanup are completed
+independently; the next producer slice is this exact semantic freeze then its
+thin authenticated source/client. Actual Edge binding/drills follow only actual
+compatible providers/accepted inputs. Keep connected09 stopped; do not request
+the same overall phase approval again or mark the missing producer DONE.
+
+**Recommended producer contract resolution (not accepted authority):** preserve
+native per-resource/environment membership lineage and receipt identities;
+qualify each Core grant against its corresponding current native receipt rather
+than collapsing multiple receipts into a synthetic principal-wide acceptance.
+Keep existing policy/grant/identity stores; a versioned private read projection
+may return finite observed proof sets with explicit source coverage/currentness,
+but those sets are observations, not new grants or a new acceptance ledger.
+Research's internal single-tuple assumption needs an explicit compatible
+per-grant normalization decision jointly with PM before that producer can ship.
+ROOT descendants must come from a qualified finite native resource universe;
+missing coverage denies that dynamic selector, never grants a wildcard or
+silently narrows the promised all-business preset. Test unaffected-scope access
+alongside revoke/expiry; invalidating every remaining grant is not success.
+This is the concrete next original08 producer task, before actual Edge binding;
+identity lookup source qualification alone cannot discharge it.
+
+**Actual normal-hook retry05:04:23UTC:**7r78hfz0 reached the contract suite but
+the unchanged verifier's sudo re-exec discards TMPDIR/CONTROL_API_TEST_*;
+its real contracts cell therefore has an ordinary `/tmp/tmp.*` owner label,
+not our caller-private mount. Off-repo monitor wrongly stopped it, receipt
+`9c270fdaf1e5aa5e21eb40dd7b5b6a40c23727d899058887d716549f846919e9`;
+keep NOT_PASS and initial incomplete group-cleanup observation. Later `ps`
+confirms old group1768624 absent; new normal hook proves exact N17A namespace
+empty before starting, never cleans an unknown resource. Correct only monitor
+attribution via active pinned helper in own process group plus exact owner label/
+workspace mount (contracts) or helper-PID-derived name AND internal network
+(Control API); keep actual image/CPU/memory/runtime/index/lease checks.
+Normal hook unchanged; current targetymw74flm, explicit2400s window.
+Full TypeScript build now passes, serial complete Control API suite running;
+no full result or commit until terminal verification. Read-only05:08:08UTC
+comparison confirms all18protected HK runtime tuples exactly match accepted
+TLS-repair baseline, all running; no whole-host TS/DL unchanged claim.
+
+**Actual selected-source catalogue check05:14UTC:** use only the existing
+Manager-v2 Paper runtime's mounted `/run/secrets/facade-db.dsn`, never a guessed
+new DB or exposed credential. One asyncpg connection (3s connect,2s statement,
+READ ONLY transaction,2s close) queries only pg_class/pg_namespace/SELECT
+privilege metadata for exact `public.ts_users`, PM membership policy/heads/
+revisions/receipts and accepted-current heads/acceptances. Returns **zero
+matching relations**. No user/grant/business rows read, no schema/data change,
+service restart/new container or source authority claim. This proves that this
+currently configured Manager read target does not contain those new PM identity/
+authority relations; it does NOT prove all TS DBs lack identities or that this
+legacy Manager target is the approved PM commissioning target. The current
+runtime cannot be silently repurposed as the new provider. PM/TS must identify
+the genuine current-authority DB target/schema/installation and return its
+qualified source readback; do not apply optional migrations, bootstrap users/
+grants or switch the running Manager DB under this read-only metadata check.
+
+**Owner clarification / onboarding intake:** Bobby says the three principals
+may need new identities (Bobby, Stan, Thanhvuong), not that a qualified existing
+manifest is available. First perform bounded read-only existence checks against
+the existing Portal identity store to avoid duplicate users; names are discovery
+hints only, never enforcement keys or authority. No password/session/token
+material queried, no account/grant creation, reactivation, schema/role change or
+new default right. Preserve all-business Bobby/Stan versus approved linked-r1
+Thanhvuong semantics independently from command/admin/delegation privileges.
+Any actual TS onboarding must use verified stable Portal IDs and the correct
+commissioned target/issuer, not synthetic fixture identities or the legacy
+Manager target simply because it is accessible.
+
+**Onboarding existence check executed:** existing SGP canonical
+`portal-control-api-1` DATABASE_URL is consumed privately by its existing pg
+client, one3s-connect/2s-query READ ONLY transaction then ROLLBACK/close. Inspect
+only known identity column names, then at most7exact username/display candidates
+for Bobby/Stan/Thanhvuong; no password/session/token/grant material read.
+All3already exist: bobby ACTIVE/no forced password change, thanhvuong ACTIVE/no
+forced password change, stan INVITED/forced password change; none archived.
+These are actual observed Portal rows, **not** confirmed TS mappings, user-name
+authorization, live session proof or accepted business grants. Do not create
+duplicate Portal users or force Stan ACTIVE; use existing invitation/auth flow.
+Only stable-ID hashes are retained in bounded public receipt. Actual TS mapping
+still requires the correct accepted issuer/target and source onboarding; the
+caller-supplied names, configured role and this discovery do not grant rights.
+
+**Next producer slice acceptance, still original08:** before mounting, exercise
+actual native receipt/head/source readback for two independent scopes and each
+enabled environment; wrong receipt/mapping/app/field/workload revision denies.
+Revoke/expire/renew one native grant and verify its existing Core grant/cursor/
+cache/stream becomes unusable while the independent scope remains permitted.
+Prove authoritative bounded ROOT expansion or return unavailable for that
+selector; overflow/incomplete census never becomes a truncated all-read grant.
+TLS/pin/timeout/byte/admission/installation-expiry and absent target/schema must
+deny without metadata/secret leakage; mutation verifiers remain denied in the
+read-only installation. Use real commissioned source/identity for actual08
+measurement, retain TEST_ONLY provenance for isolated fixtures. These are the
+exact exit cases for the remaining concrete producer, not results already run.
+
+**Terminal Research landing05:28:24UTC:** normal `git commit` with configured
+hooks exits0 and lands exactly three paths in
+`8ba33de3cf2cb91a4d58bf7421c6b7b4fc5ce462`, Bobby author/committer, no push/merge.
+Contracts63files/691PASS/0FAIL/SKIP. Control API331passed files+2skipped;
+4463PASS/0FAIL/3SKIP, including86mapping cases. The three skipped cases belong
+to research-full04-read-models, research-w3-real-dr and research-sampler-real-
+source; no real-DR/provider claim from their absence. Locked install/source
+TypeScript build, normal legacy isolated PITR gates and final PostgreSQL restore
+(including four scoped-access row digests) complete. Do not add overlapping
+103focus or61PM tests into a purported unique full-suite count. Existing legacy
+PITR/nginx cells lack cgroup bounds; this is correctness, not capacity evidence.
+
+The separate source-integrity supervisor retains **NOT_PASS /
+OWNED_JOURNAL_OR_WORKING_SOURCE_DRIFT**, receipt
+`fb287e2dd9d259086ee049ede7e9a86507387f562fa504a023605b552f67a601`;
+bounded complete hook log183642B SHA
+`d84cf71e12b3c9fc05585956acad7e0611ab45a3c5ebedf43c0e85b3c2d2e564`.
+Read-only terminal follow-up identifies exactly two concurrent peer source
+changes: current-human-recovery-client.ts and new elp210-recovery-failure-
+boundaries.spec.ts. Both own committed and working mapper/test match focus pins
+a9e0355c…/00f55371…; committed journal matches stagedd404b8e9…, and the exact
+76-line append SHAaadf27e7… occurs once unchanged. Peer commissioning markdown
+also changed separately. Preserve all peer WIP and the original NOT_PASS receipt;
+no retry/fake PASS to certify a whole immutable branch. Scope-qualified mapping
+source and normal hook results are recorded separately from that failed guard.
+No hook bypass, normal test assertion change, deploy or runtime authority follows.
+
+**Post-terminal cleanup/runtime/C4 decision05:31UTC:** all five exact own normal-
+hook containers absent, owned process group empty, own lease removed, private
+tmp children empty. Four earlier finished source copies49,616,770logical bytes
+removed; cleanup receipt
+`9d6b142e442b14735a846c9a69cd48e5c1c75e082426cb0dcd0a910086bd04e6`.
+Free before/after167330922496→167385882624B is shared observational disk delta.
+Normal hook performed cached build activity; SGP328images/88.82GB and3774cache/
+195.9GB before and after, free167257726976B at final inventory. Shared mutable
+offline nginx tag now points to120a1876… created2026-08-24; do not treat the tag
+as immutable or claim a new phase image/zero BuildKit activity. Active PM
+restricted-r1 correctness window05:28:44→05:33:44 owns subsequent cells/lease.
+HK foreign writer lock remains until07:59:01; inventory103images/31.18GB,
+387cache/30.05GB, free228872212480B. Root created no local container/build/job.
+No shared prune during either active peer operation; any shared-cache maintenance
+is a named owner quiet-window action after retention proof, not phase garbage
+collection. Retain active/explicit rollback images, private valid08PKI and all
+active worktrees; no operational/evidence container, volume, release, network,
+source or peer resource removed. Private bounded diagnostics/recipes retained.
+
+Fresh protected18HK tuples exactly match accepted TLS baseline and8SGP tuples
+match pre-hook, all running, same IDs/images/config/start/restarts. Canonical
+Portal source remains `/home/bobby/.worktrees/portal-execution-manager-v2`,
+`feat/manager-v2-paper-read@54c6f5f3`; active owned feature is
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`,
+`feat/execution-edge-upgrade-v1_2`, baseline20dc3f94 plus this journal commit.
+All7active Portal worktrees remain as inventoried in§23.20.3; no creation/switch/
+removal. Stable local `/home/bobby/portal-main-release main@53316263`;
+HK release `/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`,
+SGP `/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose`.
+Edge image `sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e`,
+runtime source8814cd2a, Paper config6180b9bf…; SGP canonical Control API image
+8400439b…/config963a3d84…. Source commits are NOT those deployed revisions.
+Retain named TS rollbackr599150385e…/r49b4e7a6c0… and valid private08PKI
+renewal-epg10-08-64qjgx59; no replacement or restart. PM remains66743c88 with
+peer restricted-r1 WIP; TSnext e21f6edd/native-publication13f21d53 and
+DLmain5bf5cd54 remain separate authority pins, no edits/acceptance by this slice.
+
+**Recorded status / decision / next permitted work:** mapping source committed
+and qualified only; **full08 NOT_MET, connected09 NOT_STARTED**. The owner
+clarification does not require duplicate Portal accounts or manual secret
+submission. Genuine TS onboarding depends on the correct accepted issuer/DB
+target and native-to-Core grant semantics, not the accessible legacy Manager DB.
+Next is the already approved original08 producer contract resolution described
+above, then its actual authenticated relations source/client and commissioning;
+Edge binds/drills once those precise inputs exist. This is unfinished cross-
+producer implementation, not an 'all work complete, only environment' claim.
+Do not request blanket approval again, invent acceptance, widen business rights
+or proceed to connected09. r1 and command scopes retain their separate source/
+COMMIT gates; all-business read does not wait on the whole PM/native roadmap.
+No data/user/secret/grant mutation, financial effect or operational restart.
+
+**Metadata/landing check:** three JSON receipts have unique keys and stay below
+64KiB (wire4216B, producer14447B, historical intake8704B); PM source/listener
+pins match and607local Markdown file references resolve/zero missing. Scope
+checks confirm no actual08/connected09/mutation claim; unrelated untracked
+score-review hash109659d2… unchanged/excluded. These are metadata checks, not
+new product/security/performance tests. Commit exactly seven owned tracking/
+contract/evidence files with Bobby identity on the existing feature branch;
+normal configured Git behavior, no hook bypass/push/merge/runtime operation.
 
 
 

@@ -1,5 +1,7 @@
 {
   "schema": "epg10.current-provider-commissioning-intake.v1",
+  "current_state_ref": "producer-qualification.json",
+  "historical_snapshot": "The original03:24UTC intake below is retained. Later producer implementation/qualification supersedes only the progress claims via current_state_ref, not actual runtime acceptance.",
   "observed_utc": "2026-10-17T03:24:34Z",
   "provenance": "READ_ONLY_SOURCE_AND_RUNTIME_METADATA_NOT_CONNECTED_AUTHORITY_ACCEPTANCE",
   "status": "ACTUAL_PROVIDER_IMPLEMENTATION_REQUIRED",
