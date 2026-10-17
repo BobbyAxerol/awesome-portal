@@ -138,3 +138,15 @@ NONE, deployed evidence pending and command/Live authority unchanged.
 T04-11 physical applicable coalescer proof are delivered by the normal-hook
 commit containing this packet. Full04 remains NOT_MET_SOURCE_PARENT_CONSUMER;
 Claude remains NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW.
+
+### Terminal normal-hook receipt — 2026-10-17
+
+Landed `68923d2912b2fa58db2789e10f559a17cf600817`:38files,+2058/−50.
+Normal hook exit0,64contract files/698PASS,336API files/4616PASS+3existing
+skips, APIbuild/scopedPGrestore/four row digests PASS. Controller terminal
+07:21:12UTC at `/home/bobby/.local/state/portal-execution-elp210/20261017/readers-land-065637/controller.json`;
+log SHA256 `9d5dc774fdf1ae2cdc0bcb49af0467fc057a6557269a4d586d513342a3619c61`.
+Source unchanged through gate; eight runtime image/start/restart tuples
+unchanged; remaining owned resources empty. No source/runtime/FE/push/deploy.
+This terminal addendum supersedes pending-hook wording above only; it does not
+close other parents/aliases or genuine source/consumer qualification.

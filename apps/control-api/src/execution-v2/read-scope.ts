@@ -82,6 +82,22 @@ export function scopeAllowsField(scope:AuthorizedExecutionReadScope,field:string
 /** Hidden values must not become a filter, sort, group or ranking oracle. */
 export const scopeAllowsQueryField = scopeAllowsField;
 
+/** Full economic accounting is independent of a researcher field whitelist.
+ * Evaluate the unfiltered source census; seeing every currently visible row is
+ * not proof that hidden peer allocations do not exist. Delivery still rechecks
+ * the minted current authority after all asynchronous work. */
+export function scopeAllowsFullAccountingPopulation(scope:AuthorizedExecutionReadScope,portfolioId?:string):boolean {
+  assertExecutionReadScope(scope);const state=minted.get(scope)!;
+  if(scope.mode!=="SCOPED_V2"||!state.context||!state.requirement.dataset||!businessReads.has(state.requirement.action))return false;
+  const full=(resource:AccessResource)=>!businessReadDenied(state.context!,resource,scope.environment)&&
+    evaluateBusinessRead(state.context!,"business.read_all",resource,scope.environment).allowed;
+  const population=state.population.filter(t=>portfolioId===undefined||t.portfolio_id===portfolioId);
+  if(!population.length)return portfolioId===undefined?scope.wholePopulation:
+    state.resources.some(r=>r.kind==="PORTFOLIO"&&r.id===portfolioId)&&full({kind:"PORTFOLIO",id:portfolioId});
+  const visible=new Set(state.tuples.map(t=>JSON.stringify(t)));
+  return population.every(t=>visible.has(JSON.stringify(t))&&tupleLineage(t).every(full));
+}
+
 /** Stable *authorization* identity for a named replay query. Unlike the page
  * fingerprint it excludes a document's changing source revision. It retains
  * current visible tuples, fields, actor/session, policy, lineage and generation;

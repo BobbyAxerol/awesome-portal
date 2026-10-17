@@ -1,0 +1,92 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "slot": "COMPOSITION",
+    "result": {
+      "value": "80",
+      "status": "available",
+      "reason_codes": [],
+      "band_code": "good",
+      "weight_basis": "allocated_economic_capital",
+      "allocation_snapshot_id": "TEST_ONLY:allocation",
+      "total_allocated_capital": "80",
+      "score_coverage_allocated": "1",
+      "unscored_allocated_weight": "0",
+      "provisional_allocated_weight": "0",
+      "mature_allocated_weight": "1",
+      "allocation_coverage_nav": "0.8",
+      "scored_nav_weight": "0.8",
+      "idle_cash_weight": "0.2",
+      "nav_coverage_reason": null,
+      "bounds": null,
+      "contributions": [
+        {
+          "subject_id": "TEST_ONLY:alpha-a",
+          "allocation_weight": "0.75",
+          "value": "67.5",
+          "band_code": null
+        },
+        {
+          "subject_id": "TEST_ONLY:alpha-b",
+          "allocation_weight": "0.25",
+          "value": "12.5",
+          "band_code": null
+        }
+      ],
+      "diagnostics": {
+        "allocation_hhi": null,
+        "score_contribution_hhi": null,
+        "score_dispersion": "17.320508075689",
+        "reason_codes": [
+          "GROUPING_NOT_APPROVED"
+        ]
+      }
+    },
+    "provenance": {
+      "scope": {
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "profile_id": "TEST_ONLY:paper",
+        "catalogue_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "binding": {
+        "subject_type": "portfolio",
+        "subject_id": "TEST_ONLY:portfolio",
+        "tuple_population_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "partition_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "stage_filter": [
+          "PAPER"
+        ],
+        "window_start_ms": 0,
+        "window_end_ms": 1000,
+        "comparable_basis_id": "TEST_ONLY:basis",
+        "individual_evidence_binding_id": "TEST_ONLY:ledger"
+      },
+      "source_revision": "TEST_ONLY:source-r1",
+      "source_set_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "source_as_of_ms": 1000,
+      "source_qualification": "SOURCE_VERIFIED",
+      "input_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "calculation_revision": "TEST_ONLY:calculation",
+      "computed_at_ms": 1100,
+      "allocation_artifact_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "allocation_revision": "TEST_ONLY:allocation-r1",
+      "ownership_manifest_ref": "TEST_ONLY:ownership",
+      "full_accounting_manifest_ref": "TEST_ONLY:accounting",
+      "allocation_effective_at_ms": 1000,
+      "approval_ref": "TEST_ONLY:approval",
+      "approved_at_ms": 900,
+      "valid_until_ms": 2000,
+      "raw_score_refs": [
+        {
+          "subject_id": "TEST_ONLY:alpha-a",
+          "publication_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "subject_id": "TEST_ONLY:alpha-b",
+          "publication_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ]
+    }
+  }
+}

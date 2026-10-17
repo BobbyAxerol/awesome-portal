@@ -11015,6 +11015,20 @@ packet-containing commit can land only on exit0. Exact source/runtime/cleanup
 receipt is linked in that packet. Claude NOT_STARTED_BY_OWNER_DIRECTION / AWAITING_CONSUMER_REVIEW;
 backend continues independently within the assigned02–11 scope.
 
+Reader batch terminal: `68923d2912b2fa58db2789e10f559a17cf600817`,38files,
++2058/−50; normal hook698contracts/4616API PASS+3existing skips, build/PGrestore
+PASS. [Exact log/controller/cleanup](execution_loop/evidence/ELP2-04/positive-readers.md#terminal-normal-hook-receipt--2026-10-17).
+Runtime unchanged;04 full source/parents/consumer exit remains open.
+
+Current06 work is the [Composition publication chain](execution_loop/evidence/ELP2-06/composition-publication.md):
+separate byte-pinned full-accounting input/result, bounded existing worker and
+immutable storage, Fund/Portfolio precomputed API with current-grant/final-await
+fences; no request-side aggregate or researcher subset denominator. Applied code
+and tests are WORKING_TREE_PENDING_GATE, not a runtime PASS. Independent source
+review ACCEPT; focused integration/normal-hook pending. Regime public chain,
+genuine source/config, policy-only recompute and full06-002 remain open; FE is
+NOT_STARTED_BY_OWNER_DIRECTION / AWAITING_CONSUMER_REVIEW.
+
 Backend next06 follow-through is **Composition input→bounded off-request
 materializer→immutable publication→current-fenced API**, then Regime loader/
 materialization. Independent review confirms this is actual missing code, not
@@ -11025,4 +11039,9 @@ or source JSON `verified:true` as authority. Regime still needs independently
 pinned causal/reference/archive/binding inputs. Genuine source/config/issuer/
 budget/G2 and frontend acceptance stay open in the canonical census; no release,
 dev/main merge, source command, frontend assignment or runtime activation.
+
+Composition focused gate now301/301PASS/build/PGrestore (23new cases included,
+not added twice); exact[receipt and consumer mapping](execution_loop/evidence/ELP2-06/composition-publication.md#focused-gate-terminal--2026-10-17-1432asiasaigon).
+Source bytes/runtime stable and own cells/network cleaned. One normal-hook
+commit is pending; Regime chain remains implementation work, not config-only.
 

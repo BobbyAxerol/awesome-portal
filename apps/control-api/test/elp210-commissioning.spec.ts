@@ -15,16 +15,22 @@ import { loadPublicationCommissioning, qualifyDatasetPublication, withCatalogueP
 import { EXECUTION_PUBLICATION_CATALOGUE } from "../src/execution-v2/publication-source.generated";
 import { ManagerScoreRuntime, loadApprovedManagerScorePolicy, managerScorePolicyHash, managerScorePublicationCurrent, managerScorePublicationPolicyCurrent,
   type ManagerScoreRuntimePolicyArtifact, type ManagerScoreRuntimeTask } from "../src/execution-v2/manager-score-runtime";
-import { managerScorePublication } from "../src/execution-v2/manager-score-publication.contract";
+import { managerScorePublication, type ManagerScorePublication } from "../src/execution-v2/manager-score-publication.contract";
 import { managerScorePopulationDigest } from "../src/execution-v2/manager-score-publication";
 import { ManagerModelRepository } from "../src/execution-v2/manager-model.store";
 import type { ManagerModelDocument } from "../src/execution-v2/manager-model.contract";
 import type { DatasetPublication } from "../src/execution-v2/publication.contract";
 import { queryManagerModel } from "../src/execution-v2/manager-model";
 import { ManagerModelService } from "../src/execution-v2/manager-model.service";
+import { ManagerModelController } from "../src/execution-v2/manager-model.controller";
+import { ManagerCompositionRuntime, loadApprovedManagerAllocation, revokeApprovedManagerAllocation,
+  managerCompositionPublicationCurrent, managerCompositionPublicationForRead,
+  type ManagerAllocationArtifact, type ManagerAllocationApprovalPin,
+  type ManagerCompositionRuntimeTask } from "../src/execution-v2/manager-composition-runtime";
+import { managerCompositionPublication } from "../src/execution-v2/manager-composition-publication.contract";
 import { KeysetCursorCodec } from "../src/query/cursor";
 import { BUSINESS_READ_FIELDS } from "../src/execution-v2/read-fields";
-import { productReadFixture, OWN } from "./elp2-product-read.fixture";
+import { productReadFixture, OWN, PEER } from "./elp2-product-read.fixture";
 import { testConfig } from "./harness";
 
 const contracts=process.env.PORTAL_CONTRACTS_DIR??resolve(__dirname,"../../../packages/contracts");
@@ -82,6 +88,219 @@ function policy() {
   if(result.status!=="READY")throw new Error(JSON.stringify(result));return result.handle;
 }
 const scoreRuntime=()=>new ManagerScoreRuntime({maximum_observations:100,maximum_blocks:10,maximum_stress_subperiods:100,maximum_input_bytes:65536,maximum_in_flight:1});
+
+/** SYNTHETIC accounting, calibration and approval pins. Real calculators/worker/
+ * PostgreSQL are exercised; this is not a TS/PM authority or HTTP/session receipt. */
+function compositionInput(missingPeer=false) {
+  const d=input(),first=d.document.members[0];
+  d.document.members=[{...first,name:"Synthetic Alpha A"},{...first,tuple:PEER,name:"Synthetic Alpha B",lifecycle:"ARCHIVED"}];
+  d.document.source_set_digest=accessDigest([OWN,PEER]);d.publication.authority.tuples=[OWN,PEER];
+  const partition={economic_domain:"PAPER" as const,currency:"USDT",basis:"SYNTHETIC:basis",
+    native_profile_ref:"SYNTHETIC:native",domain_proof_ref:"SYNTHETIC:domain"};
+  d.document.facts=d.document.members.flatMap((m,index)=>(["allocation","current_nav"] as const).map(kind=>({
+    fact_id:`SYNTHETIC:${kind}:${m.tuple.alpha_id}`,revision:"SYNTHETIC:fact-r1",source_receipt_ref:"SYNTHETIC:accounting-receipt",
+    tuple:m.tuple,partition,economic_account_ref:`SYNTHETIC:economic:${m.tuple.alpha_id}`,
+    ownership_partition_ref:`SYNTHETIC:ownership:${m.tuple.alpha_id}`,kind,classification:"ECONOMIC" as const,
+    transfer_pair_ref:null,counterpart_portfolio_id:null,effective_at_ms:d.document.as_of_ms,recorded_at_ms:d.document.as_of_ms,
+    metric:{value:index===0?"60":"20",unit:"MONEY",currency:"USDT",basis:partition.basis,window:null,
+      denominator:null,methodology_ref:"SYNTHETIC:accounting",availability:"AVAILABLE" as const,reason_code:null,
+      quality:{completeness:"COMPLETE" as const,freshness:"FRESH" as const,reasons:[]},source_confidence:"VERIFIED" as const,
+      provenance_refs:["SYNTHETIC:accounting-receipt"],calculation_revision:"SYNTHETIC:accounting-r1",policy_revision:"SYNTHETIC:accounting-policy"}})));
+  const metricSets=[
+    {net_excess_twr:"0.07",sharpe_period:"0.135",mdd:"0.01",add:"0.004",positive_block_ratio:"0.9",stress_excess_twr:"0.07"},
+    {net_excess_twr:"0.03",sharpe_period:missingPeer?null:"0.075",mdd:"0.05",add:"0.02",positive_block_ratio:"0.5",stress_excess_twr:"0.03"},
+    {net_excess_twr:"0.04",sharpe_period:"0.09",mdd:"0.04",add:"0.016",positive_block_ratio:"0.6",stress_excess_twr:"0.04"},
+  ];
+  const raw=d.document.members.map((m,index)=>{
+    const t=scoreTask(d.document);if(t.input.kind!=="METRICS")throw new Error("SYNTHETIC_FIXTURE_KIND");
+    t.binding={...t.binding,subject_id:m.tuple.alpha_id,tuple_population_digest:managerScorePopulationDigest([m]),partition_digest:accessDigest(partition)};
+    t.input.quality.metrics=metricSets[index];return {slot:"RAW" as const,task:t};
+  });
+  const binding={...raw[0].task.binding,subject_type:"portfolio" as const,subject_id:OWN.portfolio_id,
+    tuple_population_digest:managerScorePopulationDigest(d.document.members),individual_evidence_binding_id:"SYNTHETIC:portfolio-ledger"};
+  const direct=scoreTask(d.document);if(direct.input.kind!=="METRICS")throw new Error("SYNTHETIC_FIXTURE_KIND");
+  direct.binding=binding;direct.input.quality.individual_evidence_binding_id=binding.individual_evidence_binding_id;
+  direct.input.quality.metrics=metricSets[2];
+  const population=d.document.members.map(m=>({tuple:m.tuple,stage:m.stage}));
+  const artifact:ManagerAllocationArtifact={schema_version:"portal.execution.manager-allocation-approved.v1",
+    scope:{...scope,catalogue_digest:catalogue},binding,source_revision:d.document.revision,source_set_digest:d.document.source_set_digest,
+    source_as_of_ms:d.document.as_of_ms,source_qualification:"SOURCE_VERIFIED",allocation_snapshot_id:"SYNTHETIC:allocation-snapshot",
+    allocation_revision:"SYNTHETIC:allocation-r1",ownership_manifest_ref:"SYNTHETIC:ownership-manifest",
+    full_accounting_manifest_ref:"SYNTHETIC:full-accounting-manifest",effective_at_ms:d.document.as_of_ms,
+    currency:"USDT",maximum_source_age_ms:60_000,population,
+    rows:raw.map((r,index)=>({subject_id:r.task.binding.subject_id,allocated_economic_capital:index===0?"60":"20",
+      economic_ownership_ids:[`SYNTHETIC:ownership:${r.task.binding.subject_id}`],population:[population[index]],raw_binding:r.task.binding})),
+    grouping:null,nav_partition:{revision:"SYNTHETIC:nav-r1",manifest_ref:"SYNTHETIC:nav-manifest",as_of_ms:d.document.as_of_ms,
+      currency:"USDT",comparable_basis_id:binding.comparable_basis_id,nav:"100",idle_cash:"20",other_nav:"0",
+      rows:[{subject_id:OWN.alpha_id,current_nav_allocated_capital:"60"},{subject_id:PEER.alpha_id,current_nav_allocated_capital:"20"}]}};
+  const bytes=JSON.stringify(artifact),pin:ManagerAllocationApprovalPin={artifact_sha256:hash(bytes),scope:artifact.scope,
+    binding_digest:accessDigest(binding),source_revision:artifact.source_revision,source_set_digest:artifact.source_set_digest,
+    source_as_of_ms:artifact.source_as_of_ms,allocation_revision:artifact.allocation_revision,ownership_manifest_ref:artifact.ownership_manifest_ref,
+    full_accounting_manifest_ref:artifact.full_accounting_manifest_ref,approval_ref:"SYNTHETIC_NOT_OWNER_ALLOCATION_APPROVAL",
+    approved_at_ms:now-10_000,valid_until_ms:now+30_000,grouping_pin:null,
+    nav_pin:{artifact_digest:accessDigest(artifact.nav_partition),approval_ref:"SYNTHETIC_NOT_OWNER_NAV_APPROVAL",
+      approved_at_ms:now-10_000,valid_until_ms:now+30_000}};
+  const loaded=loadApprovedManagerAllocation({artifact_bytes:bytes,approval_pin:pin,scope:artifact.scope,as_of_ms:now});
+  if(loaded.status!=="READY")throw new Error(JSON.stringify(loaded));
+  const task:Omit<ManagerCompositionRuntimeTask,"allocation"|"raw_scores">={scope:artifact.scope,binding,
+    source_revision:artifact.source_revision,source_set_digest:artifact.source_set_digest,source_as_of_ms:artifact.source_as_of_ms,
+    source_qualification:"SOURCE_VERIFIED",calculation_revision:"SYNTHETIC:composition-calc-r1",computed_at_ms:now};
+  return {d,artifact,pin,handle:loaded.handle,task,scoreTasks:[...raw,{slot:"DIRECT_NAV" as const,task:direct}]};
+}
+function compositionInstallation(fx:ReturnType<typeof compositionInput>,acknowledge=async()=>{}) {
+  const state:{allocation:typeof fx.handle|null;policy:ReturnType<typeof policy>|null}={allocation:fx.handle,policy:policy()};
+  const scoreTasks=vi.fn(async()=>fx.scoreTasks),compositionTasks=vi.fn(async()=>[fx.task]);
+  const installation:ManagerRuntimeInstallation={trust:unqualifiedAccessTrust,cadence_ms:1000,maximum_publication_reads:1,
+    partitions:[{scope,commissioning:commissioning().handle,bounds,publication:async()=>fx.d.publication,
+      source:{read:async()=>structuredClone(fx.d),recheck:async()=>({}),acknowledge},
+      score:{runtime:scoreRuntime(),maximum_tasks_per_revision:3,currentPolicy:()=>state.policy,tasks:scoreTasks},
+      composition:{runtime:new ManagerCompositionRuntime({maximum_rows:10,maximum_input_bytes:65536,maximum_in_flight:1}),
+        maximum_tasks_per_revision:1,currentAllocation:()=>state.allocation,tasks:compositionTasks}}]};
+  return {installation,state,scoreTasks,compositionTasks};
+}
+function compositionReader(fx:ReturnType<typeof compositionInput>,full=true,fields=[...BUSINESS_READ_FIELDS] as string[]) {
+  const f=productReadFixture({full,fields}),original=f.access.readPublication.getMockImplementation()!;
+  f.access.readPublication.mockImplementation(async request=>{
+    const value=await original(request);return {...value,tuples:fx.d.document.members.map(m=>m.tuple),
+      current_linkage:{...value.current_linkage,pairs:fx.d.document.members.map(m=>({alpha_id:m.tuple.alpha_id,portfolio_id:m.tuple.portfolio_id}))}};
+  });return f;
+}
+function compositionCandidate(fx:ReturnType<typeof compositionInput>,artifact=structuredClone(fx.artifact)) {
+  const bytes=JSON.stringify(artifact),pin:ManagerAllocationApprovalPin={...structuredClone(fx.pin),artifact_sha256:hash(bytes),
+    scope:artifact.scope,binding_digest:accessDigest(artifact.binding),source_revision:artifact.source_revision,
+    source_set_digest:artifact.source_set_digest,source_as_of_ms:artifact.source_as_of_ms,allocation_revision:artifact.allocation_revision,
+    ownership_manifest_ref:artifact.ownership_manifest_ref,full_accounting_manifest_ref:artifact.full_accounting_manifest_ref,
+    grouping_pin:artifact.grouping===null?null:{artifact_digest:accessDigest(artifact.grouping),approval_ref:"SYNTHETIC_NOT_OWNER_GROUPING_APPROVAL",
+      approved_at_ms:now-10_000,valid_until_ms:fx.pin.valid_until_ms},
+    nav_pin:artifact.nav_partition===null?null:{artifact_digest:accessDigest(artifact.nav_partition),approval_ref:"SYNTHETIC_NOT_OWNER_NAV_APPROVAL",
+      approved_at_ms:now-10_000,valid_until_ms:fx.pin.valid_until_ms}};
+  const load=()=>loadApprovedManagerAllocation({artifact_bytes:bytes,approval_pin:pin,scope:artifact.scope,as_of_ms:now});
+  return {artifact,bytes,pin,load};
+}
+function requireCompositionAllocation(candidate:ReturnType<typeof compositionCandidate>) {
+  const result=candidate.load();if(result.status!=="READY")throw new Error(JSON.stringify(result));return result.handle;
+}
+const compositionRuntime=(clock?:()=>number)=>new ManagerCompositionRuntime({maximum_rows:10,maximum_input_bytes:65536,maximum_in_flight:1},clock);
+async function calculatedComposition(fx:ReturnType<typeof compositionInput>,allocation=fx.handle,clock?:()=>number) {
+  const handle=policy(),runtime=scoreRuntime();const raw:ManagerScorePublication[]=[];
+  for(const item of fx.scoreTasks){
+    const result=await runtime.calculate({...item.task,policy:handle}),{preview:_preview,...quality}=result.quality;
+    raw.push(managerScorePublication.parse({slot:item.slot,quality,raw_metrics:result.raw_metrics,provenance:result.provenance}));
+  }
+  const fence={accepts:(score:typeof raw[number])=>managerScorePublicationPolicyCurrent(handle,
+    {quality:{...score.quality,preview:null},provenance:score.provenance},clock?.()??now)};
+  const publication=await compositionRuntime(clock).calculate({...fx.task,allocation,raw_scores:raw},fence);
+  return {publication,raw,fence};
+}
+
+describe("ELP2-06 closed Composition loader/runtime boundaries — synthetic pins, not source qualification",()=>{
+  it("publishes verified empty full-accounting census as no_allocation, never zero quality",async()=>{
+    const fx=compositionInput(),artifact=structuredClone(fx.artifact);
+    artifact.population=[];artifact.rows=[];artifact.binding.tuple_population_digest=accessDigest([]);
+    artifact.source_set_digest=accessDigest([]);artifact.grouping=null;artifact.nav_partition=null;
+    const candidate=compositionCandidate(fx,artifact),allocation=requireCompositionAllocation(candidate);
+    const publication=await compositionRuntime().calculate({...fx.task,scope:artifact.scope,binding:artifact.binding,
+      source_set_digest:artifact.source_set_digest,allocation,raw_scores:[]},{accepts:()=>false});
+    expect(publication.result).toMatchObject({value:null,status:"no_allocation",total_allocated_capital:"0",
+      score_coverage_allocated:null,bounds:null,contributions:[]});
+    expect(managerCompositionPublication.safeParse(publication).success).toBe(true);
+  });
+  it("keeps explicit LIVE+CANARY selection when the full frozen census currently has only LIVE",async()=>{
+    const fx=compositionInput(),artifact=structuredClone(fx.artifact);
+    artifact.scope={...artifact.scope,environment:"live",profile_id:"LIVE_BINANCE_USDM"};
+    artifact.binding.stage_filter=["CANARY","LIVE"];artifact.binding.partition_digest=hash("SYNTHETIC:actual-partition");
+    for(const member of artifact.population)member.stage="LIVE";
+    for(const row of artifact.rows){for(const member of row.population)member.stage="LIVE";
+      row.raw_binding.stage_filter=["CANARY","LIVE"];row.raw_binding.partition_digest=artifact.binding.partition_digest;}
+    const allocation=requireCompositionAllocation(compositionCandidate(fx,artifact));
+    const publication=await compositionRuntime().calculate({...fx.task,scope:artifact.scope,binding:artifact.binding,
+      allocation,raw_scores:[]},{accepts:()=>false});
+    expect(publication.provenance.binding.stage_filter).toEqual(["CANARY","LIVE"]);
+    expect(publication.result).toMatchObject({value:null,status:"partial_coverage",total_allocated_capital:"80",
+      score_coverage_allocated:"0",bounds:{lower:"0",upper:"100"}});
+  });
+  it.each(["zero","missing"] as const)("preserves exact %s q semantics through the canonical calculator",async state=>{
+    const fx=compositionInput(state==="missing");
+    if(state==="zero")for(const item of fx.scoreTasks.filter(item=>item.slot==="RAW")){
+      if(item.task.input.kind!=="METRICS")throw new Error("SYNTHETIC_FIXTURE_KIND");
+      item.task.input.quality.metrics={net_excess_twr:"-0.02",sharpe_period:"0",mdd:"0.1",add:"0.04",positive_block_ratio:"0",stress_excess_twr:"-0.02"};
+    }
+    const {publication,raw,fence}=await calculatedComposition(fx);
+    expect(publication.result).toMatchObject(state==="zero"?{value:"0",status:"available",score_coverage_allocated:"1"}:
+      {value:null,status:"partial_coverage",score_coverage_allocated:"0.75",bounds:{lower:"67.5",upper:"92.5"}});
+    expect(publication.provenance.raw_score_refs).toHaveLength(state==="zero"?2:1);
+    expect(managerCompositionPublicationCurrent(fx.handle,publication,raw,fence,now)).toBe(true);
+  });
+  it("rejects status/capital/credit contradictions publicly and a substituted raw digest at the current-proof boundary",async()=>{
+    const fx=compositionInput(),{publication,raw,fence}=await calculatedComposition(fx);
+    for(const mutate of [
+      (p:typeof publication)=>{p.result.total_allocated_capital="0";},
+      (p:typeof publication)=>{p.result.score_coverage_allocated="0.75";},
+      (p:typeof publication)=>{p.result.status="no_allocation";},
+      (p:typeof publication)=>{p.result.contributions[0].value=null;},
+      (p:typeof publication)=>{p.provenance.raw_score_refs=[];},
+    ]){const contradictory=structuredClone(publication);mutate(contradictory);
+      expect(managerCompositionPublication.safeParse(contradictory).success).toBe(false);}
+    const substituted=structuredClone(publication);substituted.provenance.raw_score_refs[0].publication_digest=hash("SYNTHETIC:wrong-raw-publication");
+    // A digest with the right wire shape is not proof that it references the current RAW calculation.
+    expect(managerCompositionPublication.safeParse(substituted).success).toBe(true);
+    expect(managerCompositionPublicationCurrent(fx.handle,substituted,raw,fence,now)).toBe(false);
+  });
+  it.each(["absent","expired"] as const)("keeps assigned A when independent grouping/NAV approval is %s",async state=>{
+    const fx=compositionInput(),artifact=structuredClone(fx.artifact);
+    if(state==="absent"){artifact.grouping=null;artifact.nav_partition=null;}
+    else artifact.grouping={revision:"SYNTHETIC:groups-r1",manifest_ref:"SYNTHETIC:groups",effective_at_ms:artifact.source_as_of_ms,
+      rows:artifact.rows.map(row=>({subject_id:row.subject_id,concentration_group_id:`SYNTHETIC:group:${row.subject_id}`}))};
+    const candidate=compositionCandidate(fx,artifact);
+    if(state==="expired"){candidate.pin.grouping_pin!.valid_until_ms=now-1;candidate.pin.nav_pin!.valid_until_ms=now-1;}
+    const allocation=requireCompositionAllocation(candidate),{publication,raw,fence}=await calculatedComposition(fx,allocation);
+    expect(publication.result).toMatchObject({value:"80",status:"available",allocation_coverage_nav:null,scored_nav_weight:null,
+      idle_cash_weight:null,nav_coverage_reason:"BASIS_MISMATCH",diagnostics:{allocation_hhi:null,score_contribution_hhi:null}});
+    expect(publication.provenance.valid_until_ms).toBe(fx.pin.valid_until_ms);
+    if(state==="expired")expect(publication.result.diagnostics.reason_codes).toContain("GROUPING_APPROVAL_NOT_CURRENT");
+    expect(managerCompositionPublicationCurrent(allocation,publication,raw,fence,now)).toBe(true);
+  });
+  it("does not mistake assigned capital above current NAV for overlapping allocation or renormalize A",async()=>{
+    const fx=compositionInput(),artifact=structuredClone(fx.artifact);
+    artifact.nav_partition={...artifact.nav_partition!,nav:"70",idle_cash:"0",rows:[
+      {subject_id:OWN.alpha_id,current_nav_allocated_capital:"52.5"},{subject_id:PEER.alpha_id,current_nav_allocated_capital:"17.5"}]};
+    const allocation=requireCompositionAllocation(compositionCandidate(fx,artifact)),{publication}=await calculatedComposition(fx,allocation);
+    expect(publication.result).toMatchObject({value:"80",status:"available",total_allocated_capital:"80",
+      allocation_coverage_nav:null,scored_nav_weight:null,idle_cash_weight:null,nav_coverage_reason:"BASIS_MISMATCH"});
+    expect(publication.result.reason_codes).not.toContain("ALLOCATION_RECONCILIATION_FAILED");
+  });
+  it("projects only expired auxiliaries away between calculation/read while preserving A and its immutable receipt",async()=>{
+    const fx=compositionInput(),artifact=structuredClone(fx.artifact);let clock=now;
+    artifact.grouping={revision:"SYNTHETIC:groups-r1",manifest_ref:"SYNTHETIC:groups",effective_at_ms:artifact.source_as_of_ms,
+      rows:artifact.rows.map(row=>({subject_id:row.subject_id,concentration_group_id:`SYNTHETIC:group:${row.subject_id}`}))};
+    const candidate=compositionCandidate(fx,artifact);candidate.pin.grouping_pin!.valid_until_ms=now+1000;candidate.pin.nav_pin!.valid_until_ms=now+1000;
+    const allocation=requireCompositionAllocation(candidate),{publication,raw,fence}=await calculatedComposition(fx,allocation,()=>clock);
+    expect(publication.result.diagnostics.allocation_hhi).toBe("0.625");expect(publication.result.allocation_coverage_nav).toBe("0.8");
+    const immutable=structuredClone(publication);clock=now+1001;
+    const projected=managerCompositionPublicationForRead(allocation,publication,raw,fence,clock);
+    expect(projected).not.toBeNull();expect(projected!.result).toMatchObject({value:"80",status:"available",allocation_coverage_nav:null,
+      scored_nav_weight:null,idle_cash_weight:null,diagnostics:{allocation_hhi:null,score_contribution_hhi:null}});
+    expect(projected!.provenance).toEqual(publication.provenance);expect(publication).toEqual(immutable);
+    expect(managerCompositionPublicationCurrent(allocation,publication,raw,fence,clock)).toBe(false);
+    expect(managerCompositionPublicationCurrent(allocation,projected,raw,fence,clock)).toBe(true);
+  });
+  it("checks main approval expiry after the calculation yield using its trusted clock, not caller computed_at",async()=>{
+    const fx=compositionInput();let clock=now;
+    const {raw,fence}=await calculatedComposition(fx,fx.handle,()=>clock),runtime=compositionRuntime(()=>clock);
+    const flight=runtime.calculate({...fx.task,allocation:fx.handle,raw_scores:raw},fence);
+    clock=fx.pin.valid_until_ms;
+    await expect(flight).rejects.toMatchObject({code:"COMPOSITION_ALLOCATION_NOT_CURRENT"});
+  });
+  it("requires a real identity-branded handle, exact approved bytes and disjoint economic ownership",async()=>{
+    const fx=compositionInput(),candidate=compositionCandidate(fx);
+    expect(loadApprovedManagerAllocation({artifact_bytes:candidate.bytes+"\n",approval_pin:candidate.pin,scope:candidate.artifact.scope,as_of_ms:now}))
+      .toEqual({status:"NOT_PUBLISHED",reason_codes:["ALLOCATION_ARTIFACT_HASH_MISMATCH"]});
+    const duplicate=structuredClone(fx.artifact);duplicate.rows[1].economic_ownership_ids=[...duplicate.rows[0].economic_ownership_ids];
+    expect(compositionCandidate(fx,duplicate).load()).toEqual({status:"NOT_PUBLISHED",reason_codes:["ALLOCATION_OWNERSHIP_OVERLAP"]});
+    await expect(compositionRuntime().calculate({...fx.task,allocation:Object.freeze({}) as typeof fx.handle,raw_scores:[]},{accepts:()=>false}))
+      .rejects.toMatchObject({code:"COMPOSITION_ALLOCATION_NOT_APPROVED"});
+  });
+});
 
 describe("ELP2-10 private commissioning and real registered constructors (synthetic pins)",()=>{
   it("registers a zero-I/O fail-closed runtime in the actual AppModule",async()=>{
@@ -226,6 +445,116 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-10 installed worker/Score/
   beforeEach(async()=>{for(const r of runtimes.splice(0))await r.beforeApplicationShutdown();await pool.query("TRUNCATE execution_manager_model_heads,execution_manager_model_revisions,execution_manager_consumer_fences");});
   afterAll(async()=>{for(const r of runtimes.splice(0))await r.beforeApplicationShutdown();await pool?.end();const admin=new Pool({connectionString:url("postgres"),max:1});
     try{if(!/^elp210_commission_[a-f0-9]{32}$/.test(name))throw new Error("DB_NAME");await admin.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);}finally{await admin.end();}},60000);
+  it("materializes Composition plus raw/direct Score, persists PG and serves the existing Manager controller/query",async()=>{
+    const fx=compositionInput(),installed=compositionInstallation(fx),runtime=new ExecutionManagerRuntime(pool,installed.installation);runtimes.push(runtime);
+    await runtime.tick();expect(runtime.status().state).toBe("TICK_OK");
+    const doc=await new ManagerModelRepository(pool).document(scope.workspace_id,scope.environment,scope.profile_id,fx.d.document.revision);
+    expect(doc!.precomputed_scores).toHaveLength(3);expect(doc!.precomputed_compositions).toHaveLength(1);
+    expect(doc!.precomputed_compositions![0].result).toMatchObject({value:"80",status:"available",total_allocated_capital:"80",
+      score_coverage_allocated:"1",allocation_coverage_nav:"0.8",idle_cash_weight:"0.2"});
+    expect(runtime.compositionFence.accepts(doc!.precomputed_compositions![0],doc!.precomputed_scores!)).toBe(true);
+    const f=compositionReader(fx),service=new ManagerModelService(pool,f.scopes,f.config,runtime);
+    const workspaces={canReadExecution:vi.fn(async()=>true)} as unknown as ConstructorParameters<typeof ManagerModelController>[1];
+    const controller=new ManagerModelController(service,workspaces);
+    const request={portalUser:f.principal.user,portalSession:f.principal.session,portalWorkspaceId:scope.workspace_id} as Parameters<ManagerModelController["portfolio"]>[0];
+    const result=await controller.portfolio(request,{workspace_id:scope.workspace_id,environment:"paper",limit:"1"},OWN.portfolio_id);
+    expect(result.scores.composition).toEqual({value:"80",status:"available"});
+    expect(result.scores.direct_nav).toEqual({value:"60",status:"available"});
+    expect(result.composition_details).toEqual(doc!.precomputed_compositions);
+    expect(result.items).toHaveLength(1);expect(workspaces.canReadExecution).toHaveBeenCalledWith(scope.workspace_id,f.principal.user.userId);
+  });
+  it("keeps a missing q and archived allocation in the full denominator; DIRECT_NAV remains independent",async()=>{
+    const fx=compositionInput(true),installed=compositionInstallation(fx),runtime=new ExecutionManagerRuntime(pool,installed.installation);runtimes.push(runtime);
+    await runtime.tick();expect(runtime.status().state).toBe("TICK_OK");
+    const f=compositionReader(fx),result=await new ManagerModelService(pool,f.scopes,f.config,runtime).read(f.principal,"PORTFOLIO",{environment:"paper"},OWN.portfolio_id);
+    expect(result.scores.composition).toEqual({value:null,status:"partial_coverage"});
+    expect(result.composition_details![0].result).toMatchObject({total_allocated_capital:"80",score_coverage_allocated:"0.75",
+      unscored_allocated_weight:"0.25",bounds:{lower:"67.5",upper:"92.5"}});
+    expect(result.composition_details![0].result.contributions.find(c=>c.subject_id===PEER.alpha_id)).toMatchObject({allocation_weight:"0.25",value:null});
+    expect(result.scores.direct_nav).toEqual({value:"60",status:"available"});
+  });
+  it("reuses both immutable arrays/timestamps after lost ACK and a new runtime restart",async()=>{
+    const fx=compositionInput();let ack=0;
+    const installed=compositionInstallation(fx,async()=>{if(++ack===1)throw new Error("SYNTHETIC_ACK_LOST");});
+    const firstRuntime=new ExecutionManagerRuntime(pool,installed.installation);runtimes.push(firstRuntime);
+    await firstRuntime.tick();expect(firstRuntime.status().state).toBe("TICK_REFUSED");
+    const repo=new ManagerModelRepository(pool),before=await repo.document(scope.workspace_id,scope.environment,scope.profile_id,fx.d.document.revision);
+    expect(before!.precomputed_compositions).toHaveLength(1);expect(before!.precomputed_scores).toHaveLength(3);
+    await firstRuntime.beforeApplicationShutdown();
+    const resumed=new ExecutionManagerRuntime(pool,installed.installation);runtimes.push(resumed);
+    await resumed.tick();expect(resumed.status().state).toBe("TICK_OK");expect(ack).toBe(2);
+    const after=await repo.document(scope.workspace_id,scope.environment,scope.profile_id,fx.d.document.revision);
+    expect(after).toEqual(before);expect(after!.precomputed_compositions![0].provenance.computed_at_ms).toBe(now);
+    expect(after!.precomputed_scores!.map(s=>s.provenance.computed_at_ms)).toEqual([now,now,now]);
+    expect(installed.scoreTasks).toHaveBeenCalledOnce();expect(installed.compositionTasks).toHaveBeenCalledOnce();
+    expect(resumed.compositionFence.accepts(after!.precomputed_compositions![0],after!.precomputed_scores!)).toBe(true);
+  });
+  it.each(["precomputed_scores","precomputed_compositions"] as const)("refuses source-supplied worker outputs: %s",async field=>{
+    const fx=compositionInput();Object.assign(fx.d.document,{[field]:[]});
+    const installed=compositionInstallation(fx),runtime=new ExecutionManagerRuntime(pool,installed.installation);runtimes.push(runtime);
+    await runtime.tick();expect(runtime.status().state).toBe("TICK_REFUSED");
+    expect(installed.scoreTasks).not.toHaveBeenCalled();expect(installed.compositionTasks).not.toHaveBeenCalled();
+    expect((await pool.query("SELECT count(*)::int AS n FROM execution_manager_model_revisions")).rows[0].n).toBe(0);
+  });
+  it.each(["allocation revoked","allocation expired","raw policy revoked"] as const)("refuses %s during the final delivery await",async change=>{
+    const fx=compositionInput(),installed=compositionInstallation(fx),runtime=new ExecutionManagerRuntime(pool,installed.installation);runtimes.push(runtime);
+    await runtime.tick();expect(runtime.status().state).toBe("TICK_OK");
+    const f=compositionReader(fx),service=new ManagerModelService(pool,f.scopes,f.config,runtime);
+    expect((await service.read(f.principal,"PORTFOLIO",{environment:"paper"},OWN.portfolio_id)).scores.composition.value).toBe("80");
+    const clock=vi.spyOn(Date,"now");
+    const original=f.scopes.deliver.bind(f.scopes);
+    vi.spyOn(f.scopes,"deliver").mockImplementation(async(s,load)=>{
+      const result=await original(s,load);
+      if(change==="allocation revoked")expect(revokeApprovedManagerAllocation(fx.handle)).toBe(true);
+      else if(change==="raw policy revoked")installed.state.policy=null;
+      else clock.mockReturnValue(fx.pin.valid_until_ms);
+      return result;
+    });
+    try{await expect(service.read(f.principal,"PORTFOLIO",{environment:"paper"},OWN.portfolio_id))
+      .rejects.toMatchObject({code:"EXECUTION_READ_ACCESS_CHANGED",status:409});}
+    finally{clock.mockRestore();}
+  });
+  it.each([true,false])("withholds full Composition from a restricted researcher (allocation field granted=%s)",async withAllocation=>{
+    const fx=compositionInput(),installed=compositionInstallation(fx),runtime=new ExecutionManagerRuntime(pool,installed.installation);runtimes.push(runtime);
+    await runtime.tick();expect(runtime.status().state).toBe("TICK_OK");
+    const fields=[...BUSINESS_READ_FIELDS].filter(x=>withAllocation||x!=="allocation"),f=compositionReader(fx,false,fields);
+    const result=await new ManagerModelService(pool,f.scopes,f.config,runtime).read(f.principal,"PORTFOLIO",{environment:"paper"},OWN.portfolio_id);
+    expect(result.items.map(x=>x.alpha_id)).toEqual([OWN.alpha_id]);expect(result.scores.composition.value).toBeNull();
+    expect(result.composition_details??[]).toEqual([]);
+    const wire=JSON.stringify(result);
+    for(const field of ["total_allocated_capital","allocation_snapshot_id","full_accounting_manifest_ref","score_coverage_allocated"])
+      expect(wire).not.toContain(`"${field}"`);
+    if(!withAllocation)expect(result.items[0].metrics).not.toHaveProperty("allocation");
+  });
+  it("keeps Composition and direct NAV unchanged across table filter and cursor pages",async()=>{
+    const fx=compositionInput(),installed=compositionInstallation(fx),runtime=new ExecutionManagerRuntime(pool,installed.installation);runtimes.push(runtime);
+    await runtime.tick();expect(runtime.status().state).toBe("TICK_OK");
+    const f=compositionReader(fx),service=new ManagerModelService(pool,f.scopes,f.config,runtime);
+    const first=await service.read(f.principal,"PORTFOLIO",{environment:"paper",limit:1},OWN.portfolio_id);
+    expect(first.page.next_cursor).toBeTypeOf("string");
+    const second=await service.read(f.principal,"PORTFOLIO",{environment:"paper",limit:1,after:first.page.next_cursor!},OWN.portfolio_id);
+    const filtered=await service.read(f.principal,"PORTFOLIO",{environment:"paper",filters:[{field:"alpha_id",op:"EQ",value:OWN.alpha_id}]},OWN.portfolio_id);
+    expect([...first.items,...second.items].map(x=>x.alpha_id)).toEqual([OWN.alpha_id,PEER.alpha_id]);
+    expect(filtered.items.map(x=>x.alpha_id)).toEqual([OWN.alpha_id]);
+    for(const response of [first,second,filtered]){
+      expect(response.scores.composition).toEqual({value:"80",status:"available"});
+      expect(response.scores.direct_nav).toEqual({value:"60",status:"available"});
+      expect(response.composition_details).toEqual(first.composition_details);
+    }
+  });
+  it("invalidates an outstanding cursor after allocation authority is revoked, without overwriting its stored revision",async()=>{
+    const fx=compositionInput(),installed=compositionInstallation(fx),runtime=new ExecutionManagerRuntime(pool,installed.installation);runtimes.push(runtime);
+    await runtime.tick();expect(runtime.status().state).toBe("TICK_OK");
+    const f=compositionReader(fx),service=new ManagerModelService(pool,f.scopes,f.config,runtime),repo=new ManagerModelRepository(pool);
+    const before=await repo.document(scope.workspace_id,scope.environment,scope.profile_id,fx.d.document.revision);
+    const first=await service.read(f.principal,"PORTFOLIO",{environment:"paper",limit:1},OWN.portfolio_id);
+    expect(first.page.next_cursor).toBeTypeOf("string");expect(revokeApprovedManagerAllocation(fx.handle)).toBe(true);
+    await expect(service.read(f.principal,"PORTFOLIO",{environment:"paper",limit:1,after:first.page.next_cursor!},OWN.portfolio_id))
+      .rejects.toMatchObject({code:"EXECUTION_READ_NOT_AVAILABLE",status:400});
+    const fresh=await service.read(f.principal,"PORTFOLIO",{environment:"paper",limit:1},OWN.portfolio_id);
+    expect(fresh.scores.composition.value).toBeNull();expect(fresh.composition_details??[]).toEqual([]);
+    expect(await repo.document(scope.workspace_id,scope.environment,scope.profile_id,fx.d.document.revision)).toEqual(before);
+  });
   it("runs the installed materializer, reuses immutable Score on lost ACK and releases its lease on shutdown",async()=>{
     const d=input(),handle=policy(),task=scoreTask(d.document);let ack=0;
     const tasks=vi.fn(async()=>[{slot:"RAW" as const,task}]);

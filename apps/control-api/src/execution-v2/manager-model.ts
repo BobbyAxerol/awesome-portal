@@ -1,10 +1,11 @@
 import { accessDigest } from "./access-policy";
-import { assertExecutionReadScope, ExecutionReadScopeError, scopeAllowsField, scopeReadPopulation,
+import { assertExecutionReadScope, ExecutionReadScopeError, scopeAllowsField, scopeReadPopulation, scopeAllowsFullAccountingPopulation,
   type AuthorizedExecutionReadScope } from "./read-scope";
 import { projectionRowVisible } from "./read-projection";
 import { KeysetCursorCodec } from "../query/cursor";
 import { sumExactDecimals } from "../research/exact-decimal";
 import { selectManagerScorePublications, type ManagerScoreReadFence } from "./manager-score-publication";
+import { selectManagerCompositionPublications,type ManagerCompositionReadFence } from "./manager-composition-publication";
 import { managerModelDocument, managerModelQuery, managerDatasetResponse, MANAGER_SCALARS, managerMoneyFields, managerStatementFields,
   type ManagerMember, type ManagerFact, type ManagerMetric, type ManagerModelDocument, type ManagerModelQuery } from "./manager-model.contract";
 
@@ -196,7 +197,8 @@ function rootFlows(facts: ManagerFact[], surface: ManagerSurface) {
  * not called here. Current policy filters tuples/fields before joins or totals.
  * This function still requires scopes.deliver at its service boundary. */
 export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: unknown, rawQuery: unknown,
-  codec: KeysetCursorCodec, surface: ManagerSurface = "FLEET", resourceId?: string, scoreFence?: ManagerScoreReadFence) {
+  codec: KeysetCursorCodec, surface: ManagerSurface = "FLEET", resourceId?: string, scoreFence?: ManagerScoreReadFence,
+  compositionFence?:ManagerCompositionReadFence) {
   assertExecutionReadScope(scope);
   if (scope.mode !== "SCOPED_V2") fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED");
   const doc = managerModelDocument.parse(input), query = managerModelQuery.parse(rawQuery);
@@ -252,6 +254,17 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     return s.length === 1 ? {value:s[0].quality.value,status:s[0].quality.status} :
       {value:null,status:"policy_pending" as const};
   };
+  const compositionPartition=query.economic_partition?accessDigest(query.economic_partition):
+    partitionsForScore.length===1?partitionsForScore[0]:null;
+  const selectedStages=query.stage_filter.length?query.stage_filter:
+    scope.environment==="paper"?["PAPER" as const]:scope.environment==="sandbox"?["SANDBOX" as const]:["CANARY" as const,"LIVE" as const];
+  // These complete accounting outputs must never leak through researcher fields,
+  // visible-subset totals, table filters or pagination. Direct NAV stays separate.
+  const compositions=(surface==="FUND"||surface==="PORTFOLIO")&&compositionPartition!==null&&
+    ["score","allocation","balance_total","currency","provenance_ref"].every(field=>scopeAllowsField(scope,field))&&
+    scopeAllowsFullAccountingPopulation(scope,surface==="PORTFOLIO"?resourceId:undefined)?
+    selectManagerCompositionPublications(doc,members,{type:surface==="FUND"?"manager_book":"portfolio",id:resourceId??scope.workspaceId},
+      selectedStages,compositionPartition,compositionFence):[];
   const rows = allRows.filter(row => filtered(row, query));
   rows.sort((a, b) => {
     for (const order of query.sort) {
@@ -263,7 +276,7 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     return lexical(a.row_key, b.row_key);
   });
   const queryId = accessDigest({ scope: scope.fingerprint, source: doc.revision, generation: doc.projection_generation,
-    surface, resourceId: resourceId ?? null, scores:accessDigest({details,rows:allRows.map(r => r.metrics.score)}),
+    surface, resourceId: resourceId ?? null, scores:accessDigest({details,compositions,rows:allRows.map(r => r.metrics.score)}),
     query: { ...query, after: undefined, before: undefined } });
   const cursorContext = { resourceId: `manager-model:${surface}`, workspaceId: scope.workspaceId, queryFingerprint: queryId };
   const encode = (row: ManagerDatasetRow, direction: "after" | "before") => codec.encode({ resource_id: cursorContext.resourceId,
@@ -307,11 +320,13 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
       previous_cursor: start > 0 && items.length ? encode(items[0], "before") : null },
     items, groups: groupOutput, capital_statements: statement,
     statement_scope: "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS" as const,
-    scores: { raw: summary("RAW"), composition: { value: null, status: "policy_pending" as const },
+    scores: { raw: summary("RAW"), composition: compositions.length===1?
+      {value:compositions[0].result.value,status:compositions[0].result.status}:{ value: null, status: "policy_pending" as const },
       direct_nav: summary("DIRECT_NAV"), regime: { value: null, status: "unavailable" as const },
-      reason_code: details.some(s => s.quality.value !== null) ? "QUALIFIED_PRECOMPUTED_SCORE" as const : "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED" as const,
+      reason_code: details.some(s => s.quality.value !== null)||compositions.some(s=>s.result.value!==null) ? "QUALIFIED_PRECOMPUTED_SCORE" as const : "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED" as const,
       calculation_path: "PRECOMPUTED_ONLY" as const },
     ...(doc.precomputed_scores !== undefined ? {score_details:details} : {}),
+    ...(doc.precomputed_compositions!==undefined?{composition_details:compositions}:{}),
     funding_bucket_pnl: { value: null, reason_code: "LOT_ATTRIBUTION_METHOD_NOT_APPROVED" as const },
     lineage: { reducer_revision: "manager-model.v1" as const, source_set_ref: accessDigest(facts.map(f => [f.fact_id, f.revision]).sort()),
       revision: accessDigest({ scope: scope.fingerprint, source: doc.revision }), supersedes_revision: doc.supersedes_revision ? accessDigest({ scope: scope.fingerprint, source: doc.supersedes_revision }) : null },

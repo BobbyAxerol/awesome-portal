@@ -11,6 +11,11 @@ import { qualifyDatasetPublication, publicationCommissioningCurrent, type Public
 import { ManagerScoreRuntime, managerScorePublicationPolicyCurrent, type ApprovedManagerScorePolicy, type ManagerScoreRuntimeTask } from "./manager-score-runtime";
 import { managerScorePublication } from "./manager-score-publication.contract";
 import type { ManagerScoreReadFence } from "./manager-score-publication";
+import { ManagerCompositionRuntime, managerCompositionPublicationCurrent, managerCompositionPublicationForRead,
+  type ApprovedManagerAllocation, type ManagerCompositionRuntimeTask } from "./manager-composition-runtime";
+import type { ManagerCompositionReadFence } from "./manager-composition-publication";
+import type { ManagerScorePublication } from "./manager-score-publication.contract";
+import type { ManagerCompositionPublication } from "./manager-composition-publication.contract";
 
 export interface ManagerRuntimePartition {
   scope: ManagerLeaseScope;
@@ -23,6 +28,8 @@ export interface ManagerRuntimePartition {
     tasks(delivery: ManagerConsumerDelivery, signal: AbortSignal): Promise<Array<{
       slot: "RAW" | "DIRECT_NAV"; task: Omit<ManagerScoreRuntimeTask,"policy">;
     }>> };
+  composition?: { runtime:ManagerCompositionRuntime;maximum_tasks_per_revision:number;currentAllocation():ApprovedManagerAllocation|null;
+    tasks(delivery:ManagerConsumerDelivery,signal:AbortSignal):Promise<Array<Omit<ManagerCompositionRuntimeTask,"allocation"|"raw_scores">>> };
 }
 /** Supplied only by an independently reviewed server deployment composition.
  * Not deserialized from ENV/HTTP, not a grant, not an arbitrary module import. */
@@ -66,11 +73,14 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     if ([pool.options.connectionTimeoutMillis,pool.options.query_timeout].some(n=>!Number.isSafeInteger(n)||Number(n)<1||Number(n)>60_000))
       throw new Error("MANAGER_RUNTIME_POOL_TIMEOUT_REQUIRED");
     this.partitions = installation.partitions.map(p=>({...p,scope:Object.freeze({...p.scope}),bounds:Object.freeze({...p.bounds}),
-      ...(p.score?{score:Object.freeze({...p.score})}:{})}));
+      ...(p.score?{score:Object.freeze({...p.score})}:{}),...(p.composition?{composition:Object.freeze({...p.composition})}:{})}));
     this.consumers = this.partitions.map(p=> {
       if (!publicationCommissioningCurrent(p.commissioning,p.scope,Date.now())) throw new Error("MANAGER_RUNTIME_COMMISSIONING_REQUIRED");
       if(p.score && (!Number.isSafeInteger(p.score.maximum_tasks_per_revision)||p.score.maximum_tasks_per_revision<1||p.score.maximum_tasks_per_revision>128))
         throw new Error("MANAGER_SCORE_TASK_BOUND");
+      if(p.composition&&(!Number.isSafeInteger(p.composition.maximum_tasks_per_revision)||p.composition.maximum_tasks_per_revision<1||
+        p.composition.maximum_tasks_per_revision>128||(p.score?.maximum_tasks_per_revision??0)+p.composition.maximum_tasks_per_revision>128))
+        throw new Error("MANAGER_COMPOSITION_TASK_BOUND");
       return new ManagerProjectionConsumer({pool,source:this.materializingSource(p),scope:p.scope,bounds:p.bounds,commissioning:p.commissioning});
     });
     this.lastState="READY";
@@ -107,6 +117,15 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     return !!p?.score && publicationCommissioningCurrent(p.commissioning,p.scope,Date.now()) &&
       managerScorePublicationPolicyCurrent(p.score.currentPolicy(),{quality:{...score.quality,preview:null},provenance:score.provenance},Date.now());
   } };
+  readonly compositionFence:ManagerCompositionReadFence={project:(publication,rawScores)=>{
+    const p=this.partitions.find(p=>key(p.scope)===key(publication.provenance.scope));
+    return p?.composition&&publicationCommissioningCurrent(p.commissioning,p.scope,Date.now())?
+      managerCompositionPublicationForRead(p.composition.currentAllocation(),publication,rawScores,this.scoreFence,Date.now()):null;
+  },accepts:(publication,rawScores)=>{
+    const p=this.partitions.find(p=>key(p.scope)===key(publication.provenance.scope));
+    return !!p?.composition&&publicationCommissioningCurrent(p.commissioning,p.scope,Date.now())&&
+      managerCompositionPublicationCurrent(p.composition.currentAllocation(),publication,rawScores,this.scoreFence,Date.now());
+  }};
   onModuleInit() { if (this.installation) this.schedule(); }
   private schedule() {
     if(this.stopped || !this.installation) return;
@@ -144,20 +163,22 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
       const document=prepared.document;
       if(document.members.length+document.facts.length>p.bounds.maximum_document_rows)throw new Error("MANAGER_PROJECTION_LIMIT");
       if(document.precomputed_scores!==undefined)throw new Error("MANAGER_SCORE_WORKER_RESULT_REQUIRED");
+      if(document.precomputed_compositions!==undefined)throw new Error("MANAGER_COMPOSITION_WORKER_RESULT_REQUIRED");
       // Lost ACK / restart must reuse the identical immutable materialization,
       // including calculation timestamps. Never recompute into the same revision.
       if(input.head?.revision===document.revision) {
         const existing=await this.repository.document(document.workspace_id,document.environment,document.profile_id,document.revision);
         if(!existing)throw new Error("MANAGER_REVISION_NOT_FOUND");
-        const {precomputed_scores:scores,...source}=existing;
+        const {precomputed_scores:scores,precomputed_compositions:compositions,...source}=existing;
         if(accessDigest(source)!==accessDigest(document))throw new Error("MANAGER_REVISION_CONFLICT");
-        return {...delivery,document:{...document,...(scores===undefined?{}:{precomputed_scores:scores})}};
+        return {...delivery,document:{...document,...(scores===undefined?{}:{precomputed_scores:scores}),
+          ...(compositions===undefined?{}:{precomputed_compositions:compositions})}};
       }
-      if(!p.score)return {...delivery,document};
-      const tasks=await p.score.tasks(delivery,input.signal);
-      if(tasks.length>p.score.maximum_tasks_per_revision||Buffer.byteLength(JSON.stringify(tasks))>p.bounds.maximum_document_bytes)
+      if(!p.score&&!p.composition)return {...delivery,document};
+      const tasks=p.score?await p.score.tasks(delivery,input.signal):[];
+      if(tasks.length>(p.score?.maximum_tasks_per_revision??0)||Buffer.byteLength(JSON.stringify(tasks))>p.bounds.maximum_document_bytes)
         throw new Error("MANAGER_SCORE_TASK_BOUND");
-      const scores=[];
+      const scores:ManagerScorePublication[]=[];
       for(const item of tasks) {
         await yieldWorker();
         if(input.signal.aborted)throw input.signal.reason;
@@ -166,11 +187,29 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
           t.source_revision!==document.revision||t.source_set_digest!==document.source_set_digest||
           t.source_qualification!==document.qualification||t.input.quality.as_of_ms!==document.as_of_ms)
           throw new Error("MANAGER_SCORE_SOURCE_BINDING_INVALID");
-        const result=await p.score.runtime.calculate({...t,policy:p.score.currentPolicy()});
+        const result=await p.score!.runtime.calculate({...t,policy:p.score!.currentPolicy()});
         const {preview:_privatePreview,...quality}=result.quality;
         scores.push(managerScorePublication.parse({slot:item.slot,quality,raw_metrics:result.raw_metrics,provenance:result.provenance}));
       }
-      return {...delivery,document:{...document,precomputed_scores:scores}};
+      const compositions:ManagerCompositionPublication[]=[];
+      if(p.composition){
+        const tasks=await p.composition.tasks(delivery,input.signal);
+        if(tasks.length>p.composition.maximum_tasks_per_revision||Buffer.byteLength(JSON.stringify(tasks))>p.bounds.maximum_document_bytes)
+          throw new Error("MANAGER_COMPOSITION_TASK_BOUND");
+        for(const task of tasks){
+          await yieldWorker();if(input.signal.aborted)throw input.signal.reason;
+          if(key(task.scope)!==key(p.scope)||task.scope.catalogue_digest!==document.catalogue_digest||
+            task.source_revision!==document.revision||task.source_set_digest!==document.source_set_digest||
+            task.source_qualification!==document.qualification||task.source_as_of_ms!==document.as_of_ms)
+            throw new Error("MANAGER_COMPOSITION_SOURCE_BINDING_INVALID");
+          const result=await p.composition.runtime.calculate({...task,allocation:p.composition.currentAllocation(),raw_scores:scores},this.scoreFence,input.signal);
+          if(!this.compositionFence.accepts(result,scores))throw new Error("MANAGER_COMPOSITION_APPROVAL_CHANGED");
+          compositions.push(result);
+        }
+      }
+      const materialized={...document,...(p.score?{precomputed_scores:scores}:{}),...(p.composition?{precomputed_compositions:compositions}:{})};
+      if(Buffer.byteLength(JSON.stringify(materialized))>p.bounds.maximum_document_bytes)throw new Error("MANAGER_PROJECTION_LIMIT");
+      return {...delivery,document:materialized};
     },recheck:i=>p.source.recheck(i),acknowledge:(r,s)=>p.source.acknowledge(r,s)};
   }
 }

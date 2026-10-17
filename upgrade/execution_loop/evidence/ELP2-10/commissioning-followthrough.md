@@ -1472,7 +1472,7 @@ every positive source reader, workflow or stream adapter is commissioned.
 |04 /T04-11|Applicable actual Manager document coalescer/current-authority proof delivered locally: four PG cases PASS, including independent same-actor session outcomes|One actual SELECT/two waiters, grant/session revoke and no completed-response permission cache. Not all aliases, cross-actor or real PM source qualification; no new cache introduced. Exact receipt in[positive-readers](../ELP2-04/positive-readers.md)|
 |05 /05-001|Authenticated current publication/writer generation/continuity/floor/barrier/privacy source installation and connected proof remain open|Repin the incoming committed source and its exact accepted installation; do not repeat the stale assertion that producer implementation is wholly absent|
 |06 /06-002|Concrete normalized-source→ManagerProjectionSource→installation/tie-out adapter is not mounted|Reuse consumer/lease/atomic projection+checkpoint/ACK machinery; connect selected qualified source, retaining time/coverage/grain and authority|
-|06 /06-002,00-005|Composition/Regime are not merely awaiting config: publication/runtime only accept RAW or DIRECT_NAV; `manager-model.ts:310–311` fixes composition to policy_pending/null and regime to unavailable/null|Finish allocation/input/result projection chain, then source/config qualification; shared alpha aggregation math alone is not this chain. No formula/weights/bands changes or fixture calibration defaults|
+|06 /06-002,00-005|Local Composition loader→worker→immutablePG→Fund/Portfolio API chain now has301 impactedPASS/build/restore, normal-hook landing pending; Regime public chain still absent, pure calculator already landed|See[Composition receipt/handoff](../ELP2-06/composition-publication.md). Finish Regime loader/worker/publication and policy-only recompute; genuine source/config qualification stays separate. No formula/weights/bands changes or fixture production defaults|
 |07 /07-001|Real installed current-human/mapping/provider authority and physical-COMMIT/revoke/UNKNOWN/recovery proof remain open|Align stable human issuer, accepted existing identity/workload/app/field tuple and private trust installation; source-mapping lookup is preflight, not a held business grant|
 |07 /07-002|Broader RETURN/control/profile/create/assignment/archive/monitor command families are not complete merely because the eight capital-operation union is delivered|Exact per-operation capability/source adapter and tests; do not alias FUND/TOP_UP or R1 executor. Candidate commissioning remains no-command/no-Live activation|
 |08 /08-001|Workflow contracts/projectors/fixtures exist, but selected source-mounted adapters/executors and consumer acceptance do not|Connect only qualified workflow facts/operations, preserve explicit runtime-disabled states for unqualified operations|
@@ -1659,6 +1659,33 @@ not prevent review findings; causal-time, exact delta/large-offset numerical
 and frozen archive-history regressions are required in the final test freeze.
 No approved runtime policy, source/worker/public projection or frontend field
 is delivered by a private mathematical function.
+
+#### Composition local chain / current gap return — 2026-10-17 14:32Asia/Saigon
+
+Working batch based on68923d29 adds the actual[Composition chain](../ELP2-06/composition-publication.md)
+under06-002, not another generic interface.301 impacted API tests/build/PGrestore
+PASS;23new cases are included. Source-only independent review ACCEPT. Exact
+hashes/clock/population/policy negatives and synthetic-source limitations are
+in that packet. Final normal-hook contract/build/regression landing pending.
+No source credentials, runtime installation, numeric approval, FE or migration.
+Reader normal-hook terminal68923d29 is also[recorded](../ELP2-04/positive-readers.md#terminal-normal-hook-receipt--2026-10-17).
+
+Read-only source observation07:12–07:13UTC (historical pin, no new runtime claim):
+PM worktree HEAD4d451b67992a7a8a469aafd57b52bae7cead09a1; Edge worktree
+HEAD5ff6c1dd1b852289b52180185ee4caf725009801. PM current-authorized lifecycle
+history source is newer; binding-history source/contracts/tests still owner WIP.
+Readiness stays IN_PROGRESS_DEPENDENCIES_PENDING/design-not-test-receipt;
+proposalsha a4b9a570ef0926776fe6b12e2ce9931e67a3720e5def7d3cd8b0153d418ca800
+unchanged. Source presence is not installed issuer/grant/provider authority.
+No remote business rows/jobs/writes/install/restart or foreign WIP edits.
+
+Backend next: Regime's independent calibration/evidence loader→bounded existing
+worker→immutable projection→exact-scope API, then remaining approved command/
+workflow/realtime integrations. Reuse72-case pure Regime receipt without
+rerunning unchanged formula. No scalar Regime probability/score, no unsupported
+source proof or guessed calibration.05/07 genuine provider/physical-COMMIT trust,
+10 numeric budgets/coexistence/G2 and11 final acceptance remain open. Claude
+NOT_STARTED_BY_OWNER_DIRECTION; new Composition handoff AWAITING_CONSUMER_REVIEW.
 
 Final corrected Regime pure retake72/72PASS,0FAIL/SKIP at13:12Asia/Saigon,
 source `c74aba37cfb6e8a304f23b198fb4011453af37dedad9eb99557083a4b2cb0110`,

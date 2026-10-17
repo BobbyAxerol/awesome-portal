@@ -3,6 +3,8 @@ import { utcMilliseconds, executionEnvironment, financialStage, exactDecimal, op
 import { publicationDigest } from "./publication.contract";
 import { managerScorePublication } from "./manager-score-publication.contract";
 export { managerScorePublication } from "./manager-score-publication.contract";
+import { managerCompositionPublication } from "./manager-composition-publication.contract";
+export { managerCompositionPublication } from "./manager-composition-publication.contract";
 
 const text = z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$(?![\s\S])/);
 export const MANAGER_SCALARS = {
@@ -59,6 +61,7 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
   facts_through_ms: utcMilliseconds.nullable(), observed_at_ms: utcMilliseconds,
   source_quality: managerQuality, members: z.array(managerMember).max(10_000), facts: z.array(managerFact).max(20_000),
   precomputed_scores: z.array(managerScorePublication).max(128).optional(),
+  precomputed_compositions: z.array(managerCompositionPublication).max(128).optional(),
 }).strict().superRefine((d, c) => {
   if (d.facts_through_ms !== null && d.facts_through_ms > d.as_of_ms || d.as_of_ms > d.observed_at_ms ||
     d.recorded_through_ms > d.observed_at_ms || d.members.some(m => m.valid_to_ms !== null && m.valid_to_ms <= m.valid_from_ms) ||
@@ -100,6 +103,11 @@ export const managerDatasetRow = z.object({ row_key: z.string().min(1).max(2048)
 const scorePending = z.object({ value: exactDecimal.nullable(), status: z.enum(["policy_pending", "available", "provisional", "unbound", "invalid_data", "stale", "partial_costs", "partial_components", "insufficient_data"]) }).strict()
   .superRefine((v,c) => { if (["available","provisional"].includes(v.status) !== (v.value !== null))
     c.addIssue({code:z.ZodIssueCode.custom,message:"MANAGER_SCORE_SUMMARY_INVALID"}); });
+const compositionSummary = z.object({value:exactDecimal.nullable(),status:z.enum(["policy_pending","available","provisional",
+  "partial_coverage","incomparable_basis","no_allocation","invalid_data"])}).strict().superRefine((v,c)=>{
+  if(["available","provisional"].includes(v.status)!==(v.value!==null))
+    c.addIssue({code:z.ZodIssueCode.custom,message:"MANAGER_COMPOSITION_SUMMARY_INVALID"});
+});
 export const managerDatasetResponse = z.object({ schema_version: z.literal("portal.execution.manager-dataset.v1"),
   surface: z.enum(["FUND", "FLEET", "PORTFOLIO", "ALPHA", "ACCOUNT", "DEPLOYMENT"]), workspace_id: text,
   environment: executionEnvironment, record_authority: z.literal("PORTAL_PROJECTION"), source_authority: z.literal("TRADING_SYSTEM"),
@@ -112,10 +120,11 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
     unique_row_count: z.number().int().min(0).max(10_000), totals_scope: z.literal("FULL_AUTHORIZED_FILTERED_QUERY"), economic_partitions: z.array(partitionMetrics).max(200) }).strict()).max(200),
   capital_statements: z.array(partitionMetrics).max(200),
   statement_scope: z.literal("AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS"),
-  scores: z.object({ raw: scorePending, composition: scorePending, direct_nav: scorePending,
+  scores: z.object({ raw: scorePending, composition: compositionSummary, direct_nav: scorePending,
     regime: z.object({ value: z.null(), status: z.literal("unavailable") }).strict(),
     reason_code: z.enum(["RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED", "QUALIFIED_PRECOMPUTED_SCORE"]), calculation_path: z.literal("PRECOMPUTED_ONLY") }).strict(),
   score_details: z.array(managerScorePublication).max(128).optional(),
+  composition_details: z.array(managerCompositionPublication).max(128).optional(),
   funding_bucket_pnl: z.object({ value: z.null(), reason_code: z.literal("LOT_ATTRIBUTION_METHOD_NOT_APPROVED") }).strict(),
   lineage: z.object({ reducer_revision: z.literal("manager-model.v1"), source_set_ref: publicationDigest,
     revision: publicationDigest, supersedes_revision: publicationDigest.nullable() }).strict(),

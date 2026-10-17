@@ -1,5 +1,9 @@
 # ELP2-06 — Manager read models và 360 datasets
 
+Latest assigned backend continuation: [Composition publication chain](composition-publication.md).
+It supersedes the earlier always-null Composition implementation description
+only after its actual terminal gates; Regime/source/config/consumer remain open.
+
 ## Entry / approved scope
 
 Bobby assigned ELP2-06 on 2026-10-16. Integration checkout

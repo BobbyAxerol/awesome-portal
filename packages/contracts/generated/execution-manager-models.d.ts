@@ -341,7 +341,7 @@ export interface components {
                 composition: {
                     value: string | null;
                     /** @enum {string} */
-                    status: "policy_pending" | "available" | "provisional" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data";
+                    status: "policy_pending" | "available" | "provisional" | "partial_coverage" | "incomparable_basis" | "no_allocation" | "invalid_data";
                 };
                 direct_nav: {
                     value: string | null;
@@ -446,6 +446,86 @@ export interface components {
                     approval_ref: string | null;
                     approved_at_ms: number | null;
                     policy_valid_until_ms: number | null;
+                };
+            }[];
+            composition_details?: {
+                /** @constant */
+                slot: "COMPOSITION";
+                result: {
+                    value: string | null;
+                    /** @enum {string} */
+                    status: "available" | "provisional" | "partial_coverage" | "incomparable_basis" | "no_allocation" | "invalid_data";
+                    reason_codes: string[];
+                    band_code: ("weak" | "neutral" | "fair" | "good" | "very_good") | null;
+                    /** @constant */
+                    weight_basis: "allocated_economic_capital";
+                    allocation_snapshot_id: string;
+                    total_allocated_capital: string | null;
+                    score_coverage_allocated: string | null;
+                    unscored_allocated_weight: string | null;
+                    provisional_allocated_weight: string | null;
+                    mature_allocated_weight: string | null;
+                    allocation_coverage_nav: string | null;
+                    scored_nav_weight: string | null;
+                    idle_cash_weight: string | null;
+                    nav_coverage_reason: string | null;
+                    bounds: {
+                        lower: string;
+                        upper: string;
+                    } | null;
+                    contributions: {
+                        subject_id: string;
+                        allocation_weight: string;
+                        value: string | null;
+                        band_code: null;
+                    }[];
+                    diagnostics: {
+                        allocation_hhi: string | null;
+                        score_contribution_hhi: string | null;
+                        score_dispersion: string | null;
+                        reason_codes: string[];
+                    };
+                };
+                provenance: {
+                    scope: {
+                        workspace_id: string;
+                        /** @enum {string} */
+                        environment: "paper" | "sandbox" | "live";
+                        profile_id: string;
+                        catalogue_digest: string;
+                    };
+                    binding: {
+                        /** @enum {string} */
+                        subject_type: "portfolio" | "manager_book";
+                        subject_id: string;
+                        tuple_population_digest: string;
+                        partition_digest: string;
+                        stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                        window_start_ms: number;
+                        window_end_ms: number;
+                        comparable_basis_id: string;
+                        individual_evidence_binding_id: string;
+                    };
+                    source_revision: string;
+                    source_set_digest: string;
+                    source_as_of_ms: number;
+                    /** @constant */
+                    source_qualification: "SOURCE_VERIFIED";
+                    input_digest: string;
+                    calculation_revision: string;
+                    computed_at_ms: number;
+                    allocation_artifact_sha256: string;
+                    allocation_revision: string;
+                    ownership_manifest_ref: string;
+                    full_accounting_manifest_ref: string;
+                    allocation_effective_at_ms: number;
+                    approval_ref: string;
+                    approved_at_ms: number;
+                    valid_until_ms: number;
+                    raw_score_refs: {
+                        subject_id: string;
+                        publication_digest: string;
+                    }[];
                 };
             }[];
             funding_bucket_pnl: {
@@ -699,6 +779,86 @@ export interface components {
                 approval_ref: string | null;
                 approved_at_ms: number | null;
                 policy_valid_until_ms: number | null;
+            };
+        };
+        ManagerCompositionPublication: {
+            /** @constant */
+            slot: "COMPOSITION";
+            result: {
+                value: string | null;
+                /** @enum {string} */
+                status: "available" | "provisional" | "partial_coverage" | "incomparable_basis" | "no_allocation" | "invalid_data";
+                reason_codes: string[];
+                band_code: ("weak" | "neutral" | "fair" | "good" | "very_good") | null;
+                /** @constant */
+                weight_basis: "allocated_economic_capital";
+                allocation_snapshot_id: string;
+                total_allocated_capital: string | null;
+                score_coverage_allocated: string | null;
+                unscored_allocated_weight: string | null;
+                provisional_allocated_weight: string | null;
+                mature_allocated_weight: string | null;
+                allocation_coverage_nav: string | null;
+                scored_nav_weight: string | null;
+                idle_cash_weight: string | null;
+                nav_coverage_reason: string | null;
+                bounds: {
+                    lower: string;
+                    upper: string;
+                } | null;
+                contributions: {
+                    subject_id: string;
+                    allocation_weight: string;
+                    value: string | null;
+                    band_code: null;
+                }[];
+                diagnostics: {
+                    allocation_hhi: string | null;
+                    score_contribution_hhi: string | null;
+                    score_dispersion: string | null;
+                    reason_codes: string[];
+                };
+            };
+            provenance: {
+                scope: {
+                    workspace_id: string;
+                    /** @enum {string} */
+                    environment: "paper" | "sandbox" | "live";
+                    profile_id: string;
+                    catalogue_digest: string;
+                };
+                binding: {
+                    /** @enum {string} */
+                    subject_type: "portfolio" | "manager_book";
+                    subject_id: string;
+                    tuple_population_digest: string;
+                    partition_digest: string;
+                    stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                    window_start_ms: number;
+                    window_end_ms: number;
+                    comparable_basis_id: string;
+                    individual_evidence_binding_id: string;
+                };
+                source_revision: string;
+                source_set_digest: string;
+                source_as_of_ms: number;
+                /** @constant */
+                source_qualification: "SOURCE_VERIFIED";
+                input_digest: string;
+                calculation_revision: string;
+                computed_at_ms: number;
+                allocation_artifact_sha256: string;
+                allocation_revision: string;
+                ownership_manifest_ref: string;
+                full_accounting_manifest_ref: string;
+                allocation_effective_at_ms: number;
+                approval_ref: string;
+                approved_at_ms: number;
+                valid_until_ms: number;
+                raw_score_refs: {
+                    subject_id: string;
+                    publication_digest: string;
+                }[];
             };
         };
     };

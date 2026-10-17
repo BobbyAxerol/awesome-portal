@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
-import { managerDatasetResponse, managerMetric, managerModelQuery, managerScorePublication } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
+import { managerDatasetResponse, managerMetric, managerModelQuery, managerScorePublication,managerCompositionPublication } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
 const root = resolve(__dirname,"..");
 const load = (file:string) => JSON.parse(readFileSync(resolve(root,file),"utf8"));
 const api = load("openapi/execution-manager-models.openapi.json");
@@ -11,6 +11,29 @@ const fixture = load("fixtures/execution-manager-dataset.synthetic.valid.json");
 const ajv = new Ajv2020({strict:true,allErrors:true});
 const validate = ajv.compile(schema);
 describe("ELP2-06 generated named Manager BFF contract",()=>{
+  it("publishes Composition separately from RAW/DIRECT_NAV, with full-denominator absence semantics",()=>{
+    const sample=load("fixtures/execution-manager-composition.synthetic.valid.json");
+    expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    const check=ajv.compile(api.components.schemas.ManagerCompositionPublication);
+    expect(check(sample.value),JSON.stringify(check.errors)).toBe(true);
+    expect(managerCompositionPublication.parse(sample.value)).toEqual(sample.value);
+    const response={...structuredClone(fixture.value),surface:"PORTFOLIO",composition_details:[sample.value]};
+    response.scores.composition={value:"80",status:"available"};
+    expect(validate(response),JSON.stringify(validate.errors)).toBe(true);
+    expect(managerDatasetResponse.safeParse(response).success).toBe(true);
+  });
+  it.each(["zero-capital","missing-raw-reference","foreign-raw-reference","wrong-band","false-coverage","bad-hhi","negative-dispersion"])(
+    "rejects semantic Composition inconsistency %s even where JSON generation cannot encode refinements",kind=>{
+      const sample=structuredClone(load("fixtures/execution-manager-composition.synthetic.valid.json").value);
+      if(kind==="zero-capital")sample.result.total_allocated_capital="0";
+      if(kind==="missing-raw-reference")sample.provenance.raw_score_refs.pop();
+      if(kind==="foreign-raw-reference")sample.provenance.raw_score_refs[0].subject_id="TEST_ONLY:hidden";
+      if(kind==="wrong-band")sample.result.band_code="weak";
+      if(kind==="false-coverage")sample.result.score_coverage_allocated="0";
+      if(kind==="bad-hhi")sample.result.diagnostics.allocation_hhi="1.000000000000000001";
+      if(kind==="negative-dispersion")sample.result.diagnostics.score_dispersion="-0.000000000000000001";
+      expect(managerCompositionPublication.safeParse(sample).success).toBe(false);
+    });
   it("publishes precomputed score details with explicit binding, components and null semantics",()=>{
     const sample=load("fixtures/execution-manager-score.synthetic.valid.json");
     expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
