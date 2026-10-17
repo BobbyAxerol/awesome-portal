@@ -10822,3 +10822,79 @@ are authoritative current return. Earlier NOT_STARTED/planning entries are histo
 Normal-hook commit is the landing gate for this coherent slice. Full ELP2-06
 exit remains **NOT_MET_SOURCE_CONFIG_CONSUMER**, not product available or
 owner accepted. Cleanup/rollback and resource measurements stay in the packet.
+
+<a id="elp2-10-existing-identity-mapping"></a>
+
+### 14.12.1 Edge original08 — source-backed existing-identity mapping client
+
+Bobby explicitly approves PM/Research producer implementation before actual
+Edge08 binding; no connected09 or new phase. Source-only additive slice at
+Research9a3a27c8, integration docs/research-loop-plan. Preserve all staged
+current-human installation/provisioning WIP and its shared index. Main Edge
+journal23.20.4 and PM58.99.1 own cross-project source pins and integration.
+Guides: Execution V2 rules1–3/7–8, ELP2-10 identity/current authority, PM5.1.1/
+5.2.1, Edge08/BE3/4/REVIEW3. Status IN_PROGRESS_IMPLEMENTATION.
+
+Target owned new source/tests: concrete pinned-mTLS existing-identity mapping
+client plus AccessTrust composition. Reuse existing fixed private PM recovery
+listener and Research TLS safety; no new service/directory/grant engine, browser
+route, DB credential or direct TS DB access. Request exact independently accepted
+human issuer/Portal subject/workspace/environment/workload with nonce. PM SELECTs
+only existing exact ts_users pair and returns actual UUID/version or null for
+unknown/inactive. Target subject lookup does not impersonate that person's
+session. Never map accepted identities using candidate .invalid PKI/issuer,
+display names, static guessed UUIDs or historical receipt alone. Fresh online
+mapping is preflight only: final writes retain existing held source fences
+through COMMIT. No mapping cache, permission fallback or extra JWT signer.
+Preserve every other AccessTrust callback and production fail-closed defaults.
+
+Resources/validation/risk/rollback: source preparation now; no jobs under
+foreign SGP correctness lease through04:39:33UTC. Focused tests when released
+under an exclusive own lease, <=2CPU/1536MiB/300s, no production DB/listener,
+service restart/deploy/credential rotation. Test actual TLS1.3 mutual trust,
+leaf mismatch before write, exact scope/correlation/revision/null, malformed/
+oversize/timeout and unchanged recovery transport. Revert only additive
+unmounted composition; preserve peer staged changes and native/accepted facts.
+Source-tested is not actual08 acceptance. Real current grants/trust installation
+and Edge revoke/cache/cursor/SSE remain required before connected09. Primary
+owns journal/contracts/resource scheduling; disjoint implementation delegated.
+
+Peer source-only review accepts wire/TLS/mapping but identifies missing finite
+aggregate inflight admission and explicit installation expiry, including post-I/O
+expiry check. Fix these owned producer defects before mounting; no external-debt
+label or new business grant. Required private max_inflight and accepted absolute
+installation_expires_at_utc_ms, no default TTL/queue. Test denial before I/O,
+concurrent overload, expiry after I/O and slot release/recovery on every exit.
+First focused source freeze e22cfaf/4564126 ran full typecheck in the isolated
+2CPU/1536MiB cell; explicit1024MiB Node heap exhausted at212s (SIGABRT), zero
+product tests. Receipt70abb825eef0d3b63e1bca3a1fe9768165c053936df4ed0c443da008d866b2ca
+retained, exact test container/lease cleaned and8runtime tuples unchanged.
+Run corrected client Vitest focus within the same finite envelope; full build/
+typecheck remains mandatory in the normal hook's approved4CPU/4GiB cell. Never
+report this diagnostic as PASS or expand the focused resource ceiling silently.
+PM existing-only producer now committedf9b5b32c with61source/PG/regressionPASS;
+actual grants/issuer alignment and Edge08 remain uncommissioned. Preserve peer
+commissioning/plan WIP and use only one mapping implementation/normal-hook batch.
+
+Corrected focused source qualification:103/103PASS,0FAIL/SKIP =86mapping plus
+17existing current-human transport regressions. Actual loopback TLS1.3 mutual
+CA/hostname/leaf checks, exact512UTF8/UUID/BIGINT/correlation/null, busy before
+metadata with noqueue, pre/post-I/O expiry and terminal slot recovery all pass.
+Sourcea9e0355c1c2840c5368215b8b1e188ba10cbe87646bba73bd3083d9c99b5ac00;
+test00f55371de603b0687697931741868751bb4a407ba070359118519e6a82075e2.
+Controller9b7876080ba5ac497c56d64eaad7eaf182031cf1660877931847647e52e24b57;
+JUnitcc44f490c6dbaab99bcb4c2f9462c1b82f039ce6c034096c10e69b80030d2013.
+Existing readonly deps correctness only, not clean locked-install evidence;
+full build/typecheck/locked dependencies remain normal-hook landing gates.
+Own container/lease removed,8protected runtime tuples and source/dependencies
+unchanged. Source-copy cleanup and exact terminal hook/commit are recorded by
+Edge23.20.4 and its bounded producer qualification receipt, not predeclared here.
+PM current source/importer74474c96 now292functional/25offline separately; consume
+that source receipt without adding it to our103 or treating it as installed grants.
+Status SOURCE_FOCUS_TESTED_NORMAL_HOOK_LANDING_GATE, actual08NOT_MET. Private
+composition remains unmounted; stable issuer/trust/current-grant alignment is
+not solved by candidate PKI. Backend next is exact accepted-source commissioning,
+then Edge08 revoke/cache/cursor/SSE; no09, runtime/secret/grant/financial mutation.
+Frontend remains NOT_STARTED_BY_OWNER_DIRECTION; no new public schema/field or
+UI request. Handoff is source-only, AWAITING_CONSUMER_REVIEW, not owner acceptance.
+
