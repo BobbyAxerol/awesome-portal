@@ -265,3 +265,46 @@ Full10 remains NOT_MET_SOURCE_CURRENT_HUMAN_BUDGET_CALIBRATION_COEXISTENCE_BROWS
 dependencies and assigned consumer acceptance still have to pass, or Bobby must
 explicitly approve named scope exclusions. Candidate-only approval is not such
 an exclusion, calibration approval or runtime promotion.
+
+## Current read-only PM intake — 2026-10-17T22:41Z
+
+Actual SSH observation on the same approved HK target/worktree:
+`bobby@16.163.212.33:/home/bobby/.worktrees/trading-system-pm-v1_1`, branch
+feat/portfolio-account-v1_1-parallel, clean HEAD
+`1b7496a86ce315602260099cc87cb73d67e5ea05`. This supersedes only older source
+absence/pins, not the preserved historical receipts or installation gates.
+
+| Source under services/portfolio_management | Observed SHA256 |
+| --- | --- |
+| native_business_read_provider.py | 0134b84aa9da5887214faa3108cc299a120a217762dabdb23386347589c9b048 |
+| native_fence.py | ec7016f26ced2c2cba19e6c03b83ad70b2576d235078d64ccaa80beaaca87186 |
+| business_root_held.py | da9c5a62778c2af82339f5f52b9ae17b97aa440a2cde04d51e3f63cec296fd4c |
+| native_manager_read_private.py | 8d09488e13b47bc588897b710e99a420a8106f55b0d055b32c6f0004b5033f02 |
+| native_business_read_installation.py | 6c3c43a33c19d413f4744eed4804b01d8e884d2e46a8b62f6b4d5623b677c040 |
+| native_business_read_runtime.py | 76c8574a5cfcdc34a1f92e7967a5fea3192d970bf72b1952db500a4409452273 |
+
+Peer53a7a5a0 adds exact v2 scoped-notice terminal witness propagation through
+provider/held bridge/FenceStore/verifier and restart settlement. Finite v1 keeps
+only its own FINAL_HTTP family; v2 accepts only its explicit SSE frame
+completion/abort family, not global allow-both or downshift. The273-line private
+entry has been read in full: import inert; exact root-owned0600/no-follow/hash
+pins; reviewed private10.70.0.2/TLS1.3mTLS listener; role/system/install/runtime
+acceptance checks and UNKNOWN-preserving maintenance. No source credential,
+SQL/config, current user/grant, listener or service was changed during intake.
+
+Peer reports242 component tests/59pins. This is REPORTED_COMPONENT_EVIDENCE,
+not this primary's new execution, current human authority or installed runtime.
+Core's current finite native v1 path is not automatically v2/SSE-qualified;
+original EPG10-08 owns connected frame/installer integration. No duplicate
+protocol, transport or source implementation is requested here.
+
+Disposition: SOURCE_PRESENT_NOT_INSTALLED. The actual populated stable Core
+still needs a dependency-closed schema/writer/trust/current-user installation;
+source migration134/137/139 is not evidence it was applied over installed36.
+Real grants, accepted mappings, selected source/readers, revoke/cache/cursor/SSE,
+budgets/calibration, coexistence/original P184G2 and consumer/browser remain
+OPEN. No source-only receipt closes05-001/07-001/10 or starts11. Claude intake
+found no new consumer acknowledgement; UI remains owner-held. Exact private
+intake is retained at20261017/pm-native-source-refresh-2242.md under the existing
+private evidence root. Unchanged finite correctness receipts are reused only
+at their original source/coverage; no repeat full suite for this source note.

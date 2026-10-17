@@ -5,6 +5,7 @@ import { ExecutionReadScopeError } from "../execution-v2/read-scope";
 /** A narrow publication subset, not a field grant. Actual values still require
  * the current scope's reviewed fields. No global business vocabulary changes. */
 const fields = Object.freeze({
+  account_policies: Object.freeze(["account_id", "mode", "venue", "created_at", "updated_at"]),
   account_sync_current_state: Object.freeze(["account_id", "currency", "mode", "status", "updated_at"]),
   account_sync_effective: Object.freeze(["account_id", "currency", "mode", "status", "created_at"]),
   account_sync_snapshots: Object.freeze(["account_id", "currency", "mode", "status", "created_at"]),
@@ -37,6 +38,7 @@ export function namedRetainedBusinessResourceId(key: string, workspaceId: string
  * alias can supply these records. Matching a bare relation name is not proof. */
 export function namedRetainedBusinessSourceAllowed(relation: string, source: string): boolean {
   switch (relation) {
+    case "account_policies": return source === "manager.current.account-policies";
     case "account_sync_current_state": return source === "manager.current.account-sync-current-state";
     case "account_sync_effective": return source === "manager.accounts" || source === "manager.current.account-sync-effective";
     case "account_sync_snapshots": return source === "manager.current.account-sync-snapshots";
@@ -57,7 +59,7 @@ export function namedRetainedBusinessSourceAllowed(relation: string, source: str
 export function namedRetainedBusinessAnchored(relation: string, row: Record<string, ProjectionScalar>): boolean {
   const account = Object.getOwnPropertyDescriptor(row, "account_id");
   if (!account || !("value" in account) || typeof account.value !== "string" || !account.value) return false;
-  if (relation === "account_sync_current_state" || relation === "account_sync_effective" ||
+  if (relation === "account_policies" || relation === "account_sync_current_state" || relation === "account_sync_effective" ||
     relation === "account_sync_snapshots" || relation === "order_bracket_legs") return true;
   const strategy = Object.getOwnPropertyDescriptor(row, "strategy_id");
   return Boolean(strategy && "value" in strategy && typeof strategy.value === "string" && strategy.value);

@@ -99,6 +99,7 @@ TRACKED = (
     "generated/execution-retained-review.d.ts",
     "fixtures/execution-retained-review.valid.json",
     "fixtures/execution-retained-operation-page.valid.json",
+    "fixtures/execution-account-policy-metadata.synthetic.valid.json",
     "fixtures/research-native-search.valid.json",
     "fixtures/research-native-freeze.valid.json",
     "fixtures/research-native-report.valid.json",

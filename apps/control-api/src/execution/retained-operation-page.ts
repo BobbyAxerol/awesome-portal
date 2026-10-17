@@ -32,7 +32,7 @@ export async function authorizeRetainedRelation(scopes: ExecutionReadScopes | un
 }
 
 export function retainedRelationAction(relation: string): ReadScopeRequirement["action"] {
-  if (["accounts", "account_balances", "margin_balances", "account_equity_snapshots", "account_sync_effective", "venue_accounts"].includes(relation)) return "account.read";
+  if (["accounts", "account_balances", "account_policies", "margin_balances", "account_equity_snapshots", "account_sync_effective", "venue_accounts"].includes(relation)) return "account.read";
   if (["portfolios", "portfolio_equity_snapshots", "portfolio_allocations"].includes(relation)) return "portfolio.read";
   return "alpha.read";
 }
@@ -42,7 +42,7 @@ export function retainedRelationAction(relation: string): ReadScopeRequirement["
  * Null entries remain useful in explicit legacy mode; V2 publication must first
  * supply the missing purpose/lineage/finite field contract. No wildcard default. */
 export const NAMED_RETAINED_PURPOSES = Object.freeze({
-  account_balances: "account.read", account_policies: null, account_reservations: "account.read",
+  account_balances: "account.read", account_policies: "account.read", account_reservations: "account.read",
   account_sync_current_state: "account.read", account_sync_effective: "account.read", account_sync_snapshots: "account.read",
   accounts: "account.read", alpha_risk_config: null, alphas: "alpha.read",
   broker_account_sync_current_state: null, broker_account_sync_effective: null, broker_account_sync_snapshots: null,
@@ -161,12 +161,13 @@ export async function retainedOperationPage(config: ControlApiConfig,
   const rawItems = relation?.availability === "AVAILABLE" ? relation.items : [];
   if (rawItems.length > 10000) throw new RetainedOperationError("UDB_RETAINED_VIEW_ROW_BOUND", 503);
   const finiteFields = scoped ? namedRetainedBusinessFields(operation.relation) : null;
-  // Newly captured account-sync aliases are finite in BOTH compatibility
-  // modes. Keep this separate from V2 source/row/field authority and ID rules;
-  // no existing legacy alias gains a different disclosure or identity recipe.
-  const publicFields = finiteFields ?? (operation.relation === "account_sync_current_state" ||
+  const accountPolicyMetadata = operation.relation === "account_policies";
+  // Newly captured metadata stays finite in BOTH retained compatibility modes.
+  // This does not change the separate legacy current-source translator or the
+  // accepted bytes/disclosure of unrelated retained aliases.
+  const publicFields = finiteFields ?? (accountPolicyMetadata || operation.relation === "account_sync_current_state" ||
     operation.relation === "account_sync_snapshots" ? namedRetainedBusinessFields(operation.relation) : null);
-  if (finiteFields && relation && !namedRetainedBusinessSourceAllowed(operation.relation, relation.source_id))
+  if ((finiteFields || accountPolicyMetadata) && relation && !namedRetainedBusinessSourceAllowed(operation.relation, relation.source_id))
     throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
   let sourceRows = rawItems;
   // Optional per-record dependency, unlike the conditional child dataset.
@@ -244,11 +245,24 @@ export async function retainedOperationPage(config: ControlApiConfig,
     return true;
   }) : scopedRetainedRows(scope, sourceRows);
   // Resolve the existing key ring once, before computing opaque row IDs.
-  // Legacy IDs below retain their original unkeyed bytes unchanged.
+  // Unrelated legacy IDs retain their original unkeyed bytes. The newly finite
+  // account-policy alias keeps its private PK keyed in BOTH retained modes.
   const keys = querySigningKeys(config);
   const activeKeyId = config.QUERY_CURSOR_ACTIVE_KEY_ID;
+  const keyedIdentity = Boolean(finiteFields) || accountPolicyMetadata;
   const identities = new Set<string>();
   const records = items.map(item => {
+    if (accountPolicyMetadata) {
+      // Worker ingress already checks profile/mode. Validate visible imported
+      // or corrupt snapshots too, AFTER row visibility, without an existence
+      // oracle for a hidden malformed policy. Missing/null mode stays absence;
+      // it is never replaced by the request environment.
+      const mode = Object.getOwnPropertyDescriptor(item.fields, "mode");
+      if (!namedRetainedBusinessAnchored(operation.relation, item.fields) ||
+        mode && (!("value" in mode) || mode.value !== null && mode.value !== undefined &&
+          (typeof mode.value !== "string" || mode.value.toLowerCase() !== query.environment)))
+        throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+    }
     const values: Record<string, string | number | boolean | null> = {};
     for (const field of operation.fields) {
       if (publicFields && !publicFields.includes(field.name)) continue;
@@ -278,9 +292,9 @@ export async function retainedOperationPage(config: ControlApiConfig,
     // Effective sync IDs are source-observed, not a declared PK. Even a
     // declared source PK cannot silently collapse duplicate retained rows.
     const identityKey = identity.join("\u0001");
-    if (finiteFields && identities.has(identityKey)) throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+    if (keyedIdentity && identities.has(identityKey)) throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
     identities.add(identityKey);
-    const resourceId = finiteFields
+    const resourceId = keyedIdentity
       ? namedRetainedBusinessResourceId(keys[activeKeyId], principal.workspaceId,
         query.environment, profile, operation.operationId, identity)
       : `por1_${createHash("sha256").update(`${operation.operationId}\u0000${identity.join("\u0001")}`).digest("hex")}`;
@@ -293,7 +307,7 @@ export async function retainedOperationPage(config: ControlApiConfig,
     ...(findingSessionUsed ? [findingSessionScope!.fingerprint] : []),
     // Rotation changes keyed record ordering; an old-key cursor must not
     // silently seek within a new-key ordering, even while its key is retained.
-    ...(finiteFields ? ["named-row-key", activeKeyId] : [])]);
+    ...(keyedIdentity ? ["named-row-key", activeKeyId] : [])]);
   const mac = (prefix: string, key: string) => createHmac("sha256", key).update(binding).update("\u0000" + prefix).digest("base64url");
   let offset = 0;
   if (query.cursor) {

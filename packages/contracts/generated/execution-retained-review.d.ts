@@ -65,6 +65,14 @@ export interface components {
         RetainedReviewScopedResponse: components["schemas"]["execution-retained-review.v2.schema"];
         RetainedReviewScopedProfile: components["schemas"]["$defs-Profile"];
         RetainedReviewScopedPanel: components["schemas"]["$defs-Panel"];
+        /** @description Finite retained account-policy metadata, not fee/margin/custody authority. The DTO is not a grant: V2 needs current account/field authority and legacy remains explicit compatibility. Source PK is private. Missing keys remain missing; null is source absence; mode preserves the source's original case. */
+        AccountPolicyMetadataValues: {
+            account_id?: string;
+            mode?: string | null;
+            venue?: string | null;
+            created_at?: number | null;
+            updated_at?: number | null;
+        };
         Reason: string | null;
         UtcMs: number | null;
         Panel: {
@@ -421,7 +429,7 @@ export interface components {
                     [key: string]: string | number | boolean | null;
                 };
             }[];
-        } & unknown;
+        } & (unknown & unknown);
     };
     responses: never;
     parameters: never;

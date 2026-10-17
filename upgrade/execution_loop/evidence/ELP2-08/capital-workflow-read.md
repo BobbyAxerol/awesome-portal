@@ -97,7 +97,7 @@ Actual focused/normal-hook terminal sections follow; no prewritten PASS.
 Full07/08 and10 exit remains OPEN for exact missing operation adapters,
 source/current-human trust/installation, actual source qualification,
 production budget/calibration/coexistence/P184 performance G2 and browser.
-No new workflow reader means those original requirements have disappeared.
+This additive workflow reader does not remove those original requirements.
 
 Rollback removes the additive reader exposure, not stored commands, accepted
 receipts, audit, source effects or revoked rights. Owned test resources only
@@ -159,3 +159,27 @@ NOT_MOUNTED. Append this receipt without repeating unchanged focused tests;
 one coherent normal-hook landing next. Claude intake checked against the
 owning07/08 packets: no new consumer acknowledgement/reverse request found;
 handoff remains AWAITING_CONSUMER_REVIEW and UI owner-held.
+
+<a id="normal-hook-terminal-20261017-230417"></a>
+## Actual normal-hook terminal — 2026-10-17T23:04:17Z
+
+Landed `005de29b0fa8caf5a129604fe72e5a55410fed29`,23files,+1554/−33.
+The unchanged owning focused receipt above is reused, not repeated or added
+to hook coverage. Normal hook exit0:68contract files/804tests PASS;381API files/
+6287tests PASS,2existing skipped files/3existing skipped tests. API build,
+actual scoped PostgreSQL restore/four access-row digests, N29/tracking and
+monorepo gates PASS. N29's separate product blocker N29-REL-01 stays NO_GO.
+
+Private receipt directory:
+`/home/bobby/.local/state/portal-execution-elp210/20261017/capital-workflow-read-land-223545/`.
+Controller SHA256 `ba50f11cf5241e48a5250b1b0342066d47686ac1233acd39800773d1cf300574`;
+log SHA256 `a505ebeea5415bfd3952fb45826ac05b423406bfb61310a849f76613c4565615`.
+Source/index frozen, all eight protected runtime tuples unchanged, remaining
+owned resources empty, own lease removed. No new image/cache or prune.
+
+This supersedes only NORMAL_HOOK_PENDING/UNCOMMITTED for this reader. No
+mount/runtime/source command, upstream activation, frontend, push, dev/main,
+signing or release. Actual trust/provider/installation and remaining07/08/10
+gates remain OPEN;11NOT_ENTRY_READY. Claude can consume the published operation,
+shared WorkflowCapital DTO and canonical synthetic fixture when assigned;
+NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW is unchanged.

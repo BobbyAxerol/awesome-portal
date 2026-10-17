@@ -466,6 +466,10 @@ const FLEET: readonly ProfileProjectionBinding[] = [
   bind("broker_sync", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC),
   bind("account_sync_current_state", "EXECUTION_ACCOUNT_BROKER_360_SCREEN", "manager.current.account-sync-current-state", "account_sync_current_state", ACCOUNT_SYNC_CURRENT_STATE),
   bind("account_sync_snapshots", "EXECUTION_ACCOUNT_BROKER_360_SCREEN", "manager.current.account-sync-snapshots", "account_sync_snapshots", ACCOUNT_SYNC_SNAPSHOTS),
+  // Declared source PK plus finite metadata; no fee, leverage, margin or loan
+  // capture. Current account purpose and field grants are enforced at reads.
+  bind("account_policies", "EXECUTION_ACCOUNT_BROKER_360_SCREEN", "manager.current.account-policies", "account_policies",
+    ["account_policy_id", "account_id", "mode", "venue", "created_at", "updated_at"]),
   bind("brackets", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-brackets", "order_brackets", BRACKET_PARENT),
   bind("bracket_legs", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-bracket-legs", "order_bracket_legs", BRACKET_LEG),
   bind("service_heartbeats", "EXECUTION_COMMAND_CENTER_SCREEN", "manager.current.service-heartbeats", "service_heartbeats", SERVICE_HEARTBEAT),

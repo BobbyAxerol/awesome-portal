@@ -214,6 +214,7 @@ const CURRENT_KEY_FIELDS: Readonly<Record<string, readonly string[]>> = {
   // Exact generated declared-PK aliases; retained observations, not history proof.
   "manager.current.account-sync-current-state:account_sync_current_state": ["account_id"],
   "manager.current.account-sync-snapshots:account_sync_snapshots": ["sync_id"],
+  "manager.current.account-policies:account_policies": ["account_policy_id"],
 };
 
 @Injectable()

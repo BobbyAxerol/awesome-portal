@@ -41,5 +41,16 @@
   },
   "dependentRequired":{"read_scope":["visibility","coverage"],"visibility":["read_scope","coverage"],"coverage":["read_scope","visibility"]},
   "allOf":[{"if":{"properties":{"reason_code":{"const":"AUTHORIZED_RETAINED_OBSERVATIONS_ONLY"}},"required":["reason_code"]},
-    "then":{"properties":{"read_scope":{},"visibility":{},"coverage":{}},"required":["read_scope","visibility","coverage"]}}]
+    "then":{"properties":{"read_scope":{},"visibility":{},"coverage":{}},"required":["read_scope","visibility","coverage"]}},
+    {"if":{"properties":{"logical_operation_id":{"const":"managerAccountPoliciesPageV1"}},"required":["logical_operation_id"]},
+      "then":{"properties":{"records":{"type":"array","items":{"type":"object","properties":{"values":{
+        "type":"object","additionalProperties":false,
+        "description":"Finite retained account-policy metadata, not fee/margin/custody authority. The DTO is not a grant: V2 needs current account/field authority and legacy remains explicit compatibility. Source PK is private. Missing keys remain missing; null is source absence; mode preserves the source's original case.",
+        "properties":{
+          "account_id":{"type":"string","minLength":1,"maxLength":4096},
+          "mode":{"type":["string","null"],"pattern":"^(?:[pP][aA][pP][eE][rR]|[sS][aA][nN][dD][bB][oO][xX]|[lL][iI][vV][eE])$(?![\\s\\S])"},
+          "venue":{"type":["string","null"],"maxLength":4096},
+          "created_at":{"type":["integer","null"]},"updated_at":{"type":["integer","null"]}
+        }
+      }}}}}}}]
 }

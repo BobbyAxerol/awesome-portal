@@ -199,6 +199,44 @@
       },
       "RetainedReviewScopedPanel": {
         "$ref": "../schemas/execution-retained-review.v2.schema.json#/$defs/Panel"
+      },
+      "AccountPolicyMetadataValues": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Finite retained account-policy metadata, not fee/margin/custody authority. The DTO is not a grant: V2 needs current account/field authority and legacy remains explicit compatibility. Source PK is private. Missing keys remain missing; null is source absence; mode preserves the source's original case.",
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^(?:[pP][aA][pP][eE][rR]|[sS][aA][nN][dD][bB][oO][xX]|[lL][iI][vV][eE])$(?![\\s\\S])"
+          },
+          "venue": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4096
+          },
+          "created_at": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        }
       }
     }
   }

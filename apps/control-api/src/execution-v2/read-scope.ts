@@ -404,23 +404,29 @@ export class ExecutionReadScopes {
           // qualified exact account lineage, not researcher ownership or ID sets.
           const bindingTuples=r.action==="binding.read"?
             publication.tuples.filter(purposeAllows):[];
+          // Exact account authority is independent of researcher ownership or
+          // Portfolio membership. purposeAllows still requires current accepted
+          // account.read and honors DENY on every correlated lineage component.
+          // An unbound/account-only population is NOT invented here.
+          const accountTuples=r.action==="account.read"?
+            publication.tuples.filter(purposeAllows):[];
           const currentRelations=environmentRelations(context.relationsFor(p.user.userId),b.environment);
           const own=new Set(currentRelations.own_alpha_ids);
           const linked=new Set(currentRelations.member_portfolio_ids);
           const linkage=publication.current_linkage;
           const linkQualified=linkage&&(linkage.qualification==="SOURCE_VERIFIED"||context.allow_test_only&&linkage.qualification==="TEST_ONLY");
-          if(!linkQualified&&!fullTuples.length&&!bindingTuples.length)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+          if(!linkQualified&&!fullTuples.length&&!bindingTuples.length&&!accountTuples.length)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
           const currentPairs=new Set(linkQualified?linkage.pairs.map(pair=>JSON.stringify([pair.alpha_id,pair.portfolio_id])):[]);
           const linkedTuples=publication.tuples.filter(t=>context!.relationsFor(p.user.userId).qualified&&own.has(t.alpha_id)&&linked.has(t.portfolio_id)&&
             currentPairs.has(JSON.stringify([t.alpha_id,t.portfolio_id]))&&purposeAllows(t)&&
             allowed("alpha.read",{kind:"ALPHA",id:t.alpha_id})&&
             (allowed("portfolio.read_restricted",{kind:"PORTFOLIO",id:t.portfolio_id})||allowed("portfolio.read",{kind:"PORTFOLIO",id:t.portfolio_id})));
-          if(!fullTuples.length||[...linkedTuples,...bindingTuples].some(t=>!fullTuples.includes(t))){
+          if(!fullTuples.length||[...linkedTuples,...bindingTuples,...accountTuples].some(t=>!fullTuples.includes(t))){
             if(policy.state!=="QUALIFIED"||!policy.policy_ref)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
             fields=policy.fields.filter(isBusinessReadField);fieldPolicyRef=policy.policy_ref;
             if(!fields.length)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
           }
-          tuples=[...new Set([...fullTuples,...linkedTuples,...bindingTuples])];
+          tuples=[...new Set([...fullTuples,...linkedTuples,...bindingTuples,...accountTuples])];
           // No matching row does not itself prove an authorized collection.
           if(!tuples.length&&!explicitCollection)fail("EXECUTION_READ_NOT_AVAILABLE",404);
           const visibleKeys=new Set(tuples.flatMap(tupleLineage).map(exactKey));

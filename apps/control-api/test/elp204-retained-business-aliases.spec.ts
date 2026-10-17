@@ -47,8 +47,8 @@ function dependentFinding(id = "PRIVATE-FINDING", fields: Record<string, Project
 function parentReads(f: Fixture) {
   return f.access.readPublication.mock.calls.filter(([request]) => request.binding.dataset_id.endsWith(":execution_sessions"));
 }
-/** Keep the child current authority intact. Removing alpha.read globally also
- * invalidates its linked account scope, so that is not a parent-only denial. */
+/** Keep the independent child account authority intact. Only the parent's
+ * publication changes here; an account grant is not a session/Alpha grant. */
 function peerOnlySessionPublication(f: Fixture) {
   const original = f.access.readPublication.getMockImplementation()!;
   const peerKeys = new Set([`ALPHA:${PEER.alpha_id}`, `ALPHA_VERSION:${PEER.alpha_version_id}`,
@@ -69,10 +69,10 @@ function leg(group: string, id = "own-leg") {
 }
 
 describe("ELP2-04 first three finite named business aliases", () => {
-  it("keeps six explicit finite account purposes; the other27 named purposes stay closed", () => {
-    expect(Object.values(NAMED_RETAINED_PURPOSES).filter(value => value === null)).toHaveLength(27);
+  it("keeps seven explicit finite account purposes; the other26 named purposes stay closed", () => {
+    expect(Object.values(NAMED_RETAINED_PURPOSES).filter(value => value === null)).toHaveLength(26);
     expect(NAMED_RETAINED_PURPOSES.order_bracket_legs).toBe("account.read");
-    for (const alias of ["account_sync_current_state", "account_sync_effective", "account_sync_snapshots",
+    for (const alias of ["account_policies", "account_sync_current_state", "account_sync_effective", "account_sync_snapshots",
       "reconciliation_findings", "conditional_order_group_legs"]) {
       expect(NAMED_RETAINED_PURPOSES[alias as keyof typeof NAMED_RETAINED_PURPOSES]).toBe("account.read");
       expect(namedRetainedBusinessFields(alias)!.every(field => BUSINESS_READ_FIELDS.includes(field as never) || field === "mode")).toBe(true);

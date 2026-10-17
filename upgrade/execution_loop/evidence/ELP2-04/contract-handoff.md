@@ -127,3 +127,27 @@ finite readers above. [Actual hook/restore/source and cleanup receipt](finite-ac
 No further schema/field change in this addendum; do not rerun or regenerate
 unchanged contracts just for this record. Consumer still awaits Bobby's
 assignment and Claude's actual acknowledgement/browser receipt.
+
+## 2026-10-17 — Account-policy metadata / current account scope
+
+Read [owning producer packet](account-policy-metadata.md) and its actual terminal
+before consuming. Existing `managerAccountPoliciesPageV1` now has a finite
+`AccountPolicyMetadataValues` component in execution-retained-review.d.ts and
+canonical TEST_ONLY fixture `execution-account-policy-metadata.synthetic.valid.json`.
+Only account_id/mode/venue/created_at/updated_at can publish, still intersected
+with the current V2 field/resource grant. Private account_policy_id is keyed,
+not a public field or business permission. Source mode case is preserved;
+null/missing/epoch0 and retained PARTIAL/STALE/unknown-history remain distinct.
+
+Valid explicit current account authority is no longer implicitly dependent on
+Alpha ownership or Portfolio membership. Existing account-purpose readers keep
+their own finite fields/current fences; no account-only population is invented.
+The new alias is finite/keyed in BOTH retained modes; unrelated legacy aliases
+and the separate legacy current-source translator keep their behavior. Old
+retained account-policy continuation may invalidate at this new identity recipe.
+No fee/leverage/margin/loan UI, action, polling, source refresh or custody claim.
+
+Consumer remains NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW.
+When assigned, pin producer commit and generated type/fixture, map only real
+granted values, then take fixture and genuine API/browser receipts separately.
+This handoff is not proof of a real current-human/source provider or acceptance.

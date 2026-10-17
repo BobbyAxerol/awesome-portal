@@ -1,5 +1,12 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+2026-10-17 next approved subset: [finite account-policy metadata and independent
+current account scope](account-policy-metadata.md). Exact existing metadata
+source/PK, six private capture fields/five public candidates; no economic
+settings/custody or field-policy grant. Actual test/landing state is in that
+packet. Other26 named null purposes stay closed after this subset lands; full04
+source/consumer/parent coverage is still OPEN. Earlier counts below are history.
+
 2026-10-17 next approved subset: [finite account-sync and exact-target command
 readers](finite-account-command-readers.md). Two existing named account purposes
 and one additive current-authorized command collection are APPLIED/UNCOMMITTED,

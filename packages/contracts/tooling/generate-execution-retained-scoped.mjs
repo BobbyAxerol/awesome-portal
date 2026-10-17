@@ -18,6 +18,12 @@ profile.required.push('metadata_state','metadata_reason_code');
 profile.properties.metadata_state=state;profile.properties.metadata_reason_code=text;profile.properties.profile_id=text;
 profile.properties.source_payload_digest={anyOf:[text,{type:'null'}]};
 const spec=read('openapi/execution-retained-review.openapi.json');
+// Keep the finite definition in the operation condition; a root JSON-Schema
+// $defs is otherwise emitted as a required response field by this generator.
+const accountPolicyBranches=read('schemas/execution-retained-operation-page.v1.schema.json').allOf
+  .filter(branch=>branch.if?.properties?.logical_operation_id?.const==='managerAccountPoliciesPageV1');
+if(accountPolicyBranches.length!==1)throw new Error('Account-policy conditional schema drift');
+spec.components.schemas.AccountPolicyMetadataValues=accountPolicyBranches[0].then.properties.records.items.properties.values;
 spec.components.schemas.RetainedReviewScopedResponse={$ref:'../schemas/execution-retained-review.v2.schema.json'};
 spec.components.schemas.RetainedReviewScopedProfile={$ref:'../schemas/execution-retained-review.v2.schema.json#/$defs/Profile'};
 spec.components.schemas.RetainedReviewScopedPanel={$ref:'../schemas/execution-retained-review.v2.schema.json#/$defs/Panel'};
