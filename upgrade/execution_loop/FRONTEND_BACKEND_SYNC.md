@@ -21,10 +21,13 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 | Vùng | Agent | Pin đã đọc | Trạng thái | Khi nào hỏi tiếp |
 | --- | --- | --- | --- | --- |
 | TS execution (HK) | `a617b80c6a131e34a` | `c4819bc0` | Đã hoàn thành digest 2026-10-17 | Hỏi *phần thay đổi* khi pin TS tiến |
-| PM (HK) | (agent digest PM, ID trong transcript) | `673ce7cf` | Đã hoàn thành; **cần đối chiếu `e62b6825`** | FE-019 |
-| Edge (HK) | (agent digest Edge, ID trong transcript) | `8560ac10` | Đã hoàn thành | Khi Codex nêu EPG10 đổi |
+| PM (HK) | (agent digest PM, ID chưa ghi lại) | `673ce7cf` | Đã hoàn thành; **cần đối chiếu `e62b6825`** | FE-019 |
+| Edge (HK) | (agent digest Edge, ID chưa ghi lại) | `8560ac10` | Đã hoàn thành | Khi Codex nêu EPG10 đổi |
 
-Ghi chú: hai ID cuối chưa được ghi lại trong phiên này; lần giao kế tiếp phải lấy ID thật từ danh sách agent và cập nhật bảng.
+| FE inventory V1 | `ad491faedaae87b94` | `eafeb31e` | Hoàn thành (UXM-00) | Khi V1 FE đổi |
+| Lowfi M02+M04 / M05–07 / M08–10 | `a60392f32440041aa` / `a4acfcd98307ef547` / `abf05a72cf1644cfa` | kit @ 2026-10-17 | Hoàn thành | Sửa lowfi sau khi Bobby duyệt flow |
+
+Ghi chú: hai ID PM/Edge chưa được ghi lại trong phiên này; lần giao kế tiếp phải lấy ID thật từ danh sách agent và cập nhật bảng.
 
 ### Thay đổi từ lần đọc trước (đã đọc, 2026-10-17) và tác động lên FE
 
@@ -123,6 +126,9 @@ khi khóa wireframe; **P2** cần trước khi nối thật; **P3** tối ưu.
 | ELP2-REQ-FE-017 | P1 | Tên/đơn vị metric statement (`opening`↔`initial_funds`, tách decrease/recall, `pending_fees`) | Capital block | PM+Portal | Bảng ánh xạ | R-13 |
 | ELP2-REQ-FE-018 | P1 | Đưa code Edge EPG10 (chỉ ở HK) vào nhánh tích hợp hoặc ghi rõ nó không phải nguồn của contract Portal | Căn cứ ELP2-09 | Codex/Bobby | Quyết định + pin | R-17 |
 | ELP2-REQ-FE-019 | P1 | Đối chiếu pin PM (`673ce7cf` vs `e62b6825`) và cập nhật Source Truth Board | Toàn bộ ngữ nghĩa PM | Codex | Pin thống nhất | mới |
+| ELP2-REQ-FE-020 | P2 | Backend có giữ **preview** lệnh không (hay chỉ receipt)? | M09 hàng "Preview only" | Portal | Trả lời có/không | design G1 |
+| ELP2-REQ-FE-021 | P2 | Nguồn **audit** (ai làm gì) có contract/qualified chưa | M09 tab Audit | Portal | Trả lời + contract | design G2 |
+| ELP2-REQ-FE-022 | P2 | Cách tính return paper sau archive; nguồn trọng số `w_i` cấp alpha (alpha trải nhiều portfolio); cửa sổ actual bắt đầu từ Canary hay Live | M05, M08 | Portal+Research | Quy ước ghi rõ | design G3 |
 
 ## 4. Review của FE về phần backend của Codex (nhìn từ phía người dùng contract)
 

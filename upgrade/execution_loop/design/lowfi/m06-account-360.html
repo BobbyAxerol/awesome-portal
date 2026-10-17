@@ -1,0 +1,152 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M06 Account 360 — lowfi</title><link rel="stylesheet" href="kit.css">
+<style>
+[hidden]{display:none!important}
+main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,1fr)}}
+.tabs{overflow-x:auto}.tabs a{white-space:nowrap}
+.crumb{font-size:12px;color:var(--mute);margin-bottom:6px}.crumb a{color:var(--mute)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.two{grid-template-columns:1fr}}
+.dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:8px 0 0}.dl dt{font-size:12px;color:var(--mute)}.dl dd{margin:0;overflow-wrap:anywhere}
+@media(max-width:660px){.dl{grid-template-columns:110px 1fr}}
+.scope{display:inline-block;padding:0 6px;border-radius:4px;font:600 10px/16px system-ui;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--ink)}
+.scope.phys{background:var(--ink);color:var(--bg)}
+.card.phys{border-width:2px}
+.card.log{border-style:solid}
+.big{font:600 24px/32px ui-monospace,Menlo,monospace}
+.sep{display:flex;align-items:center;gap:8px;margin:8px 0;color:var(--mute);font-size:12px}.sep:before,.sep:after{content:"";flex:1;border-top:1px dashed var(--line)}
+.hr{border:0;border-top:1px solid var(--line);margin:8px 0}
+.strip{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.strip>div{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:4px 10px}.strip .l{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute)}
+.scroll table{min-width:520px}.grid>*,.two>*{min-width:0}
+</style></head>
+<body data-state="healthy" data-notes="on">
+<div class="bar"><b>Lowfi · M06 Account 360</b>
+ <span class="seg" data-ctl="state"><button data-v="healthy" aria-pressed="true">Healthy</button><button data-v="sparse">Source not ready</button><button data-v="denied">Researcher (own slice)</button><button data-v="loading">Loading</button></span>
+ <span class="seg" data-ctl="notes"><button data-v="on" aria-pressed="true">Notes on</button><button data-v="off">Off</button></span>
+ <span class="mute sm">Sample values only — not data from any source</span></div>
+<div class="shell"><nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a aria-current="page" href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Account</h6><a href="#">Profile &amp; Access</a></nav>
+<main>
+
+<div class="crumb"><a href="#">Accounts</a> › <b style="color:var(--ink)">Binance-02 sleeve</b> <span class="mono">acct-l-0092</span> &nbsp;·&nbsp; <a href="#">← Back to Accounts results</a> <span class="mono">?domain=live&amp;venue=binance</span> <span class="note">1</span></div>
+<div class="ctx"><h1>Binance-02 sleeve</h1><span class="chip">Logical account / sleeve</span><span class="chip">USDT · real-funded</span>
+ <span class="seg" data-seg><button aria-pressed="true">Sleeve view</button><button aria-pressed="false">Physical binding view</button></span><span class="note">2</span></div>
+
+<!-- IDENTITY: logical vs physical -->
+<div class="two">
+ <div class="card log"><h2>Logical account / sleeve <span class="scope">Internal</span></h2>
+  <dl class="dl"><dt>Name · ID</dt><dd>Binance-02 sleeve · <span class="mono">acct-l-0092</span></dd><dt>Portfolio</dt><dd>Core</dd><dt>Domain · currency</dt><dd>Real-funded · USDT</dd><dt>Deployments</dt><dd>1 live · <a href="#">live-0192</a></dd></dl></div>
+ <div class="card phys"><h2>Physical venue binding <span class="scope phys">Native</span> <span class="note">3</span></h2>
+  <dl class="dl"><dt>Venue · binding ID</dt><dd>Binance · <span class="mono">bind-p-0031</span></dd>
+   <dt>Native account</dt><dd><span data-show="healthy denied loading">Sub-account …4f2a (masked)</span><span class="na" data-show="sparse">Not available <span class="reason">Binding proof not loaded</span></span></dd>
+   <dt>Product · position</dt><dd><span data-show="healthy denied loading">USDT-M futures · hedge mode</span><span class="na" data-show="sparse">Not available <span class="reason">Binding proof not loaded</span></span></dd>
+   <dt>Margin mode</dt><dd><span data-show="healthy denied loading">Cross</span><span class="na" data-show="sparse">Not available</span></dd>
+   <dt>Environment proof</dt><dd><span data-show="healthy denied loading">Mainnet · verified 09:12</span><span class="na" data-show="sparse">Not available</span></dd></dl>
+  <p class="sm mute" style="margin:6px 0 0">Mode is read from venue proof, never guessed from the account name.</p></div>
+</div>
+
+<div class="banner warn" style="margin-top:12px" data-show="healthy sparse loading"><b>Shared physical account.</b> 3 logical sleeves use this binding. Native figures are venue-wide and are not this sleeve's capital. <a href="#sleeves">See sleeves</a> <span class="note">4</span></div>
+<div class="banner warn" style="margin-top:12px" data-show="denied"><b>Shared physical account.</b> Native balance and other sleeves are not shown to your role. Your sleeve's figures below are complete on their own.</div>
+
+<div class="strip">
+ <div><span class="l">Data freshness</span><span class="chip" data-s="partial" data-show="healthy denied loading"><i></i>Stale 14m</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Unknown</span></div>
+ <div><span class="l">Reconciliation</span><span class="chip" data-s="partial" data-show="healthy denied loading"><i></i>Reconciling</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Not available</span></div>
+ <div><span class="l">Last native snapshot</span><span class="mono sm" data-show="healthy denied loading">09:14 local</span><span class="na" data-show="sparse">Not available</span></div></div>
+
+<div class="tabs" role="tablist" data-tg="tab" style="margin-top:6px">
+ <a href="#" data-t="ov" aria-selected="true">Overview</a><a href="#" data-t="pos" aria-selected="false">Positions &amp; orders</a><a href="#" data-t="all" aria-selected="false">Allocations</a><a href="#" data-t="fee" aria-selected="false">Fees, funding &amp; borrow</a><a href="#" data-t="rec" aria-selected="false">Reconciliation</a><a href="#" data-t="aud" aria-selected="false">Audit</a><span class="note">5</span></div>
+
+<!-- ============ OVERVIEW ============ -->
+<section data-pg="tab" data-p="ov">
+ <div class="grid g3">
+  <div class="card log"><h2>Internal ledger <span class="scope">This sleeve</span></h2>
+   <div class="mute sm">Account balance <span class="mono">INTERNAL_ACCOUNT_BALANCE</span></div>
+   <div class="big"><span data-show="healthy denied">88,200.00</span><span class="na" data-show="sparse">Not available</span><div class="sk" data-show="loading"></div></div>
+   <span class="reason" data-show="healthy denied">USDT · as of 09:14 · stale 14m</span><span class="reason" data-show="sparse">Ledger source not qualified</span>
+   <hr class="hr"><table><tbody><tr><td>Unrealized PnL</td><td class="n"><span data-show="healthy denied loading">+700.00</span><span class="na" data-show="sparse">—</span></td></tr></tbody></table></div>
+  <div class="card phys"><h2>Venue native custody <span class="scope phys">Whole physical account</span></h2>
+   <div class="mute sm">Native wallet balance · shared</div>
+   <div class="big"><span data-show="healthy loading">412,880.25</span><span class="na" data-show="sparse denied">Not available</span></div>
+   <span class="reason" data-show="healthy">USDT · shared by 3 sleeves · not alpha capital</span><span class="reason" data-show="sparse">Native source not qualified</span><span class="reason" data-show="denied">Not available to your role</span>
+   <hr class="hr"><table><tbody><tr><td>Native equity</td><td class="n"><span data-show="healthy loading">414,010.40</span><span class="na" data-show="sparse denied">—</span></td></tr></tbody></table></div>
+  <div class="card log"><h2>PM capital &amp; exposure <span class="scope">This sleeve</span></h2>
+   <table><tbody>
+    <tr><td>Budget approved</td><td class="n"><span data-show="healthy denied loading">100,000.00</span><span class="na" data-show="sparse">—</span></td></tr>
+    <tr><td>Budget used</td><td class="n"><span data-show="healthy denied loading">80,000.00</span><span class="na" data-show="sparse">—</span></td></tr>
+    <tr><td>Gross exposure</td><td class="n"><span data-show="healthy denied loading"><b>96,400.00</b></span><span class="na" data-show="sparse">—</span></td></tr>
+    <tr class="child"><td>↳ Long / Short</td><td class="n"><span data-show="healthy denied loading">61,300 / 35,100</span><span class="na" data-show="sparse">—</span></td></tr></tbody></table>
+   <span class="reason">Hedge legs are shown separately. Net exposure is not computed.</span></div>
+ </div>
+ <p class="sm mute" style="margin:8px 0 0"><span class="note">6</span> Three authorities, three scopes. They are never added, subtracted or labelled as alpha capital. No "native minus internal" remainder exists in this screen.</p>
+
+ <div class="grid g2" style="margin-top:12px">
+  <div class="card" id="sleeves"><h2>Sleeves on this binding <span class="scope phys">Physical</span> <span class="note">7</span></h2>
+   <div class="scroll"><table><thead><tr><th>Logical sleeve</th><th>Portfolio</th><th class="n">Internal balance</th><th>Attributable native metrics</th></tr></thead><tbody>
+    <tr class="sel"><td><b>Binance-02 sleeve</b> <span class="sm mute">this</span></td><td>Core</td><td class="n"><span data-show="healthy denied loading">88,200.00</span><span class="na" data-show="sparse">—</span></td><td><span class="na">Not available</span><span class="reason">No attribution source</span></td></tr>
+    <tr data-show="healthy loading sparse"><td>Binance-02b sleeve</td><td>Satellite</td><td class="n"><span data-show="healthy loading">61,400.00</span><span class="na" data-show="sparse">—</span></td><td><span class="na">Not available</span><span class="reason">No attribution source</span></td></tr>
+    <tr data-show="healthy loading sparse"><td>Binance-02c sleeve</td><td>Canary</td><td class="n"><span data-show="healthy loading">47,900.00</span><span class="na" data-show="sparse">—</span></td><td><span class="na">Not available</span><span class="reason">No attribution source</span></td></tr></tbody></table></div>
+   <p class="sm mute" style="margin:6px 0 0" data-show="healthy loading sparse">Rows are not totalled and the native balance is not split among them. Other sleeves are listed because your role may see them.</p>
+   <p class="sm mute" style="margin:6px 0 0" data-show="denied">Other sleeves on this venue account are not shown to your role.</p></div>
+  <div class="card phys"><h2>Margin &amp; native risk <span class="scope phys">Whole physical account</span> <span class="note">8</span></h2>
+   <table><tbody>
+    <tr><td>Margin mode</td><td class="n"><span data-show="healthy loading">Cross</span><span class="na" data-show="sparse denied">Not available</span></td></tr>
+    <tr><td>Margin ratio</td><td class="n"><span data-show="healthy loading">5.1%</span><span class="na" data-show="sparse denied">Not available</span></td></tr>
+    <tr><td>Maintenance margin</td><td class="n"><span data-show="healthy loading">21,300.00</span><span class="na" data-show="sparse denied">Not available</span></td></tr>
+    <tr><td>Available margin</td><td class="n"><span data-show="healthy loading">301,100.00</span><span class="na" data-show="sparse denied">Not available</span></td></tr></tbody></table>
+   <p class="sm" style="margin:6px 0 0">Cross margin at the venue does not prove that logical portfolios are protected from each other in a liquidation.</p></div>
+ </div>
+</section>
+
+<!-- ============ POSITIONS ============ -->
+<section data-pg="tab" data-p="pos" hidden>
+ <div class="card"><h2>Positions &amp; open orders <span class="seg" data-tg="ps" style="margin-left:8px"><button data-t="sl" aria-pressed="true">This sleeve</button><button data-t="ph" aria-pressed="false">Physical account</button></span></h2>
+  <div data-pg="ps" data-p="sl"><div class="scroll"><table><thead><tr><th>Symbol</th><th class="n">Long notional</th><th class="n">Short notional</th><th class="n">Gross</th><th class="n">Open orders</th></tr></thead><tbody>
+   <tr><td>BTCUSDT</td><td class="n">61,300.00</td><td class="n">35,100.00</td><td class="n"><b>96,400.00</b></td><td class="n">4</td></tr></tbody></table></div>
+   <p class="sm mute" style="margin:6px 0 0">Gross is long plus short. Hedge legs are never netted silently. USDT only.</p></div>
+  <div data-pg="ps" data-p="ph" hidden><p class="na">Physical-account positions: Not available <span class="reason">No source attributing native positions to sleeves is published</span></p></div>
+ </div>
+</section>
+
+<!-- ============ ALLOCATIONS ============ -->
+<section data-pg="tab" data-p="all" hidden>
+ <div class="card scroll" style="padding:0"><table><thead><tr><th>Alpha / version</th><th>Deployment</th><th>Stage</th><th class="n">Allocation (USDT)</th></tr></thead><tbody>
+  <tr><td><b>BTC-Trend</b> <span class="mono">v3</span></td><td>live-0192</td><td><span class="pill on">Live</span></td><td class="n">80,000.00</td></tr></tbody></table></div>
+ <p class="sm mute" style="margin-top:8px">Allocations are PM-side, logical, one partition. They do not claim any share of the native balance.</p>
+</section>
+
+<!-- ============ FEES ============ -->
+<section data-pg="tab" data-p="fee" hidden>
+ <div class="card"><table><tbody>
+  <tr><td>Fees</td><td class="n"><span data-show="healthy denied loading">388.20</span><span class="na" data-show="sparse">Not available</span></td></tr>
+  <tr><td>Funding</td><td class="n"><span data-show="healthy denied loading">224.20</span><span class="na" data-show="sparse">Not available</span></td></tr>
+  <tr><td>Borrow / interest</td><td class="n"><span class="na">Not available</span><span class="reason">Source not published</span></td></tr></tbody></table>
+  <p class="sm mute" style="margin:6px 0 0">Window 30D, this sleeve. USDT.</p></div>
+</section>
+
+<!-- ============ RECONCILIATION ============ -->
+<section data-pg="tab" data-p="rec" hidden>
+ <div class="card scroll" style="padding:0"><table><thead><tr><th>Check</th><th>Scope</th><th>Result</th><th>Last run</th></tr></thead><tbody>
+  <tr><td>Balance ↔ ledger</td><td>This sleeve</td><td><span class="chip" data-s="partial"><i></i>Reconciling</span></td><td class="mono">09:12</td></tr>
+  <tr><td>Positions ↔ venue</td><td>This sleeve</td><td><span class="chip" data-s="fresh"><i></i>Matched</span></td><td class="mono">09:12</td></tr>
+  <tr><td>Open orders ↔ venue</td><td>This sleeve</td><td><span class="chip" data-s="fresh"><i></i>Matched</span></td><td class="mono">09:12</td></tr></tbody></table></div>
+ <p class="sm mute" style="margin-top:8px">Differences and receipts open in Operations. No amount gap is derived here from native vs internal balance.</p>
+</section>
+
+<!-- ============ AUDIT ============ -->
+<section data-pg="tab" data-p="aud" hidden>
+ <div class="card scroll" style="padding:0"><table><thead><tr><th>Time</th><th>Event</th><th>Actor</th><th>Receipt</th></tr></thead><tbody>
+  <tr><td class="mono">09 Oct 14:20</td><td>Budget approved 100,000.00</td><td>bjones</td><td class="mono">rc-8790</td></tr>
+  <tr><td class="mono">07 Oct 08:00</td><td>Binding verified (mainnet)</td><td>system</td><td class="mono">rc-8741</td></tr></tbody></table></div>
+</section>
+
+<aside class="notes"><b>Annotations</b><ol>
+<li><b>Identity and back path.</b> Breadcrumb by display name with the logical ID in mono. Back keeps the Accounts query. The header always states which thing you are looking at.</li>
+<li><b>View switch.</b> Sleeve view is the default. Physical binding view re-roots the same screen on the venue account (same panels, native scope first) so the two grains are never mixed on one page.</li>
+<li><b>Two identities side by side.</b> Left: logical account/sleeve (internal). Right: physical venue binding (native) with a heavier border and a Native tag. Venue, product, position mode, margin mode and environment come from binding proof, never from the name suffix.</li>
+<li><b>Shared-binding warning</b> sits above all figures, in plain words. For a researcher it does not reveal the sleeve count or other sleeves.</li>
+<li><b>Tabs</b> hold detail; Overview is the one reading path. Tab is kept in the URL.</li>
+<li><b>Three authorities, three scopes.</b> Internal ledger, native custody and PM capital are different facts. Each column has a scope tag. They are never summed or differenced, and no remainder is shown. The Fleet "Account balance" column stays on the internal source set (guide §10).</li>
+<li><b>Sleeves on this binding.</b> Each row's internal balance is shown, with attributable native metrics reading "Not available" until a real attribution source exists. No total row. Hidden from researchers; native balance is also hidden so no total can be inferred.</li>
+<li><b>Margin and native risk</b> are tagged as whole-account scope and carry the cross-margin caution. Hedge gross exposure is long plus short; net is deliberately not offered.</li>
+<li><b>Limits.</b> Money values are one partition and currency (USDT real-funded). Borrow shows "Not available" until a source is published. Reconciliation reports state, not an invented amount gap.</li>
+<li><b>Alternative considered:</b> one merged balance table with a row per account and a column per source (internal, native, PM). Rejected: it invites adding down the rows, repeats the shared native number on every sleeve and hides the scope of each figure.</li>
+</ol></aside>
+</main></div><script src="kit.js"></script>
+<script>(function(){document.querySelectorAll('[data-tg]').forEach(function(g){g.addEventListener('click',function(e){var a=e.target.closest('[data-t]');if(!a||!g.contains(a))return;e.preventDefault();var k=g.getAttribute('data-tg');g.querySelectorAll('[data-t]').forEach(function(x){var on=x===a;x.setAttribute(x.tagName==='A'?'aria-selected':'aria-pressed',on?'true':'false')});document.querySelectorAll('[data-pg="'+k+'"]').forEach(function(p){p.hidden=p.getAttribute('data-p')!==a.getAttribute('data-t')})})})})();</script></body></html>

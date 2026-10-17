@@ -1,0 +1,48 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M03 Alpha Fleet — lowfi</title><link rel="stylesheet" href="kit.css"></head><body data-state="healthy" data-notes="on" data-peek="off">
+<div class="bar"><b>Lowfi · M03 Alpha Fleet</b>
+ <span class="seg" data-ctl="state"><button data-v="healthy" aria-pressed="true">Healthy</button><button data-v="sparse">Source not ready</button><button data-v="denied">Researcher (own slice)</button><button data-v="loading">Loading</button></span>
+ <span class="seg" data-ctl="notes"><button data-v="on" aria-pressed="true">Notes on</button><button data-v="off">Off</button></span><span class="seg" data-ctl="peek"><button data-v="off" aria-pressed="true">Table</button><button data-v="on">Peek drawer</button></span><span class="mute sm">Sample values only</span></div>
+<div class="shell"><nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a aria-current="page" href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Account</h6><a href="#">Profile &amp; Access</a></nav>
+<main>
+<div class="ctx"><h1>Alpha Fleet</h1><span class="chip" data-s="fresh" data-show="healthy loading denied"><i></i>Fresh · 9s</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Identity only · metrics not ready</span>
+ <span class="seg" data-seg><button aria-pressed="false">7D</button><button aria-pressed="true">30D</button><button aria-pressed="false">90D</button></span><span class="chip">USDT · real-funded</span><span class="note">1</span></div>
+<div class="banner" data-show="denied">Showing alphas you own. Other owners, fund totals and peer rankings are not available to your role.</div>
+<div class="banner warn" data-show="sparse"><b>Identities are shown; money and score columns are not available yet.</b> Hover a dash to see the exact reason. Nothing is estimated.</div>
+
+<div class="tabs" role="tablist"><a aria-selected="true" href="#">All <span class="mute sm">214</span></a><a aria-selected="false" href="#">Live <span class="mute sm">38</span></a><a aria-selected="false" href="#">Canary <span class="mute sm">9</span></a><a aria-selected="false" href="#">Sandbox <span class="mute sm">61</span></a><a aria-selected="false" href="#">Paper <span class="mute sm">142</span></a><span class="note">2</span></div>
+
+<div class="tool"><input placeholder="Search alpha or version" aria-label="Search"><span class="note">3</span>
+ <button class="btn">Portfolio ▾</button><button class="btn" data-show="healthy sparse loading">Owner ▾</button><button class="btn">Health ▾</button><button class="btn">More filters ▾</button>
+ <span class="chip">Group: none ▾</span><span class="note">4</span><span style="flex:1"></span><button class="btn">Columns ▾</button><button class="btn">Compact</button><button class="btn" disabled title="Export needs a policy decision">Export</button></div>
+<div class="tool sm" data-show="healthy"><span class="chip">Health: Needs attention ✕</span><span class="chip">Portfolio: Core ✕</span><a href="#">Clear all</a></div>
+
+<div class="split"><div class="card scroll" style="padding:0">
+<table><thead><tr><th>Alpha / version</th><th>Owner / portfolio</th><th>Stages</th><th class="n">Allocation ⇅</th><th class="n">Net PnL ⇅</th><th class="n">Unrealized ⇅</th><th class="n">Account balance</th><th>Equity 30D</th><th>Health · source</th><th class="n">QBTS ⇅</th></tr></thead>
+<tbody data-show="loading"><tr><td colspan="10"><div class="sk"></div></td></tr><tr><td colspan="10"><div class="sk"></div></td></tr><tr><td colspan="10"><div class="sk"></div></td></tr><tr><td colspan="10"><div class="sk"></div></td></tr></tbody>
+<tbody data-show="healthy sparse denied">
+ <tr class="grp" data-show="healthy sparse"><td colspan="10">Portfolio: Core · 12 alphas · 15 deployments <span class="note">5</span></td></tr>
+ <tr class="sel"><td><b>BTC-Trend</b> <span class="mono">v3</span></td><td>asmith<br><span class="sm mute">Core</span></td><td><span class="pill on">Live</span><span class="pill">Paper</span></td>
+  <td class="n"><span data-show="healthy denied">120,000</span><span class="na" data-show="sparse" title="Allocation source not ready">—</span></td><td class="n"><span data-show="healthy denied">+21,430</span><span class="na" data-show="sparse">—</span></td><td class="n"><span data-show="healthy denied">+1,120</span><span class="na" data-show="sparse">—</span></td><td class="n"><span data-show="healthy denied">132,980</span><span class="na" data-show="sparse">—</span></td><td><span class="spark" data-show="healthy denied"></span><span class="na" data-show="sparse">—</span></td><td><span class="chip" data-s="fresh"><i></i>OK</span></td><td class="n"><span class="na" title="Score policy pending">Pending</span></td></tr>
+ <tr class="child"><td>↳ Deployment live-0192 · Binance-02</td><td></td><td><span class="pill on">Live</span></td><td class="n">80,000</td><td class="n">+14,010</td><td class="n">+700</td><td class="n">88,200</td><td></td><td><span class="chip" data-s="partial"><i></i>Stale 14m</span></td><td></td></tr>
+ <tr><td><b>ETH-Mean</b> <span class="mono">v2</span></td><td>bjones<br><span class="sm mute">Core · Satellite</span> <span class="pill">2</span></td><td><span class="pill on">Canary</span><span class="pill">Sandbox</span></td>
+  <td class="n"><span data-show="healthy">76,000</span><span class="na" data-show="sparse denied">—</span></td><td class="n"><span data-show="healthy">+12,980</span><span class="na" data-show="sparse denied">—</span></td><td class="n"><span data-show="healthy">−430</span><span class="na" data-show="sparse denied">—</span></td><td class="n"><span data-show="healthy">80,100</span><span class="na" data-show="sparse denied">—</span></td><td><span class="spark" data-show="healthy"></span><span class="na" data-show="sparse denied">—</span></td><td><span class="chip" data-s="bad"><i></i>Needs attention</span></td><td class="n"><span class="na">Pending</span></td></tr>
+</tbody>
+<tbody data-show="denied"><tr><td colspan="10" class="sm mute">You own 1 alpha. Fund and peer rows are not loaded.</td></tr></tbody></table>
+<div class="sm mute" style="padding:8px 12px" data-show="healthy sparse">Showing 50 of 214 authorized alphas · <a href="#">Next 50</a> · totals are for the whole filtered set <span class="note">6</span></div></div>
+
+<div class="drawer" data-show="healthy sparse denied"><b>BTC-Trend v3</b> <span class="mute sm">peek</span> <span class="note">7</span>
+ <p class="sm">Owner asmith · Core · Live + Paper</p>
+ <table><tbody><tr><td>Allocation</td><td class="n"><span data-show="healthy denied">120,000</span><span class="na" data-show="sparse">—</span></td></tr><tr><td>Net PnL · 30D</td><td class="n"><span data-show="healthy denied">+21,430</span><span class="na" data-show="sparse">—</span></td></tr><tr><td>QBTS</td><td class="n na">Policy pending</td></tr><tr><td>Source</td><td class="n">live-0192 · Stale 14m</td></tr></tbody></table>
+ <p style="margin-top:8px"><button class="btn">Open Alpha 360</button> <button class="btn" disabled title="No permission for this action">Recall</button></p></div></div>
+
+<aside class="notes"><b>Annotations</b><ol>
+<li><b>Context in the URL.</b> Window, currency/partition, stage, filters, sort, group and selected row all live in the URL (a saved view later). Today's Fleet keeps filters in local state — this fixes it.</li>
+<li><b>Stage tabs are filters, not a total.</b> "All" is a view, not a fifth stage. An alpha in two stages appears in both tabs; counts say unique alphas, never summed across tabs.</li>
+<li><b>Search.</b> The current query contract has no text search (FE-008). The box stays as a design target; until backend answers it shows only when supported.</li>
+<li><b>Group by ≤ 2 levels</b> (Portfolio → Owner, Stage → Portfolio, Venue, Health). More levels would be a fan-out the backend does not allow.</li>
+<li><b>Group header</b> states what is counted (alphas vs deployments) and totals come from the whole filtered query, not the visible page.</li>
+<li><b>Honest paging.</b> "Showing 50 of 214 authorized" — never a hidden total; never a footer that sums peers the viewer cannot see.</li>
+<li><b>Peek drawer</b> keeps the table context; Open Alpha 360 keeps the query so Back returns to the same results. Disabled actions explain why without leaking hidden data.</li>
+<li><b>Columns.</b> All guide columns exist; at 1280px the table scrolls horizontally with the identity column sticky. Column chooser and compact density are the escape valves, so nothing is crammed by default. Sort is server-side, nulls always last in both directions.</li>
+</ol></aside>
+</main></div><script src="kit.js"></script></body></html>

@@ -1,0 +1,134 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M10 Profile &amp; Access — lowfi</title><link rel="stylesheet" href="kit.css">
+<style>
+/* page-local only: reading column, persona toggle, fact grid */
+.col{max-width:1040px}
+.chip{white-space:nowrap}
+.scroll td,.scroll th{white-space:normal}.scroll th{position:static}
+body:not([data-who=restr]) [data-w=restr],body[data-who=restr] [data-w=mgr]{display:none}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media(max-width:1100px){.facts{grid-template-columns:repeat(2,1fr)}}@media(max-width:660px){.facts{grid-template-columns:1fr}}
+.facts .l{font-size:12px;color:var(--mute)}.facts .v{font-weight:600}
+.sec h2{font-size:15px;line-height:22px;margin:0 0 2px}.sec .sub{margin:0 0 8px}
+.divide{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--mute);font-size:12px}.divide:before,.divide:after{content:"";flex:1;border-top:1px dashed var(--line)}
+.empty{padding:20px;text-align:center}
+.scroll table{min-width:560px}
+</style></head><body data-state="healthy" data-notes="on" data-who="mgr">
+<div class="bar"><b>Lowfi · M10 Profile &amp; Access</b>
+ <span class="seg" data-ctl="state"><button data-v="healthy" aria-pressed="true">Healthy</button><button data-v="sparse">Source not ready</button><button data-v="denied">Researcher (own slice)</button><button data-v="loading">Loading</button></span>
+ <span class="seg" data-ctl="notes"><button data-v="on" aria-pressed="true">Notes on</button><button data-v="off">Off</button></span>
+ <span class="seg" data-ctl="who"><button data-v="mgr" aria-pressed="true">Healthy: manager</button><button data-v="restr">Healthy: restricted</button></span>
+ <span class="mute sm">Sample values only</span></div>
+<div class="shell"><nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Account</h6><a aria-current="page" href="#">Profile &amp; Access</a></nav>
+<main><div class="col">
+<div class="ctx"><h1>Profile &amp; Access</h1>
+ <span class="chip" data-s="fresh" data-show="healthy denied loading"><i></i>Fresh · 20s</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Business permissions not loaded</span></div>
+
+<div class="banner warn" data-show="sparse"><span class="note">8</span> <b>Your business permissions could not be loaded.</b> Your sign-in works. This is not the same as “no access”: nothing below is assumed, and no action is shown as allowed or blocked.</div>
+<div class="banner" data-show="denied">You are a researcher. You see your own alphas and your part of any portfolio that contains them.</div>
+<div class="banner" data-w="restr" data-show="healthy"><span class="note">9</span> You can sign in, but no business access is active for your account right now. Ask a manager to renew it.</div>
+
+<div class="card" style="margin-bottom:12px"><div class="facts">
+ <div><div class="l">Signed in as</div><div class="v" data-show="healthy sparse loading">Stan <span class="note">1</span></div><div class="v" data-show="denied">asmith</div><div class="sk" data-show="loading" style="margin-top:4px"></div><div class="sm mute mono">user_7f3a…e1</div></div>
+ <div><div class="l">Role label <span class="mute">(a description only)</span></div>
+  <div class="v" data-show="healthy"><span data-w="mgr">Manager · read-all</span><span data-w="restr">Researcher · inactive</span></div><div class="v" data-show="denied">Researcher · own slice</div>
+  <div data-show="sparse"><span class="na">Not available</span><span class="reason">Permissions not loaded</span></div></div>
+ <div><div class="l">App sign-in <span class="note">2</span></div><div class="v"><span class="chip" data-s="fresh"><i></i>Active</span></div><div class="sm mute">Session ends in 7h 12m</div></div>
+ <div><div class="l">Business access</div>
+  <div data-show="healthy"><span data-w="mgr"><span class="chip" data-s="fresh"><i></i>Accepted</span><div class="sm mute mono">membership r19</div></span><span data-w="restr"><span class="chip"><i></i>None active</span><div class="sm mute">Last grant expired 12 Oct</div></span></div>
+  <div data-show="denied"><span class="chip" data-s="fresh"><i></i>Accepted</span><div class="sm mute mono">membership r12</div></div>
+  <div data-show="sparse"><span class="na">Not available</span><span class="reason">Trading system not reachable</span></div></div>
+</div></div>
+
+<div class="card sec"><h2>1 · What you can see <span class="note">3</span></h2><p class="sub sm mute">Visibility only. It says nothing about what you may change.</p>
+<div class="scroll"><table><thead><tr><th>Area</th><th>What you see</th><th>Note</th></tr></thead>
+<tbody data-show="healthy" data-w="mgr">
+ <tr><td>Overview</td><td><span class="chip" data-s="fresh"><i></i>All authorized</span></td><td class="sm mute">Fund totals with their source and coverage</td></tr>
+ <tr><td>Portfolios</td><td><span class="chip" data-s="fresh"><i></i>All authorized</span></td><td class="sm mute">Full portfolio totals</td></tr>
+ <tr><td>Alpha Fleet</td><td><span class="chip" data-s="fresh"><i></i>All authorized</span></td><td class="sm mute">Every owner</td></tr>
+ <tr><td>Accounts</td><td><span class="chip" data-s="fresh"><i></i>All authorized</span></td><td class="sm mute">Account secrets are never shown to anyone</td></tr>
+ <tr><td>Archived Alphas</td><td><span class="chip" data-s="fresh"><i></i>All authorized</span></td><td class="sm mute">List not published yet; the page says so</td></tr>
+ <tr><td>Operations</td><td><span class="chip" data-s="fresh"><i></i>All authorized</span></td><td class="sm mute">Receipts, exceptions and audit</td></tr></tbody>
+<tbody data-show="healthy" data-w="restr">
+ <tr><td>Overview</td><td><span class="chip"><i></i>Nothing yet</span></td><td class="sm mute">No business access is active</td></tr>
+ <tr><td>Portfolios</td><td><span class="chip"><i></i>Nothing yet</span></td><td class="sm mute">No business access is active</td></tr>
+ <tr><td>Alpha Fleet</td><td><span class="chip"><i></i>Nothing yet</span></td><td class="sm mute">No business access is active</td></tr>
+ <tr><td>Accounts</td><td><span class="chip"><i></i>Nothing yet</span></td><td class="sm mute">No business access is active</td></tr>
+ <tr><td>Archived Alphas</td><td><span class="chip"><i></i>Nothing yet</span></td><td class="sm mute">No business access is active</td></tr>
+ <tr><td>Operations</td><td><span class="chip"><i></i>Nothing yet</span></td><td class="sm mute">No business access is active</td></tr></tbody>
+<tbody data-show="denied">
+ <tr><td>Overview</td><td><span class="chip" data-s="partial"><i></i>Your slice</span></td><td class="sm mute">“My execution overview”, no fund totals</td></tr>
+ <tr><td>Portfolios</td><td><span class="chip" data-s="partial"><i></i>Your part</span></td><td class="sm mute">Portfolios that hold your alphas, labelled “your part”, never “total”</td></tr>
+ <tr><td>Alpha Fleet</td><td><span class="chip" data-s="partial"><i></i>Alphas you own</span></td><td class="sm mute">Rankings use only what you can see</td></tr>
+ <tr><td>Accounts</td><td><span class="chip"><i></i>Not shown to your role</span></td><td class="sm mute">Balances and bindings are for managers</td></tr>
+ <tr><td>Archived Alphas</td><td><span class="chip" data-s="partial"><i></i>Alphas you own</span></td><td class="sm mute">Evidence for your own alphas</td></tr>
+ <tr><td>Operations</td><td><span class="chip" data-s="partial"><i></i>Your requests</span></td><td class="sm mute">Plus exceptions on your alphas</td></tr></tbody>
+<tbody data-show="sparse">
+ <tr><td>Overview</td><td><span class="na">Not available</span><span class="reason">Permissions not loaded</span></td><td></td></tr>
+ <tr><td>Portfolios</td><td><span class="na">Not available</span><span class="reason">Permissions not loaded</span></td><td></td></tr>
+ <tr><td>Alpha Fleet</td><td><span class="na">Not available</span><span class="reason">Permissions not loaded</span></td><td></td></tr>
+ <tr><td>Accounts</td><td><span class="na">Not available</span><span class="reason">Permissions not loaded</span></td><td></td></tr>
+ <tr><td>Archived Alphas</td><td><span class="na">Not available</span><span class="reason">Permissions not loaded</span></td><td></td></tr>
+ <tr><td>Operations</td><td><span class="na">Not available</span><span class="reason">Permissions not loaded</span></td><td></td></tr></tbody>
+<tbody data-show="loading"><tr><td colspan="3"><div class="sk"></div></td></tr><tr><td colspan="3"><div class="sk"></div></td></tr><tr><td colspan="3"><div class="sk"></div></td></tr></tbody>
+</table></div></div>
+
+<div class="divide">Seeing something never lets you change it <span class="note">4</span></div>
+
+<div class="card sec"><h2>2 · What you can do <span class="note">5</span></h2><p class="sub sm mute">Each action says why it is off, in plain words.</p>
+<div class="scroll"><table><thead><tr><th>Action</th><th>Status</th><th>Why</th></tr></thead>
+<tbody data-show="healthy" data-w="mgr">
+ <tr><td>Change fund budgets or recall capital</td><td><span class="chip" data-s="stale"><i></i>Not available yet</span></td><td class="sm">Capital commands are not turned on for this environment. Your role allows them once they are.</td></tr>
+ <tr><td>Archive an alpha</td><td><span class="chip" data-s="partial"><i></i>Allowed · needs approval</span></td><td class="sm">A second person approves before anything changes.</td></tr>
+ <tr><td>Start a reactivation review</td><td><span class="chip" data-s="fresh"><i></i>Allowed</span></td><td class="sm">Opens a review only. It never goes live by itself.</td></tr>
+ <tr><td>Approve stage exits</td><td><span class="chip" data-s="partial"><i></i>Partly allowed</span></td><td class="sm">Paper and Sandbox exits: yes. Canary to Live is waiting for confirmation (see section 3). <span class="note">6</span></td></tr>
+ <tr><td>Manage users and grants</td><td><span class="chip" data-s="fresh"><i></i>Allowed · within limit</span></td><td class="sm">You can give up to the access you hold, not above. <a href="#">Open Users &amp; access</a></td></tr>
+ <tr><td>Change your own admin rights</td><td><span class="chip"><i></i>Not allowed</span></td><td class="sm">Nobody can change their own admin rights. Another administrator does it.</td></tr>
+ <tr><td>Export tables</td><td><span class="chip" data-s="stale"><i></i>Not available yet</span></td><td class="sm">Export is not built yet. It will need its own grant.</td></tr></tbody>
+<tbody data-show="healthy" data-w="restr">
+ <tr><td>Archive an alpha</td><td><span class="chip"><i></i>Not allowed</span></td><td class="sm">No business access is active. Ask a manager to renew it.</td></tr>
+ <tr><td>Start a reactivation review</td><td><span class="chip"><i></i>Not allowed</span></td><td class="sm">No business access is active. Ask a manager to renew it.</td></tr>
+ <tr><td>Manage users and grants</td><td><span class="chip"><i></i>Not allowed</span></td><td class="sm">Not part of your role.</td></tr>
+ <tr><td>Export tables</td><td><span class="chip" data-s="stale"><i></i>Not available yet</span></td><td class="sm">Export is not built yet.</td></tr></tbody>
+<tbody data-show="denied">
+ <tr><td>Change fund budgets or recall capital</td><td><span class="chip"><i></i>Not allowed</span></td><td class="sm">This is a manager action. Your role is to view and research.</td></tr>
+ <tr><td>Archive your own alpha</td><td><span class="chip" data-s="partial"><i></i>Allowed · needs approval</span></td><td class="sm">A manager approves before anything changes.</td></tr>
+ <tr><td>Start a reactivation review</td><td><span class="chip"><i></i>Not allowed</span></td><td class="sm">Managers start reviews. You can follow reviews on your own alphas.</td></tr>
+ <tr><td>Approve stage exits</td><td><span class="chip"><i></i>Not allowed</span></td><td class="sm">Not part of your role.</td></tr>
+ <tr><td>Manage users and grants</td><td><span class="chip"><i></i>Not allowed</span></td><td class="sm">Not part of your role.</td></tr>
+ <tr><td>Change your own admin rights</td><td><span class="chip"><i></i>Not allowed</span></td><td class="sm">Nobody can change their own admin rights. Another administrator does it.</td></tr>
+ <tr><td>Export tables</td><td><span class="chip" data-s="stale"><i></i>Not available yet</span></td><td class="sm">Export is not built yet.</td></tr></tbody>
+<tbody data-show="sparse"><tr><td colspan="3"><span class="na">Not available</span><span class="reason">Permissions not loaded. No action is shown as allowed or blocked until they are.</span></td></tr></tbody>
+<tbody data-show="loading"><tr><td colspan="3"><div class="sk"></div></td></tr><tr><td colspan="3"><div class="sk"></div></td></tr><tr><td colspan="3"><div class="sk"></div></td></tr></tbody>
+</table></div></div>
+
+<div class="card sec" style="margin-top:12px"><h2>3 · How you got this access <span class="note">7</span></h2><p class="sub sm mute">Who granted what to you, and until when.</p>
+<div class="scroll"><table><thead><tr><th>Access</th><th>Granted by</th><th>Scope</th><th>Since</th><th>Expires</th><th>State</th></tr></thead>
+<tbody data-show="healthy" data-w="mgr">
+ <tr><td>Manager read-all</td><td>Bobby (owner)</td><td>All business data</td><td>1 Sep 2026</td><td class="mute">No end date</td><td><span class="chip" data-s="fresh"><i></i>Effective</span></td></tr>
+ <tr><td>Approve stage exits</td><td>Bobby (owner)</td><td>Paper, Sandbox, Canary exits</td><td>1 Sep 2026</td><td>31 Dec 2026</td><td><span class="chip" data-s="fresh"><i></i>Effective</span></td></tr>
+ <tr><td>Manage users</td><td>Bobby (owner)</td><td>Up to the access you hold</td><td>15 Sep 2026</td><td>31 Dec 2026</td><td><span class="chip" data-s="fresh"><i></i>Effective</span></td></tr>
+ <tr><td>Approve Canary to Live exits</td><td>Bobby (owner)</td><td>Canary to Live</td><td>Sent 17 Oct 2026</td><td>31 Dec 2026</td><td><span class="chip" data-s="partial"><i></i>Waiting for confirmation</span><span class="reason">Nothing changes until the trading system accepts it</span></td></tr></tbody>
+<tbody data-show="healthy" data-w="restr">
+ <tr><td>Researcher view</td><td>Stan</td><td>Alphas you own</td><td>20 Aug 2026</td><td>12 Oct 2026</td><td><span class="chip" data-s="bad"><i></i>Expired</span><span class="reason">Ask Stan to renew it</span></td></tr></tbody>
+<tbody data-show="denied">
+ <tr><td>Researcher view</td><td>Stan</td><td>Alphas you own</td><td>20 Aug 2026</td><td class="mute">No end date</td><td><span class="chip" data-s="fresh"><i></i>Effective</span></td></tr>
+ <tr><td>Archive your own alphas</td><td>Stan</td><td>Alphas you own · needs approval</td><td>20 Aug 2026</td><td>31 Dec 2026</td><td><span class="chip" data-s="fresh"><i></i>Effective</span></td></tr></tbody>
+<tbody data-show="sparse"><tr><td colspan="6"><span class="na">Not available</span><span class="reason">Grants could not be loaded</span></td></tr></tbody>
+<tbody data-show="loading"><tr><td colspan="6"><div class="sk"></div></td></tr><tr><td colspan="6"><div class="sk"></div></td></tr></tbody>
+</table></div>
+<p class="sm mute" style="margin:8px 0 0" data-show="healthy" data-w="mgr">What you can pass on: up to the access you hold, never above it, never to yourself. Owner accounts cannot be changed from here.</p>
+<p class="sm mute" style="margin:8px 0 0" data-show="healthy" data-w="restr">To get access back, ask a manager.</p>
+</div>
+
+<aside class="notes"><b>Annotations</b><ol>
+<li><b>Identity is an ID, not a name.</b> The stable user ID is what is checked; the role label is only a description. Nothing on this page compares names or labels to decide rights.</li>
+<li><b>Two separate facts:</b> app sign-in and business access. Business access reads “Accepted” only after the trading system accepted it (with its membership revision). A working sign-in never implies business access.</li>
+<li><b>Visibility section.</b> One row per area: manager read-all, researcher own slice, or nothing yet. It never shows counts or hints of what is hidden (no “7 more alphas”). Researcher totals are labelled “your part”, never “total”.</li>
+<li><b>Seeing ≠ doing.</b> A dashed divider and two separate sections. Having a row on screen never turns on an action.</li>
+<li><b>Capability list.</b> Status plus one plain sentence. The sentence says which kind of “no”: your role (Not allowed), not turned on or not built (Not available yet), needs a second person (needs approval), or waiting for confirmation. Reasons come from a fixed wording list and never name hidden resources or other people.</li>
+<li><b>Waiting row.</b> A business grant was sent but the trading system has not accepted it. The app side may show it, but nothing is enabled and nothing is claimed as revoked or granted system-wide until it is accepted.</li>
+<li><b>Delegation.</b> Who granted it, scope, since, expires, state. Managers also see what they may pass on (the ceiling) in one sentence; researchers do not get a ceiling line.</li>
+<li><b>Source not ready</b> means permissions could not be loaded. It is shown as “Not available”, never as “no access” and never as allowed, so nobody is told to ask for a right they may already have.</li>
+<li><b>Restricted persona</b> (toggle in the bar, healthy only): can sign in, has no active business access, sees the expired grant and who can renew it. No data and no guesses.</li>
+<li><b>Alternative considered:</b> one matrix of areas × (see / act) with ticks. Rejected: it puts seeing and doing in one cell, which invites reading “I can see it, so I can change it”, and leaves no room for a reason sentence per row.</li>
+</ol></aside>
+</div></main></div><script src="kit.js"></script></body></html>

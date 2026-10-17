@@ -1,0 +1,65 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M07 Deployment header — lowfi</title><link rel="stylesheet" href="kit.css">
+<style>
+[hidden]{display:none!important}
+main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,1fr)}}
+.crumb{font-size:12px;color:var(--mute);margin-bottom:6px;overflow-wrap:anywhere}.crumb a{color:var(--mute)}.crumb b{color:var(--ink)}
+.dl{display:flex;gap:6px 24px;flex-wrap:wrap;margin:10px 0 0}.dl div{min-width:0}.dl dt{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute)}.dl dd{margin:0;overflow-wrap:anywhere}
+.states{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}@media(max-width:900px){.states{grid-template-columns:1fr}}
+.states>div{border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--bg)}
+.states .l{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);margin-bottom:4px}
+.states .chip{font-size:13px;padding:2px 10px}
+.ph{margin-top:14px;min-height:340px;border:2px dashed var(--line);border-radius:8px;background:repeating-linear-gradient(135deg,var(--fill) 0 12px,transparent 12px 24px);display:grid;place-items:center;text-align:center;padding:20px;color:var(--mute)}
+.ph b{display:block;font-size:16px;color:var(--ink)}
+.mini{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:6px 10px;margin-top:14px}
+.tag{display:inline-block;font:600 10px/16px system-ui;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);border:1px solid var(--line);border-radius:4px;padding:0 6px}
+</style></head>
+<body data-state="healthy" data-notes="on">
+<div class="bar"><b>Lowfi · M07 Deployment header</b>
+ <span class="seg" data-ctl="state"><button data-v="healthy" aria-pressed="true">Healthy</button><button data-v="sparse">Source not ready</button><button data-v="denied">Researcher (own slice)</button><button data-v="loading">Loading</button></span>
+ <span class="seg" data-ctl="notes"><button data-v="on" aria-pressed="true">Notes on</button><button data-v="off">Off</button></span>
+ <span class="mute sm">Sample values only — not data from any source</span></div>
+<div class="shell"><nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a aria-current="page" href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Account</h6><a href="#">Profile &amp; Access</a></nav>
+<main>
+
+<div class="card">
+ <div class="crumb"><a href="#">Alpha Fleet</a> › <a href="#">BTC-Trend v3</a> <span class="mono">a-7f3a91</span> › <b>Live · live-0192</b> <span class="note">1</span>
+  <span class="mute"> &nbsp;·&nbsp; opened from Alpha Fleet. Also under:</span> <a href="#" data-show="healthy sparse loading">Core › Binance-02 sleeve</a><span data-show="denied" class="mute">your authorized paths only</span> <span class="note">2</span></div>
+ <div class="ctx" style="margin:0"><h1>BTC-Trend v3 · Live deployment</h1><span class="chip mono">live-0192</span><span class="chip">USDT · real-funded</span></div>
+ <p style="margin:6px 0 0"><a href="#">← Back to Alpha Fleet results</a> <span class="mono sm mute">?stage=live&amp;portfolio=core&amp;sort=-allocation&amp;sel=live-0192</span> <span class="note">3</span></p>
+
+ <dl class="dl">
+  <div><dt>Portfolio</dt><dd><a href="#" data-show="healthy sparse loading">Core</a><span data-show="denied">Core</span></dd></div>
+  <div><dt>Account</dt><dd><a href="#" data-show="healthy sparse loading">Binance-02 sleeve</a> <span class="mono sm mute" data-show="healthy sparse loading">acct-l-0092</span><span class="na" data-show="denied">Not available to your role</span></dd></div>
+  <div><dt>Stage</dt><dd><span class="pill">Paper <a href="#">paper-0044</a></span><span class="pill">Sandbox <a href="#">sbx-0031</a></span><span class="pill">Canary <a href="#">can-0007</a></span><span class="pill on">Live</span> <span class="note">4</span></dd></div>
+  <div><dt>Alpha</dt><dd><a href="#">Open Alpha 360</a></dd></div>
+ </dl>
+
+ <div class="states">
+  <div><span class="l">Runtime</span>
+   <span class="chip" data-s="fresh" data-show="healthy denied"><i></i>Running</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Not available</span><div class="sk" data-show="loading"></div>
+   <span class="reason" data-show="healthy denied">Since 11 Oct 09:00 · from the runtime record</span><span class="reason" data-show="sparse">Runtime source not ready</span></div>
+  <div><span class="l">Data freshness</span>
+   <span class="chip" data-s="partial" data-show="healthy denied"><i></i>Stale 14m</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Unknown</span><div class="sk" data-show="loading"></div>
+   <span class="reason" data-show="healthy denied">Last event 09:14 · figures below may lag the venue</span><span class="reason" data-show="sparse">No as-of time published</span></div>
+  <div><span class="l">Reconciliation</span>
+   <span class="chip" data-s="partial" data-show="healthy denied"><i></i>Reconciling</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Not available</span><div class="sk" data-show="loading"></div>
+   <span class="reason" data-show="healthy denied">1 order unknown at venue · <a href="#">Open in Operations</a></span><span class="reason" data-show="sparse">Reconciliation source not ready</span></div>
+ </div>
+ <p class="sm mute" style="margin:8px 0 0">Three independent facts. <span class="note">5</span> <span data-show="healthy denied">This sample is deliberately mixed: a deployment can be running while its data is stale and its books are still reconciling.</span></p>
+</div>
+
+<div class="ph"><div><b>Existing detail screen — unchanged</b>Paper · Sandbox · Canary · Live workbench renders here.<br>Its own tabs (?tab=), actions, blotter and replay links, and layout are kept as they are today. <span class="note">6</span></div></div>
+
+<div class="mini"><span class="tag">On scroll</span><b>BTC-Trend v3 · Live</b><span class="mono sm">live-0192</span><span class="chip" data-s="fresh"><i></i>Running</span><span class="chip" data-s="partial"><i></i>Stale 14m</span><span class="chip" data-s="partial"><i></i>Reconciling</span><a href="#" class="sm">← Results</a><span class="note">7</span></div>
+
+<aside class="notes"><b>Annotations</b><ol>
+<li><b>Breadcrumb by display name, routed by ID.</b> Names are for reading, IDs (mono) are for routing and never parsed to guess owner or profile. Special characters and historical aliases render as stored. The URL does not change, so bookmarks keep working.</li>
+<li><b>Entry path vs other parents.</b> The crumb shows how the user arrived (Alpha Fleet). The same deployment also sits under a portfolio and an account, offered as "Also under". A researcher only sees paths they are authorized for.</li>
+<li><b>Back to results</b> restores the exact list query and selected row. Opening in a new tab keeps this header intact; browser Back behaves the same.</li>
+<li><b>Context row.</b> Portfolio, account and stage. The stage pills link to this alpha's sibling deployments in other stages; the current one is filled. Paper and Sandbox headers would show a "Simulated" chip instead of "real-funded".</li>
+<li><b>Three state chips, never merged.</b> Runtime, data freshness and reconciliation each carry their own chip, as-of and reason. No combined "health" light. A running deployment with stale data is not red, and stale data does not rewrite the runtime state.</li>
+<li><b>Preserved screen.</b> Only the header above is new. The existing Paper, Sandbox, Canary and Live screens, their tabs and actions are untouched (UXM-00 verdict: preserve). Source-not-ready shows "Not available" with the reason in each chip; Researcher view hides account and unauthorized paths.</li>
+<li><b>Sticky form.</b> After scrolling, the header collapses to one line with the three chips and a Results link. Nothing else follows the user down the page.</li>
+<li><b>Alternative considered:</b> replace the existing screen's own header chips with one traffic-light "Health" chip. Rejected: it merges three independent facts and hides which one needs action.</li>
+</ol></aside>
+</main></div><script src="kit.js"></script></body></html>

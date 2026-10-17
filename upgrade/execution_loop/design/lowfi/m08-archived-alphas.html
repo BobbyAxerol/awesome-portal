@@ -1,0 +1,148 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M08 Archived Alphas — lowfi</title><link rel="stylesheet" href="kit.css">
+<style>
+/* page-local only: split width, wrapping cells, two-line timelines, empty-state toggle */
+.split{grid-template-columns:1fr 360px}@media(max-width:1100px){.split{grid-template-columns:1fr}}
+td.wrap{white-space:normal;min-width:150px}
+.kpi .sub{font-size:12px;color:var(--mute)}
+.chip{white-space:nowrap}.empty{margin-top:12px;padding:28px 20px;text-align:center}.empty h2{font-size:16px;line-height:24px;margin:0 0 6px}.empty p{max-width:560px;margin:6px auto}
+.tl{height:56px;border:1px dashed var(--line);border-radius:6px;display:grid;place-items:center;color:var(--mute);font-size:12px;background:repeating-linear-gradient(135deg,transparent 0 10px,var(--fill) 10px 11px)}
+.tl.sim{border-style:solid;border-color:var(--mute)}
+.sec{margin:10px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);font-weight:600}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}@media(max-width:1100px){.steps{grid-template-columns:1fr}}
+.steps div{border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--panel)}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+body[data-state=healthy][data-empty=zero] [data-has=rows]{display:none}
+body:not([data-state=healthy]) [data-has=zero],body:not([data-empty=zero]) [data-has=zero]{display:none}
+.scroll table{min-width:600px}.scroll td{white-space:normal}.scroll th{white-space:normal}
+</style></head><body data-state="healthy" data-notes="on" data-peek="on" data-empty="rows">
+<div class="bar"><b>Lowfi · M08 Archived Alphas</b>
+ <span class="seg" data-ctl="state"><button data-v="healthy" aria-pressed="true">Healthy</button><button data-v="sparse">Source not ready</button><button data-v="denied">Researcher (own slice)</button><button data-v="loading">Loading</button></span>
+ <span class="seg" data-ctl="notes"><button data-v="on" aria-pressed="true">Notes on</button><button data-v="off">Off</button></span>
+ <span class="seg" data-ctl="peek"><button data-v="off">Table</button><button data-v="on" aria-pressed="true">Peek drawer</button></span>
+ <span class="seg" data-ctl="empty"><button data-v="rows" aria-pressed="true">Has rows</button><button data-v="zero">Zero archived</button></span>
+ <span class="mute sm">Sample values only</span></div>
+<div class="shell"><nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a aria-current="page" href="#">Archived Alphas</a><a href="#">Operations</a><h6>Account</h6><a href="#">Profile &amp; Access</a></nav>
+<main>
+<div class="ctx"><h1>Archived Alphas</h1>
+ <span class="chip" data-s="fresh" data-show="healthy denied loading"><i></i>Fresh · 21s</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Archive list not available</span>
+ <span class="chip">Monitor figures: Paper · simulated</span><span class="note">1</span><span class="note">2</span></div>
+
+<div class="banner" data-show="denied">Showing archived alphas you own. Other owners and fund-level counts are not available to your role.</div>
+<div class="banner warn" data-show="sparse"><b>The archive list is not available yet.</b> The data source does not publish archived alphas for this environment. That is different from “nothing is archived”, so no count is shown.</div>
+
+<div class="grid g3" data-show="healthy sparse loading" data-has="rows">
+ <div class="card kpi"><div class="l">Archived alphas <span class="note">3</span></div>
+  <div class="v" data-show="healthy">17</div><div class="sub" data-show="healthy">alphas · 1 requested · 2 pending drain · 14 archived</div>
+  <div data-show="sparse"><span class="na">Not available</span><span class="reason">Archive list not published</span></div><div class="sk" data-show="loading"></div></div>
+ <div class="card kpi"><div class="l">With open obligations</div>
+  <div class="v" data-show="healthy">3</div><div class="sub" data-show="healthy">alphas · positions, orders, reservations or settlement still open</div>
+  <div data-show="sparse"><span class="na">Not available</span><span class="reason">Needs the archive list</span></div><div class="sk" data-show="loading"></div></div>
+ <div class="card kpi"><div class="l">Paper monitors</div>
+  <div class="v" data-show="healthy">9 <span class="sm mute">running</span></div><div class="sub" data-show="healthy">3 need attention · 5 not provisioned (of 17 alphas)</div>
+  <div data-show="sparse"><span class="na">Not available</span><span class="reason">Needs the archive list</span></div><div class="sk" data-show="loading"></div></div>
+</div>
+
+<div data-show="healthy" data-has="rows" style="margin-top:12px">
+<div class="tabs" role="tablist"><a aria-selected="true" href="#">All <span class="mute sm">17</span></a><a aria-selected="false" href="#">Archive requested <span class="mute sm">1</span></a><a aria-selected="false" href="#">Pending drain <span class="mute sm">2</span></a><a aria-selected="false" href="#">Archived <span class="mute sm">14</span></a><span class="note">4</span></div>
+<div class="tool"><input placeholder="Search alpha or version" aria-label="Search"><button class="btn">Previous stage ▾</button><button class="btn">Monitor ▾</button><button class="btn">Review status ▾</button><button class="btn">Owner ▾</button><span style="flex:1"></span><button class="btn">Columns ▾</button><button class="btn" disabled title="Export is not available yet">Export</button></div></div>
+
+<div class="split" data-show="healthy denied loading" data-has="rows">
+<div class="card scroll" style="padding:0;align-self:start">
+<table><thead><tr><th>Alpha / version</th><th>Archived</th><th>Open obligations <span class="note">5</span></th><th>Paper monitor <span class="note">6</span></th><th>Evidence since start <span class="note">7</span></th><th>Review</th></tr></thead>
+<tbody data-show="healthy">
+ <tr class="sel"><td><b>BTC-Momentum</b> <span class="mono">v2</span><br><span class="pill">Pending drain</span> <span class="sm mute">bjones</span></td>
+  <td class="wrap">18 Sep 2026<br><span class="sm mute">Superseded by v3 · was <span class="pill on">Live</span></span></td>
+  <td><span class="chip" data-s="partial"><i></i>2 open</span><br><span class="sm mute">1 order · 1 settlement</span></td>
+  <td><span class="chip" data-s="fresh"><i></i>Running</span><br><span class="sm mute">since 20 Sep</span></td>
+  <td class="wrap"><span class="mono">+1.8%</span> net<br><span class="mono">−0.9%</span> DD<br><span class="sm mute">27 d · simulated</span></td><td><span class="mute">Not started</span></td></tr>
+ <tr><td><b>SOL-Break</b> <span class="mono">v1</span><br><span class="pill">Archived</span> <span class="sm mute">asmith</span></td>
+  <td class="wrap">30 Aug 2026<br><span class="sm mute">Edge decayed · was <span class="pill on">Paper</span></span></td>
+  <td><span class="chip" data-s="fresh"><i></i>None</span></td>
+  <td><span class="chip" data-s="stale"><i></i>Stale</span><br><span class="sm mute">last observation 3h ago</span></td>
+  <td class="wrap"><span class="mono">−0.4%</span> net<br><span class="mono">−2.2%</span> DD<br><span class="sm mute">48 d · simulated · 1 gap</span></td><td><span class="chip" data-s="partial"><i></i>Under review</span></td></tr>
+ <tr><td><b>ETH-Fade</b> <span class="mono">v4</span><br><span class="pill">Archived</span> <span class="sm mute">bjones</span></td>
+  <td class="wrap">2 Jul 2026<br><span class="sm mute">Risk limit · was <span class="pill on">Canary</span></span></td>
+  <td><span class="chip" data-s="fresh"><i></i>None</span></td>
+  <td><span class="chip"><i></i>Not provisioned</span></td>
+  <td class="wrap"><span class="na">Not available</span><span class="reason">Monitor not running</span></td><td><span class="mute">Not started</span></td></tr>
+ <tr><td><b>DOGE-Grid</b> <span class="mono">v1</span><br><span class="pill">Archived</span> <span class="sm mute">cchen</span></td>
+  <td class="wrap">11 Jun 2026<br><span class="sm mute">Retired · was <span class="pill on">Sandbox</span></span></td>
+  <td><span class="chip" data-s="fresh"><i></i>None</span></td>
+  <td><span class="chip" data-s="partial"><i></i>Quota-limited</span><br><span class="sm mute">paused by policy</span></td>
+  <td class="wrap"><span class="mono">+0.2%</span> net<br><span class="mono">−0.3%</span> DD<br><span class="sm mute">12 d · simulated · 9-day gap</span></td><td><span class="mute">Not started</span></td></tr>
+ <tr><td><b>XRP-Revert</b> <span class="mono">v2</span><br><span class="pill">Archive requested</span> <span class="sm mute">cchen</span></td>
+  <td class="wrap">16 Oct 2026<br><span class="sm mute">Owner left · was <span class="pill on">Live</span></span></td>
+  <td><span class="chip" data-s="bad"><i></i>1 unknown</span><br><span class="sm mute">outcome not yet known</span></td>
+  <td><span class="chip" data-s="bad"><i></i>Failed</span><br><span class="sm mute">last good 17 Oct 02:10</span></td>
+  <td class="wrap"><span class="na">Not available</span><span class="reason">Monitor failed before first observation</span></td><td><span class="mute">Not started</span></td></tr>
+</tbody>
+<tbody data-show="denied">
+ <tr class="sel"><td><b>SOL-Break</b> <span class="mono">v1</span><br><span class="pill">Archived</span> <span class="sm mute">you</span></td>
+  <td class="wrap">30 Aug 2026<br><span class="sm mute">Edge decayed · was <span class="pill on">Paper</span></span></td>
+  <td><span class="chip" data-s="fresh"><i></i>None</span></td>
+  <td><span class="chip" data-s="stale"><i></i>Stale</span><br><span class="sm mute">last observation 3h ago</span></td>
+  <td class="wrap"><span class="mono">−0.4%</span> net<br><span class="mono">−2.2%</span> DD<br><span class="sm mute">48 d · simulated · 1 gap</span></td><td><span class="chip" data-s="partial"><i></i>Under review</span></td></tr>
+ <tr><td colspan="6" class="sm mute">You own 1 archived alpha. Other rows are not loaded.</td></tr>
+</tbody>
+<tbody data-show="loading"><tr><td colspan="6"><div class="sk"></div></td></tr><tr><td colspan="6"><div class="sk"></div></td></tr><tr><td colspan="6"><div class="sk"></div></td></tr></tbody>
+</table>
+<div class="sm mute" style="padding:8px 12px" data-show="healthy">Showing 5 of 17 authorized archived alphas · <a href="#">Next 50</a> · counts above cover the whole authorized set</div></div>
+
+<div class="drawer" data-show="healthy"><b>BTC-Momentum v2</b> <span class="pill">Pending drain</span> <span class="note">8</span>
+ <p class="sm mute" style="margin:2px 0 0">Archive requested 18 Sep by Stan · reason: superseded by v3</p>
+ <div class="sec">Still open (archive does not close these)</div>
+ <table><tbody><tr><td>Open positions</td><td class="n">0</td></tr><tr><td>Working orders</td><td class="n">1</td></tr><tr><td>Reservations</td><td class="n">0</td></tr><tr><td>Unknown outcomes</td><td class="n">0</td></tr><tr><td>Settlement pending</td><td class="n">1</td></tr></tbody></table>
+ <div class="sec">Two separate timelines</div>
+ <div class="sm mute">Before archive · real-funded · USDT · to 18 Sep</div><div class="tl">Prior economic history</div>
+ <div class="sm mute" style="margin-top:6px">After 20 Sep · simulated · starts when the monitor really ran</div><div class="tl sim">Forward paper monitor · no backfill</div>
+ <div class="sec">Support evidence</div>
+ <table><tbody><tr><td>Net return · 27 days</td><td class="n">+1.8%</td></tr><tr><td>Max drawdown</td><td class="n">−0.9%</td></tr><tr><td>QBTS</td><td class="n na">Policy pending</td></tr><tr><td>Regime support</td><td class="n na">Insufficient data</td></tr><tr><td>Virtual allocation</td><td class="n">100,000 <span class="sm mute">USDT sim</span></td></tr><tr><td>Last observation</td><td class="n">2 min ago</td></tr></tbody></table>
+ <p class="sm mute">Observed results since the monitor started. They describe what happened, not what will happen.</p>
+ <div class="sec">Reactivation <span class="note">9</span></div>
+ <p class="sm" style="margin:2px 0 6px">Opens a review. Default target is Paper. It never goes live or lifts the archive on its own.</p>
+ <button class="btn pri">Start reactivation review</button> <button class="btn">Open Alpha 360</button></div>
+
+<div class="drawer" data-show="denied"><b>SOL-Break v1</b> <span class="pill">Archived</span>
+ <p class="sm mute" style="margin:2px 0 0">Archived 30 Aug · edge decayed</p>
+ <div class="sec">Still open</div><p class="sm" style="margin:2px 0">Nothing open.</p>
+ <div class="sec">Support evidence</div>
+ <table><tbody><tr><td>Net return · 48 days</td><td class="n">−0.4%</td></tr><tr><td>Max drawdown</td><td class="n">−2.2%</td></tr><tr><td>Monitor gap</td><td class="n">1 · last observation 3h ago</td></tr><tr><td>Review</td><td class="n">Under review</td></tr></tbody></table>
+ <p style="margin-top:8px"><button class="btn" disabled title="Reviews are started by managers">Start reactivation review</button><span class="reason">Reviews are started by managers. You can follow the review here.</span></p></div>
+</div>
+
+<div class="card" style="margin-top:12px" data-show="healthy" data-has="rows"><details><summary><b>What a reactivation review asks for</b> <span class="mute sm">preview of the review form, not a command</span></summary>
+ <div class="steps" style="margin-top:8px">
+  <div><b>1 · Reason</b><br><span class="sm mute">Why reconsider, in words.</span></div>
+  <div><b>2 · Version and parameters</b><br><span class="sm mute">Bound to a version. Changing parameters creates a new version; the archived one is untouched.</span></div>
+  <div><b>3 · New evidence</b><br><span class="sm mute">Forward monitor results since it started, with gaps shown.</span></div>
+  <div><b>4 · Remaining obligations</b><br><span class="sm mute">Anything still open from the archive.</span></div>
+  <div><b>5 · Capability and certification</b><br><span class="sm mute">Profile, venue and certification the target stage needs.</span></div>
+  <div><b>6 · Target stage</b><br><span class="sm mute">Starts at Paper. Anything further needs its own approval.</span></div>
+ </div></details></div>
+
+<div class="card empty" data-show="sparse">
+ <h2>Archived alphas can't be listed yet</h2>
+ <p class="mute">We don't know whether any are archived, so this page shows no list and no zero. Nothing is estimated from other screens.</p>
+ <p><a href="#">Go to Alpha Fleet</a> · <a href="#">Open Operations</a></p>
+ <p class="sm mute" style="margin-top:14px">When the list is available, each row will show</p>
+ <p><span class="pill">Lifecycle</span><span class="pill">Previous stage</span><span class="pill">Open obligations</span><span class="pill">Paper monitor</span><span class="pill">Evidence since start</span><span class="pill">Review status</span></p></div>
+
+<div class="card empty" data-show="healthy" data-has="zero">
+ <h2>No archived alphas in your scope</h2>
+ <p class="mute">This is a real empty result, not a missing source. Archiving is a decision made from an alpha's detail page; archived alphas then appear here with their paper monitor.</p>
+ <p><a href="#">Go to Alpha Fleet</a></p></div>
+
+<aside class="notes"><b>Annotations</b><ol>
+<li><b>Lifecycle, not a stage.</b> “Archived” is a decision label. Previous stage stays Paper / Sandbox / Canary / Live and is shown as a pill; there is no fifth stage and these alphas are not in Fleet's stage tabs by default. An archived alpha that still holds capital or obligations stays inside fund NAV and score denominators (guide §13).</li>
+<li><b>No 7D / 30D picker here.</b> Evidence runs from the day the monitor actually started, so a window picker would mislabel it. Monitor figures are always tagged “Paper · simulated”.</li>
+<li><b>Summary = counts only.</b> No money on this strip. Monitor groups add up to the total (9 + 3 + 5 = 17). Researchers do not see this strip, since fund-level counts would reveal peers.</li>
+<li><b>Lifecycle tabs</b> follow the archive command: requested → pending drain → archived. A row becomes “Archived” only on an authority receipt for the right scope, never from our own click.</li>
+<li><b>Obligations column.</b> What is still open, as counts. Archive does not cancel, flatten or return capital by itself. “None” appears only when known; otherwise “Not available”. An unknown outcome is shown as unknown, not as open or closed.</li>
+<li><b>Monitor column</b> is independent of the original alpha: running / paused / stale / failed / quota-limited / not provisioned. A running monitor does not prove the original is flat.</li>
+<li><b>Evidence cell.</b> Net return and drawdown since the monitor started, labelled simulated, with gaps called out. QBTS reads “Policy pending”; regime support reads “Insufficient data”. Wording is descriptive only: no “likely”, no “recommended”.</li>
+<li><b>Peek drawer</b> keeps the list context. Two timelines are drawn separately on purpose: prior real-funded history and the forward paper monitor are never one continuous line, and the monitor is never backfilled.</li>
+<li><b>Reactivation is a review.</b> Opens a form (below the table), default target Paper, bound to a version. It cannot go live or lift the archive, and a high score does not change that. Researchers see it disabled with a plain reason.</li>
+<li><b>Empty states are first-class.</b> Three different screens: <i>Source not ready</i> (backend has no archive read yet, request FE-016 — so this is the real first state), <i>Zero archived</i> (a true empty result, toggle in the bar) and <i>Loading</i>. Unavailable never shows 0.</li>
+<li><b>Alternative considered:</b> a kanban with lifecycle columns (Requested → Pending drain → Archived → Monitoring → In review). Rejected: obligations, monitor and review are independent facts, so one column position would hide the others and imply a single path.</li>
+</ol></aside>
+</main></div><script src="kit.js"></script></body></html>
