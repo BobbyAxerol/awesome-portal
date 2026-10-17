@@ -10184,6 +10184,9 @@ tracks PM dependency sidecar233ffa86 (168PASS) and uninstalled Core-terminal
 component32PASS. The original08 continuation also qualified business-root221PASS
 at11:38UTC and repaired finite HTTP egress35PASS at11:43UTC, failed attempts retained.
 These do not replace actual provider/installer/final-delivery work or close08.
+Latest native held bridge/recovery exact final bytes93PASS (68regression+25new,
+including10newPG), PM source commitdb95be4c, remains UNMOUNTED. See§23.20.7 and
+[bounded recovery qualification](evidence/execution-edge-v1_2/EPG10-08/business-root-recovery-qualification.json).
 Preserve the current peer hook/source/index pin.
 Exact [qualification](evidence/execution-edge-v1_2/EPG10-08/current-correspondence-qualification.json)
 separates fixture corrections, draft/source landing and actual authority.
@@ -10232,12 +10235,14 @@ Record phase approval, exact affected datasets/operations/profiles and partner r
 **Resource/test execution boundary:** Measure revocation propagation with UTC and monotonic timeline against approved bound; record sanitized trust/config digests, old/new credential behavior and secret-scan results. Shared-host lock, disposable
 namespaces and per-phase cleanup in §23.3 are mandatory; test plans are not execution evidence.
 
-**Technical debt / external gates:** No unfinished independent Edge code/test/
-cleanup remains. TLS repair is qualified, not still awaiting keys or a window.
-Actual TS/PM provider implementation/publication and Research current-policy
-composition/mapping are concrete cross-owner dependencies, not environment
-placeholders. Approved researcher fields block that restricted lane only;
-Stan mutation ceiling/native COMMIT proof block the command lane, not all-business
+**Technical debt / external gates (latest17/10 disposition):** the independent
+16/10 package was finished; this is NOT a claim that current owned work is done.
+Original08 now owns the approved actual-provider composition, durable recovery,
+Manager-domain grant/final-send/per-frame integration, reviewed installation
+and connected drills in §23.20.7. Keep that unfinished implementation distinct
+from genuine unavailable partner inputs. TLS repair is qualified, not still
+awaiting keys or a window. Approved researcher fields affect that restricted
+lane only; command/native financial COMMIT proof does not block all-business
 read. Read acceptance need not wait for07-command or the whole PM13/P184 campaign.
 
 **Technical debt ghép nối vòng2 — OPEN, không chặn việc09 độc lập:**
@@ -16297,5 +16302,151 @@ These remain explicit original08 implementation tasks, not external debt or
 already completed production guarantees. Local Node toolchain/cached Node
 image is unavailable; SGP peer source/index/window must be rechecked before
 any approved connected/correctness execution. No09 connected transition.
+
+**Original08 next owned work / entry12:32UTC:** previous turn PROGRESS:
+68-case actual-PG component qualification and coherent Edge evidence commit
+ffedd862, not full provider completion. Preserve full six-item objective above.
+Fresh SGP peer window12:28:41–12:45:21 blocks only SGP jobs/shared writes;
+HK has no user lock. Continue owned native recovery/admission implementation
+locally rather than wait or label these gaps config/external debt.
+
+**Recovery/admission scope before edits:** reuse the exact existing source
+lease/epoch/transition engine; no new authorization engine or reconstructed
+business proof. Add explicit reviewed durable global unresolved/retained bounds
+to that ledger; no default budget or permission. Recovery authenticates the
+same Binding and actual recorded source digest on the pinned DB; terminal
+verification must not require recreating an Issued authorization handle.
+Provide serialized cancellation of unentered/absent issuance using a genuine
+same-key cancellation tombstone, never fake proof/source digest or new key.
+An absent in-flight issue must be fenced by the same source serialization
+point before local admission can be released. ENTERED/UNKNOWN always need an
+authenticated real owning terminal; TTL/absence/restart cannot clear them.
+Bound all retained cancellations as well as leases, and validate new ledger
+catalogue/role pins. No grants, default listener, source/runtime/schema install,
+financial/command activation or broad cleanup.
+
+Reserve only `business_root_recovery.patch`,
+`test_business_root_recovery.py`, `test_business_root_recovery_pg.py` in the
+existing private owning-provider directory for a single reviewer. Source-only,
+fresh host lock checks; no jobs/canonical/index/Git/transfers. Root reviews,
+materializes into a new isolated source copy and qualifies new cases plus
+affected68case regression under the same cached HK <=300s correctness envelope.
+Preserve prior35source pins/failed+final receipts; keep explicit NOT_RUN until
+actual qualification. Independent Core/Manager READ/authentication/installer
+composition remains required; these changes do not close08 or open09 connected.
+
+**Prepared target /12:38UTC, NOT_RUN:** fresh local lock checks clear. Create
+only `/tmp/epg10-08-recovery-HK-NafwU29b`, mechanically copy the prior35source
+closure plus guarded runner, pins and reviewed40operational baseline. No tests,
+containers, builds, source install or operational mutations. This is a new
+isolated copy; preserve the68PASS target byte-for-byte. Root will review the
+three reserved recovery outputs, materialize the patch and pin exact new bytes
+before testing the full affected selection. PM and Research reviewers perform
+read-only authentication/expiry audits in parallel, no files/jobs/SGP activity.
+The optional exact two-file Core source-transfer request is not an HK blocker;
+no new Core source has been copied remotely or its35definitions run.
+
+**Actual authenticated native READ producer / source-only reservation12:40UTC:**
+the PM audit identifies existing `portal_human_recovery.py` bounded TLS1.3,
+actual-socket peer pin, strict HTTP parser and `HumanVerifier` plus candidate
+request/workload checks as reusable seams. Reserve only four private outputs
+`native_business_read_provider.py`, `native_business_read_transport.patch`,
+`test_native_business_read_provider.py`, `test_native_business_read_server.py`
+under the same owning-provider directory. PM reviewer may implement this exact
+closed READ facade and a small backward-compatible listener dispatch extension;
+no duplicated TLS stack, reverse human lease, automatic identity creation,
+generic handler registry/URL/SQL, canonical changes, jobs or source transfer.
+Root reviews and owns qualification/promotion. Existing recovery/mapping remain
+unchanged/default-off. Native-only composition must not require the reverse
+candidate/ledger merely to start a READ listener. Only configured exact stable
+subject/domain/acceptance bindings and separate bounded SELECT/control pools
+are allowed. Signed human/request/workload correlation applies to issue/enter;
+same-key cancel/status/terminal recovery remains possible for the pinned Core
+peer after human expiry/revoke, but can grant no new READ. Normalize native
+BIGINT revisions to decimal strings; opaque install JSON is not JS authority.
+Durable recovery/global admission uses the current reviewer’s SAME ledger,
+never a second engine or DTO-to-Issued reconstruction. Actual Core held human/
+app permission and finite final egress remain mandatory independent composition.
+
+**Recovery qualification entry12:44UTC / before job:** root reviewed all three
+frozen outputs (patch15be6f6221d7c039ef2dd2b66c52fbee197e487a964721b684ab7ff981193101,
+unit4a92d42c8ea75bba0598ce07fab7ec8e5766270c512d0fda4ce91d8f1b153f8d,
+PG50e3a259b3e6b939bafe68b86b90fdefbf15bb214d5ff3821f29660e3609d8c0).
+Apply only to the new disposable source copy;37pins/475,600logical bytes,
+AST PASS and original35source untouched. Four reviewed changes: source ledger
+SQL, lifecycle, bridge, and explicit TEST_ONLY fixture limits/grants. Add exactly
+15unit+10actual-PG definitions; run prior68 then new25 in one fresh fixture,
+expected93/0FAIL/ERROR/SKIP. Existing8PGclass must prepare that fixture before
+the new10; no arbitrary DB reset/reuse. Exact same cached HK <=300s envelope,
+internal network/no ports/opdata/build/install, fresh user/root guards and
+reviewed40tuple runtime pre/post.128unresolved/512retained are explicit TEST_ONLY
+correctness-fill values, NOT product sizing or production defaults. Global
+admission, cancelled late issue, physical source-COMMIT ACK loss, restart without
+Issued reconstruction, wrong binding/signer/source/catalogue/role and unaffected
+scope are required. No authenticated provider/Core final delivery or capacity
+claim follows; no production schema/identity/grant change,09 or shared cleanup.
+
+**Actual recovery result124357:**93PASS/0FAIL/ERROR/SKIP in35.605s, receipt
+59e7b03a… and JUnit1528445c…. Own worker/PG/network/lease cleaned,40operational
+tuples unchanged; shared free236836282368→236727173120B, no exclusive claim.
+Before canonical commit, `git diff --cached --check` correctly refuses two new
+test files' blank EOF lines. Remove only those two blank lines (no product/SQL/
+test semantics change), preserve the original PASS receipt, repin37inputs to
+475,598B and rerun the SAME93case selection for exact final bytes. No failed
+test, skipped negative, changed budget or weaker oracle is hidden here.
+
+**Final recovery124801 / exact-byte landing:**93PASS/0FAIL/ERROR/SKIP in36.860s,
+12:48:01.700→12:48:38.455UTC. Receipt25bbdfa49197c25c4bbe15b899009a34c48c5ca0871436d717ad638fa4fc2b09,
+JUnitfc72d1e247bed2effaf49299e5634248ef80120ab1aae51b6849ffcfcde73c29.
+All37canonical PM input hashes match the final copied fixture; no product/SQL
+change from the first93PASS. Both actual user/root locks clear after terminal.
+Exact worker/PG/internal network/lease removed,40operational tuples unchanged;
+shared free236759433216→236636110848B, not exclusive consumption. No build/pull/
+install/new image/cache, runtime schema/identity/grant/data or service restart.
+Full37pins and both attempts live in
+[recovery qualification](evidence/execution-edge-v1_2/EPG10-08/business-root-recovery-qualification.json).
+
+PM `feat/portfolio-account-v1_1-parallel` source commitdb95be4c lands exactly
+eight new qualified narrow bridge/SQL/test paths, owned58.102.1 plan hunk and
+guide pointer under Bobby identity. Do not promote the earlier20-relation
+prototype. Staged plan is reconstructed from HEAD plus ONLY the owned subsection;
+the peer's11-line economic/history journal and source/contracts stay unstaged,
+unchanged. No push/merge. This source is UNMOUNTED, no default limits/grants or
+installed permission. Explicit retained-history cap fails closed; it is not an
+implemented production purge/archive policy or a capacity claim.
+
+**Current parallel boundary12:50UTC:** Research source remainsf1f5fc7d; actual
+peer hook containers control-api-test-node-4020120/postgres-4020120 are live,
+window owner codex-elp210-commissioning-land-123719 until13:17:19UTC. No new
+Core tests/transfers/shared source/index writes by this session. This blocks
+only SGP-dependent work, not the approved private native READ facade or owned
+Manager-domain/Core-client preparation. User's exact two-file Core transfer
+question remains unanswered; no transfer is assumed. Source-only PM producer
+draft is not acceptance. Recovery component has no owned failing test; actual
+authenticated provider, Manager-domain/Core grants, COMMIT/final-send/per-frame
+composition, minimal installer/configuration and connected drills remain owned
+unfinished work in this original08. Do not relabel these as external debt or
+declare08/09connected complete.
+
+**Temporal audit to carry into composition:** token/admission deadline, native
+permission-effective-end and unresolved quarantine are distinct. Quarantine
+persists after expiry but does not extend permission. A post-COMMIT liveness
+check cannot undo a factual COMMIT; late outcome must remain factual/uncertain,
+never fake rollback/reapply. Finite egress completion is local OS handoff, not
+browser ACK; bytes already handed off cannot be recalled. Preserve stale-deny,
+fresh per-frame permits, actual expiry/revoke tests and truthful temporal
+qualification; do not silently weaken the contract to admission-only semantics.
+
+**Retention/reconciliation for this slice:** keep the active original35source
+comparison and new37source/harness/receipts only while authenticated producer
+integration reuses them. No disposable containers remain. Shared active/peer
+images/cache and named r59/r49 rollback artifacts are intentionally retained;
+no shared prune while parallel jobs are active. Canonical Portal stays
+54c6f5f3 at portal-execution-manager-v2; active Edge feature remains the current
+checkout and branch, not deployed runtime. Stable HK release remains
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`,
+SGP `/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose`;
+runtime digest/config/service tuples and feature worktree inventory stay linked
+from current-correspondence-runtime.json plus the fresh40tuple test receipts.
 
 
