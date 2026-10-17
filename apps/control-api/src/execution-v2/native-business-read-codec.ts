@@ -224,7 +224,8 @@ export interface PreparedNativeBusinessReadRequest {
   /** All immutable Base fields including exact original deadline, independent of action. */
   readonly stable_core_digest: string;
 }
-const prepared = new WeakMap<object, { action: NativeBusinessReadAction; request: Request; responseBytes: number }>();
+const prepared = new WeakMap<object, { action: NativeBusinessReadAction; request: Request; responseBytes: number;
+  baseBody: string; bindingDigest: string; stableCoreDigest: string }>();
 const actions: readonly string[] = ["issue", "enter", "unknown", "status", "cancel-unentered", "resolve"];
 
 /** Private constructor-only validation; exact existing workload schema, not
@@ -241,12 +242,14 @@ export function nativeBusinessReadWorkloadId(value: unknown): string {
  * This correlation carrier is NOT a held native handle/authority. */
 export function nativeBusinessReadTransportRequest(context: PreparedNativeBusinessReadRequest): Readonly<{
   action: NativeBusinessReadAction; path: string; body: string; workload_id: string;
+  base_body: string; binding_digest: string; stable_core_digest: string;
 }> {
   try {
     const state = prepared.get(context);
     if (!state) return fail();
     return Object.freeze({ action: state.action, path: `/internal/elp210/business-root-read/${state.action}`,
-      body: canonical(state.request as Data), workload_id: state.request.binding.workload_id });
+      body: canonical(state.request as Data), workload_id: state.request.binding.workload_id,
+      base_body: state.baseBody, binding_digest: state.bindingDigest, stable_core_digest: state.stableCoreDigest });
   } catch { return fail(); }
 }
 
@@ -273,7 +276,8 @@ export function prepareNativeBusinessReadRequest(action: NativeBusinessReadActio
       provider_delivery_digest: pmHttpRequestDigest({ method: "POST", raw_path: Buffer.from(path, "ascii"),
         query_string: new Uint8Array(), body: Buffer.from(unsignedBody, "utf8") }, { request_bytes: cap.request_bytes }),
       binding_digest: sha256(canonical(request.binding as Data)), stable_core_digest: sha256(coreBody) });
-    prepared.set(output, { action, request: freeze(request), responseBytes: cap.response_bytes });
+    prepared.set(output, { action, request: freeze(request), responseBytes: cap.response_bytes,
+      baseBody: coreBody, bindingDigest: output.binding_digest, stableCoreDigest: output.stable_core_digest });
     return output;
   } catch { return fail(); }
 }

@@ -185,3 +185,10 @@ Shared report evaluation now retains delegation ancestors/DENYs while refusing
 app-only audit ALLOW leaves. Proposed mounted HTTP/PG regression is NOT_RUN at
 entry. Existing schemas/financial semantics/command flags unchanged; generated
 query/result and synthetic example are for owner-assigned future consumers.
+
+**Finite producer terminal,2026-10-17T20:07Z:** landed
+`5cac1151e27a3276ed9c32f56fe485197c2cdcaa`; the proposed regression above
+is no longer NOT_RUN. [Actual normal-hook/restore receipt](../ELP2-04/finite-account-command-readers.md#finite-reader-terminal-20261017-2007)
+records6011 API/791 contract PASS with3 existing skips and unchanged runtimes.
+This delivers only the finite exact-resource collection/alias subset, not an
+additional executor, actual source authority or acknowledged frontend consumer.

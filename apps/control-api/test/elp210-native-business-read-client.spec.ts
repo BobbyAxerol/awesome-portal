@@ -8,9 +8,9 @@ import {createServer,type Server} from "node:https";
 import type {Socket} from "node:net";
 import type {TLSSocket} from "node:tls";
 import {afterAll,afterEach,beforeAll,describe,expect,it} from "vitest";
-import {NativeBusinessReadClient,NativeBusinessReadClientError,type NativeBusinessReadClientConfig}
+import {NativeBusinessReadClient,NativeBusinessReadClientError,nativeBusinessReadAuthenticatedResult,type NativeBusinessReadClientConfig}
   from "../src/execution-v2/native-business-read-client";
-import {prepareNativeBusinessReadRequest,type NativeBusinessReadAction,type PreparedNativeBusinessReadRequest}
+import {prepareNativeBusinessReadRequest,parseNativeBusinessReadResult,type NativeBusinessReadAction,type PreparedNativeBusinessReadRequest}
   from "../src/execution-v2/native-business-read-codec";
 import {commonName,testCertificate} from "./fixtures/elp210-test-certificates";
 
@@ -100,6 +100,27 @@ describe("ELP2-10 real native business READ TLS transport — synthetic wire, no
     expect(lane.received[0].headers).toMatchObject({"content-type":"application/json","content-length":String(Buffer.byteLength(context.body)),connection:"close"});
     expect(lane.received[0].headers).not.toHaveProperty("transfer-encoding");expect(Object.isFrozen(reply)).toBe(true);
     expect(reply).not.toHaveProperty("held_handle");expect(reply).not.toHaveProperty("operational_current");
+    const witness=nativeBusinessReadAuthenticatedResult(client,reply);
+    expect(Object.isFrozen(witness)).toBe(true);expect(witness.result).toBe(reply);
+    expect(witness).toMatchObject({action,base_body:context.base_body,binding_digest:context.binding_digest,
+      stable_core_digest:context.stable_core_digest,response_sha256:digest(JSON.stringify(nativeReply(action)))});
+    expect(JSON.parse(witness.base_body)).not.toHaveProperty("human_token");
+    expect(JSON.parse(witness.base_body)).not.toHaveProperty("signed_terminal");
+    expect(witness).not.toHaveProperty("release_permitted");expect(witness).not.toHaveProperty("held_handle");
+  });
+  it("authenticates only this selected client and actual reply identity, not codec-only parses or shaped/cloned witnesses",async()=>{
+    const lane=await endpoint(),client=new NativeBusinessReadClient(config(lane.origin)),context=prepared();
+    const result=await client.call(context);await drained(client);
+    const other=new NativeBusinessReadClient(config(lane.origin));
+    expect(()=>nativeBusinessReadAuthenticatedResult(other,result)).toThrowError(expect.objectContaining({code:"NATIVE_BUSINESS_READ_RESULT_UNVERIFIED"}));
+    let traps=0;const getter={};Object.defineProperty(getter,"state",{enumerable:true,get(){traps++;throw new Error("PRIVATE_GETTER");}});
+    const proxy=new Proxy(result,{get(){traps++;throw new Error("PRIVATE_PROXY");},ownKeys(){traps++;throw new Error("PRIVATE_PROXY");},
+      getPrototypeOf(){traps++;throw new Error("PRIVATE_PROXY");}}),revoked=Proxy.revocable(result,{});revoked.revoke();
+    const codecOnly=parseNativeBusinessReadResult(context,Buffer.from(JSON.stringify(nativeReply())));
+    for(const value of [{...result},JSON.parse(JSON.stringify(result)),codecOnly,getter,proxy,revoked.proxy,null,undefined])
+      expect(()=>nativeBusinessReadAuthenticatedResult(client,value)).toThrowError(expect.objectContaining({code:"NATIVE_BUSINESS_READ_RESULT_UNVERIFIED"}));
+    expect(traps).toBe(0);expect(lane.received).toHaveLength(1);expect(other.snapshot()).toEqual({in_flight:0});
+    expect(nativeBusinessReadAuthenticatedResult(client,result).result).toBe(result);
   });
   it.each(["pin","ca","hostname","tls-version"] as const)("sends zero HTTP application bytes on %s trust failure",async kind=>{
     const selected=kind==="ca"?foreignPm:kind==="hostname"?wrongHost:pm;

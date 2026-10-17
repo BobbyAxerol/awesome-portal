@@ -2495,3 +2495,29 @@ Claude intake remains owner-held/AWAITING_CONSUMER_REVIEW, not an actual ack.
 Actual native authority/trust,14 approved budgets/calibration, coexistence/G2,
 browser and full10 exit remain OPEN;11NOT_ENTRY_READY. Keep the independent
 EPG10-08 process-recovery lane and its new measurements separate from ours.
+
+### 2026-10-17T20:09Z — finite reader terminal / native custody continuation
+
+The [finite04 reader normal-hook terminal](../ELP2-04/finite-account-command-readers.md#finite-reader-terminal-20261017-2007)
+landed `5cac1151e27a3276ed9c32f56fe485197c2cdcaa`:791 contracts/6011 API
+PASS,3 existing skips, scoped restore PASS, frozen source/index and eight
+runtime tuples unchanged, owned resources absent. Supersedes pending landing,
+not full04/10 or source/consumer acceptance; prior failures remain in history.
+
+[NC-01 native read custody](native-read-obligation-custody.md) is the next
+applied local backend subset: same Core barrier, exact token-free Base and
+session/domain binding, immutable pre-ISSUE obligation, shared recovery budget
+and real-client transport witness. Entry APPLIED_UNCOMMITTED / NOT_RUN, no
+operational installation or public contract/FE change. It deliberately has no
+terminal release API: source signer/ISSUE–ENTER/final egress/same-attempt
+settlement and actual trust remain ordered integration work, not a new queue.
+Claude remains owner-held/AWAITING_CONSUMER_REVIEW; review intake now follows
+campaign7.3 at entry/freeze/landing/exit with disposition and owning-packet links.
+Full10 approved budgets/calibration/coexistence/P184G2/browser and11 entry stay OPEN.
+
+**NC-01 focused terminal20:18UTC:**332/332 PASS, build/scoped restore PASS,
+source/index/eight runtime tuples unchanged, own resources absent. Independent
+witness review accepted correlation-only semantics and found UTC `+00:00`
+custody SQL mismatch; fixed with one more actual-PG regression for the coherent
+normal hook (PENDING), preserving exact deadline bytes/hash. [Owning packet](native-read-obligation-custody.md#focused-terminal--2026-10-17t201810z)
+retains actual scope, failure-before-hook/PTY retry and remaining lifecycle work.

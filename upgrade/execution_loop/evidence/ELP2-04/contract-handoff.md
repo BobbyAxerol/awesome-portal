@@ -120,3 +120,10 @@ Regenerate with `npm --prefix packages/contracts run generate:execution-trusted-
 Existing submit/detail schemas and UI remain unchanged. Source at this entry
 is UNCOMMITTED/NOT_RUN; consult terminal addendum before consumption.
 AWAITING_CONSUMER_REVIEW / NOT_STARTED_BY_OWNER_DIRECTION, not delivered UI.
+
+**Producer landed,2026-10-17T20:07Z:**
+`5cac1151e27a3276ed9c32f56fe485197c2cdcaa` supersedes UNCOMMITTED for the
+finite readers above. [Actual hook/restore/source and cleanup receipt](finite-account-command-readers.md#finite-reader-terminal-20261017-2007).
+No further schema/field change in this addendum; do not rerun or regenerate
+unchanged contracts just for this record. Consumer still awaits Bobby's
+assignment and Claude's actual acknowledgement/browser receipt.

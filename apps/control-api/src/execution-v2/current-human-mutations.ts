@@ -4,7 +4,7 @@ import { z } from "zod";
 import { withTransaction } from "../db/pool";
 import { accessDigest } from "./access-policy";
 import { accessText } from "./access.contract";
-import { CurrentHumanCandidate, CurrentHumanLeaseError } from "./current-human-candidate";
+import { CurrentHumanCandidate, CurrentHumanLeaseError, type CurrentHumanNativeReadRecoveryAttempt } from "./current-human-candidate";
 
 const text = z.string().min(1).max(128).regex(/^[^\u0000-\u001f\u007f]+$/);
 const hash = z.string().regex(/^sha256:[a-f0-9]{64}$/);
@@ -43,6 +43,12 @@ export interface CurrentHumanRecoveryPort {
    * A response does not release a lease: signed source resolution must already
    * have committed in Core, which the coordinator rereads afterwards. */
   recover(attempt: CurrentHumanRecoveryAttempt): Promise<unknown>;
+}
+export interface CurrentHumanNativeReadRecoveryPort {
+  /** Exact durable native metadata, NEVER a reverse-human proof/read permit.
+   * Results are ignored. A later authenticated transport + local egress witness
+   * must own settlement; NC-01 installs no successful settlement operation. */
+  recover(attempt: CurrentHumanNativeReadRecoveryAttempt): Promise<unknown>;
 }
 export class CurrentHumanMutationPending extends CurrentHumanLeaseError {
   constructor(readonly mutation_id: string, readonly state: "DRAIN_PENDING" | "DRAIN_UNKNOWN") {
@@ -97,7 +103,8 @@ function assertFence(fence: CurrentHumanMutationFence | undefined): void {
 export class CurrentHumanMutations {
   constructor(private readonly pool: Pool, private readonly candidate: CurrentHumanCandidate,
     private readonly recovery: CurrentHumanRecoveryPort,
-    private readonly limits: { maximum_intents: number; maximum_recoveries_per_request: number }) {
+    private readonly limits: { maximum_intents: number; maximum_recoveries_per_request: number },
+    private readonly nativeRecovery?: CurrentHumanNativeReadRecoveryPort) {
     if (!candidate.usesPool(pool) || !Number.isSafeInteger(limits.maximum_intents) || limits.maximum_intents < 1 || limits.maximum_intents > 4096
       || !Number.isSafeInteger(limits.maximum_recoveries_per_request) || limits.maximum_recoveries_per_request < 1 || limits.maximum_recoveries_per_request > 16)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
@@ -222,7 +229,7 @@ export class CurrentHumanMutations {
         await this.transaction(async db => {
           const row = (await db.query<Intent>("SELECT * FROM elp210_candidate.mutations WHERE mutation_id=$1 FOR UPDATE", [intent.mutation_id])).rows[0];
           if (row.state !== "PENDING") return;
-          if ((await db.query("SELECT 1 FROM elp210_candidate.leases WHERE phase IN ('ISSUED','ENTERED','UNKNOWN') LIMIT 1")).rowCount) return;
+          if ((await db.query("SELECT 1 FROM elp210_candidate.obligations WHERE unresolved LIMIT 1")).rowCount) return;
           if (hooks.retain_after_application_rollback) return;
           await db.query(`UPDATE elp210_candidate.mutations SET state='REFUSED',terminal_digest=$2,finished_at=clock_timestamp()
             WHERE mutation_id=$1`, [intent.mutation_id, accessDigest({ outcome: "REFUSED", reason_code: "APPLICATION_NOT_COMMITTED" })]);
@@ -247,9 +254,16 @@ export class CurrentHumanMutations {
   }
 
   private async recoverSource() {
-    const attempts = await this.candidate.recoverableAttempts();
-    for (const attempt of attempts.slice(0, this.limits.maximum_recoveries_per_request)) {
-      try { await this.recovery.recover(attempt); }
+    const attempts = await this.candidate.recoverableObligations(this.nativeRecovery ? "BOTH" : "REVERSE_ONLY");
+    let calls = 0;
+    for (const item of attempts) {
+      if (item.family === "NATIVE_READ" && !this.nativeRecovery) continue;
+      if (calls >= this.limits.maximum_recoveries_per_request) break;
+      calls++;
+      try {
+        if (item.family === "NATIVE_READ") await this.nativeRecovery!.recover(item.attempt);
+        else await this.recovery.recover(item.attempt);
+      }
       catch { /* Inspect authenticated durable Core state, never trust an ACK. */ }
     }
   }
@@ -257,7 +271,7 @@ export class CurrentHumanMutations {
   private async pendingState(db: PoolClient): Promise<"DRAIN_PENDING" | "DRAIN_UNKNOWN" | null> {
     const row = (await db.query(`SELECT count(*)::int AS n,
       count(*) FILTER(WHERE phase='UNKNOWN' OR expires_at_ms<=floor(extract(epoch FROM clock_timestamp())*1000))::int AS unknown
-      FROM elp210_candidate.leases WHERE phase IN ('ISSUED','ENTERED','UNKNOWN')`)).rows[0];
+      FROM elp210_candidate.obligations WHERE unresolved`)).rows[0];
     return row.unknown > 0 ? "DRAIN_UNKNOWN" : row.n > 0 ? "DRAIN_PENDING" : null;
   }
 

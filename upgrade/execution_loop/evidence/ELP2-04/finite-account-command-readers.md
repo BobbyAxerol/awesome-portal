@@ -211,3 +211,23 @@ PASS,42 EDS-12 inputs, `runtime_effect=NONE`; `product_active=false`,
 `operations_qualified=false` and deployed-evidence-pending remain unchanged.
 No authority/profile/gate weakening or runtime change. The corrected coherent
 normal hook is PENDING; do not add a duplicate focused build before it.
+
+<a id="finite-reader-terminal-20261017-2007"></a>
+## Actual corrected normal-hook terminal — 2026-10-17T20:07:12Z
+
+Landed `5cac1151e27a3276ed9c32f56fe485197c2cdcaa`,35 files,+2002/−49
+(including attributed preserved peer Unified notes). Controller
+`reader-completion-land-193956` exit0. Contracts67 files/791 PASS with
+generation/parity/snapshot PASS; Control API build PASS; API375 files PASS,
+2 existing skipped files,6011 PASS+3 existing skips (6014 total),1216.18s.
+Command38/account-capture12/alias18 are subsets, not additional coverage.
+Scoped PostgreSQL restore/four access-row digests PASS. Static296 routes/no
+collision, protected kernel MATCH, N29/EDS-12 integrity PASS/runtime_effect NONE.
+
+All35 source/index pins unchanged; eight protected runtime image/start/restart/
+running tuples identical. Owned Node/PG/network absent, own lease released.
+Gate log SHA256 `6f819f12487d074cdf0a2b76cb4280b457405f0de075e78c539400f9569f132d`;
+terminal controller `c740b0fe235bd44a580783a8b06aff394569c749207b92c119fd818d622bf7ec`.
+Preserve the focused fixture failure and first static-pin rejection above.
+This supersedes pending corrected landing only: remaining purposes/current
+source and full04/10/consumer acceptance do not become PASS. No push/runtime/FE.

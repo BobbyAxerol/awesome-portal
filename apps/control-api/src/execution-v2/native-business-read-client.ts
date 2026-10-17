@@ -22,7 +22,7 @@ export interface NativeBusinessReadClientConfig {
   max_inflight: number;
 }
 export type NativeBusinessReadClientCode = "NATIVE_BUSINESS_READ_CONFIG_INVALID" |
-  "NATIVE_BUSINESS_READ_REQUEST_INVALID" | "NATIVE_BUSINESS_READ_BUSY" |
+  "NATIVE_BUSINESS_READ_REQUEST_INVALID" | "NATIVE_BUSINESS_READ_RESULT_UNVERIFIED" | "NATIVE_BUSINESS_READ_BUSY" |
   "NATIVE_BUSINESS_READ_UNAVAILABLE" | "NATIVE_BUSINESS_READ_DEADLINE_EXCEEDED";
 export class NativeBusinessReadClientError extends Error {
   /** Transport fact only. Neither value is a source processing/release result. */
@@ -71,6 +71,29 @@ function pem(value: unknown): Buffer {
 const fixedPaths = new Set(["issue", "enter", "unknown", "status", "cancel-unentered", "resolve"]
   .map(action => `/internal/elp210/business-root-read/${action}`));
 
+/** Private authenticated transport correlation, NEVER a held read capability,
+ * grant, final-egress receipt or proof that a source obligation is settled.
+ * Token-free Base and exact reply-byte digest permit durable caller custody.
+ * Only call()'s actual successful TLS/framing/codec path can create a witness. */
+export interface AuthenticatedNativeBusinessReadResult {
+  readonly action: ReturnType<typeof nativeBusinessReadTransportRequest>["action"];
+  readonly base_body: string;
+  readonly binding_digest: string;
+  readonly stable_core_digest: string;
+  readonly response_sha256: string;
+  readonly result: NativeBusinessReadResult;
+}
+const authenticated = new WeakMap<object, { client: NativeBusinessReadClient;
+  witness: Readonly<AuthenticatedNativeBusinessReadResult> }>();
+export function nativeBusinessReadAuthenticatedResult(client: NativeBusinessReadClient,
+  result: unknown): Readonly<AuthenticatedNativeBusinessReadResult> {
+  // WeakMap identity checking executes no Proxy/getter/reflection hooks.
+  const proof = result !== null && (typeof result === "object" || typeof result === "function")
+    ? authenticated.get(result) : undefined;
+  if (!proof || proof.client !== client) throw error("NATIVE_BUSINESS_READ_RESULT_UNVERIFIED");
+  return proof.witness;
+}
+
 /** No HTTP write/end/flush occurs before actual authorized secureConnect and
  * exact hostname/leaf check. agent:false prevents reuse of a prior TLS gate.
  * A started operation occupies admission until its ClientRequest closes, even
@@ -105,10 +128,12 @@ export class NativeBusinessReadClient {
 
   call(prepared: PreparedNativeBusinessReadRequest): Promise<NativeBusinessReadResult> {
     let body: Buffer, path: string;
+    let correlation: ReturnType<typeof nativeBusinessReadTransportRequest>;
     try {
       // Helper obtains ALL values from the genuine codec WeakMap, never a
       // caller-provided carrier getter or a reconstructed request/assertion.
       const wire = nativeBusinessReadTransportRequest(prepared);
+      correlation = wire;
       if (wire.workload_id !== this.config.workload_id || !fixedPaths.has(wire.path)) throw new Error();
       body = Buffer.from(wire.body, "utf8"); path = wire.path;
       if (body.length < 1 || body.length > this.config.request_bytes) throw new Error();
@@ -185,7 +210,13 @@ export class NativeBusinessReadClient {
             if (settled) return;
             if (!res.complete || size !== expectedLength) { abort(); return; }
             try {
-              const parsed = parseNativeBusinessReadResult(prepared, Buffer.concat(chunks, size));
+              const bytes = Buffer.concat(chunks, size);
+              const parsed = parseNativeBusinessReadResult(prepared, bytes);
+              authenticated.set(parsed, { client: this, witness: Object.freeze({
+                action: correlation.action, base_body: correlation.base_body,
+                binding_digest: correlation.binding_digest, stable_core_digest: correlation.stable_core_digest,
+                response_sha256: `sha256:${createHash("sha256").update(bytes).digest("hex")}`, result: parsed,
+              }) });
               settled = true; resolve(parsed);
               // Admission/timer remain until the request's real close event.
             } catch { abort(); }

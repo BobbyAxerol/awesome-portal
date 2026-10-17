@@ -213,3 +213,14 @@ destructive down migration or self-activation; placement/DR detail in runbook.
   qualification owners must supply exact approved envelope/calibration and
   selected source test window. No permission required again for delivered
   local scope; no goal/push/dev/main/release/deploy/activation occurred.
+
+## 2026-10-17 continuation links
+
+- [Finite reader actual normal-hook terminal](../ELP2-04/finite-account-command-readers.md#finite-reader-terminal-20261017-2007):
+  landed5cac1151, local contract/PG proof only, no source/runtime/browser promotion.
+- [NC-01 native read obligation custody](native-read-obligation-custody.md):
+  explicit scope/requirement/test matrix, immutable custody and shared barrier,
+  genuine-client correlation; APPLIED_UNCOMMITTED/NOT_RUN at entry, UNMOUNTED.
+  Native final settlement, real trust/config installation and full10 remain open.
+- [Current commissioning ledger](commissioning-followthrough.md): canonical
+  phase dependencies and Claude intake; no duplicate request/acceptance queue.

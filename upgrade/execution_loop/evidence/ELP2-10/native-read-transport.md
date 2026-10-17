@@ -245,3 +245,20 @@ reviewed genuine configuration installation and connected revoke/recovery are
 still OPEN integration work. Keep native Base/deadline immutable and do not
 use reverse-human candidate.issue as a bare JWT factory. Numeric budget/
 calibration, coexistence and applicable original P184 performance G2 stay OPEN.
+
+## 2026-10-17 — custody-only continuation, not mounted authority
+
+Read [NC-01 exact scope, semantics, tests and residual lifecycle](native-read-obligation-custody.md).
+Entry `5cac1151e27a3276ed9c32f56fe485197c2cdcaa`; implementation is
+APPLIED_UNCOMMITTED / NOT_RUN until its own terminal addendum. Current source
+repin19:43 records PM `ce725f2352296df88a2dd7914c699ff26aef1313` and unchanged
+wire; this is source observation, not installed trust. Repin again before any
+actual installation. Native factory/installer exists; do not call it absent.
+
+Private transport adds client-identity authenticated result correlation and
+`NATIVE_BUSINESS_READ_RESULT_UNVERIFIED` (six private client error codes total).
+No public/wire DTO changes. Genuine successful TLS/framing/codec results alone
+get that witness; it never becomes a held read capability or positive terminal.
+Core candidate gains immutable pre-ISSUE custody and shared authority barriers;
+missing final recovery means it must remain UNMOUNTED. The independent finite
+egress owner's work stays separate pending semantic integration.

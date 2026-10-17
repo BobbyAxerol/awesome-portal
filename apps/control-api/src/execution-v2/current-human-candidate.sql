@@ -34,6 +34,60 @@ CREATE TABLE elp210_candidate.leases (
 );
 CREATE INDEX leases_unresolved ON elp210_candidate.leases(phase,expires_at_ms)
   WHERE phase IN ('ISSUED','ENTERED','UNKNOWN');
+-- NC-01: fresh DISPOSABLE candidate schema only, not a production migration.
+-- A native ISSUE can commit before ENTER. Every native row blocks drain from
+-- admission onward; this slice deliberately has NO successful release state.
+CREATE TABLE elp210_candidate.native_read_obligations (
+  lease_id text PRIMARY KEY CHECK (lease_id ~ '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'),
+  attempt_id text UNIQUE NOT NULL CHECK (attempt_id ~ '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'),
+  authority_revision bigint NOT NULL CHECK (authority_revision BETWEEN 0 AND 9007199254740991),
+  subject_id text NOT NULL, session_id text NOT NULL,
+  session_revision bigint NOT NULL CHECK (session_revision BETWEEN 0 AND 9007199254740991),
+  workspace_id text NOT NULL, environment text NOT NULL CHECK (environment IN ('paper','sandbox','live')),
+  workload_id text NOT NULL,
+  request_digest text NOT NULL CHECK (length(request_digest)=64 AND request_digest ~ '^[a-f0-9]{64}$'),
+  authority_fingerprint text NOT NULL CHECK (length(authority_fingerprint)=71 AND authority_fingerprint ~ '^sha256:[a-f0-9]{64}$'),
+  source_identity_digest text NOT NULL CHECK (length(source_identity_digest)=71 AND source_identity_digest ~ '^sha256:[a-f0-9]{64}$'),
+  base_body text NOT NULL CHECK (octet_length(base_body) BETWEEN 1 AND 32768),
+  stable_core_digest text NOT NULL CHECK (length(stable_core_digest)=64 AND stable_core_digest ~ '^[a-f0-9]{64}$'),
+  binding_digest text NOT NULL CHECK (length(binding_digest)=64 AND binding_digest ~ '^[a-f0-9]{64}$'),
+  deadline text NOT NULL CHECK (deadline ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,6})?(Z|[+]00:00)$'),
+  issued_at_ms bigint NOT NULL,
+  expires_at_ms bigint NOT NULL CHECK (expires_at_ms>issued_at_ms AND expires_at_ms-issued_at_ms<=60000),
+  CHECK (expires_at_ms=floor(extract(epoch FROM deadline::timestamptz)*1000)::bigint),
+  phase text NOT NULL DEFAULT 'ADMITTED' CHECK (phase IN ('ADMITTED','UNKNOWN')),
+  CHECK (stable_core_digest=encode(sha256(convert_to(base_body,'UTF8')),'hex')),
+  CHECK (((base_body::jsonb#>>'{binding,lease_id}')=lease_id
+    AND (base_body::jsonb#>>'{binding,attempt_id}')=attempt_id
+    AND (base_body::jsonb#>>'{binding,subject}')=subject_id
+    AND (base_body::jsonb#>>'{binding,workspace_id}')=workspace_id
+    AND (base_body::jsonb#>>'{binding,environment}')=environment
+    AND (base_body::jsonb#>>'{binding,workload_id}')=workload_id
+    AND (base_body::jsonb#>>'{binding,request_digest}')=request_digest
+    AND (base_body::jsonb->>'deadline')=deadline) IS TRUE)
+);
+CREATE TABLE elp210_candidate.native_read_events (
+  event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  lease_id text NOT NULL REFERENCES elp210_candidate.native_read_obligations(lease_id),
+  phase text NOT NULL CHECK (phase IN ('ADMITTED','UNKNOWN')),
+  occurred_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+-- One bounded accounting/pending surface. Family disambiguates raw native
+-- Manager request_digest versus the legacy prefixed provider digest.
+CREATE VIEW elp210_candidate.obligations AS
+  SELECT 'REVERSE_HUMAN'::text AS family, lease_id,attempt_id,authority_revision,
+    subject_id,session_id,session_revision,workspace_id,environment,workload_id,
+    request_digest,authority_fingerprint,issued_at_ms,expires_at_ms,phase,
+    phase IN ('ISSUED','ENTERED','UNKNOWN') AS unresolved,
+    NULL::text AS base_body,NULL::text AS stable_core_digest,NULL::text AS binding_digest,
+    NULL::text AS source_identity_digest
+    FROM elp210_candidate.leases
+  UNION ALL
+  SELECT 'NATIVE_READ',lease_id,attempt_id,authority_revision,
+    subject_id,session_id,session_revision,workspace_id,environment,workload_id,
+    request_digest,authority_fingerprint,issued_at_ms,expires_at_ms,phase,true,
+    base_body,stable_core_digest,binding_digest,source_identity_digest
+    FROM elp210_candidate.native_read_obligations;
 CREATE TABLE elp210_candidate.events (
   event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   lease_id text NOT NULL REFERENCES elp210_candidate.leases(lease_id),
@@ -84,6 +138,39 @@ CREATE TRIGGER preserve_mutations BEFORE DELETE OR TRUNCATE ON elp210_candidate.
   FOR EACH STATEMENT EXECUTE FUNCTION elp210_candidate.immutable();
 CREATE TRIGGER preserve_mutation_events BEFORE UPDATE OR DELETE OR TRUNCATE ON elp210_candidate.mutation_events
   FOR EACH STATEMENT EXECUTE FUNCTION elp210_candidate.immutable();
+CREATE TRIGGER preserve_native_read BEFORE DELETE OR TRUNCATE ON elp210_candidate.native_read_obligations
+  FOR EACH STATEMENT EXECUTE FUNCTION elp210_candidate.immutable();
+CREATE TRIGGER preserve_native_read_events BEFORE UPDATE OR DELETE OR TRUNCATE ON elp210_candidate.native_read_events
+  FOR EACH STATEMENT EXECUTE FUNCTION elp210_candidate.immutable();
+CREATE FUNCTION elp210_candidate.native_read_event() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM 1 FROM elp210_candidate.authority WHERE singleton FOR UPDATE;
+  IF TG_OP='INSERT' THEN
+    IF NEW.phase<>'ADMITTED'
+      OR NOT EXISTS(SELECT 1 FROM elp210_candidate.authority WHERE singleton
+        AND drain_id IS NULL AND revision=NEW.authority_revision)
+      OR EXISTS(SELECT 1 FROM elp210_candidate.leases WHERE lease_id=NEW.lease_id)
+      OR NEW.issued_at_ms>floor(extract(epoch FROM clock_timestamp())*1000)::bigint
+      OR NEW.expires_at_ms<=floor(extract(epoch FROM clock_timestamp())*1000)::bigint
+      OR NOT EXISTS(SELECT 1 FROM public.portal_users u JOIN public.auth_sessions s ON s.user_id=u.user_id
+        WHERE u.user_id=NEW.subject_id AND u.status='ACTIVE' AND NOT u.must_change_password
+          AND u.archived_at IS NULL AND u.session_version=NEW.session_revision
+          AND s.session_id=NEW.session_id AND s.session_version=u.session_version AND s.state='ACTIVE'
+          AND s.idle_expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()
+          AND NEW.deadline::timestamptz<=least(s.idle_expires_at,s.absolute_expires_at)
+          AND EXISTS(SELECT 1 FROM public.workspaces w WHERE w.workspace_id=NEW.workspace_id)
+          AND (EXISTS(SELECT 1 FROM public.workspace_members m WHERE m.workspace_id=NEW.workspace_id AND m.user_id=u.user_id)
+            OR EXISTS(SELECT 1 FROM public.portal_owner_anchor a WHERE a.anchor_id='PORTAL_OWNER' AND a.user_id=u.user_id)))
+    THEN RAISE EXCEPTION 'CURRENT_HUMAN_NATIVE_ADMISSION_REFUSED'; END IF;
+  ELSIF OLD.phase<>'ADMITTED' OR NEW.phase<>'UNKNOWN'
+    OR (to_jsonb(NEW)-'phase') IS DISTINCT FROM (to_jsonb(OLD)-'phase')
+  THEN RAISE EXCEPTION 'CURRENT_HUMAN_NATIVE_TRANSITION_INVALID'; END IF;
+  UPDATE elp210_candidate.authority SET lease_epoch=lease_epoch+1 WHERE singleton;
+  INSERT INTO elp210_candidate.native_read_events(lease_id,phase) VALUES(NEW.lease_id,NEW.phase);
+  RETURN NEW;
+END $$;
+CREATE TRIGGER native_read_events AFTER INSERT OR UPDATE ON elp210_candidate.native_read_obligations
+  FOR EACH ROW EXECUTE FUNCTION elp210_candidate.native_read_event();
 CREATE FUNCTION elp210_candidate.mutation_event() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP='UPDATE' THEN
@@ -106,6 +193,8 @@ BEGIN
   -- This is NOT the signed authority revision; only real authority changes
   -- increment that revision. The caller already holds the same barrier lock.
   UPDATE elp210_candidate.authority SET lease_epoch=lease_epoch+1 WHERE singleton;
+  IF TG_OP='INSERT' AND EXISTS(SELECT 1 FROM elp210_candidate.native_read_obligations WHERE lease_id=NEW.lease_id)
+    THEN RAISE EXCEPTION 'CURRENT_HUMAN_CROSS_FAMILY_ID_CONFLICT'; END IF;
   IF TG_OP='UPDATE' THEN
     IF (to_jsonb(NEW)-ARRAY['phase','attempt_id','terminal_receipt_digest']) IS DISTINCT FROM
        (to_jsonb(OLD)-ARRAY['phase','attempt_id','terminal_receipt_digest'])
@@ -159,7 +248,7 @@ BEGIN
       ON m.mutation_id=a.drain_id AND m.state='PENDING' WHERE a.singleton
       AND m.mutation_id IS DISTINCT FROM current_setting('elp210_candidate.mutation_id',true))
     THEN RAISE EXCEPTION 'CURRENT_HUMAN_DRAIN_COORDINATOR_REQUIRED'; END IF;
-  IF EXISTS(SELECT 1 FROM elp210_candidate.leases WHERE phase IN ('ISSUED','ENTERED','UNKNOWN'))
+  IF EXISTS(SELECT 1 FROM elp210_candidate.obligations WHERE unresolved)
     THEN RAISE EXCEPTION 'CURRENT_HUMAN_DRAIN_REQUIRED'; END IF;
   UPDATE elp210_candidate.authority SET revision=revision+1 WHERE singleton;
   IF TG_OP='DELETE' THEN RETURN OLD; END IF;
