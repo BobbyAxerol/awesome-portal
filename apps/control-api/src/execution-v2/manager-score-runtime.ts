@@ -126,6 +126,10 @@ export interface ManagerScoreRuntimeTask {
   source_revision: string; source_set_digest: string; source_qualification: "SOURCE_VERIFIED" | "TEST_ONLY";
   calculation_revision: string; computed_at_ms: number; expected_policy_revision: string | null;
   policy: ApprovedManagerScorePolicy | null;
+  /** Private original-task custody binding from the qualified metrics adapter.
+   * Included in the existing exact worker input hash. Never synthesized here
+   * from whichever normalization policy happens to be current. */
+  metrics_dependency_digest?:string;
   input: { kind: "METRICS"; quality: QualityBase & { metrics: ManagerScoreMetrics } }
     | { kind: "PATH"; path: ManagerScorePathInput; quality: Omit<QualityBase, "sample_count" | "complete_block_count"> };
 }
@@ -226,6 +230,9 @@ export class ManagerScoreRuntime {
       const stages = scope.environment === "paper" ? ["PAPER"] : scope.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
       if (binding.stage_filter.some(stage => !stages.includes(stage))) throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
       z.enum(["METRICS", "PATH"]).parse(captured.input.kind);
+      if(Object.hasOwn(captured,"metrics_dependency_digest")&&
+        (captured.input.kind!=="METRICS"||!digest.safeParse(captured.metrics_dependency_digest).success))
+        throw new ManagerScoreRuntimeError("SCORE_RUNTIME_INPUT_INVALID");
       text.parse(captured.source_revision); digest.parse(captured.source_set_digest); text.parse(captured.calculation_revision);
       z.enum(["SOURCE_VERIFIED", "TEST_ONLY"]).parse(captured.source_qualification); ms.parse(captured.computed_at_ms);
       text.nullable().parse(captured.expected_policy_revision);

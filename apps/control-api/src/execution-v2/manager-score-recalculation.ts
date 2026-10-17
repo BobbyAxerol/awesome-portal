@@ -1,4 +1,4 @@
-/** Private optional PATH custody; not an installed source or calibration authority. */
+/** Private optional original-input custody; not an installed source or calibration authority. */
 import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { z } from "zod";
@@ -16,7 +16,18 @@ import { managerScoreRecalculationPolicy, managerScorePublicationPolicyCurrent,
 import type { ManagerConsumerDelivery, ManagerProjectionSource } from "./manager-consumer";
 import type { ExecutionReadPublicationRequest } from "./read-publication";
 
-type Task = { slot:"RAW"|"DIRECT_NAV"; task:Omit<ManagerScoreRuntimeTask,"policy"> };
+/** Supplied by the qualified private metrics adapter from its retained source
+ * artifact. Current normalization policy alone is NOT evidence of these pins. */
+export interface ManagerScoreMetricsDependency {
+  source_revision:string; source_set_digest:string; source_as_of_ms:number;
+  metrics_input_digest:string; method_digest:string; stress_delta_bps:string;
+  source_locator:string;
+}
+export interface ManagerScoreRecalculationTask {
+  slot:"RAW"|"DIRECT_NAV"; task:Omit<ManagerScoreRuntimeTask,"policy">;
+  metrics_dependency?:ManagerScoreMetricsDependency;
+}
+type Task=ManagerScoreRecalculationTask;
 type RetainedTask=Task&{input_json:string};
 type Policy = NonNullable<ReturnType<typeof managerScoreRecalculationPolicy>>;
 export interface ManagerScoreRecalculationConfig {
@@ -74,19 +85,57 @@ function taskSource(t:Task["task"],d:ManagerModelDocument) {
     t.input.quality.as_of_ms!==d.as_of_ms)fail("MANAGER_DERIVED_SOURCE_MISMATCH");
 }
 const text=z.string().min(1).max(256),digest=z.string().regex(/^sha256:[a-f0-9]{64}$/),ms=z.number().int().nonnegative().safe();
+// Private source identifiers/locators must not accept log/header controls or
+// JavaScript `$`'s special pre-final-newline match. Preserve bytes; never trim
+// or normalize a value before binding its producer digest.
+const dependencyText=z.string().min(1).max(256)
+  .regex(/^[^\u0000-\u001f\u007f\u0085\u2028\u2029]+$(?![\s\S])/).refine(s=>s.trim().length>0);
+const dependencyDigest=z.string().regex(/^sha256:[a-f0-9]{64}$(?![\s\S])/);
+const metricsDependencySchema=z.object({source_revision:dependencyText,source_set_digest:dependencyDigest,source_as_of_ms:ms,
+  metrics_input_digest:dependencyDigest,method_digest:dependencyDigest,
+  stress_delta_bps:z.string().max(512).regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$(?![\s\S])/),source_locator:dependencyText}).strict();
+const sameDelta=(a:string,b:string)=>{
+  const normal=(s:string)=>{const [whole,fraction=""]=s.split(".");return `${whole}.${fraction.replace(/0+$/,"")}`;};
+  return normal(a)===normal(b);
+};
+function validateDependency(item:Task,d:ManagerModelDocument,initialPolicy?:Policy):void {
+  if(item.metrics_dependency===undefined){
+    // A declared binding cannot be silently stripped into legacy absence.
+    if(item.task.metrics_dependency_digest!==undefined)fail("MANAGER_DERIVED_METRIC_DEPENDENCY_INVALID");
+    return;
+  }
+  if(item.task.input.kind!=="METRICS")fail("MANAGER_DERIVED_METRIC_DEPENDENCY_INVALID");
+  const dep=metricsDependencySchema.parse(item.metrics_dependency);
+  if(item.task.metrics_dependency_digest!==accessDigest(dep)||
+    dep.source_revision!==d.revision||dep.source_set_digest!==d.source_set_digest||dep.source_as_of_ms!==d.as_of_ms||
+    dep.metrics_input_digest!==accessDigest(item.task.input)||initialPolicy&&
+    (dep.method_digest!==initialPolicy.method_digest||!sameDelta(dep.stress_delta_bps,initialPolicy.stress_delta_bps)))
+    fail("MANAGER_DERIVED_METRIC_DEPENDENCY_INVALID");
+}
 const bundleSchema=z.object({schema_version:z.literal("portal.execution.manager-score-recalculation.v1"),
   source:z.object({workspace_id:text,environment:z.enum(["paper","sandbox","live"]),profile_id:text,revision:text,
     payload_digest:digest,source_epoch:text,source_sequence:z.string().regex(/^(?:0|[1-9]\d*)$/),projection_generation:text,
     catalogue_digest:digest,source_set_digest:digest,as_of_ms:ms}).strict(),
   policy:z.object({identity_digest:digest,method_digest:digest,policy_revision:text,stress_delta_bps:z.string().min(1).max(512),
     approved_at_ms:ms,valid_until_ms:ms}).strict(),input_method_digest:digest,input_digest:digest,
-  retained_tasks:z.array(z.object({slot:z.enum(["RAW","DIRECT_NAV"]),task:z.unknown(),input_json:z.string().min(1).max(8*1024*1024)}).strict()).min(1).max(128),
+  retained_tasks:z.array(z.object({slot:z.enum(["RAW","DIRECT_NAV"]),task:z.unknown(),input_json:z.string().min(1).max(8*1024*1024),
+    metrics_dependency:metricsDependencySchema.optional()}).strict()).min(1).max(128),
   scores:z.array(managerScorePublication).min(1).max(128),calculation_key:digest,computed_at_ms:ms,
   calculation_revision:text,input_method_revision:text}).strict();
-function recomputeTask(t:Task["task"],p:Policy,revision:string,computed:number):Task["task"] {
-  if(t.input.kind!=="PATH")return fail("MANAGER_DERIVED_INPUTS_NOT_RETAINED");
-  return {...t,expected_policy_revision:p.policy_revision,calculation_revision:revision,computed_at_ms:computed,
-    input:{...t.input,path:{...t.input.path,stress_delta_bps:p.stress_delta_bps}}};
+function recomputeTask(item:Task,p:Policy,revision:string,computed:number):{task:Task["task"];reasons:string[]} {
+  const t=item.task,common={...t,expected_policy_revision:p.policy_revision,calculation_revision:revision,computed_at_ms:computed};
+  if(t.input.kind==="PATH")return {task:{...common,input:{...t.input,path:{...t.input.path,stress_delta_bps:p.stress_delta_bps}}},reasons:[]};
+  if(t.input.kind!=="METRICS")return fail("MANAGER_DERIVED_INPUTS_NOT_RETAINED");
+  const dep=item.metrics_dependency,metrics={...t.input.quality.metrics},reasons:string[]=[];
+  if(!dep||dep.method_digest!==p.method_digest){
+    for(const key of Object.keys(metrics) as Array<keyof typeof metrics>)metrics[key]=null;
+    reasons.push("METRIC_DEPENDENCIES_NOT_RETAINED");
+  }else if(!sameDelta(dep.stress_delta_bps,p.stress_delta_bps)){
+    // A scalar stress result cannot reconstruct a different fixed-path delta.
+    // The other five metrics keep their original source strings and methods.
+    metrics.stress_excess_twr=null;reasons.push("STRESS_INPUTS_NOT_RETAINED_FOR_POLICY");
+  }
+  return {task:{...common,input:{kind:"METRICS",quality:{...t.input.quality,metrics}}},reasons};
 }
 function parseBundle(raw:unknown,digest:string,d:ManagerModelDocument,limit:number):Bundle {
   const b=bundleSchema.parse(capture(raw,limit)) as Bundle;
@@ -106,21 +155,32 @@ function parseBundle(raw:unknown,digest:string,d:ManagerModelDocument,limit:numb
     const task=capture(JSON.parse(t.input_json),limit) as Task["task"];
     if(JSON.stringify(task)!==t.input_json||accessDigest(task)!==accessDigest(t.task))fail("MANAGER_DERIVED_ORIGINAL_INPUT_MISMATCH");
     t.task=task;
-    if(!t||!["RAW","DIRECT_NAV"].includes(t.slot)||t.task?.input?.kind!=="PATH")fail("MANAGER_DERIVED_INPUT_INVALID");
-    taskSource(t.task,d);const k=slotKey(t.slot,t.task.binding);if(seen.has(k))fail("MANAGER_DERIVED_INPUT_INVALID");seen.add(k);
+    if(!t||!["RAW","DIRECT_NAV"].includes(t.slot)||!["PATH","METRICS"].includes(t.task?.input?.kind))fail("MANAGER_DERIVED_INPUT_INVALID");
+    taskSource(t.task,d);validateDependency(t,d);
+    const k=slotKey(t.slot,t.task.binding);if(seen.has(k))fail("MANAGER_DERIVED_INPUT_INVALID");seen.add(k);
     const score=b.scores.find(s=>slotKey(s.slot,s.provenance.binding)===k),p=score?.provenance;
+    const sourceScore=(d.precomputed_scores??[]).find(s=>slotKey(s.slot,s.provenance.binding)===k);
+    // This check is unconditional, including the derived-result path below.
+    // Rehashing mutable sidecar metadata/keys cannot rewrite original custody
+    // relative to the immutable financial source's worker input digest.
+    if(!sourceScore||sourceScore.provenance.input_digest!==hash(t.input_json))
+      fail("MANAGER_DERIVED_ORIGINAL_INPUT_MISMATCH");
+    const original=score!==undefined&&sourceScore!==undefined&&accessDigest(score)===accessDigest(sourceScore);
+    const work=recomputeTask(t,b.policy,b.calculation_revision,b.computed_at_ms);
+    const matchesOriginal=original&&p?.input_digest===hash(t.input_json);
+    const matchesDerived=p?.input_digest===hash(JSON.stringify(work.task));
     if(!p||p.source_revision!==d.revision||p.source_set_digest!==d.source_set_digest||p.source_as_of_ms!==d.as_of_ms||
       p.source_qualification!=="SOURCE_VERIFIED"||accessDigest(p.scope)!==accessDigest(t.task.scope)||
       p.policy_revision!==b.policy.policy_revision||p.approved_at_ms!==b.policy.approved_at_ms||p.policy_valid_until_ms!==b.policy.valid_until_ms||
       p.calculation_revision!==b.calculation_revision||
-      ![hash(JSON.stringify(t.task)),hash(JSON.stringify(recomputeTask(t.task,b.policy,b.calculation_revision,b.computed_at_ms)))].includes(p.input_digest))
+      (!matchesOriginal&&!matchesDerived)||!matchesOriginal&&work.reasons.some(reason=>!score!.quality.reason_codes.includes(reason)))
       fail("MANAGER_DERIVED_ORIGINAL_INPUT_MISMATCH");
   }
   b.scores=b.scores.map(s=>managerScorePublication.parse(s));
   return b;
 }
 
-/** Server-private PATH-only opt-in. No public input, formula, timer or source authority. */
+/** Server-private opt-in. No public input, formula, timer or source authority. */
 export class ManagerScoreRecalculation {
   private readonly models:ManagerModelRepository;
   private readonly leases:ManagerProjectionLeases;
@@ -143,7 +203,7 @@ export class ManagerScoreRecalculation {
   attach(delivery:ManagerConsumerDelivery,tasks:readonly Task[]):void {
     try {this.attachBounded(delivery,tasks);}
     catch(error){
-      // Optional PATH custody capacity cannot suppress independently valid
+      // Optional original-input custody capacity cannot suppress independently valid
       // financial projections. Malformed/ambiguous bindings still reject the
       // complete transaction; they must not poison future stored readers.
       if(error instanceof Error&&error.message==="MANAGER_DERIVED_INPUT_BOUND"){
@@ -156,12 +216,14 @@ export class ManagerScoreRecalculation {
     const d=managerModelDocument.parse(delivery.document),now=Date.now(),handle=this.options.currentPolicy();
     const p=managerScoreRecalculationPolicy(handle,d.as_of_ms,now);
     if(!p){this.disposition="DERIVED_POLICY_NOT_ELIGIBLE";return;}
-    const detached=capture(tasks.filter(t=>t.task.input.kind==="PATH"),this.config.maximum_bundle_bytes,true);
+    const detached=capture(tasks,this.config.maximum_bundle_bytes,true);
     const retained=detached.map(item=>({...item,input_json:JSON.stringify(item.task)}));
     if(!retained.length){this.disposition="DERIVED_INPUTS_NOT_RETAINED";return;}
     const scores=(d.precomputed_scores??[]).map(s=>managerScorePublication.parse(s));
     for(const item of retained){
       taskSource(item.task,d);
+      validateDependency(item,d,p);
+      if(!["PATH","METRICS"].includes(item.task.input.kind))fail("MANAGER_DERIVED_INPUT_INVALID");
       if(item.task.calculation_revision!==this.config.calculation_revision)fail("MANAGER_DERIVED_IMPLEMENTATION_MISMATCH");
       const score=scores.find(s=>slotKey(s.slot,s.provenance.binding)===slotKey(item.slot,item.task.binding));
       if(!score||score.provenance.input_digest!==hash(JSON.stringify(item.task))||
@@ -248,11 +310,13 @@ export class ManagerScoreRecalculation {
     const computed=Date.now(),replacement=new Map<string,ManagerScorePublication>();
     for(const item of original.retained_tasks){
       check();const task=capture(item.task,this.config.maximum_bundle_bytes);
-      if(task.input.kind!=="PATH")fail("MANAGER_DERIVED_INPUTS_NOT_RETAINED");
-      const work=recomputeTask(task,p,this.config.calculation_revision,computed);
-      const result=await this.options.runtime.calculate({...work,policy:handle});check();
+      const work=recomputeTask({...item,task},p,this.config.calculation_revision,computed);
+      const result=await this.options.runtime.calculate({...work.task,policy:handle});check();
       const {preview:_private,...quality}=result.quality;
-      replacement.set(slotKey(item.slot,task.binding),managerScorePublication.parse({slot:item.slot,quality,
+      // Custody reasons are separate from worker input; never truncate original
+      // faults to squeeze an extra reason into the worker's 32-reason input cap.
+      replacement.set(slotKey(item.slot,task.binding),managerScorePublication.parse({slot:item.slot,
+        quality:{...quality,reason_codes:[...new Set([...quality.reason_codes,...work.reasons])]},
         raw_metrics:result.raw_metrics,provenance:result.provenance}));
     }
     const captured=capture({...base,calculation_key:desiredKey,computed_at_ms:computed,

@@ -87,7 +87,7 @@ export function enforceProfileLineage<TSpec extends { key: string }>(
     { class: "group", field: "group_id", accepted: groupIds, present: rootsPresent.group, trusted: complete("conditional_groups") },
   ] as const;
 
-  return relations.map((relation) => {
+  const scoped: Array<LineageRelationResult<TSpec>> = relations.map((relation) => {
     if (!relation.page) return relation;
     const rejects: Record<string, number> = {};
     const scopedOut: Record<string, number> = {};
@@ -123,6 +123,38 @@ export function enforceProfileLineage<TSpec extends { key: string }>(
       lineageRejects: rejects,
       ...(counted(scopedOut) ? { lineageScopedOut: scopedOut } : {}),
     };
+  });
+  // Bracket legs publish no mode/account of their own. Use only the accepted
+  // same-cycle parent population AFTER the existing profile-lineage pass,
+  // never raw pre-filter bracket IDs or an older committed snapshot.
+  const bracketParents = scoped.filter(relation => relation.spec.key === "brackets");
+  const parent = bracketParents.length === 1 ? bracketParents[0].page : null;
+  if ((parent?.items.length ?? 0) > 2_000)
+    throw new Error(errorPrefix + "_PROFILE_LINEAGE_ROW_BOUND");
+  const bracketCounts = new Map<string, number>();
+  for (const row of parent?.items ?? []) {
+    const id = row.bracket_group_id;
+    if (typeof id === "string" && id.length > 0)
+      bracketCounts.set(id, (bracketCounts.get(id) ?? 0) + 1);
+  }
+  const completeParent = Boolean(parent && parent.completeness === "COMPLETE" && parent.nextCursor === null);
+  return scoped.map(relation => {
+    if (relation.spec.key !== "bracket_legs" || !relation.page) return relation;
+    if (relation.page.items.length > 2_000)
+      throw new Error(errorPrefix + "_PROFILE_LINEAGE_ROW_BOUND");
+    const accepted = relation.page.items.filter(row => typeof row.bracket_group_id === "string" &&
+      bracketCounts.get(row.bracket_group_id) === 1);
+    const dropped = relation.page.items.length - accepted.length;
+    if (completeParent && dropped === 0) return relation;
+    // Unknown/unavailable/capped parent is never an empty COMPLETE fact.
+    // Preserve the upstream UNKNOWN distinction, and never promote a
+    // partial page merely because some of its children's parents were found.
+    const completeness = relation.page.completeness === "UNKNOWN" || parent?.completeness === "UNKNOWN"
+      ? "UNKNOWN" as const : "PARTIAL" as const;
+    return { ...relation, page: { ...relation.page, items: accepted, completeness },
+      state: "PARTIAL" as const,
+      reasonCode: relation.reasonCode ?? errorPrefix + "_BRACKET_PARENT_CENSUS_UNQUALIFIED",
+      ...(dropped ? { lineageRejects: { ...relation.lineageRejects, bracket: dropped } } : {}) };
   });
 }
 

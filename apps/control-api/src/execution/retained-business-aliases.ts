@@ -10,6 +10,9 @@ const fields = Object.freeze({
   conditional_order_group_legs: Object.freeze([
     "group_id", "leg_id", "sequence", "side", "quantity", "price", "state", "created_at", "updated_at",
   ]),
+  order_bracket_legs: Object.freeze([
+    "leg_id", "side", "quantity", "price", "status", "created_at", "updated_at", "submitted_at",
+  ]),
 } satisfies Record<string, readonly string[]>);
 
 export function namedRetainedBusinessFields(relation: string): readonly string[] | null {
@@ -37,6 +40,9 @@ export function namedRetainedBusinessSourceAllowed(relation: string, source: str
     case "execution_sessions": return source === "manager.sessions" || source === "manager.current.execution-sessions";
     case "conditional_order_group_legs": return source === "manager.conditional-orders" || source === "manager.current.conditional-order-group-legs";
     case "conditional_order_groups": return source === "manager.conditional-orders" || source === "manager.current.conditional-order-groups";
+    // No legacy bracket collector alias exists in the checked-in adapter.
+    case "order_bracket_legs": return source === "manager.current.order-bracket-legs";
+    case "order_brackets": return source === "manager.current.order-brackets";
     default: return false;
   }
 }
@@ -47,7 +53,7 @@ export function namedRetainedBusinessSourceAllowed(relation: string, source: str
 export function namedRetainedBusinessAnchored(relation: string, row: Record<string, ProjectionScalar>): boolean {
   const account = Object.getOwnPropertyDescriptor(row, "account_id");
   if (!account || !("value" in account) || typeof account.value !== "string" || !account.value) return false;
-  if (relation === "account_sync_effective") return true;
+  if (relation === "account_sync_effective" || relation === "order_bracket_legs") return true;
   const strategy = Object.getOwnPropertyDescriptor(row, "strategy_id");
   return Boolean(strategy && "value" in strategy && typeof strategy.value === "string" && strategy.value);
 }
@@ -106,6 +112,61 @@ export function joinRetainedFindingSessionRows<T extends ParentRow>(
     if (properties.account_id?.value !== parent.fields.account_id) return [];
     const row = { ...child, fields: { ...child.fields, strategy_id: parent.fields.strategy_id } };
     return [{ row, parent }];
+  });
+}
+
+/** Exact bracket FK join, not a permission resolver. A bracket may have no
+ * strategy: its original account-grain row must independently pass the parent
+ * scope's all-correlated-tuples rule BEFORE the merged child is considered.
+ * No execution-session lookup or inference is performed. Full same-snapshot
+ * parent census is required by the caller; duplicates poison the key even if
+ * one parent is hidden/malformed. Unknown/unprovable links uniformly omit.
+ */
+export function joinRetainedBracketLegRows<T extends ParentRow>(
+  children: readonly T[], parents: readonly ParentRow[], environment: "paper" | "sandbox" | "live",
+): { row: T; parent: ParentRow; inherited_fields: readonly string[] }[] {
+  if (children.length > 2_000 || parents.length > 2_000)
+    throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+  const groups = new Map<string, ParentRow | null>();
+  const contextFields = [...inherited, "mode", "execution_session_id"] as const;
+  for (const parent of parents) {
+    const properties = Object.getOwnPropertyDescriptors(parent.fields);
+    const id = properties.bracket_group_id;
+    if (!id || !("value" in id) || !boundedText(id.value)) continue;
+    const account = properties.account_id;
+    const valid = Object.values(properties).every(property => "value" in property) &&
+      account && "value" in account && boundedText(account.value) &&
+      contextFields.every(key => {
+        const property = properties[key];
+        return !property || "value" in property &&
+          (property.value === null || property.value === undefined || boundedText(property.value));
+      }) &&
+      (properties.mode?.value === null || properties.mode?.value === undefined || properties.mode.value === environment);
+    groups.set(id.value, groups.has(id.value) || !valid ? null : parent);
+  }
+  return children.flatMap(child => {
+    const properties = Object.getOwnPropertyDescriptors(child.fields);
+    const id = properties.bracket_group_id;
+    if (Object.values(properties).some(property => !("value" in property)) ||
+      !id || !("value" in id) || !boundedText(id.value)) return [];
+    const parent = groups.get(id.value);
+    if (!parent) return [];
+    const inheritedFields: string[] = [];
+    const anchors: Record<string, ProjectionScalar> = {};
+    for (const key of contextFields) {
+      const own = properties[key]?.value, value = parent.fields[key];
+      if (own !== null && own !== undefined && !boundedText(own)) return [];
+      if (own !== null && own !== undefined && value !== null && value !== undefined && own !== value) return [];
+      if (value !== null && value !== undefined && (own === null || own === undefined)) {
+        anchors[key] = value;
+        inheritedFields.push(key);
+      }
+    }
+    if (properties.mode?.value !== null && properties.mode?.value !== undefined &&
+      properties.mode.value !== environment) return [];
+    // Explicit child values are never overwritten. Null/missing values have
+    // no lineage of their own; the independently authorized parent supplies it.
+    return [{ row: { ...child, fields: { ...child.fields, ...anchors } }, parent, inherited_fields: inheritedFields }];
   });
 }
 

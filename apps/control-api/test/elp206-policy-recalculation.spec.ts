@@ -14,10 +14,12 @@ import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "../src
 import { ManagerModelRepository } from "../src/execution-v2/manager-model.store";
 import { ManagerModelService } from "../src/execution-v2/manager-model.service";
 import type { ManagerModelDocument } from "../src/execution-v2/manager-model.contract";
-import { ManagerScoreRuntime, loadApprovedManagerScorePolicy, managerScorePolicyHash,
+import { ManagerScoreRuntime, loadApprovedManagerScorePolicy, managerScorePolicyHash,managerScoreRecalculationPolicy,
   type ApprovedManagerScorePolicy, type ManagerScoreRuntimePolicyArtifact,
   type ManagerScoreRuntimeTask } from "../src/execution-v2/manager-score-runtime";
 import { managerScorePopulationDigest } from "../src/execution-v2/manager-score-publication";
+import { calculateManagerScoreMetrics } from "../src/execution-v2/manager-score";
+import type { ManagerScoreRecalculationTask } from "../src/execution-v2/manager-score-recalculation";
 import { loadPublicationCommissioning } from "../src/execution-v2/publication-adapter";
 import type { DatasetPublication } from "../src/execution-v2/publication.contract";
 import type { ManagerProjectionSource } from "../src/execution-v2/manager-consumer";
@@ -119,6 +121,26 @@ function pathTask(f: Fixture): Omit<ManagerScoreRuntimeTask, "policy"> {
       currency: "USDT", cash_currency: "USDT", block_manifest_registered_at_ms: start - 1, stress_delta_bps: "5" } } };
 }
 
+function metricsTask(f:Fixture):Omit<ManagerScoreRuntimeTask,"policy"> {
+  const t=pathTask(f);if(t.input.kind!=="PATH")throw new Error("SYNTHETIC_PATH_FIXTURE_REQUIRED");
+  // Synthetic source artifact computed by the shared module, NOT real PM data.
+  const raw=calculateManagerScoreMetrics(t.input.path);
+  return {...t,input:{kind:"METRICS",quality:{...t.input.quality,metrics:raw.metrics,
+    sample_count:raw.sample_count,complete_block_count:raw.complete_block_count}}};
+}
+function metricsItem(f:Fixture,handle:ApprovedManagerScorePolicy|null,task=metricsTask(f)):ManagerScoreRecalculationTask {
+  const p=managerScoreRecalculationPolicy(handle,f.document.as_of_ms,Date.now());
+  if(!p)throw new Error("SYNTHETIC_POLICY_NOT_ELIGIBLE");
+  // Test-only stand-in for an independently qualified producer artifact. It is
+  // deliberately not an installed production adapter or source attestation.
+  const metrics_dependency={source_revision:f.document.revision,source_set_digest:f.document.source_set_digest,
+    source_as_of_ms:f.document.as_of_ms,metrics_input_digest:accessDigest(task.input),method_digest:p.method_digest,
+    stress_delta_bps:p.stress_delta_bps,source_locator:"SYNTHETIC:retained-metrics-artifact-not-source-qualification"};
+  // The qualified adapter must provide the digest BEFORE the original worker
+  // call. Custody and runtime never add this binding on its behalf afterward.
+  return {slot:"RAW",task:{...task,metrics_dependency_digest:accessDigest(metrics_dependency)},metrics_dependency};
+}
+
 describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 immutable policy PATH recalculation — actual PG, SYNTHETIC authority only", () => {
   const name = `elp206_recalc_${randomUUID().replaceAll("-", "")}`;
   const url = (database: string) => { const u = new URL(process.env.TEST_DATABASE_URL!); u.pathname = `/${database}`; return u.toString(); };
@@ -176,7 +198,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 immutable policy PATH r
     }), recheck, acknowledge };
     const calculator = new ManagerScoreRuntime({ maximum_observations: 20, maximum_blocks: 10, maximum_stress_subperiods: 40,
       maximum_input_bytes: 65_536, maximum_in_flight: 1 });
-    const tasks = vi.fn(async () => [{ slot: "RAW" as const, task: pathTask(f) }]);
+    const tasks = vi.fn(async ():Promise<ManagerScoreRecalculationTask[]> => [{ slot: "RAW", task: pathTask(f) }]);
     const installation: ManagerRuntimeInstallation = { trust: unqualifiedAccessTrust, cadence_ms: 1000, maximum_publication_reads: 1,
       partitions: [{ scope, commissioning: f.commissioning, bounds, source, publication: async () => f.publication,
         score: { runtime: calculator, maximum_tasks_per_revision: 2, currentPolicy: () => state.policy, tasks, recalculation: config } }] };
@@ -444,6 +466,198 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 immutable policy PATH r
     });
     await h.runtime.tick(); expect(h.runtime.status().state).toBe("TICK_OK");
     expect(await derivedRows()).toHaveLength(2); expect(await sourceRows()).toEqual(original); expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+
+  it("retains exact METRICS worker bytes through jsonb and re-normalizes anchors/maturity without source or ACK changes",async()=>{
+    const h=installed(),t=metricsTask(h.f);
+    const reordered=Object.fromEntries(Object.entries(t).reverse()) as typeof t;
+    const item=metricsItem(h.f,h.state.policy,reordered),bytes=JSON.stringify(item.task);
+    h.tasks.mockResolvedValue([item]);await h.runtime.tick();
+    expect(h.runtime.status().state).toBe("TICK_OK");
+    const d=await document(h),source=await sourceRows(),initial=await derivedRows();
+    const bundle=JSON.parse(initial[0].bytes);
+    expect(bundle.retained_tasks[0].input_json).toBe(bytes);
+    expect(bundle.retained_tasks[0].metrics_dependency).toEqual(item.metrics_dependency);
+    expect(d.precomputed_scores![0].provenance.input_digest).toBe(hash(bytes));
+    h.state.policy=policy(h.f,"METRICS-B",a=>{
+      a.policy.anchors.twr=["-0.02","0.2"];
+      a.policy.maturity={minimum_samples:2,minimum_complete_blocks:1,minimum_duration_ms:200};
+    });
+    await h.runtime.tick();expect(rec(h).status().state).toBe("DERIVED_COMMITTED");
+    const result=(await rec(h).snapshot(d)).document.precomputed_scores![0];
+    expect(result.raw_metrics).toEqual(d.precomputed_scores![0].raw_metrics);
+    expect(result.quality.status).toBe("available");expect(result.quality.value).not.toBe(d.precomputed_scores![0].quality.value);
+    expect(result.provenance.source_as_of_ms).toBe(h.f.document.as_of_ms);
+    const calculate=vi.spyOn(h.calculator,"calculate"),rows=await derivedRows();
+    await h.runtime.tick();expect(rec(h).status().state).toBe("CURRENT_DERIVED_REUSED");
+    await h.runtime.beforeApplicationShutdown();
+    const resumed=new ExecutionManagerRuntime(pool,h.installation);runtimes.push(resumed);await resumed.tick();
+    expect(calculate).not.toHaveBeenCalled();expect(await derivedRows()).toEqual(rows);
+    expect(await sourceRows()).toEqual(source);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+
+  it("reuses source metrics under an exactly equivalent decimal stress delta",async()=>{
+    const h=installed();h.tasks.mockResolvedValue([metricsItem(h.f,h.state.policy)]);await h.runtime.tick();
+    const d=await document(h);h.state.policy=policy(h.f,"DELTA-5-POINT-0",a=>{a.policy.stress_delta_bps="5.0";});
+    await h.runtime.tick();const result=(await rec(h).snapshot(d)).document.precomputed_scores![0];
+    expect(result.raw_metrics).toEqual(d.precomputed_scores![0].raw_metrics);
+    expect(result.quality.value).not.toBeNull();expect(result.quality.reason_codes).not.toContain("STRESS_INPUTS_NOT_RETAINED_FOR_POLICY");
+  });
+
+  it("mixed PATH/METRICS changed delta recomputes PATH, withholds only scalar stress, and preserves originals",async()=>{
+    const h=installed(),metric=metricsItem(h.f,h.state.policy);
+    metric.slot="DIRECT_NAV";metric.task.binding={...metric.task.binding,subject_type:"portfolio",subject_id:OWN.portfolio_id};
+    h.tasks.mockResolvedValue([{slot:"RAW",task:pathTask(h.f)},metric]);await h.runtime.tick();
+    const d=await document(h),source=await sourceRows(),initial=await derivedRows();
+    h.state.policy=changedPolicy(h.f);await h.runtime.tick();
+    expect(h.runtime.status().state).toBe("TICK_OK");const view=await rec(h).snapshot(d);
+    const path=view.document.precomputed_scores!.find(s=>s.slot==="RAW")!;
+    const metrics=view.document.precomputed_scores!.find(s=>s.slot==="DIRECT_NAV")!;
+    expect(path.quality.value).not.toBeNull();expect(path.raw_metrics!.stress_excess_twr).not.toBe(d.precomputed_scores![0].raw_metrics!.stress_excess_twr);
+    const original=d.precomputed_scores!.find(s=>s.slot==="DIRECT_NAV")!;
+    expect(metrics.raw_metrics).toEqual({...original.raw_metrics,stress_excess_twr:null});
+    expect(metrics.quality).toMatchObject({status:"partial_components",value:null,band_code:null,
+      components:{P:expect.any(String),R:expect.any(String),B:null}});
+    expect(metrics.quality.reason_codes).toContain("STRESS_INPUTS_NOT_RETAINED_FOR_POLICY");
+    expect(metrics.provenance.policy_revision).toBe("SYNTHETIC:policy-B");
+    expect(JSON.parse((await derivedRows()).find(r=>r.calculation_key===view.key)!.bytes).retained_tasks)
+      .toEqual(JSON.parse(initial[0].bytes).retained_tasks);
+    expect(await sourceRows()).toEqual(source);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+
+  it("retains missing METRICS dependencies honestly without blocking a compatible PATH sibling",async()=>{
+    const h=installed(),t=metricsTask(h.f);t.binding={...t.binding,subject_type:"portfolio",subject_id:OWN.portfolio_id};
+    h.tasks.mockResolvedValue([{slot:"RAW",task:pathTask(h.f)},{slot:"DIRECT_NAV",task:t}]);await h.runtime.tick();
+    const d=await document(h),source=await sourceRows();h.state.policy=changedPolicy(h.f);await h.runtime.tick();
+    const scores=(await rec(h).snapshot(d)).document.precomputed_scores!;
+    expect(scores.find(s=>s.slot==="RAW")!.quality.value).not.toBeNull();
+    const missing=scores.find(s=>s.slot==="DIRECT_NAV")!;
+    expect(Object.values(missing.raw_metrics!)).toEqual(Array(6).fill(null));
+    expect(missing.quality).toMatchObject({status:"partial_components",value:null,band_code:null});
+    expect(missing.quality.reason_codes).toContain("METRIC_DEPENDENCIES_NOT_RETAINED");
+    expect(await sourceRows()).toEqual(source);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+
+  it.each(["source_revision","source_set_digest","source_as_of_ms","metrics_input_digest","method_digest","stress_delta_bps"] as const)(
+    "mismatched supplied metric dependency %s rolls back the initial source and sidecar before ACK",async field=>{
+      const h=installed(),item=metricsItem(h.f,h.state.policy),dep=item.metrics_dependency!;
+      if(field==="source_as_of_ms")dep.source_as_of_ms+=1;
+      else if(field==="stress_delta_bps")dep.stress_delta_bps="10";
+      else if(field==="source_revision")dep.source_revision="SYNTHETIC:other-source";
+      else dep[field]=hash("SYNTHETIC:mismatched-dependency");
+      // Preserve a matching original-task binding, so these cases exercise
+      // source/method/scenario validation rather than just a stale digest.
+      item.task.metrics_dependency_digest=accessDigest(dep);
+      h.tasks.mockResolvedValue([item]);await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_REFUSED");
+      expect(await sourceRows()).toEqual([]);expect(await derivedRows()).toEqual([]);expect(await derivedHead()).toBeUndefined();
+      expect(h.acknowledge).not.toHaveBeenCalled();
+    });
+
+  it.each(["wrapper-only","wrapper-and-original-task"] as const)(
+    "rehashing mutable derived metadata cannot substitute the original metrics dependency: %s",async fault=>{
+      const h=installed();h.tasks.mockResolvedValue([metricsItem(h.f,h.state.policy)]);await h.runtime.tick();
+      const d=await document(h),source=await sourceRows();
+      h.state.policy=changedPolicy(h.f);await h.runtime.tick();
+      const view=await rec(h).snapshot(d),rows=await derivedRows();
+      const b=JSON.parse(rows.find(r=>r.calculation_key===view.key)!.bytes);
+      const item=b.retained_tasks[0];
+      // Isolated corruption fault, NOT a legitimate production rewrite. The
+      // false claim would reuse A's stress scalar as if generated at B's delta.
+      item.metrics_dependency.stress_delta_bps="10";
+      item.metrics_dependency.source_locator="SYNTHETIC:substituted-source-artifact";
+      if(fault==="wrapper-and-original-task"){
+        item.task.metrics_dependency_digest=accessDigest(item.metrics_dependency);
+        item.input_json=JSON.stringify(item.task);
+        const work={...item.task,expected_policy_revision:b.policy.policy_revision,
+          calculation_revision:b.calculation_revision,computed_at_ms:b.computed_at_ms,
+          input:{kind:"METRICS" as const,quality:{...item.task.input.quality,metrics:{...item.task.input.quality.metrics}}}};
+        const result=await h.calculator.calculate({...work,policy:h.state.policy});
+        const {preview:_private,...quality}=result.quality;
+        b.scores[0]={slot:item.slot,quality,raw_metrics:result.raw_metrics,provenance:result.provenance};
+      }
+      b.input_digest=accessDigest({method:b.input_method_digest,tasks:b.retained_tasks});
+      b.calculation_key=accessDigest({source:b.source,input_digest:b.input_digest,policy:b.policy.identity_digest,
+        calculation_revision:b.calculation_revision,input_method_revision:b.input_method_revision});
+      const originalSourceInput=d.precomputed_scores![0].provenance.input_digest;
+      expect(accessDigest(b)).not.toBe(rows.find(r=>r.calculation_key===view.key)!.payload_digest);
+      const client=await pool.connect();
+      try{
+        await client.query("BEGIN");
+        await client.query(`INSERT INTO execution_manager_calculation_revisions
+          (workspace_id,environment,profile_id,source_revision,calculation_key,payload_digest,payload)
+          VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)`,[scope.workspace_id,scope.environment,scope.profile_id,d.revision,
+          b.calculation_key,accessDigest(b),JSON.stringify(b)]);
+        await client.query(`UPDATE execution_manager_calculation_heads SET calculation_key=$1
+          WHERE workspace_id=$2 AND environment=$3 AND profile_id=$4 AND source_revision=$5`,
+          [b.calculation_key,scope.workspace_id,scope.environment,scope.profile_id,d.revision]);
+        await client.query("COMMIT");
+      }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
+      // Prove the malicious, coherently rehashed bytes were actually read from
+      // PG; rejection must be relative to the immutable source, not stale keys.
+      expect(await derivedHead()).toBe(b.calculation_key);
+      await expect(rec(h).snapshot(d)).rejects.toThrow(fault==="wrapper-only"?
+        "MANAGER_DERIVED_METRIC_DEPENDENCY_INVALID":"MANAGER_DERIVED_ORIGINAL_INPUT_MISMATCH");
+      expect(d.precomputed_scores![0].provenance.input_digest).toBe(originalSourceInput);
+      expect(await sourceRows()).toEqual(source);expect(h.acknowledge).toHaveBeenCalledOnce();
+    });
+
+  it.each(["missing-digest","missing-wrapper"] as const)(
+    "supplied metrics provenance cannot silently downgrade a %s mismatch to legacy absence",async fault=>{
+      const h=installed(),item=metricsItem(h.f,h.state.policy);
+      if(fault==="missing-digest")delete item.task.metrics_dependency_digest;else delete item.metrics_dependency;
+      h.tasks.mockResolvedValue([item]);await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_REFUSED");
+      expect(await sourceRows()).toEqual([]);expect(await derivedRows()).toEqual([]);expect(h.acknowledge).not.toHaveBeenCalled();
+    });
+
+  it.each([
+    ["source_locator","SYNTHETIC:artifact\n"],["source_locator","SYNTHETIC:artifact\u0000x"],
+    ["source_locator","SYNTHETIC:artifact\u007f"],["source_locator","SYNTHETIC:artifact\u2028"],
+    ["source_locator"," "],["stress_delta_bps","5\n"],
+    ["method_digest",`${hash("SYNTHETIC:method")}\n`],
+  ] as const)(
+    "new dependency grammar rejects controls/final-newline before original custody: %s %j",async(field,value)=>{
+      const h=installed(),item=metricsItem(h.f,h.state.policy);
+      item.metrics_dependency![field]=value;
+      item.task.metrics_dependency_digest=accessDigest(item.metrics_dependency);
+      h.tasks.mockResolvedValue([item]);await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_REFUSED");
+      expect(await sourceRows()).toEqual([]);expect(await derivedRows()).toEqual([]);expect(h.acknowledge).not.toHaveBeenCalled();
+    });
+
+  it("a later eligible return to the original delta reuses original scalar inputs, not the previous partial result",async()=>{
+    const h=installed();h.tasks.mockResolvedValue([metricsItem(h.f,h.state.policy)]);await h.runtime.tick();
+    const d=await document(h),original=d.precomputed_scores![0].raw_metrics,source=await sourceRows();
+    h.state.policy=changedPolicy(h.f);await h.runtime.tick();
+    expect((await rec(h).snapshot(d)).document.precomputed_scores![0].raw_metrics!.stress_excess_twr).toBeNull();
+    h.state.policy=policy(h.f,"RETURN-DELTA-5");await h.runtime.tick();
+    const result=(await rec(h).snapshot(d)).document.precomputed_scores![0];
+    expect(result.raw_metrics).toEqual(original);expect(result.quality.value).not.toBeNull();
+    expect(result.quality.reason_codes).not.toContain("STRESS_INPUTS_NOT_RETAINED_FOR_POLICY");
+    expect(await derivedRows()).toHaveLength(3);expect(await sourceRows()).toEqual(source);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+
+  it("serves current-policy METRICS partial absence through the authorized API without request-time calculation",async()=>{
+    const h=installed(),t=metricsTask(h.f);
+    t.input.quality.reason_codes=Array.from({length:32},(_,i)=>`SYNTHETIC:original-reason-${i}`);
+    h.tasks.mockResolvedValue([metricsItem(h.f,h.state.policy,t)]);await h.runtime.tick();
+    h.state.policy=changedPolicy(h.f);await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_OK");
+    const {f,service}=reader(h),calculate=vi.spyOn(h.calculator,"calculate");
+    const result=await service.read(f.principal,"ALPHA",{environment:"paper"},OWN.alpha_id);
+    expect(result.score_details).toHaveLength(1);
+    expect(result.score_details![0].quality).toMatchObject({status:"partial_components",value:null,band_code:null});
+    expect(result.score_details![0].quality.reason_codes).toContain("STRESS_INPUTS_NOT_RETAINED_FOR_POLICY");
+    expect(result.score_details![0].quality.reason_codes).toEqual(expect.arrayContaining(t.input.quality.reason_codes));
+    expect(calculate).not.toHaveBeenCalled();expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+
+  it("METRICS method change and later-than-source approval cannot mint original-as-of scores",async()=>{
+    const h=installed();h.tasks.mockResolvedValue([metricsItem(h.f,h.state.policy)]);await h.runtime.tick();
+    const rows=await derivedRows(),source=await sourceRows(),calculate=vi.spyOn(h.calculator,"calculate");
+    h.state.policy=policy(h.f,"METRICS-METHOD",a=>{a.runtime_config.grid_method_ref="SYNTHETIC:changed-grid";});
+    await h.runtime.tick();expect(rec(h).status().state).toBe("DERIVED_INPUT_METHOD_NOT_RETAINED");
+    h.state.policy=policy(h.f,"METRICS-LATER",undefined,h.f.document.as_of_ms+100);
+    await h.runtime.tick();expect(rec(h).status().state).toBe("DERIVED_POLICY_NOT_ELIGIBLE");
+    expect(calculate).not.toHaveBeenCalled();expect(await derivedRows()).toEqual(rows);expect(await sourceRows()).toEqual(source);
+    expect(h.acknowledge).toHaveBeenCalledOnce();
   });
 
   it("does not keep returning a pre-revoke numeric result after final authority I/O", async () => {

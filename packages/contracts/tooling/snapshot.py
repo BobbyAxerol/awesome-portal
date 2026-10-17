@@ -20,6 +20,7 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "fixtures/execution-manager-metric.derived-reasons.synthetic.valid.json",
     "fixtures/execution-manager-composition.synthetic.valid.json",
     "fixtures/execution-manager-regime.synthetic.valid.json",
     "fixtures/execution-manager-score.synthetic.valid.json",

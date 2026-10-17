@@ -2473,7 +2473,7 @@
                               "maxLength": 256,
                               "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
                             },
-                            "maxItems": 32
+                            "maxItems": 64
                           }
                         },
                         "required": [
@@ -2731,7 +2731,7 @@
                                     "maxLength": 256,
                                     "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
                                   },
-                                  "maxItems": 32
+                                  "maxItems": 64
                                 }
                               },
                               "required": [
@@ -3064,7 +3064,7 @@
                                     "maxLength": 256,
                                     "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
                                   },
-                                  "maxItems": 32
+                                  "maxItems": 64
                                 }
                               },
                               "required": [
@@ -3340,7 +3340,7 @@
                               "maxLength": 256,
                               "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
                             },
-                            "maxItems": 32
+                            "maxItems": 64
                           }
                         },
                         "required": [
@@ -6259,7 +6259,7 @@
                   "maxLength": 256,
                   "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
                 },
-                "maxItems": 32
+                "maxItems": 64
               }
             },
             "required": [
@@ -6672,7 +6672,7 @@
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
                       },
-                      "maxItems": 32
+                      "maxItems": 64
                     }
                   },
                   "required": [
@@ -6930,7 +6930,7 @@
                               "maxLength": 256,
                               "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
                             },
-                            "maxItems": 32
+                            "maxItems": 64
                           }
                         },
                         "required": [

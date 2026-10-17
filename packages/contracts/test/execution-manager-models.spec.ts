@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
-import { managerDatasetResponse, managerMetric, managerModelQuery, managerScorePublication,managerCompositionPublication } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
+import { managerDatasetResponse, managerMetric, managerModelQuery, managerQuality, managerScorePublication,managerCompositionPublication } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
 import { managerRegimePublication } from "../../../apps/control-api/src/execution-v2/manager-regime-publication.contract";
 const root = resolve(__dirname,"..");
 const load = (file:string) => JSON.parse(readFileSync(resolve(root,file),"utf8"));
@@ -12,6 +12,29 @@ const fixture = load("fixtures/execution-manager-dataset.synthetic.valid.json");
 const ajv = new Ajv2020({strict:true,allErrors:true});
 const validate = ajv.compile(schema);
 describe("ELP2-06 generated named Manager BFF contract",()=>{
+  it("preserves source plus derived metric reasons up to 64 without widening source-quality admission",()=>{
+    const sample=load("fixtures/execution-manager-metric.derived-reasons.synthetic.valid.json");
+    expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    expect(sample.value.quality.reasons).toHaveLength(33);
+    const check=ajv.compile(api.components.schemas.ManagerMetric);
+    for(const count of [33,64,65]){
+      const metric=structuredClone(sample.value);
+      metric.quality.reasons=Array.from({length:count},(_,i)=>`TEST_ONLY:reason-${i}`);
+      expect(check(metric),JSON.stringify(check.errors)).toBe(count<=64);
+      expect(managerMetric.safeParse(metric).success).toBe(count<=64);
+      const response=structuredClone(load("fixtures/execution-manager-dataset.rows.synthetic.valid.json").value);
+      response.items[0].metrics.score=metric;
+      expect(validate(response),JSON.stringify(validate.errors)).toBe(count<=64);
+      expect(managerDatasetResponse.safeParse(response).success).toBe(count<=64);
+    }
+    expect(check(sample.value),JSON.stringify(check.errors)).toBe(true);
+    expect(managerMetric.parse(sample.value)).toEqual(sample.value);
+    expect(managerQuality.safeParse(sample.value.quality).success).toBe(false);
+    const response=structuredClone(fixture.value);
+    response.quality=sample.value.quality;
+    expect(validate(response)).toBe(false);
+    expect(managerDatasetResponse.safeParse(response).success).toBe(false);
+  });
   it("publishes descriptive per-alpha Regime without a scalar, pooled outcomes or production fixture authority",()=>{
     const sample=load("fixtures/execution-manager-regime.synthetic.valid.json");
     expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");

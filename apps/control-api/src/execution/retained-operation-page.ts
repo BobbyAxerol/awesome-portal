@@ -8,7 +8,7 @@ import { AuthorizedExecutionReadScope, ExecutionReadScopes, ExecutionReadScopeEr
   scopeAllowsField, scopeReadPopulation, ReadScopePrincipal, ReadScopeRequirement } from "../execution-v2/read-scope";
 import { projectionRowVisible } from "../execution-v2/read-projection";
 import { managerTimestamp } from "./manager-timestamp";
-import { joinRetainedConditionalLegRows, joinRetainedFindingSessionRows, namedRetainedFindingNeedsSession, namedRetainedBusinessAnchored, namedRetainedBusinessFields, namedRetainedBusinessResourceId, namedRetainedBusinessSourceAllowed } from "./retained-business-aliases";
+import { joinRetainedBracketLegRows, joinRetainedConditionalLegRows, joinRetainedFindingSessionRows, namedRetainedFindingNeedsSession, namedRetainedBusinessAnchored, namedRetainedBusinessFields, namedRetainedBusinessResourceId, namedRetainedBusinessSourceAllowed } from "./retained-business-aliases";
 
 /** Internal adapters share one publication identity. This is never accepted
  * from a browser, and the source revision is not returned as a scoped digest. */
@@ -51,7 +51,7 @@ export const NAMED_RETAINED_PURPOSES = Object.freeze({
   conditional_order_groups: "alpha.read", dead_letters: null, execution_replay_jobs: null,
   execution_sessions: "alpha.read", fills: "alpha.read", instrument_aliases: null,
   instrument_metadata_history: null, instruments: null, margin_balances: "account.read",
-  operator_operations: null, order_bracket_legs: null, order_brackets: "alpha.read", orders: "alpha.read",
+  operator_operations: null, order_bracket_legs: "account.read", order_brackets: "alpha.read", orders: "alpha.read",
   paper_account_seed: "account.read", paper_matcher_config: null, paper_open_orders: "alpha.read",
   performance_projection_current_state: null, portfolio_allocations: "portfolio.read",
   portfolio_audit_current_state: null, portfolio_capital_ledger: "portfolio.read",
@@ -131,12 +131,14 @@ export async function retainedOperationPage(config: ControlApiConfig,
   const profile = scopes ? retainedConfiguredProfile(config, query.environment) : managerRelationProfileBinding(query.environment).profileId;
   const metadata = scopes ? await repository.snapshotMetadata(principal.workspaceId, query.environment, profile) : null;
   const scope = await authorizeNamedRetainedRelation(scopes, principal, query.environment, profile, operation, metadata ?? undefined);
-  // The named child purpose is account.read (A18), distinct from the legacy
-  // Alpha derivation. Authorize the parent dataset independently; a child
-  // publication or an opaque group ID is not authority over its parent.
+  // Explicit account purposes of the two finite leg adapters, distinct
+  // from their legacy Alpha readers. A child publication/opaque FK is not
+  // authority over the independently accepted exact parent dataset.
+  const parentRelation = operation.relation === "conditional_order_group_legs" ? "conditional_order_groups"
+    : operation.relation === "order_bracket_legs" ? "order_brackets" : null;
   let parentScope: AuthorizedExecutionReadScope | undefined;
-  if (scope?.mode === "SCOPED_V2" && operation.relation === "conditional_order_group_legs") {
-    const parent = managerRelationOperationByRelation("conditional_order_groups");
+  if (scope?.mode === "SCOPED_V2" && parentRelation) {
+    const parent = managerRelationOperationByRelation(parentRelation);
     if (!parent) throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
     parentScope = await authorizeRetainedRelation(scopes, principal, query.environment, profile,
       parent.sourceId, parent.relation, metadata ?? undefined, undefined, "account.read");
@@ -167,6 +169,7 @@ export async function retainedOperationPage(config: ControlApiConfig,
   let findingSessionScope: AuthorizedExecutionReadScope | undefined;
   let findingSessionUsed = false;
   const joinedFindingRows = new Set<(typeof rawItems)[number]>();
+  const bracketInheritedFields = new Map<(typeof rawItems)[number], readonly string[]>();
   if (scope?.mode === "SCOPED_V2" && operation.relation === "reconciliation_findings") {
     const candidates = rawItems.filter(row => projectionRowVisible(scope, row.fields) &&
       namedRetainedFindingNeedsSession(row.fields));
@@ -198,9 +201,9 @@ export async function retainedOperationPage(config: ControlApiConfig,
     }
   }
   if (parentScope) {
-    const parents = Object.values(snapshot.document.relations).filter(r => r.relation === "conditional_order_groups");
+    const parents = Object.values(snapshot.document.relations).filter(r => r.relation === parentRelation);
     if (parents.length > 1) throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
-    if (parents[0] && !namedRetainedBusinessSourceAllowed("conditional_order_groups", parents[0].source_id))
+    if (parents[0] && !namedRetainedBusinessSourceAllowed(parentRelation!, parents[0].source_id))
       throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
     // Absence/partial lineage is not an authorized empty child dataset. A
     // retained STALE pair may still describe retained observations, but no
@@ -211,8 +214,19 @@ export async function retainedOperationPage(config: ControlApiConfig,
       parent.freshness !== relation.freshness || !parent.as_of || !relation.as_of ||
       !managerTimestamp(parent.as_of) || !managerTimestamp(relation.as_of))
       throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
-    sourceRows = joinRetainedConditionalLegRows(rawItems,
-      parent.items);
+    if (operation.relation === "order_bracket_legs") {
+      const currentParentScope = parentScope;
+      const joined = joinRetainedBracketLegRows(rawItems, parent.items, query.environment).filter(link =>
+        // Original parent first: a child cannot narrow a shared account into
+        // a visible Alpha and thereby mint parent authority.
+        projectionRowVisible(currentParentScope, link.parent.fields) &&
+        projectionRowVisible(scope!, link.row.fields) &&
+        projectionRowVisible(currentParentScope, link.row.fields));
+      sourceRows = joined.map(link => link.row);
+      for (const link of joined) bracketInheritedFields.set(link.row, link.inherited_fields);
+    } else {
+      sourceRows = joinRetainedConditionalLegRows(rawItems, parent.items);
+    }
   }
   // Keep private identity until AFTER row authorization, not after redaction.
   // It supplies only an opaque record ID. Its existence is not a field grant.
@@ -237,6 +251,11 @@ export async function retainedOperationPage(config: ControlApiConfig,
       // field grant. Preserve direct rows and child-owned fields unchanged.
       if (field.name === "strategy_id" && joinedFindingRows.has(item) &&
         (!findingSessionScope || !retainedFieldAllowed(findingSessionScope, field.name))) continue;
+      // Inherited fields remain private unless BOTH dataset scopes grant the
+      // same finite public field. Current bracket-leg catalogue exposes none
+      // of its parent's economic/session anchors; this is not a new grant.
+      if (bracketInheritedFields.get(item)?.includes(field.name) &&
+        (!parentScope || !retainedFieldAllowed(parentScope, field.name))) continue;
       if (field.name in item.fields) values[field.name] = scalar(field.kind, item.fields[field.name]);
     }
     const identity = operation.identityFields.map(name => {

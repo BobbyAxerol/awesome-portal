@@ -203,6 +203,9 @@ const CURRENT_KEY_FIELDS: Readonly<Record<string, readonly string[]>> = {
   "manager.orders:orders": ["order_id"],
   "manager.conditional-orders:conditional_order_groups": ["group_id"],
   "manager.conditional-orders:conditional_order_group_legs": ["group_id", "leg_id"],
+  // Existing generated declared-PK operations, current observations only.
+  "manager.current.order-brackets:order_brackets": ["bracket_group_id"],
+  "manager.current.order-bracket-legs:order_bracket_legs": ["leg_id"],
   "manager.command-journal:command_journal": ["command_id"],
   "manager.accounts:margin_balances": ["account_id", "instrument_id", "currency"],
   "manager.accounts:account_sync_effective": ["sync_id"],

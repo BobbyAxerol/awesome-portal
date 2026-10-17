@@ -1,5 +1,94 @@
 # ELP2-06 — immutable policy-only calculation revisions
 
+## Focus terminal and derived-reason contract correction — 2026-10-17T11:06UTC
+
+`finite-followthrough-focus-105640/controller.json` is TERMINAL, exit1:
+APIbuild PASS;329/330API tests PASS across10files; one new authorized METRICS
+read failed. Logsha256
+`1d47cc4741d7ac0bb34053c8b717f3f05aed7b4313728f64bd0d5695616adebc`.
+Source/index/eight protected runtime tuples unchanged; exact Node/PG/network
+resources absent and lease released. Restore NOT_RUN after the failed test.
+Actual-PG means disposable DB with SYNTHETIC authority/calibration, not source
+commissioning. Prior failures remain preserved.
+
+Root cause is a real projection-contract mismatch: Score permits64reasons,
+including the32original reasons plus a derivation-absence reason, while the
+row's `ManagerMetric.quality.reasons` allowed only32. No source fact or current
+permission was wrong. The bounded correction gives metric quality64reasons,
+keeps source/document `managerQuality` at32, and never truncates a reason.
+Regenerated dataset JSONschema/OpenAPI with the existing generator; regenerated
+`execution-manager-models.d.ts` has no textual change because array bounds are
+not represented in TS. New canonical synthetic metric fixture and contract
+regressions cover33/64accepted,65refused, unchanged source32cap and full response
+parity. No field, numerical policy, authority, migration or UI change.
+
+Independent review accepted this narrow fix. Initial host generator lacked
+its Zod resolution path; it wrote no schema. Reran using the existing API
+node_modules via NODE_PATH, no install/lockfile change. Generated-type command
+then completed. Corrected case/contract/hook are **NOT_RUN** at this entry;
+the coherent normal hook will exercise them once, not repeat the entire focus.
+Claude remains held/AWAITING_CONSUMER_REVIEW; future consumers may preserve up
+to64metric reasons, not silently drop derived absence.
+
+Landing attempt `finite-followthrough-land-110740` stopped at the normal
+pre-build snapshot gate: two generated contract digests had not yet been
+refreshed. No build/test/DB cell started, no commit and no source/runtime
+change; owned resources empty. Refresh the canonical snapshot using its
+existing script and register the new synthetic fixture, then resume the same
+normal hook with the exact owned staged paths preserved. No hook bypass.
+
+Second early landing `finite-followthrough-land-111033` stopped at EDS-12's
+stale `projection_relation_ladder` hash for the changed static Bracket catalogue.
+Again no APIbuild/DB cell started, no commit, unchanged source/runtime and
+empty owned resources. Existing release-integrity refresh script updates only
+the generated static ledger/manifests; authority remains false and runtime
+effect NONE. Static verifier passed after refresh; this is not a release or
+deployment qualification. Continue normal hook after these exact metadata
+dependencies, not rerun a previous load/DR/source job.
+
+## Current METRICS follow-through — 2026-10-17T10:55UTC
+
+Baseline322e23472c391f80d929436da050227f53c5068d landed the original PATH
+chain through normal hook/build/restore. New private METRICS support is
+APPLIED/UNCOMMITTED; focused results NOT_RUN at entry. No public schema,
+formula, calibration/default, migration, source sequence/ACK or runtime change.
+
+Private `ManagerScoreRecalculationTask.metrics_dependency` records exact source
+revision/set/as-of, original metrics input digest, method, stress delta and
+source locator. A qualified adapter must bind its digest into the ORIGINAL
+worker input before calculation. Neither custody nor current policy may mint
+that provenance. Exact input JSON remains separately retained across JSONB.
+
+Same method/delta reuses six actual scalar metrics; a changed stress delta
+nulls only stress with `STRESS_INPUTS_NOT_RETAINED_FOR_POLICY`, preserving the
+other five and independently recomputable PATH siblings. Missing source
+dependencies yields null components with `METRIC_DEPENDENCIES_NOT_RETAINED`,
+not zero or invented paths. Returning to a compatible policy uses original
+inputs rather than the previous partial result. No request-side calculation.
+
+Independent review found mutable sidecar metadata alone was insufficient.
+The correction always compares original task bytes to the immutable SOURCE
+score input digest, including derived reads/restart. Rehashing a substituted
+dependency, task, derived score and all mutable keys must still fail. New PG
+corruption regressions exercise both wrapper-only and coherent forged-task
+paths; original source and ACK must stay unchanged. Reject asymmetric missing
+dependency/digest, controls/final-newline grammar and invalid source pins.
+
+Existing original-cutoff policy/method eligibility is NOT weakened. Explicit
+later-policy RESTATED and policy-independent source-method custody require
+their own additive versioned contract/history; they remain real backend debt,
+as do Composition/Regime dependency recalculations and actual source tie-out.
+Fixture-derived dependency artifacts are TEST_ONLY, not installed PM evidence.
+
+Grouped validation covers actual disposablePG, Score runtime and reader
+regressions in the same bounded correctness cell as04/07. Rollback retains
+immutable original source/revisions; no SQL data deletion. Claude held;
+AWAITING_CONSUMER_REVIEW. Existing score provenance/quality types suffice for
+this private input extension; consumer must keep typed partial/null reasons.
+
+The prior historical entries below remain intact. New terminal results and
+commit supersede only this entry's APPLIED/NOT_RUN state after actual review.
+
 ## Entry and approved scope — 2026-10-17
 
 Bobby's active remaining-backend 02–11 assignment, Unified §14.13. Previous

@@ -424,6 +424,15 @@ const LEG = [
   "trigger_reference", "time_in_force", "good_till_date", "reduce_only", "post_only", "state",
   "average_fill_price", "version", "created_at", "updated_at",
 ] as const;
+// Exact existing generated operations, not a dynamic relation/field selector.
+// Parent-only private lineage plus the finite leg reader's current subset.
+// Current observations only: neither binding is a lifecycle/history ladder.
+const BRACKET_PARENT = [
+  "bracket_group_id", "account_id", "strategy_id", "execution_session_id", "mode", "created_at", "updated_at",
+] as const;
+const BRACKET_LEG = [
+  "bracket_group_id", "leg_id", "side", "quantity", "price", "status", "created_at", "updated_at", "submitted_at",
+] as const;
 const JOURNAL = [
   "command_id", "command_kind", "contract_revision", "mode", "venue", "alpha_id", "account_id",
   "client_order_id", "aggregate_key", "state", "outcome_class", "accepted_at", "dispatched_at",
@@ -447,6 +456,8 @@ const FLEET: readonly ProfileProjectionBinding[] = [
   bind("reconciliation", "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.reconciliation", "reconciliation_findings", FINDING),
   bind("venue_accounts", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.venue-accounts", "venue_accounts", VENUE_ACCOUNT),
   bind("broker_sync", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC),
+  bind("brackets", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-brackets", "order_brackets", BRACKET_PARENT),
+  bind("bracket_legs", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-bracket-legs", "order_bracket_legs", BRACKET_LEG),
 ];
 
 const PAPER: readonly ProfileProjectionBinding[] = [

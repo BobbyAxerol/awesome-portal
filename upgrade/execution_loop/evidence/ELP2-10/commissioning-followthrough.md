@@ -1,5 +1,84 @@
 # ELP2-10 — three-gate commissioning follow-through
 
+## Current grouped validation correction — 2026-10-17T11:06UTC
+
+The next20-file slice's focus is TERMINAL: build PASS,329/330API tests PASS,
+one real Manager metric-reason contract mismatch. [Exact failure and narrow
+correction](../ELP2-06/policy-recalculation.md#focus-terminal-and-derived-reason-contract-correction--2026-10-17t1106utc).
+Bracket capture/reader and finite PM control cases passed in this disposable
+PG/synthetic-source scope. Source/runtime/index unchanged, owned resources
+clean, restore NOT_RUN due failure. No blanket PASS inferred.
+
+Applied correction adds only the metric diagnostic bound64 while retaining
+source/document32, generated schemas and canonical fixture/tests. The original
+statement below "no public schema drift" is superseded for this exact bound;
+no new field or generated TS shape changes. One coherent normal-hook landing
+next. Wider explicit ORIGINAL/RESTATED design remains private/unapplied; the
+worker-only draft is not a complete calculation/store/API chain. Actual source,
+trust/current-human, budgets/calibration, other readers/commands/replay,
+coexistence/G2 and Claude gates remain as the phase census below.11not ready.
+
+<a id="elp210-backend-return-20261017-1055"></a>
+
+## Latest backend landing and remaining work — 2026-10-17T10:55UTC
+
+The previously pending70-file batch LANDED as
+`322e23472c391f80d929436da050227f53c5068d`: +10,106/−1,306 versus
+d483357a. This includes implementation, generated contracts, tests and docs;
+it is NOT10,106lines of backend logic. No frontend path changed.
+
+Normal-hook controller `20261017/followthrough-land-102612/controller.json`
+under `/home/bobby/.local/state/portal-execution-elp210` ended **PASS** at
+10:53:25UTC, exit0.715contract tests/64files, APIbuild,4,922API tests/343files
+PASS;3tests skipped(two files wholly skipped). Scoped PostgreSQL restore with
+four access-row digests PASS. These overlap earlier focused cases; no additive
+coverage total. Logsha256
+`095881cecc1868a5b99aa539cd7fa56b9baabf94299bef1bdbceaf201c42f864`.
+Exact owned source/index validation PASS, eight protected runtime image/start/
+restart tuples unchanged. All owned Node/PG/network resources absent and
+measurement lease released. Prior setup/fixture failures remain in history.
+This is isolated correctness, not a runtime/source/G2 or production capacity
+qualification. No automatic build/deploy/push/activation follows the commit.
+
+### Next coherent backend slice, APPLIED / tests NOT_RUN at entry
+
+-04 [Bracket capture and finite independently scoped parent reader](../ELP2-04/bracket-capture.md):
+  static existing operations, exact PKs, same-cycle lineage, complete parent
+  census and current independent scopes. No arbitrary source or new fields.
+-06 [METRICS original-input custody and dependency checks](../ELP2-06/policy-recalculation.md#current-metrics-follow-through--2026-10-17t1055utc):
+  input-bound provenance, changed-stress typed partial and immutable-original
+  tamper tests. Explicit later-policy RESTATED remains separately unimplemented.
+-07 [ADMIN_LOCK/UNLOCK source-candidate codec](../ELP2-07/pm-control-candidate.md):
+  strict request/result boundaries only; never an authenticated owning Outcome.
+
+Primary applied private drafts only AFTER the old hook's source pin ended.
+Existing schema/generated types need no update for these private changes.
+One grouped affected APIbuild/real disposablePG/fixture/restore gate next,
+then normal hook once for the coherent batch. Current source/PM exact code
+context was rechecked read-only at10:54:36UTC; no owner WIP or runtime altered.
+
+### Phase-by-phase debt; frontend remains owner-held
+
+|Phase|Still required|Local backend can continue|
+|---|---|---|
+|00–01|Affected coverage/contract ledger upkeep|Reuse unchanged valid receipts|
+|02–03|Accepted real issuer/mapping/current grants and exact Stan/researcher field ceiling installed and qualified|Local OwnProfile/exact receipt/resource/environment checks are implemented, not an installed grant proof|
+|04|Other finite parent/reference/config/custody/audit/technical readers; real held compound-source fence|Bracket additions now applied; existing actual cache-concurrency proof is already PASS and is not rerun without impact|
+|05–06|Actual qualified economic source→Manager tie-out/install; explicit RESTATED and Composition/Regime dependency recomputation|Composition/Regime full chains landed; METRICS extension now applied, further original/restated work remains code debt|
+|07–08|Remaining reallocation/pending/profile/register/assign/lifecycle/monitor families and owning/through-COMMIT proofs|Finite source-pinned adapters can proceed unmounted; RETURN genuinely lacks owning writer|
+|09|Jointly frozen authenticated serialized source wire/factory/listener and connected continuity/correction/revoke qualification|Local Hub/coordinator implemented; Edge has concrete PgScopedReplaySource, not yet the required mounted serialized wire|
+|10|Real trust/current-human installation,14numeric budget groups approved, Score/Regime calibration and matched coexistence/original applicable P184G2|Continue implementable local work and qualification preparation; no test constants promoted to production|
+|11|Mandatory source/consumer/shadow/tie-out/recovery handoff|NOT_ENTRY_READY; no dev/main/sign/release/deploy|
+
+Claude ExecutionV2 UXM00–10 **NOT_STARTED_BY_OWNER_DIRECTION**;
+handoffs **AWAITING_CONSUMER_REVIEW**. Already-built Research UI is unchanged.
+Future Claude can consume published fixture contracts after assignment; actual
+read/command/browser lanes require their own qualifying evidence. No FE task
+is started or called accepted merely because backend fixtures are delivered.
+No new duplicate request IDs; existing04-008/009,06-002,07-001/002 and source/
+trust/budget entries retain their original done-when. Rollback only new code,
+preserve financial source, grants, immutable receipts/revisions and audit.
+
 ## Entry and scope card
 
 Bobby's active goal assigns completion of current-human/provider/authority-writer

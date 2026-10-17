@@ -1,5 +1,10 @@
 # ELP2-04 — finite retained business aliases, 2026-10-17
 
+Latest follow-through: [finite bracket capture/parent reader](bracket-capture.md)
+adds one explicit purpose after baseline322e2347; the original three-purpose
+and30closed count below is historical. Current proposed closed count29. Tests
+and source/held-fence acceptance stay separate; no blanket04completion.
+
 ## Entry, scope and ownership
 
 Bobby's remaining-backend02–11 assignment; `docs/research-loop-plan` at

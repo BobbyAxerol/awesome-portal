@@ -69,8 +69,8 @@ function leg(group: string, id = "own-leg") {
 }
 
 describe("ELP2-04 first three finite named business aliases", () => {
-  it("maps only the three explicit account purposes; the other30 stay closed", () => {
-    expect(Object.values(NAMED_RETAINED_PURPOSES).filter(value => value === null)).toHaveLength(30);
+  it("keeps the original three finite account purposes plus the new bracket-leg purpose; other29 stay closed", () => {
+    expect(Object.values(NAMED_RETAINED_PURPOSES).filter(value => value === null)).toHaveLength(29);
     for (const alias of ["account_sync_effective", "reconciliation_findings", "conditional_order_group_legs"]) {
       expect(NAMED_RETAINED_PURPOSES[alias as keyof typeof NAMED_RETAINED_PURPOSES]).toBe("account.read");
       expect(namedRetainedBusinessFields(alias)!.every(field => BUSINESS_READ_FIELDS.includes(field as never) || field === "mode")).toBe(true);

@@ -11313,3 +11313,57 @@ unchanged bytes; normal hook remains mandatory.02–10mandatory gaps OPEN,
 11NOT_ENTRY_READY. ClaudeExecutionV2 UXM00–10 NOT_STARTED_BY_OWNER_DIRECTION,
 handoffs AWAITING_CONSUMER_REVIEW. No UI,source/upstream/Live activation,push,
 dev/main,sign or deploy. Backend continues within Bobby's existing assignment.
+
+**Backend landing and next slice,2026-10-17T10:55UTC:**
+`322e23472c391f80d929436da050227f53c5068d` landed70owned files
+(+10,106/−1,306 implementation/generated/tests/docs; no FE).
+Normal hook PASS:715contracts,APIbuild,4,922API tests/3skips,scopedPGrestore;
+source/eight protected runtimes unchanged; exact owned resources/lease cleaned.
+[Terminal receipt and current phase-by-phase debt](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-backend-return-20261017-1055).
+Next applied/uncommitted slice:04static bracket capture/independently scoped
+legs,06original METRICS dependency custody and07finite PM admin-control
+candidate codec; affected focused validation pending. No public schema drift,
+runtime/source/command/Live activation, UI work,push or deploy. Explicit later
+RESTATED/Composition/Regime recomputation,other readers/families,real authority/
+wire,budget/calibration/coexistence/G2 remain OPEN;11NOT_ENTRY_READY.
+Claude UXM00–10 NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW.
+
+**Backend grouped correction,2026-10-17T11:06UTC:** finite-followthrough focus
+is TERMINAL buildPASS,329/330API casesPASS, one METRICS read failure from
+derived reasons33versus metric DTO32. [Failure, exact cleanup and additive
+bounded contract correction](execution_loop/evidence/ELP2-06/policy-recalculation.md#focus-terminal-and-derived-reason-contract-correction--2026-10-17t1106utc).
+Source/document32 remains strict; metric64matches Score's existing output,
+no silent reason truncation. Generatedschema/fixture/test updated; TS shape
+unchanged. Corrected coherent normal hook next, not a duplicate full focus.
+Phase/source/command/calibration/performance gaps and11NOT_ENTRY_READY remain
+as the linked census. Claude UXMheld, no FE/runtime/push/release action.
+
+
+<a id="original08-business-root-component-20261017"></a>
+**Original EPG10-08 owned component qualification,2026-10-17:** Bobby confirms
+Stan may administer subordinate grants inside Bobby ceiling; protected-owner/
+self-elevation/over-ceiling prohibitions remain. No trading/financial activation.
+Edge owns original08 provider/final-delivery integration; full08 NOT_MET, no
+connected09 promotion. Follow Edge Unified23.20.7 and EDGE08/BE3–5,9.2,14.2;
+preserve this Research campaign/peer WIP. Research entry322e23472c391f80d929436da050227f53c5068d,
+docs/research-loop-plan. Scope: reviewed uninstalled Manager-domain READ
+acceptance/observer four-file draft, exact29-file native identity/membership
+closure; source-only transfer approved to /tmp/epg10-08-business-root-L7CwneYt.
+Goal/tests NOT_RUN before execution:45new unit +8 disposable actual-PG cases,
+plus168 impacted native/membership regressions; expected221, no ignored skips.
+Gates: immutable history/CAS/exact replay, protected owner, distinct non-super
+installer/SELECT-only observer, identity/catalogue/profile/field pins, all three
+environments, native BIGINT, revoke and physical COMMIT/injected driver ACK-loss
+with fresh same-key status. Observation-only, NOT a held provider.
+Resource/rollback: <=300s own lease; cached1CPU/512MiB worker +1CPU/1GiB tmpfsPG,
+internal network,no host ports/volume/operational DB/build/pull/install. Compare
+10protected runtime tuples; remove only own containers/network/lease; preserve
+bounded original receipts then remove source copies. Runtime writes0.
+Six frozen draft files/runner/manifest transfer explicitly approved by Bobby.
+Prior tool egress refusal copied nothing; own preparation lease returned.
+First runner preparation assertion failed BEFORE any test/container; copied
+source hashes remain frozen, exact-match quoting corrected without product edits.
+HK foreign measurement requires read-only HK; Edge journal reconciled afterward.
+Actual held source, owning COMMIT/final-send composition, installer and connected
+revoke/cache/cursor/SSE remain owned unfinished08 work, not config-only debt.
+No UI/push/merge/release activation. Qualification start is recorded in receipt.

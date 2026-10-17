@@ -23,11 +23,15 @@ export const managerPartition = z.object({ economic_domain: z.enum(["ACTUAL", "P
   currency: text, basis: text, native_profile_ref: text, domain_proof_ref: text }).strict();
 export const managerQuality = z.object({ completeness: z.enum(["COMPLETE", "PARTIAL", "UNRESOLVED"]),
   freshness: z.enum(["FRESH", "STALE", "UNKNOWN"]), reasons: z.array(text).max(32) }).strict();
+// A derived metric preserves the source reasons and adds bounded derivation
+// reasons. Match Score publication's existing 64-reason envelope without
+// widening the source/document admission envelope or silently truncating it.
+const managerMetricQuality = managerQuality.extend({ reasons: z.array(text).max(64) }).strict();
 export const managerMetric = z.object({ value: exactDecimal.nullable(), unit: text, currency: text.nullable(),
   basis: text, window: z.object({ from_ms: utcMilliseconds, to_ms: utcMilliseconds }).strict().nullable(),
   denominator: exactDecimal.nullable(), methodology_ref: text.nullable(),
   availability: z.enum(["AVAILABLE", "PARTIAL", "UNAVAILABLE", "NOT_APPLICABLE"]), reason_code: text.nullable(),
-  quality: managerQuality, source_confidence: z.enum(["VERIFIED", "PROVISIONAL", "UNKNOWN"]),
+  quality: managerMetricQuality, source_confidence: z.enum(["VERIFIED", "PROVISIONAL", "UNKNOWN"]),
   provenance_refs: z.array(text).min(1).max(32), calculation_revision: text, policy_revision: text }).strict()
   .superRefine((v, c) => {
     if ((v.availability === "AVAILABLE") !== (v.value !== null) || v.value === null && v.reason_code === null ||

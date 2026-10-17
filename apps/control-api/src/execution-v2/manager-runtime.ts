@@ -8,7 +8,7 @@ import type { ManagerLeaseScope } from "./manager-lease";
 import { prepareManagerProjection, ManagerModelRepository } from "./manager-model.store";
 import { accessDigest } from "./access-policy";
 import { qualifyDatasetPublication, publicationCommissioningCurrent, type PublicationCommissioning } from "./publication-adapter";
-import { ManagerScoreRuntime, managerScorePublicationPolicyCurrent, type ApprovedManagerScorePolicy, type ManagerScoreRuntimeTask } from "./manager-score-runtime";
+import { ManagerScoreRuntime, managerScorePublicationPolicyCurrent, type ApprovedManagerScorePolicy } from "./manager-score-runtime";
 import { managerScorePublication } from "./manager-score-publication.contract";
 import type { ManagerScoreReadFence } from "./manager-score-publication";
 import { ManagerCompositionRuntime, managerCompositionPublicationCurrent, managerCompositionPublicationForRead,
@@ -21,7 +21,8 @@ import { ManagerRegimeRuntime, managerRegimePublicationCurrent, type ApprovedMan
 import type { ManagerRegimeReadFence } from "./manager-regime-publication";
 import type { ManagerRegimeSubjectBinding, ManagerRegimePublication } from "./manager-regime-publication.contract";
 import type { ScopedReplayHub } from "./realtime";
-import { ManagerScoreRecalculation, type ManagerScoreRecalculationConfig } from "./manager-score-recalculation";
+import { ManagerScoreRecalculation, type ManagerScoreRecalculationConfig,
+  type ManagerScoreRecalculationTask } from "./manager-score-recalculation";
 
 export interface ManagerRuntimePartition {
   scope: ManagerLeaseScope;
@@ -33,9 +34,7 @@ export interface ManagerRuntimePartition {
   score?: { runtime: ManagerScoreRuntime; maximum_tasks_per_revision: number; currentPolicy(): ApprovedManagerScorePolicy | null;
     /** Explicit opt-in only; no extra timer, source checkpoint or runtime default. */
     recalculation?: ManagerScoreRecalculationConfig;
-    tasks(delivery: ManagerConsumerDelivery, signal: AbortSignal): Promise<Array<{
-      slot: "RAW" | "DIRECT_NAV"; task: Omit<ManagerScoreRuntimeTask,"policy">;
-    }>> };
+    tasks(delivery: ManagerConsumerDelivery, signal: AbortSignal): Promise<ManagerScoreRecalculationTask[]> };
   composition?: { runtime:ManagerCompositionRuntime;maximum_tasks_per_revision:number;currentAllocation():ApprovedManagerAllocation|null;
     tasks(delivery:ManagerConsumerDelivery,signal:AbortSignal):Promise<Array<Omit<ManagerCompositionRuntimeTask,"allocation"|"raw_scores">>> };
   regime?: { runtime: ManagerRegimeRuntime; maximum_tasks_per_revision: number;
