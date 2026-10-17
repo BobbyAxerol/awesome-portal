@@ -1,0 +1,113 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M10 Profile &amp; Access — HIFI</title><link rel="stylesheet" href="hifi.css">
+<style>
+td,th{padding:6px 8px}td.w{white-space:normal}
+.tagu{white-space:nowrap}.tagu .dot{width:6px;height:6px;margin-right:6px;vertical-align:1px}
+.m{font-size:12px;line-height:16px;color:var(--ink-faint)}.faint{color:var(--ink-faint)}
+td.m{white-space:normal}
+.g2{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:24px;align-items:start}@media(max-width:1100px){.g2{grid-template-columns:1fr}}
+</style></head>
+<body data-state="healthy">
+<div class="strip"><span>Design preview · M10</span><span class="grp" data-ctl="state"><button data-v="healthy" aria-pressed="true">Manager</button><button data-v="sparse" aria-pressed="false">Source not ready</button><button data-v="researcher" aria-pressed="false">Researcher</button></span><span>Sample values</span></div>
+<div class="app">
+<header class="top"><span class="brand">Quant Ecosystem Portal</span><span class="crumb">Administration / <b>Profile &amp; Access</b></span></header>
+<nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Governance</h6><a href="#">Approval Inbox</a><a href="#">Waivers</a><a href="#">Exit Reviews</a><h6>Administration</h6><a aria-current="page" href="#">Profile &amp; Access</a></nav>
+<main><div class="stack">
+
+<div class="mast"><div><h1>Profile &amp; Access</h1><div class="sub" data-s="healthy">Stan · Manager</div><div class="sub" data-s="sparse">Stan</div><div class="sub" data-s="researcher">asmith · Researcher</div></div>
+ <div class="ctrls"><span class="fresh" data-s="healthy researcher"><i class="dot"></i>Fresh · 20s</span><span class="fresh" data-s="sparse"><i class="dot warn"></i>Permissions not loaded</span></div></div>
+
+<div class="banner" data-s="sparse">Business permissions could not be loaded.</div>
+
+<div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+ <div class="kpi"><div class="l">Signed in as</div><div class="v"><span data-s="healthy sparse">Stan</span><span data-s="researcher">asmith</span></div><div class="n mono"><span data-s="healthy sparse">user_7f3a…e1</span><span data-s="researcher">user_2c9d…40</span></div></div>
+ <div class="kpi"><div class="l">Role</div><div class="v"><span data-s="healthy">Manager</span><span data-s="researcher">Researcher</span><span class="na" data-s="sparse">Not available</span></div><div class="n"><span data-s="healthy">Read-all</span><span data-s="researcher">Own slice</span><span data-s="sparse">Permissions not loaded</span></div></div>
+ <div class="kpi"><div class="l">App sign-in</div><div class="v">Active</div><div class="n">Ends in 7h 12m</div></div>
+ <div class="kpi"><div class="l">Business access</div><div class="v"><span data-s="healthy researcher">Accepted</span><span class="na" data-s="sparse">Not available</span></div><div class="n"><span data-s="healthy">Membership r19</span><span data-s="researcher">Membership r12</span><span data-s="sparse">Trading system not reachable</span></div></div></div>
+
+<div class="g2">
+ <div class="panel"><div class="ph">What you can see <span class="r">Visibility only</span></div>
+  <div class="tw"><table><thead><tr><th>Area</th><th>Scope</th></tr></thead>
+  <tbody data-s="healthy">
+<tr><td>Overview</td><td><span class="tagu good"><i class="dot"></i>All authorized</span></td></tr>
+<tr><td>Portfolios</td><td><span class="tagu good"><i class="dot"></i>All authorized</span></td></tr>
+<tr><td>Alpha Fleet</td><td><span class="tagu good"><i class="dot"></i>All authorized</span></td></tr>
+<tr><td>Accounts</td><td><span class="tagu good"><i class="dot"></i>All authorized</span></td></tr>
+<tr><td>Archived Alphas</td><td><span class="tagu good"><i class="dot"></i>All authorized</span></td></tr>
+<tr><td>Operations</td><td><span class="tagu good"><i class="dot"></i>All authorized</span></td></tr>
+<tr><td>R1 gate</td><td><span class="tagu good"><i class="dot"></i>Can see</span></td></tr>
+<tr><td>R2 gate</td><td><span class="tagu good"><i class="dot"></i>Can see</span></td></tr>
+<tr><td>Canary gate</td><td><span class="tagu good"><i class="dot"></i>Can see</span></td></tr>
+<tr><td>Live gate</td><td><span class="tagu good"><i class="dot"></i>Can see</span></td></tr>
+  </tbody>
+  <tbody data-s="researcher">
+<tr><td>Overview</td><td><span class="tagu warn"><i class="dot warn"></i>Your slice</span></td></tr>
+<tr><td>Portfolios</td><td><span class="tagu warn"><i class="dot warn"></i>Your part</span></td></tr>
+<tr><td>Alpha Fleet</td><td><span class="tagu warn"><i class="dot warn"></i>Alphas you own</span></td></tr>
+<tr><td>Accounts</td><td><span class="tagu ">Not shown</span></td></tr>
+<tr><td>Archived Alphas</td><td><span class="tagu warn"><i class="dot warn"></i>Alphas you own</span></td></tr>
+<tr><td>Operations</td><td><span class="tagu warn"><i class="dot warn"></i>Your requests</span></td></tr>
+<tr><td>R1 gate</td><td><span class="tagu warn"><i class="dot warn"></i>Your requests</span></td></tr>
+<tr><td>R2 gate</td><td><span class="tagu ">Not shown</span></td></tr>
+<tr><td>Canary gate</td><td><span class="tagu ">Not shown</span></td></tr>
+<tr><td>Live gate</td><td><span class="tagu ">Not shown</span></td></tr>
+  </tbody>
+  <tbody data-s="sparse">
+<tr><td>Overview</td><td><span class="na">Not available</span> <span class="m">Not loaded</span></td></tr>
+<tr><td>Portfolios</td><td><span class="na">Not available</span> <span class="m">Not loaded</span></td></tr>
+<tr><td>Alpha Fleet</td><td><span class="na">Not available</span> <span class="m">Not loaded</span></td></tr>
+<tr><td>Accounts</td><td><span class="na">Not available</span> <span class="m">Not loaded</span></td></tr>
+<tr><td>Archived Alphas</td><td><span class="na">Not available</span> <span class="m">Not loaded</span></td></tr>
+<tr><td>Operations</td><td><span class="na">Not available</span> <span class="m">Not loaded</span></td></tr>
+<tr><td>R1 gate</td><td><span class="na">Not available</span> <span class="m">Not loaded</span></td></tr>
+<tr><td>R2 gate</td><td><span class="na">Not available</span> <span class="m">Not loaded</span></td></tr>
+<tr><td>Canary gate</td><td><span class="na">Not available</span> <span class="m">Not loaded</span></td></tr>
+<tr><td>Live gate</td><td><span class="na">Not available</span> <span class="m">Not loaded</span></td></tr>
+  </tbody></table></div></div>
+
+ <div class="panel"><div class="ph">What you can do <span class="r">Seeing never grants this</span></div>
+  <div class="tw"><table><thead><tr><th>Action</th><th>Status</th><th>Why</th></tr></thead>
+  <tbody data-s="healthy">
+<tr><td>Change fund budgets or recall capital</td><td><span class="tagu warn">Not available yet</span></td><td class="m">Not turned on for this environment.</td></tr>
+<tr><td>Archive an alpha</td><td><span class="tagu warn">Needs approval</span></td><td class="m">A second person approves.</td></tr>
+<tr><td>Start a reactivation review</td><td><span class="tagu good">Allowed</span></td><td class="m">Opens a review only.</td></tr>
+<tr class="grp"><td colspan="3">Approve stage exits</td></tr>
+<tr class="kid"><td>R1 gate · decide</td><td><span class="tagu good">Allowed</span></td><td class="m">Decide on R1 requests.</td></tr>
+<tr class="kid"><td>R2 gate · decide</td><td><span class="tagu good">Allowed</span></td><td class="m">Decide on R2 requests.</td></tr>
+<tr class="kid"><td>Canary gate · decide</td><td><span class="tagu good">Allowed</span></td><td class="m">Decide on Canary requests.</td></tr>
+<tr class="kid"><td>Live gate · decide</td><td><span class="tagu warn">Waiting</span></td><td class="m">Grant sent; not yet accepted.</td></tr>
+<tr><td>Manage users and grants</td><td><span class="tagu good">Allowed</span> <span class="tagu warn">STEP-UP REQUIRED</span></td><td class="m">Up to the access you hold.</td></tr>
+<tr><td>Change your own admin rights</td><td><span class="tagu">Not allowed</span></td><td class="m">Another administrator does it.</td></tr>
+<tr><td>Export tables</td><td><span class="tagu warn">Not available yet</span></td><td class="m">Export is not built yet.</td></tr>
+  </tbody>
+  <tbody data-s="researcher">
+<tr><td>Change fund budgets or recall capital</td><td><span class="tagu">Not allowed</span></td><td class="m">Manager action.</td></tr>
+<tr><td>Archive your own alpha</td><td><span class="tagu warn">Needs approval</span></td><td class="m">A manager approves.</td></tr>
+<tr><td>Start a reactivation review</td><td><span class="tagu">Not allowed</span></td><td class="m">Managers start reviews.</td></tr>
+<tr class="grp"><td colspan="3">Approve stage exits</td></tr>
+<tr class="kid"><td>R1 gate · decide</td><td><span class="tagu">Not allowed</span></td><td class="m">Seeing is not deciding.</td></tr>
+<tr class="kid"><td>R2 gate · decide</td><td><span class="tagu">Not allowed</span></td><td class="m">Seeing is not deciding.</td></tr>
+<tr class="kid"><td>Canary gate · decide</td><td><span class="tagu">Not allowed</span></td><td class="m">Seeing is not deciding.</td></tr>
+<tr class="kid"><td>Live gate · decide</td><td><span class="tagu">Not allowed</span></td><td class="m">Seeing is not deciding.</td></tr>
+<tr><td>Manage users and grants</td><td><span class="tagu">Not allowed</span></td><td class="m">Not part of your role.</td></tr>
+<tr><td>Change your own admin rights</td><td><span class="tagu">Not allowed</span></td><td class="m">Another administrator does it.</td></tr>
+<tr><td>Export tables</td><td><span class="tagu warn">Not available yet</span></td><td class="m">Export is not built yet.</td></tr>
+  </tbody>
+  <tbody data-s="sparse"><tr><td colspan="3"><span class="na">Not available</span> <span class="m">Permissions not loaded</span></td></tr></tbody></table></div></div>
+</div>
+
+<div class="panel"><div class="ph">Access granted to me</div>
+ <div class="tw"><table><thead><tr><th>Access</th><th>Granted by</th><th>Scope</th><th>Since</th><th>Expires</th><th>State</th></tr></thead>
+ <tbody data-s="healthy">
+  <tr><td>Manager read-all</td><td>Bobby (owner)</td><td>All business data</td><td class="mono">1 Sep 2026</td><td class="faint">No end date</td><td><span class="tagu good"><i class="dot"></i>Effective</span></td></tr>
+  <tr><td>Gate decisions R1, R2, Canary</td><td>Bobby (owner)</td><td>R1, R2, Canary</td><td class="mono">1 Sep 2026</td><td class="mono">31 Dec 2026</td><td><span class="tagu good"><i class="dot"></i>Effective</span></td></tr>
+  <tr><td>Manage users</td><td>Bobby (owner)</td><td>Up to your own access</td><td class="mono">15 Sep 2026</td><td class="mono">31 Dec 2026</td><td><span class="tagu good"><i class="dot"></i>Effective</span></td></tr>
+  <tr><td>Gate decision Live</td><td>Bobby (owner)</td><td>Live gate</td><td class="mono">17 Oct 2026</td><td class="mono">31 Dec 2026</td><td><span class="tagu warn"><i class="dot warn"></i>Waiting</span></td></tr></tbody>
+ <tbody data-s="researcher">
+  <tr><td>Researcher view</td><td>Stan</td><td>Alphas you own</td><td class="mono">20 Aug 2026</td><td class="faint">No end date</td><td><span class="tagu good"><i class="dot"></i>Effective</span></td></tr>
+  <tr><td>Archive your own alphas</td><td>Stan</td><td>Alphas you own</td><td class="mono">20 Aug 2026</td><td class="mono">31 Dec 2026</td><td><span class="tagu good"><i class="dot"></i>Effective</span></td></tr></tbody>
+ <tbody data-s="sparse"><tr><td colspan="6"><span class="na">Not available</span> <span class="m">Grants not loaded</span></td></tr></tbody></table></div></div>
+
+<details><summary>About this page</summary><div class="m">Waiting means the grant was sent and the trading system has not accepted it. Owner accounts cannot be changed here.</div></details>
+
+</div></main></div>
+<script src="hifi.js"></script></body></html>

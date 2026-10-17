@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M07 Deployment header — HIFI</title><link rel="stylesheet" href="hifi.css">
+<style>
+[hidden]{display:none!important}
+.stack>*{min-width:0}
+.why{display:block;font-size:11px;line-height:14px;color:var(--ink-faint)}
+.path{font-size:12px;line-height:16px;color:var(--ink-faint);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}.path b{font-weight:500;color:var(--ink-soft)}
+.mast .sub{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.kpi .v .dot{vertical-align:middle;margin-right:8px}
+.kpi .v.na{font:400 16px/32px var(--font-sans)}
+.ph0{min-height:340px;background:var(--sunken);outline:1px dashed var(--line-strong);outline-offset:-1px;display:grid;place-items:center;padding:24px;text-align:center}
+.ph0 b{display:block;font:500 15px/22px var(--font-sans);margin-bottom:12px}
+.jr{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;font:500 11px/16px var(--font-mono);letter-spacing:.08em;color:var(--ink-faint)}.jr .on{color:var(--accent)}.jr .ok{color:var(--good)}
+.mini{display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:var(--panel);padding:8px 16px;font-size:13px}
+.mini .tagu{margin-right:4px}
+</style></head>
+<body data-state="healthy">
+<div class="strip"><span>Design preview · M07</span><span class="grp" data-ctl="state"><button data-v="healthy" aria-pressed="true">Manager</button><button data-v="sparse" aria-pressed="false">Source not ready</button><button data-v="researcher" aria-pressed="false">Researcher</button></span><span>Sample values</span></div>
+<div class="app">
+<header class="top"><span class="brand">Quant Ecosystem Portal</span><span class="crumb">Execution / <a href="#">Alpha Fleet</a> / <b>BTC-Trend v3</b></span></header>
+<nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a aria-current="page" href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Governance</h6><a href="#">Approval Inbox</a><a href="#">Waivers</a><a href="#">Exit Reviews</a><h6>Administration</h6><a href="#">Profile &amp; Access</a></nav>
+<main><div class="stack">
+
+<div class="mast"><div>
+ <div class="path"><a href="#" title="?tab=deployments&stage=live&sel=live-0192">← Alpha 360</a><span>·</span><a href="#">Alpha Fleet</a><span>/</span><a href="#">BTC-Trend v3</a><span class="mono">a-7f3a91</span><span>/</span><b>Live · live-0192</b></div>
+ <h1 style="margin-top:8px">BTC-Trend v3 <span class="tagu">LIVE-0192</span></h1>
+ <div class="sub"><span class="stage live"><i></i>Live</span><span data-s="healthy sparse">Core ·</span><a href="#" data-s="healthy sparse">Binance-02 sleeve</a><span class="na" data-s="researcher">Account not available</span><span class="mute" style="color:var(--ink-faint)">USDT · real-funded</span></div></div>
+ <div class="ctrls"><a href="#" data-s="healthy sparse">Alpha 360</a><a href="#" data-s="healthy sparse">Account 360</a></div></div>
+
+<div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+ <div class="kpi"><div class="l">Runtime</div><div class="v" data-s="healthy researcher"><i class="dot"></i>Running</div><div class="v na" data-s="sparse">Not available</div><div class="n" data-s="healthy researcher">Since Oct 11 09:00Z</div><div class="n" data-s="sparse">Runtime source not ready</div></div>
+ <div class="kpi"><div class="l">Data freshness</div><div class="v" data-s="healthy researcher"><i class="dot warn"></i>Stale 14m</div><div class="v na" data-s="sparse">Not available</div><div class="n" data-s="healthy researcher">Last event 09:14Z</div><div class="n" data-s="sparse">No as-of published</div></div>
+ <div class="kpi"><div class="l">Reconciliation</div><div class="v" data-s="healthy researcher"><i class="dot warn"></i>Reconciling</div><div class="v na" data-s="sparse">Not available</div><div class="n" data-s="healthy researcher">1 unknown order · <a href="#">Operations</a></div><div class="n" data-s="sparse">Source not ready</div></div></div>
+
+<div class="ph0"><div><b>Existing detail screen — unchanged</b>
+ <div class="jr"><span class="ok">✓ R1</span><span class="ok">✓ R2</span><span>● PAPER</span><span>— SANDBOX</span><span>— CANARY</span><span class="on">● LIVE</span></div></div></div>
+
+<div class="mini"><span class="cap" style="margin:0">ON SCROLL</span><b>BTC-Trend v3 · Live</b><span class="mono">live-0192</span><span data-s="healthy researcher"><i class="dot"></i> Running</span><span data-s="healthy researcher"><i class="dot warn"></i> Stale 14m</span><span data-s="healthy researcher"><i class="dot warn"></i> Reconciling</span><span class="na" data-s="sparse">State not available</span><a href="#">← Alpha 360</a></div>
+</div></main></div>
+<script src="hifi.js"></script></body></html>

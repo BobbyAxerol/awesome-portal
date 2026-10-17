@@ -58,3 +58,35 @@ Màn M08 không có tương đương V1; M01 gần nhất là Command Center.
 | R11 | M07 | Dải hành trình R1→R2→PAPER→SANDBOX→CANARY→LIVE | Pills stage trùng một phần | Giữ dải hành trình, bỏ pills trùng |
 
 Lưu ý giới hạn: ảnh V1 của các màn danh sách chỉ thấy phần trên (1 alpha/1 portfolio mẫu); phần dưới của một số tab không nằm trong ảnh nên không được khẳng định.
+
+## Quyết định thiết kế đã chốt (Bobby, 2026-10-17; tất cả chọn theo khuyến nghị UX của Claude)
+
+| Mã | Quyết định |
+| --- | --- |
+| D1 | Score drawer ở Alpha 360 mở khi cần (Explain) |
+| D2 | Canary→Live là một miền "Real-funded" + breakdown theo stage |
+| D3 | Researcher được yêu cầu archive alpha của mình (manager duyệt); tái kích hoạt chỉ manager |
+| D6 | Initial/Added funds là danh sách dòng tiền trong Capital; bảng theo funding source là mục thu gọn "Not available" |
+| D7 | Researcher thấy tên portfolio thật + banner "your slice only" (field policy §3.2 vẫn cần duyệt) |
+| D8 | Alpha đã archive chỉ ở Archived Alphas, không vào tab "All" của Fleet |
+| R1/R2 | M09 giữ Acknowledge/Resolve và lens "Mine"; Source health thành panel thu gọn |
+| R4 | M10 giữ SEE/DECIDE từng gate + cờ STEP-UP |
+| R6 | Portfolio 360: Approvals và Incidents là tab phụ (More) |
+| R8 | Alpha 360: 6 tab chính + menu More chứa các tab V1 còn lại |
+| R9 | Contribution-by-venue nằm trong tab Performance |
+| R10 | Cột Difference chỉ trong Reconciliation (scope khớp); số dư shared binding là "Not computed" |
+| R5, R11 | Mặc định theo khuyến nghị (chưa hỏi): khôi phục cột Allocated capital + hàng Unallocated ở M02; giữ dải hành trình ở M07 |
+| F1–F3 | Xem [UXM-02-journeys.md](UXM-02-journeys.md) |
+
+Còn mở: D4, D5 (nháp của Claude), mọi G1–G3 (cần Codex: FE-020/021/022), grain M09 (R3, cần Codex), reader viết tay hay ajv, UXM nào được giao tiếp, bản HIFI.
+
+## HIFI (UXM-06, 2026-10-17)
+
+`hifi/*.html` = 10 màn bằng design system Carbon thật (token `operations-carbon`, IBM Plex, radius 0, không pill, panel không viền, tab gạch chân).
+Mở `hifi/m01-overview.html` rồi đổi **Manager / Source not ready / Researcher** ở thanh trên. Biểu đồ dùng chung trong `hifi/hifi.js`
+(lưới đứt, tick UTC, crosshair + tooltip, nhấn điểm cuối, drawdown tách panel, phím mũi tên, hatch cho phần mô phỏng). Giá trị là mẫu.
+
+Phát hiện khi đọc chuẩn chart (cần làm khi được giao code, không đổi chung lúc này):
+- Chart ECharts của Execution đang dùng bảng màu navy thay vì Carbon (`activeTheme()` gộp `execution-carbon` thành `operations`); `EquityChart` (uPlot) thì đúng.
+- Font trong chart ECharts bị gắn cứng JetBrains Mono; Carbon dùng IBM Plex Mono.
+- Role bands (`--role-is/oos/holdout`) và `--viz-*` chưa được khai báo lại cho Carbon.

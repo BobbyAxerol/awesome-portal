@@ -1,0 +1,108 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M06 Account 360 — HIFI</title><link rel="stylesheet" href="hifi.css">
+<style>
+[hidden]{display:none!important}
+.stack>*,.two>*,.grid3>*{min-width:0}
+.why{display:block;font-size:11px;line-height:14px;color:var(--ink-faint)}
+.back{font-size:12px;line-height:16px;display:inline-block;margin-bottom:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px}@media(max-width:900px){.two{grid-template-columns:1fr}}
+.tagu.inv{background:var(--ink);color:var(--paper)}
+.dl{display:grid;grid-template-columns:140px minmax(0,1fr);gap:6px 12px;margin:0}.dl dt{color:var(--ink-faint);font-size:12px;line-height:20px}.dl dd{margin:0;overflow-wrap:anywhere}
+@media(max-width:660px){.dl{grid-template-columns:110px minmax(0,1fr)}}
+.big{font:400 24px/32px var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}.big small{font-size:12px;color:var(--ink-faint)}
+.big.na{font:400 16px/32px var(--font-sans)}
+.auth .l{font:500 11px/16px var(--font-sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
+.auth table{margin-top:8px}
+.tabs{overflow-x:auto}.tabs button{white-space:nowrap}
+.tw table{min-width:480px}
+.mast .sub{display:flex;gap:12px;flex-wrap:wrap}
+</style></head>
+<body data-state="healthy">
+<div class="strip"><span>Design preview · M06</span><span class="grp" data-ctl="state"><button data-v="healthy" aria-pressed="true">Manager</button><button data-v="sparse" aria-pressed="false">Source not ready</button><button data-v="researcher" aria-pressed="false">Researcher</button></span><span>Sample values</span></div>
+<div class="app">
+<header class="top"><span class="brand">Quant Ecosystem Portal</span><span class="crumb">Execution / <a href="#">Accounts</a> / <b>Binance-02 sleeve</b></span></header>
+<nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a aria-current="page" href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Governance</h6><a href="#">Approval Inbox</a><a href="#">Waivers</a><a href="#">Exit Reviews</a><h6>Administration</h6><a href="#">Profile &amp; Access</a></nav>
+<main><div class="stack">
+
+<div class="mast"><div><a class="back" href="#" title="?domain=live&venue=binance">← Accounts</a>
+ <h1>Binance-02 sleeve <span class="tagu">LOGICAL</span></h1><div class="sub"><span>Core</span><span class="mono">acct-l-0092</span><span>USDT · real-funded</span></div></div>
+ <div class="ctrls"><span class="seg" data-local="view"><button data-v="sleeve" aria-pressed="true">Sleeve</button><button data-v="phys" aria-pressed="false">Physical binding</button></span>
+  <span class="fresh" data-s="healthy researcher"><i class="dot warn"></i>Stale 14m</span><span class="fresh" data-s="healthy researcher"><i class="dot warn"></i>Reconciling</span>
+  <span class="fresh" data-s="sparse"><i class="dot mute"></i>Freshness unknown</span><span class="fresh" data-s="sparse"><i class="dot mute"></i>Reconciliation not available</span></div></div>
+
+<div class="banner" data-s="healthy sparse">Shared account · 3 sleeves. Native figures are not sleeve capital.</div>
+<div class="banner info" data-s="researcher">Shared account. Other sleeves and native balance are hidden.</div>
+
+<div class="two">
+ <div class="panel"><div class="ph">Logical sleeve <span class="tagu">INTERNAL</span></div>
+  <dl class="dl"><dt>Name</dt><dd>Binance-02 sleeve</dd><dt>ID</dt><dd class="mono">acct-l-0092</dd><dt>Portfolio</dt><dd>Core</dd><dt>Domain</dt><dd>Real-funded · USDT</dd><dt>Deployments</dt><dd><a href="#">live-0192</a></dd></dl></div>
+ <div class="panel"><div class="ph">Physical binding <span class="tagu inv">NATIVE</span></div>
+  <dl class="dl"><dt>Venue</dt><dd>Binance · <span class="mono">bind-p-0031</span></dd>
+   <dt>Native account</dt><dd><span data-s="healthy researcher">Sub-account …4f2a</span><span class="na" data-s="sparse">Not available <span class="why">Proof not loaded</span></span></dd>
+   <dt>Product</dt><dd><span data-s="healthy researcher">USDT-M futures · hedge</span><span class="na" data-s="sparse">Not available</span></dd>
+   <dt>Margin mode</dt><dd><span data-s="healthy researcher">Cross</span><span class="na" data-s="sparse">Not available</span></dd>
+   <dt>Environment</dt><dd><span data-s="healthy researcher">Mainnet · proof 09:12Z</span><span class="na" data-s="sparse">Not available</span></dd></dl></div>
+</div>
+
+<div>
+<div class="tabs" role="tablist" id="tabs"><button role="tab" data-tab="ov" aria-selected="true">Overview</button><button role="tab" data-tab="pos" aria-selected="false">Positions &amp; orders</button><button role="tab" data-tab="all" aria-selected="false">Allocations</button><button role="tab" data-tab="fee" aria-selected="false">Fees &amp; funding</button><button role="tab" data-tab="rec" aria-selected="false">Reconciliation</button><button role="tab" data-tab="aud" aria-selected="false">Audit</button></div>
+
+<!-- OVERVIEW -->
+<div class="stack" data-pane="ov">
+ <div class="grid3 auth">
+  <div class="panel"><div class="ph">Internal ledger <span class="tagu">THIS SLEEVE</span></div><div class="l">Account balance</div>
+   <div class="big" data-s="healthy researcher">88,200.00 <small>USDT</small></div><div class="big na" data-s="sparse">Not available</div><span class="why" data-s="sparse">Ledger not qualified</span>
+   <table><tbody><tr><td>Unrealized PnL</td><td class="n"><span class="pos" data-s="healthy researcher">+700.00</span><span class="na" data-s="sparse">Not available</span></td></tr></tbody></table></div>
+  <div class="panel"><div class="ph">Native custody <span class="tagu inv">WHOLE ACCOUNT</span></div><div class="l">Wallet balance · shared</div>
+   <div class="big" data-s="healthy">412,880.25 <small>USDT</small></div><div class="big na" data-s="sparse researcher">Not available</div><span class="why" data-s="sparse">Native source not qualified</span><span class="why" data-s="researcher">Not shown to your role</span>
+   <table><tbody><tr><td>Native equity</td><td class="n"><span data-s="healthy">414,010.40</span><span class="na" data-s="sparse researcher">Not available</span></td></tr></tbody></table></div>
+  <div class="panel"><div class="ph">PM capital <span class="tagu">THIS SLEEVE</span></div><div class="l">Budget used / approved</div>
+   <div class="big" data-s="healthy researcher">80,000 <small>/ 100,000</small></div><div class="big na" data-s="sparse">Not available</div>
+   <table><tbody><tr><td>Gross exposure</td><td class="n"><span data-s="healthy researcher">96,400.00</span><span class="na" data-s="sparse">Not available</span></td></tr><tr class="kid"><td>Long / Short</td><td class="n"><span data-s="healthy researcher">61,300 / 35,100</span><span class="na" data-s="sparse">Not available</span></td></tr></tbody></table></div>
+ </div>
+
+ <div class="grid2">
+  <div class="panel"><div class="ph">Sleeves on this binding <span class="tagu inv">PHYSICAL</span></div>
+   <div class="tw"><table><thead><tr><th>Sleeve</th><th>Portfolio</th><th class="n">Internal balance</th><th class="n">Native attribution</th></tr></thead><tbody>
+    <tr class="sel"><td>Binance-02 sleeve</td><td>Core</td><td class="n"><span data-s="healthy researcher">88,200.00</span><span class="na" data-s="sparse">Not available</span></td><td class="n"><span class="na">Not available</span><span class="why">No source</span></td></tr>
+    <tr data-s="healthy sparse"><td>Binance-02b sleeve</td><td>Satellite</td><td class="n"><span data-s="healthy">61,400.00</span><span class="na" data-s="sparse">Not available</span></td><td class="n"><span class="na">Not available</span><span class="why">No source</span></td></tr>
+    <tr data-s="healthy sparse"><td>Binance-02c sleeve</td><td>Canary</td><td class="n"><span data-s="healthy">47,900.00</span><span class="na" data-s="sparse">Not available</span></td><td class="n"><span class="na">Not available</span><span class="why">No source</span></td></tr></tbody></table></div></div>
+  <div class="panel"><div class="ph">Margin <span class="tagu inv">WHOLE ACCOUNT</span></div>
+   <table><tbody>
+    <tr><td>Margin ratio</td><td class="n"><span data-s="healthy">5.1%</span><span class="na" data-s="sparse researcher">Not available</span></td></tr>
+    <tr><td>Maintenance</td><td class="n"><span data-s="healthy">21,300.00</span><span class="na" data-s="sparse researcher">Not available</span></td></tr>
+    <tr><td>Available</td><td class="n"><span data-s="healthy">301,100.00</span><span class="na" data-s="sparse researcher">Not available</span></td></tr>
+    <tr><td>Coverage</td><td class="n"><span class="tagu good" data-s="healthy">COVERED</span><span class="na" data-s="sparse researcher">Not available</span></td></tr></tbody></table>
+   <details><summary>Cross margin</summary><div class="cap" style="display:block">Venue cross margin does not isolate logical portfolios in a liquidation.</div></details></div>
+ </div>
+
+ <div class="panel"><div class="ph">Account equity <span class="r">Internal ledger · this sleeve</span></div>
+  <div class="chart" id="eq" data-s="healthy researcher"></div><div class="empty na" data-s="sparse" style="min-height:200px">No series published</div>
+  <div class="cap" data-s="healthy researcher"><span>30D</span><span>1D</span><span>USDT</span><span>Internal ledger</span></div></div>
+</div>
+
+<!-- POSITIONS -->
+<div class="panel" data-pane="pos" hidden><div class="ph"><span class="seg" data-local="ps"><button data-v="sl" aria-pressed="true">This sleeve</button><button data-v="ph" aria-pressed="false">Physical account</button></span></div>
+ <div data-ps="sl" class="tw"><table><thead><tr><th>Symbol</th><th class="n">Long</th><th class="n">Short</th><th class="n">Gross</th><th class="n">Open orders</th></tr></thead><tbody><tr><td>BTCUSDT</td><td class="n">61,300.00</td><td class="n">35,100.00</td><td class="n">96,400.00</td><td class="n">4</td></tr></tbody></table><div class="cap"><span>Notional USDT</span><span>Gross = long + short</span></div></div>
+ <div data-ps="ph" hidden class="na" style="padding:12px 0">Not available <span class="why">No position attribution source</span></div></div>
+
+<div class="panel" data-pane="all" hidden><div class="tw"><table><thead><tr><th>Alpha</th><th>Deployment</th><th>Stage</th><th class="n">Allocation USDT</th></tr></thead><tbody><tr><td><a href="#">BTC-Trend</a> <span class="mono" style="color:var(--ink-faint)">v3</span></td><td>live-0192</td><td><span class="stage live"><i></i>Live</span></td><td class="n">80,000.00</td></tr></tbody></table></div></div>
+
+<div class="panel" data-pane="fee" hidden><table><tbody><tr><td>Fees</td><td class="n"><span data-s="healthy researcher">388.20</span><span class="na" data-s="sparse">Not available</span></td></tr><tr><td>Funding</td><td class="n"><span data-s="healthy researcher">224.20</span><span class="na" data-s="sparse">Not available</span></td></tr><tr><td>Borrow</td><td class="n"><span class="na">Not available</span><span class="why">Source not published</span></td></tr></tbody></table><div class="cap"><span>30D</span><span>This sleeve</span><span>USDT</span></div></div>
+
+<div class="panel" data-pane="rec" hidden><div class="tw"><table><thead><tr><th>Check</th><th>Scope</th><th>Result</th><th class="n">Δ</th><th>Last run</th></tr></thead><tbody>
+ <tr><td>Balance</td><td>This sleeve</td><td><i class="dot warn"></i> Reconciling</td><td class="n"><span class="na">Not computed</span><span class="why">Native spans all sleeves</span></td><td class="mono">09:12Z</td></tr>
+ <tr><td>Positions</td><td>This sleeve</td><td><i class="dot"></i> Matched</td><td class="n">0</td><td class="mono">09:12Z</td></tr>
+ <tr><td>Open orders</td><td>This sleeve</td><td><i class="dot"></i> Matched</td><td class="n">0</td><td class="mono">09:12Z</td></tr></tbody></table></div></div>
+
+<div class="panel" data-pane="aud" hidden><div class="tw"><table><thead><tr><th>Time (UTC)</th><th>Event</th><th>Actor</th><th>Receipt</th></tr></thead><tbody><tr><td class="mono">Oct 09 14:20</td><td>Budget approved 100,000.00</td><td>bjones</td><td class="mono">rc-8790</td></tr><tr><td class="mono">Oct 07 08:00</td><td>Binding verified · mainnet</td><td>system</td><td class="mono">rc-8741</td></tr></tbody></table></div></div>
+</div>
+
+</div></main></div>
+<script src="hifi.js"></script>
+<script>
+function $(s){return document.querySelector(s)}function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+function showGroup(attr,v){$$("["+attr+"]").forEach(function(e){e.hidden=e.getAttribute(attr)!==v})}
+function draw(){var h=$("#eq");if(h&&h.offsetParent)equityChart(h,{mode:"eq",n:31,seed:21,drift:30,vol:420,end:700,base:87500,label:"Sleeve equity",h:220})}
+$("#tabs").addEventListener("click",function(e){var t=e.target.closest("[data-tab]");if(!t)return;$$("#tabs [data-tab]").forEach(function(x){x.setAttribute("aria-selected",x===t?"true":"false")});showGroup("data-pane",t.getAttribute("data-tab"));setTimeout(draw,0)});
+window.onseg=function(k,v){if(k==="ps")showGroup("data-ps",v)};window.onctl=function(){setTimeout(draw,0)};draw();window.addEventListener("resize",draw);
+</script></body></html>

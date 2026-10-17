@@ -582,6 +582,15 @@ Bổ sung cho §8 (độc lập, bounded, một người tích hợp); không m�
 10. **Báo cáo chi phí:** cuối round nêu số agent đã dùng, cái nào tái dùng, cái nào spawn mới và vì sao; không có workflow
     nhiều agent khi Bobby chưa yêu cầu quy mô đó.
 
+### 10.9 Chuẩn thiết kế V2: chart, chữ, luồng theo vai trò (Bobby, 2026-10-17)
+
+1. **Đọc lại rules mỗi round:** ngoài §10.1, đọc lại rules chung của các loop ([Research working rules](../research_loop/CLAUDE-FOR-thanhvuong.md)), rules riêng Execution (file này, `CLAUDE.md` §0/§3/§8, Design Grammar V3) trước khi thiết kế; không dựa vào trí nhớ.
+2. **Chart đẹp như Research, màu Execution:** apparatus giống Research (lưới đứt, tick UTC, crosshair snap, tooltip gọn, nhấn điểm cuối, vùng stage/gap, drawdown tách panel, phím mũi tên) nhưng chỉ dùng token Carbon (`--exec-chart-*`, `--accent`, `--good/--bad`, stage). Không làm mịn đổi extrema; gap là gap; mô phỏng là nét/hatch, không dựa riêng màu.
+3. **Chữ tối giản:** Execution gọn như app giao dịch: một câu trạng thái, một hệ quả, một hành động. Phụ đề ≤60 ký tự, ≤4 chuỗi ≥60 ký tự mỗi màn, giải thích cơ chế đặt sau `<details>`. Không viết như Research.
+4. **Luồng theo vai trò rõ ràng:** mỗi màn nêu rõ phần của Manager (toàn quỹ), Researcher (chỉ lát của mình, có tên portfolio nhưng không có tổng/peer) và Operator (xử lý ngoại lệ). Khác biệt hiển thị bằng một banner ngắn, không bằng đoạn văn.
+5. **Đúng design system hiện tại:** radius 0, không pill, panel không viền, một cỡ KPI, tab gạch chân, accent chỉ cho trạng thái active, một nút đặc duy nhất. Component sáng tạo mới chỉ khi dùng ≥2 màn hoặc có nghĩa nghiệp vụ, kèm Reuse report.
+6. **Khi lowfi xung đột design system, design system thắng** (lowfi chỉ là bản nháp luồng); ghi độ lệch cần Bobby duyệt.
+
 Duyệt: **APPROVED nguyên văn (Bobby, 2026-10-17)** cho §9 (trừ cách cài reader ở 9.8.2, chờ giải thích thêm) và §10;
 hiệu lực từ round sau. Quyết định cùng ngày: không chọn lát dọc nối-thật sớm — **thiết kế cả bộ song song trước, nối
 thật sau khi từng nguồn qualified**. Duyệt rules không phải giao UXM; phase vẫn cần Bobby giao.

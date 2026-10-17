@@ -1,0 +1,86 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M08 Archived Alphas — HIFI</title><link rel="stylesheet" href="hifi.css">
+<style>
+.g8{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;align-items:start}
+.g8 .drawer{width:auto}
+@media(max-width:1100px){.g8{grid-template-columns:1fr}}
+td,th{padding:6px 8px}td.w{white-space:normal;min-width:120px}
+.tagu .dot{width:6px;height:6px;margin-right:6px;vertical-align:1px}
+.tool{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.m{font-size:12px;line-height:16px;color:var(--ink-faint)}
+.sec{margin:16px 0 6px;font:500 11px/16px var(--font-sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);display:flex;justify-content:space-between}
+.sec .r{text-transform:none;letter-spacing:0;font-family:var(--font-mono)}
+.drawer table td{height:28px;padding:4px 0}.drawer td.n{padding-right:0}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.dh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.dh b{font:600 15px/22px var(--font-sans)}
+.faint{color:var(--ink-faint)}.sec+.chart{padding-top:14px}.tagu{white-space:nowrap}
+</style></head>
+<body data-state="healthy">
+<div class="strip"><span>Design preview · M08</span><span class="grp" data-ctl="state"><button data-v="healthy" aria-pressed="true">Manager</button><button data-v="sparse" aria-pressed="false">Source not ready</button><button data-v="researcher" aria-pressed="false">Researcher</button></span><span>Sample values</span></div>
+<div class="app">
+<header class="top"><span class="brand">Quant Ecosystem Portal</span><span class="crumb">Execution / <b>Archived Alphas</b></span></header>
+<nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a aria-current="page" href="#">Archived Alphas</a><a href="#">Operations</a><h6>Governance</h6><a href="#">Approval Inbox</a><a href="#">Waivers</a><a href="#">Exit Reviews</a><h6>Administration</h6><a href="#">Profile &amp; Access</a></nav>
+<main><div class="stack">
+
+<div class="mast"><div><h1>Archived Alphas</h1><div class="sub" data-s="healthy sparse">Lifecycle watchlist · paper monitors</div><div class="sub" data-s="researcher">Alphas you own</div></div>
+ <div class="ctrls"><span class="chipx">Monitor · Paper · simulated</span><span class="fresh" data-s="healthy researcher"><i class="dot"></i>Fresh · 12:04Z</span><span class="fresh" data-s="sparse"><i class="dot warn"></i>Archive list not available</span></div></div>
+
+<div class="banner" data-s="sparse">The archive list is not published yet.</div>
+
+<div class="kpis" style="grid-template-columns:repeat(3,1fr)" data-s="healthy">
+ <div class="kpi"><div class="l">Archived alphas</div><div class="v">17</div><div class="n">1 requested · 2 pending drain · 14 archived</div></div>
+ <div class="kpi"><div class="l">With open obligations</div><div class="v">3</div><div class="n">Requested or pending drain</div></div>
+ <div class="kpi"><div class="l">Paper monitors</div><div class="v">9 <small>running</small></div><div class="n">3 need attention · 5 not provisioned</div></div></div>
+<div class="kpis" style="grid-template-columns:repeat(3,1fr)" data-s="sparse">
+ <div class="kpi"><div class="l">Archived alphas</div><div class="v na">Not available</div><div class="n">List not published</div></div>
+ <div class="kpi"><div class="l">With open obligations</div><div class="v na">Not available</div><div class="n">Needs the archive list</div></div>
+ <div class="kpi"><div class="l">Paper monitors</div><div class="v na">Not available</div><div class="n">Needs the archive list</div></div></div>
+
+<div class="panel empty" data-s="sparse"><div style="text-align:center"><div style="font:600 15px/22px var(--font-sans)">Archive list not available</div><div class="na">Source not published for this environment</div><div style="margin-top:12px"><a href="#">Alpha Fleet</a> &nbsp; <a href="#">Operations</a></div></div></div>
+
+<div data-s="healthy researcher">
+ <div class="tabs" data-s="healthy"><button aria-selected="true">All <span class="faint">17</span></button><button aria-selected="false">Archive requested <span class="faint">1</span></button><button aria-selected="false">Pending drain <span class="faint">2</span></button><button aria-selected="false">Archived <span class="faint">14</span></button></div>
+ <div class="tool"><input class="search" placeholder="Search alpha or version" aria-label="Search"><button class="btn">Previous stage ▾</button><button class="btn">Monitor ▾</button><button class="btn">Review ▾</button><button class="btn" data-s="healthy">Owner ▾</button></div>
+ <div class="g8">
+  <div class="panel" style="padding:0"><div class="tw"><table><thead><tr><th>Alpha</th><th>Archived</th><th>Obligations</th><th>Monitor</th><th class="n">Net · DD since start</th><th>Review</th></tr></thead>
+  <tbody data-s="healthy">
+   <tr class="sel"><td class="w"><b>BTC-Momentum</b> <span class="mono faint">v2</span><div class="m">bjones <span class="tagu warn">PENDING DRAIN</span></div></td><td class="w">18 Sep<div class="m"><span class="stage live"><i></i>Live</span></div></td><td><span class="tagu warn"><i class="dot warn"></i>2 open</span></td><td><i class="dot"></i> Running</td><td class="n"><span class="pos">+1.8%</span> <span class="faint">/</span> <span class="neg">−0.9%</span></td><td class="faint">Not started</td></tr>
+   <tr><td class="w"><b>SOL-Break</b> <span class="mono faint">v1</span><div class="m">asmith <span class="tagu">ARCHIVED</span></div></td><td class="w">30 Aug<div class="m"><span class="stage paper"><i></i>Paper</span></div></td><td><span class="tagu good"><i class="dot"></i>None</span></td><td><i class="dot warn"></i> Stale 3h</td><td class="n"><span class="neg">−0.4%</span> <span class="faint">/</span> <span class="neg">−2.2%</span></td><td><span class="tagu warn">Under review</span></td></tr>
+   <tr><td class="w"><b>ETH-Fade</b> <span class="mono faint">v4</span><div class="m">bjones <span class="tagu">ARCHIVED</span></div></td><td class="w">2 Jul<div class="m"><span class="stage canary"><i></i>Canary</span></div></td><td><span class="tagu good"><i class="dot"></i>None</span></td><td><i class="dot mute"></i> Not provisioned</td><td class="n"><span class="na">Not available</span><div class="m">Monitor not running</div></td><td class="faint">Not started</td></tr>
+   <tr><td class="w"><b>DOGE-Grid</b> <span class="mono faint">v1</span><div class="m">cchen <span class="tagu">ARCHIVED</span></div></td><td class="w">11 Jun<div class="m"><span class="stage sandbox"><i></i>Sandbox</span></div></td><td><span class="tagu good"><i class="dot"></i>None</span></td><td><i class="dot warn"></i> Quota-limited</td><td class="n"><span class="pos">+0.2%</span> <span class="faint">/</span> <span class="neg">−0.3%</span><div class="m">9-day gap</div></td><td class="faint">Not started</td></tr>
+   <tr><td class="w"><b>XRP-Revert</b> <span class="mono faint">v2</span><div class="m">cchen <span class="tagu warn">ARCHIVE REQUESTED</span></div></td><td class="w">16 Oct<div class="m"><span class="stage live"><i></i>Live</span></div></td><td><span class="tagu bad"><i class="dot bad"></i>1 unknown</span></td><td><i class="dot bad"></i> Failed</td><td class="n"><span class="na">Not available</span><div class="m">Failed before first run</div></td><td class="faint">Not started</td></tr>
+  </tbody>
+  <tbody data-s="researcher">
+   <tr class="sel"><td class="w"><b>SOL-Break</b> <span class="mono faint">v1</span><div class="m">You <span class="tagu">ARCHIVED</span></div></td><td class="w">30 Aug<div class="m"><span class="stage paper"><i></i>Paper</span></div></td><td><span class="tagu good"><i class="dot"></i>None</span></td><td><i class="dot warn"></i> Stale 3h</td><td class="n"><span class="neg">−0.4%</span> <span class="faint">/</span> <span class="neg">−2.2%</span></td><td><span class="tagu warn">Under review</span></td></tr>
+  </tbody></table></div>
+  <div class="m" style="padding:8px 12px" data-s="healthy">Showing 5 of 17 authorized</div></div>
+
+  <aside class="drawer" data-s="healthy"><div class="dh"><div><b>BTC-Momentum v2</b><div class="m">Requested 18 Sep by Stan · superseded by v3</div></div><span class="tagu warn">PENDING DRAIN</span></div>
+   <div class="sec">Still open</div>
+   <table><tbody><tr><td>Open positions</td><td class="n">0</td></tr><tr><td>Working orders</td><td class="n">1</td></tr><tr><td>Reservations</td><td class="n">0</td></tr><tr><td>Unknown outcomes</td><td class="n">0</td></tr><tr><td>Settlement pending</td><td class="n">1</td></tr></tbody></table>
+   <div class="sec"><span>Before archive</span><span class="r">USDT · real-funded</span></div><div id="spk1"></div>
+   <div class="sec"><span>Paper monitor · simulated</span><span class="r">since 20 Sep</span></div><div class="chart" id="eqm1"></div>
+   <div class="sec">Evidence</div>
+   <table><tbody><tr><td>Net return · 27 d</td><td class="n pos">+1.8%</td></tr><tr><td>Max drawdown</td><td class="n neg">−0.9%</td></tr><tr><td>QBTS</td><td class="n na">Pending</td></tr><tr><td>Regime support</td><td class="n na">Not available</td></tr><tr><td>Virtual allocation</td><td class="n">100,000 <small class="faint">USDT sim</small></td></tr><tr><td>Last observation</td><td class="n">2 min ago</td></tr></tbody></table>
+   <div class="acts"><button class="btn pri">Start reactivation review</button><button class="btn">Open Alpha 360</button></div>
+   <details><summary>How reactivation works</summary><div class="m">A review, default target Paper. Never goes live or lifts the archive by itself.</div></details></aside>
+
+  <aside class="drawer" data-s="researcher"><div class="dh"><div><b>SOL-Break v1</b><div class="m">Archived 30 Aug · edge decayed</div></div><span class="tagu">ARCHIVED</span></div>
+   <div class="sec">Still open</div><div class="na">Nothing open</div>
+   <div class="sec"><span>Paper monitor · simulated</span><span class="r">since 12 Jul</span></div><div class="chart" id="eqm2"></div>
+   <div class="sec">Evidence</div>
+   <table><tbody><tr><td>Net return · 48 d</td><td class="n neg">−0.4%</td></tr><tr><td>Max drawdown</td><td class="n neg">−2.2%</td></tr><tr><td>Last observation</td><td class="n">3 h ago</td></tr><tr><td>Review</td><td class="n">Under review</td></tr></tbody></table>
+   <div class="acts"><button class="btn" disabled>Start reactivation review</button></div><div class="m" style="margin-top:6px">Managers start reviews</div></aside>
+ </div>
+</div>
+
+</div></main></div>
+<script src="hifi.js"></script>
+<script>
+function ser(seed,n,d,v,s){var r=function(x){return function(){x=(x*1664525+1013904223)%4294967296;return x/4294967296}}(seed),o=[],c=s;for(var i=0;i<n;i++){c+=d+(r()-.5)*v;o.push(c)}return o}
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+function draw(){
+ var a=document.getElementById("eqm1");if(a&&a.offsetParent)equityChart(a,{h:120,n:27,seed:5,drift:90,vol:900,mode:"ret",base:100000,end:1800,sim:26,label:"Paper monitor, simulated"});
+ var b=document.getElementById("eqm2");if(b&&b.offsetParent)equityChart(b,{h:120,n:27,seed:9,drift:-10,vol:700,mode:"ret",base:100000,end:-400,sim:26,label:"Paper monitor, simulated"});
+ var s=document.getElementById("spk1");if(s&&s.offsetParent)spark(s,ser(3,60,60,900,0),css("--chart-line-2"),s.clientWidth,34)}
+window.onctl=function(){setTimeout(draw,0)};draw();window.addEventListener("resize",draw);
+</script></body></html>

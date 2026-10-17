@@ -36,6 +36,7 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 .bl{display:flex;font-size:10px;color:var(--mute);white-space:nowrap}
 .bar2{height:8px;background:var(--fill);border-radius:3px;overflow:hidden}.bar2 i{display:block;height:100%;background:var(--mute)}
 .drawer h2{font-size:13px;line-height:18px;font-weight:600}
+.rqa{padding:14px 40px 4px 8px}
 .pend{font:600 22px/28px system-ui;color:var(--mute)}
 .drawer table td{white-space:normal;vertical-align:top}.drawer table td.n{white-space:nowrap}
 .rf-sts{display:flex;gap:4px;flex-wrap:wrap;margin:12px 0 12px}
@@ -59,7 +60,7 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
  <div class="crumb"><a href="#">Alpha Fleet</a> › <b style="color:var(--ink)">BTC-Trend v3</b> <span class="mono">a-7f3a91</span> &nbsp;·&nbsp; <a href="#">← Back to Fleet results</a> <span class="mono">?stage=live&amp;portfolio=core&amp;sort=-allocation</span> <span class="note">1</span></div>
  <div class="ctx" style="margin:0"><h1>BTC-Trend</h1><span class="chip mono">v3</span><span class="chip" data-s="fresh"><i></i>Active</span>
   <span class="chip" data-s="fresh" data-show="healthy denied loading"><i></i>Fresh · 9s</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Identity only · metrics not ready</span>
-  <span class="mono sm mute">version av-0003</span></div>
+  <span class="mono sm mute">version av-0003</span><span style="flex:1"></span><span data-show="denied" data-chg="new" class="rqa" title="Researcher only. Today there is no way to ask for archiving from this screen. Opens a request; a manager approves it in Operations."><button class="btn">Request archive</button><span class="note">14</span></span></div>
  <dl class="hd">
   <div><dt>Researcher owner</dt><dd>asmith <span class="sm mute">(author of record)</span></dd></div>
   <div><dt>Research binding</dt><dd><span class="mono">run_0412</span> · params <span class="mono">9c1e…b7</span></dd></div>
@@ -95,8 +96,8 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 </div>
 
 <!-- TABS + CONTENT -->
-<div class="tabs" role="tablist" style="margin-top:16px" data-tg="tab" data-chg="changed" title="Today: 10 tabs (Overview, Insight Charts, Trade Replay, Positions, Orders &amp; Fills, Risk, Sessions, Accounting, Reconciliation, Audit). Proposed: the six guide tabs plus a More menu that keeps the other V1 tabs unchanged.">
- <a href="#" data-t="perf" aria-selected="true">Performance</a><a href="#" data-t="dep" aria-selected="false">Deployments <span class="mute sm">4</span></a><a href="#" data-t="evi" aria-selected="false">Research Evidence</a><a href="#" data-t="rf" aria-selected="false">Regime Fit</a><a href="#" data-t="ord" aria-selected="false">Orders &amp; Fills</a><a href="#" data-t="act" aria-selected="false">Activity &amp; Decisions</a><a href="#" title="Existing V1 tabs, unchanged: Trade Replay, Positions, Risk, Sessions, Accounting, Reconciliation, Audit (Insight Charts content moves into Performance)">More ▾</a><span class="note">7</span></div>
+<div class="tabs" role="tablist" style="margin-top:16px" data-tg="tab" data-chg="changed" title="Today: 10 tabs (Overview, Insight Charts, Trade Replay, Positions, Orders &amp; Fills, Risk, Sessions, Accounting, Reconciliation, Audit). Proposed: six primary tabs plus a More menu holding Trade Replay, Positions, Risk, Sessions, Accounting, Reconciliation, Audit and Insight Charts, unchanged.">
+ <a href="#" data-t="perf" aria-selected="true">Performance</a><a href="#" data-t="dep" aria-selected="false">Deployments <span class="mute sm">4</span></a><a href="#" data-t="evi" aria-selected="false">Research Evidence</a><a href="#" data-t="rf" aria-selected="false">Regime Fit</a><a href="#" data-t="ord" aria-selected="false">Orders &amp; Fills</a><a href="#" data-t="act" aria-selected="false">Activity &amp; Decisions</a><a href="#" title="Existing V1 tabs, unchanged: Trade Replay, Positions, Risk, Sessions, Accounting, Reconciliation, Audit (Insight Charts)">More ▾</a><span class="note">7</span></div>
 
 <div class="split"><div>
 
@@ -124,6 +125,7 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
   </div>
  </div>
 
+ <div class="card" style="margin-top:12px" data-chg="kept" title="Today the Overview has a bar chart “Contribution by venue · USDT” with one axis per currency. Kept as a secondary card; it moves under the equity chart."><h2>Contribution by venue <span class="mute sm">USDT · real-funded · one axis per currency</span></h2><div class="chart" style="height:110px"><span data-show="healthy denied">Chart · net PnL by venue (Binance)</span><span data-show="sparse">Not available — source not qualified</span><span data-show="loading"><span class="sk" style="width:200px;display:block"></span></span></div><span class="reason">Venues are never mixed across currencies.</span></div>
  <div class="card" style="margin-top:12px" data-chg="new" title="Today stages appear only as lines inside the Equity-by-stage chart and a Deployment map; no segment durations, no actual-vs-forward split."><h2>Cross-stage timeline <span class="mute sm">Paper → Sandbox → Canary → Live</span><span class="note">9</span></h2>
   <div data-show="healthy denied">
    <div class="tl" role="img" aria-label="Paper 40 days, Sandbox 20 days, Canary 4 days, Live 6 days">
@@ -299,7 +301,9 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 <tr><td><span class="tag changed">CHANGED</span></td><td>Scope controls</td><td>Scope bar: Portfolio, Mode, Venue, Window selects, all “ALL”</td><td>Economic-domain segment and window segment; Portfolio and Venue are not drawn</td><td>Open question: where Portfolio and Venue filters live.</td></tr>
 <tr><td><span class="tag changed">CHANGED</span></td><td>Tab bar</td><td>10 tabs: Overview, Insight Charts, Trade Replay, Positions, Orders &amp; Fills, Risk, Sessions, Accounting, Reconciliation, Audit</td><td>Performance, Deployments, Research Evidence, Regime Fit, Orders &amp; Fills, Activity &amp; Decisions, plus “More ▾” holding the V1 tabs</td><td>The other V1 tabs are not dropped; they stay reachable and unchanged.</td></tr>
 <tr><td><span class="tag new">NEW</span></td><td>Summary strip</td><td>None above the tabs</td><td>Net PnL, Return (Modified-Dietz), Max drawdown, QBTS Pending, Regime Fit</td><td>Return method is labelled (FE-006). QBTS shows Pending until policy exists (FE-011).</td></tr>
-<tr><td><span class="tag removed">REMOVED</span></td><td>Order-count tiles and Contribution-by-venue chart on the Overview</td><td>Tiles: orders, filled, formula version, submitted, risk/broker rejected, reject rate, latency with raw code <span class="mono">N28_BROKER_ACK_TIMESTAMP_NOT_ACTIVATED</span>; bar chart “Contribution by venue · USDT”</td><td>Not on the main view; counts belong to Orders &amp; Fills with plain-word reasons; venue contribution is not drawn</td><td>Flag: the venue contribution chart has no home yet in this proposal.</td></tr>
+<tr><td><span class="tag removed">REMOVED</span></td><td>Order-count tiles on the Overview</td><td>Tiles: orders, filled, formula version, submitted, risk/broker rejected, reject rate, latency with raw code <span class="mono">N28_BROKER_ACK_TIMESTAMP_NOT_ACTIVATED</span></td><td>Not on the main view; counts belong to Orders &amp; Fills with plain-word reasons</td><td>Needs the public copy dictionary (FE-015).</td></tr>
+<tr><td><span class="tag kept">KEPT</span></td><td>Contribution by venue chart</td><td>Bar chart “Contribution by venue · USDT”, one axis per currency</td><td>Same chart as a secondary card under the equity chart in Performance</td><td>Bobby decision 2026-10-17.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Request archive (researcher only)</td><td>None on this screen</td><td>Button in the header for the researcher state; opens a request that a manager approves in Operations. Managers do not see it</td><td>Needs an archive-request command and its receipt (guide §13).</td></tr>
 <tr><td><span class="tag changed">CHANGED</span></td><td>Equity chart</td><td>“Equity by stage” with Lin / Log / Table / Expand / Export</td><td>Facets for actual, forward simulated and research OOS; same toolbar</td><td>Needs a manager time-series endpoint (FE-013).</td></tr>
 <tr><td><span class="tag new">NEW</span></td><td>Cross-stage timeline and forward-observation facet</td><td>None; stages only as lines in one chart</td><td>Proportional Paper → Sandbox → Canary → Live bar, per-stage cards, and a separate 70d-forward vs 10d-actual facet</td><td>Guide §9.1. Mixed return needs a verified continuity manifest.</td></tr>
 <tr><td><span class="tag changed">CHANGED</span></td><td>Deployments</td><td>“Deployment map — venue × stage” grid with a Broker sync column (SYNC UNKNOWN)</td><td>Table: stage, deployment, account, runtime, native profile, dates, deployed by, receipts</td><td>Guide §9 tab 2.</td></tr>
@@ -320,6 +324,8 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 <li><b>Regime Fit panel.</b> Six support states as plain pills with text. The panel opens on Insufficient data (today), then Unbound (digest mismatch, never "latest run"), then a Supported variant marked Future. TradeState is a separate engine fact.</li>
 <li><b>Score drawer.</b> Built for "policy pending" first: raw QBTS, contribution (w_i × q_i, no band), band, coverage, components, evidence and policy, all with exact reasons. The Future layout toggle shows where band, provisional badge, P/R/B and contribution will go. Policy version is "Not published" today.</li>
 <li><b>Backend limits honoured.</b> Returns are Modified-Dietz (FE-006). Score sort is hidden while policy is pending (FE-011). No text search or cross-environment totals are assumed.</li>
+<li><b>Request archive.</b> Only the researcher sees this header button. It opens a request; a manager approves or rejects it in Operations. Managers do not see the button, because their archive actions live elsewhere. The state is a receipt, not an instant change.</li>
+<li><b>More menu and secondary chart.</b> The V1 tabs (Trade Replay, Positions, Risk, Sessions, Accounting, Reconciliation, Audit, Insight Charts) are kept unchanged under "More ▾". The V1 contribution-by-venue chart is kept as a secondary card under the equity chart. The score drawer opens on demand.</li>
 <li><b>Alternative considered:</b> one long page with the drawer as a modal and all six tabs flattened into sections. Rejected: it buries the cross-stage timeline under Regime Fit and Evidence, and a modal hides the metrics the explanation is about.</li>
 </ol></aside>
 </main></div><script src="kit.js"></script>
