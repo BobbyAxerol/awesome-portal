@@ -5,10 +5,9 @@ import type { PortalUser } from "../domain";
 import { AuthService } from "../auth/auth.service";
 import { mutationSecurityDenial,MUTATION_SECURITY_MESSAGE } from "../auth/mutation-security";
 import { SessionGuard } from "../facade/session.guard";
-import { AccessPolicyError } from "./access.contract";
-import { CommandError,commandIntent,commandSubmit,commandWorkspace,commandId,commandKey } from "./command.contract";
+import { commandIntent,commandSubmit,commandWorkspace,commandId,commandKey } from "./command.contract";
 import { ExecutionCommandService } from "./command.service";
-import { CommandHttpError } from "./command.error";
+import { CommandHttpError,commandHttpCall } from "./command.error";
 type Request=FastifyRequest&{portalUser:PortalUser;portalSession:{sessionId:string;csrfSecretHash:string}};
 
 /** Named PM capital operations only; no generic CLI/URL, credentials or authority install. */
@@ -27,11 +26,7 @@ export class ExecutionCommandController {
     const header=this.parse(commandKey,r.headers["x-portal-idempotency-key"]);
     if(key!==undefined&&header!==key)throw new CommandHttpError("COMMAND_INPUT_INVALID","Use the same command key.",400);
   }
-  private async call<T>(fn:()=>Promise<T>):Promise<T>{try{return await fn();}catch(e){
-    if(e instanceof CommandError||e instanceof AccessPolicyError)throw new CommandHttpError(e.status===404?"COMMAND_RESOURCE_NOT_FOUND":e.code,"The requested command is not available. Review its status before retrying.",e.status);
-    // No source error text, SQL, stack, hidden blocker or request body is public.
-    throw new CommandHttpError("COMMAND_UNAVAILABLE","The command service is unavailable. Query the same intent before retrying.",503);
-  }}
+  private call<T>(fn:()=>Promise<T>):Promise<T>{return commandHttpCall(fn);}
   @Post("/preview") @Header("Cache-Control","private, no-store")
   async preview(@Req()r:Request,@Body()raw:unknown,@Res({passthrough:true})reply:FastifyReply){
     const i=this.parse(commandIntent,raw);this.security(r,i.business_payload.idempotency_key);reply.code(200);

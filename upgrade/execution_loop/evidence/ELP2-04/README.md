@@ -1,5 +1,11 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+2026-10-17 backend follow-through: [positive operation/technical readers](positive-readers.md)
+partially implements existing04-008/009. V1/other parent barriers stay unchanged;
+128/128 focused tests/build/restore passed, including four actual PG coalescer
+authority cases; the packet-containing commit requires normal-hook exit0. This is not
+full04 source commissioning or frontend acceptance.
+
 ## Approved closeout entry — Bobby, 2026-10-16 (Asia/Saigon)
 
 Bobby approved finishing the existing01–04 gaps: History failures/contracts,

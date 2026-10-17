@@ -113,6 +113,43 @@
           }
         ]
       }
+    },
+    {
+      "type": "ExecutionScopedRuntimeManifestV2",
+      "value": {
+        "schema_version": "portal.execution.runtime-manifest.v2",
+        "workspace_id": "workspace_TEST_ONLY",
+        "read_scope": "TECHNICAL_AUTHORIZED",
+        "read_at_ms": 1790812800000,
+        "local_projection": {
+          "schema_version": "portal.execution.technical-diagnostics.v1",
+          "read_scope": "TECHNICAL_AUTHORIZED",
+          "profiles": [
+            {
+              "environment": "paper",
+              "profile_id": "profile_TEST_ONLY",
+              "component": "LOCAL_PROJECTION",
+              "state": "NOT_PUBLISHED",
+              "health": "NOT_PUBLISHED",
+              "lag_ms": null,
+              "last_error_code": null
+            }
+          ]
+        },
+        "durable_mirror": [
+          {
+            "schema_version": "portal.execution.technical-health.v1",
+            "read_scope": "TECHNICAL_AUTHORIZED",
+            "environment": "paper",
+            "profile_id": "profile_TEST_ONLY",
+            "component": "DURABLE_MIRROR",
+            "state": "PARTIAL",
+            "reason_code": "TEST_ONLY_INCOMPLETE",
+            "revision": null,
+            "observed_at": null
+          }
+        ]
+      }
     }
   ]
 }

@@ -52,6 +52,19 @@ fixtures.cases.push({type:'TechnicalHealth',value:{schema_version:'portal.execut
   environment:'paper',profile_id:'profile_TEST_ONLY',component:'DURABLE_MIRROR',state:'PARTIAL',reason_code:'TEST_ONLY_INCOMPLETE',revision:null,observed_at:null}},
   {type:'TechnicalDiagnostics',value:{schema_version:'portal.execution.technical-diagnostics.v1',read_scope:'TECHNICAL_AUTHORIZED',profiles:[{
     environment:'paper',profile_id:'profile_TEST_ONLY',component:'LOCAL_PROJECTION',state:'TEST_ONLY_UNKNOWN',health:'NOT_PUBLISHED',lag_ms:null,last_error_code:null}]}});
+document.components.schemas.ExecutionScopedRuntimeManifestV2=obj({
+  schema_version:{const:'portal.execution.runtime-manifest.v2'},workspace_id:text,read_scope:{const:'TECHNICAL_AUTHORIZED'},read_at_ms:count,
+  local_projection:ref('TechnicalDiagnostics'),durable_mirror:{type:'array',minItems:1,maxItems:3,items:ref('TechnicalHealth')},
+});
+document.components.schemas.ExecutionScopedRuntimeManifestV2.description='Finite local observations, not source qualification or command readiness. Core workspace authority and configured storage access are checked independently. Runtime validates matching ordered profile/environment pairs (paper, sandbox, live), nullable lag correlation and no future timestamps. health OBSERVED means snapshot clock observed only; state NOT_PUBLISHED also covers a missing persisted refresh-health row.';
+document.paths['/api/v1/execution/runtime-manifest/v2']={get:op('executionScopedRuntimeManifestGetV2','ExecutionScopedRuntimeManifestV2',[
+  param('environment',{enum:['paper','sandbox','live']}),param('workspace_id',{...text,maxLength:96})])};
+fixtures.cases.push({type:'ExecutionScopedRuntimeManifestV2',value:{
+  schema_version:'portal.execution.runtime-manifest.v2',workspace_id:'workspace_TEST_ONLY',read_scope:'TECHNICAL_AUTHORIZED',read_at_ms:1790812800000,
+  local_projection:{schema_version:'portal.execution.technical-diagnostics.v1',read_scope:'TECHNICAL_AUTHORIZED',profiles:[{
+    environment:'paper',profile_id:'profile_TEST_ONLY',component:'LOCAL_PROJECTION',state:'NOT_PUBLISHED',health:'NOT_PUBLISHED',lag_ms:null,last_error_code:null}]},
+  durable_mirror:[fixtures.cases.find(item=>item.type==='TechnicalHealth').value],
+}});
 for(const [file,data] of Object.entries({'openapi/execution-scoped-records.openapi.json':document,'fixtures/execution-scoped-records.synthetic.valid.json':fixtures})){
   const path=resolve(root,file),bytes=JSON.stringify(data,null,2)+'\n';
   if(process.argv.includes('--check')){if(readFileSync(path,'utf8')!==bytes)throw new Error(`Generated drift: ${file}`);}

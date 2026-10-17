@@ -55,6 +55,8 @@ import { MarketContextController } from "./execution/market-context.controller";
 import { MarketContextService } from "./execution/market-context.service";
 import { ExecutionRuntimeManifestController } from "./execution/runtime-manifest.controller";
 import { ExecutionRuntimeManifestService } from "./execution/runtime-manifest.service";
+import { ExecutionScopedRuntimeManifestController } from "./execution/scoped-runtime-manifest.controller";
+import { ExecutionScopedRuntimeManifestService } from "./execution/scoped-runtime-manifest.service";
 import { ExecutionContractAuthorityController } from "./execution/contract-authority.controller";
 import { ExecutionContractAuthorityService } from "./execution/contract-authority.service";
 import { MaximumDataOperationController } from "./execution/maximum-data-operation.controller";
@@ -263,6 +265,7 @@ export class AppModule {
         ExecutionCurrentSourceController,
         MarketContextController,
         ExecutionRuntimeManifestController,
+        ExecutionScopedRuntimeManifestController,
         ExecutionContractAuthorityController,
         MaximumDataOperationController,
         ExecutionProfileHistoryController,
@@ -495,6 +498,7 @@ export class AppModule {
         ExecutionSharedReadCacheMaintenanceWorker,
         MarketContextService,
         ExecutionRuntimeManifestService,
+        ExecutionScopedRuntimeManifestService,
         ExecutionContractAuthorityService,
         MaximumDataContinuationRepository,
         MaximumDataOperationService,

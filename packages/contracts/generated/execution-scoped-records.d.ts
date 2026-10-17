@@ -89,6 +89,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/runtime-manifest/v2": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description V2 alternative selected by durable server policy only. Existing legacy compatibility DTO is unchanged. No caller-provided scope, raw relation selector, credentials or global metadata. This document publishes scoped consumers; not a browser opt-in. HTTP private,no-store. */
+        get: operations["executionScopedRuntimeManifestGetV2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -269,6 +286,17 @@ export interface components {
                 lag_ms: number | null;
                 last_error_code: string | null;
             }[];
+        };
+        /** @description Finite local observations, not source qualification or command readiness. Core workspace authority and configured storage access are checked independently. Runtime validates matching ordered profile/environment pairs (paper, sandbox, live), nullable lag correlation and no future timestamps. health OBSERVED means snapshot clock observed only; state NOT_PUBLISHED also covers a missing persisted refresh-health row. */
+        ExecutionScopedRuntimeManifestV2: {
+            /** @constant */
+            schema_version: "portal.execution.runtime-manifest.v2";
+            workspace_id: string;
+            /** @constant */
+            read_scope: "TECHNICAL_AUTHORIZED";
+            read_at_ms: number;
+            local_projection: components["schemas"]["TechnicalDiagnostics"];
+            durable_mirror: components["schemas"]["TechnicalHealth"][];
         };
     };
     responses: never;
@@ -565,6 +593,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TechnicalDiagnostics"];
+                };
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    executionScopedRuntimeManifestGetV2: {
+        parameters: {
+            query?: {
+                environment?: "paper" | "sandbox" | "live";
+                workspace_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scoped response on V2 authority */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionScopedRuntimeManifestV2"];
                 };
             };
             /** @description Typed safe refusal; never a legacy/upstream fallback. */

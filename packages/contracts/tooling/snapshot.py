@@ -42,6 +42,7 @@ TRACKED = (
     "tooling/generate-execution-history.mjs",
     "tooling/generate-execution-manager-scoped.mjs",
     "tooling/generate-execution-scoped-records.mjs",
+    "tooling/execution-operation-reader.mjs",
     "tooling/generate-execution-resource-scoped.mjs",
     "tooling/generate-execution-retained-scoped.mjs",
     "tooling/generate-execution-analytics-scoped.mjs",

@@ -394,6 +394,72 @@
           }
         }
       }
+    },
+    "/api/v1/execution/runtime-manifest/v2": {
+      "get": {
+        "operationId": "executionScopedRuntimeManifestGetV2",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          }
+        ],
+        "description": "V2 alternative selected by durable server policy only. Existing legacy compatibility DTO is unchanged. No caller-provided scope, raw relation selector, credentials or global metadata. This document publishes scoped consumers; not a browser opt-in. HTTP private,no-store.",
+        "responses": {
+          "200": {
+            "description": "Scoped response on V2 authority",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionScopedRuntimeManifestV2"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "401": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "403": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "404": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "409": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "503": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1429,6 +1495,49 @@
           "read_scope",
           "profiles"
         ]
+      },
+      "ExecutionScopedRuntimeManifestV2": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.runtime-manifest.v2"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "read_scope": {
+            "const": "TECHNICAL_AUTHORIZED"
+          },
+          "read_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "local_projection": {
+            "$ref": "#/components/schemas/TechnicalDiagnostics"
+          },
+          "durable_mirror": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "items": {
+              "$ref": "#/components/schemas/TechnicalHealth"
+            }
+          }
+        },
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "read_scope",
+          "read_at_ms",
+          "local_projection",
+          "durable_mirror"
+        ],
+        "description": "Finite local observations, not source qualification or command readiness. Core workspace authority and configured storage access are checked independently. Runtime validates matching ordered profile/environment pairs (paper, sandbox, live), nullable lag correlation and no future timestamps. health OBSERVED means snapshot clock observed only; state NOT_PUBLISHED also covers a missing persisted refresh-health row."
       }
     }
   }

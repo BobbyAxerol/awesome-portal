@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { operationReaderSchema,synchronizeOperationReaders } from "./execution-operation-reader.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const load = path => JSON.parse(readFileSync(resolve(root, path), "utf8"));
 const save = (path, value) => writeFileSync(resolve(root, path), `${JSON.stringify(value, null, 2)}\n`);
@@ -203,9 +204,9 @@ apply.responses["202"].content["application/json"].schema = { oneOf: [...union("
   { $ref: "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitApplyResponse" }] };
 const operation = api.paths["/api/v1/execution/operations/{operation_id}"].get;
 operation.description = "Reads an actor/workspace-bound Portal decision operation after fresh gate authorization. Poll settlement; an ACK is not terminal success.";
-operation.responses["200"].content["application/json"].schema = { oneOf: [...union("DecisionOperation").oneOf,
-  { $ref: "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionOperation" }] };
+operation.responses["200"].content["application/json"].schema = operationReaderSchema();
 save("openapi/execution-governance.openapi.json", api);
+synchronizeOperationReaders();
 const r2 = load(r2Path);
 r2.$defs.review_data.properties.decision_evidence_manifest = { $ref: "#/$defs/evidence_manifest" };
 // Terminal records remain inspectable; only eligibility controls new decisions.

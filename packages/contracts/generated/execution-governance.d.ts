@@ -216,7 +216,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Reads an actor/workspace-bound Portal decision operation after fresh gate authorization. Poll settlement; an ACK is not terminal success. */
+        /** @description Named operation detail. Exact ecm_ intents use current workspace/resource/environment audit authority and finite CommandStatus; GET never dispatches or reconciles. Existing Portal/F0 decision readers retain their gate checks and scoped-parent refusal. An ACK is not business APPLIED or venue FILLED. HTTP private, no-store. */
         get: operations["getPaperExitDecisionOperation"];
         put?: never;
         post?: never;
@@ -1651,6 +1651,25 @@ export interface components {
             /** @constant */
             external_side_effect_requested: false;
         };
+        ExecutionCommandOperation: {
+            /** @constant */
+            schema_version: "execution.command-operation.v1";
+            operation_id: components["schemas"]["$defs-Identifier"];
+            /** @constant */
+            command_type: "EXECUTION_COMMAND";
+            command_key: string;
+            /** @constant */
+            status: "BLOCKED";
+            /** @constant */
+            verification_result: "NOT_STARTED";
+            blockers: string[];
+            warnings: string[];
+            relay_receipt: null;
+            /** @constant */
+            source_side_effect_requested: false;
+            created_at: components["schemas"]["DateTime"];
+            updated_at: components["schemas"]["DateTime"];
+        };
         DecisionReceipt: {
             operation_id: components["schemas"]["Identifier"];
             receipt_id: components["schemas"]["Identifier"];
@@ -1696,6 +1715,47 @@ export interface components {
             receipt: components["schemas"]["DecisionReceipt"] | null;
             /** @constant */
             external_side_effect_requested: false;
+        };
+        CommandStatus: {
+            /** @constant */
+            schema_version: "portal.execution.command-status.v1";
+            command_id: string;
+            /** @enum {string} */
+            operation: "FUND" | "INITIAL_GRANT" | "TOP_UP" | "IMMEDIATE_DECREASE" | "RECALL_PARTIAL" | "RECALL_FULL" | "ADJUST_TARGET_BUDGET" | "SET_ROOT_LIMIT";
+            resource: {
+                /** @enum {string} */
+                kind: "ROOT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            profile_ref: string;
+            /** @enum {string} */
+            delivery: "PREPARED" | "SENDING" | "ACKNOWLEDGED" | "DELIVERY_UNKNOWN" | "FAILED_BEFORE_SEND";
+            business: {
+                /** @enum {string} */
+                state: "UNKNOWN" | "APPLIED" | "PARTIALLY_APPLIED" | "WAITING_ENCUMBRANCE" | "CANCELLED" | "PARTIALLY_APPLIED_CANCELLED" | "REJECTED";
+                receipt_ref: string | null;
+                source_event_ref: string | null;
+                revision: string | null;
+                amounts: {
+                    requested: string;
+                    applied: string;
+                    pending: string;
+                    cancelled: string;
+                    rejected: string;
+                } | null;
+            };
+            /** @enum {string} */
+            projection: "UNKNOWN" | "CURRENT" | "CATCHING_UP" | "STALE" | "UNAVAILABLE";
+            /** @enum {string} */
+            venue: "NOT_APPLICABLE" | "UNKNOWN" | "PENDING" | "ACKNOWLEDGED" | "FILLED" | "REJECTED";
+            /** @enum {string} */
+            next_action: "REVIEW_PREVIEW" | "QUERY_SAME_INTENT" | "REVIEW_RECEIPT" | "REVIEW_BLOCKER";
+            created_at_ms: number;
+            updated_at_ms: number;
+            /** @enum {string} */
+            authority: "OWNER_VERIFIED" | "TEST_ONLY";
         };
         "execution-sandbox-certification.v1.schema_$defs-Actor": {
             user_id: components["schemas"]["$defs-Identifier"];
@@ -2435,14 +2495,57 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Decision operation */
+            /** @description Authorized named operation detail; no generic parent or queue commissioning. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"];
+                    "application/json": components["schemas"]["ExecutionCommandOperation"] | components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"] | components["schemas"]["CommandStatus"];
                 };
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown and hidden commands have the same safe envelope. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

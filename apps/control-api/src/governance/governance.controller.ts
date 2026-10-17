@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   Inject,
   Optional,
@@ -47,6 +48,9 @@ import { PaperExitService } from "./paper-exit.service";
 import { GovernanceReviewCaptureService } from "./review-capture.service";
 import { R2CaptureSchema, PaperExitCreateSchema, SandboxReviewNoteSchema } from "./review-capture.contracts";
 import { ExecutionReadScopes } from "../execution-v2/read-scope";
+import { ExecutionCommandService } from "../execution-v2/command.service";
+import { commandId } from "../execution-v2/command.contract";
+import { CommandHttpError,commandHttpCall } from "../execution-v2/command.error";
 
 interface GovernanceRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -66,6 +70,7 @@ export class GovernanceController {
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
+    @Optional() @Inject(ExecutionCommandService) private readonly trustedCommands?: ExecutionCommandService,
   ) {}
 
   @Get("/governance/review-capture-capabilities")
@@ -458,12 +463,25 @@ export class GovernanceController {
   }
 
   @Get("/operations/:operation_id")
+  @Header("Cache-Control", "private, no-store")
   async operation(
     @Req() request: GovernanceRequest,
     @Param("operation_id") operationId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
+    if (operationId.startsWith("ecm_")) {
+      // These durable intents already retain immutable workspace/resource/env
+      // lineage. Reuse exact audit authorization and current delivery fences;
+      // a GET must never reconcile, dispatch or amend an operation.
+      const id = commandId.safeParse(operationId);
+      if (!id.success) throw new CommandHttpError("COMMAND_INPUT_INVALID", "Check the command fields.", 400);
+      return commandHttpCall(async () => {
+        if (!this.trustedCommands) throw new Error("TRUSTED_COMMAND_READER_NOT_INSTALLED");
+        return this.trustedCommands.status({ user_id: request.portalUser.userId,
+          session_id: request.portalSession.sessionId, session_generation: request.portalSession.sessionVersion }, workspaceId, id.data);
+      });
+    }
     return this.compatibleOperationParent(request, workspaceId, async () => {
       const execution = await this.operations.operationOrNull(
         request.portalUser,

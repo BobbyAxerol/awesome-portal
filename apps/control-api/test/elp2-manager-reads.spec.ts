@@ -2,7 +2,9 @@
  * TEST_ONLY. This does not qualify a production TS publication or field policy. */
 import "reflect-metadata";
 import { createHash, randomUUID } from "node:crypto";
-import { Pool } from "pg";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
 import { AuthService } from "../src/auth/auth.service";
@@ -29,6 +31,13 @@ import { scopedManagerResponseSchema } from "../src/manager-lists/scoped-manager
 import type { AuthSession, PortalUser, VerifiedAccessIdentity } from "../src/domain";
 import { migrateTestDatabase, setupApp, teardownApp, testConfig } from "./harness";
 import { productReadFixture, OWN as PRODUCT_OWN } from "./elp2-product-read.fixture";
+import { ManagerModelService } from "../src/execution-v2/manager-model.service";
+import { persistManagerProjection, prepareManagerProjection } from "../src/execution-v2/manager-model.store";
+import type { ManagerModelDocument } from "../src/execution-v2/manager-model.contract";
+import type { DatasetPublication } from "../src/execution-v2/publication.contract";
+import { ManagerProjectionLeases } from "../src/execution-v2/manager-lease";
+import { loadPublicationCommissioning } from "../src/execution-v2/publication-adapter";
+import { EXECUTION_PUBLICATION_CATALOGUE } from "../src/execution-v2/publication-source.generated";
 
 const OWN = { alpha_id: "TEST-own", alpha_version_id: "TEST-av", portfolio_id: "TEST-shared-pf", deployment_id: "TEST-own-dep", account_id: "TEST-shared-account" };
 const PEER = { alpha_id: "TEST-peer", alpha_version_id: "TEST-peer-av", portfolio_id: OWN.portfolio_id, deployment_id: "TEST-peer-dep", account_id: OWN.account_id };
@@ -251,8 +260,160 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 scoped Manager raw read
         [workspace, PROFILE, id, JSON.stringify({ ...tuple, risk_grant_id: id, strategy_id: strategy, mode: "PAPER", venue: "TEST", created_at: "2026-09-02T00:00:00Z" })]);
     };
     const commandCenter = new CommandCenterRepository(ctx.pool, cfg, domain, repository, undefined, undefined, scopes);
-    return { workspace, repository, scopes, read, legacy, grants, principal, adapter, financial, financialRepository, seedFinancial, commandCenter };
+    return { workspace, repository, scopes, read, legacy, grants, principal, adapter, financial, financialRepository, seedFinancial, commandCenter, config: cfg };
   }
+
+  it.each(["current", "grant-revoke", "session-revoke", "leader-session-revoke"] as const)(
+    "T04-11 physical Manager document leader/follower with real current authority: %s", async fault => {
+      const f = await fixture(), now = Date.now();
+      // Same actor/workspace, genuinely distinct current Core sessions. This
+      // isolates per-delivery session authority; cross-actor mixing is unproven.
+      let followerPrincipal = f.principal;
+      if (fault === "leader-session-revoke") {
+        const session: AuthSession = { ...f.principal.session, sessionId: randomUUID() };
+        await new SessionsRepository(ctx.pool).create({ sessionId: session.sessionId, userId: researcher.userId,
+          tokenHash: createHash("sha256").update(randomUUID()).digest("hex"), accessSubject: null,
+          accessTokenExpiresAt: null, csrfSecretHash: createHash("sha256").update(randomUUID()).digest("hex"),
+          activationId: null, sessionVersion: researcher.sessionVersion,
+          idleExpiresAt: session.idleExpiresAt, absoluteExpiresAt: session.absoluteExpiresAt });
+        followerPrincipal = { ...f.principal, session };
+        expect(followerPrincipal.session.sessionId).not.toBe(f.principal.session.sessionId);
+      }
+      const modelScope = { workspace_id: f.workspace, environment: "paper" as const, profile_id: PROFILE };
+      // Reuse the commissioning/store fixture pattern. These pins and source
+      // facts are deliberately synthetic, never actual source acceptance.
+      const artifact = { schema_version: "portal.execution.publication-commissioning.v1", scope: modelScope,
+        catalogue_digest: EXECUTION_PUBLICATION_CATALOGUE.source_catalogue_digest,
+        adapter_id: "TEST_ONLY:physical-coalescer", family_ids: ["alpha_fleet_overview"], purposes: ["BUSINESS"],
+        receipt_pins: { source_read: "TEST_ONLY:read", transport_trust: "TEST_ONLY:transport",
+          privacy: "TEST_ONLY:privacy", field_policy: "TEST_ONLY:fields" } };
+      const bytes = JSON.stringify(artifact);
+      const commissioning = loadPublicationCommissioning(bytes, {
+        artifact_sha256: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+        adapter_id: artifact.adapter_id, approval_ref: "TEST_ONLY_NOT_OWNER_APPROVAL",
+        approved_at_ms: now - 1000, valid_until_ms: now + 60_000,
+      }, now);
+      const doc: ManagerModelDocument = { schema_version: "portal.execution.manager-model-input.v1", ...modelScope,
+        qualification: "SOURCE_VERIFIED", family_id: "alpha_fleet_overview", revision: `TEST_ONLY:${randomUUID()}`,
+        supersedes_revision: null, source_epoch: "TEST_ONLY:epoch", source_sequence: "1",
+        projection_generation: "TEST_ONLY:g1", catalogue_digest: artifact.catalogue_digest,
+        source_set_digest: accessDigest(tuples), as_of_ms: now - 100, recorded_through_ms: now - 50,
+        facts_through_ms: now - 100, observed_at_ms: now,
+        source_quality: { completeness: "COMPLETE", freshness: "FRESH", reasons: [] },
+        members: tuples.map(tuple => ({ tuple: { ...tuple }, stage: "PAPER", name: tuple.alpha_id === OWN.alpha_id
+          ? "TEST_ONLY:own-public-name" : "TEST_ONLY:PRIVATE_PEER_MUST_NOT_LEAVE",
+          owner_user_id: researcher.userId, lifecycle: "ACTIVE", venue: null, health: null, source_state: null,
+          binding_ref: null, assignment_revision: "TEST_ONLY:a", owner_revision: "TEST_ONLY:o",
+          binding_revision: "TEST_ONLY:b", valid_from_ms: now - 1000, valid_to_ms: null })), facts: [] };
+      const contracts = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+      const publication = JSON.parse(readFileSync(resolve(contracts,
+        "fixtures/execution-dataset-publication.synthetic.valid.json"), "utf8")).value as DatasetPublication;
+      Object.assign(publication, { family_id: doc.family_id, catalogue_digest: doc.catalogue_digest,
+        environment: doc.environment, profile_id: doc.profile_id, issued_at_ms: now - 1000,
+        expires_at_ms: now + 60_000, source_as_of_ms: doc.as_of_ms, observed_at_ms: now,
+        history_capability: "CURRENT_ONLY", barrier: null });
+      for (const axis of ["source_read", "transport_trust", "privacy", "field_policy"] as const)
+        publication[axis] = { qualification: "SOURCE_VERIFIED", receipt_ref: artifact.receipt_pins[axis] };
+      publication.authority = { ...publication.authority, ...modelScope, qualification: "SOURCE_VERIFIED",
+        publication_revision: "TEST_ONLY:physical-publication", tuples: structuredClone(tuples), resources: structuredClone(resources),
+        binding: { dataset_id: doc.family_id, source_revision: doc.revision, projection_generation: doc.projection_generation,
+          catalogue_revision: doc.catalogue_digest, window: null } };
+      const leases = new ManagerProjectionLeases(domain), lease = await leases.acquire(modelScope, randomUUID(), 15_000);
+      expect(lease).not.toBeNull();
+      try {
+        const prepared = prepareManagerProjection(doc, publication, { nowMs: now, commissioning, lease: lease! });
+        const writer = await domain.connect();
+        try { await writer.query("BEGIN"); await persistManagerProjection(writer, prepared); await writer.query("COMMIT"); }
+        catch (error) { await writer.query("ROLLBACK"); throw error; }
+        finally { writer.release(); }
+      } finally { if (lease) await leases.release(lease); }
+
+      let documentSelects = 0;
+      // Observe actual SQL without replacing either query results or the
+      // repository/service/scope implementation. Only DATA is coalesced.
+      const counted = { query: (text: string, values?: unknown[]) => {
+        if (text.includes("FROM execution_manager_model_revisions")) documentSelects++;
+        return domain.query({ text, values, query_timeout: 4000 });
+      } } as unknown as Pool;
+      const service = new ManagerModelService(counted, f.scopes, f.config);
+      const inflight = (service as unknown as { repository: {
+        flights: Map<string, unknown>; waitingReaders: number } }).repository;
+      // Separate connection avoids consuming the domain pool slot needed by
+      // the follower's fresh head/authority reads. Never lock a runtime DB.
+      const locks = new Pool({ connectionString: databaseUrl(domainName), max: 1,
+        connectionTimeoutMillis: 2000, query_timeout: 4000 });
+      let client: PoolClient | undefined;
+      const pending: Array<Promise<{ value: Awaited<ReturnType<ManagerModelService["read"]>> | null; error: unknown }>> = [];
+      const read = (principal = f.principal) => service.read(principal, "FLEET", { environment: "paper" })
+        .then(value => ({ value, error: null }), error => ({ value: null, error }));
+      try {
+        client = await locks.connect();
+        // Borrowed clients emit asynchronous transport/idle-timeout errors.
+        // Observe them without crashing the worker; query promises still
+        // reject normally, and finally destroys this exact test connection.
+        client.on("error", () => undefined);
+        const actual = (await client.query<{ name: string }>("SELECT current_database() AS name")).rows[0].name;
+        if (actual !== domainName || !/^elp204_manager_exec_[a-f0-9]{32}$/.test(actual))
+          throw new Error("TEST_ONLY_MANAGER_LOCK_DATABASE_INVALID");
+        await client.query("BEGIN");
+        await client.query("SET LOCAL lock_timeout='1s'");
+        await client.query("SET LOCAL idle_in_transaction_session_timeout='10s'");
+        await client.query("LOCK TABLE execution_manager_model_revisions IN ACCESS EXCLUSIVE MODE");
+        pending.push(read());
+        await expect.poll(() => inflight.waitingReaders, { timeout: 2000, interval: 10 }).toBe(1);
+        pending.push(read(followerPrincipal));
+        await expect.poll(() => inflight.waitingReaders, { timeout: 2000, interval: 10 }).toBe(2);
+        expect(inflight.flights.size).toBe(1); expect(documentSelects).toBe(1);
+        await expect.poll(async () => Number((await client!.query<{ n: number }>(`SELECT count(*)::int AS n
+          FROM pg_stat_activity a JOIN pg_locks l ON l.pid=a.pid
+          WHERE a.datname=current_database() AND a.pid<>pg_backend_pid() AND a.state='active'
+            AND a.wait_event_type='Lock' AND l.relation='execution_manager_model_revisions'::regclass
+            AND l.mode='AccessShareLock' AND NOT l.granted
+            AND a.query LIKE '%FROM execution_manager_model_revisions%'`)).rows[0].n),
+          { timeout: 2000, interval: 10 }).toBe(1);
+        if (fault === "grant-revoke") await new AccessRepository(ctx.pool).saveGrant({
+          ...f.grants[0], revoked_at_ms: Date.now(), revision: randomUUID() });
+        if (fault === "session-revoke" || fault === "leader-session-revoke") await auth.sessions.revokeSession(f.principal.session.sessionId,
+          "TEST_ONLY physical coalescer current-session race");
+        await client.query("COMMIT");
+        const outcomes = await Promise.all(pending);
+        expect(documentSelects).toBe(1); expect(inflight.waitingReaders).toBe(0); expect(inflight.flights.size).toBe(0);
+        for (const [index, outcome] of outcomes.entries()) {
+          if (fault === "current" || fault === "leader-session-revoke" && index === 1) {
+            expect(outcome.error).toBeNull();
+            expect(outcome.value!.page.returned_count).toBe(1);
+            expect(outcome.value!.items[0].alpha_id).toBe(OWN.alpha_id);
+            expect(outcome.value!.items[0].name).toBe("TEST_ONLY:own-public-name");
+            expect(JSON.stringify(outcome.value)).not.toContain("PRIVATE_PEER_MUST_NOT_LEAVE");
+          } else {
+            expect(outcome.value).toBeNull();
+            expect(outcome.error).toMatchObject({ code: "EXECUTION_READ_NOT_AVAILABLE", status: 404 });
+            expect(JSON.stringify(outcome)).not.toContain("own-public-name");
+          }
+        }
+        if (fault === "current") {
+          await service.read(f.principal, "FLEET", { environment: "paper" });
+          expect(documentSelects).toBe(2); // no completed-response/permission cache
+        } else {
+          await expect(service.read(f.principal, "FLEET", { environment: "paper" }))
+            .rejects.toMatchObject({ code: "EXECUTION_READ_NOT_AVAILABLE", status: 404 });
+          expect(documentSelects).toBe(1); // revoked requests never reach DATA
+          if (fault === "leader-session-revoke") {
+            const fresh = await service.read(followerPrincipal, "FLEET", { environment: "paper" });
+            expect(fresh.items[0].alpha_id).toBe(OWN.alpha_id);
+            expect(documentSelects).toBe(2); // unrelated current session stays usable
+          }
+        }
+      } finally {
+        try { if (client) await client.query("ROLLBACK"); }
+        finally {
+          // Destroy the test lock connection even after assertion/SQL failure;
+          // unfinished readers must settle before the fixture DB is dropped.
+          client?.release(true);
+          try { await Promise.all(pending); } finally { await locks.end(); }
+        }
+      }
+    }, 20_000);
 
   it("filters raw fleet before page/count; preserves exact own finances and hides shared-account totals/peers", async () => {
     const f = await fixture(), result = scopedManagerResponseSchema.parse(await f.read("ALPHA_FLEET", { limit: 1 }));

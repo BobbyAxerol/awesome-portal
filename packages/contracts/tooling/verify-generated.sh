@@ -39,6 +39,7 @@ generate_and_compare openapi/execution-scoped-realtime.openapi.json generated/ex
 node tooling/generate-execution-history.mjs --check
 node tooling/generate-execution-manager-scoped.mjs --check
 node tooling/generate-execution-scoped-records.mjs --check
+node tooling/execution-operation-reader.mjs --check
 node tooling/generate-execution-resource-scoped.mjs --check
 node tooling/generate-execution-retained-scoped.mjs --check
 node tooling/generate-execution-analytics-scoped.mjs --check

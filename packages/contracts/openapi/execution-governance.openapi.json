@@ -712,7 +712,7 @@
     "/api/v1/execution/operations/{operation_id}": {
       "get": {
         "operationId": "getPaperExitDecisionOperation",
-        "description": "Reads an actor/workspace-bound Portal decision operation after fresh gate authorization. Poll settlement; an ACK is not terminal success.",
+        "description": "Named operation detail. Exact ecm_ intents use current workspace/resource/environment audit authority and finite CommandStatus; GET never dispatches or reconciles. Existing Portal/F0 decision readers retain their gate checks and scoped-parent refusal. An ACK is not business APPLIED or venue FILLED. HTTP private, no-store.",
         "parameters": [
           {
             "$ref": "#/components/parameters/OperationId"
@@ -723,11 +723,21 @@
         ],
         "responses": {
           "200": {
-            "description": "Decision operation",
+            "description": "Authorized named operation detail; no generic parent or queue commissioning.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
                   "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ExecutionCommandOperation"
+                    },
                     {
                       "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1DecisionOperation"
                     },
@@ -739,11 +749,32 @@
                     },
                     {
                       "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionOperation"
+                    },
+                    {
+                      "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandStatus"
                     }
                   ]
                 }
               }
             }
+          },
+          "400": {
+            "description": "Typed current-authority refusal; no upstream or legacy fallback."
+          },
+          "401": {
+            "description": "Typed current-authority refusal; no upstream or legacy fallback."
+          },
+          "403": {
+            "description": "Typed current-authority refusal; no upstream or legacy fallback."
+          },
+          "404": {
+            "description": "Unknown and hidden commands have the same safe envelope."
+          },
+          "409": {
+            "description": "Typed current-authority refusal; no upstream or legacy fallback."
+          },
+          "503": {
+            "description": "Typed current-authority refusal; no upstream or legacy fallback."
           },
           "default": {
             "$ref": "#/components/responses/Problem"

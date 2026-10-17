@@ -113,6 +113,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Named operation detail. Exact ecm_ intents use current workspace/resource/environment audit authority and finite CommandStatus; GET never dispatches or reconciles. Existing Portal/F0 decision readers retain their gate checks and scoped-parent refusal. An ACK is not business APPLIED or venue FILLED. HTTP private, no-store. */
         get: operations["getExecutionCommandOperationF0"];
         put?: never;
         post?: never;
@@ -825,6 +826,190 @@ export interface components {
             created_at: components["schemas"]["DateTime"];
             updated_at: components["schemas"]["DateTime"];
         };
+        R1DecisionOperation: {
+            /** @constant */
+            schema_version: "governance.r1-decision-operation.v1";
+            operation_id: string;
+            approval_id: string;
+            /** @constant */
+            command_type: "GOVERNANCE_R1_DECISION";
+            /** @enum {unknown} */
+            status: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            /** @enum {unknown} */
+            verification_result: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            expected_approval_version: number;
+            evidence_set_hash: string;
+            /** Format: date-time */
+            planned_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            applied_at: string | null;
+            receipt: {
+                [key: string]: unknown;
+            } | null;
+        };
+        R2DecisionOperation: {
+            /** @constant */
+            schema_version: "governance.r2-decision-operation.v1";
+            operation_id: string;
+            approval_id: string;
+            /** @constant */
+            command_type: "GOVERNANCE_R2_DECISION";
+            /** @enum {unknown} */
+            status: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            /** @enum {unknown} */
+            verification_result: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            expected_approval_version: number;
+            evidence_set_hash: string;
+            /** Format: date-time */
+            planned_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            applied_at: string | null;
+            receipt: {
+                [key: string]: unknown;
+            } | null;
+            /** @constant */
+            decision_authority: "PORTAL_ONLY";
+            /** @constant */
+            source_side_effect_requested: false;
+        };
+        LiveDecisionOperation: {
+            /** @constant */
+            schema_version: "governance.live-decision-operation.v1";
+            operation_id: string;
+            approval_id: string;
+            /** @constant */
+            command_type: "GOVERNANCE_LIVE_DECISION";
+            /** @enum {unknown} */
+            status: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            /** @enum {unknown} */
+            verification_result: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            expected_approval_version: number;
+            evidence_set_hash: string;
+            /** Format: date-time */
+            planned_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            applied_at: string | null;
+            receipt: {
+                [key: string]: unknown;
+            } | null;
+            /** @constant */
+            decision_authority: "PORTAL_ONLY";
+            /** @constant */
+            source_side_effect_requested: false;
+        };
+        "$defs-Identifier": string;
+        Code: {
+            code: string;
+        };
+        NullableDateTime: components["schemas"]["DateTime"] | null;
+        DecisionReceipt: {
+            operation_id: components["schemas"]["$defs-Identifier"];
+            receipt_id: components["schemas"]["$defs-Identifier"];
+            /** @constant */
+            status: "SUCCEEDED";
+            review_id: components["schemas"]["$defs-Identifier"];
+            /** @enum {unknown} */
+            review_state: "EXTENDED" | "REJECTED_TO_PAPER_HELD" | "PROMOTION_AUTHORIZED";
+            review_version: number;
+            /** @enum {unknown} */
+            decision: "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
+            /** @enum {integer|null} */
+            extension_days: 14 | null;
+            extended_until: components["schemas"]["NullableDateTime"];
+            promotion_grant_id: components["schemas"]["$defs-Identifier"] | null;
+            /** @enum {unknown} */
+            next_eligible_action: "PLAN_SANDBOX_PROMOTION" | "RETURN_TO_PAPER_HELD" | "CONTINUE_PAPER_OBSERVATION";
+            /** @constant */
+            external_side_effect_requested: false;
+            decided_at: components["schemas"]["DateTime"];
+        };
+        PaperExitDecisionOperation: {
+            /** @constant */
+            schema_version: "governance.paper-exit-decision-operation.v1";
+            operation_id: components["schemas"]["$defs-Identifier"];
+            review_id: components["schemas"]["$defs-Identifier"];
+            /** @constant */
+            command_type: "GOVERNANCE_PAPER_EXIT_DECISION";
+            /** @enum {unknown} */
+            status: "PENDING" | "SUCCEEDED" | "EXPIRED";
+            /** @enum {unknown} */
+            verification_result: "PENDING" | "SUCCEEDED" | "EXPIRED";
+            blockers: components["schemas"]["Code"][];
+            warnings: components["schemas"]["Code"][];
+            expected_review_version: number;
+            evidence_set_hash: components["schemas"]["Hash"];
+            source_snapshot_hash: components["schemas"]["Hash"];
+            /** @enum {unknown} */
+            evaluation_state: "MET" | "UNMET" | "PARTIAL" | "STALE" | "UNAVAILABLE";
+            planned_at: components["schemas"]["DateTime"];
+            expires_at: components["schemas"]["DateTime"];
+            applied_at: components["schemas"]["NullableDateTime"];
+            receipt: components["schemas"]["DecisionReceipt"] | null;
+            /** @constant */
+            external_side_effect_requested: false;
+        };
+        CommandStatus: {
+            /** @constant */
+            schema_version: "portal.execution.command-status.v1";
+            command_id: string;
+            /** @enum {string} */
+            operation: "FUND" | "INITIAL_GRANT" | "TOP_UP" | "IMMEDIATE_DECREASE" | "RECALL_PARTIAL" | "RECALL_FULL" | "ADJUST_TARGET_BUDGET" | "SET_ROOT_LIMIT";
+            resource: {
+                /** @enum {string} */
+                kind: "ROOT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            profile_ref: string;
+            /** @enum {string} */
+            delivery: "PREPARED" | "SENDING" | "ACKNOWLEDGED" | "DELIVERY_UNKNOWN" | "FAILED_BEFORE_SEND";
+            business: {
+                /** @enum {string} */
+                state: "UNKNOWN" | "APPLIED" | "PARTIALLY_APPLIED" | "WAITING_ENCUMBRANCE" | "CANCELLED" | "PARTIALLY_APPLIED_CANCELLED" | "REJECTED";
+                receipt_ref: string | null;
+                source_event_ref: string | null;
+                revision: string | null;
+                amounts: {
+                    requested: string;
+                    applied: string;
+                    pending: string;
+                    cancelled: string;
+                    rejected: string;
+                } | null;
+            };
+            /** @enum {string} */
+            projection: "UNKNOWN" | "CURRENT" | "CATCHING_UP" | "STALE" | "UNAVAILABLE";
+            /** @enum {string} */
+            venue: "NOT_APPLICABLE" | "UNKNOWN" | "PENDING" | "ACKNOWLEDGED" | "FILLED" | "REJECTED";
+            /** @enum {string} */
+            next_action: "REVIEW_PREVIEW" | "QUERY_SAME_INTENT" | "REVIEW_RECEIPT" | "REVIEW_BLOCKER";
+            created_at_ms: number;
+            updated_at_ms: number;
+            /** @enum {string} */
+            authority: "OWNER_VERIFIED" | "TEST_ONLY";
+        };
         OperationAcknowledgeRequest: {
             /** @constant */
             schema_version: "execution.operation-acknowledge-request.v1";
@@ -1360,14 +1545,57 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Blocked operation with no relay receipt */
+            /** @description Authorized named operation detail; no generic parent or queue commissioning. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExecutionCommandOperation"];
+                    "application/json": components["schemas"]["ExecutionCommandOperation"] | components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"] | components["schemas"]["CommandStatus"];
                 };
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown and hidden commands have the same safe envelope. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

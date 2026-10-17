@@ -20,3 +20,24 @@ export const technicalDiagnosticsSchema = z.object({
     lag_ms: stamp.nullable(), last_error_code: text.nullable(),
   }).strict()).min(1).max(3),
 }).strict();
+
+/** Local technical observations only. Core scope is never replaced by the
+ * separately authorized projection-storage workspace. No source readiness. */
+export const executionScopedRuntimeManifestSchema = z.object({
+  schema_version: z.literal("portal.execution.runtime-manifest.v2"),
+  workspace_id: text,
+  read_scope: z.literal("TECHNICAL_AUTHORIZED"),
+  read_at_ms: stamp,
+  local_projection: technicalDiagnosticsSchema,
+  durable_mirror: z.array(technicalHealthSchema).min(1).max(3),
+}).strict().superRefine((value, context) => {
+  const local=value.local_projection.profiles, mirrors=value.durable_mirror;
+  const order=["paper","sandbox","live"];
+  if(local.length!==mirrors.length || local.some((item,index) => {
+    const mirror=mirrors[index];
+    return !mirror || item.environment!==mirror.environment || item.profile_id!==mirror.profile_id ||
+      index>0 && order.indexOf(item.environment)<=order.indexOf(local[index-1].environment) ||
+      (item.health==="NOT_PUBLISHED" ? item.lag_ms!==null : item.lag_ms===null) ||
+      mirror.observed_at!==null && mirror.observed_at>value.read_at_ms;
+  })) context.addIssue({code:z.ZodIssueCode.custom,message:"RUNTIME_PROFILE_CORRELATION_INVALID",path:["local_projection"]});
+});

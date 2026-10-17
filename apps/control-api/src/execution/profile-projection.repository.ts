@@ -246,6 +246,16 @@ export class ExecutionProfileProjectionRepository {
     environment: ProjectionEnvironment,
     profileId: string,
   ): Promise<ProfileProjectionRefreshHealth> {
+    return await this.refreshHealthObservation(workspaceId, environment, profileId) ?? healthyRefreshHealth();
+  }
+
+  /** Scalar persisted observation. Unlike the legacy scheduler convenience
+   * reader above, absence is never converted into an observed HEALTHY fact. */
+  async refreshHealthObservation(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+  ): Promise<ProfileProjectionRefreshHealth | null> {
     const result = await this.pool.query<{
       state: ProjectionRefreshState;
       consecutive_failures: number;
@@ -261,7 +271,7 @@ export class ExecutionProfileProjectionRepository {
       [workspaceId, environment, profileId],
     );
     const row = result.rows[0];
-    if (!row) return healthyRefreshHealth();
+    if (!row) return null;
     return {
       state: row.state,
       consecutiveFailures: row.consecutive_failures,

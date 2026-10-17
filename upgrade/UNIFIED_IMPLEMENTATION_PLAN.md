@@ -10991,3 +10991,38 @@ commit and cleanup are recorded by `profile-recovery-land-*` under the private
 20261017 commissioning receipt root. This is component delivery only, not
 02/06/10 full product/source/calibration acceptance.
 
+#### 14.13.1 Identity/recovery/Regime landing and next04 readers
+
+`be97b20ef994909b8f660712f1906a885f54495a`:23files,+2197/−87.
+Normal hook PASS:692contracts,4576API+3existing skips, APIbuild, scoped PGrestore.
+Exact terminal `profile-recovery-land-061404/controller.json` under private
+`/home/bobby/.local/state/portal-execution-elp210/20261017/`; log
+sha256`bde29a3f6832c07b40ee8427885d6475f0a971246be6f589de0bf9380597f3e2`.
+Source unchanged through gate;8protected runtime tuples unchanged; owned
+containers/network removed. No push/runtime/source/frontend change. This closes
+local foundations only, not genuine provider/config/complete06 or product exit.
+
+Next approved04 partial reader slice is documented in
+[positive-readers](execution_loop/evidence/ELP2-04/positive-readers.md): strict
+ecm_ operation parent reuses exact financial audit status; additive runtime V2
+preserves Core vs configured storage authority and old V1. Existing04-008/009
+remain open for all other parents/null aliases/source pins. Focused receipt now
+passes128/128 tests/build/restore, including four actual PG physical-coalescer
+current-authority cases under T04-11. Its independent-session mixed outcome is
+not cross-actor/source qualification. Final test-harness deadline/listener and
+static route/pin maintenance are covered by the single normal-hook landing;
+packet-containing commit can land only on exit0. Exact source/runtime/cleanup
+receipt is linked in that packet. Claude NOT_STARTED_BY_OWNER_DIRECTION / AWAITING_CONSUMER_REVIEW;
+backend continues independently within the assigned02–11 scope.
+
+Backend next06 follow-through is **Composition input→bounded off-request
+materializer→immutable publication→current-fenced API**, then Regime loader/
+materialization. Independent review confirms this is actual missing code, not
+calibration alone: existing publication/runtime slots accept only RAW/DIRECT_NAV
+and Manager summary fixes Composition/Regime to absence. Reuse existing full-
+denominator calculator; separate allocation/publication DTO, never PRB quality
+or source JSON `verified:true` as authority. Regime still needs independently
+pinned causal/reference/archive/binding inputs. Genuine source/config/issuer/
+budget/G2 and frontend acceptance stay open in the canonical census; no release,
+dev/main merge, source command, frontend assignment or runtime activation.
+
