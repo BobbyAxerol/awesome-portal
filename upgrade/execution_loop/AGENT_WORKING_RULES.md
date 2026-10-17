@@ -352,3 +352,236 @@ nhỏ/shared-files/docs-only dùng một writer; không spawn chỉ để tăng 
    resources đã xác định; giữ evidence/rollback/business data. Không hứa chạy
    nền sau turn nếu không có cơ chế task thực sự. Primary chịu trách nhiệm
    báo cáo cuối; Bobby vẫn duyệt từng phase tiếp theo.
+
+## 9. Frontend V2 — quy tắc thiết kế trước khi có HiFi (APPROVED 2026-10-17, trừ mục reader ở 9.8.2)
+
+Đề xuất của Claude, 2026-10-17. **Chưa có hiệu lực** cho tới khi Bobby ghi "duyệt" bên dưới; không thay §1–§8 và
+không mở quyền triển khai phase nào. Phân tích, kế hoạch, request nằm ở
+[FRONTEND_V2_METHOD_AND_PLAN_PROPOSAL_2026-10-17.md](FRONTEND_V2_METHOD_AND_PLAN_PROPOSAL_2026-10-17.md).
+
+Duyệt: `PENDING` (Bobby). Ngày duyệt/sửa đổi: —.
+
+### 9.1 Vì sao cần: V2 không có HiFi ban đầu
+
+Legacy HiFi từng là điểm so sánh. V2 chỉ có UX guide, hai ảnh lowfi (là input nội dung, không phải HiFi) và các
+contract/fixture backend. Vì vậy mỗi màn phải đi qua chuỗi cổng bên dưới; **wireframe được Bobby duyệt thay cho
+HiFi** ở bước so sánh.
+
+### 9.2 Chuỗi cổng cho mỗi màn (G0–G7)
+
+| Cổng | Sản phẩm | Ai duyệt |
+| --- | --- | --- |
+| G0 Pin | Ghi source SHA producer, generated type, fixture + hash, bundle/API (hoặc "không có"), làn bằng chứng | Claude |
+| G1 Screen Spec Card | Một trang/màn: câu hỏi người dùng cần trả lời, headline duy nhất, ≤6 KPI chính, field→contract (grain/unit/availability), action→capability→lý do khóa, điều hướng vào/ra, URL-state, 6 ô scale-refine (CLAUDE.md §8) | Bobby xem cùng wireframe |
+| G2 Wireframe | HTML/CSS xám dùng token hiện có, 1280 và 660, đủ state (§9.4); lowfi không bắt chước Excel | **Bobby duyệt theo nhóm màn** |
+| G3 Ma trận state + field | Mỗi ô trên wireframe ↔ field/state ↔ fixture ↔ copy key | Claude, Codex đối chiếu contract |
+| G4 Build | Component thuần trình bày, props = generated types, chạy ở lab `/execution/_fixtures`; test + baseline **chỉ cho group mới** | — |
+| G5 Receipt | Trình duyệt so wireframe đã duyệt: 1280/660, bàn phím/focus, overflow, console, request/idle polling, deep-link/back/reload | — |
+| G6 Đọc thật | Chỉ khi endpoint qualified; receipt ghi source/bundle/API pin; fixture PASS không thay | Codex qualify nguồn |
+| G7 Đóng | Hồ sơ phase (rules §7.4), request hai chiều cập nhật, debt có owner | Bobby |
+
+Không được nhảy cổng; phát hiện contract thiếu → request (§9.6), không bịa.
+
+### 9.3 Quy tắc dữ liệu (không đổi sự thật để UI đẹp)
+
+1. Mọi field hiển thị truy được về: guide → generated type → fixture canonical. Không type viết tay, không
+   `Record<string, unknown>` để vượt kiểm tra, không parse server prose.
+2. **Một component duy nhất render metric** (value/unit/currency/basis/window/availability/reason/confidence); không
+   nơi nào khác tự format số hoặc tự suy trạng thái. Decimal luôn string; null ≠ 0 ≠ "không áp dụng".
+3. Sort/filter/group/aggregate/đếm là server-side theo allowlist của contract; không sort một trang rồi gọi là toàn bảng;
+   không tính tổng client; không `global − visible`.
+4. Phân biệt bốn trục: environment/stage/lifecycle/economic partition; tiền chỉ cộng trong một partition; "All" chỉ là
+   điều hướng. Dòng tiền ≠ lãi; Initial/Added funds ≠ track record.
+5. Score/Regime không tính ở browser; band lấy từ server canonical; contribution không band; `policy_pending` là
+   state được thiết kế, không phải ô trống.
+6. Realtime = thông báo rồi refetch có kiểm soát; không polling thay stream; retained = không stream.
+7. Quyền: UI không suy từ ADMIN/tên/`grants.current`; nút khóa phải có lý do typed an toàn; không lộ hidden count
+   trong chữ, tooltip hay nút export.
+8. Mọi bản ghi/lệnh dùng receipt đa chiều (delivery / business / projection / venue); ACK ≠ APPLIED; unknown →
+   tra lại cùng key, không gửi key mới.
+
+### 9.4 Quy tắc thiết kế (sạch, dễ dùng, không nhét mọi thứ)
+
+1. Mỗi màn **một headline**, nhóm KPI ngắn (≤6), chi tiết nằm trong drawer/tab/expandable. Không mười thẻ ngang hàng.
+2. Mọi màn manager có **thanh ngữ cảnh** (phạm vi, environment/partition, cửa sổ + timezone, currency, as-of/freshness)
+   lưu trong URL; back/forward/reload không âm thầm reset.
+3. State bắt buộc có thiết kế + copy + focus: loading, authorized-empty, partial, stale, unavailable, denied, revoked,
+   resync, insufficient evidence, outcome unknown, disconnected, policy_pending. Màu không là tín hiệu duy nhất.
+4. Copy tiếng Anh, ngắn, có hành động tiếp theo; mã nội bộ/reason code/request ID chỉ ở chi tiết. Không dump enum
+   làm heading. Nhãn từ guide tiếng Việt cần bản tiếng Anh được duyệt trước khi dùng.
+5. Bảng: đủ cột yêu cầu, đơn vị/basis/precision rõ; sticky identity, chọn cột, header sort có `aria-sort`, chip bộ lọc
+   xóa từng cái/tất cả, group header, row expand; số không ellipsize; cuộn trong panel, không cuộn trang.
+6. Tham khảo cách tổ chức thông tin của sàn (tổng quan tài sản trước, rồi lệnh/lịch sử; account/environment luôn hiển
+   thị) như **ý tưởng bố cục**, không sao chép asset/ma trận quyền; quyền thật theo policy nội bộ.
+7. Dialog/drawer là modal đúng nghĩa (`role=dialog`, focus trap, Escape, trả focus) khi thiết kế mới; không sửa
+   drawer cũ ngoài phạm vi.
+
+### 9.5 Quy tắc code và kiểm chứng
+
+1. Reuse component đã duyệt trước; component mới cần Reuse report (v0.5 §11.3). Component/chart V1 yếu → ghi đề xuất
+   trong proposal cho Bobby, không tự thay giữa chừng.
+2. V2 viết ở file CSS riêng, **chỉ dùng `font: var(--exec-font-*)`** (không `font:` literal), không đổi token chung,
+   không đụng Research/Planning.
+3. Screen V2 là component thuần trình bày; fixture chỉ ở lab/test (gate `productBoundary` giữ nguyên). Nối product
+   route chỉ ở G6.
+4. Test: unit cho state matrix và metric component; Playwright cho lab group mới ở 1280 và 660 (+ bàn phím);
+   BFF double dựng từ fixture canonical, đánh dấu `BFF_DOUBLE`. Baseline: chỉ group mới, giải thích từng delta,
+   không nuốt regression khác; chạy trong image pinned.
+5. Mọi receipt ghi làn: `FIXTURE_LAB` / `BFF_DOUBLE` / `REAL_READ_RETAINED` / `REAL_READ_QUALIFIED`. Không gọi
+   fixture là real-API; không claim "backend sẵn sàng" khi `SOURCE_NOT_QUALIFIED`.
+6. Scale-refine 6 ô (CLAUDE.md §8) cho mỗi màn trước G7; hiệu năng đo bằng đo thật, không đoán.
+
+### 9.6 Phối hợp với Codex
+
+- Claude gửi request ở dạng ID `ELP2-REQ-FE-nnn` (locator, UI bị chặn, expected semantics, fixture, done-when);
+  Codex ghi trạng thái trong packet của phase sở hữu; một ledger, không nhân bản.
+- Trước mỗi gói: đọc handoff/commit mới, xin pin SHA producer, ghi vào G0. Contract mới → regenerate bằng lệnh của
+  contracts, không sửa file generated.
+- ACK của consumer = `ACCEPTED` hoặc `CHANGES_REQUESTED` kèm locator/receipt; viết file không phải ACK.
+- Claude chỉ làm backend khi Bobby giao kèm; Codex chỉ đổi UI đã duyệt khi có handoff ghi nhận.
+- **Hạ cánh code:** không ff-merge vào cây tích hợp khi cây đó có thay đổi chưa commit của bên kia; thống nhất lượt
+  hạ cánh. Không `git stash` chung.
+
+### 9.7 Phân loại màn (từ khảo sát kho frontend, chưa phải thiết kế)
+
+| Màn | Phân loại | Ghi chú nguồn gần nhất |
+| --- | --- | --- |
+| M01 Manager Overview | NEW (tái dùng phần) | `/execution` Command Center có triage, FleetHealth, SourceHealth; thiếu NAV/flows/score/chart cấp quỹ |
+| M02 Portfolios Directory | NEW (bảng mỏng) | `PortfolioList` 132 dòng, không sort/filter |
+| M03 Alpha Fleet | REFINE | Lọc client, grain `alphaId`, chưa QBTS/sort/group/URL |
+| M04 Portfolio 360 | REFINE + tab mới | Scope bar chỉ là span tĩnh; thiếu Allocations/Accounts/Risk/People |
+| M05 Alpha 360 | REFINE | Thiếu Research Evidence, Regime, score, timeline xuyên stage |
+| M06 Account 360 | REFINE (khớp nhất) | Thiếu identity logical/physical, margin, attribution |
+| M07 Deployment detail | PRESERVE (refine nhỏ) | Breadcrumb dùng id thô |
+| M08 Archived Alphas | NEW | Không có route đọc backend |
+| M09 Operations & Decisions | REFINE + gộp | Thiếu trục projection (catching_up/resync) |
+| M10 Profile & Access | REFINE (ngữ nghĩa) | Thiếu self-visibility, field-policy, delegation ceiling |
+
+### 9.8 Port-first, fixture phải qua cổng schema, parity khi có dữ liệu thật (APPROVED, trừ khoản 2)
+
+1. Mọi màn V2 chỉ gọi một interface `ManagerApi` (mỗi method = một `operationId` sinh ra). Hai adapter: `fixture`
+   và `http`. Component không biết làn nào. Không import fixture từ product graph (gate `productBoundary` giữ nguyên).
+2. Mọi response đi qua một reader ở ranh giới (kiểm enum, decimal, null/availability; không sửa). Fixture và thật
+   dùng **cùng** reader. Cách cài (reader viết tay hay `ajv` theo JSON schema đã publish) do Bobby/Codex chọn.
+3. Fixture bốn tầng: L0 canonical (nguyên văn Codex) · L1 ma trận state (biến đổi hợp lệ, phủ mọi tổ hợp availability ×
+   status × reason × freshness × completeness) · L2 quy mô (200 hàng, nhiều nhóm, cursor, 1 MiB) · L3 âm tính. Mọi
+   fixture FE tự thêm phải qua cổng conformance với schema đã publish; fixture L0 không bao giờ bị sửa.
+4. Có profile fixture **"thưa thực tế"** (nhiều null/unavailable) phản ánh trạng thái nguồn; wireframe phải ổn khi KPI
+   chính là `unavailable` có lý do.
+5. Khi một endpoint qualified: chụp response đã che → fixture `REAL_RECEIPT` → chạy lại test component → so cấu trúc với
+   synthetic; chênh lệch sửa fixture, không sửa dữ liệu thật.
+6. Mỗi gói pin SHA bốn nguồn: Portal producer, TS execution, PM, Edge. Truy cập HK chỉ-đọc, chỉ khi được giao; không
+   Docker/DB/ghi/build.
+
+### 9.9 Source Truth Board (APPROVED)
+
+Một tài liệu sống chung: field Portal → contract Portal → Edge → TS/PM nguồn → trạng thái (`EXISTS_MOUNTED` /
+`SOURCE_DARK` / `MISSING`) → owner → request ID. Frontend đọc nó ở G0/G1 mỗi màn; Codex cập nhật khi nguồn đổi. Lát dọc
+"đọc thật" đầu tiên đi từ field có khả năng sớm nhất (định danh, orders/fills/positions) — xem proposal Phần B §13.
+
+## 10. Làm song song với Codex: đồng bộ mỗi round, review hai chiều, sáng tạo có kiểm soát (APPROVED 2026-10-17)
+
+Yêu cầu của Bobby, 2026-10-17. Bổ sung cho §7 và §9.6; không thay thế. Mục tiêu: hai agent chạy song song mà không
+lỗi thời, không giẫm lên nhau, và mọi phát hiện của một bên đến được bên kia trong round kế tiếp.
+
+### 10.1 Round-start sync (bắt buộc, trước khi làm bất kỳ gì trong round)
+
+Mỗi round — kể cả round chỉ trả lời câu hỏi — bắt đầu bằng đúng chuỗi này, ghi kết quả vào
+[FRONTEND_BACKEND_SYNC.md](FRONTEND_BACKEND_SYNC.md) §0–§1 **trước khi** báo cáo:
+
+1. **Đọc nhánh của bên kia (chỉ đọc):** `git log` + `git diff --stat` của `docs/research-loop-plan` (và nhánh
+   worktree của Codex nếu có) từ pin lần đọc trước; Codex đọc `claude/fe-parity` tương tự. Không checkout, không
+   sửa, không stash chung.
+2. **Đọc phần review + request của bên kia:** hộp thư đến (request `ELP2-REQ-*` gửi cho mình, review `ELP2-REV-*`)
+   trong packet các phase và trong sổ đồng bộ. Không chỉ đọc handoff của phase đang làm — đọc lại cả phase đã đóng
+   (CLAUDE.md §7.9).
+3. **Phân loại mục mới:** `ACT_NOW` (chặn việc đã được giao hoặc sửa sai sự thật đã dùng) · `NEXT_GATE` (xử lý ở G0
+   của gói kế) · `INFO`. Mục `ACT_NOW` được xử lý hoặc báo Bobby ngay đầu round; không để chìm.
+4. **Làm mới pin nguồn:** TS execution, PM, Edge (SSH chỉ-đọc, **chỉ khi gói được giao cho phép**). Hai pin khác nhau
+   cho cùng một nguồn → ghi `UNRECONCILED` và đọc lại trước khi dùng ngữ nghĩa đó.
+5. **Không có gì mới vẫn phải ghi** "Đã đối chiếu, không phát sinh" kèm pin; bỏ mục này = round chưa bắt đầu.
+
+Nếu pin cũ hơn nhánh tích hợp thì **rebase trước G0** (§9.6); dữ liệu/field lấy từ pin cũ không được dùng làm sự thật.
+
+### 10.2 Round-end write (bắt buộc, trước khi báo Bobby)
+
+Cập nhật sổ đồng bộ §3 (request FE→BE mới/đã giao) và §4 (review mới); trong packet phase nêu mục "Request hai
+chiều" theo §7.4(7). Báo cáo Bobby theo template 7 mục của CLAUDE.md §7.4 và **trỏ tới file**, không thay file bằng
+chat (CLAUDE.md §7.7). Điều Codex cần biết ở round kế tiếp phải nằm trong file, không chỉ trong tin nhắn.
+
+### 10.3 Review hai chiều (phản biện chi tiết, không chỉ chấp nhận)
+
+- **FE review backend** từ góc người dùng contract: ID `ELP2-REV-<n>`, có severity `BLOCKER|MAJOR|MINOR|NOTE`, locator
+  (file:line hoặc schema path), quan sát thực tế vs kỳ vọng, hệ quả lên UI/UX, đề xuất nhỏ nhất. Mỗi lần backend
+  giao contract/handoff mới → FE review trong round gần nhất có thể, không đợi được giao phase. Review này chỉ ghi,
+  **không** là ACK; ACK vẫn cần assignment (§9.6).
+- **Backend review FE** việc dùng dữ liệu: field bị diễn giải sai, state bị bịa, copy hứa hơn dữ liệu cho phép.
+- `BLOCKER` buộc bên nhận trả lời (chấp nhận / bác bằng bằng chứng / hoãn có owner) trong round kế tiếp; `MAJOR` trong
+  gói liên quan; `MINOR/NOTE` ghi nhận. Bác bỏ phải có bằng chứng, không "đã đủ rồi".
+- Review không đổi ownership: FE không sửa file backend/contracts; BE không sửa UI đã duyệt. Muốn đổi → request.
+
+### 10.4 Mẫu request / review
+
+```
+ID: ELP2-REQ-FE-nnn (hoặc ELP2-REV-nnn)    Pri: P1|P2|P3 / Severity
+Từ → Đến:  Claude → Codex        Phase/Màn:  UXM-xx / M0x
+Locator:  <file:line | schema path | endpoint>
+Quan sát (có pin SHA):  ...       Kỳ vọng / ngữ nghĩa cần:  ...
+UI bị chặn / hệ quả:  ...         Đề xuất nhỏ nhất:  ...
+Fixture cần (kịch bản §2.2 trong sổ):  ...    Contract/test ảnh hưởng:  ...
+Done-when:  ...                   Status:  OPEN→ACKNOWLEDGED→IN_PROGRESS→DELIVERED→VERIFIED→CLOSED
+```
+
+### 10.5 Giữ nhánh thẳng hàng
+
+- Mỗi bên chỉ ghi trong nhánh của mình; hạ cánh vào cây tích hợp theo lượt đã thống nhất (§9.6). Cây tích hợp có thay
+  đổi chưa commit của bên kia → không ff-merge.
+- Trước commit: fetch + so với `docs/research-loop-plan`; docs-only hạ cánh được sau hook, code Execution phải chạy
+  `scripts/refresh-release-integrity-ledgers.sh --write` trước.
+- Commit message nêu ID request/review liên quan. Codex nhắc ID khi giao; FE nhắc ID khi ACK.
+- Không dựa vào chat cũ làm sự thật: pin (SHA + ngày) ghi trong sổ; đã quá 24h hoặc nhánh đã tiến → đọc lại.
+
+### 10.6 Claude là lead UI/UX: sáng tạo trong khung, đề xuất chứ không chờ hỏi
+
+- Theo guide v1.1 và thành phần hiện có; **đề xuất cải thiện chủ động**: mỗi màn trình hai phương án khác bản chất
+  (không phải hai biến thể trang trí) kèm khuyến nghị, lý do, dữ liệu dùng, chi phí/nguy cơ.
+- **Độ lệch khỏi guide = `DEVIATION`**: ghi lý do (người dùng làm được việc gì tốt hơn), dữ liệu nguồn, ảnh hưởng
+  accessibility/hiệu năng; chỉ làm khi Bobby duyệt. Sáng tạo không bao giờ đổi sự thật, grain, quyền hay ngữ nghĩa
+  thiếu dữ liệu (§9.3).
+- Sáng tạo phải thấy được bằng wireframe + trạng thái thưa/lỗi, không chỉ trạng thái đẹp (§9.8.4).
+- Gợi ý thay biểu đồ/component V1 chưa tốt ghi ở mục "Suggest" của gói, không tự thay trước khi duyệt.
+
+### 10.7 Hỏi Bobby: chỉ khi cần, và phải đủ
+
+Chỉ hỏi quyết định thực sự của Bobby (phase, phạm vi, đánh đổi sản phẩm). Mỗi câu hỏi nêu: bối cảnh, các lựa chọn,
+hệ quả từng cái, **khuyến nghị kèm lý do**. Không hỏi việc có mặc định hợp lý hoặc tự kiểm chứng được.
+
+### 10.8 Kinh tế subagent: giao đúng việc, tái dùng thay vì sinh mới (Bobby, 2026-10-17)
+
+Cái gì tối ưu được bằng subagent thì **phải** giao, để giữ tiến độ và thời gian mà không đốt token của luồng chính.
+Bổ sung cho §8 (độc lập, bounded, một người tích hợp); không mở rộng quyền ghi hay phạm vi phase.
+
+1. **Nên giao:** quét/đọc nhiều file hoặc nhiều worktree rồi trả kết luận (digest nguồn TS/PM/Edge qua SSH chỉ-đọc, đối
+   chiếu `git log` ở đầu round, đọc evidence dài); sinh và kiểm fixture theo schema; rà conformance/drift; review
+   độc lập một diff khi muốn một cái nhìn không bị neo vào kết luận của mình; các nhánh việc độc lập chạy song song.
+2. **Không giao:** việc vài lệnh hoặc đã biết đích; quyết định thiết kế/IA; viết contract chung; ACK/review chính thức
+   (người ký chịu trách nhiệm); kiểm chứng chính kết luận của mình bằng agent được nhồi sẵn kết luận đó.
+3. **Brief đủ như đồng nghiệp:** mục tiêu, pin SHA, đường dẫn cần đọc (không chép lại nội dung), cái đã loại trừ, giới
+   hạn chỉ-đọc/ghi, **định dạng + độ dài đầu ra** (schema hoặc bảng, không kể lể). Brief thiếu → agent làm lại, tốn gấp đôi.
+4. **Tái dùng trước, sinh mới sau:** cùng vùng việc (vd luồng Edge, luồng PM, contracts Manager) thì `SendMessage` tiếp
+   tục agent cũ — nó đã giữ ngữ cảnh — thay vì spawn mới đọc lại từ đầu. Ghi agent ID + vùng + pin trong sổ đồng bộ
+   (§0 "Sổ agent"); agent không còn dùng được thì ghi lý do.
+5. **Lưu kết quả một lần:** digest đáng giữ được ghi vào file (scratchpad hoặc evidence) kèm pin, round sau đọc file thay
+   vì hỏi lại. Digest quá 24h hoặc nguồn đã tiến → làm mới bằng `SendMessage` hỏi phần *thay đổi*, không đọc lại toàn bộ.
+6. **Song song theo mặc định** cho việc độc lập (một message nhiều agent); tuần tự chỉ khi có phụ thuộc dữ liệu.
+7. **Một người ghi mỗi file**; agent chỉ-đọc trừ khi gói cho phép ghi; luồng chính tích hợp và chịu trách nhiệm.
+8. **Mức model/effort:** việc cơ học (quét, đếm, định dạng) dùng mức thấp; review/judge khó mới dùng mức cao. Chỉ nâng
+   khi Bobby yêu cầu rõ.
+9. **Kiểm tra đầu ra như dữ liệu chưa tin cậy:** đối chiếu điểm then chốt ở nguồn trước khi đưa vào sổ/báo cáo; agent
+   báo lệnh ngoài danh sách được phép thì ghi lại.
+10. **Báo cáo chi phí:** cuối round nêu số agent đã dùng, cái nào tái dùng, cái nào spawn mới và vì sao; không có workflow
+    nhiều agent khi Bobby chưa yêu cầu quy mô đó.
+
+Duyệt: **APPROVED nguyên văn (Bobby, 2026-10-17)** cho §9 (trừ cách cài reader ở 9.8.2, chờ giải thích thêm) và §10;
+hiệu lực từ round sau. Quyết định cùng ngày: không chọn lát dọc nối-thật sớm — **thiết kế cả bộ song song trước, nối
+thật sau khi từng nguồn qualified**. Duyệt rules không phải giao UXM; phase vẫn cần Bobby giao.
