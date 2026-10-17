@@ -16123,4 +16123,179 @@ rollback releases. Full08 remains NOT_MET; same original08 implementation
 continues with exact four-table held bridge/authenticated Core composition,
 not a new phase, blanket dependency wait or request for repeated approval.
 
+**Owning Core integration reservation11:59UTC / before edits:** root reserves
+only `current-human-native-boundary.patch` and
+`current-human-native-boundary.spec.ts` in the existing private owning-provider
+directory for the existing Research reviewer. Source baseline is the actual
+Research current-human-mutations/pool/access-service files at f1f5fc7d; preserve
+all concurrent Manager/score/contract/journal work. Reuse the qualified native
+terminal rather than a second ledger. Optional hooks must carry server-owned
+intent/binding, lock BEFORE application and record AFTER original receipt in
+the SAME owning transaction; settle only after physical outcome/pool release.
+FINISHED replay must not acquire/ENTER a new source attempt. Legacy hook behavior
+and financial/auth issuance paths remain unchanged. Source-I/O never runs under
+Core row locks. Reviewer writes private patch/test definitions only, no test job,
+transfer, canonical edit, Git, credentials or runtime action; root reviews and
+integrates. One actual bounded Core pool, authenticated PM transport, final READ
+delivery and connected drills remain part of original08, not inferred from this
+reservation or component results. Focused resource envelope and new source-copy
+scope must be recorded before any subsequent execution; no fresh tests yet.
+
+**Four-table bridge focused validation preparation12:05UTC:** finish owned
+preparation without waiting for the independent Research patch. Use a new
+`/tmp/epg10-08-held-HK-*` source-only test directory on HK, never a runtime
+checkout/mount. Mechanically copy the already pinned29native files, the original
+three lifecycle files plus reviewed narrowing patch and three new bridge/test
+definitions; do not modify canonical PM or transfer this new set to SGP. Run only
+new bridge unit/actual-PG classes plus qualified root-read units as affected
+regression; reuse unchanged221/35 receipts without counting them again. Cached
+worker p184-r59/9150385e and PG15/6343bdc8; <=300s lease, worker1CPU/512MiB,
+PG1CPU/1GiB,256MiBtmpfs data, internal network and exact private DB alias.
+No host ports, operational volume/credentials/data, builds/pulls/installs or
+benchmark/capacity claim. Fresh user/root locks and actual foreign jobs are
+mandatory; record real first failures, pins, counts, runtime tuples/disk, then
+remove only own workers/network/source copies. No target is started yet.
+SQL status is metadata-only; lost issue-ACK recovery is not falsely promoted to
+a reconstructed held proof. Actual provider/recovery/transport/installer and
+connected acceptance remain owned original08 work.
+
+**Fresh concurrency/source audit12:16UTC / no new test result:** HK's foreign
+window was created12:03:47 until14:33:47 after the reviewer's12:02:01 clear-lock
+read. Private draft edits continued12:04–12:05 before detection; source work
+stopped on detection, and no CPU-heavy job/build/test/runtime action started.
+At12:16 the user lock is absent but its actual measurement container
+`b423ce74ac9d` / `market_data_service_p184w` is still running. Do not equate
+missing lock with measurement completion or start an HK test alongside it.
+Source-only preparation in this separate Edge/private namespace may resume;
+normal hooks/tests wait for the actual measurement to end. SGP's identified
+Research controller3845109/start571462886 ended with a peer TypeScript build
+failure (`manager-score-runtime.ts:193`, TS1005); preserve its staged source,
+index and failed result. A new PM correctness window12:15:22–12:20:22 owns SGP.
+
+The new four-table bridge currently has15unit+8actual-PG definitions, AST/hash
+review only, NOT_RUN. The intended focused profile also includes45 unchanged
+root-read unit regressions, expected68 total; do not count previous221/35
+results again. The private HK runner's actual-job check must distinguish the
+explicitly reviewed normal TS/DL/Portal operational service set from foreign
+measurement/test jobs; the18 protected Portal tuples alone are not the whole
+host. Unknown containers still refuse execution; never remove the guard.
+The proposed new SGP copy scope is29 canonical inputs+3 old lifecycle originals
++4 new bridge/patch/test inputs with runner/hash manifest, and has a separate
+pending source-transfer question. The earlier31-file approval is already used,
+qualified and cleaned; no new source transfer is inferred from it. Reuse HK
+preparation if its own measurement finishes first.
+
+Readonly audit correction: an initial suspicion that business-root maintenance
+uses policy/owner no-op UPDATE was false. Actual `_install` uses policy
+`FOR UPDATE` and users `FOR SHARE`; native history SQL does not add such an
+UPDATE. Leave guards unchanged on this basis. This is static review, not a
+product failure or measured acceptance. New private drafts/source copies remain
+active preparations; no cleanup/deployment/production write or push/merge.
+
+**Dependency-independent preparation12:20UTC:** materialize exactly35source
+files in `/tmp/epg10-08-held-HK-rR2hr0Ci/source` (29 canonical unchanged inputs,
+three old lifecycle originals with the reviewed narrowing patch applied only to
+these copies, and three new bridge/test definitions). Final source-pins.json
+contains all35 SHA256s; new bridge e3085a9a…, patched lifecycle fd40e8c2…;
+Python AST review confirms15+8 new definitions, NOT_RUN. Fix the private runner
+to pin the explicit38-service operational baseline:18 protected Portal plus
+20 named existing TS/DL services. Require exact image/config/start/restart tuples
+and no missing/unknown running container before admission. In particular the
+still-active `market_data_service_p184w` is explicitly excluded and refuses
+execution even with no lock file. No catch-all allowlist or measurement bypass.
+Runner AST/baseline shape STATIC_PASS only; expected actual test count fixed68.
+Private Core boundary patch/spec ownership is now the single bounded
+`epg08_core_boundary` reviewer; only the two already reserved files, root owns
+all promotion/test/journal/runtime work. SGP has another live Research normal
+hook window12:18:03–12:58:03; preserve its index/source and do not overlap jobs.
+No own test/lease/container/network/image/build/cache or runtime mutation was
+created by this preparation. Source/HK runner remain active retained inputs.
+
+**Runtime classification correction / execution entry12:23UTC:** read the
+current TS owner journal, not just container liveness. Its FINAL clean campaign
+was ABORTED/TAINTED, lock released12:08:55; the guarded run classifies coincident
+Codex command executions as foreign activity. Do not reuse it as clean capacity
+evidence or claim read-only execs were harmless to that campaign. The retained
+writer `market_data_service_p184w` is the operational service on a44349a1,
+started12:04:20, not a currently running load controller. Direct process review
+finds no matching P184 campaign/foreign-activity/phase3 measurement controller.
+Reconcile the private baseline to exactly40 existing operational services,
+including this writer and omitted `qdl_v2_stable_candidate-market_cache-1`;
+pin exact image/config/start/restart tuples. This supersedes the provisional
+38-service/exclude-writer classification, not any active-window prohibition.
+Run the already declared68-case HK correctness profile only after fresh
+user/root lock and unknown-job checks, <=300s, no new build/install/host ports or
+operational data. SGP stays untouched, so no new source-transfer approval is
+consumed. Record all failures, cleanup and actual40-tuple comparison. Nothing
+here certifies TS/DL capacity, native production authority or connected08.
+
+**HK attempt122240 / before apparatus correction:** all68cases collected,
+60PASS/0FAIL/8ERROR/0SKIP, NOT_PASS. The eight PG cases failed at shared setup:
+TCP5432 refused after a Unix-socket-only pg_isready accepted the temporary init
+server. Product PG bodies did not run. Fix only the runner's readiness probe to
+TCP127.0.0.1 plus exact disposable DB; retain this original receipt/log/JUnit
+and add bounded own-DB startup diagnostics on failures. Worker/PG/internal
+network cleaned,40operational tuples unchanged. Retry the SAME68case profile
+after fresh guards, no product/schema/oracle change or omitted negatives.
+
+**HK final component qualification122315:**68PASS/0FAIL/ERROR/SKIP in17.200s,
+15new bridge units+8actual-PG cases+45root-read unit regressions. Same35source
+pins, product bridge e3085a9a… and narrowed lifecycle fd40e8c2… unchanged after
+the readiness-only apparatus fix. Receipt185de425a3d6f4fb472e292ee62d4de9fc94b5a70220d53c6f38ec8209e1d288,
+JUnit5b201ea2f675e1c2e988016d2d7e2efe39c4c73a2819a30b52c5c30adb047514.
+Actual native four-table ALWAYS guards, policy/selected-user/head revoke block,
+unaffected Stan/Bobby scope, old RR/CAS race, separate SELECT/control roles,
+catalogue/ACL/SETROLE/replication bypass denials, expiry/UNKNOWN quarantine,
+same-key metadata status and injected issue/ENTER/terminal post-COMMIT ACK loss
+execute. Ephemeral TEST_ONLY terminal signer proves protocol only, not actual
+Core final delivery/COMMIT. No default grant or historical fact was created.
+Both attempts' exact worker/PG/internal network removed;40operational
+image/config/start/restart tuples unchanged. Final shared free238455607296→
+238404947968B is not exclusive test consumption; first attempt shared values
+and full35source pins/receipt hashes are retained in
+[bounded qualification](evidence/execution-edge-v1_2/EPG10-08/business-root-held-qualification.json).
+No new image/build/cache, port, operational data/schema/identity/grant write or
+service restart. Retain only active private35source copies432,137B (exact byte
+count in receipt), source-only drafts/harness and bounded receipts for the
+ongoing original08 integration; clean copies after coherent promotion/review.
+Local admission is not durable global admission; lost issue-ACK/restart recovery,
+authenticated provider/Manager-domain grant/final-send/SSE composition and exact
+reviewed installation/connected drills remain owned unfinished work. Full08
+NOT_MET, connected09 NOT_STARTED; no push/merge or next-phase activation.
+
+**Coherent evidence landing boundary:** only this main-plan continuation and
+`business-root-held-qualification.json` enter the Edge commit, Bobby identity,
+on existing `feat/execution-edge-upgrade-v1_2` from5af7a449. Verify bounded
+JSON/receipt/JUnit/source pins, AST and `git diff --check`; do not stage the
+unrelated score feasibility review (109659d2…) or private/canonical PM/Research
+source. Normal Git hook configuration is unchanged (this checkout currently
+uses default hooks containing samples only); no hook bypass, broad build or
+whole-worktree acceptance is claimed. Canonical Portal remains54c6f5f3 and the
+active feature worktrees/stable HK/SGP release locations remain those recorded
+in current-correspondence-runtime.json; fresh40tuple checks prove runtime
+non-mutation for these tests, not that the parallel TS release never advanced.
+Shared active/rollback images including r59/r49 remain; no image/cache created
+and no shared pruning. Original08 implementation continues; the obsolete SGP
+source-copy proposal is not a blocker after successful HK qualification.
+
+**Core private handoff / source-only,12:29UTC:** reviewer returns exactly the
+two reserved outputs: `current-human-native-boundary.patch` f245ea3470f404a1cdbe7bab41dbc12510d1010ef8231a2d5dcb8782c72ebd8e
+and `current-human-native-boundary.spec.ts`0a150f2d05cbe1dbe5b0a42644af5b897f18c580c494609fc0fd8873ffbde5d3,
+both beneath the active private owning-provider directory. Root read/review and
+`git apply --numstat` STATIC_PASS:5files217+/50− against actual Research
+f1f5fc7d. Optional actual-coordinator/wrapper/service/pool seam preserves legacy
+defaults, server-owned binding and one-shot prepare, locks before application,
+records after original receipt+FINISHED in the same transaction and settles
+only after physical outcome/client release. Native FINISHED replay uses DB-only
+immutable receipt, no new acquire/ENTER/apply.35definitions (23coordinator,
+12pool) and compilation NOT_RUN; driver doubles are not actual-PG evidence.
+No canonical patch, source transfer, Core deployment or new resource was made;
+reviewer is terminal, no child job left running. Root owns qualification and
+authenticated acquisition/settlement, durable restart/lost-ACK/global admission,
+temporal-expiry ordering and Manager READ/final-send/per-frame composition.
+These remain explicit original08 implementation tasks, not external debt or
+already completed production guarantees. Local Node toolchain/cached Node
+image is unavailable; SGP peer source/index/window must be rechecked before
+any approved connected/correctness execution. No09 connected transition.
+
 
