@@ -1,0 +1,116 @@
+{
+  "schema": "epg10.current-provider-commissioning-intake.v1",
+  "observed_utc": "2026-10-17T03:24:34Z",
+  "provenance": "READ_ONLY_SOURCE_AND_RUNTIME_METADATA_NOT_CONNECTED_AUTHORITY_ACCEPTANCE",
+  "status": "ACTUAL_PROVIDER_IMPLEMENTATION_REQUIRED",
+  "phase": "Original approved EPG10-08 round2; commands07/08 separately; not a new phase",
+  "approval": "Bobby approves READ-TRUST first, separate command transport, parallel03/01/06, then connected09->10->11; no new generic approval needed",
+  "feature": {
+    "baseline": "f26657aa2423db502ac07be2dc14d6fddade64ba",
+    "branch": "feat/execution-edge-upgrade-v1_2",
+    "worktree": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+    "product_code_changes": 0,
+    "deployed": false,
+    "unrelated_untracked_review": "PRESERVED"
+  },
+  "pm": {
+    "commit": "5f0d60b24207479477096789fe4f53c1bc8c49b6",
+    "branch": "feat/portfolio-account-v1_1-parallel",
+    "worktree": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+    "source_scan_scope": "Current services Python definitions and config/deploy/compose/scripts wiring; not a proof of absence in an arbitrary external secret store",
+    "reusable_implemented": ["Human mTLS HTTP candidate", "OperatorSession through-COMMIT lease composition", "Current report/economic readers", "Private full-outcome command handler and durable original intent"],
+    "missing_actual_provider_ports": [
+      "workload_authority.lease(verified_human) -> validated WorkloadAccess",
+      "report_authority.lease(human, workload) -> current read/receipt provider",
+      "read_access_for(conn, verified_context, reference, operation) -> ReportAccess with accepted current ReadPolicy",
+      "receipt_access(conn, verified_context, kind, target, operation, key, scopes=resolved_scopes) -> current ReadPolicy"
+    ],
+    "additional_history_only_port": "source_access_for(conn, verified_context, exact_intent, HISTORY) -> current ReadPolicy; not a prerequisite for ordinary manager read",
+    "decisive_pins": {
+      "services/portfolio_management/read_authority.py": "adbe8cba5b8affaff5972ab3c6cf3f274f6c7bcfdd93d6a0f628e5d5854b8d44",
+      "services/portfolio_management/operator_runtime.py": "ad260baa12bf2f003dc06862c71faf1fcf5a15d3e4a19d3b4f2e1d41731cebc9",
+      "services/portfolio_management/edge_command_handler.py": "957755dec22461377db219e3522f97f76b33e0bab7f2dd51c201b672cf0fec2d",
+      "contracts/baseline/portfolio-account-v1_1/pma11-03-04-current-read-handoff.json": "b859ce2cd3a3e6b3dbbccae947018021b02179f39248e860454048db44127c49",
+      "contracts/baseline/portfolio-account-v1_1/pma11-13-economic-history-current-read.json": "99cbe06704764a7aaa5bb1a96212b4e1a4d1a6900e283dfd75ea79ade64078e8",
+      "contracts/baseline/portfolio-account-v1_1/pma11-14-private-edge-composition.json": "dcd21897d43c1c0957a1ec4ab3e3676f30b0662c15107a9677a224739c405ee3"
+    },
+    "composition_packet_is_owner_wip": true,
+    "duplicate_status_metadata": "FIXED_IN_OWNER_WIP; status_operation now distinct; not an Edge gate",
+    "network_command_mounted": false,
+    "new_command_http_wire": false,
+    "qualified_runtime_cells": [],
+    "owned_worktree_untouched": true
+  },
+  "research": {
+    "commit": "9a3a27c8680451c59fcbeb82d3fdb576a2a54f58",
+    "branch": "docs/research-loop-plan",
+    "source": "bobby@178.128.51.255:/home/bobby/portal-research",
+    "clean_at_observation": true,
+    "commissioning_packet": "upgrade/execution_loop/evidence/ELP2-10/commissioning-followthrough.md",
+    "commissioning_packet_sha256": "f924f1f84d19e84c8497af7867ff5d327b270c1ce417fa1e445fa113d1d28aaa",
+    "decisive_pins": {
+      "apps/control-api/src/execution-v2/access-trust.ts": "996c7f1ba60fae998b3c85d11d005d707b8b638d6920c0d5c8d814735c4ad0eb",
+      "apps/control-api/src/execution-v2/manager-runtime.ts": "c449b48410b95aa9994665dd3282a8e37d08796889dbe2c030c5e0d05b13d725",
+      "apps/control-api/src/execution-v2/publication-adapter.ts": "cef1bb57a3eddcebe3888fffebda4b326d01fb3632a1d325cca2669310d8ab4c",
+      "apps/control-api/src/main.ts": "d9383c44b73cbd6eaccfe986a1737487611c8d032f7f64df1227274a39738b34"
+    },
+    "human_budget_coexistence": "OPEN",
+    "source_scan_scope": "apps/control-api/src verifiedHumanMapping definitions, consumers and forwarding wrappers; production bootstrap/factory injection",
+    "missing_implementation": "Source-backed AccessTrustProvider.verifiedHumanMapping -> {ts_user_id, revision}; private production adapter/factory using actual accepted mapping/current authority",
+    "existing_injection": "AppModule and createControlApiApp accept executionAccessTrust; production main.ts does not inject an actual source-backed implementation",
+    "reusable_implemented": ["Current identity/session and root/delegated receipt coordinators", "One-view issuance/recovery fencing", "AccessTrust async ABI and injection seams"],
+    "human_candidate_only": "POST /internal/elp210/current-human/enter and /resolve prove Portal human/session lifecycle, not TS mapping or workload/app/field read grants",
+    "secret_values_read_or_printed": false,
+    "runtime_provider_installation_certified": false,
+    "owned_worktree_untouched": true
+  },
+  "parallel_inputs": {
+    "ts_commit": "f4ebd6e74b09c8bcb5423fe4942024ff147c373e",
+    "native_publication_rust_sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+    "native_publication_sql59_sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+    "native03_fence": "DECISIVE_BYTES_UNCHANGED_NO_NEW_QUALIFIED_OWNER_RETURN",
+    "data_layer_canonical": "/home/bobby/data_layer main@5bf5cd540498b82959342c7cfb2ebeaac3007426",
+    "load01_06": "Existing instrumentation/isolated preparation complete; actual connected target/numeric bounds/coexistence return still required, not invented",
+    "hk_foreign_measurement_until_utc": "2026-10-17T05:20:16Z",
+    "heavy_jobs_launched": 0
+  },
+  "verification": {
+    "new_product_tests_run": 0,
+    "actual_revoke_cache_cursor_sse_cases": "NOT_RUN_MISSING_ACTUAL_PRODUCER",
+    "new_peer_tests_inherited": 0,
+    "historical_codec_receipt": "../EPG10-07/pm-source-qualification.json",
+    "historical_codec_passed": 75,
+    "historical_independent11_passed": 535,
+    "counting": "Historical source-only results not rerun, added together or promoted to connected acceptance"
+  },
+  "runtime_and_cleanup": {
+    "protected_tuple_reference": "../EPG10-11/round2-intake.json#/runtime",
+    "hk_protected_tuples_unchanged": 18,
+    "sgp_protected_tuples_unchanged": 5,
+    "active_edge_image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+    "active_edge_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+    "canonical_source": "/home/bobby/.worktrees/portal-execution-manager-v2 feat/manager-v2-paper-read@54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+    "stable_release": "/home/bobby/portal-main-release main@533162635f56584d630e3d971d77d50860595f15",
+    "hk_images_build_cache": "102images/30.57GB;371BuildKit/28.3GB",
+    "sgp_images_build_cache": "328images/88.82GB;3774BuildKit/195.9GB",
+    "hk_free_observed_bytes": 238643978240,
+    "sgp_free_observed_bytes": 167506739200,
+    "cleanup": "NO_ACTION_NEEDED_NO_DISPOSABLE_RESOURCES_CREATED",
+    "retention": "All7active Portal worktrees, active release, explicitly named rollback and08 valid PKI retained; no shared prune",
+    "metadata_attempt": "Initial sandbox sudo unavailable; approved read-only host Docker inspection succeeded",
+    "production_mutations": 0,
+    "financial_effects": 0,
+    "secret_or_grant_changes": 0
+  },
+  "decision": {
+    "owned_runnable_binding": "NONE_FROM_CURRENT_RETURN; concrete actual provider required, not an additional Edge codec",
+    "next_action": "PM implement/return actual workload and read-policy producer; Research implement source-backed verified mapping/private AccessTrust composition; use existing source seams and accepted r1",
+    "then_edge": "Bind actual CurrentReadGrantProvider, run original08 current revoke/cache/cursor/SSE/export and unaffected-scope controls; commands separately require authenticated submit/status/recovery port",
+    "after_applicable_returns": "Connected09 -> exact-scope10 shadow/cutover/rollback -> actual11 operational acceptance",
+    "full_connected_acceptance": "NOT_MET",
+    "new_phase": false,
+    "repeated_approval_required": false
+  },
+  "pushed": false,
+  "merged": false
+}

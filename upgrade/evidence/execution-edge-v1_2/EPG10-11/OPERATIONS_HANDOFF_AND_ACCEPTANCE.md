@@ -5,7 +5,8 @@ Full connected acceptance NOT_MET; no production activation/sign-off.
 Latest17/10/2026 follow-through: new qualified PM formats consumed; owned Rust
 source codec COMPLETE with75PASS/strict Clippy/fmt and cleanup. Full exit remains
 NOT_MET; next gap08 trust commissioning, separately07 actual transport/08-command.
-See [current scoped receipt](../EPG10-07/pm-source-qualification.json) before the
+See [current commissioning receipt](../EPG10-08/commissioning-intake.json) and
+[scoped codec receipt](../EPG10-07/pm-source-qualification.json) before the
 historical `resumed_intake`/`blocked_audit`. Original approval stays valid.
 Bobby approved independent11 and original10 round2 on actual owner returns.
 Current original10/11 round2 continuation is also approved; no repeated generic

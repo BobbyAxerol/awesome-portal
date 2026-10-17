@@ -51,6 +51,12 @@ Chúng không thay thế phase hoặc exit gate trong
   codec75PASS/strict Clippy/fmt/cleanup COMPLETE. Independent11 COMPLETE/full10/11
   NOT_MET. Next original08 trust, separately07 mounted transport/08-command COMMIT,
   then connected09→10→11; no new phase/general approval (main plan§23.20.2).
+  Fresh [08 commissioning intake](../evidence/execution-edge-v1_2/EPG10-08/commissioning-intake.json)
+  /main plan§23.20.3 pins PM5f0d60b2 and Research9a3a27c8: actual workload/app/
+  field providers and source-backed verifiedHumanMapping require producer
+  implementation, not a switch or more Edge codecs. Human mTLS/session/read
+  wrappers already exist; use them unchanged. Current provider binding is not
+  executable from returned inputs; full connected gates remain NOT_MET.
   Historical08 completion round after earlier deferral recorded PM
   `c401a023` still publishes no actual human/workload/COMMIT provider and Research
   `169195ca` remains unqualified/UNMAPPED. Single owner packet now specifies

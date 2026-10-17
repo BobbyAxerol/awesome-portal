@@ -5,8 +5,8 @@ Authority: [main journal §23.17](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_A
 EDGE08 and BE§§3–5/9.2/14.2/ELP2-02/03/04/09. This is the single08
 security/owner return, not another roadmap or permission to change a peer.
 
-Final recorded status: **IN_PROGRESS / TLS_RUNTIME_QUALIFIED /
-ACTUAL_AUTHORITY_PUBLICATION_MISSING** (completion request resumed12:55UTC).
+Current recorded status: **IN_PROGRESS / TLS_RUNTIME_QUALIFIED /
+ACTUAL_PROVIDER_IMPLEMENTATION_REQUIRED** (original round2 remains approved).
 **Parallel-round disposition:** independent Edge implementation/tests/TLS/
 cleanup COMPLETE; **three integration debt items OPEN for round2**, tracked in
 main phase08: `08-READ-TRUST`, `08-RESEARCHER-POLICY`, `08-COMMAND-COMMIT`.
@@ -30,7 +30,30 @@ TS commit. Paper/sandbox/live are structural scopes; Canary is a live stage.
 
 ## Current round2 delta —17/10/2026, Asia/Saigon
 
-Latest09:48: Research clean30162a3f coordinates delegated receipt authority;
+**Latest10:24:** current [commissioning intake](commissioning-intake.json)
+pins PM5f0d60b2 and Research clean9a3a27c8. The next work is concrete producer
+implementation, not just deployment/configuration or another generic approval:
+
+| Owner | Reuse already implemented | Exact remaining implementation / return |
+| --- | --- | --- |
+| PM current read authority | `operator_session.py`, `read_authority.py`, current report/economic readers and human mTLS candidate | Implement/return actual `workload_authority.lease(verified_human) → WorkloadAccess`; `report_authority.lease(human, workload) → current provider` with `read_access_for → ReportAccess/ReadPolicy` and `receipt_access → ReadPolicy`. Pin accepted workload/app/field/membership revisions, real authority/revoke mechanism and exact target. A wrapper/DTO or human ENTER is not this producer. |
+| Research identity/current policy | AccessTrust async ABI, existing identity/session and root/delegated receipt coordinators | Implement source-backed `verifiedHumanMapping → {ts_user_id, revision}` from verified accepted identity receipts, not display names/roles. Compose the private AccessTrust adapter using existing AppModule/createControlApiApp injection. Return authenticated provider/trust/config references and exact current read-operation/field/scope correspondence; secret values stay private. |
+| Edge binding | Existing `CurrentReadGrantProvider`, scoped reads/cache/cursors/export/SSE and revoke harness | Once the above actual provider is executable, bind it, exercise real revoke/cache/cursor/SSE plus manager/unaffected-scope positives and r1 privacy negatives. Measure actual authority→last disclosure; unavailable/unknown mapping denies. No new codec or synthetic fixture can replace these inputs. |
+
+`source_access_for(..., HISTORY)` is additionally required only when the
+economic-history lane is selected; ordinary manager read commissioning must
+not wait for that lane, command07 or the native journal fence. Research's
+candidate human `/enter` and `/resolve` are not the full read-policy provider.
+PM's actual network command mount remains absent and separately governed;
+its private handler/full outcome/byte-binding source must not be rewritten.
+The owner corrected the duplicate composition `status` key to `status_operation`
+in PM WIP (dcd21897…); the earlier metadata report is historical, not an open
+Edge gate. No peer file was changed here. Full08/09/10/11 connected NOT_MET;
+no owned dependent binding is executable from the presently returned inputs.
+The precise next work belongs to PM/Research producer implementation in this
+same approved round2, followed immediately by Edge binding/drills—not phase12.
+
+**Historical09:48:** Research clean30162a3f coordinates delegated receipt authority;
 current commissioning packet e1410ca5… still marks human/budget/coexistence OPEN.
 PM6e0424b7 has qualified HTTP delivery binding, owning outcomes and private
 current-authorized command composition. Edge has now completed the runnable

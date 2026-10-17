@@ -10149,14 +10149,17 @@ runtime prohibition is superseded only for that named repair, with strict
 verification, valid rollback/disable-path and shared-host locks preserved.
 No financial command activation, arbitrary grants, peer-history rewrite,
 unapproved business field matrix or09…11 activation follows from this approval.
-**Latest owner disposition (2026-10-16,12:55 UTC):** Bobby requested completion
-of this same08 after the earlier PM-integration deferral. Status is now
-**RESUMED / ACTUAL_AUTHORITY_PUBLICATION_MISSING**, not pending generic phase
-approval. Fresh PM `c401a023` explicitly publishes neither the runtime human/
-workload provider nor COMMIT-lease proof; Research `169195ca` still has no
-production current-policy provider and reports UNMAPPED identity. Complete
-all owned independent work; do not manufacture those producer facts. Exact
-producer actions and split read/command acceptance are in the single owner packet.
+**Latest owner disposition (2026-10-17):** Bobby approves08-READ-TRUST first,
+07/08-command separately, parallel03/01/06 then connected09→10→11; no new
+approval or phase. Fresh PM5f0d60b2 and Research9a3a27c8 now contain the human
+transport, leased-reader/composition and receipt coordination source, but lack
+concrete workload/app/field providers and verifiedHumanMapping implementation.
+Status: **RESUMED / ACTUAL_PROVIDER_IMPLEMENTATION_REQUIRED**, not merely a
+deployment switch. Exact injection ports, producer tasks and bounded receipts
+are recorded in [§23.20.3](#23203-approved-round2--current-provider-commissioning-intake-2026-10-17)
+and the [08 owner packet](evidence/execution-edge-v1_2/EPG10-08/SECURITY_CONTRACT_AND_OWNER_RETURN.md).
+Read does not wait for command07, native publication or the whole PM roadmap.
+Historical16/10 pins below do not override this fresh disposition.
 **Owned package:** QUALIFIED_ISOLATED_SOURCE_DARK; full runtime security acceptance
 is not closed. Eight formal families have limited isolated proof; T08-03 remains
 partial without actual business authority. No production family is certified.
@@ -10213,8 +10216,8 @@ read. Read acceptance need not wait for07-command or the whole PM13/P184 campaig
 
 | Debt | Owner / đầu vào còn thiếu | Ghép nối và exit vòng2 | Chỉ chặn |
 |---|---|---|---|
-| 08-READ-TRUST | TS/PM: actual current-policy provider + verified identity/revisions; Research: concrete AccessTrust composition/mapping | Edge bind provider thật; chạy actual revoke/cache/cursor/export/SSE và unaffected-scope controls; T08-02/08/09 liên quan | Nghiệm thu/mở đường đọc phụ thuộc trust này, không chặn harness/fixtures/isolated recovery của09 |
-| 08-RESEARCHER-POLICY | Owner/Research/TS: exact accepted fields, precision/history/export/SSE và current linked identities | Ghép field/link policy; chạy restricted negative/positive controls và no-hidden-aggregate checks của T08-07/08/09 | Chỉ researcher lane, không chặn manager all-business read |
+| 08-READ-TRUST | PM: concrete workload_authority/report_authority leased providers, not their existing wrappers; Research: source-backed verifiedHumanMapping and actual AccessTrust composition | Edge bind provider thật; chạy actual revoke/cache/cursor/export/SSE và unaffected-scope controls; T08-02/08/09 liên quan | Nghiệm thu/mở đường đọc phụ thuộc trust này, không chặn harness/fixtures/isolated recovery của09 |
+| 08-RESEARCHER-POLICY | r1 field approval CLOSED; Research/TS còn bind current linked identities, exact accepted field revision và financial projection vào provider thật | Ghép field/link policy; chạy restricted negative/positive controls và no-hidden-aggregate checks của T08-07/08/09; r1 HISTORY/EXPORT/STREAM vẫn denied | Chỉ researcher lane, không chặn manager all-business read |
 | 08-COMMAND-COMMIT | TS/PM: actual workload/human lease xuyên outer COMMIT, protected-owner/Stan authority;07 trả command port hợp lệ | Ghép command authority; correlated revoke-first/COMMIT-first với native effect/receipt; T08-01/03 liên quan | Chỉ command activation/connected certification, không chặn read hoặc test status/ambiguity cô lập |
 
 Debt IDs ở bảng là tracking items, không phải phase con. Vòng2 tiếp tục chính08
@@ -14600,6 +14603,110 @@ reservation until12:15:39Asia/Saigon respected; no local cargo/pytest/full
 workspace verification launched. Scoped Rust75/Clippy/fmt ran on SGP under
 our own lease, not HK and not a full-monorepo/connected acceptance claim.
 Normal configured local commit, no hook bypass, push, merge or runtime deploy.
+
+### 23.20.3 Approved round2 — current-provider commissioning intake (2026-10-17)
+
+**Entry / goal / status:** Bobby approves completing08-READ-TRUST first,
+07/08-COMMAND-COMMIT separately, TS03/connected01/06 in parallel, then actual
+09→10→11. Continue these original phases, no new phase or repeated general
+approval. Entry Edgef26657aa; unrelated untracked feasibility review preserved.
+Before changing bindings, refresh Research/PM actual composition, verified
+identity/current-provider input and authenticated transport, not merely old
+unconfigured manifests. Identify and execute every independently runnable owned
+item; never replace a missing current provider with a successful human lease.
+
+**Governing guides / scope:** original [08](#epg10-08-plan), [07](#epg10-07-plan),
+[10 owner returns](evidence/execution-edge-v1_2/EPG10-10/SHADOW_CUTOVER_AND_OWNER_RETURN.md),
+EDGE07–11, BE§3/9.2–9.4/14.2 and REVIEW§3. Existing r1 field approval and08 TLS
+repair remain accepted. Read-only partner source/config-reference discovery and
+owned binding/harness/doc work are in scope; partner WIP, financial effects,
+made-up user mappings/grants, native publisher edits, deployment/cutover and
+secret disclosure are not. Authentication, human/workload/app/field/membership
+authority and original source key/digests remain separate. Bind only a genuine
+compatible provider; no permission TTL cache, role fallback or auto-resend.
+
+**Verification / rollback / decision boundary:** pin fresh commits and decisive
+file hashes; use narrowly scoped compatibility/current-revoke tests when real
+inputs make them runnable. A foreign HK measurement reservation currently runs
+until12:20:16Asia/Saigon; no HK build/cargo/pytest/load. Test-only SGP work, if
+needed, first reserves a free measurement lease and exact isolated target.
+Record actual tests separately from peer/historical evidence; runtime truth is
+immutable image/config/service metadata, not feature branch HEAD. Roll back
+only owned additive unmounted changes, never native facts or existing runtime.
+Before closeout partition runnable versus genuine external inputs and report
+the exact owner/action, affected gap and next permitted step. Full connected
+acceptance remains NOT_MET unless actual connected cases pass. No push/merge.
+
+**Actual result / bounded owner return10:24Asia/Saigon:** the fresh PM and
+Research audit establishes a producer implementation dependency, not a generic
+approval, secret-value request or merely an unflipped deployment flag. PM's
+`OperatorSession` calls injected `workload_authority.lease(human)`;
+`CurrentReadAuthority` calls injected `report_authority.lease(human, workload)`.
+No concrete current workload/app/field provider or runtime construction was
+found in the inspected service/config graph. Existing wrappers/readers and
+human HTTP client are implemented; do not ask PM to rewrite them. The source
+handoff explicitly has default provider NONE_FAIL_CLOSED and mapping UNBOUND.
+Research9a3a27c8 has real root/delegated receipt and issuance coordination, but
+`verifiedHumanMapping` appears only as interface/null default/consumer/forwarder
+in production src; AppModule/createControlApiApp injection is available, not a
+source-backed production adapter/factory. Generic mounted secrets references
+do not establish installation; no private values were read to invent a mapping.
+
+**Exact runnable/blocked partition:** owned fresh source/ABI/hash audit, current
+status reconciliation and a single precise PM/Research commissioning request
+are finished in this slice. No further actual Edge binding/test is executable
+from the present producer return; new dummy grants/fixtures/codecs would not
+close it. PM must supply the concrete current workload + read/receipt policy
+provider; Research supplies verified accepted Portal↔TS mapping and private
+AccessTrust composition. The [08 packet](evidence/execution-edge-v1_2/EPG10-08/SECURITY_CONTRACT_AND_OWNER_RETURN.md)
+lists exact callbacks and return. `source_access_for(..., HISTORY)` blocks only
+that history lane; ordinary manager read need not wait. Human ENTER/TLS is not
+read permission. Field matrixr1 and08 PKI repair are not open approval gates.
+Once those real inputs exist, owned bind/revoke/cache/cursor/SSE tests run
+immediately in original08. Separately PM must mount authenticated private
+command submit/status/recovery before07/08-command drills; codec/ledger/full
+source handler already exist. Native03 publisher files remain unchanged,
+despite TSf4ebd6e7 progress elsewhere.01/06 actual connected targets/budgets are
+still separate; prepared instrumentation is not an unfinished owned task.
+
+**Evidence / tests:** [bounded current intake](evidence/execution-edge-v1_2/EPG10-08/commissioning-intake.json)
+pins sixPM inputs, fourResearch inputs, current source packet and both native
+publisher bytes. PM owner WIP fixes duplicate `status` to `status_operation`;
+strict unique-key JSON parses and flags remain network/runtime false. Historical
+75codec and535independent11 counts are not new tests, not summed or elevated.
+New product/connected tests0, authority/source/financial calls0; no cargo,
+pytest, image build or load under the foreign HK FINAL measurement lock.
+
+**C4 / source-release-runtime:** read-only18HK+5SGP protected image/config/start/
+restart tuples match their retained baseline exactly; feature not deployed.
+HKfree238,643,978,240B,102images/30.57GB+371BuildKit/28.3GB;
+SGPfree167,506,739,200B,328images/88.82GB+3774BuildKit/195.9GB. No disposable
+container/image/cache/target/lease was created, so cleanup NO_ACTION_NEEDED;
+no shared prune/removal. All7active feature worktrees, current release and
+named rollback/valid08PKI retained. Canonical manager54c6f5f3/stableSGPmain
+53316263/active Edge8814cd2a image d6aa7a51… unchanged. Initial sandbox sudo
+metadata attempt was unavailable; approved read-only host Docker inspection
+succeeded. No peer source/DB/grant/secret/TLS or operational runtime mutation.
+
+**Recommendation / phase gate:** do not start another phase or claim acceptance.
+The next concrete work is PM/Research's current provider/mapping implementation
+and installation on the agreed target, then Edge08 read binding/drills; keep
+07/08-command and03/01/06 separate. After their applicable returns, run connected
+09→scoped10 cutover/rollback→11. Full08/09/10/11 connected exit NOT_MET;
+independent implementation remains COMPLETE. Bobby's approval is sufficient
+for this existing round; the remaining dependency is real producer code/input,
+not another owner yes/no or a request to send credentials into chat.
+
+**Metadata/commit gate:** strict unique-key JSON and64KiB bounds pass for new
+intake8,441B, historical codec7,133B and old round2 intake65,410B. Six current
+PM input hashes and four historical tested Edge code/lock hashes match;651local
+Markdown file links resolve/0missing. First audit regex did not understand an
+existing valid angle-bracket path with spaces; corrected the checker, not that
+link or product code, then reran the whole metadata check successfully.
+`git diff --check` PASS. These are metadata checks, not product/security/capacity
+tests. Bobby identity verified; commit only seven owned tracking Markdowns and
+two bounded JSON receipts. Preserve unrelated review. No full-monorepo hook/
+verification PASS claimed; no hooks bypassed, push or merge performed.
 
 
 

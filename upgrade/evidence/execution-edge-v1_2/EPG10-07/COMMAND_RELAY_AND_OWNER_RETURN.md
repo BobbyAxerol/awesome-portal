@@ -39,10 +39,15 @@ and retention still required, but whole PM/TS upgrade is not a prerequisite.
 Then affected09→10scoped cutover/rollback→11 acceptance, in the original round.
 Full connected07/08/10/11 remains NOT_MET. Original approval remains valid.
 
-Peer metadata observation: `pma11-14-private-edge-composition.json` repeats the
-root `status` key (qualification and operation); PM owner should rename its
-status-operation entry. We do not consume that ambiguous key or modify PM's
-file. Full-outcome wire has its own schema/strict decoder; no extra Edge gate.
+Fresh10:24Asia/Saigon follow-through: PM5f0d60b2 still requires concrete
+workload/app/field provider implementations, not just injected wrappers.
+Its private `EdgeCommandHandler` has no mounted authenticated network wire;
+commands remain a separate07/08-COMMAND-COMMIT return, not a read prerequisite.
+See [current08 intake](../EPG10-08/commissioning-intake.json).
+The earlier duplicate root `status` metadata observation is resolved in PM
+owner WIP: `status_operation` is present, strict unique-key parse passes,
+file SHA256dcd21897…. Peer file untouched. Full-outcome wire retains its own
+schema/strict decoder; no new Edge gate or repeated implementation request.
 
 ## Implemented boundary
 

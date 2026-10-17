@@ -13,6 +13,12 @@ rows below still identify actual connected inputs, not a request to redo those
 source components. Next gap08-READ-TRUST commissioning, separately07 transport/
 08-command COMMIT; parallel03 native publication/01–06 connected load. Then
 affected09→10→11, no new phase or repeated general approval. Full exit NOT_MET.
+Fresh10:24 [08 intake](../EPG10-08/commissioning-intake.json) clarifies that
+PM's actual workload/app/field providers and Research's verifiedHumanMapping
+still need concrete producer implementations. Existing injected wrappers and
+human-only candidate are not enough to commission by changing a flag. Exact
+producer callbacks/return are consolidated in the08 packet; no duplicate wire
+or new Edge fixture is needed before that real input exists.
 
 ## Implemented boundary
 

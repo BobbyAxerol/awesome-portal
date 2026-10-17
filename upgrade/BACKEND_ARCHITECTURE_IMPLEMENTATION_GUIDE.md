@@ -752,7 +752,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
   composition now consumed; Edge pure PM source codec75PASS/strict Clippy/fmt and
   scoped cleanup COMPLETE. Full10/11 NOT_MET. Next08 real trust commissioning,
   separately07 mounted transport/08-command COMMIT; then connected09→10→11.
-  No12/new approval; current scoped receipt linked from main plan§23.20.2.
+  No12/new approval; codec receipt linked from main plan§23.20.2. Fresh
+  commissioning intake§23.20.3 pins PM5f0d60b2/Research9a3a27c8: concrete
+  workload/app/field producer and source-backed verifiedHumanMapping are still
+  missing implementations, not merely deployment flags. Existing human TLS/
+  session/read wrappers are implemented; do not rewrite them or invent grants.
+  See [current08 intake](evidence/execution-edge-v1_2/EPG10-08/commissioning-intake.json)
+  and its single owner packet for exact callbacks and split read/command work.
+  Actual connected08→09→10→11 NOT_MET; no new product test/runtime mutation.
   Historical08 completion round after the earlier PM deferral recorded
   PM`c401a023` still explicitly NOT_PUBLISHED for runtime authority/COMMIT proof;
   Research`169195ca` has no production provider and UNMAPPED identity. The single
