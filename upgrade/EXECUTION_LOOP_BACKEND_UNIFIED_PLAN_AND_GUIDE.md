@@ -10194,6 +10194,10 @@ exact evidence scope and cleanup:
 [native READ listener](evidence/execution-edge-v1_2/EPG10-08/native-business-read-provider-qualification.json).
 Exact [qualification](evidence/execution-edge-v1_2/EPG10-08/current-correspondence-qualification.json)
 separates fixture corrections, draft/source landing and actual authority.
+Runtime/installer continuation: **235PASS/0FAIL/ERROR/SKIP**,54exact source pins,
+new29cases including9fresh-PG; still UNMOUNTED, no actual authority installed.
+See [bounded installation evidence](evidence/execution-edge-v1_2/EPG10-08/native-business-read-installation-qualification.json)
+and latest§23.20.7; full08NOT_MET,09connectedNOT_STARTED.
 Historical16/10 pins below do not override this fresh disposition.
 **Owned package:** QUALIFIED_ISOLATED_SOURCE_DARK; full runtime security acceptance
 is not closed. Eight formal families have limited isolated proof; T08-03 remains
@@ -16537,5 +16541,282 @@ connected revoke/cache/cursor/SSE drills. Do not call these config-only/external
 debt, claim08closed or start09connected. SGP peer job/index and the unanswered
 exact two-file Core transfer request affect only their actual dependent jobs;
 they do not defer independent owned source/harness preparation.
+
+**Fresh owning target and parallel audit13:05–13:08UTC:** read-only2s/250ms
+transaction verifies the SAME `live_data_executor` database/container08df6d6d,
+image6343bdc8, volume`trading_system_pgdata`, cluster identifier hash9e0c2ad6…
+and postmaster2026-09-15T04:32:04.569576Z. `public.ts_users`,
+`pm_membership.policy`, `pm_business_read.heads`, `pm_core_authority.epoch` are
+still ABSENT; no rows/grants/DDL changed. First Docker mount formatting probe
+failed before SQL (bind mounts have noName); corrected metadata probe and actual
+READONLY transaction completed/ROLLED_BACK. No guessed/test DB substitution.
+PM peer000cedcd economic-range landed between own entrydb95be4c and89293d0d;
+own source commit's actual parent is000cedcd59c38718fcdff3bd72888035f6d57698.
+Its source/contracts/journal remain represented, not overwritten or staged as
+our work. Research remainsf1f5fc7d,52peer-staged paths; do not touch its index.
+
+Read-only PM audit confirms no native production loader/factory/identity-owner
+bootstrap currently exists. Reuse BusinessRootReadMaintenance.install/status;
+minimal dependencies are exact users99, only schema+policy lines4–12 of the
+membership candidate, business-root-read/fence/guards candidates. Do NOT invoke
+the full shared migration chain/101+12 or manufacture subset migration success.
+Expected source/catalogue/role/function pins must come from an independently
+reviewed artifact, not auto-blessing observed production. Retained admission
+still fails closed at its explicit cap; there is no implemented purge policy.
+
+Read-only Research audit identifies current-human-recovery-client.ts bounded
+TLS POST as the outbound reuse seam; mapping has installation/admission guards.
+No shared outbound primitive exists yet. Nested native reply is NOT compatible
+with the deliberately flat parseCurrentHumanWire; do not widen legacy decoding.
+Core Manager domain grant is absent; do not fake ROOT_SCOPE/non-NULL entity
+census or historical TsMembershipAcceptance. Existing execution.read RS256 and
+reverse-human candidate issue are not the native human signer composition.
+
+**Next private single-writer reservation / before code:** in the SAME active
+owning-provider directory, Research reviewer may prepare ONLY
+`native-business-read-client.ts`, `native-business-read-client.spec.ts`,
+`native-business-read-client-reuse.patch`. Patch may extract one existing fixed
+route bounded pinned-POST byte primitive and mechanically reuse it from recovery
+and mapping; preserve each legacy codec, purpose, correlation, error and guard.
+New native codec is separate, duplicate-aware/UTF8/byte/depth/key bounded with
+closed shapes; original flat wire remains flat. Native client only consumes
+genuine caller-supplied signed delivery assertions, never creates reverse human
+leases/identities/grants/signers. Exact six lifecycle routes/allmode pins/decimal
+BIGINT strings; source-only proofs cannot authorize Core final delivery. Mark
+definitions NOT_RUN; no shared/canonical/index edit, job, build, transfer,
+credential, runtime or commit. Root reviews/pins/qualifies and owns integration.
+
+PM reviewer may prepare ONLY `native_business_read_runtime.py`,
+`test_native_business_read_runtime.py`, `native_business_read_installation.py`,
+`test_native_business_read_installation.py` in that directory. Reuse the exact
+existing observer/fence/bridge/provider/listener and maintenance seams; no new
+authority engine, grant model, auto-mapping, default policy/limits/trust, whole
+migration chain or arbitrary SQL. Private approved target/identity/domain/source/
+catalogue/role/issuer/terminal pins and numeric bounds must be explicit; absent
+or mismatching input denies construction/install. Installer is inert on import,
+bounded, idempotent/status-aware; preserve uncertainty and immutable history,
+not drop/restore grants. Candidate guards own BEGIN/COMMIT: do not silently nest.
+Do not install or fabricate a production retained-history purge. New definitions
+remain NOT_RUN until root review and fresh guarded isolated qualification.
+This is owned original08 implementation, not a delivered runtime/config-only
+debt. Root alone selects/reviews the eventual real change package and egress
+composition; no new phase/push/merge/connected acceptance follows.
+
+**Continuation / actual guard reconciliation14:38UTC:** the interrupted SSH
+read did not yield a receipt; do not claim its source inspection completed or
+restart a test based on that observation timeout. A bounded replacement SSH
+read confirms Research now `0aad2697fe5f47977b1379329c3167f12aea3849`
+with six peer score-path modifications. Preserve those paths/index and refresh
+the exact affected transport bases before qualification. The first two bounded
+replacement invocations failed locally (missing session helper/host argument),
+before SSH/source I/O; the corrected read succeeded. No test or deployment is
+claimed for those failed metadata commands.
+
+At13:54UTC the actual Bobby guard was foreign `claude-s100-final-clean3`,
+13:23:36–15:23:36UTC; root guard absent. No EPG10-08 test/build/container/source
+transfer started under it. Both reviewers were told to freeze writes/jobs and
+perform read-only review. The lock alone is not evidence that a campaign ran
+or passed. Bounded process/runtime observations are not capacity acceptance.
+Fresh actual sudo read **14:38:05UTC** finds BOTH guards ABSENT (owner released
+before deadline; expiry was not assumed) and no matching campaign runner.
+The prior 40-tuple baseline needs reconciliation: the TS operational writer was
+recreated by its owner during that window. Never silently bless current tuples
+or reuse the old125809 equality receipt as proof of a new run.
+
+**Owned review findings / before the next code slice:** the installer draft's
+schema transaction and independently transactional guards are separate durable
+stages. If stage1 committed but stage2 lost its acknowledgement, merely seeing
+`pm_core_authority` and rerunning the final verifier cannot safely resume it.
+Implement exact independently pinned partial-stage readback and guard resume,
+refuse unknown drift, preserve UNKNOWN until verified; test physical COMMIT
+acknowledgement loss, stage2 failure/retry and exact identity/policy/admission
+readback. `SCHEMA_VERIFIED` alone is not native acceptance, current permission,
+Core app authority or enabled runtime. This is an owned draft defect, not debt
+or a reason to install early. No production authority/identity/role/DDL change.
+
+Current Core grant storage already exists in `portal_access_grants_v2` plus
+`portal_access_policy_state/events`. Existing business ALLOW installation is
+pending genuine TS acceptance; the legacy entity evaluator depends on real
+entity lineage. Native Manager-domain proof must not be converted into a fake
+historical `TsMembershipAcceptance`, fabricated ROOT_SCOPE or non-NULL census.
+Select an additive private versioned branch in that SAME current authority,
+preserving legacy/public selector semantics and DENY priority. Current Core
+human/session/app/field locks, durable final send/terminal and per-frame permits
+remain owned unfinished original08 work, not fulfilled by the206 provider tests.
+
+The user's approved old25+6source/test packet remains an already exercised,
+cleaned scope; it is not blanket approval for new Core files. Review/freeze the
+reserved3client and4installer/runtime outputs first; tests remain NOT_RUN until
+actual guarded execution. No push/merge or09connected transition is authorized
+by this continuation. Original08 status remains IN_PROGRESS / full exit NOT_MET.
+
+**Next isolated qualification preparation / before harness writes:** reserve
+`/tmp/epg10-08-runtime-HK-btWA4fXg` (fresh mode0700) for the exact previously
+qualified50source closure plus the four reviewed runtime/installer outputs.
+Root's mechanical preparation checks prior pins against both retained snapshot
+and current canonical PM bytes; no peer source is copied implicitly. Freeze and
+review all four new hashes before adding them. New actual-PG installation cases
+must own a fresh fixture database, not reset/reuse the earlier regression DB.
+Use the same cached <=300s TEST_ONLY envelope and206regressions plus the exact
+new selection, zero ignored failures/errors/skips. Preparation is NOT_RUN proof,
+not source/runtime acceptance. No build/pull/dependency install/host listener.
+
+Actual reviewed40tuple comparison now shows39unchanged and only the TS-owned
+`market_data_service_p184w` changed: SAME imagea44349a10e52…, config
+fab1cdb7ba711002553a19258db2f64a768e382936bb8f3039cd5d1ae667c4c3,
+started14:33:28.067818616UTC,restarts0,runningtrue. Record this as observed
+operational retention, not approval/certification of that new TS config. No
+EPG08 restart occurred. A fresh run must pin this exact reconciled40set and
+refuse further drift/foreign jobs; no source authority follows from observation.
+
+**Fresh guard14:47:45UTC / same08 resumed:** both actual guards are ABSENT,
+Docker shows the reviewed40operational names only. The intervening foreign
+`claude-subagent-rca-798e80a2` lease14:41:58–15:26:58 was observed14:43–14:45;
+no test/build/transfer was run. Source preparation/draft writes overlapped its
+start before the next guard read; the PM reviewer disclosed a bundled guard-read
+and patch command that failed to branch before writing the final definition.
+These are NOT guarded qualification/capacity evidence. Freeze notification was
+sent to both reviewers; no production/DB/index mutation. Future guard reads must
+return and be evaluated before writes/jobs, not be chained blindly with them.
+
+Runtime/installer drafts now have27NOT_RUN definitions (10runtime doubles,
+10installer unit,7fresh-PG), expected233with206regressions. Before qualification
+finish maintenance-role exact ACL/bypass audit and register PG cleanup at each
+resource acquisition (setup failure does not call asyncTearDown). Do not report
+an unverified draft as installed acceptance. Client draft has102NOT_RUN cases,
+including9actual-loopbackTLS definitions. Narrow its delivery-digest public
+purpose to issue/enter; recovery needs no human delivery assertion. The old
+25+6transfer approval does not contain these three new client files; one exact
+asynchronous source-only transfer question is pending, not a new phase approval.
+
+**Concrete Core decision / before private code:** reuse the SAME
+`elp210_candidate.leases/events`, authority singleton and CurrentHumanMutations
+drain, not another permission/receipt engine. Add a purpose-isolated native READ
+lifecycle with actual bounded sender identity, durable SENDING and READ-specific
+SERVED/ABORTED/UNKNOWN. Existing reverse PM issue/ENTER/resolve/recovery must
+remain compatible and refuse native READ purposes. Core signs genuine native
+issue/ENTER delivery assertions from its durable actual-human read context,
+without creating an additional reverse-PM lease. No Core lock spans PM/source/
+socket I/O. Final current human/app/field recheck occurs after all data awaits;
+only the owning finite egress/per-frame witness can settle that exact attempt.
+Physical terminal COMMIT and pool release precede terminal signing/PM resolution.
+UNKNOWN never releases a sender or permits another send. Restart needs actual
+old-sender quiescence/process fencing, not TTL/instance-ID/DB absence inference.
+
+Use a versioned PRIVATE Manager-domain grant fact in the EXISTING
+`portal_access_grants_v2.grant_fact` and reviewed policy/event transaction.
+Legacy readers deliberately classify the stored union; public resourceSelector
+and legacy entity evaluation are unchanged. The DB-only internal decision must
+intersect genuine current human/policy/app grant/field seal with independently
+verified native proof. Bind workspace/environment/profile/catalogue/profile/
+field digests, exact subject/revisions/expiry. DENY wins; any resource-scoped
+DENY not representable in a domain-wide query refuses that whole domain rather
+than being ignored. No fake ROOT/census/TS historical receipt or public JSON
+grant intake. Read-all is not export/stream/technical/command permission.
+
+Root reserves two private outputs per reviewer (single writer/path): Research
+`manager-domain-access.patch` + `manager-domain-access.spec.ts` for the existing
+grant/repository/snapshot/private install decision; Core boundary reviewer
+`current-human-native-read.patch` + `current-human-native-read.spec.ts` for the
+same-ledger local READ lifecycle/drain and finite-witness composition. Reviewers
+must agree on the DB-only decision interface first; no generic allow callback,
+synthetic grant/identity or runtime authority. No canonical/shared source/index,
+job/build/transfer/Git/credential/DB/runtime action. Root reviews exact patches,
+pins, tests, compatibility and actual installation; all new definitions remain
+NOT_RUN. These reservations are original08 owned implementation, not acceptance
+or permission to expose raw Manager relations/browser routes or start09.
+
+**Actual guard/source reconciliation14:49–15:15UTC:** the short PM correctness
+window ended; peer PM history/current-read commit is nowb63b3c88703333be1277b8fb0ba60734fba94baa,
+with our existing native listener files unchanged. The subsequent HK foreign
+OKX WS probe window14:52:51–15:18:51 had two confirmed running containers;
+EPG08 started no jobs, source transfers or runtime changes under that window.
+Both actual root/Bobby guards and those exact probe handles are ABSENT at
+15:14:31 and15:15:03UTC: owner released early, not assumed from deadline.
+SGP remains separately guarded by a real Core hook (node/postgres443271);
+preserve its24staged peer paths and Research609d11dd source/index.
+
+**Approved next source/test slice before edits:** four reviewed private PM
+outputs now have29NOT_RUN cases, superseding the earlier27-definition draft:
+10runtime,10installer unit and9fresh-PG. AST-only inspection verifies all four
+hashes: runtime76c8574a…, runtime tests12b9ac05…, installer8a8ea939…,
+installer tests949f69de…. Add exact maintenance table/column/function/sequence/
+schema/parameter ACL and bypass checks; immediately register cleanup for each
+acquired PG connection/pool. Use18fresh disposable databases/27scoped roles,
+not shared/production DBs or destructive schema reset. Qualify235total against
+the unchanged206regressions in the reserved HK target, same cached <=300s
+envelope, zero ignored failure/error/skip, no image build/pull/install.
+
+Bobby separately approves transfer of exactly the3new native-client source/
+test/reuse-patch files plus runner/hash manifest to a fresh isolated SGP temp
+directory. No secret/data/private config, canonical/index change or deployment.
+Before that transfer, root narrows human delivery-digest purpose to issue/enter,
+adds real Python-preimage Unicode/allmode vectors, and exposes only frozen,
+detached client selection pins to reject constructor mispairing. These pins are
+not native/Core authority. Expected client definitions111, still NOT_RUN.
+The actual read-only Python preimage calculation used native_fence.canonical
+75bf3db9… plus http_request_digest722fca48…; it is not a TypeScript test pass.
+SGP legacy regression closure is15existing runtime-import files/145419B;
+exclude erased type-only imports rather than copying unrelated generated
+Research recipes. Retain both existing mapping/recovery codecs and contracts.
+
+Original08 remains IN_PROGRESS/full exitNOT_MET. Core domain/install/revoke,
+same-ledger finite READ sender/terminal, fresh per-frame integration, genuine
+installation and connected revoke/cache/cursor/SSE remain owned work. No09
+connected acceptance, runtime activation, source grant or financial permission
+is inferred from preparation. Shared operational40tuple retention stays exact;
+only owned disposable cells/network/lease may be removed after these tests.
+**235case actual result /15:18:35UTC:** prepared source54/710730B was
+qualified using the exact two runner commands in the bounded
+[native runtime/installation evidence](evidence/execution-edge-v1_2/EPG10-08/native-business-read-installation-qualification.json).
+235PASS/0FAIL/ERROR/SKIP,58.084s:206regression+10runtime+10installerunit+9actualPG;
+the newPG cases own18fresh databases/27roles, not shared-state reset. Actual
+schema and standaloneguard COMMIT acknowledgement loss, pinned PREPARED resume,
+identity/policy/admission/maintenance ACL drift and preflight/default-off are
+covered. Receiptb731872d… and JUnit9b24e89a… retained with all54exactpins.
+Ownworker007f1333e347/PG4f1ed2fe69b8/internalnetwork/lease removed;40operational
+tuples unchanged. Shared free234734395392→234588233728B (not exclusive).
+No newimages/cache, shared cleanup or operational mutation. Original08full exit
+NOT_MET; component evidence is not actual grant/install/final-send acceptance.
+
+**Canonical source landing / before edits15:25UTC:** PM peer independently
+committed capital range31b45370ef7c92a44b35dbcd19e18ec02cc5fcf9; its previously
+dirty source/journal/index is now clean. Land ONLY four exact54manifest runtime/
+installer source/test files plus own58.102.1journal/guide pointer. Recheck pins
+and normal Bobby commit; no migration execution, service restart or push/merge.
+An attempted multi-file documentation patch was rejected atomically for a guide
+anchor mismatch; verified no partial edit, then used exact existing anchors.
+It is not a product test failure. Preserve unrelated Edge feasibility document.
+
+**SGP current source/guard15:23–15:26:** new foreign Core correctness lease
+codex-elp210-commissioning-focus-152104 until15:37:44.917384, with actual
+node/postgres616813. No EPG08 transfer/test under this guard. Core owner has also
+added UNTRACKED native-business-read-client.ts/codec plus typed fixtures; these
+are independent peer WIP, not our three-file packet or qualified authority.
+Read and compare exact wire/transport contracts before any canonical landing;
+never overwrite or stage their32paths. The approved3file isolated test remains
+NOT_RUN and is still runnable on guard release, not blocked by a new approval.
+Core Manager-domain/private sender draft returns69/39definitions are NOT_RUN;
+review exact compatibility before qualification or genuine installation.
+
+**PM normal source commit15:26UTC:** afa1af81eb88fe51451515bc237769ec4e7f98a7,
+feat/portfolio-account-v1_1-parallel;54canonical hash checks exact, staged only
+four new source/test files and owned58.102.1/guide (6paths). Bobby identity,
+diff-check clean, normal commit, resulting PM worktree clean; no push/merge.
+Source commit remains UNMOUNTED. Edge evidence records full source pins and
+receipt rather than treating source landing as installed authority.
+
+**Approved three-file SGP test preparation:** exact input manifest pins root
+client7d5f2af8…, specb5ce34d3…, reusepatch105d1bb6… and guarded
+run_native_client.py4da59ef5…. AST valid, NOT_RUN; no source packet transferred.
+On actual guard release use fresh /tmp/epg10-08-native-read-client-* and
+hash-check4inputs, copy ONLY15pinned existing Core runtime files+package locally
+inside that temp target, apply reuse patch there, add newclient/spec (19files).
+One cached1CPU/512MiB network-none readonlyworker/32MiBtmpfs, <=300s lease;
+strict new TypeScript check then111new cases plus exact mapping/recovery
+regressions. Zero ignored failure/error/skip. No PG/hostports/build/pull/install,
+canonical/index/deploy/restart; protect10Core/Portal tuples and clean own exact
+worker/source packet. Peer's840dc58c nativeclient/codec WIP remains untouched.
+
 
 
