@@ -138,6 +138,7 @@ function fixture(options:FixtureOptions={}){
   };
   let revisions:ManagerScoreRestatementSnapshot[]=[];
   const snapshot=(items:ManagerScoreRestatementSnapshot[]):ManagerScoreHistorySnapshot=>({document,original:null,
+    regime_restatements:[],regime_restated_head_key:null,
     restatements:structuredClone(items),original_head_key:null,restated_head_key:items.at(-1)?.calculation_key??null,
     snapshot_digest:accessDigest(items)});
   scan.mockImplementation(async()=>snapshot(revisions));

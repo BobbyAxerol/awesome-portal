@@ -2421,3 +2421,59 @@ next normal-hook requirement](../ELP2-06/composition-dependent-restatement.md#se
 remain visible; no contracts/restore PASS inferred from that stopped gate.
 All44current-authorized Composition BFF cases passed, including the24 census/
 RAW/time regressions. Production budgets/source/trust/browser remain unproven.
+
+<a id="elp210-independent-regime-20261017"></a>
+
+## Independent Regime continuation —2026-10-17
+
+[ORIGINAL normal hook](../ELP2-06/regime-original-custody.md#regime-original-terminal-20261017-1817)
+landed6a01686e,775contracts/APIbuild/5,806API PASS+3existing skips/scoped PG
+restore/four row digests. Exact cell/lease clean, eight runtimes unchanged.
+[Historical Regime worker/coordinator/third head/current-authorized named API](../ELP2-06/regime-dependent-restatement.md)
+now APPLIED_UNCOMMITTED/affected gates pending. Independent of Score policy;
+whole-corpus authority, original A/E/F and later K/C, shared existing quotas,
+finite current source/policy fencing, no GET calculator/ACK. Closed generated
+REGIME detail +synthetic fixtures are not installed source/consumer proof.
+
+Latest read-only HK pin18:02–18:04UTC: PM
+cc22e0814673dd96a19a63adb5355e7eec63e51a contains committed operator original
+history adapter/dataset. It is QUALIFIED_UNMOUNTED_NOT_FULL_TYPED_HISTORY, not
+absent source and not a runtime route. Exact<=64 selected operations/keys,
+<=16 scopes and original report+business-history rights; no global census/floor/
+checkpoint/capacity authority inferred. The working current-access provider is
+dirty WIP and must not be overwritten or treated as committed installation.
+Next04 integration still needs exact finite export/Edge wire/selected current
+authority; no direct PM DB/HTTP shortcut, no runtime toggle.
+
+Real app/native/current-human/provider terminal, approved14budgets/Score-Regime
+calibration/coexistence/applicable P184G2 stay OPEN. Consumer UXM owner-held/
+AWAITING_CONSUMER_REVIEW;11NOT_ENTRY_READY. Recurring Claude intake checked,
+no new consumer ack or blanket source PASS; no FE/push/dev/main/sign/deploy.
+
+### Independent Regime affected proof and latest source —18:45UTC
+
+[Actual distinct API/restore and contract terminals](../ELP2-06/regime-dependent-restatement.md#affected-apirestore-and-contract-terminals-2026-10-17-18441845utc)
+now establish affected correctness:58API/two files/build/scoped restore and
+58contracts/three files PASS. Preserve all earlier failures; no new source or
+production calibration/budget/browser certificate. One coherent normal hook
+remains PENDING, not a second manual full test run.
+
+Read-only HK PM source observation18:39UTC is now full
+`c080b4dba9ff52dde3bbb9a3a58f68e6fab5f808`, branch
+feat/portfolio-account-v1_1-parallel in its existing PM worktree. Committed
+original admission-history producer/dataset/schema were read fully: exact
+1..64keys/1..16portfolio-environment scopes, immutable original constraints,
+REPORT+BUSINESS HISTORY and current lease/COMMIT/release acceptance. It is
+explicitly QUALIFIED_UNMOUNTED_NOT_FULL_TYPED_HISTORY/runtime=false/route=null,
+not absent source, global history/capacity authority or installed native grant.
+Keep four economic dimensions/units separate; no current admission re-evaluation.
+No owner959-line test receipt requalified, no SQL/API/business rows read here.
+Peer dirty plan/catalogue/current-access and untracked position-history WIP
+remain untouched. Source-only implementation does not prove current app trust.
+
+Canonical04-008/009 retain all parent/audit/technical/current-source debts;
+the next finite local slice is two exact account-sync status observations.
+Full06 source/config/tie-out/ALL,10 actual current-human/native terminal,
+approved14budgets/calibration/coexistence/P184G2, owner-held Claude browser and
+11NOT_ENTRY_READY remain unchanged. Latest Claude request intake checked; no
+new consumer acknowledgement claimed or duplicate queue created.

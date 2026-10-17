@@ -8,6 +8,7 @@ import {accessDigest} from "./access-policy";
 import {managerModelDocument,type ManagerModelDocument} from "./manager-model.contract";
 import {decodeRetainedManagerScoreOriginal,type ManagerScoreOriginalCustodySnapshot} from "./manager-score-original-custody";
 import {decodeRetainedManagerScoreRestatement,type ManagerScoreRestatementSnapshot} from "./manager-score-restatement";
+import {decodeRetainedManagerRegimeRestatementBundle,type ManagerRegimeRestatementSnapshot} from "./manager-regime-restatement";
 
 const MAX_BUNDLE=8*1024*1024,MAX_ROWS=32,MAX_BYTES=64*1024*1024,MAX_CONCURRENT=4;
 const finiteDigest=(value:unknown):value is string=>typeof value==="string"&&/^sha256:[a-f0-9]{64}$(?![\s\S])/.test(value);
@@ -28,8 +29,10 @@ export interface ManagerScoreHistorySnapshot {
   readonly document:ManagerModelDocument;
   readonly original:ManagerScoreOriginalCustodySnapshot|null;
   readonly restatements:readonly ManagerScoreRestatementSnapshot[];
+  readonly regime_restatements:readonly ManagerRegimeRestatementSnapshot[];
   readonly original_head_key:string|null;
   readonly restated_head_key:string|null;
+  readonly regime_restated_head_key:string|null;
   /** PRIVATE state only. Never return/encode this profile-wide digest or any
    * calculation_key to a browser. Public cursors bind authorized projections. */
   readonly snapshot_digest:string;
@@ -45,7 +48,9 @@ function expected(raw:ManagerModelDocument):ManagerModelDocument {
     return d;
   }catch(error){if(error instanceof ManagerScoreHistoryStoreError)throw error;return fail("HISTORY_INPUT_INVALID");}
 }
-function lineage(views:readonly ManagerScoreRestatementSnapshot[],head:string|null):void {
+type HistoricalLineageView={calculation_key:string;supersedes_calculation_key:string|null;
+  computed_at_ms:number;knowledge_cutoff_ms:number};
+function lineage(views:readonly HistoricalLineageView[],head:string|null):void {
   const map=new Map(views.map(v=>[v.calculation_key,v]));
   if(map.size!==views.length||(views.length===0?head!==null:head===null||!map.has(head)))fail("HISTORY_DATA_INVALID");
   for(const view of views){
@@ -58,7 +63,7 @@ function lineage(views:readonly ManagerScoreRestatementSnapshot[],head:string|nu
   // branches. Equal wall-clock milliseconds are valid; pointer order is causal.
   const seen=new Set<string>();let key:string|null=head;
   while(key!==null){if(seen.has(key))fail("HISTORY_DATA_INVALID");seen.add(key);
-    const view:ManagerScoreRestatementSnapshot|undefined=map.get(key);if(!view)fail("HISTORY_DATA_INVALID");key=view.supersedes_calculation_key;}
+    const view:HistoricalLineageView|undefined=map.get(key);if(!view)fail("HISTORY_DATA_INVALID");key=view.supersedes_calculation_key;}
   if(seen.size!==views.length)fail("HISTORY_DATA_INVALID");
 }
 
@@ -138,10 +143,11 @@ export class ManagerScoreHistoryStore {
     if(rows.some(r=>!["portal.execution.manager-score-recalculation.v1","portal.execution.manager-score-original-inputs.v1",
       "portal.execution.manager-score-original-inputs.v2","portal.execution.manager-score-original-inputs.v3",
       "portal.execution.manager-score-original-inputs.v4",
-      "portal.execution.manager-score-restatement.v1","portal.execution.manager-score-restatement.v2"].includes(r.schema_version??"")))fail("HISTORY_SCHEMA_UNSUPPORTED");
+      "portal.execution.manager-score-restatement.v1","portal.execution.manager-score-restatement.v2",
+      "portal.execution.manager-regime-restatement.v1"].includes(r.schema_version??"")))fail("HISTORY_SCHEMA_UNSUPPORTED");
     const heads=await query<Head>("SELECT head_kind,calculation_key FROM execution_manager_score_mode_heads WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND source_revision=$4 ORDER BY head_kind",args);
-    if(heads.length>2||new Set(heads.map(h=>h.head_kind)).size!==heads.length||heads.some(h=>
-      !["ORIGINAL_INPUTS","RESTATED_CURRENT_POLICY"].includes(h.head_kind)||!finiteDigest(h.calculation_key)||!rows.some(r=>r.calculation_key===h.calculation_key)))fail("HISTORY_DATA_INVALID");
+    if(heads.length>3||new Set(heads.map(h=>h.head_kind)).size!==heads.length||heads.some(h=>
+      !["ORIGINAL_INPUTS","RESTATED_CURRENT_POLICY","REGIME_RESTATED_CURRENT_POLICY"].includes(h.head_kind)||!finiteDigest(h.calculation_key)||!rows.some(r=>r.calculation_key===h.calculation_key)))fail("HISTORY_DATA_INVALID");
     return {rows,heads,source_digest:sources[0].payload_digest,signature:accessDigest({source:sources[0].payload_digest,rows,heads})};
   }
   async scan(document:ManagerModelDocument,timeoutMs:number):Promise<ManagerScoreHistorySnapshot>{
@@ -156,18 +162,22 @@ export class ManagerScoreHistoryStore {
       if(accessDigest(source)!==actual.payload_digest||actual.payload_digest!==inventory.source_digest)fail("HISTORY_SOURCE_CHANGED");
       const originalKey=inventory.heads.find(h=>h.head_kind==="ORIGINAL_INPUTS")?.calculation_key??null;
       const restatedKey=inventory.heads.find(h=>h.head_kind==="RESTATED_CURRENT_POLICY")?.calculation_key??null;
+      const regimeKey=inventory.heads.find(h=>h.head_kind==="REGIME_RESTATED_CURRENT_POLICY")?.calculation_key??null;
       const originals=inventory.rows.filter(r=>r.schema_version==="portal.execution.manager-score-original-inputs.v1"||
         r.schema_version==="portal.execution.manager-score-original-inputs.v2"||r.schema_version==="portal.execution.manager-score-original-inputs.v3"||
         r.schema_version==="portal.execution.manager-score-original-inputs.v4");
       const isRestated=(r:Meta)=>r.schema_version==="portal.execution.manager-score-restatement.v1"||
         r.schema_version==="portal.execution.manager-score-restatement.v2";
       const calculations=inventory.rows.filter(isRestated);
+      const isRegimeRestated=(r:Meta)=>r.schema_version==="portal.execution.manager-regime-restatement.v1";
+      const regimeCalculations=inventory.rows.filter(isRegimeRestated);
       if(originals.length!==(originalKey===null?0:1)||originalKey!==null&&originals[0]?.calculation_key!==originalKey||
-        calculations.length>0&&originalKey===null)fail("HISTORY_DATA_INVALID");
-      const selected=inventory.rows.filter(r=>r.calculation_key===originalKey||isRestated(r));
+        (calculations.length>0||regimeCalculations.length>0)&&originalKey===null)fail("HISTORY_DATA_INVALID");
+      const selected=inventory.rows.filter(r=>r.calculation_key===originalKey||isRestated(r)||isRegimeRestated(r));
       const stored=selected.length?await query<Stored>("SELECT calculation_key,payload_digest,payload FROM execution_manager_calculation_revisions WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND source_revision=$4 AND calculation_key=ANY($5::text[]) ORDER BY calculation_key",[...args,selected.map(r=>r.calculation_key)]):[];
       if(stored.length!==selected.length)fail("HISTORY_DATA_INVALID");
-      let original:ManagerScoreOriginalCustodySnapshot|null=null,restatements:ManagerScoreRestatementSnapshot[]=[];
+      let original:ManagerScoreOriginalCustodySnapshot|null=null,restatements:ManagerScoreRestatementSnapshot[]=[],
+        regimeRestatements:ManagerRegimeRestatementSnapshot[]=[];
       try{
         if(originalKey!==null){const row=stored.find(r=>r.calculation_key===originalKey);if(!row)fail("HISTORY_DATA_INVALID");
           original=decodeRetainedManagerScoreOriginal(source,row,MAX_BUNDLE);}
@@ -175,9 +185,15 @@ export class ManagerScoreHistoryStore {
           const row=stored.find(r=>r.calculation_key===meta.calculation_key);if(!row)fail("HISTORY_DATA_INVALID");
           return decodeRetainedManagerScoreRestatement(row,original!,MAX_BUNDLE,source);
         });
+        if(original)regimeRestatements=regimeCalculations.map(meta=>{
+          const row=stored.find(r=>r.calculation_key===meta.calculation_key);if(!row)fail("HISTORY_DATA_INVALID");
+          return decodeRetainedManagerRegimeRestatementBundle(row,original!,source,MAX_BUNDLE);
+        });
         lineage(restatements,restatedKey);
+        lineage(regimeRestatements,regimeKey);
       }catch{fail("HISTORY_DATA_INVALID");}
       const result:ManagerScoreHistorySnapshot=freeze({document:source,original,restatements,
+        regime_restatements:regimeRestatements,regime_restated_head_key:regimeKey,
         original_head_key:originalKey,restated_head_key:restatedKey,snapshot_digest:inventory.signature});
       snapshots.set(result,{owner:this,prefix:JSON.stringify(args),signature:inventory.signature,source_digest:inventory.source_digest});
       return result;

@@ -166,3 +166,29 @@ ALL. No fake Score dependency. Remaining04/07–09/current-human/app/native
 commissioning work continues independently;14approved budgets/calibration/
 coexistence/P184G2 stay separate.11NOT_ENTRY_READY. Claude has no new public
 field to wire here; historical REGIME needs later handoff/actual consumer ack.
+
+<a id="regime-original-terminal-20261017-1817"></a>
+
+## Actual normal-hook terminal —2026-10-17T18:17:26UTC
+
+Supersedes only pending ORIGINAL validation above. Commit
+`6a01686e1c2ef3868c4e3e957d1b75899ff574b4`,19files,+1,908/−45;
+775contracts/66files, API source build,5,806API/368passed files and scoped PG
+dump/restore/four access row digests PASS. Three existing skipped tests in two
+skipped files remain;511 affected cases are included, never added again.
+
+Private actual controller `20261017/regime-original-land-174934/controller.json`,
+SHA256 of controller source
+abdb2798407b454a6de63565738ede285c1db96e38cca7c359214da094ac7e24;
+logSHA256353b8159157c32c3e3b14cb1c013c82c4beeba544f9807f759be10917ca65fc0.
+All19 source/doc pins stayed identical through normal hook; committed blobs
+recorded. Foreign index unchanged; clean tree after land, branch ahead464.
+Exact Node/PG/network1435286 removed, remaining_owned_resources[], matching
+measurement lease released. Eight protected image/start/restart/running tuples
+unchanged. Capacity read18:22–18:23UTC: root155GiB free24%, RAMavailable9,549MiB;
+NO_ACTION_NEEDED beyond own cell teardown, no foreign image/volume cleanup.
+
+This is TEST_ONLY correctness/restore, not actual source/approved calibration/
+coexistence/browser acceptance. Next approved independent historical Regime
+worker/coordinator/History API is tracked in [dependent packet](regime-dependent-restatement.md),
+canonical06-002 unchanged. No source/runtime/FE activation or remote push.

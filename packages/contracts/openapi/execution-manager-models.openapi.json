@@ -1937,7 +1937,7 @@
             "PortalSession": []
           }
         ],
-        "description": "Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Optional metric_family=COMPOSITION selects Fund/Portfolio full-accounting allocation-bound history; omitted/explicit SCORE preserves the Score projection. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK.",
+        "description": "Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score or Regime signal. Optional metric_family=COMPOSITION selects Fund/Portfolio full-accounting allocation-bound history. REGIME selects independently retained Alpha/Deployment historical matching only after current authorization of the entire original subject/reference corpus; no inherited financial Score grant. Omitted/explicit SCORE preserves the Score projection and opaque-reference recipe. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable with null counts, not empty complete history. No GET calculation, source send or ACK.",
         "parameters": [
           {
             "name": "workspace_id",
@@ -1997,7 +1997,8 @@
               "type": "string",
               "enum": [
                 "SCORE",
-                "COMPOSITION"
+                "COMPOSITION",
+                "REGIME"
               ]
             }
           },
@@ -2157,7 +2158,7 @@
             "PortalSession": []
           }
         ],
-        "description": "Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Optional metric_family=COMPOSITION selects Fund/Portfolio full-accounting allocation-bound history; omitted/explicit SCORE preserves the Score projection. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK.",
+        "description": "Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score or Regime signal. Optional metric_family=COMPOSITION selects Fund/Portfolio full-accounting allocation-bound history. REGIME selects independently retained Alpha/Deployment historical matching only after current authorization of the entire original subject/reference corpus; no inherited financial Score grant. Omitted/explicit SCORE preserves the Score projection and opaque-reference recipe. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable with null counts, not empty complete history. No GET calculation, source send or ACK.",
         "parameters": [
           {
             "name": "workspace_id",
@@ -2217,7 +2218,8 @@
               "type": "string",
               "enum": [
                 "SCORE",
-                "COMPOSITION"
+                "COMPOSITION",
+                "REGIME"
               ]
             }
           },
@@ -9751,7 +9753,8 @@
             "type": "string",
             "enum": [
               "SCORE",
-              "COMPOSITION"
+              "COMPOSITION",
+              "REGIME"
             ]
           },
           "stage_filter": {
@@ -9883,7 +9886,8 @@
             "type": "string",
             "enum": [
               "SCORE",
-              "COMPOSITION"
+              "COMPOSITION",
+              "REGIME"
             ]
           },
           "stage_filter": {
@@ -11541,19 +11545,697 @@
             ]
           },
           "regime": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "availability": {
-                "const": "NOT_PUBLISHED"
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason_code": {
+                    "type": "string",
+                    "enum": [
+                      "INDEPENDENT_REGIME_REVISION_NOT_SELECTED",
+                      "REGIME_TARGET_NOT_AVAILABLE",
+                      "REGIME_ORIGINAL_CORPUS_AUTHORITY_NOT_RETAINED",
+                      "INDEPENDENT_REGIME_RESTATEMENT_NOT_PUBLISHED",
+                      "SELECTED_REGIME_REVISION_NOT_PUBLISHED"
+                    ]
+                  }
+                },
+                "required": [
+                  "availability",
+                  "reason_code"
+                ]
               },
-              "reason_code": {
-                "const": "INDEPENDENT_REGIME_REVISION_NOT_SELECTED"
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "PARTIAL"
+                    ]
+                  },
+                  "reason_codes": {
+                    "type": "array",
+                    "items": {
+                      "const": "SOURCE_PROJECTION_PARTIAL"
+                    },
+                    "maxItems": 1
+                  },
+                  "entries": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "binding": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "subject_type": {
+                              "type": "string",
+                              "enum": [
+                                "alpha",
+                                "deployment"
+                              ]
+                            },
+                            "subject_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                            },
+                            "alpha_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                            },
+                            "alpha_version_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                            },
+                            "stage_filter": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "PAPER",
+                                  "SANDBOX",
+                                  "CANARY",
+                                  "LIVE"
+                                ]
+                              },
+                              "minItems": 1,
+                              "maxItems": 4
+                            },
+                            "comparable_basis_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "individual_evidence_binding_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            }
+                          },
+                          "required": [
+                            "subject_type",
+                            "subject_id",
+                            "alpha_id",
+                            "alpha_version_id",
+                            "stage_filter",
+                            "comparable_basis_ref",
+                            "individual_evidence_binding_ref"
+                          ]
+                        },
+                        "original_input_ref": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "derived_input_ref": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "original_publication_ref": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "publication_ref": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "original": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "economic_as_of_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "evaluation_at_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "feature_cutoff_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "computed_at_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "captured_at_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "economic_as_of_ms",
+                            "evaluation_at_ms",
+                            "feature_cutoff_ms",
+                            "computed_at_ms",
+                            "captured_at_ms"
+                          ]
+                        },
+                        "knowledge_cutoff_ms": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "computed_at_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "calculation_revision": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                        },
+                        "feed_freshness": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "availability": {
+                                  "const": "NOT_PUBLISHED"
+                                },
+                                "reason_code": {
+                                  "const": "ORIGINAL_FEED_FRESHNESS_NOT_RECORDED"
+                                }
+                              },
+                              "required": [
+                                "availability",
+                                "reason_code"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "availability": {
+                                  "const": "AVAILABLE"
+                                },
+                                "checked_at_ms": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "WITHIN_CURRENT_FEED_FRESHNESS",
+                                    "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS"
+                                  ]
+                                },
+                                "source_age_ms": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "maximum_source_age_ms": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "feature_age_ms": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "maximum_feature_age_ms": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "availability",
+                                "checked_at_ms",
+                                "status",
+                                "source_age_ms",
+                                "maximum_source_age_ms",
+                                "feature_age_ms",
+                                "maximum_feature_age_ms"
+                              ]
+                            }
+                          ]
+                        },
+                        "result": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "supported",
+                                "weak_support",
+                                "out_of_support",
+                                "insufficient_data",
+                                "stale",
+                                "unbound"
+                              ]
+                            },
+                            "reason_codes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256,
+                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                              },
+                              "maxItems": 64
+                            },
+                            "nearest_distance": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 512,
+                                  "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "eligible_reference_count": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4096
+                            },
+                            "neighbor_count": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4096
+                            },
+                            "distinct_episode_count": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4096
+                            },
+                            "stage_breakdown": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "stage": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ResearchIS",
+                                      "ResearchOOS",
+                                      "ResearchValidation",
+                                      "Paper",
+                                      "Sandbox",
+                                      "Canary",
+                                      "Live"
+                                    ]
+                                  },
+                                  "evidence_kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "research_simulated",
+                                      "forward_simulated",
+                                      "actual"
+                                    ]
+                                  },
+                                  "economic_domain_ref": {
+                                    "type": "string",
+                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                  },
+                                  "account_mode_ref": {
+                                    "type": "string",
+                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "supported",
+                                      "weak_support"
+                                    ]
+                                  },
+                                  "reason_codes": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256,
+                                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                    },
+                                    "maxItems": 64
+                                  },
+                                  "neighbor_count": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 4096
+                                  },
+                                  "distinct_episode_count": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 4096
+                                  },
+                                  "effective_sample_size": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512,
+                                    "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                  },
+                                  "nearest_distance": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512,
+                                    "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                  },
+                                  "reference_window_refs": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                    },
+                                    "minItems": 1,
+                                    "maxItems": 4096
+                                  },
+                                  "neighbors": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "reference_window_ref": {
+                                          "type": "string",
+                                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                        },
+                                        "distance": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512,
+                                          "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                        },
+                                        "weight": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512,
+                                          "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                        }
+                                      },
+                                      "required": [
+                                        "reference_window_ref",
+                                        "distance",
+                                        "weight"
+                                      ]
+                                    },
+                                    "minItems": 1,
+                                    "maxItems": 4096
+                                  },
+                                  "matched_outcome_summary": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "mean": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512,
+                                        "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                      },
+                                      "median": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512,
+                                        "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                      },
+                                      "min": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512,
+                                        "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                      },
+                                      "max": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 512,
+                                        "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                      },
+                                      "quantiles": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "probability": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512,
+                                              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512,
+                                              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                            }
+                                          },
+                                          "required": [
+                                            "probability",
+                                            "value"
+                                          ]
+                                        },
+                                        "maxItems": 9
+                                      },
+                                      "method": {
+                                        "const": "DESCRIPTIVE_NET_TWR_LINEAR_EMPIRICAL_UNWEIGHTED_QUANTILES"
+                                      },
+                                      "cost_assumptions_refs": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                        },
+                                        "minItems": 1,
+                                        "maxItems": 4096
+                                      },
+                                      "outcome_from_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "outcome_to_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "mean",
+                                      "median",
+                                      "min",
+                                      "max",
+                                      "quantiles",
+                                      "method",
+                                      "cost_assumptions_refs",
+                                      "outcome_from_ms",
+                                      "outcome_to_ms"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "stage",
+                                  "evidence_kind",
+                                  "economic_domain_ref",
+                                  "account_mode_ref",
+                                  "status",
+                                  "reason_codes",
+                                  "neighbor_count",
+                                  "distinct_episode_count",
+                                  "effective_sample_size",
+                                  "nearest_distance",
+                                  "reference_window_refs",
+                                  "neighbors",
+                                  "matched_outcome_summary"
+                                ]
+                              },
+                              "maxItems": 7
+                            },
+                            "reference_window_refs": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                              },
+                              "maxItems": 4096
+                            },
+                            "formula_id": {
+                              "const": "market_regime_robust_gaussian_v1_1"
+                            },
+                            "qualification": {
+                              "const": "RUNTIME_APPROVED"
+                            },
+                            "policy_version": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                            },
+                            "policy_hash": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "approved_policy_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                            },
+                            "feature_schema_version": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                            },
+                            "calibration_snapshot_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "calibration_hash": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "overlap_policy_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                            },
+                            "horizon_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "research_binding_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "bound_run_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "strategy_version_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "params_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "evidence_snapshot_ref": {
+                              "type": "string",
+                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                            },
+                            "as_of_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "feature_cutoff_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "reference_cutoff_ms": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "reason_codes",
+                            "nearest_distance",
+                            "eligible_reference_count",
+                            "neighbor_count",
+                            "distinct_episode_count",
+                            "stage_breakdown",
+                            "reference_window_refs",
+                            "formula_id",
+                            "qualification",
+                            "policy_version",
+                            "policy_hash",
+                            "approved_policy_id",
+                            "feature_schema_version",
+                            "calibration_snapshot_ref",
+                            "calibration_hash",
+                            "overlap_policy_id",
+                            "horizon_ms",
+                            "research_binding_ref",
+                            "bound_run_ref",
+                            "strategy_version_ref",
+                            "params_ref",
+                            "evidence_snapshot_ref",
+                            "as_of_ms",
+                            "feature_cutoff_ms",
+                            "reference_cutoff_ms"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "binding",
+                        "original_input_ref",
+                        "derived_input_ref",
+                        "original_publication_ref",
+                        "publication_ref",
+                        "original",
+                        "knowledge_cutoff_ms",
+                        "computed_at_ms",
+                        "calculation_revision",
+                        "feed_freshness",
+                        "result"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 128
+                  }
+                },
+                "required": [
+                  "availability",
+                  "reason_codes",
+                  "entries"
+                ]
               }
-            },
-            "required": [
-              "availability",
-              "reason_code"
             ]
           }
         },
@@ -13263,19 +13945,697 @@
                       ]
                     },
                     "regime": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "availability": {
-                          "const": "NOT_PUBLISHED"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "const": "NOT_PUBLISHED"
+                            },
+                            "reason_code": {
+                              "type": "string",
+                              "enum": [
+                                "INDEPENDENT_REGIME_REVISION_NOT_SELECTED",
+                                "REGIME_TARGET_NOT_AVAILABLE",
+                                "REGIME_ORIGINAL_CORPUS_AUTHORITY_NOT_RETAINED",
+                                "INDEPENDENT_REGIME_RESTATEMENT_NOT_PUBLISHED",
+                                "SELECTED_REGIME_REVISION_NOT_PUBLISHED"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "reason_code"
+                          ]
                         },
-                        "reason_code": {
-                          "const": "INDEPENDENT_REGIME_REVISION_NOT_SELECTED"
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "type": "string",
+                              "enum": [
+                                "AVAILABLE",
+                                "PARTIAL"
+                              ]
+                            },
+                            "reason_codes": {
+                              "type": "array",
+                              "items": {
+                                "const": "SOURCE_PROJECTION_PARTIAL"
+                              },
+                              "maxItems": 1
+                            },
+                            "entries": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "binding": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "subject_type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "alpha",
+                                          "deployment"
+                                        ]
+                                      },
+                                      "subject_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                      },
+                                      "alpha_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                      },
+                                      "alpha_version_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                      },
+                                      "stage_filter": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "enum": [
+                                            "PAPER",
+                                            "SANDBOX",
+                                            "CANARY",
+                                            "LIVE"
+                                          ]
+                                        },
+                                        "minItems": 1,
+                                        "maxItems": 4
+                                      },
+                                      "comparable_basis_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "individual_evidence_binding_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      }
+                                    },
+                                    "required": [
+                                      "subject_type",
+                                      "subject_id",
+                                      "alpha_id",
+                                      "alpha_version_id",
+                                      "stage_filter",
+                                      "comparable_basis_ref",
+                                      "individual_evidence_binding_ref"
+                                    ]
+                                  },
+                                  "original_input_ref": {
+                                    "type": "string",
+                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                  },
+                                  "derived_input_ref": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "original_publication_ref": {
+                                    "type": "string",
+                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                  },
+                                  "publication_ref": {
+                                    "type": "string",
+                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                  },
+                                  "original": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "economic_as_of_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "evaluation_at_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "feature_cutoff_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "computed_at_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "captured_at_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "economic_as_of_ms",
+                                      "evaluation_at_ms",
+                                      "feature_cutoff_ms",
+                                      "computed_at_ms",
+                                      "captured_at_ms"
+                                    ]
+                                  },
+                                  "knowledge_cutoff_ms": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "computed_at_ms": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "calculation_revision": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                  },
+                                  "feed_freshness": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "availability": {
+                                            "const": "NOT_PUBLISHED"
+                                          },
+                                          "reason_code": {
+                                            "const": "ORIGINAL_FEED_FRESHNESS_NOT_RECORDED"
+                                          }
+                                        },
+                                        "required": [
+                                          "availability",
+                                          "reason_code"
+                                        ]
+                                      },
+                                      {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "availability": {
+                                            "const": "AVAILABLE"
+                                          },
+                                          "checked_at_ms": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "status": {
+                                            "type": "string",
+                                            "enum": [
+                                              "WITHIN_CURRENT_FEED_FRESHNESS",
+                                              "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS"
+                                            ]
+                                          },
+                                          "source_age_ms": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "maximum_source_age_ms": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "feature_age_ms": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "maximum_feature_age_ms": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "availability",
+                                          "checked_at_ms",
+                                          "status",
+                                          "source_age_ms",
+                                          "maximum_source_age_ms",
+                                          "feature_age_ms",
+                                          "maximum_feature_age_ms"
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "result": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "supported",
+                                          "weak_support",
+                                          "out_of_support",
+                                          "insufficient_data",
+                                          "stale",
+                                          "unbound"
+                                        ]
+                                      },
+                                      "reason_codes": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256,
+                                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                        },
+                                        "maxItems": 64
+                                      },
+                                      "nearest_distance": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 512,
+                                            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "eligible_reference_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 4096
+                                      },
+                                      "neighbor_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 4096
+                                      },
+                                      "distinct_episode_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 4096
+                                      },
+                                      "stage_breakdown": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "stage": {
+                                              "type": "string",
+                                              "enum": [
+                                                "ResearchIS",
+                                                "ResearchOOS",
+                                                "ResearchValidation",
+                                                "Paper",
+                                                "Sandbox",
+                                                "Canary",
+                                                "Live"
+                                              ]
+                                            },
+                                            "evidence_kind": {
+                                              "type": "string",
+                                              "enum": [
+                                                "research_simulated",
+                                                "forward_simulated",
+                                                "actual"
+                                              ]
+                                            },
+                                            "economic_domain_ref": {
+                                              "type": "string",
+                                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                            },
+                                            "account_mode_ref": {
+                                              "type": "string",
+                                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                            },
+                                            "status": {
+                                              "type": "string",
+                                              "enum": [
+                                                "supported",
+                                                "weak_support"
+                                              ]
+                                            },
+                                            "reason_codes": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 256,
+                                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                              },
+                                              "maxItems": 64
+                                            },
+                                            "neighbor_count": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 4096
+                                            },
+                                            "distinct_episode_count": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 4096
+                                            },
+                                            "effective_sample_size": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512,
+                                              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                            },
+                                            "nearest_distance": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512,
+                                              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                            },
+                                            "reference_window_refs": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                              },
+                                              "minItems": 1,
+                                              "maxItems": 4096
+                                            },
+                                            "neighbors": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "object",
+                                                "additionalProperties": false,
+                                                "properties": {
+                                                  "reference_window_ref": {
+                                                    "type": "string",
+                                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                                  },
+                                                  "distance": {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 512,
+                                                    "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                  },
+                                                  "weight": {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 512,
+                                                    "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "reference_window_ref",
+                                                  "distance",
+                                                  "weight"
+                                                ]
+                                              },
+                                              "minItems": 1,
+                                              "maxItems": 4096
+                                            },
+                                            "matched_outcome_summary": {
+                                              "type": "object",
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "mean": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 512,
+                                                  "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                },
+                                                "median": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 512,
+                                                  "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                },
+                                                "min": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 512,
+                                                  "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                },
+                                                "max": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 512,
+                                                  "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                },
+                                                "quantiles": {
+                                                  "type": "array",
+                                                  "items": {
+                                                    "type": "object",
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                      "probability": {
+                                                        "type": "string",
+                                                        "minLength": 1,
+                                                        "maxLength": 512,
+                                                        "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                      },
+                                                      "value": {
+                                                        "type": "string",
+                                                        "minLength": 1,
+                                                        "maxLength": 512,
+                                                        "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "probability",
+                                                      "value"
+                                                    ]
+                                                  },
+                                                  "maxItems": 9
+                                                },
+                                                "method": {
+                                                  "const": "DESCRIPTIVE_NET_TWR_LINEAR_EMPIRICAL_UNWEIGHTED_QUANTILES"
+                                                },
+                                                "cost_assumptions_refs": {
+                                                  "type": "array",
+                                                  "items": {
+                                                    "type": "string",
+                                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                                  },
+                                                  "minItems": 1,
+                                                  "maxItems": 4096
+                                                },
+                                                "outcome_from_ms": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 9007199254740991
+                                                },
+                                                "outcome_to_ms": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 9007199254740991
+                                                }
+                                              },
+                                              "required": [
+                                                "mean",
+                                                "median",
+                                                "min",
+                                                "max",
+                                                "quantiles",
+                                                "method",
+                                                "cost_assumptions_refs",
+                                                "outcome_from_ms",
+                                                "outcome_to_ms"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "stage",
+                                            "evidence_kind",
+                                            "economic_domain_ref",
+                                            "account_mode_ref",
+                                            "status",
+                                            "reason_codes",
+                                            "neighbor_count",
+                                            "distinct_episode_count",
+                                            "effective_sample_size",
+                                            "nearest_distance",
+                                            "reference_window_refs",
+                                            "neighbors",
+                                            "matched_outcome_summary"
+                                          ]
+                                        },
+                                        "maxItems": 7
+                                      },
+                                      "reference_window_refs": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                        },
+                                        "maxItems": 4096
+                                      },
+                                      "formula_id": {
+                                        "const": "market_regime_robust_gaussian_v1_1"
+                                      },
+                                      "qualification": {
+                                        "const": "RUNTIME_APPROVED"
+                                      },
+                                      "policy_version": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                      },
+                                      "policy_hash": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "approved_policy_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                      },
+                                      "feature_schema_version": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                      },
+                                      "calibration_snapshot_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "calibration_hash": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "overlap_policy_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                      },
+                                      "horizon_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "research_binding_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "bound_run_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "strategy_version_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "params_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "evidence_snapshot_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "as_of_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "feature_cutoff_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "reference_cutoff_ms": {
+                                        "anyOf": [
+                                          {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "reason_codes",
+                                      "nearest_distance",
+                                      "eligible_reference_count",
+                                      "neighbor_count",
+                                      "distinct_episode_count",
+                                      "stage_breakdown",
+                                      "reference_window_refs",
+                                      "formula_id",
+                                      "qualification",
+                                      "policy_version",
+                                      "policy_hash",
+                                      "approved_policy_id",
+                                      "feature_schema_version",
+                                      "calibration_snapshot_ref",
+                                      "calibration_hash",
+                                      "overlap_policy_id",
+                                      "horizon_ms",
+                                      "research_binding_ref",
+                                      "bound_run_ref",
+                                      "strategy_version_ref",
+                                      "params_ref",
+                                      "evidence_snapshot_ref",
+                                      "as_of_ms",
+                                      "feature_cutoff_ms",
+                                      "reference_cutoff_ms"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "binding",
+                                  "original_input_ref",
+                                  "derived_input_ref",
+                                  "original_publication_ref",
+                                  "publication_ref",
+                                  "original",
+                                  "knowledge_cutoff_ms",
+                                  "computed_at_ms",
+                                  "calculation_revision",
+                                  "feed_freshness",
+                                  "result"
+                                ]
+                              },
+                              "minItems": 1,
+                              "maxItems": 128
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "reason_codes",
+                            "entries"
+                          ]
                         }
-                      },
-                      "required": [
-                        "availability",
-                        "reason_code"
                       ]
                     }
                   },
@@ -13391,7 +14751,11 @@
                 "const": "NOT_PUBLISHED"
               },
               "reason_code": {
-                "const": "SCOPED_HISTORY_ENUMERATION_NOT_INSTALLED"
+                "type": "string",
+                "enum": [
+                  "SCOPED_HISTORY_ENUMERATION_NOT_INSTALLED",
+                  "REGIME_ORIGINAL_CORPUS_AUTHORITY_NOT_RETAINED"
+                ]
               },
               "page": {
                 "type": "object",
@@ -14978,19 +16342,697 @@
                       ]
                     },
                     "regime": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "availability": {
-                          "const": "NOT_PUBLISHED"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "const": "NOT_PUBLISHED"
+                            },
+                            "reason_code": {
+                              "type": "string",
+                              "enum": [
+                                "INDEPENDENT_REGIME_REVISION_NOT_SELECTED",
+                                "REGIME_TARGET_NOT_AVAILABLE",
+                                "REGIME_ORIGINAL_CORPUS_AUTHORITY_NOT_RETAINED",
+                                "INDEPENDENT_REGIME_RESTATEMENT_NOT_PUBLISHED",
+                                "SELECTED_REGIME_REVISION_NOT_PUBLISHED"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "reason_code"
+                          ]
                         },
-                        "reason_code": {
-                          "const": "INDEPENDENT_REGIME_REVISION_NOT_SELECTED"
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "type": "string",
+                              "enum": [
+                                "AVAILABLE",
+                                "PARTIAL"
+                              ]
+                            },
+                            "reason_codes": {
+                              "type": "array",
+                              "items": {
+                                "const": "SOURCE_PROJECTION_PARTIAL"
+                              },
+                              "maxItems": 1
+                            },
+                            "entries": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "binding": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "subject_type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "alpha",
+                                          "deployment"
+                                        ]
+                                      },
+                                      "subject_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                      },
+                                      "alpha_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                      },
+                                      "alpha_version_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                                      },
+                                      "stage_filter": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "enum": [
+                                            "PAPER",
+                                            "SANDBOX",
+                                            "CANARY",
+                                            "LIVE"
+                                          ]
+                                        },
+                                        "minItems": 1,
+                                        "maxItems": 4
+                                      },
+                                      "comparable_basis_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "individual_evidence_binding_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      }
+                                    },
+                                    "required": [
+                                      "subject_type",
+                                      "subject_id",
+                                      "alpha_id",
+                                      "alpha_version_id",
+                                      "stage_filter",
+                                      "comparable_basis_ref",
+                                      "individual_evidence_binding_ref"
+                                    ]
+                                  },
+                                  "original_input_ref": {
+                                    "type": "string",
+                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                  },
+                                  "derived_input_ref": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "original_publication_ref": {
+                                    "type": "string",
+                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                  },
+                                  "publication_ref": {
+                                    "type": "string",
+                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                  },
+                                  "original": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "economic_as_of_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "evaluation_at_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "feature_cutoff_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "computed_at_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "captured_at_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "economic_as_of_ms",
+                                      "evaluation_at_ms",
+                                      "feature_cutoff_ms",
+                                      "computed_at_ms",
+                                      "captured_at_ms"
+                                    ]
+                                  },
+                                  "knowledge_cutoff_ms": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "computed_at_ms": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "calculation_revision": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256,
+                                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                  },
+                                  "feed_freshness": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "availability": {
+                                            "const": "NOT_PUBLISHED"
+                                          },
+                                          "reason_code": {
+                                            "const": "ORIGINAL_FEED_FRESHNESS_NOT_RECORDED"
+                                          }
+                                        },
+                                        "required": [
+                                          "availability",
+                                          "reason_code"
+                                        ]
+                                      },
+                                      {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "availability": {
+                                            "const": "AVAILABLE"
+                                          },
+                                          "checked_at_ms": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "status": {
+                                            "type": "string",
+                                            "enum": [
+                                              "WITHIN_CURRENT_FEED_FRESHNESS",
+                                              "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS"
+                                            ]
+                                          },
+                                          "source_age_ms": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "maximum_source_age_ms": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "feature_age_ms": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "maximum_feature_age_ms": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "availability",
+                                          "checked_at_ms",
+                                          "status",
+                                          "source_age_ms",
+                                          "maximum_source_age_ms",
+                                          "feature_age_ms",
+                                          "maximum_feature_age_ms"
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "result": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "supported",
+                                          "weak_support",
+                                          "out_of_support",
+                                          "insufficient_data",
+                                          "stale",
+                                          "unbound"
+                                        ]
+                                      },
+                                      "reason_codes": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 256,
+                                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                        },
+                                        "maxItems": 64
+                                      },
+                                      "nearest_distance": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 512,
+                                            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "eligible_reference_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 4096
+                                      },
+                                      "neighbor_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 4096
+                                      },
+                                      "distinct_episode_count": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 4096
+                                      },
+                                      "stage_breakdown": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "stage": {
+                                              "type": "string",
+                                              "enum": [
+                                                "ResearchIS",
+                                                "ResearchOOS",
+                                                "ResearchValidation",
+                                                "Paper",
+                                                "Sandbox",
+                                                "Canary",
+                                                "Live"
+                                              ]
+                                            },
+                                            "evidence_kind": {
+                                              "type": "string",
+                                              "enum": [
+                                                "research_simulated",
+                                                "forward_simulated",
+                                                "actual"
+                                              ]
+                                            },
+                                            "economic_domain_ref": {
+                                              "type": "string",
+                                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                            },
+                                            "account_mode_ref": {
+                                              "type": "string",
+                                              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                            },
+                                            "status": {
+                                              "type": "string",
+                                              "enum": [
+                                                "supported",
+                                                "weak_support"
+                                              ]
+                                            },
+                                            "reason_codes": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 256,
+                                                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                              },
+                                              "maxItems": 64
+                                            },
+                                            "neighbor_count": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 4096
+                                            },
+                                            "distinct_episode_count": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 4096
+                                            },
+                                            "effective_sample_size": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512,
+                                              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                            },
+                                            "nearest_distance": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 512,
+                                              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                            },
+                                            "reference_window_refs": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                              },
+                                              "minItems": 1,
+                                              "maxItems": 4096
+                                            },
+                                            "neighbors": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "object",
+                                                "additionalProperties": false,
+                                                "properties": {
+                                                  "reference_window_ref": {
+                                                    "type": "string",
+                                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                                  },
+                                                  "distance": {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 512,
+                                                    "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                  },
+                                                  "weight": {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 512,
+                                                    "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "reference_window_ref",
+                                                  "distance",
+                                                  "weight"
+                                                ]
+                                              },
+                                              "minItems": 1,
+                                              "maxItems": 4096
+                                            },
+                                            "matched_outcome_summary": {
+                                              "type": "object",
+                                              "additionalProperties": false,
+                                              "properties": {
+                                                "mean": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 512,
+                                                  "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                },
+                                                "median": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 512,
+                                                  "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                },
+                                                "min": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 512,
+                                                  "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                },
+                                                "max": {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 512,
+                                                  "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                },
+                                                "quantiles": {
+                                                  "type": "array",
+                                                  "items": {
+                                                    "type": "object",
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                      "probability": {
+                                                        "type": "string",
+                                                        "minLength": 1,
+                                                        "maxLength": 512,
+                                                        "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                      },
+                                                      "value": {
+                                                        "type": "string",
+                                                        "minLength": 1,
+                                                        "maxLength": 512,
+                                                        "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "probability",
+                                                      "value"
+                                                    ]
+                                                  },
+                                                  "maxItems": 9
+                                                },
+                                                "method": {
+                                                  "const": "DESCRIPTIVE_NET_TWR_LINEAR_EMPIRICAL_UNWEIGHTED_QUANTILES"
+                                                },
+                                                "cost_assumptions_refs": {
+                                                  "type": "array",
+                                                  "items": {
+                                                    "type": "string",
+                                                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                                  },
+                                                  "minItems": 1,
+                                                  "maxItems": 4096
+                                                },
+                                                "outcome_from_ms": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 9007199254740991
+                                                },
+                                                "outcome_to_ms": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 9007199254740991
+                                                }
+                                              },
+                                              "required": [
+                                                "mean",
+                                                "median",
+                                                "min",
+                                                "max",
+                                                "quantiles",
+                                                "method",
+                                                "cost_assumptions_refs",
+                                                "outcome_from_ms",
+                                                "outcome_to_ms"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "stage",
+                                            "evidence_kind",
+                                            "economic_domain_ref",
+                                            "account_mode_ref",
+                                            "status",
+                                            "reason_codes",
+                                            "neighbor_count",
+                                            "distinct_episode_count",
+                                            "effective_sample_size",
+                                            "nearest_distance",
+                                            "reference_window_refs",
+                                            "neighbors",
+                                            "matched_outcome_summary"
+                                          ]
+                                        },
+                                        "maxItems": 7
+                                      },
+                                      "reference_window_refs": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                        },
+                                        "maxItems": 4096
+                                      },
+                                      "formula_id": {
+                                        "const": "market_regime_robust_gaussian_v1_1"
+                                      },
+                                      "qualification": {
+                                        "const": "RUNTIME_APPROVED"
+                                      },
+                                      "policy_version": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                      },
+                                      "policy_hash": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "approved_policy_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                      },
+                                      "feature_schema_version": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                      },
+                                      "calibration_snapshot_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "calibration_hash": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "overlap_policy_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 256,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                      },
+                                      "horizon_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "research_binding_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "bound_run_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "strategy_version_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "params_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "evidence_snapshot_ref": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                      },
+                                      "as_of_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "feature_cutoff_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "reference_cutoff_ms": {
+                                        "anyOf": [
+                                          {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "reason_codes",
+                                      "nearest_distance",
+                                      "eligible_reference_count",
+                                      "neighbor_count",
+                                      "distinct_episode_count",
+                                      "stage_breakdown",
+                                      "reference_window_refs",
+                                      "formula_id",
+                                      "qualification",
+                                      "policy_version",
+                                      "policy_hash",
+                                      "approved_policy_id",
+                                      "feature_schema_version",
+                                      "calibration_snapshot_ref",
+                                      "calibration_hash",
+                                      "overlap_policy_id",
+                                      "horizon_ms",
+                                      "research_binding_ref",
+                                      "bound_run_ref",
+                                      "strategy_version_ref",
+                                      "params_ref",
+                                      "evidence_snapshot_ref",
+                                      "as_of_ms",
+                                      "feature_cutoff_ms",
+                                      "reference_cutoff_ms"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "binding",
+                                  "original_input_ref",
+                                  "derived_input_ref",
+                                  "original_publication_ref",
+                                  "publication_ref",
+                                  "original",
+                                  "knowledge_cutoff_ms",
+                                  "computed_at_ms",
+                                  "calculation_revision",
+                                  "feed_freshness",
+                                  "result"
+                                ]
+                              },
+                              "minItems": 1,
+                              "maxItems": 128
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "reason_codes",
+                            "entries"
+                          ]
                         }
-                      },
-                      "required": [
-                        "availability",
-                        "reason_code"
                       ]
                     }
                   },
@@ -15579,6 +17621,1739 @@
               "raw_dependencies"
             ]
           }
+        ]
+      },
+      "ManagerHistoricalRegimeDetail": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "reason_code": {
+                "type": "string",
+                "enum": [
+                  "INDEPENDENT_REGIME_REVISION_NOT_SELECTED",
+                  "REGIME_TARGET_NOT_AVAILABLE",
+                  "REGIME_ORIGINAL_CORPUS_AUTHORITY_NOT_RETAINED",
+                  "INDEPENDENT_REGIME_RESTATEMENT_NOT_PUBLISHED",
+                  "SELECTED_REGIME_REVISION_NOT_PUBLISHED"
+                ]
+              }
+            },
+            "required": [
+              "availability",
+              "reason_code"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "type": "string",
+                "enum": [
+                  "AVAILABLE",
+                  "PARTIAL"
+                ]
+              },
+              "reason_codes": {
+                "type": "array",
+                "items": {
+                  "const": "SOURCE_PROJECTION_PARTIAL"
+                },
+                "maxItems": 1
+              },
+              "entries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "binding": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "subject_type": {
+                          "type": "string",
+                          "enum": [
+                            "alpha",
+                            "deployment"
+                          ]
+                        },
+                        "subject_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "alpha_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "alpha_version_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "stage_filter": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "PAPER",
+                              "SANDBOX",
+                              "CANARY",
+                              "LIVE"
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 4
+                        },
+                        "comparable_basis_ref": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "individual_evidence_binding_ref": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        }
+                      },
+                      "required": [
+                        "subject_type",
+                        "subject_id",
+                        "alpha_id",
+                        "alpha_version_id",
+                        "stage_filter",
+                        "comparable_basis_ref",
+                        "individual_evidence_binding_ref"
+                      ]
+                    },
+                    "original_input_ref": {
+                      "type": "string",
+                      "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                    },
+                    "derived_input_ref": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "original_publication_ref": {
+                      "type": "string",
+                      "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                    },
+                    "publication_ref": {
+                      "type": "string",
+                      "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                    },
+                    "original": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "economic_as_of_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "evaluation_at_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "feature_cutoff_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "computed_at_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "captured_at_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "economic_as_of_ms",
+                        "evaluation_at_ms",
+                        "feature_cutoff_ms",
+                        "computed_at_ms",
+                        "captured_at_ms"
+                      ]
+                    },
+                    "knowledge_cutoff_ms": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "computed_at_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "calculation_revision": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                    },
+                    "feed_freshness": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "const": "NOT_PUBLISHED"
+                            },
+                            "reason_code": {
+                              "const": "ORIGINAL_FEED_FRESHNESS_NOT_RECORDED"
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "reason_code"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "const": "AVAILABLE"
+                            },
+                            "checked_at_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "WITHIN_CURRENT_FEED_FRESHNESS",
+                                "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS"
+                              ]
+                            },
+                            "source_age_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "maximum_source_age_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "feature_age_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "maximum_feature_age_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "checked_at_ms",
+                            "status",
+                            "source_age_ms",
+                            "maximum_source_age_ms",
+                            "feature_age_ms",
+                            "maximum_feature_age_ms"
+                          ]
+                        }
+                      ]
+                    },
+                    "result": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "weak_support",
+                            "out_of_support",
+                            "insufficient_data",
+                            "stale",
+                            "unbound"
+                          ]
+                        },
+                        "reason_codes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                          },
+                          "maxItems": 64
+                        },
+                        "nearest_distance": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 512,
+                              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "eligible_reference_count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4096
+                        },
+                        "neighbor_count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4096
+                        },
+                        "distinct_episode_count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4096
+                        },
+                        "stage_breakdown": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "stage": {
+                                "type": "string",
+                                "enum": [
+                                  "ResearchIS",
+                                  "ResearchOOS",
+                                  "ResearchValidation",
+                                  "Paper",
+                                  "Sandbox",
+                                  "Canary",
+                                  "Live"
+                                ]
+                              },
+                              "evidence_kind": {
+                                "type": "string",
+                                "enum": [
+                                  "research_simulated",
+                                  "forward_simulated",
+                                  "actual"
+                                ]
+                              },
+                              "economic_domain_ref": {
+                                "type": "string",
+                                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                              },
+                              "account_mode_ref": {
+                                "type": "string",
+                                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "supported",
+                                  "weak_support"
+                                ]
+                              },
+                              "reason_codes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                                },
+                                "maxItems": 64
+                              },
+                              "neighbor_count": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 4096
+                              },
+                              "distinct_episode_count": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 4096
+                              },
+                              "effective_sample_size": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              "nearest_distance": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              "reference_window_refs": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                },
+                                "minItems": 1,
+                                "maxItems": 4096
+                              },
+                              "neighbors": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "reference_window_ref": {
+                                      "type": "string",
+                                      "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                    },
+                                    "distance": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512,
+                                      "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                    },
+                                    "weight": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 512,
+                                      "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                    }
+                                  },
+                                  "required": [
+                                    "reference_window_ref",
+                                    "distance",
+                                    "weight"
+                                  ]
+                                },
+                                "minItems": 1,
+                                "maxItems": 4096
+                              },
+                              "matched_outcome_summary": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "mean": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512,
+                                    "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                  },
+                                  "median": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512,
+                                    "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                  },
+                                  "min": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512,
+                                    "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                  },
+                                  "max": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 512,
+                                    "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                  },
+                                  "quantiles": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "probability": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512,
+                                          "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                        },
+                                        "value": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 512,
+                                          "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                                        }
+                                      },
+                                      "required": [
+                                        "probability",
+                                        "value"
+                                      ]
+                                    },
+                                    "maxItems": 9
+                                  },
+                                  "method": {
+                                    "const": "DESCRIPTIVE_NET_TWR_LINEAR_EMPIRICAL_UNWEIGHTED_QUANTILES"
+                                  },
+                                  "cost_assumptions_refs": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                                    },
+                                    "minItems": 1,
+                                    "maxItems": 4096
+                                  },
+                                  "outcome_from_ms": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "outcome_to_ms": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "mean",
+                                  "median",
+                                  "min",
+                                  "max",
+                                  "quantiles",
+                                  "method",
+                                  "cost_assumptions_refs",
+                                  "outcome_from_ms",
+                                  "outcome_to_ms"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "stage",
+                              "evidence_kind",
+                              "economic_domain_ref",
+                              "account_mode_ref",
+                              "status",
+                              "reason_codes",
+                              "neighbor_count",
+                              "distinct_episode_count",
+                              "effective_sample_size",
+                              "nearest_distance",
+                              "reference_window_refs",
+                              "neighbors",
+                              "matched_outcome_summary"
+                            ]
+                          },
+                          "maxItems": 7
+                        },
+                        "reference_window_refs": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                          },
+                          "maxItems": 4096
+                        },
+                        "formula_id": {
+                          "const": "market_regime_robust_gaussian_v1_1"
+                        },
+                        "qualification": {
+                          "const": "RUNTIME_APPROVED"
+                        },
+                        "policy_version": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                        },
+                        "policy_hash": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "approved_policy_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                        },
+                        "feature_schema_version": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                        },
+                        "calibration_snapshot_ref": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "calibration_hash": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "overlap_policy_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                        },
+                        "horizon_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "research_binding_ref": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "bound_run_ref": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "strategy_version_ref": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "params_ref": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "evidence_snapshot_ref": {
+                          "type": "string",
+                          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                        },
+                        "as_of_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "feature_cutoff_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "reference_cutoff_ms": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "reason_codes",
+                        "nearest_distance",
+                        "eligible_reference_count",
+                        "neighbor_count",
+                        "distinct_episode_count",
+                        "stage_breakdown",
+                        "reference_window_refs",
+                        "formula_id",
+                        "qualification",
+                        "policy_version",
+                        "policy_hash",
+                        "approved_policy_id",
+                        "feature_schema_version",
+                        "calibration_snapshot_ref",
+                        "calibration_hash",
+                        "overlap_policy_id",
+                        "horizon_ms",
+                        "research_binding_ref",
+                        "bound_run_ref",
+                        "strategy_version_ref",
+                        "params_ref",
+                        "evidence_snapshot_ref",
+                        "as_of_ms",
+                        "feature_cutoff_ms",
+                        "reference_cutoff_ms"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "binding",
+                    "original_input_ref",
+                    "derived_input_ref",
+                    "original_publication_ref",
+                    "publication_ref",
+                    "original",
+                    "knowledge_cutoff_ms",
+                    "computed_at_ms",
+                    "calculation_revision",
+                    "feed_freshness",
+                    "result"
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 128
+              }
+            },
+            "required": [
+              "availability",
+              "reason_codes",
+              "entries"
+            ]
+          }
+        ]
+      },
+      "ManagerHistoricalRegimeEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "binding": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "subject_type": {
+                "type": "string",
+                "enum": [
+                  "alpha",
+                  "deployment"
+                ]
+              },
+              "subject_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              "alpha_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              "alpha_version_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              "stage_filter": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "PAPER",
+                    "SANDBOX",
+                    "CANARY",
+                    "LIVE"
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 4
+              },
+              "comparable_basis_ref": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "individual_evidence_binding_ref": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              }
+            },
+            "required": [
+              "subject_type",
+              "subject_id",
+              "alpha_id",
+              "alpha_version_id",
+              "stage_filter",
+              "comparable_basis_ref",
+              "individual_evidence_binding_ref"
+            ]
+          },
+          "original_input_ref": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "derived_input_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "original_publication_ref": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "publication_ref": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "original": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "economic_as_of_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "evaluation_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "feature_cutoff_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "computed_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "captured_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "economic_as_of_ms",
+              "evaluation_at_ms",
+              "feature_cutoff_ms",
+              "computed_at_ms",
+              "captured_at_ms"
+            ]
+          },
+          "knowledge_cutoff_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "computed_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "calculation_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+          },
+          "feed_freshness": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason_code": {
+                    "const": "ORIGINAL_FEED_FRESHNESS_NOT_RECORDED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "reason_code"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "AVAILABLE"
+                  },
+                  "checked_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "WITHIN_CURRENT_FEED_FRESHNESS",
+                      "HISTORICAL_OUTSIDE_CURRENT_FEED_FRESHNESS"
+                    ]
+                  },
+                  "source_age_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "maximum_source_age_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "feature_age_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "maximum_feature_age_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "availability",
+                  "checked_at_ms",
+                  "status",
+                  "source_age_ms",
+                  "maximum_source_age_ms",
+                  "feature_age_ms",
+                  "maximum_feature_age_ms"
+                ]
+              }
+            ]
+          },
+          "result": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "supported",
+                  "weak_support",
+                  "out_of_support",
+                  "insufficient_data",
+                  "stale",
+                  "unbound"
+                ]
+              },
+              "reason_codes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                },
+                "maxItems": 64
+              },
+              "nearest_distance": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512,
+                    "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "eligible_reference_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4096
+              },
+              "neighbor_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4096
+              },
+              "distinct_episode_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4096
+              },
+              "stage_breakdown": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "stage": {
+                      "type": "string",
+                      "enum": [
+                        "ResearchIS",
+                        "ResearchOOS",
+                        "ResearchValidation",
+                        "Paper",
+                        "Sandbox",
+                        "Canary",
+                        "Live"
+                      ]
+                    },
+                    "evidence_kind": {
+                      "type": "string",
+                      "enum": [
+                        "research_simulated",
+                        "forward_simulated",
+                        "actual"
+                      ]
+                    },
+                    "economic_domain_ref": {
+                      "type": "string",
+                      "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                    },
+                    "account_mode_ref": {
+                      "type": "string",
+                      "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "supported",
+                        "weak_support"
+                      ]
+                    },
+                    "reason_codes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                      },
+                      "maxItems": 64
+                    },
+                    "neighbor_count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 4096
+                    },
+                    "distinct_episode_count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 4096
+                    },
+                    "effective_sample_size": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512,
+                      "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                    },
+                    "nearest_distance": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512,
+                      "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                    },
+                    "reference_window_refs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                      },
+                      "minItems": 1,
+                      "maxItems": 4096
+                    },
+                    "neighbors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "reference_window_ref": {
+                            "type": "string",
+                            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                          },
+                          "distance": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512,
+                            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                          },
+                          "weight": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512,
+                            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                          }
+                        },
+                        "required": [
+                          "reference_window_ref",
+                          "distance",
+                          "weight"
+                        ]
+                      },
+                      "minItems": 1,
+                      "maxItems": 4096
+                    },
+                    "matched_outcome_summary": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "mean": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512,
+                          "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                        },
+                        "median": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512,
+                          "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                        },
+                        "min": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512,
+                          "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                        },
+                        "max": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512,
+                          "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                        },
+                        "quantiles": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "probability": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              "value": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 512,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              }
+                            },
+                            "required": [
+                              "probability",
+                              "value"
+                            ]
+                          },
+                          "maxItems": 9
+                        },
+                        "method": {
+                          "const": "DESCRIPTIVE_NET_TWR_LINEAR_EMPIRICAL_UNWEIGHTED_QUANTILES"
+                        },
+                        "cost_assumptions_refs": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                          },
+                          "minItems": 1,
+                          "maxItems": 4096
+                        },
+                        "outcome_from_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "outcome_to_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "mean",
+                        "median",
+                        "min",
+                        "max",
+                        "quantiles",
+                        "method",
+                        "cost_assumptions_refs",
+                        "outcome_from_ms",
+                        "outcome_to_ms"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "stage",
+                    "evidence_kind",
+                    "economic_domain_ref",
+                    "account_mode_ref",
+                    "status",
+                    "reason_codes",
+                    "neighbor_count",
+                    "distinct_episode_count",
+                    "effective_sample_size",
+                    "nearest_distance",
+                    "reference_window_refs",
+                    "neighbors",
+                    "matched_outcome_summary"
+                  ]
+                },
+                "maxItems": 7
+              },
+              "reference_window_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                },
+                "maxItems": 4096
+              },
+              "formula_id": {
+                "const": "market_regime_robust_gaussian_v1_1"
+              },
+              "qualification": {
+                "const": "RUNTIME_APPROVED"
+              },
+              "policy_version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+              },
+              "policy_hash": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "approved_policy_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+              },
+              "feature_schema_version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+              },
+              "calibration_snapshot_ref": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "calibration_hash": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "overlap_policy_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+              },
+              "horizon_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "research_binding_ref": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "bound_run_ref": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "strategy_version_ref": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "params_ref": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "evidence_snapshot_ref": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "as_of_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "feature_cutoff_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "reference_cutoff_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "status",
+              "reason_codes",
+              "nearest_distance",
+              "eligible_reference_count",
+              "neighbor_count",
+              "distinct_episode_count",
+              "stage_breakdown",
+              "reference_window_refs",
+              "formula_id",
+              "qualification",
+              "policy_version",
+              "policy_hash",
+              "approved_policy_id",
+              "feature_schema_version",
+              "calibration_snapshot_ref",
+              "calibration_hash",
+              "overlap_policy_id",
+              "horizon_ms",
+              "research_binding_ref",
+              "bound_run_ref",
+              "strategy_version_ref",
+              "params_ref",
+              "evidence_snapshot_ref",
+              "as_of_ms",
+              "feature_cutoff_ms",
+              "reference_cutoff_ms"
+            ]
+          }
+        },
+        "required": [
+          "binding",
+          "original_input_ref",
+          "derived_input_ref",
+          "original_publication_ref",
+          "publication_ref",
+          "original",
+          "knowledge_cutoff_ms",
+          "computed_at_ms",
+          "calculation_revision",
+          "feed_freshness",
+          "result"
+        ]
+      },
+      "ManagerHistoricalRegimeResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "supported",
+              "weak_support",
+              "out_of_support",
+              "insufficient_data",
+              "stale",
+              "unbound"
+            ]
+          },
+          "reason_codes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+            },
+            "maxItems": 64
+          },
+          "nearest_distance": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eligible_reference_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4096
+          },
+          "neighbor_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4096
+          },
+          "distinct_episode_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4096
+          },
+          "stage_breakdown": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "stage": {
+                  "type": "string",
+                  "enum": [
+                    "ResearchIS",
+                    "ResearchOOS",
+                    "ResearchValidation",
+                    "Paper",
+                    "Sandbox",
+                    "Canary",
+                    "Live"
+                  ]
+                },
+                "evidence_kind": {
+                  "type": "string",
+                  "enum": [
+                    "research_simulated",
+                    "forward_simulated",
+                    "actual"
+                  ]
+                },
+                "economic_domain_ref": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                },
+                "account_mode_ref": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "supported",
+                    "weak_support"
+                  ]
+                },
+                "reason_codes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+                  },
+                  "maxItems": 64
+                },
+                "neighbor_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4096
+                },
+                "distinct_episode_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4096
+                },
+                "effective_sample_size": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                },
+                "nearest_distance": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                },
+                "reference_window_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                  },
+                  "minItems": 1,
+                  "maxItems": 4096
+                },
+                "neighbors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "reference_window_ref": {
+                        "type": "string",
+                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                      },
+                      "distance": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512,
+                        "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                      },
+                      "weight": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512,
+                        "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                      }
+                    },
+                    "required": [
+                      "reference_window_ref",
+                      "distance",
+                      "weight"
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 4096
+                },
+                "matched_outcome_summary": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "mean": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512,
+                      "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                    },
+                    "median": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512,
+                      "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                    },
+                    "min": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512,
+                      "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                    },
+                    "max": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512,
+                      "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                    },
+                    "quantiles": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "probability": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512,
+                            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                          },
+                          "value": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 512,
+                            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                          }
+                        },
+                        "required": [
+                          "probability",
+                          "value"
+                        ]
+                      },
+                      "maxItems": 9
+                    },
+                    "method": {
+                      "const": "DESCRIPTIVE_NET_TWR_LINEAR_EMPIRICAL_UNWEIGHTED_QUANTILES"
+                    },
+                    "cost_assumptions_refs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                      },
+                      "minItems": 1,
+                      "maxItems": 4096
+                    },
+                    "outcome_from_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "outcome_to_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "mean",
+                    "median",
+                    "min",
+                    "max",
+                    "quantiles",
+                    "method",
+                    "cost_assumptions_refs",
+                    "outcome_from_ms",
+                    "outcome_to_ms"
+                  ]
+                }
+              },
+              "required": [
+                "stage",
+                "evidence_kind",
+                "economic_domain_ref",
+                "account_mode_ref",
+                "status",
+                "reason_codes",
+                "neighbor_count",
+                "distinct_episode_count",
+                "effective_sample_size",
+                "nearest_distance",
+                "reference_window_refs",
+                "neighbors",
+                "matched_outcome_summary"
+              ]
+            },
+            "maxItems": 7
+          },
+          "reference_window_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+            },
+            "maxItems": 4096
+          },
+          "formula_id": {
+            "const": "market_regime_robust_gaussian_v1_1"
+          },
+          "qualification": {
+            "const": "RUNTIME_APPROVED"
+          },
+          "policy_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+          },
+          "policy_hash": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "approved_policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+          },
+          "feature_schema_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+          },
+          "calibration_snapshot_ref": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "calibration_hash": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "overlap_policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$(?![\\s\\S])"
+          },
+          "horizon_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "research_binding_ref": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "bound_run_ref": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "strategy_version_ref": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "params_ref": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "evidence_snapshot_ref": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "as_of_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "feature_cutoff_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "reference_cutoff_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "reason_codes",
+          "nearest_distance",
+          "eligible_reference_count",
+          "neighbor_count",
+          "distinct_episode_count",
+          "stage_breakdown",
+          "reference_window_refs",
+          "formula_id",
+          "qualification",
+          "policy_version",
+          "policy_hash",
+          "approved_policy_id",
+          "feature_schema_version",
+          "calibration_snapshot_ref",
+          "calibration_hash",
+          "overlap_policy_id",
+          "horizon_ms",
+          "research_binding_ref",
+          "bound_run_ref",
+          "strategy_version_ref",
+          "params_ref",
+          "evidence_snapshot_ref",
+          "as_of_ms",
+          "feature_cutoff_ms",
+          "reference_cutoff_ms"
         ]
       }
     }

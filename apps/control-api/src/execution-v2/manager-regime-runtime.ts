@@ -722,3 +722,58 @@ export function managerRegimeRetainedInputs(handle: RetainedManagerRegimeInputs 
     });
   } catch { return null; }
 }
+
+/** PRIVATE historical-policy adapter. A restored archive is never installed in
+ * policies or in the genuine current-snapshot identity map below. */
+export const managerRegimeHistoricalPolicyArchive = z.object({
+  artifact_utf8: z.string().min(1).max(POLICY_CEILING), approval_pin: policyApproval,
+}).strict();
+export type ManagerRegimeHistoricalPolicyArchive = z.infer<typeof managerRegimeHistoricalPolicyArchive>;
+export interface ManagerRegimeHistoricalPolicySnapshot {
+  readonly artifact: ManagerRegimePolicyArtifact;
+  readonly approval: ManagerRegimePolicyApprovalPin;
+  readonly artifact_utf8: string;
+}
+const historicalPolicySnapshots = new WeakMap<ManagerRegimeHistoricalPolicySnapshot, {
+  handle: ApprovedManagerRegimePolicy; record: PolicyRecord;
+}>();
+function historicalPolicyTime(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+/** Genuine selected handle/current identity, not a caller JSON qualification. */
+export function managerRegimeHistoricalPolicySnapshot(handle: ApprovedManagerRegimePolicy | null,
+  scope: ManagerRegimeScope, knowledgeCutoffMs: number, nowMs: number): ManagerRegimeHistoricalPolicySnapshot | null {
+  try {
+    if (!historicalPolicyTime(knowledgeCutoffMs) || !historicalPolicyTime(nowMs) || knowledgeCutoffMs > nowMs) return null;
+    if (!handle) return null;
+    const p = policies.get(handle); if (!p || !policyCurrent(p, nowMs) || p.approval.available_at_ms > knowledgeCutoffMs) return null;
+    const parsed = managerRegimeScope.parse(originalCapture(scope, 4096));
+    if (!same(parsed, p.artifact.scope)) return null;
+    const snapshot = freeze({ artifact: p.artifact, approval: p.approval, artifact_utf8: p.artifact_utf8 });
+    historicalPolicySnapshots.set(snapshot, { handle, record: p }); return snapshot;
+  } catch { return null; }
+}
+export function managerRegimeHistoricalPolicySnapshotCurrent(handle: ApprovedManagerRegimePolicy | null,
+  snapshot: ManagerRegimeHistoricalPolicySnapshot, nowMs: number): boolean {
+  const witnessed = snapshot !== null && typeof snapshot === "object" ? historicalPolicySnapshots.get(snapshot) : undefined;
+  return !!witnessed && witnessed.handle === handle && historicalPolicyTime(nowMs) &&
+    policies.get(witnessed.handle) === witnessed.record && policyCurrent(witnessed.record, nowMs);
+}
+/** Original-C validation of exact archived bytes/pin. Does not consult today's
+ * installed policy and cannot create a current/first-write identity. Read now
+ * is used only for future-time integrity, not to revive the archived approval. */
+export function restoreManagerRegimeHistoricalPolicySnapshot(input: {
+  archive: ManagerRegimeHistoricalPolicyArchive; scope: ManagerRegimeScope;
+  knowledge_cutoff_ms: number; computed_at_ms: number;
+}, readNowMs: number): ManagerRegimeHistoricalPolicySnapshot | null {
+  try {
+    const f = originalFields(input, ["archive", "scope", "knowledge_cutoff_ms", "computed_at_ms"]);
+    const k: unknown = f.knowledge_cutoff_ms.value, c: unknown = f.computed_at_ms.value;
+    if (!historicalPolicyTime(k) || !historicalPolicyTime(c) || !historicalPolicyTime(readNowMs) || k > c || c > readNowMs) return null;
+    const archive = managerRegimeHistoricalPolicyArchive.parse(originalCapture(f.archive.value, 3 * POLICY_CEILING + 4096));
+    const scope = managerRegimeScope.parse(originalCapture(f.scope.value, 4096));
+    const p = policyRecordFromBytes({ artifact_bytes: archive.artifact_utf8, approval_pin: archive.approval_pin, scope, as_of_ms: c });
+    if (p.approval.available_at_ms > k) return null;
+    return freeze({ artifact: p.artifact, approval: p.approval, artifact_utf8: p.artifact_utf8 });
+  } catch { return null; }
+}

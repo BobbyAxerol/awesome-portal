@@ -11639,3 +11639,119 @@ measurement lease clean. Normal-hook landing PENDING. Historical Regime
 worker/coordinator/API remains independently implementable work under06-002,
 not source/config-only or a claimed completed consumer. Claude intake rules
 §7.3 remain binding; no new public field/FE change or runtime activation.
+
+<a id="elp2-independent-regime-history-20261017"></a>
+
+**ORIGINAL actual terminal18:17UTC:**
+[6a01686e1c2ef3868c4e3e957d1b75899ff574b4,19files,+1,908/−45](execution_loop/evidence/ELP2-06/regime-original-custody.md#regime-original-terminal-20261017-1817),
+775contracts/APIbuild/5,806API PASS+3existing skips and scoped PG restore/four
+access row digests. Exact Node/PG/network/measurement lease clean, eight
+protected runtime tuples/source/index unchanged. Supersedes pending gate only.
+
+**Approved06-002 independent continuation:**
+[Requirement matrix, reviewed historical worker/coordinator/storage/API,
+generated types/fixtures and Claude handoff](execution_loop/evidence/ELP2-06/regime-dependent-restatement.md)
+APPLIED_UNCOMMITTED/new tests NOT_RUN. Genuine pre-E approval witness, original
+full corpus/current rights, independent third head under shared138quotas,
+forward140 CHECK only; no Score policy dependency/new timer/pool/GET calc/ACK.
+Public REGIME family ALPHA/DEPLOYMENT only, private identifiers keyed, missing
+corpus null counts, original/restated clocks and intrinsic support distinct.
+PUB-01/02 review fixes accepted; actual affected gate remains required.
+
+[Current source/phase matrix](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-independent-regime-20261017)
+repins PMcc22e081 operator original-history as unmounted/non-global authority,
+not an absent adapter or current runtime. Dirty current-provider WIP preserved.
+06source/config/economic/ALL, native/current-human/app trust,14approved budgets/
+calibration/coexistence/P184G2 still OPEN;11NOT_ENTRY_READY. Claude intake§7.3
+checked, UXM00–10 owner-held/AWAITING_CONSUMER_REVIEW, no actual new ack.
+No FE/push/merge dev/main/sign/release/deploy/runtime/source/command activation.
+
+**Regime affected validation18:44–18:45UTC:**
+[Distinct58API/two-file/build/real-PG restore and58contract/three-file terminals](execution_loop/evidence/ELP2-06/regime-dependent-restatement.md#affected-apirestore-and-contract-terminals-2026-10-17-18441845utc)
+PASS, with immutable-head and AJV test defects corrected and failed receipts
+preserved. Only changed/previously-unrun tests retaken; coherent normal hook
+still PENDING. No consumer/source/production calibration certificate implied.
+
+[Latest source classification](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#independent-regime-affected-proof-and-latest-source-1845utc)
+repins committed PMc080b4db original admission history as qualified-unmounted,
+not absent or installed; peer position-history WIP preserved. Next approved
+independent backend: finite current-state/snapshot account-sync observations
+under canonical04-009, no broad audit/custody/source grant or generic parent
+shortcut. Claude owner-held/AWAITING_CONSUMER_REVIEW; full06/10 mandatory gates
+and11NOT_ENTRY_READY remain. No FE/push/dev/main/runtime change.
+
+<a id="epg10-08-egress-reservation-20261017"></a>
+
+**Original EPG10-08 owner continuation / 2026-10-18 Asia/Saigon (actual acquisition timestamp in receipt) — entry before code.**
+Bobby's active assignment is genuine current app/domain+PM identity binding,
+SENDING COMMIT-ACK ambiguity, final-send/per-frame authority, actual installation
+and revoke/cache/cursor/SSE drills; only then connected09→10→11. Full08 NOT_MET.
+Edge main plan §23.20.7 remains the owning campaign record; this Core entry
+tracks the dependency-local private qualification while HK has a foreign
+measurement window. Source intake: Core6a01686e1c2ef3868c4e3e957d1b75899ff574b4,
+PMc080b4dba9ff52dde3bbb9a3a58f68e6fab5f808 (18:38UTC source intake), TSnext8af3b12a5cda430c2f0764e79d515fffe55849ef.
+Preserve all current peer Regime/history/source/journal paths and their index.
+
+**Owned scope/invariants:** extend the EXISTING finite egress primitive with
+same-instance opaque pre-COMMIT reservation, zero-write capture, mutually
+exclusive one-shot dispatch/cancel, genuine actual response/socket quiescence
+and one-use recovery witness. Keep finite send/consume compatibility; no
+second transport, authority/lease ledger or fake no-send witness. A further
+frame uses the same primitive but requires fresh current authority; no whole
+SSE response is a finished finite response. Existing Core native client/codec
+remain sole native wire authority. PM existing-registry source is qualified,
+not installed; a domain-policy revision cannot silently erase Stan's grants.
+
+**Target/test gate:** fresh /tmp/epg10-08-egress-* source-only target on SGP,
+two original private finite source/spec files plus exact additive test/source
+delta, runner and manifest. Cached worker at most1CPU/512MiB, network-none
+(except its own loopback HTTP), read-only root/source/dependencies,32MiBtmpfs,
+<=300s lease, no package install/build/pull/DB/hostports/volume/operational mount.
+Run strict affected TypeScript and all existing finite tests plus reservation,
+ACK-loss orchestration and actual socket refusal/quiescence tests. Actual DB
+COMMIT, app-domain install and connected drills remain NOT_RUN until their
+own genuine inputs and qualification; no mock callback is promoted to authority.
+
+**Risk/rollback/cleanup:** all candidate source is unmounted, tests localhost
+TEST_ONLY; no service/config/identity/grant/data mutation. On failure retain
+bounded log/receipt and correct owned defects; never weaken ambiguity.
+Remove exact owned worker/source packet/lease after terminal, retain only
+sanitized evidence and active/named rollback artifacts. No shared prune.
+Status IN_PROGRESS_NOT_RUN; no phase closure, push, merge, deploy or UI work.
+
+**Actual stable Core DB preflight /17:51–17:52UTC, READ ONLY:** existing
+`portal_control` on `portal-stable-v1-0-1_portal-postgres-data` has
+portal_users/auth_sessions/workspace_members/workspaces/portal_owner_anchor.
+The correctly named portal_access_policy_state/grants_v2/policy_events and
+elp210_candidate.authority are ABSENT. Latest applied pgmigrations is
+1723680000036_a4-governance-grants, not current source migration139.
+Access V2's creating migration is1723680000134. Earlier illustrative probes
+public.users/public.sessions/workspace_memberships used non-source names and
+are NOT evidence of missing identity; the exact source-name catalogue audit
+corrects them. No accounts, sessions/tokens, grants or DB state were changed.
+Commissioning must review a minimal dependency-closed additive package on
+this actual populated installation, never blindly apply every37..139 migration,
+substitute a clone/test DB or present source qualification as installed authority.
+
+**Explicit resumed assignment18:37UTC:** Bobby authorizes completing the
+SENDING-ACK-loss sender, same PM–Core/current identity + minimum schema and
+per-frame SSE/revoke/cache/cursor/recovery. This entry qualifies only the
+49-case finite primitive first; actual PostgreSQL acknowledgement loss and
+connected provider/installation/frame proof remain required in original08.
+Current PM position-history WIP and Core Regime/history migrations/index stay
+outside our writes. No new generic approval or new phase is required.
+
+
+<a id="epg10-08-finite-reservation-qualified-20261017"></a>
+### Original EPG10-08 — finite reservation qualified; actual PostgreSQL ACK-loss slice
+
+- Same original08 IN_PROGRESS / full connected NOT_MET. No approval reset or new phase.
+- Finite egress: strict affected TypeScript then 49/49 PASS, 0 fail/error/skip, SGP isolated actual loopback HTTP, 2026-10-17 18:44:56.867128–18:45:10.038159 UTC (13.171s). Source packet /tmp/epg10-08-egress-sTbe7W0G; receipt sha256 de9507fe9081129531c2d71361849cc82444dfbedea1a47490ee0109c7c0e799; JUnit sha256 b7056e651156cca7bed0ae3777d2759bfefbd2d1bc394347db8bf98f229e6839. Transport component only, NOT PostgreSQL/PM installation/SSE acceptance.
+- Worker auto-removed, own lease released, 10 protected runtime tuples unchanged, 0 image/build/cache created. Shared disk free165872619520→165872480256B; not exclusive capacity measurement. Private packet retained pending integration.
+- Current approved slice: preserve exact peer six-route TLS client+closed codec; additive semantic selection helpers; same current-human ledger SENDING and final witness; reserve exact response before actual COMMIT, close/fence actual unsent response on lost ACK, recover SAME immutable receipt/key, never resend or release UNKNOWN on TTL.
+- Before source: current Core baseline6a01686e1c2ef3868c4e3e957d1b75899ff574b4 verified; private exact-hunk decoder/evaluator/SQL/mutator patch only. Broken old policy-revision installer excluded; legacy grants must survive future additive domain amendments.
+- Gates: affected strict tsc; original wire/codec compatibility tests; all10 real disposable PostgreSQL cases enabled with explicit TEST_ONLY marker+isolatedURL; zero skips. Fresh internal network, no host ports, no real DB/user/policy data. Actual PG COMMIT then injected lost ACK, real HTTP response closure and durable ABORTED/SERVED recovery; PM calls remain explicit test doubles, NOT connected PM acceptance.
+- Rollback: remove only owned worker/DB/network after every attempt, verify10 runtime tuples unchanged; no image build, operational migration, deployment, grants/session changes. Keep bounded hashed source/evidence until accepted. Source edits are fresh private test copies; remote apply_patch unavailable, assert exact baseline/hunks and inspect pins/diff before any source landing.
+- Still owned: production composition/current identity/domain amendment, PM/Core bind, per-frame SSE currentness plus real revoke/cache/cursor/recovery. This component is not phase closure; no09connected.
+
+- Native PG harness attempt18:53:39 NOT_RUN: worker mountpoint absent under RO source; no TypeScript/test executed. Owned DB/network/failed worker removed,10 runtime tuples unchanged,0 images/build. Fix only fresh isolated node_modules mountpoint directory, then rerun same gates; not product defect/acceptance.

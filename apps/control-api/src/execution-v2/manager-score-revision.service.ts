@@ -14,6 +14,8 @@ import {managerScorePopulationDigest} from "./manager-score-publication";
 import {managerScorePublication,type ManagerScorePublication} from "./manager-score-publication.contract";
 import type {ManagerCompositionBinding} from "./manager-composition-publication.contract";
 import type {ManagerScoreRestatementSnapshot} from "./manager-score-restatement";
+import type {ManagerRegimeRestatementSnapshot} from "./manager-regime-restatement";
+import {projectManagerHistoricalRegime,ManagerRegimePublicProjectionError} from "./manager-regime-history";
 import {ManagerScoreHistoryStore,ManagerScoreHistoryStoreError,type ManagerScoreHistorySnapshot} from "./manager-score-history.store";
 import {projectionRowVisible} from "./read-projection";
 import {ExecutionReadScopes,ExecutionReadScopeError,scopeAllowsField,scopeAllowsFullAccountingPopulation,scopeReadPopulation,scopeResources,
@@ -25,7 +27,10 @@ type Query=ManagerScoreRevisionQuery|ManagerScoreRevisionHistoryQuery;
 type Gate={q:Query;scope:AuthorizedExecutionReadScope;document:ManagerModelDocument;head:ManagerModelHead|null;digest:string};
 type Entry=ManagerScoreRevisionView["score_details"][number];
 type Composition=ManagerScoreRevisionView["composition"];
-type Projected={view:ManagerScoreRevisionView;retained:ManagerScoreRestatementSnapshot|null};
+type Regime=ManagerScoreRevisionView["regime"];
+type Projected={view:ManagerScoreRevisionView;retained:ManagerScoreRestatementSnapshot|null;
+  regimeRetained?:ManagerRegimeRestatementSnapshot|null;unpublished?:true;
+  historyUnavailable?:"REGIME_ORIGINAL_CORPUS_AUTHORITY_NOT_RETAINED"};
 const notFound=():never=>{throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE",404);};
 const changed=():never=>{throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);};
 const subject=(q:Query)=>({type:({FUND:"manager_book",PORTFOLIO:"portfolio",ALPHA:"alpha",ACCOUNT:"account",DEPLOYMENT:"deployment"} as const)[q.surface],
@@ -61,7 +66,7 @@ export class ManagerScoreRevisionService {
       profile:g.document.profile_id,revision:g.document.revision,stages:[...g.q.stage_filter].sort(),partition:g.q.economic_partition};
     // Preserve all default/explicit SCORE references exactly; only this new
     // financial family receives a separate public correlation domain.
-    if(g.q.metric_family==="COMPOSITION")Object.assign(context,{metric_family:"COMPOSITION"});
+    if(g.q.metric_family==="COMPOSITION"||g.q.metric_family==="REGIME")Object.assign(context,{metric_family:g.q.metric_family});
     return "sha256:"+createHmac("sha256",this.referenceKey).update("portal-manager-score-revision-v1\0"+label+"\0"+
       accessDigest({context,value})).digest("hex");
   }
@@ -99,8 +104,14 @@ export class ManagerScoreRevisionService {
       scope=await this.scopes.authorize(principal,{environment:q.environment,profileId:profile},{...requirement,action:"portfolio.read_restricted"});
     }
     if(scope.mode!=="SCOPED_V2")notFound();
-    for(const field of ["score","provenance_ref","revision","source_as_of","as_of","stage","profile_id","currency",
-      "alpha_id","alpha_version_id","portfolio_id","deployment_id","account_id"])if(!scopeAllowsField(scope,field))notFound();
+    // A Regime history read is not a financial Score/allocation grant. Check
+    // its own public fields and exact correlated population, never inherit the
+    // capital/account ceiling merely because the ordinary route is shared.
+    const fields=q.metric_family==="REGIME"?["regime","binding_id","provenance_ref","revision","source_as_of","as_of","stage","profile_id",
+      "alpha_id","alpha_version_id",...(q.surface==="DEPLOYMENT"?["deployment_id"]:[])]:
+      ["score","provenance_ref","revision","source_as_of","as_of","stage","profile_id","currency",
+      "alpha_id","alpha_version_id","portfolio_id","deployment_id","account_id"];
+    for(const field of fields)if(!scopeAllowsField(scope,field))notFound();
     if(q.metric_family==="COMPOSITION")for(const field of ["allocation","balance_total"])
       if(!scopeAllowsField(scope,field))notFound();
     if((q.surface==="FUND"||q.surface==="PORTFOLIO")&&
@@ -271,18 +282,21 @@ export class ManagerScoreRevisionService {
         availability:e.availability,reason_codes:e.reason_codes,score:p?plainScore(p,(label,value)=>this.ref(g,label,value)):null};
     });
   }
-  private project(g:Gate,entries:Entry[],retained:ManagerScoreRestatementSnapshot|null,composition?:Composition):Projected {
+  private project(g:Gate,entries:Entry[],retained:ManagerScoreRestatementSnapshot|null,composition?:Composition,
+    regime?:Regime,regimeRetained?:ManagerRegimeRestatementSnapshot|null):Projected {
     const q=g.q,d=g.document,original=q.revision_mode==="ORIGINAL_AS_PUBLISHED";
     if(new Set(entries.map(e=>e.slot)).size!==entries.length)notFound();
-    const K=retained?.knowledge_cutoff_ms??null,computed=retained?.computed_at_ms??null;
+    const K=regimeRetained?.knowledge_cutoff_ms??retained?.knowledge_cutoff_ms??null,
+      computed=regimeRetained?.computed_at_ms??retained?.computed_at_ms??null;
     const target={surface:q.surface,id:q.id??null};
     const sourceRef=this.ref(g,"source",{target,workspace:d.workspace_id,environment:d.environment,profile:d.profile_id,
       revision:d.revision,stages:[...q.stage_filter].sort(),partition:q.economic_partition});
     const selectedComposition=composition!==undefined&&composition.availability!=="NOT_PUBLISHED";
     const revisionRef=this.ref(g,"revision",{sourceRef,mode:q.revision_mode,K,computed,entries,
-      ...(q.metric_family==="COMPOSITION"?{composition:composition??null}:{})});
+      ...(q.metric_family==="COMPOSITION"?{composition:composition??null}:{}),
+      ...(q.metric_family==="REGIME"?{regime:regime??null}:{})});
     const available=entries.filter(e=>e.availability==="AVAILABLE").length;
-    const availability=selectedComposition?composition.availability:entries.length>0&&available===entries.length?"AVAILABLE":
+    const availability=regime!==undefined?regime.availability:selectedComposition?composition.availability:entries.length>0&&available===entries.length?"AVAILABLE":
       entries.some(e=>e.availability!=="NOT_PUBLISHED")?"PARTIAL":"NOT_PUBLISHED";
     const view=managerScoreRevisionView.parse({schema_version:"portal.execution.manager-score-revision.v1",target,
       workspace_id:d.workspace_id,environment:d.environment,revision_mode:q.revision_mode,purpose:"HISTORICAL_ANALYSIS_ONLY",
@@ -294,15 +308,55 @@ export class ManagerScoreRevisionService {
       computed_at_ms:computed,computed_at_reason:original?"ORIGINAL_COMPUTE_TIMES_ARE_PER_ENTRY":computed===null?"RESTATEMENT_NOT_PUBLISHED":null,
       eligibility:{policy_current:false,policy_state:"UNKNOWN",reason_code:"POLICY_STATE_NOT_CLASSIFIED",
         economic_source:q.source_selector==="CURRENT_HEAD"?"CURRENT_HEAD":"RETAINED_EXACT_REVISION",usable_as_current_operational_score:false},
-      availability,reason_codes:selectedComposition||entries.length?[]:[q.metric_family==="COMPOSITION"?
+      availability,reason_codes:q.metric_family==="REGIME"&&regime?regime.availability==="NOT_PUBLISHED"?[regime.reason_code]:[...regime.reason_codes]:selectedComposition||entries.length?[]:[q.metric_family==="COMPOSITION"?
         "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED":original?"SELECTED_SCORE_REVISION_NOT_PUBLISHED":"RESTATEMENT_NOT_PUBLISHED"],
       score_details:entries,composition:composition??{availability:"NOT_PUBLISHED",reason_code:q.metric_family==="COMPOSITION"?
         "SELECTED_COMPOSITION_REVISION_NOT_PUBLISHED":original?"COMPOSITION_REVISION_NOT_SELECTED":"DEPENDENT_RESTATEMENT_NOT_MATERIALIZED"},
-      regime:{availability:"NOT_PUBLISHED",reason_code:"INDEPENDENT_REGIME_REVISION_NOT_SELECTED"}});
-    return {view,retained};
+      regime:regime??{availability:"NOT_PUBLISHED",reason_code:"INDEPENDENT_REGIME_REVISION_NOT_SELECTED"}});
+    return {view,retained,...(q.metric_family==="REGIME"?{regimeRetained:regimeRetained??null}:{})};
+  }
+  /** Independent alpha/deployment Regime family. A materialization is selected
+   * only after its COMPLETE retained corpus is currently authorized. Private
+   * third-head keys never enter refs, cursors, counts or predecessor labels. */
+  private projectRegimeHistory(g:Gate,snapshot:ManagerScoreHistorySnapshot):Projected[]{
+    const q=g.q;
+    if((q.surface!=="ALPHA"&&q.surface!=="DEPLOYMENT")||q.id===undefined)notFound();
+    const originalRow=snapshot.original===null?null:{calculation_key:snapshot.original.calculation_key,
+      payload_digest:accessDigest(snapshot.original),payload:snapshot.original};
+    const detail=(gate:Gate,retained:ManagerRegimeRestatementSnapshot|null):Regime=>projectManagerHistoricalRegime({
+      document:g.document,originalRow,restated:retained?.entries.map(e=>e.historical)??null,scope:g.scope,
+      query:{surface:q.surface as "ALPHA"|"DEPLOYMENT",id:q.id!,stage_filter:q.stage_filter,
+        economic_partition:q.economic_partition,revision_mode:gate.q.revision_mode},
+      read_at_ms:Date.now(),maximum_output_bytes:1_048_576,ref:(kind,value)=>this.ref(g,kind,value)});
+    const absence=(value:Regime):Projected=>{
+      const projected=this.project(g,[],null,undefined,value);
+      return {...projected,unpublished:true,...(value.availability==="NOT_PUBLISHED"&&
+        value.reason_code==="REGIME_ORIGINAL_CORPUS_AUTHORITY_NOT_RETAINED"?{historyUnavailable:value.reason_code}:{})};
+    };
+    const originalGate={...g,q:{...q,revision_mode:"ORIGINAL_AS_PUBLISHED" as const}},original=detail(originalGate,null);
+    if(q.revision_mode==="ORIGINAL_AS_PUBLISHED")return original.availability==="NOT_PUBLISHED"?[absence(original)]:
+      [this.project(g,[],null,undefined,original)];
+    const map=new Map(snapshot.regime_restatements.map(v=>[v.calculation_key,v]));
+    const ordered:ManagerRegimeRestatementSnapshot[]=[],seen=new Set<string>();let key=snapshot.regime_restated_head_key;
+    while(key!==null){const value=map.get(key);if(!value||seen.has(key))throw new Error("HISTORY_LINEAGE_INVALID");
+      seen.add(key);ordered.push(value);key=value.supersedes_calculation_key;}
+    const visible=new Set<string>(),projected:Projected[]=[];
+    for(const value of ordered.reverse()){
+      const regime=detail(g,value);if(regime.availability==="NOT_PUBLISHED")continue;
+      const item=this.project(g,[],null,undefined,regime,value);
+      if(visible.has(item.view.revision_ref))continue;visible.add(item.view.revision_ref);projected.push(item);
+    }
+    let predecessor=original.availability==="NOT_PUBLISHED"?null:this.project(originalGate,[],null,undefined,original).view.revision_ref;
+    for(const item of projected){item.view.supersedes_revision_ref=predecessor;
+      item.view.supersedes_reason=predecessor===null?"NO_AUTHORIZED_PREDECESSOR":"AUTHORIZED_PREDECESSOR";
+      predecessor=item.view.revision_ref;}
+    // Missing legacy corpus stays honest null-count absence. A verified empty
+    // independent chain has zero materializations, not one manufactured row.
+    return projected.length?projected.reverse():[absence(detail(g,null))];
   }
   private projectHistory(g:Gate,snapshot:ManagerScoreHistorySnapshot):Projected[]{
     const members=this.members(g);if(!members.length&&!this.compositionEmptyTarget(g))notFound();
+    if(g.q.metric_family==="REGIME")return this.projectRegimeHistory(g,snapshot);
     if(g.q.metric_family==="COMPOSITION")return this.projectCompositionHistory(g,snapshot,members);
     const originals=this.original(g,members);
     if(g.q.revision_mode==="ORIGINAL_AS_PUBLISHED")return originals.length?[this.project(g,originals,null)]:[];
@@ -350,8 +404,10 @@ export class ManagerScoreRevisionService {
   }
   private classify(g:Gate,item:Projected):ManagerScoreRevisionView {
     const v=item.retained;
-    const state=v?this.runtime?.restatementFor({workspace_id:g.document.workspace_id,
-      environment:g.document.environment,profile_id:g.document.profile_id})?.classifyPolicy(v)??
+    const scope={workspace_id:g.document.workspace_id,environment:g.document.environment,profile_id:g.document.profile_id},rg=item.regimeRetained;
+    const state=g.q.metric_family==="REGIME"?(rg?this.runtime?.regimeRestatementFor(scope)?.classifyPolicy(rg)??
+      (Date.now()>=rg.policy.approval_pin.valid_until_ms?"NOT_CURRENT":"UNKNOWN"):"UNKNOWN"):
+      v?this.runtime?.restatementFor(scope)?.classifyPolicy(v)??
       (Date.now()>=v.policy.valid_until_ms?"NOT_CURRENT":"UNKNOWN"):"UNKNOWN";
     item.view.eligibility.policy_current=state==="CURRENT";item.view.eligibility.policy_state=state;
     item.view.eligibility.reason_code=state==="CURRENT"?null:state==="NOT_CURRENT"?
@@ -360,6 +416,8 @@ export class ManagerScoreRevisionService {
   }
   private failure(error:unknown):never{
     if(error instanceof ExecutionReadScopeError)throw error;
+    if(error instanceof ManagerRegimePublicProjectionError&&error.code==="REGIME_PUBLIC_BOUND")
+      throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT",503);
     if(error instanceof ManagerScoreHistoryStoreError){
       if(error.code==="HISTORY_SOURCE_CHANGED")changed();
       if(error.code==="HISTORY_CAPACITY")throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT",503);
@@ -375,7 +433,7 @@ export class ManagerScoreRevisionService {
       const item=await this.scopes.deliver(g.scope,async()=>{
         const items=await this.retained(g),selected=parsed.data.revision_ref===undefined?items[0]:
           items.find(p=>p.view.revision_ref===parsed.data.revision_ref);
-        if(!selected&&parsed.data.revision_ref!==undefined)notFound();
+        if((!selected||selected.unpublished)&&parsed.data.revision_ref!==undefined)notFound();
         const result=selected??this.project(g,[],null);
         if(Buffer.byteLength(JSON.stringify(result.view))>1_048_576)throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT",503);
         return result;
@@ -393,13 +451,21 @@ export class ManagerScoreRevisionService {
     try{
       const q=parsed.data,g=await this.gate(principal,q);
       const page=await this.scopes.deliver(g.scope,async()=>{
-        const all=await this.retained(g),direction=q.before?"before":"after";
+        const retained=await this.retained(g),unavailable=retained.find(p=>p.historyUnavailable)?.historyUnavailable;
+        if(unavailable){
+          if(q.before||q.after)changed();
+          return {response:managerScoreRevisionHistory.parse({schema_version:"portal.execution.manager-score-history.v1",
+            target:{surface:q.surface,id:q.id??null},workspace_id:principal.workspaceId,environment:q.environment,revision_mode:q.revision_mode,
+            purpose:"HISTORICAL_ANALYSIS_ONLY",operational_current:false,availability:"NOT_PUBLISHED",reason_code:unavailable,
+            page:{limit:q.limit,returned_count:null,authorized_total_count:null,next_cursor:null,previous_cursor:null},items:[]}),chosen:[] as Projected[]};
+        }
+        const all=retained.filter(p=>!p.unpublished),direction=q.before?"before":"after";
         const fingerprint=accessDigest({scope:g.scope.fingerprint,viewer:principal.viewerWorkspaceId??principal.workspaceId,
           target:{surface:q.surface,id:q.id??null},workspace:g.document.workspace_id,environment:q.environment,
           profile:g.document.profile_id,revision:g.document.revision,generation:g.document.projection_generation,
           catalogue:g.document.catalogue_digest,mode:q.revision_mode,stages:[...q.stage_filter].sort(),partition:q.economic_partition,
           limit:q.limit,key:this.config.QUERY_CURSOR_ACTIVE_KEY_ID,authorized:this.signature(all),
-          ...(q.metric_family==="COMPOSITION"?{metric_family:"COMPOSITION"}:{})});
+          ...(q.metric_family==="COMPOSITION"||q.metric_family==="REGIME"?{metric_family:q.metric_family}:{})});
         const context={resourceId:"execution-manager-score-history-v1",workspaceId:principal.workspaceId,
           direction,queryFingerprint:fingerprint,boundarySize:1} as const;
         const token=q.before??q.after;

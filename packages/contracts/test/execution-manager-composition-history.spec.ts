@@ -25,7 +25,7 @@ describe("ELP2-06 exact historical Composition canonical producer contract",()=>
   it("generates a named closed Composition detail and optional family selector, without changing endpoints",()=>{
     expect(api.components.schemas.ManagerHistoricalComposition).toBeDefined();
     const q=api.components.schemas.ManagerScoreRevisionQuery;
-    expect(q.properties.metric_family.enum).toEqual(["SCORE","COMPOSITION"]);
+    expect(q.properties.metric_family.enum).toEqual(["SCORE","COMPOSITION","REGIME"]);
     expect(q.required).not.toContain("metric_family");
     expect(api.paths["/api/v1/execution/manager/score-view"].get.operationId).toBe("executionManagerScoreRevisionGetV1");
     expect(api.paths["/api/v1/execution/manager/score-revisions"].get.operationId).toBe("executionManagerScoreRevisionHistoryGetV1");

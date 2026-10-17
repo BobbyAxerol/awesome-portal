@@ -89,6 +89,7 @@ async function fixture(fields:string[]=[...BUSINESS_READ_FIELDS]){
     // original is intentionally unused by this target projection; real decode
     // / lineage / source hash coupling is separately tested on actual PG.
     return {document,original:null,restatements:structuredClone(revisions),original_head_key:null,
+      regime_restatements:[],regime_restated_head_key:null,
       restated_head_key:revisions.at(-1)?.calculation_key??null,snapshot_digest:accessDigest(revisions)};
   }
   let revisions:ManagerScoreRestatementSnapshot[]=[];

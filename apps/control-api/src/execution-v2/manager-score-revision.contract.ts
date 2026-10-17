@@ -4,17 +4,20 @@ import {publicationDigest} from "./publication.contract";
 import {managerPartition} from "./manager-model.contract";
 import {managerScoreBinding,managerScoreQuality,managerScorePublication} from "./manager-score-publication.contract";
 import {managerCompositionBinding,managerCompositionResult} from "./manager-composition-publication.contract";
+import {managerHistoricalRegimeDetail} from "./manager-regime-history.contract";
 
 const text=z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$(?![\s\S])/);
 export const managerScoreRevisionMode=z.enum(["ORIGINAL_AS_PUBLISHED","RESTATED_CURRENT_POLICY"]);
 const target=z.object({surface:z.enum(["FUND","PORTFOLIO","ALPHA","ACCOUNT","DEPLOYMENT"]),id:text.nullable()}).strict();
 const base=z.object({workspace_id:text.optional(),environment:executionEnvironment,surface:target.shape.surface,id:text.optional(),
-  metric_family:z.enum(["SCORE","COMPOSITION"]).optional(),
+  metric_family:z.enum(["SCORE","COMPOSITION","REGIME"]).optional(),
   stage_filter:z.array(financialStage).max(4).default([]),economic_partition:managerPartition,
   source_selector:z.enum(["CURRENT_HEAD","RETAINED_REVISION"]),source_revision:text.optional()}).strict();
 function queryIssues(q:z.infer<typeof base>,c:z.RefinementCtx){
   if(q.metric_family==="COMPOSITION"&&q.surface!=="FUND"&&q.surface!=="PORTFOLIO")
     c.addIssue({code:"custom",message:"COMPOSITION_REVISION_TARGET_INVALID"});
+  if(q.metric_family==="REGIME"&&q.surface!=="ALPHA"&&q.surface!=="DEPLOYMENT")
+    c.addIssue({code:"custom",message:"REGIME_REVISION_TARGET_INVALID"});
   if((q.surface==="FUND")!==(q.id===undefined)||(q.source_selector==="RETAINED_REVISION")!==(q.source_revision!==undefined)||
     new Set(q.stage_filter).size!==q.stage_filter.length)c.addIssue({code:"custom",message:"SCORE_REVISION_QUERY_INVALID"});
   const domain=q.environment==="paper"?["PAPER"]:q.environment==="sandbox"?["SANDBOX"]:["CANARY","LIVE"];
@@ -97,7 +100,7 @@ export const managerScoreRevisionView=z.object({schema_version:z.literal("portal
   eligibility:policy,availability:z.enum(["AVAILABLE","PARTIAL","NOT_PUBLISHED"]),
   reason_codes:z.array(text).max(64),score_details:z.array(managerHistoricalScoreEntry).max(128),
   composition:managerHistoricalComposition,
-  regime:z.object({availability:z.literal("NOT_PUBLISHED"),reason_code:z.literal("INDEPENDENT_REGIME_REVISION_NOT_SELECTED")}).strict(),
+  regime:managerHistoricalRegimeDetail,
 }).strict().superRefine((view,c)=>{
   if((view.supersedes_reason==="AUTHORIZED_PREDECESSOR")!==(view.supersedes_revision_ref!==null)||
     view.supersedes_revision_ref===view.revision_ref||
@@ -112,7 +115,16 @@ export const managerScoreRevisionView=z.object({schema_version:z.literal("portal
     !missingRestated&&(view.knowledge_cutoff_ms===null||view.knowledge_cutoff_reason!==null||view.computed_at_ms===null||view.computed_at_reason!==null||
       view.knowledge_cutoff_ms<view.source.source_as_of_ms||view.computed_at_ms<view.knowledge_cutoff_ms))
     c.addIssue({code:"custom",message:"SCORE_REVISION_CLOCK_INVALID"});
-  const compositionSelected=view.composition.availability!=="NOT_PUBLISHED";
+  const compositionSelected=view.composition.availability!=="NOT_PUBLISHED",regimeSelected=view.regime.availability!=="NOT_PUBLISHED";
+  if(view.regime.availability!=="NOT_PUBLISHED"){
+    const detail=view.regime;
+    if(view.score_details.length!==0||compositionSelected||(view.target.surface!=="ALPHA"&&view.target.surface!=="DEPLOYMENT")||
+      detail.entries.some(e=>e.binding.subject_type!==(view.target.surface==="ALPHA"?"alpha":"deployment")||
+        e.binding.subject_id!==view.target.id||e.original.economic_as_of_ms!==view.source.source_as_of_ms||
+        !original&&(e.knowledge_cutoff_ms!==view.knowledge_cutoff_ms||e.computed_at_ms!==view.computed_at_ms))||
+      view.availability!==view.regime.availability)
+      c.addIssue({code:"custom",message:"REGIME_REVISION_CONTEXT_INVALID"});
+  }
   if(view.composition.availability!=="NOT_PUBLISHED"){
     const detail=view.composition;
     if(view.score_details.length!==0||
@@ -123,7 +135,7 @@ export const managerScoreRevisionView=z.object({schema_version:z.literal("portal
       !original&&detail.computed_at_ms!==view.computed_at_ms)
       c.addIssue({code:"custom",message:"COMPOSITION_REVISION_CONTEXT_INVALID"});
   }
-  if(view.availability==="AVAILABLE"&&(compositionSelected?
+  if(view.availability==="AVAILABLE"&&(regimeSelected?view.regime.availability!=="AVAILABLE":compositionSelected?
     view.composition.availability!=="AVAILABLE":!view.score_details.length||view.score_details.some(e=>e.availability!=="AVAILABLE")))
     c.addIssue({code:"custom",message:"SCORE_REVISION_AVAILABILITY_INVALID"});
   if(compositionSelected&&view.availability!==view.composition.availability)
@@ -143,12 +155,12 @@ export const managerScoreRevisionHistory=z.union([z.object({...historyEnvelope,
     authorized_total_count:z.number().int().min(0).max(32),
     next_cursor:z.string().min(1).max(4096).nullable(),previous_cursor:z.string().min(1).max(4096).nullable()}).strict(),
   items:z.array(managerScoreRevisionView).max(50),}).strict(),z.object({...historyEnvelope,
-  availability:z.literal("NOT_PUBLISHED"),reason_code:z.literal("SCOPED_HISTORY_ENUMERATION_NOT_INSTALLED"),
+  availability:z.literal("NOT_PUBLISHED"),reason_code:z.enum(["SCOPED_HISTORY_ENUMERATION_NOT_INSTALLED","REGIME_ORIGINAL_CORPUS_AUTHORITY_NOT_RETAINED"]),
   page:z.object({limit:z.number().int().min(1).max(50),returned_count:z.null(),authorized_total_count:z.null(),
     next_cursor:z.null(),previous_cursor:z.null()}).strict(),items:z.array(managerScoreRevisionView).length(0),
 }).strict()]).superRefine((history,c)=>{
   const p=history.page,unavailable=history.availability==="NOT_PUBLISHED";
-  if(unavailable?(history.reason_code!=="SCOPED_HISTORY_ENUMERATION_NOT_INSTALLED"||history.items.length!==0||
+  if(unavailable?(history.reason_code!=="SCOPED_HISTORY_ENUMERATION_NOT_INSTALLED"&&history.reason_code!=="REGIME_ORIGINAL_CORPUS_AUTHORITY_NOT_RETAINED"||history.items.length!==0||
     p.returned_count!==null||p.authorized_total_count!==null||p.next_cursor!==null||p.previous_cursor!==null):
     (history.reason_code!==null||p.returned_count!==history.items.length||p.authorized_total_count===null||
       p.authorized_total_count<history.items.length||history.items.length>p.limit||

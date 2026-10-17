@@ -1,0 +1,169 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.manager-score-revision.v1",
+    "target": {
+      "surface": "ALPHA",
+      "id": "TEST_ONLY:alpha"
+    },
+    "workspace_id": "TEST_ONLY:workspace",
+    "environment": "live",
+    "revision_mode": "ORIGINAL_AS_PUBLISHED",
+    "purpose": "HISTORICAL_ANALYSIS_ONLY",
+    "operational_current": false,
+    "revision_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000075",
+    "supersedes_revision_ref": null,
+    "supersedes_reason": "ORIGINAL_HAS_NO_PREDECESSOR",
+    "source": {
+      "authorized_source_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "source_revision": "TEST_ONLY-source-r1",
+      "source_as_of_ms": 1000,
+      "recorded_through_ms": 1000,
+      "facts_through_ms": 1000
+    },
+    "knowledge_cutoff_ms": null,
+    "knowledge_cutoff_reason": "ORIGINAL_KNOWLEDGE_CUTOFF_NOT_RECORDED",
+    "computed_at_ms": null,
+    "computed_at_reason": "ORIGINAL_COMPUTE_TIMES_ARE_PER_ENTRY",
+    "eligibility": {
+      "policy_current": false,
+      "policy_state": "UNKNOWN",
+      "reason_code": "POLICY_STATE_NOT_CLASSIFIED",
+      "economic_source": "RETAINED_EXACT_REVISION",
+      "usable_as_current_operational_score": false
+    },
+    "availability": "AVAILABLE",
+    "reason_codes": [],
+    "score_details": [],
+    "composition": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "COMPOSITION_REVISION_NOT_SELECTED"
+    },
+    "regime": {
+      "availability": "AVAILABLE",
+      "reason_codes": [],
+      "entries": [
+        {
+          "binding": {
+            "subject_type": "alpha",
+            "subject_id": "TEST_ONLY:alpha",
+            "alpha_id": "TEST_ONLY:alpha",
+            "alpha_version_id": "TEST_ONLY:av1",
+            "stage_filter": [
+              "LIVE"
+            ],
+            "comparable_basis_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000071",
+            "individual_evidence_binding_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000072"
+          },
+          "original_input_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000073",
+          "derived_input_ref": null,
+          "original_publication_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000074",
+          "publication_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000074",
+          "original": {
+            "economic_as_of_ms": 1000,
+            "evaluation_at_ms": 1000,
+            "feature_cutoff_ms": 1000,
+            "computed_at_ms": 1001,
+            "captured_at_ms": 1002
+          },
+          "knowledge_cutoff_ms": null,
+          "computed_at_ms": 1001,
+          "calculation_revision": "TEST_ONLY:regime-original",
+          "feed_freshness": {
+            "availability": "NOT_PUBLISHED",
+            "reason_code": "ORIGINAL_FEED_FRESHNESS_NOT_RECORDED"
+          },
+          "result": {
+            "status": "supported",
+            "reason_codes": [],
+            "nearest_distance": "0",
+            "eligible_reference_count": 3,
+            "neighbor_count": 3,
+            "distinct_episode_count": 3,
+            "formula_id": "market_regime_robust_gaussian_v1_1",
+            "qualification": "RUNTIME_APPROVED",
+            "policy_version": "TEST_ONLY:policy-v1",
+            "policy_hash": "sha256:1482588070b7cae238bc24eb01f547624ad6e3b5589af6cb6b5e9d88031cfc51",
+            "approved_policy_id": "TEST_ONLY:policy-approval",
+            "feature_schema_version": "TEST_ONLY:price-only-v1",
+            "calibration_hash": "sha256:6cb5ee63fb4ec199f9749ceaf5908a6f3c1bdafee7171b765585d01c74f3da0e",
+            "overlap_policy_id": "TEST_ONLY:overlap",
+            "horizon_ms": 100,
+            "as_of_ms": 1000,
+            "feature_cutoff_ms": 1000,
+            "reference_cutoff_ms": 400,
+            "stage_breakdown": [
+              {
+                "stage": "Live",
+                "evidence_kind": "actual",
+                "status": "supported",
+                "reason_codes": [],
+                "neighbor_count": 3,
+                "distinct_episode_count": 3,
+                "effective_sample_size": "2.188795074265",
+                "nearest_distance": "0",
+                "economic_domain_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000065",
+                "account_mode_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000066",
+                "reference_window_refs": [
+                  "sha256:0000000000000000000000000000000000000000000000000000000000000067",
+                  "sha256:0000000000000000000000000000000000000000000000000000000000000068",
+                  "sha256:0000000000000000000000000000000000000000000000000000000000000069"
+                ],
+                "neighbors": [
+                  {
+                    "reference_window_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000067",
+                    "distance": "0",
+                    "weight": "0.574096992968"
+                  },
+                  {
+                    "reference_window_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000068",
+                    "distance": "0.5",
+                    "weight": "0.348207427884"
+                  },
+                  {
+                    "reference_window_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000069",
+                    "distance": "1",
+                    "weight": "0.077695579149"
+                  }
+                ],
+                "matched_outcome_summary": {
+                  "mean": "0.010330732955",
+                  "median": "0.02",
+                  "min": "-0.01",
+                  "max": "0.03",
+                  "quantiles": [
+                    {
+                      "probability": "0.25",
+                      "value": "0.005"
+                    },
+                    {
+                      "probability": "0.75",
+                      "value": "0.025"
+                    }
+                  ],
+                  "method": "DESCRIPTIVE_NET_TWR_LINEAR_EMPIRICAL_UNWEIGHTED_QUANTILES",
+                  "outcome_from_ms": 200,
+                  "outcome_to_ms": 500,
+                  "cost_assumptions_refs": [
+                    "sha256:000000000000000000000000000000000000000000000000000000000000006a"
+                  ]
+                }
+              }
+            ],
+            "reference_window_refs": [
+              "sha256:0000000000000000000000000000000000000000000000000000000000000067",
+              "sha256:0000000000000000000000000000000000000000000000000000000000000068",
+              "sha256:0000000000000000000000000000000000000000000000000000000000000069"
+            ],
+            "calibration_snapshot_ref": "sha256:000000000000000000000000000000000000000000000000000000000000006b",
+            "research_binding_ref": "sha256:000000000000000000000000000000000000000000000000000000000000006c",
+            "bound_run_ref": "sha256:000000000000000000000000000000000000000000000000000000000000006d",
+            "strategy_version_ref": "sha256:000000000000000000000000000000000000000000000000000000000000006e",
+            "params_ref": "sha256:000000000000000000000000000000000000000000000000000000000000006f",
+            "evidence_snapshot_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000070"
+          }
+        }
+      ]
+    }
+  }
+}

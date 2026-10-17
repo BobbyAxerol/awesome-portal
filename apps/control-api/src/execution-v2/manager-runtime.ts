@@ -24,12 +24,14 @@ import { ManagerRegimeRuntime, managerRegimePublicationCurrent,captureManagerReg
 import type { ManagerRegimeReadFence } from "./manager-regime-publication";
 import type { ManagerRegimeSubjectBinding, ManagerRegimePublication } from "./manager-regime-publication.contract";
 import type { ScopedReplayHub } from "./realtime";
+import { ManagerRegimeHistoricalRuntime } from "./manager-regime-restatement-worker";
+import { ManagerRegimeRestatement,type ManagerRegimeRestatementConfig } from "./manager-regime-restatement";
 import { ManagerScoreRecalculation, type ManagerScoreRecalculationConfig,
   type ManagerScoreRecalculationTask } from "./manager-score-recalculation";
 import { ManagerScoreRestatement, type ManagerScoreDependentComposition } from "./manager-score-restatement";
 import { captureManagerScoreOriginalInputs } from "./manager-score-original-custody";
 import { ManagerOriginalCustodyLifecycle,type ManagerOriginalCustodyCaps,
-  type ManagerOriginalCustodyOmission } from "./manager-original-custody-lifecycle";
+  type ManagerOriginalCustodyOmission,type ManagerOriginalIdleDelegate } from "./manager-original-custody-lifecycle";
 
 export interface ManagerRuntimePartition {
   scope: ManagerLeaseScope;
@@ -49,6 +51,8 @@ export interface ManagerRuntimePartition {
   regime?: { runtime: ManagerRegimeRuntime; maximum_tasks_per_revision: number;
     /** Independent explicit ORIGINAL custody opt-in; no Score policy/default. */
     original_custody?:ManagerOriginalCustodyCaps;
+    /** Independent historical delegate, only with explicit ORIGINAL custody and exact shared caps. */
+    historical?:{runtime:ManagerRegimeHistoricalRuntime;config:ManagerRegimeRestatementConfig};
     currentPolicy(): ApprovedManagerRegimePolicy | null;
     currentEvidence(binding: ManagerRegimeSubjectBinding): VerifiedManagerRegimeEvidence | null;
     tasks(delivery: ManagerConsumerDelivery, signal: AbortSignal):
@@ -83,6 +87,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
   private readonly recalculations=new Map<string,ManagerScoreRecalculation>();
   private readonly restatements=new Map<string,ManagerScoreRestatement>();
   private readonly originalCustodies=new Map<string,ManagerOriginalCustodyLifecycle>();
+  private readonly regimeRestatements=new Map<string,ManagerRegimeRestatement>();
   private readonly cadenceMs: number;
   private readonly publicationReadLimit: number;
   private readonly installedTrust?: AccessTrustProvider;
@@ -105,7 +110,10 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     this.partitions = installation.partitions.map(p=>({...p,scope:Object.freeze({...p.scope}),bounds:Object.freeze({...p.bounds}),
       ...(p.score?{score:Object.freeze({...p.score,...(p.score.restatement?{restatement:Object.freeze({...p.score.restatement,
         ...(p.score.restatement.composition?{composition:Object.freeze({...p.score.restatement.composition})}:{})})}:{})})}:{}),
-      ...(p.composition?{composition:Object.freeze({...p.composition})}:{}),...(p.regime?{regime:Object.freeze({...p.regime})}:{})}));
+      ...(p.composition?{composition:Object.freeze({...p.composition})}:{}),...(p.regime?{regime:Object.freeze({...p.regime,
+        ...(p.regime.original_custody?{original_custody:Object.freeze({...p.regime.original_custody})}:{}),
+        ...(p.regime.historical?{historical:Object.freeze({...p.regime.historical,
+          config:Object.freeze({...p.regime.historical.config})})}:{})})}:{})}));
     this.consumers = this.partitions.map(p=> {
       if (!publicationCommissioningCurrent(p.commissioning,p.scope,Date.now())) throw new Error("MANAGER_RUNTIME_COMMISSIONING_REQUIRED");
       if(p.score && (!Number.isSafeInteger(p.score.maximum_tasks_per_revision)||p.score.maximum_tasks_per_revision<1||p.score.maximum_tasks_per_revision>128))
@@ -119,6 +127,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
         throw new Error("MANAGER_REGIME_TASK_BOUND");
       if(p.score?.recalculation&&p.score.restatement)throw new Error("MANAGER_SCORE_CUSTODY_MODE_CONFLICT");
       if(p.regime?.original_custody&&p.score?.recalculation)throw new Error("MANAGER_SCORE_CUSTODY_MODE_CONFLICT");
+      if(p.regime?.historical&&!p.regime.original_custody)throw new Error("MANAGER_REGIME_ORIGINAL_CUSTODY_REQUIRED");
       const recalculation=p.score?.recalculation?new ManagerScoreRecalculation({pool,runtime:p.score.runtime,
         currentPolicy:()=>p.score!.currentPolicy(),commissioning:p.commissioning,source:p.source,
         publication:(request,signal)=>p.publication(request,signal),config:p.score.recalculation}):undefined;
@@ -128,11 +137,19 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
         publication:(request,signal)=>p.publication(request,signal),config:p.score.restatement,
         ...(p.score.restatement.composition?{composition:p.score.restatement.composition}:{})}):undefined;
       if(restatement)this.restatements.set(key(p.scope),restatement);
-      const originalCustody=p.regime?.original_custody?new ManagerOriginalCustodyLifecycle(p.regime.original_custody,
-        restatement?[{caps:{maximum_bundle_bytes:p.score!.restatement!.maximum_bundle_bytes,
-          maximum_revisions_per_source:p.score!.restatement!.maximum_revisions_per_source,
-          maximum_retained_bytes_per_source:p.score!.restatement!.maximum_retained_bytes_per_source},
-          idle:input=>restatement.idle(input)}]:[]):undefined;
+      const regimeRestatement=p.regime?.historical?new ManagerRegimeRestatement({pool,
+        runtime:p.regime.historical.runtime,currentPolicy:()=>p.regime!.currentPolicy(),
+        commissioning:p.commissioning,source:p.source,publication:(request,signal)=>p.publication(request,signal),
+        config:p.regime.historical.config}):undefined;
+      if(regimeRestatement)this.regimeRestatements.set(key(p.scope),regimeRestatement);
+      const delegates:ManagerOriginalIdleDelegate[]=[];
+      if(restatement)delegates.push({caps:{maximum_bundle_bytes:p.score!.restatement!.maximum_bundle_bytes,
+        maximum_revisions_per_source:p.score!.restatement!.maximum_revisions_per_source,
+        maximum_retained_bytes_per_source:p.score!.restatement!.maximum_retained_bytes_per_source},
+        idle:input=>restatement.idle(input)});
+      if(regimeRestatement)delegates.push({caps:regimeRestatement.custodyCaps(),idle:input=>regimeRestatement.idle(input)});
+      const originalCustody=p.regime?.original_custody?
+        new ManagerOriginalCustodyLifecycle(p.regime.original_custody,delegates):undefined;
       if(originalCustody)this.originalCustodies.set(key(p.scope),originalCustody);
       return new ManagerProjectionConsumer({pool,source:this.materializingSource(p,recalculation,restatement,originalCustody),scope:p.scope,bounds:p.bounds,
         commissioning:p.commissioning,recalculation:originalCustody??restatement??recalculation});
@@ -145,6 +162,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
   recalculationFor(scope:ManagerLeaseScope):ManagerScoreRecalculation|undefined{return this.recalculations.get(key(scope));}
   restatementFor(scope:ManagerLeaseScope):ManagerScoreRestatement|undefined{return this.restatements.get(key(scope));}
   originalCustodyFor(scope:ManagerLeaseScope):ManagerOriginalCustodyLifecycle|undefined{return this.originalCustodies.get(key(scope));}
+  regimeRestatementFor(scope:ManagerLeaseScope):ManagerRegimeRestatement|undefined{return this.regimeRestatements.get(key(scope));}
   accessTrust(base?: AccessTrustProvider): AccessTrustProvider | undefined {
     if (!this.installation) return base;
     if (base && base !== this.installedTrust) throw new Error("MANAGER_RUNTIME_TRUST_CONFLICT");

@@ -19,6 +19,7 @@ function load(path) {
 }
 const contract = load(resolve(sourceRoot, 'manager-model.contract.ts'));
 const revisions = load(resolve(sourceRoot, 'manager-score-revision.contract.ts'));
+const regimes = load(resolve(sourceRoot, 'manager-regime-history.contract.ts'));
 function json(schema) {
   const d = schema._def, type = d.typeName;
   if (['ZodEffects','ZodDefault','ZodOptional'].includes(type)) return json(d.schema ?? d.innerType);
@@ -58,7 +59,10 @@ const response = json(contract.managerDatasetResponse), query = json(contract.ma
 const schemas = { ManagerDataset: response, ManagerDatasetQuery: query, ManagerMetric: json(contract.managerMetric), ManagerDatasetRow: json(contract.managerDatasetRow), ManagerScorePublication: json(contract.managerScorePublication), ManagerCompositionPublication: json(contract.managerCompositionPublication), ManagerRegimePublication: json(contract.managerRegimePublication) };
 Object.assign(schemas,{ManagerScoreRevisionQuery:json(revisions.managerScoreRevisionQuery),ManagerScoreRevisionHistoryQuery:json(revisions.managerScoreRevisionHistoryQuery),
   ManagerScoreRevisionView:json(revisions.managerScoreRevisionView),ManagerScoreRevisionHistory:json(revisions.managerScoreRevisionHistory),
-  ManagerHistoricalComposition:json(revisions.managerHistoricalComposition)});
+  ManagerHistoricalComposition:json(revisions.managerHistoricalComposition),
+  ManagerHistoricalRegimeDetail:json(regimes.managerHistoricalRegimeDetail),
+  ManagerHistoricalRegimeEntry:json(regimes.managerHistoricalRegimeEntry),
+  ManagerHistoricalRegimeResult:json(regimes.managerHistoricalRegimeResult)});
 const routes = [['fund-overview','FundOverview'],['fleet','Fleet'],['portfolios/{id}/overview','Portfolio360'],['alphas/{id}/overview','Alpha360'],['accounts/{id}/overview','Account360'],['deployments/{id}/overview','Deployment360']];
 const paths = Object.fromEntries(routes.map(([route,operation]) => ['/api/v1/execution/manager/' + route, { get: {
   operationId: 'executionManager' + operation + 'GetV1', security: [{ PortalSession: [] }],
@@ -74,7 +78,7 @@ for(const [route,operation,request,result] of [
   ['score-view','executionManagerScoreRevisionGetV1','ManagerScoreRevisionQuery','ManagerScoreRevisionView'],
   ['score-revisions','executionManagerScoreRevisionHistoryGetV1','ManagerScoreRevisionHistoryQuery','ManagerScoreRevisionHistory']]){
   const q=schemas[request];paths['/api/v1/execution/manager/'+route]={get:{operationId:operation,security:[{PortalSession:[]}],
-    description:'Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score. Optional metric_family=COMPOSITION selects Fund/Portfolio full-accounting allocation-bound history; omitted/explicit SCORE preserves the Score projection. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable, not empty complete history. No GET calculation, source send or ACK.',
+    description:'Explicit authorized historical ORIGINAL/RESTATED only; never current operational Score or Regime signal. Optional metric_family=COMPOSITION selects Fund/Portfolio full-accounting allocation-bound history. REGIME selects independently retained Alpha/Deployment historical matching only after current authorization of the entire original subject/reference corpus; no inherited financial Score grant. Omitted/explicit SCORE preserves the Score projection and opaque-reference recipe. Exact retained source requires its own current dataset authority. History enumeration may be typed unavailable with null counts, not empty complete history. No GET calculation, source send or ACK.',
     parameters:Object.entries(q.properties).map(([name,schema])=>({name,in:'query',required:q.required.includes(name),
       ...(name==='economic_partition'?{content:{'application/json':{schema}}}:{schema,...(schema.type==='array'?{style:'form',explode:false}:{})})})),
     responses:{200:{description:'Explicit historical view or typed absence; null knowledge clocks are never inferred',content:{'application/json':{schema:{$ref:'#/components/schemas/'+result}}}},

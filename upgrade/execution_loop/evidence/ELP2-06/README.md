@@ -305,3 +305,24 @@ resources and measurement lease released. Normal-hook commit still pending.
 This delivers no public field, historical Regime worker/API, source approval,
 calibration or consumer acceptance. Canonical06-002 stays OPEN; next backend
 is the independently witnessed historical worker/coordinator/authorized API.
+
+### Independent Regime historical chain —2026-10-17
+
+[ORIGINAL actual normal-hook terminal18:17UTC](regime-original-custody.md#regime-original-terminal-20261017-1817)
+landed6a01686e:775contracts/APIbuild/5,806API PASS+3existing skips/scoped PG
+restore, clean own resources and eight protected runtimes unchanged.
+[Independent worker→IDLE→138/third139head→current-authorized API packet](regime-dependent-restatement.md)
+is APPLIED_UNCOMMITTED/new-tests-NOT_RUN. Forward140 only extends head CHECK;
+existing global quotas/lifecycle/source ACK unchanged. Generated REGIME types
+and synthetic fixtures delivered in working tree; not consumer acceptance.
+Canonical06-002/source/config/economic/ALL/10commissioning remain OPEN;
+11NOT_ENTRY_READY. No FE/runtime/deploy/remote changes.
+
+**Historical Regime affected terminals18:44–18:45UTC:**
+[APIbuild/58API in2files/scoped restore and58contract cases in3files](regime-dependent-restatement.md#affected-apirestore-and-contract-terminals-2026-10-17-18441845utc)
+PASS in their distinct scopes. Earlier build/fixture/AJV failures are retained;
+the58API include42 real-PG coordinator cases. Other unchanged API suites reuse
+their18:38 source pins, not duplicate new coverage. Normal-hook landing remains
+PENDING. Generated REGIME handoff is not installed-source or Claude acceptance;
+06-002/full06/10 remain OPEN,11NOT_ENTRY_READY. Next independent04 slice is
+finite account-sync observations, not a blanket opening of29null aliases.

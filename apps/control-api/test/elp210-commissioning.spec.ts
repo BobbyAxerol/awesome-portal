@@ -3,7 +3,7 @@
 import "reflect-metadata";
 import { createHash, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -26,6 +26,8 @@ import type { ManagerScoreRecalculationTask } from "../src/execution-v2/manager-
 import { ManagerCompositionHistoricalRuntime, decodeRetainedManagerCompositionRestatement }
   from "../src/execution-v2/manager-composition-restatement";
 import { ManagerScoreHistoryStore } from "../src/execution-v2/manager-score-history.store";
+import { ManagerRegimeHistoricalRuntime } from "../src/execution-v2/manager-regime-restatement-worker";
+import type { ManagerRegimeRestatementConfig } from "../src/execution-v2/manager-regime-restatement";
 import { managerScorePopulationDigest } from "../src/execution-v2/manager-score-publication";
 import { ManagerModelRepository } from "../src/execution-v2/manager-model.store";
 import type { ManagerModelDocument } from "../src/execution-v2/manager-model.contract";
@@ -1079,6 +1081,12 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 ORIGINAL v3 — actual 
     for(const file of ["1723680000135_execution-manager-models.sql","1723680000137_execution-manager-consumer-fence.sql",
       "1723680000138_execution-manager-calculation-revisions.sql","1723680000139_execution-manager-score-mode-heads.sql"])
       await pg.query(readFileSync(resolve(__dirname,"../migrations",file),"utf8").split("-- Down Migration")[0]);
+    // Apply ONLY the real primary-owned forward migration. No synthetic ALTER
+    // fallback; the new runtime requires the independent third head CHECK.
+    const regimeMigrations=readdirSync(resolve(__dirname,"../migrations"))
+      .filter(file=>/^1723680000140_[a-z0-9-]+\.sql$/.test(file));
+    expect(regimeMigrations).toHaveLength(1);
+    await pg.query(readFileSync(resolve(__dirname,"../migrations",regimeMigrations[0]),"utf8").split("-- Down Migration")[0]);
   },60_000);
   beforeEach(async()=>{vi.restoreAllMocks();for(const runtime of ownedRuntimes.splice(0))await runtime.beforeApplicationShutdown();
     await pg.query("TRUNCATE execution_manager_score_mode_heads,execution_manager_calculation_heads,execution_manager_calculation_revisions,execution_manager_model_heads,execution_manager_model_revisions,execution_manager_consumer_fences");});
@@ -1169,7 +1177,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 ORIGINAL v3 — actual 
     FROM execution_manager_score_mode_heads h JOIN execution_manager_calculation_revisions r
     USING(workspace_id,environment,profile_id,source_revision,calculation_key) WHERE h.head_kind='RESTATED_CURRENT_POLICY'`)).rows[0];}
 
-  function installedRegimeOriginal(kind:"only"|"mixed"|"score"="only",optIn=true){
+  function installedRegimeOriginal(kind:"only"|"mixed"|"score"="only",optIn=true,
+    options:{historical?:Partial<ManagerRegimeRestatementConfig>}={}){
     const data=dependentCompositionFixture(),installed=compositionInstallation(data.fx),p=installed.installation.partitions[0];
     const rg=regimeForDocument(data.fx.d.document),state={pending:true,policy:null as ApprovedManagerScorePolicy|null,refuse:false};
     const acknowledge=vi.fn(async()=>{state.pending=false;}),tasks=vi.fn(async()=>data.items);
@@ -1187,7 +1196,11 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 ORIGINAL v3 — actual 
     p.regime={runtime:new ManagerRegimeRuntime({maximum_references:128,maximum_input_bytes:1_048_576,
       maximum_output_bytes:1_048_576,maximum_in_flight:1}),maximum_tasks_per_revision:1,
       currentPolicy:()=>rg.policy,currentEvidence:()=>rg.evidence,tasks:async()=>[rg.task],
-      ...(optIn?{original_custody:{...compositionV3Limits,maximum_revisions_per_source:dependentConfig.maximum_revisions_per_source}}:{})};
+      ...(optIn?{original_custody:{...compositionV3Limits,maximum_revisions_per_source:dependentConfig.maximum_revisions_per_source}}:{}),
+      ...(options.historical===undefined?{}:{historical:{runtime:new ManagerRegimeHistoricalRuntime({
+        maximum_references:128,maximum_input_bytes:1_048_576,maximum_output_bytes:1_048_576,maximum_in_flight:1}),
+        config:{...compositionV3Limits,maximum_revisions_per_source:dependentConfig.maximum_revisions_per_source,
+          calculation_revision:"SYNTHETIC:independent-regime-restatement-r1",...options.historical}}})};
     const runtime=new ExecutionManagerRuntime(pg,installed.installation);ownedRuntimes.push(runtime);
     const document=async()=>{const d=await new ManagerModelRepository(pg).document(scope.workspace_id,scope.environment,scope.profile_id,data.fx.d.document.revision);
       if(!d)throw new Error("SYNTHETIC_REGIME_SOURCE_NOT_MATERIALIZED");return d;};
@@ -1197,6 +1210,138 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 ORIGINAL v3 — actual 
   function requireV4(value:ManagerScoreOriginalCustodySnapshot|null):OriginalV4{
     if(value?.schema_version!=="portal.execution.manager-score-original-inputs.v4")throw new Error("SYNTHETIC_EXPECTED_V4");return value;
   }
+
+  /** Actual runtime wiring + disposable PG. Every calibration, commissioning,
+   * source and approval pin is SYNTHETIC; not provider/runtime acceptance.
+   * Worker mathematics and coordinator faults have their own focused suites. */
+  it("explicit historical Regime opt-in needs no Score and adds only its own immutable third-head lineage",async()=>{
+    const h=installedRegimeOriginal("only",true,{historical:{}}),
+      coordinator=h.runtime.regimeRestatementFor(scope)!;
+    expect(h.runtime.restatementFor(scope)).toBeUndefined();
+    expect(h.p.score).toBeUndefined();expect(h.p.composition).toBeUndefined();
+    const current=vi.spyOn(h.p.regime!.runtime,"calculate"),
+      historical=vi.spyOn(h.p.regime!.historical!.runtime,"calculateHistoricalRegime");
+    await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_OK");
+    const d=await h.document(),original=await originalRow(),financial=await financialRows();
+    expect(current).toHaveBeenCalledOnce();expect(historical).not.toHaveBeenCalled();
+    expect(d.precomputed_scores).toBeUndefined();expect(d.precomputed_compositions).toBeUndefined();
+    expect(d.precomputed_regimes).toHaveLength(1);
+    await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_OK");
+    expect(coordinator.status().state).toBe("REGIME_RESTATED_COMMITTED");
+    const selected=await coordinator.snapshot(d);
+    if(!selected.view||!selected.key)throw new Error("SYNTHETIC_EXPECTED_INDEPENDENT_REGIME");
+    expect(selected.view).toMatchObject({revision_mode:"RESTATED_CURRENT_POLICY",purpose:"HISTORICAL_ANALYSIS_ONLY",
+      operational_current:false,original_custody_key:original.calculation_key,source:{payload_digest:accessDigest(d)}});
+    expect(selected.view.entries).toHaveLength(1);
+    expect(selected.view.entries[0].historical).toMatchObject({economic_as_of_ms:d.as_of_ms,
+      evaluation_at_ms:h.rg.f.evidence.evaluation_at_ms,feature_cutoff_ms:h.rg.f.evidence.current.feature_cutoff_ms});
+    expect(selected.view.knowledge_cutoff_ms).toBeGreaterThanOrEqual(original.payload.retained_regimes[0].custody.captured_at_ms);
+    expect(selected.view.computed_at_ms).toBeGreaterThanOrEqual(selected.view.knowledge_cutoff_ms);
+    const history=await new ManagerScoreHistoryStore(pg).scan(d,3000);
+    expect(history.original?.calculation_key).toBe(original.calculation_key);
+    expect(history.restatements).toEqual([]);expect(history.restated_head_key).toBeNull();
+    expect(history.regime_restatements).toEqual([selected.view]);
+    expect(history.regime_restated_head_key).toBe(selected.key);
+    // All local read paths above are no-calculation/no-ACK. A later genuine
+    // IDLE reuses the stored key and the original K/C rather than restamping.
+    expect(current).toHaveBeenCalledOnce();expect(historical).toHaveBeenCalledOnce();
+    await h.runtime.tick();expect(coordinator.status().state).toBe("CURRENT_REGIME_RESTATED_REUSED");
+    expect(await coordinator.snapshot(d)).toEqual(selected);
+    expect(historical).toHaveBeenCalledOnce();expect(current).toHaveBeenCalledOnce();
+    expect(await originalRow()).toEqual(original);expect(await financialRows()).toEqual(financial);
+    expect(h.acknowledge).toHaveBeenCalledOnce();expect(await count("execution_manager_calculation_revisions")).toBe("2");
+    expect(await count("execution_manager_calculation_heads")).toBe("0");
+  });
+
+  it("original custody alone does not implicitly install a Regime historical worker or head",async()=>{
+    const h=installedRegimeOriginal();expect(h.runtime.regimeRestatementFor(scope)).toBeUndefined();
+    await h.runtime.tick();const d=await h.document(),original=await originalRow(),financial=await financialRows();
+    await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_OK");
+    const history=await new ManagerScoreHistoryStore(pg).scan(d,3000);
+    expect(history.regime_restatements).toEqual([]);expect(history.regime_restated_head_key).toBeNull();
+    expect(await originalRow()).toEqual(original);expect(await financialRows()).toEqual(financial);
+    expect(await count("execution_manager_calculation_revisions")).toBe("1");expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+
+  it("one original writer then serial Score/Regime delegates share the exact IDLE lease; pending Score does not starve Regime",async()=>{
+    const h=installedRegimeOriginal("mixed",true,{historical:{}}),originalWriter=h.runtime.originalCustodyFor(scope)!,
+      score=h.runtime.restatementFor(scope)!,regime=h.runtime.regimeRestatementFor(scope)!;
+    const attach=vi.spyOn(originalWriter,"attach"),persist=vi.spyOn(originalWriter,"persistAttached"),
+      scoreAttach=vi.spyOn(score,"attach"),scorePersist=vi.spyOn(score,"persistAttached");
+    await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_OK");
+    const d=await h.document(),original=await originalRow(),financial=await financialRows(),
+      restored=requireV4(await tx(client=>new ManagerScoreOriginalCustody(dependentConfig).restore(client,d)));
+    expect(restored.retained_tasks).toHaveLength(3);expect(restored.retained_compositions).toHaveLength(1);
+    expect(restored.retained_regimes).toHaveLength(1);expect(attach).toHaveBeenCalledOnce();expect(persist).toHaveBeenCalledOnce();
+    const seen:Array<Parameters<typeof score.idle>[0]>=[],events:string[]=[];
+    const scoreIdle=score.idle.bind(score),regimeIdle=regime.idle.bind(regime);
+    let entered!:()=>void,release!:()=>void;
+    const started=new Promise<void>(resolve=>{entered=resolve;}),barrier=new Promise<void>(resolve=>{release=resolve;});
+    vi.spyOn(score,"idle").mockImplementation(async input=>{
+      seen.push(input);events.push("score-enter");entered();await barrier;await scoreIdle(input);events.push("score-exit");
+    });
+    const regimeSpy=vi.spyOn(regime,"idle").mockImplementation(async input=>{
+      seen.push(input);events.push("regime-enter");await regimeIdle(input);events.push("regime-exit");
+    });
+    const flight=h.runtime.tick();
+    try{
+      await Promise.race([started,flight.then(()=>{throw new Error("SYNTHETIC_SCORE_IDLE_NOT_REACHED");})]);
+      expect(regimeSpy).not.toHaveBeenCalled();expect(seen).toHaveLength(1);
+    }finally{release();await flight;}
+    expect(h.runtime.status().state).toBe("TICK_OK");
+    expect(events).toEqual(["score-enter","score-exit","regime-enter","regime-exit"]);
+    expect(seen).toHaveLength(2);expect(seen[0]).toBe(seen[1]);expect(Object.isFrozen(seen[0])).toBe(true);
+    const lease=(await pg.query("SELECT holder_id::text,fencing_token::text,lease_epoch::text FROM execution_manager_consumer_fences")).rows[0];
+    expect(seen[0].lease).toMatchObject(lease);
+    expect(score.status().state).toBe("RESTATED_POLICY_NOT_ELIGIBLE");
+    expect(regime.status().state).toBe("REGIME_RESTATED_COMMITTED");
+    const regimeOnly=await new ManagerScoreHistoryStore(pg).scan(d,3000);
+    expect(regimeOnly.restatements).toEqual([]);expect(regimeOnly.regime_restatements).toHaveLength(1);
+    // A later eligible Score policy adds its independent head, without moving
+    // the Regime lineage or reopening the initial ORIGINAL writer.
+    h.state.policy=h.data.later.handle;await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_OK");
+    const history=await new ManagerScoreHistoryStore(pg).scan(d,3000),scoreView=requireDependentV2((await score.snapshot(d)).view);
+    expect(scoreView.composition_entries[0].historical.result.value).toBe("80");
+    expect(history.restatements).toEqual([scoreView]);expect(history.restated_head_key).toBe(scoreView.calculation_key);
+    expect(history.regime_restatements).toEqual(regimeOnly.regime_restatements);
+    expect(history.regime_restated_head_key).toBe(regimeOnly.regime_restated_head_key);
+    expect(history.original_head_key).toBe(original.calculation_key);
+    expect(new Set([history.original_head_key,history.restated_head_key,history.regime_restated_head_key]).size).toBe(3);
+    expect(attach).toHaveBeenCalledOnce();expect(persist).toHaveBeenCalledOnce();
+    expect(scoreAttach).not.toHaveBeenCalled();expect(scorePersist).not.toHaveBeenCalled();
+    expect(await count("execution_manager_calculation_revisions")).toBe("3");
+    expect(await count("execution_manager_score_mode_heads")).toBe("3");
+    expect(await originalRow()).toEqual(original);expect(await financialRows()).toEqual(financial);expect(h.acknowledge).toHaveBeenCalledOnce();
+  });
+
+  it.each(["maximum_bundle_bytes","maximum_revisions_per_source","maximum_retained_bytes_per_source"] as const)
+  ("historical Regime rejects a different shared %s cap before any source delivery",cap=>{
+    const originalCaps={...compositionV3Limits,maximum_revisions_per_source:dependentConfig.maximum_revisions_per_source};
+    expect(()=>installedRegimeOriginal("only",true,{historical:{[cap]:originalCaps[cap]+1}}))
+      .toThrow("MANAGER_ORIGINAL_LIFECYCLE_CAPS_MISMATCH");
+  });
+
+  it("historical Regime requires explicit ORIGINAL custody, not an implicit Score writer",()=>{
+    expect(()=>installedRegimeOriginal("only",false,{historical:{}})).toThrow("MANAGER_REGIME_ORIGINAL_CUSTODY_REQUIRED");
+  });
+
+  it("optional whole-custody omission still commits economic source/ACK and never calculates historical Regime",async()=>{
+    const h=installedRegimeOriginal("score",true,{historical:{}}),
+      historical=vi.spyOn(h.p.regime!.historical!.runtime,"calculateHistoricalRegime");let getters=0;
+    Object.defineProperty(h.data.items[0],"path_dependency",{enumerable:true,get(){getters++;throw Error("SYNTHETIC_BAD_OPTIONAL_PROOF");}});
+    await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_OK");
+    const d=await h.document(),financial=await financialRows();expect(d.precomputed_regimes).toHaveLength(1);
+    expect(h.runtime.originalCustodyFor(scope)!.status().state).toBe("ORIGINAL_INPUTS_NOT_RETAINED");
+    await h.runtime.tick();expect(h.runtime.status().state).toBe("TICK_OK");
+    expect(h.runtime.regimeRestatementFor(scope)!.status().state).toBe("REGIME_RESTATED_ORIGINAL_NOT_RETAINED");
+    expect(historical).not.toHaveBeenCalled();expect(h.acknowledge).toHaveBeenCalledOnce();expect(getters).toBe(0);
+    expect(await financialRows()).toEqual(financial);expect(await count("execution_manager_calculation_revisions")).toBe("0");
+    expect(await count("execution_manager_score_mode_heads")).toBe("0");
+    const history=await new ManagerScoreHistoryStore(pg).scan(d,3000);
+    expect(history.original).toBeNull();expect(history.regime_restatements).toEqual([]);
+    expect(history.original_head_key).toBeNull();expect(history.regime_restated_head_key).toBeNull();
+  });
+
 it("empty Regime input preserves actual old v3 row/pointer/bytes/timestamp during genuine duplicate retry",async()=>{
   const h=await committedV3(),before=await originalRow(),financial=await financialRows(),
     snapshot=await tx(client=>h.custody.restore(client,h.f.document)),json=JSON.stringify(snapshot);
