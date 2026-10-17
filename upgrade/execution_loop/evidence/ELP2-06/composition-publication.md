@@ -107,7 +107,9 @@ Only the local Composition chain closes after actual gates.06-002/00-005 remain:
 genuine source/allocation/config installation and connected tie-out; policy-only
 recompute without rewriting source revision; Regime loader→worker→projection→API;
 qualified partitioned cross-profile ALL; production numeric calibration.
-Regime pure math landed but is not a public runtime chain.
+At this historical entry Regime was pure math only; the later
+[Regime publication batch](regime-publication.md) supersedes that observation,
+not its remaining source/config/consumer gates.
 
 Backend can continue independent approved02–11 work; Claude's hold is not its
 dependency.10 commissioning/budget/coexistence/G2 and11 exact candidate/release
@@ -136,3 +138,21 @@ verification and the mandatory normal-hook landing remain the next gate. The
 prepared NOT_RUN rows above are historical; they do not override this focused
 result. Code/schema bytes remain unchanged after the focus; only packets change
 before the coherent commit. Final landing requires normal-hook exit0.
+
+## Terminal normal-hook receipt — 2026-10-17
+
+Landed `fdab164ce0187ac164efbf30ee232e8f3e1d5f3a`,23files,+4194/−1123.
+Normal hook:706contracts PASS;4639API PASS+3existing skips; APIbuild and actual
+disposablePG dump/restore/four scoped digests PASS. Controller
+`/home/bobby/.local/state/portal-execution-elp210/20261017/composition-land-073419/controller.json`
+finished07:59:15UTC, logsha256
+`161deb59540a41bbdeeaedb2d2214dc914ad154da80eefd2570ba6910e930df1`.
+Source unchanged during gate, eight protected runtime tuples unchanged and
+remaining owned resources empty. Focused301 is overlapping, not706+4639+301
+unique coverage. No source/runtime/FE activation or promotion.
+
+Subsequent source review found a correlated tuple→stage census check needed
+alongside the tuple digest and stage set. The Regime coherent batch adds that
+private Composition fence and regression, including an approved empty census;
+its own terminal gate determines acceptance. No public formula or denominator
+changes and no researcher-filtered partial full-accounting result.

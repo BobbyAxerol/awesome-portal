@@ -1688,6 +1688,117 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
     });
   });
 
+  it.each(["missing-current-target", "expired-current-target"] as const)(
+    "ordinary final-clock %s after actual TS_RECEIPT INSERT rolls back all authority writes (detached TEST_ONLY source)", async fault => {
+      const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted);
+      const pending = await storedGrant(submitted.receipt.grant_id!), resource = { kind: "PORTFOLIO" as const, id: "TEST_ONLY-portfolio-1" };
+      const source: CurrentAccessRelations = { schema_version: "pma.core-current-relations.v1",
+        subject_user_id: pending.subject_user_id, workspace_id: f.workspace, ts_user_id: fact.ts_user_id,
+        mapping_revision: fact.mapping_revision,
+        resources: pending.environments.map(environment => ({ environment, revision: "TEST_ONLY:current-cut",
+          own_alpha_ids: [], member_portfolio_ids: [resource.id], roots: [] })),
+        grants: [{ grant_id: pending.grant_id, binding_digest: grantBindingDigest(pending), accepted: structuredClone(fact),
+          targets: pending.environments.map(environment => ({ environment, resource, revision: "TEST_ONLY:current-leg",
+            native_reference_digest: accessDigest(["TEST_ONLY:original-native", environment, resource]),
+            valid_from_ms: fact.effective_at_ms, valid_until_ms: fact.expires_at_ms! })) }] };
+      f.trust.currentAuthorities.set(pending.subject_user_id, source);
+      const proof = f.trust.seal(fact, false), sourceBefore = structuredClone(source);
+      await withCurrentHuman(f, manager, async cell => {
+        const h = delegatedTrust(f, cell.pool, fact), service = cell.service(async () => undefined, h.trust);
+        const before = await authorityRows(f), originalEvent = AccessRepository.prototype.event;
+        // Observe the actual private binding call and forward it unchanged.
+        // No replacement authority, DB, timestamp, coordinator or native lease.
+        const inspected = service as unknown as { validateTsBinding(...args: unknown[]): void };
+        const originalBinding = inspected.validateTsBinding.bind(service);
+        let inTx: CurrentAccessRelations | undefined, expiry: number | undefined, writes = 0;
+        const clocks: number[] = [];
+        const binding = vi.spyOn(inspected, "validateTsBinding").mockImplementation((...args: unknown[]) => {
+          inTx = (args[5] as AccessRelations | undefined)?.current_authority ?? undefined;
+          clocks.push(args[6] as number); return originalBinding(...args);
+        });
+        const event = vi.spyOn(AccessRepository.prototype, "event").mockImplementation(async function (this: AccessRepository, input) {
+          await originalEvent.call(this, input);
+          if (input.operation !== "TS_RECEIPT" || input.workspace_id !== f.workspace) return;
+          writes++;
+          expect((await this.sourceEvent(fact.source, fact.receipt_id))?.event_id).toBe(input.event_id);
+          expect((await this.proposal(f.workspace, submitted.receipt.proposal_id!))?.state).toBe("TS_APPLIED");
+          expect((await this.grants(f.workspace)).find(g => g.grant_id === pending.grant_id)?.ts_receipt?.receipt_id).toBe(fact.receipt_id);
+          expect(inTx).toBeDefined();
+          const entry = inTx!.grants.find(g => g.grant_id === pending.grant_id)!;
+          if (fault === "missing-current-target") entry.targets = [];
+          else {
+            expiry = Number((await this.db.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
+            for (const target of entry.targets) target.valid_until_ms = expiry;
+          }
+        });
+        try {
+          await expect(service.acceptTsReceipt(proof)).rejects.toMatchObject({ code: "TS_MEMBERSHIP_REVISION_CONFLICT", status: 409 });
+          expect(writes).toBe(1); expect(clocks.length).toBeGreaterThanOrEqual(3); // authorization, application, final DB clock
+          if (expiry !== undefined) expect(clocks.at(-1)).toBeGreaterThanOrEqual(expiry);
+          expect(await authorityRows(f)).toEqual(before);
+          expect(await storedGrant(pending.grant_id)).toEqual(pending);
+          expect((await new AccessRepository(cell.pool).proposal(f.workspace, submitted.receipt.proposal_id!))?.submission_receipt)
+            .toEqual(submitted.receipt);
+          expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutations")).rows).toEqual([{ state: "PENDING" }]);
+          expect(h.releases()).toBe(1); expect(h.held()).toBe(0);
+          expect(source).toEqual(sourceBefore); // provider input was not mutated or rewritten to make the test pass
+        } finally { event.mockRestore(); binding.mockRestore(); }
+        // Same authenticated intent can retry against the unchanged source;
+        // no new receipt, source timestamp, request key or proposal is invented.
+        const accepted = await service.acceptTsReceipt(proof);
+        expect(accepted.receipt.outcome).toBe("TS_APPLIED");
+        expect((await cell.pool.query("SELECT state FROM elp210_candidate.mutations")).rows).toEqual([{ state: "FINISHED" }]);
+        const committed = await authorityRows(f), calls = h.calls();
+        const legacyInspected = f.service as unknown as { validateTsBinding(...args: unknown[]): void };
+        const historicalBinding = vi.spyOn(legacyInspected, "validateTsBinding").mockImplementation(() => {
+          throw new Error("TEST_ONLY immutable ACK must not enter new-intake validation");
+        });
+        try {
+          source.grants[0].targets = [];
+          expect(await f.service.acceptTsReceipt(proof)).toEqual({ receipt: accepted.receipt, replayed: true });
+          expect(historicalBinding).not.toHaveBeenCalled(); expect(h.calls()).toBe(calls);
+          expect(await authorityRows(f)).toEqual(committed);
+        } finally { historicalBinding.mockRestore(); }
+      });
+    });
+
+  it.each(["future-effective", "already-expired"] as const)(
+    "ordinary legacy ACCEPTED fact with %s wall-clock bounds never enters authority/event writes", async fault => {
+      const f = await fixture(), { submitted } = await business(f);
+      const now = Number((await ctx.pool.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
+      const fact = await tsFact(f, submitted, fault === "future-effective"
+        ? { effective_at_ms: now + 60_000 } : { expires_at_ms: now - 1 });
+      const proof = f.trust.seal(fact), before = await authorityRows(f), pending = await storedGrant(submitted.receipt.grant_id!);
+      expect(f.trust.currentAuthorities.has(fact.portal_user_id)).toBe(false); // exact legacy-extension-ABSENT lane
+      const original = AccessRepository.prototype.event; let writes = 0;
+      const event = vi.spyOn(AccessRepository.prototype, "event").mockImplementation(async function (this: AccessRepository, input) {
+        if (input.workspace_id === f.workspace && input.operation === "TS_RECEIPT") writes++;
+        await original.call(this, input);
+      });
+      try {
+        await expect(f.service.acceptTsReceipt(proof)).rejects.toMatchObject({ code: "RECEIPT_BINDING_MISMATCH", status: 409 });
+        expect(writes).toBe(0); expect(await authorityRows(f)).toEqual(before);
+        expect(await storedGrant(pending.grant_id)).toEqual(pending);
+        expect((await f.service.proposal(actor(manager), f.workspace, submitted.receipt.proposal_id!)).submission_receipt).toEqual(submitted.receipt);
+      } finally { event.mockRestore(); }
+    });
+
+  it.each(["REJECTED", "UNKNOWN"] as const)(
+    "ordinary %s observation is not incorrectly subjected to ACCEPTED wall-clock activation", async outcome => {
+      const f = await fixture(), { submitted } = await business(f);
+      const now = Number((await ctx.pool.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
+      const fact = await tsFact(f, submitted, { outcome, expires_at_ms: now - 1 });
+      const proof = f.trust.seal(fact, false), pending = await storedGrant(submitted.receipt.grant_id!);
+      const result = await f.service.acceptTsReceipt(proof);
+      expect(result.receipt).toMatchObject({ outcome: outcome === "REJECTED" ? "TS_REJECTED" : "TS_UNKNOWN", ts_authority: outcome });
+      expect(await storedGrant(pending.grant_id)).toEqual(pending);
+      const proposal = await f.service.proposal(actor(manager), f.workspace, submitted.receipt.proposal_id!);
+      expect(proposal.submission_receipt).toEqual(submitted.receipt);
+      const before = await authorityRows(f);
+      expect(await f.service.acceptTsReceipt(proof)).toEqual({ receipt: result.receipt, replayed: true });
+      expect(await authorityRows(f)).toEqual(before);
+    });
+
   it("ELP2-10 historical delegated replay skips qualification and drain despite revoke and unrelated UNKNOWN work", async () => {
     const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
     const accepted = await f.service.acceptTsReceipt(proof), grant = await storedGrant(submitted.receipt.grant_id!);

@@ -9,7 +9,7 @@ export const BUSINESS_READ_FIELDS = [
   "created_at", "updated_at", "as_of", "source_as_of", "observed_at", "availability", "freshness", "completeness",
   "reason_code", "coverage", "provenance_ref", "revision", "catalogue_revision",
   "quantity", "price", "notional", "allocation", "balance_total", "balance_free", "balance_locked",
-  "realized_pnl", "unrealized_pnl", "net_pnl", "exposure", "equity", "drawdown", "return", "score",
+  "realized_pnl", "unrealized_pnl", "net_pnl", "exposure", "equity", "drawdown", "return", "score", "regime",
   "gross_pnl", "fee_total", "funding_pnl", "margin_initial", "margin_maintenance", "exposure_long", "exposure_short",
   "risk_grant_id", "decision_id", "submitted_count", "risk_rejected_count", "broker_rejected_count", "filled_count",
   "timestamp_ms", "occurred_at_ms", "sequence", "order_id", "fill_id", "position_id", "side",

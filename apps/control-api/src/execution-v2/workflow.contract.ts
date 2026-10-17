@@ -69,8 +69,12 @@ export const workflowCapital = z.object({ schema_version: z.literal("portal.exec
   const b = v.status.business;
   try { if (b.amounts) assertAmountPartition(b.amounts); }
   catch { c.addIssue({ code: z.ZodIssueCode.custom, message: "WORKFLOW_AMOUNT_PARTITION_INVALID" }); }
+  // Target-setting wires carry target_budget/target_root_limit, not a transfer
+  // amount. A genuine owning receipt need not invent a five-way amount partition.
+  // RECALL_FULL still requires the source-resolved partition; it is not a target.
+  const requiresAmounts = !["ADJUST_TARGET_BUDGET", "SET_ROOT_LIMIT"].includes(v.status.operation);
   if (b.state === "UNKNOWN" ? b.amounts !== null || b.receipt_ref !== null || b.source_event_ref !== null || b.revision !== null
-    : b.amounts === null || b.receipt_ref === null || b.source_event_ref === null || b.revision === null)
+    : (requiresAmounts && b.amounts === null) || b.receipt_ref === null || b.source_event_ref === null || b.revision === null)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "WORKFLOW_BUSINESS_RECEIPT_INVALID" });
   if (b.amounts) {
     const a = b.amounts, positive = (s: string) => !/^0(?:\.0+)?$/.test(s);

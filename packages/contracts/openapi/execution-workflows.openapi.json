@@ -3666,6 +3666,112 @@
           "refresh",
           "public_copy_key",
           "automatic_resend"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "properties": {
+                    "business": {
+                      "properties": {
+                        "state": {
+                          "const": "UNKNOWN"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "status": {
+                  "properties": {
+                    "business": {
+                      "properties": {
+                        "amounts": {
+                          "type": "null"
+                        },
+                        "receipt_ref": {
+                          "type": "null"
+                        },
+                        "source_event_ref": {
+                          "type": "null"
+                        },
+                        "revision": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "status": {
+                  "properties": {
+                    "business": {
+                      "properties": {
+                        "receipt_ref": {
+                          "type": "string"
+                        },
+                        "source_event_ref": {
+                          "type": "string"
+                        },
+                        "revision": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "properties": {
+                    "operation": {
+                      "not": {
+                        "enum": [
+                          "ADJUST_TARGET_BUDGET",
+                          "SET_ROOT_LIMIT"
+                        ]
+                      }
+                    },
+                    "business": {
+                      "properties": {
+                        "state": {
+                          "not": {
+                            "const": "UNKNOWN"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "status": {
+                  "properties": {
+                    "business": {
+                      "properties": {
+                        "amounts": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         ]
       },
       "WorkflowConfirmation": {

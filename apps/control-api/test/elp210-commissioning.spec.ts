@@ -28,10 +28,13 @@ import { ManagerCompositionRuntime, loadApprovedManagerAllocation, revokeApprove
   type ManagerAllocationArtifact, type ManagerAllocationApprovalPin,
   type ManagerCompositionRuntimeTask } from "../src/execution-v2/manager-composition-runtime";
 import { managerCompositionPublication } from "../src/execution-v2/manager-composition-publication.contract";
+import { selectManagerCompositionPublications } from "../src/execution-v2/manager-composition-publication";
 import { KeysetCursorCodec } from "../src/query/cursor";
 import { BUSINESS_READ_FIELDS } from "../src/execution-v2/read-fields";
 import { productReadFixture, OWN, PEER } from "./elp2-product-read.fixture";
 import { testConfig } from "./harness";
+import { ScopedReplayCursorCodec, ScopedReplayHub, type ScopedNoticeSource } from "../src/execution-v2/realtime";
+import type { EdgeScopedNoticeBatch, ScopedReplayBinding, ScopedRealtimeFrame } from "../src/execution-v2/realtime.contract";
 
 const contracts=process.env.PORTAL_CONTRACTS_DIR??resolve(__dirname,"../../../packages/contracts");
 const hash=(s:string)=>`sha256:${createHash("sha256").update(s).digest("hex")}`;
@@ -204,6 +207,38 @@ describe("ELP2-06 closed Composition loader/runtime boundaries — synthetic pin
     expect(publication.result).toMatchObject({value:null,status:"no_allocation",total_allocated_capital:"0",
       score_coverage_allocated:null,bounds:null,contributions:[]});
     expect(managerCompositionPublication.safeParse(publication).success).toBe(true);
+    expect(managerCompositionPublicationCurrent(allocation,publication,[],{accepts:()=>false},now,[])).toBe(true);
+    expect(managerCompositionPublicationCurrent(allocation,publication,[],{accepts:()=>false},now,fx.artifact.population)).toBe(false);
+  });
+  it("requires the exact correlated tuple-stage census, not independent population/stage sets",async()=>{
+    const fx=compositionInput(),artifact=structuredClone(fx.artifact);
+    artifact.scope={...artifact.scope,environment:"live",profile_id:"LIVE_BINANCE_USDM"};
+    artifact.binding.stage_filter=["CANARY","LIVE"];
+    artifact.binding.partition_digest=hash("SYNTHETIC:actual-partition");
+    artifact.population[0].stage="CANARY";artifact.population[1].stage="LIVE";
+    artifact.rows.forEach((row,i)=>{row.population[0].stage=artifact.population[i].stage;
+      row.raw_binding.stage_filter=[artifact.population[i].stage];row.raw_binding.partition_digest=artifact.binding.partition_digest;});
+    const allocation=requireCompositionAllocation(compositionCandidate(fx,artifact));
+    const publication=await compositionRuntime().calculate({...fx.task,scope:artifact.scope,binding:artifact.binding,
+      allocation,raw_scores:[]},{accepts:()=>false});
+    const accepts=(expected:typeof artifact.population)=>managerCompositionPublicationCurrent(allocation,publication,[],{accepts:()=>false},now,expected);
+    expect(accepts(artifact.population)).toBe(true);expect(accepts([...artifact.population].reverse())).toBe(true);
+    expect(accepts([])).toBe(false);expect(accepts(artifact.population.slice(0,1))).toBe(false);
+    expect(accepts([...artifact.population,artifact.population[0]])).toBe(false);
+    const changed=structuredClone(artifact.population);changed[0].stage="LIVE";changed[1].stage="CANARY";
+    expect(managerScorePopulationDigest(changed as never)).toBe(managerScorePopulationDigest(artifact.population as never));
+    expect(accepts(changed)).toBe(false);
+    const members=fx.d.document.members.map((m,i)=>({...m,stage:artifact.population[i].stage}));
+    const doc={...fx.d.document,...artifact.scope,precomputed_compositions:[publication]};
+    const fence={accepts:(p:typeof publication,s:readonly ManagerScorePublication[],c?:readonly Pick<typeof members[number],"tuple"|"stage">[])=>
+      managerCompositionPublicationCurrent(allocation,p,s,{accepts:()=>false},now,c)};
+    const select=(c:typeof members)=>selectManagerCompositionPublications(doc,c,{type:"portfolio",id:OWN.portfolio_id},
+      ["CANARY","LIVE"],artifact.binding.partition_digest,fence);
+    expect(select(members)).toEqual([publication]);
+    expect(select(members.map((m,i)=>({...m,stage:changed[i].stage})))).toEqual([]);
+    let calls=0;const getter=structuredClone(artifact.population);
+    Object.defineProperty(getter[0],"stage",{enumerable:true,get:()=>{calls++;return "CANARY";}});
+    expect(accepts(getter)).toBe(false);expect(calls).toBe(0);
   });
   it("keeps explicit LIVE+CANARY selection when the full frozen census currently has only LIVE",async()=>{
     const fx=compositionInput(),artifact=structuredClone(fx.artifact);
@@ -424,7 +459,7 @@ describe("ELP2-10 private commissioning and real registered constructors (synthe
     expect(read().scores.raw).toEqual({value:null,status:"partial_costs"});
     expect(read().items[0].metrics.score).toMatchObject({value:null,availability:"UNAVAILABLE",reason_code:"REQUIRED_COSTS_NOT_COMPLETE"});
     d.document.precomputed_scores=[s];
-    const runtime={scoreFence:{accepts:()=>active}} as ExecutionManagerRuntime;
+    const runtime={scoreFence:{accepts:()=>active},recalculationFor:()=>undefined} as unknown as ExecutionManagerRuntime;
     const service=new ManagerModelService({} as Pool,f.scopes,f.config,runtime),repo=(service as any).repository;
     vi.spyOn(repo,"head").mockResolvedValue({revision:d.document.revision,projection_generation:d.document.projection_generation,catalogue_digest:catalogue,payload_digest:hash("doc")});
     vi.spyOn(repo,"document").mockResolvedValue(d.document);
@@ -438,6 +473,27 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-10 installed worker/Score/
   const name=`elp210_commission_${randomUUID().replaceAll("-","")}`;
   const url=(db:string)=>{const u=new URL(process.env.TEST_DATABASE_URL!);u.pathname=`/${db}`;return u.toString();};
   let pool:Pool;const runtimes:ExecutionManagerRuntime[]=[];
+  /** SYNTHETIC source/identity/policy, real Hub + Manager consumer + disposable PG.
+   * No mounted HTTP, commissioned Edge factory, source coverage or propagation SLA. */
+  async function replayRuntime(source:ScopedNoticeSource) {
+    const binding:ScopedReplayBinding={...scope,principal_scope_digest:"SYNTHETIC:current-principal",
+      app_policy_revision:"SYNTHETIC:app-policy",field_policy_revision:"SYNTHETIC:field-policy",model_revision:"SYNTHETIC:model",
+      schema_revision:"portal.execution.scoped-realtime.v1",dataset:"alpha_fleet_overview",query_digest:"SYNTHETIC:query",
+      source_set_digest:"SYNTHETIC:source-set",source_continuity_epoch:"SYNTHETIC:epoch",projection_generation:"SYNTHETIC:generation",
+      snapshot_id:"SYNTHETIC:snapshot",window:null};
+    const frames:ScopedRealtimeFrame[]=[];
+    const hub=new ScopedReplayHub(source,new ScopedReplayCursorCodec("test",{test:"TEST_ONLY-replay-lifecycle-key-".repeat(3)},60000),
+      {maximumClients:1,maximumEntriesPerClient:2,maximumFrameBytes:8192,maximumClientBytes:16384,
+        maximumTotalBytes:16384,maximumNoticesPerRead:1,readTimeoutMs:1000});
+    await hub.subscribe({binding,baselineCursor:"TEST_ONLY.private.scan-1",guard:{currentIdentity:async()=>binding.principal_scope_digest,
+      write:async(_expected,send)=>send()},write:frame=>{frames.push(frame);return true;}});
+    const c=commissioning(),at=Date.now();
+    const commissioned=loadPublicationCommissioning(c.bytes,{...c.pin,approved_at_ms:at-10_000,valid_until_ms:at+60_000},at);
+    const read=vi.fn(async()=>null),runtime=new ExecutionManagerRuntime(pool,{trust:unqualifiedAccessTrust,cadence_ms:1000,
+      maximum_publication_reads:1,realtime:hub,partitions:[{scope,commissioning:commissioned,bounds,
+        publication:async()=>null,source:{read,recheck:async()=>({}),acknowledge:async()=>{}}}]});
+    runtimes.push(runtime);return {runtime,hub,frames,read};
+  }
   beforeAll(async()=>{const admin=new Pool({connectionString:url("postgres"),max:1});try{await admin.query(`CREATE DATABASE ${name}`);}finally{await admin.end();}
     pool=new Pool({connectionString:url(name),max:2,connectionTimeoutMillis:2000,query_timeout:4000});
     for(const file of ["1723680000135_execution-manager-models.sql","1723680000137_execution-manager-consumer-fence.sql"])
@@ -445,6 +501,64 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-10 installed worker/Score/
   beforeEach(async()=>{for(const r of runtimes.splice(0))await r.beforeApplicationShutdown();await pool.query("TRUNCATE execution_manager_model_heads,execution_manager_model_revisions,execution_manager_consumer_fences");});
   afterAll(async()=>{for(const r of runtimes.splice(0))await r.beforeApplicationShutdown();await pool?.end();const admin=new Pool({connectionString:url("postgres"),max:1});
     try{if(!/^elp210_commission_[a-f0-9]{32}$/.test(name))throw new Error("DB_NAME");await admin.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);}finally{await admin.end();}},60000);
+  it("polls the installed Hub before real financial IDLE and coalesces the same Manager tick",async()=>{
+    let enter!:()=>void,release!:(value:EdgeScopedNoticeBatch)=>void;
+    const entered=new Promise<void>(resolve=>{enter=resolve;});
+    const pending=new Promise<EdgeScopedNoticeBatch>(resolve=>{release=resolve;});
+    const noticeRead=vi.fn<ScopedNoticeSource["read"]>(async()=>({notices:[],next_cursor:"TEST_ONLY.private.scan-1",caught_up:true}));
+    noticeRead.mockImplementationOnce(()=>{enter();return pending;});
+    const h=await replayRuntime({read:noticeRead});
+    const work=h.runtime.tick();
+    try {
+      await entered;
+      expect(h.runtime.tick()).toBe(work);
+      expect(h.read).not.toHaveBeenCalled(); // Poll first, not after a potentially long financial batch.
+      release({notices:[],next_cursor:"TEST_ONLY.private.scan-1",caught_up:true});
+      await work;
+      expect(h.read).toHaveBeenCalledOnce();
+      expect(h.frames.map(f=>f.event_type)).toEqual(["heartbeat"]);
+      expect(h.runtime.status()).toMatchObject({state:"TICK_OK",automatic_loop:false});
+      await h.runtime.tick();
+      expect(noticeRead).toHaveBeenCalledTimes(2);expect(h.read).toHaveBeenCalledTimes(2);
+      expect(h.frames.map(f=>f.event_type)).toEqual(["heartbeat","heartbeat"]);
+      expect((await pool.query("SELECT count(*)::int AS n FROM execution_manager_consumer_fences")).rows[0].n).toBe(1);
+      expect((await pool.query("SELECT count(*)::int AS n FROM execution_manager_model_revisions")).rows[0].n).toBe(0);
+    } finally {
+      release({notices:[],next_cursor:"TEST_ONLY.private.scan-1",caught_up:true});
+      await work;await h.runtime.beforeApplicationShutdown();
+    }
+  });
+  it("stops during Hub poll without starting financial work or reviving TICK_OK after late completion",async()=>{
+    let enter!:()=>void,release!:(value:EdgeScopedNoticeBatch)=>void;
+    const entered=new Promise<void>(resolve=>{enter=resolve;});
+    const pending=new Promise<EdgeScopedNoticeBatch>(resolve=>{release=resolve;});
+    const noticeRead=vi.fn<ScopedNoticeSource["read"]>(()=>{enter();return pending;});
+    const h=await replayRuntime({read:noticeRead}),work=h.runtime.tick();
+    await entered;
+    const signal=noticeRead.mock.calls[0][3];
+    const shutdown=h.runtime.beforeApplicationShutdown();let stopped=false;
+    void shutdown.then(()=>{stopped=true;});
+    try {
+      // There is no financial/DB work on this path: settle only the finite
+      // promise cancellation chain, without resolving the ignoring provider.
+      await new Promise<void>(resolve=>setImmediate(resolve));
+      expect(stopped).toBe(true);expect(signal.aborted).toBe(true);
+      expect(h.runtime.status()).toEqual({state:"STOPPED",partitions:1,automatic_loop:false});
+      expect(h.read).not.toHaveBeenCalled();
+      expect(h.hub.diagnostics()).toMatchObject({clients:0,source_flights:1,queued_bytes:0});
+      expect(h.frames).toHaveLength(1);expect(h.frames[0]).toMatchObject({event_type:"unavailable",reason_code:"STOPPED",terminal:true});
+      await expect(h.runtime.tick()).rejects.toThrow("MANAGER_RUNTIME_STOPPED");
+    } finally {
+      release({notices:[],next_cursor:"TEST_ONLY.private.scan-1",caught_up:true});
+      await work;await shutdown;
+      await new Promise<void>(resolve=>setImmediate(resolve));
+    }
+    expect(h.read).not.toHaveBeenCalled();expect(noticeRead).toHaveBeenCalledOnce();
+    expect(h.frames).toHaveLength(1);expect(h.hub.diagnostics().source_flights).toBe(0);
+    expect(h.runtime.status()).toEqual({state:"STOPPED",partitions:1,automatic_loop:false});
+    expect((await pool.query("SELECT count(*)::int AS n FROM execution_manager_consumer_fences")).rows[0].n).toBe(0);
+    expect((await pool.query("SELECT count(*)::int AS n FROM execution_manager_model_revisions")).rows[0].n).toBe(0);
+  });
   it("materializes Composition plus raw/direct Score, persists PG and serves the existing Manager controller/query",async()=>{
     const fx=compositionInput(),installed=compositionInstallation(fx),runtime=new ExecutionManagerRuntime(pool,installed.installation);runtimes.push(runtime);
     await runtime.tick();expect(runtime.status().state).toBe("TICK_OK");

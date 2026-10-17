@@ -150,3 +150,18 @@ Source unchanged through gate; eight runtime image/start/restart tuples
 unchanged; remaining owned resources empty. No source/runtime/FE/push/deploy.
 This terminal addendum supersedes pending-hook wording above only; it does not
 close other parents/aliases or genuine source/consumer qualification.
+
+### Approved next subset — 2026-10-17
+
+The[three finite retained aliases](finite-retained-aliases.md) now have an
+applied UNCOMMITTED candidate: explicit purposes, narrow current field
+intersection, keyed private row identity and same-snapshot parent join.
+Tests/normal-hook PENDING;30other null aliases and compound source-current
+qualification remain OPEN. This is not all04reader completion or new authority.
+
+**Terminal focused addendum,09:04UTC:** the subset's41cases PASS inside the
+247/247API/build/scopedPGrestore gate;84/84impacted workflow/Manager contracts
+also PASS in the same sequential window. [Exact receipt and unchanged public
+contract](finite-retained-aliases.md#terminal-focused-correctness--2026-10-17t090412z).
+Normal-hook landing stays pending; other owner's index and protected runtimes
+unchanged, own resources/lease removed. No source or consumer qualification.

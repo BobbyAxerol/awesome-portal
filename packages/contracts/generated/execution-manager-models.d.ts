@@ -350,8 +350,9 @@ export interface components {
                 };
                 regime: {
                     value: null;
-                    /** @constant */
-                    status: "unavailable";
+                    /** @enum {string} */
+                    status: "unavailable" | "supported" | "weak_support" | "out_of_support" | "insufficient_data" | "stale" | "unbound";
+                    reason_code?: ("REGIME_POLICY_SOURCE_OR_AUTHORIZED_SLICE_NOT_QUALIFIED" | "REGIME_IS_PER_ALPHA_OR_DEPLOYMENT_ONLY") | null;
                 };
                 /** @enum {string} */
                 reason_code: "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED" | "QUALIFIED_PRECOMPUTED_SCORE";
@@ -526,6 +527,150 @@ export interface components {
                         subject_id: string;
                         publication_digest: string;
                     }[];
+                };
+            }[];
+            regime_details?: {
+                /** @constant */
+                slot: "REGIME";
+                result: {
+                    /** @enum {string} */
+                    status: "supported" | "weak_support" | "out_of_support" | "insufficient_data" | "stale" | "unbound";
+                    reason_codes: string[];
+                    reasons: {
+                        code: string;
+                        source_locator: string;
+                        reference_window_id: string | null;
+                    }[];
+                    nearest_distance: string | null;
+                    eligible_reference_count: number;
+                    neighbor_count: number;
+                    distinct_episode_count: number;
+                    stage_breakdown: {
+                        /** @enum {string} */
+                        stage: "ResearchIS" | "ResearchOOS" | "ResearchValidation" | "Paper" | "Sandbox" | "Canary" | "Live";
+                        /** @enum {string} */
+                        evidence_kind: "research_simulated" | "forward_simulated" | "actual";
+                        economic_domain: string;
+                        account_mode: string;
+                        /** @enum {string} */
+                        status: "supported" | "weak_support";
+                        reason_codes: string[];
+                        neighbor_count: number;
+                        distinct_episode_count: number;
+                        effective_sample_size: string;
+                        nearest_distance: string;
+                        reference_window_ids: string[];
+                        neighbors: {
+                            reference_window_id: string;
+                            distance: string;
+                            weight: string;
+                            source_locator: string;
+                            manifest_hash: string;
+                        }[];
+                        matched_outcome_summary: {
+                            mean: string;
+                            median: string;
+                            min: string;
+                            max: string;
+                            quantiles: {
+                                probability: string;
+                                value: string;
+                            }[];
+                            /** @constant */
+                            method: "DESCRIPTIVE_NET_TWR_LINEAR_EMPIRICAL_UNWEIGHTED_QUANTILES";
+                            cost_assumptions_ids: string[];
+                            outcome_from_ms: number;
+                            outcome_to_ms: number;
+                        };
+                    }[];
+                    reference_window_ids: string[];
+                    /** @constant */
+                    formula_id: "market_regime_robust_gaussian_v1_1";
+                    /** @constant */
+                    qualification: "RUNTIME_APPROVED";
+                    policy_version: string;
+                    policy_hash: string;
+                    approved_policy_id: string;
+                    feature_schema_version: string;
+                    calibration_snapshot_id: string;
+                    calibration_hash: string;
+                    overlap_policy_id: string;
+                    horizon_ms: number;
+                    research_binding_id: string;
+                    bound_run_id: string;
+                    strategy_version: string;
+                    params_hash: string;
+                    evidence_snapshot_id: string;
+                    as_of_ms: number;
+                    feature_cutoff_ms: number;
+                    reference_cutoff_ms: number | null;
+                    revision: string;
+                    supersedes_revision: string | null;
+                    preview: null;
+                };
+                provenance: {
+                    scope: {
+                        workspace_id: string;
+                        /** @enum {string} */
+                        environment: "paper" | "sandbox" | "live";
+                        profile_id: string;
+                        catalogue_digest: string;
+                    };
+                    binding: {
+                        /** @enum {string} */
+                        subject_type: "alpha" | "deployment";
+                        subject_id: string;
+                        alpha_id: string;
+                        alpha_version_id: string;
+                        tuple_population_digest: string;
+                        partition_digest: string;
+                        stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                        comparable_basis_id: string;
+                        individual_evidence_binding_id: string;
+                    };
+                    research_binding: {
+                        alpha_id: string;
+                        research_binding_id: string;
+                        run_id: string;
+                        strategy_version: string;
+                        params_hash: string;
+                        trade_params_hash: string;
+                        param_mapping_version: string;
+                        universe_id: string;
+                        venue: string;
+                        data_snapshot_id: string;
+                        split_manifest_hash: string;
+                        binding_effective_at_ms: number;
+                        binding_created_at_ms: number;
+                        run_completed_at_ms: number;
+                        artifact_available_at_ms: number;
+                        evidence_available_at_ms: number;
+                        source_locator: string;
+                    };
+                    source_revision: string;
+                    projection_generation: string;
+                    source_set_digest: string;
+                    source_as_of_ms: number;
+                    /** @constant */
+                    source_qualification: "SOURCE_VERIFIED";
+                    input_digest: string;
+                    calculation_revision: string;
+                    computed_at_ms: number;
+                    policy_artifact_sha256: string;
+                    policy_revision: string;
+                    formula_hash: string;
+                    feature_definition_hash: string;
+                    approval_ref: string;
+                    approved_at_ms: number;
+                    policy_valid_until_ms: number;
+                    evidence_artifact_sha256: string;
+                    evidence_manifest_hash: string;
+                    population_census_digest: string;
+                    reference_census_digest: string;
+                    source_acceptance_ref: string;
+                    source_accepted_at_ms: number;
+                    evidence_valid_until_ms: number;
+                    evaluation_at_ms: number;
                 };
             }[];
             funding_bucket_pnl: {
@@ -859,6 +1004,150 @@ export interface components {
                     subject_id: string;
                     publication_digest: string;
                 }[];
+            };
+        };
+        ManagerRegimePublication: {
+            /** @constant */
+            slot: "REGIME";
+            result: {
+                /** @enum {string} */
+                status: "supported" | "weak_support" | "out_of_support" | "insufficient_data" | "stale" | "unbound";
+                reason_codes: string[];
+                reasons: {
+                    code: string;
+                    source_locator: string;
+                    reference_window_id: string | null;
+                }[];
+                nearest_distance: string | null;
+                eligible_reference_count: number;
+                neighbor_count: number;
+                distinct_episode_count: number;
+                stage_breakdown: {
+                    /** @enum {string} */
+                    stage: "ResearchIS" | "ResearchOOS" | "ResearchValidation" | "Paper" | "Sandbox" | "Canary" | "Live";
+                    /** @enum {string} */
+                    evidence_kind: "research_simulated" | "forward_simulated" | "actual";
+                    economic_domain: string;
+                    account_mode: string;
+                    /** @enum {string} */
+                    status: "supported" | "weak_support";
+                    reason_codes: string[];
+                    neighbor_count: number;
+                    distinct_episode_count: number;
+                    effective_sample_size: string;
+                    nearest_distance: string;
+                    reference_window_ids: string[];
+                    neighbors: {
+                        reference_window_id: string;
+                        distance: string;
+                        weight: string;
+                        source_locator: string;
+                        manifest_hash: string;
+                    }[];
+                    matched_outcome_summary: {
+                        mean: string;
+                        median: string;
+                        min: string;
+                        max: string;
+                        quantiles: {
+                            probability: string;
+                            value: string;
+                        }[];
+                        /** @constant */
+                        method: "DESCRIPTIVE_NET_TWR_LINEAR_EMPIRICAL_UNWEIGHTED_QUANTILES";
+                        cost_assumptions_ids: string[];
+                        outcome_from_ms: number;
+                        outcome_to_ms: number;
+                    };
+                }[];
+                reference_window_ids: string[];
+                /** @constant */
+                formula_id: "market_regime_robust_gaussian_v1_1";
+                /** @constant */
+                qualification: "RUNTIME_APPROVED";
+                policy_version: string;
+                policy_hash: string;
+                approved_policy_id: string;
+                feature_schema_version: string;
+                calibration_snapshot_id: string;
+                calibration_hash: string;
+                overlap_policy_id: string;
+                horizon_ms: number;
+                research_binding_id: string;
+                bound_run_id: string;
+                strategy_version: string;
+                params_hash: string;
+                evidence_snapshot_id: string;
+                as_of_ms: number;
+                feature_cutoff_ms: number;
+                reference_cutoff_ms: number | null;
+                revision: string;
+                supersedes_revision: string | null;
+                preview: null;
+            };
+            provenance: {
+                scope: {
+                    workspace_id: string;
+                    /** @enum {string} */
+                    environment: "paper" | "sandbox" | "live";
+                    profile_id: string;
+                    catalogue_digest: string;
+                };
+                binding: {
+                    /** @enum {string} */
+                    subject_type: "alpha" | "deployment";
+                    subject_id: string;
+                    alpha_id: string;
+                    alpha_version_id: string;
+                    tuple_population_digest: string;
+                    partition_digest: string;
+                    stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                    comparable_basis_id: string;
+                    individual_evidence_binding_id: string;
+                };
+                research_binding: {
+                    alpha_id: string;
+                    research_binding_id: string;
+                    run_id: string;
+                    strategy_version: string;
+                    params_hash: string;
+                    trade_params_hash: string;
+                    param_mapping_version: string;
+                    universe_id: string;
+                    venue: string;
+                    data_snapshot_id: string;
+                    split_manifest_hash: string;
+                    binding_effective_at_ms: number;
+                    binding_created_at_ms: number;
+                    run_completed_at_ms: number;
+                    artifact_available_at_ms: number;
+                    evidence_available_at_ms: number;
+                    source_locator: string;
+                };
+                source_revision: string;
+                projection_generation: string;
+                source_set_digest: string;
+                source_as_of_ms: number;
+                /** @constant */
+                source_qualification: "SOURCE_VERIFIED";
+                input_digest: string;
+                calculation_revision: string;
+                computed_at_ms: number;
+                policy_artifact_sha256: string;
+                policy_revision: string;
+                formula_hash: string;
+                feature_definition_hash: string;
+                approval_ref: string;
+                approved_at_ms: number;
+                policy_valid_until_ms: number;
+                evidence_artifact_sha256: string;
+                evidence_manifest_hash: string;
+                population_census_digest: string;
+                reference_census_digest: string;
+                source_acceptance_ref: string;
+                source_accepted_at_ms: number;
+                evidence_valid_until_ms: number;
+                evaluation_at_ms: number;
             };
         };
     };

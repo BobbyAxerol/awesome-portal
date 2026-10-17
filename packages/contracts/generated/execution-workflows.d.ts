@@ -593,7 +593,7 @@ export interface components {
             public_copy_key: "QUERY_SAME_INTENT" | "REVIEW_RECEIPT" | "PARTIAL_REMAINDER_PENDING" | "APPLIED_PART_RETAINED" | "SOURCE_REJECTED";
             /** @constant */
             automatic_resend: false;
-        };
+        } & (unknown & unknown);
         WorkflowConfirmation: {
             /** @constant */
             schema_version: "portal.execution.workflow-confirmation.v1";

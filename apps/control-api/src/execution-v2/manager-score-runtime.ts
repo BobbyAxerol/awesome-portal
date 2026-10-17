@@ -168,6 +168,25 @@ export function managerScorePublicationCurrent(handle: ApprovedManagerScorePolic
   result: Pick<ManagerScoreRuntimeResult,"quality"|"provenance">, nowMs:number): boolean {
   return result.quality.value!==null && managerScorePublicationPolicyCurrent(handle,result,nowMs);
 }
+/** Private retained-input compatibility, not approval by a JSON flag. A policy
+ * introduced after the source cutoff cannot become original-as-published data.
+ * Anchors/maturity/stress delta may change; observation/cost/block/flow/ownership
+ * methods cannot be reconstructed from metrics and must remain identical. */
+export function managerScoreRecalculationPolicy(handle:ApprovedManagerScorePolicy|null,sourceAsOf:number,now:number) {
+  const r=handle?approvedPolicies.get(handle):undefined;
+  if(!r||!Number.isSafeInteger(sourceAsOf)||!Number.isSafeInteger(now)||sourceAsOf<0||sourceAsOf>now||
+    r.approval.approved_at_ms>sourceAsOf||r.approval.valid_until_ms<=now)return null;
+  const p=r.artifact.policy,c=r.artifact.runtime_config;
+  return freeze({identity_digest:hash(canonical({artifact:r.artifact,approval:r.approval})),
+    method_digest:hash(canonical({formula_hash:p.formula_hash,comparable_basis_id:p.comparable_basis_id,
+      duration_key:p.duration_key,observation_frequency:p.observation_frequency,calendar:p.calendar,timezone:p.timezone,
+      currency:p.currency,cash_reference_id:p.cash_reference_id,cost_method:p.cost_method,
+      required_costs:[...p.required_costs].sort(),block_manifest_id:p.block_manifest_id,stress_policy_id:p.stress_policy_id,
+      grid_method_ref:c.grid_method_ref,flow_adjustment_method_ref:c.flow_adjustment_method_ref,
+      ownership_method_ref:c.ownership_method_ref,fx_method_ref:c.fx_method_ref})),
+    policy_revision:r.approval.policy_revision,stress_delta_bps:p.stress_delta_bps,
+    approved_at_ms:r.approval.approved_at_ms,valid_until_ms:r.approval.valid_until_ms});
+}
 const metricsSchema = z.object(Object.fromEntries(Object.keys(MANAGER_SCORE_ATOMIC_WEIGHTS).map(key => [key, decimal.nullable()])) as Record<keyof ManagerScoreMetrics, z.ZodNullable<typeof decimal>>).strict();
 const qualityFields = { comparable_basis_id: text, individual_evidence_binding_id: text.nullable(),
   window_start_ms: ms, window_end_ms: ms, as_of_ms: ms, observed_duration_ms: ms, currency: text,

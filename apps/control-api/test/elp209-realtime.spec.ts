@@ -540,21 +540,56 @@ describe("ELP2-09 bounded ownership — slow clients, reconnects and uncooperati
     expect(h.frames.map(frame => frame.event_type)).toEqual(["revalidate", "revalidate"]);
     expect(h.hub.diagnostics().queued_bytes).toBe(0);
   });
-  it("stops source delivery while preserving a pending request until its actual completion", async () => {
+  it("aborts an owned cooperating read on stop without a late protected delivery", async () => {
+    const h = harness();
+    const entered = deferred<void>();
+    h.read.mockImplementationOnce((_binding, _after, _limit, signal) => new Promise((_resolve, reject) => {
+      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+      entered.resolve();
+    }));
+    await h.subscribe();
+    const polling = h.hub.poll();
+    await entered.promise;
+    const signal = h.read.mock.calls[0][3];
+    h.hub.stop();
+    await polling;
+    expect(signal.aborted).toBe(true);
+    expect(h.frames).toHaveLength(1);
+    terminal(h.frames[0], "STOPPED", "unavailable");
+    expect(h.authority.writes).toBe(0);
+    expect(h.hub.diagnostics()).toMatchObject({ clients: 0, source_flights: 0, queued_bytes: 0 });
+    await h.hub.poll();
+    expect(h.read).toHaveBeenCalledOnce();
+  });
+  it("settles stopped pollers but retains an abort-ignoring source slot until actual completion", async () => {
     const h = harness();
     const pending = deferred<EdgeScopedNoticeBatch>();
     h.read.mockReturnValueOnce(pending.promise);
     await h.subscribe();
     const polling = h.hub.poll();
     await flush();
+    const signal = h.read.mock.calls[0][3];
     h.hub.stop();
+    let settled = false;
+    void polling.then(() => { settled = true; });
+    try {
+      await new Promise<void>(resolve=>setImmediate(resolve)); // Drain the current turn, not a guessed microtask count.
+      expect(settled).toBe(true);
+      expect(signal.aborted).toBe(true);
+      expect(h.frames).toHaveLength(1);
+      terminal(h.frames[0], "STOPPED", "unavailable");
+      expect(h.hub.diagnostics()).toMatchObject({ clients: 0, source_flights: 1, timed_out_flights: 0, queued_bytes: 0 });
+      h.hub.stop();
+      await h.hub.poll();
+      expect(h.read).toHaveBeenCalledOnce();
+    } finally {
+      pending.resolve(batch());
+      await polling;
+      await flush();
+    }
     expect(h.frames).toHaveLength(1);
-    terminal(h.frames[0], "STOPPED", "unavailable");
-    expect(h.hub.diagnostics()).toMatchObject({ clients: 0, source_flights: 1, queued_bytes: 0 });
-    pending.resolve(batch());
-    await polling;
-    expect(h.frames).toHaveLength(1);
-    expect(h.hub.diagnostics().source_flights).toBe(0);
+    expect(h.authority.writes).toBe(0);
+    expect(h.hub.diagnostics()).toMatchObject({ source_flights: 0, queued_bytes: 0 });
   });
   it("aborts timed-out providers but retains their bounded slot until an ignored abort really completes", async () => {
     vi.useFakeTimers();

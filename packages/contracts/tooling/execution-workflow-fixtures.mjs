@@ -18,11 +18,17 @@ export function workflowFixtures(f, c) {
     fund: step('NOT_REQUIRED'), initial_grant: step('NOT_REQUIRED') }));
   add('W08-CREATED-FUNDED', 'T08-02', 'WorkflowCreate', f.createWorkflow({ ...create, fund: applied('fund'), initial_grant: applied('grant') }));
   add('W08-ACK-UNKNOWN', 'T08-10', 'WorkflowCapital', f.capitalWorkflow(context, 'USDT', status));
-  const capital = (operation, state, amounts) => f.capitalWorkflow(context, 'USDT', { ...status, operation,
+  const capital = (operation, state, amounts) => {
+    const resource = operation === 'SET_ROOT_LIMIT' ? { kind: 'ROOT', id: 'TEST_ONLY:root' } : context.resource;
+    return f.capitalWorkflow({ ...context, resource }, 'USDT', { ...status, operation, resource,
     business: { state, amounts, receipt_ref: 'TEST_ONLY:owning-receipt', source_event_ref: 'TEST_ONLY:event', revision: '9007199254740993' },
     projection: 'CATCHING_UP', venue: 'NOT_APPLICABLE' });
+  };
   add('W08-FUND', 'T08-03', 'WorkflowCapital', capital('FUND', 'APPLIED', { requested: '1000', applied: '1000', pending: '0', cancelled: '0', rejected: '0' }));
   add('W08-TOPUP', 'T08-03', 'WorkflowCapital', capital('TOP_UP', 'APPLIED', { requested: '1000', applied: '1000', pending: '0', cancelled: '0', rejected: '0' }));
+  // Target-setting receipts do not imply a source amount partition or transfer.
+  add('W08-ROOT-LIMIT-NONAMOUNT', 'T08-03', 'WorkflowCapital', capital('SET_ROOT_LIMIT', 'APPLIED', null));
+  add('W08-TARGET-BUDGET-REJECTED-NONAMOUNT', 'T08-04', 'WorkflowCapital', capital('ADJUST_TARGET_BUDGET', 'REJECTED', null));
   add('W08-DECREASE-REJECTED', 'T08-04', 'WorkflowCapital', capital('IMMEDIATE_DECREASE', 'REJECTED', { requested: '1000', applied: '0', pending: '0', cancelled: '0', rejected: '1000' }));
   add('W08-RECALL-PENDING', 'T08-04', 'WorkflowCapital', capital('RECALL_PARTIAL', 'WAITING_ENCUMBRANCE', { requested: '1000', applied: '0', pending: '1000', cancelled: '0', rejected: '0' }));
   add('W08-PARTIAL', 'T08-05', 'WorkflowCapital', capital('RECALL_PARTIAL', 'PARTIALLY_APPLIED', { requested: '1000.000000000000000001', applied: '300', pending: '700.000000000000000001', cancelled: '0', rejected: '0' }));

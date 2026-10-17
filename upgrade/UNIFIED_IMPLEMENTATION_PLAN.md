@@ -11045,6 +11045,43 @@ not added twice); exact[receipt and consumer mapping](execution_loop/evidence/EL
 Source bytes/runtime stable and own cells/network cleaned. One normal-hook
 commit is pending; Regime chain remains implementation work, not config-only.
 
+#### 14.13.2 Composition landed; descriptive Regime chain and remaining phases
+
+Composition landed `fdab164ce0187ac164efbf30ee232e8f3e1d5f3a` (23files,
++4194/−1123): normal hook706contracts/4639API PASS+3existing skips, build and
+actualPGrestore PASS. [Terminal receipt/handoff](execution_loop/evidence/ELP2-06/composition-publication.md#terminal-normal-hook-receipt--2026-10-17)
+supersedes earlier pending observations, not genuine source/config acceptance.
+
+[Regime loader→worker→immutablePG→reader](execution_loop/evidence/ELP2-06/regime-publication.md)
+is implemented as a separate descriptive per-alpha/deployment result, not a
+numeric score or forecast. Focus335/336PASS/build PASS;16PGchain tests PASS;
+one cancellation-test ordering defect corrected without runtime relaxation.
+Canonical actual-result synthetic fixture and schema/negative tests join one
+normal-hook landing. Until terminal exit0, local chain remains PENDING_GATE.
+Source-only independent review is not execution or runtime acceptance.
+
+Latest [canonical gap census](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-backend-gap-census-20261017)
+still has actual work in02–10: current exact many-leg identity/grants, positive
+parents/aliases, qualified source adapter, policy-only immutable recalculation,
+broader command/workflow families, concrete realtime source/coordinator, real
+trust/COMMIT fences and approved budgets/calibration/matched G2.11not entry-ready.
+PM/Edge source08:07–08:09UTC remains a156f21a/5ff6c1dd, unmounted proposal and
+owner-reported private qualification, not installed authority. Do not treat
+source code absence as the reason when implementation now exists.
+
+Backend may continue independently within Bobby's approved02–11 batch;
+Claude UXM00–10 remains NOT_STARTED_BY_OWNER_DIRECTION. Additive Regime
+contract/fixture handoff is AWAITING_CONSUMER_REVIEW, not a request to edit UI.
+No public new route/migration, runtime/source activation, push/dev/main/sign/
+release/deploy. After every coherent batch, update this index, its packet and
+the existing census with actual gate, next backend work and consumer handoff.
+
+Regime landing resource precheck08:16:30UTC: after300s the controller could not
+acquire the PM capital-history owner's existing window. No staging/hooks/tests
+or resources started, no foreign lease removed. See[exact pending state](execution_loop/evidence/ELP2-06/regime-publication.md#landing-resource-precheck--081630utc).
+The corrected final test/fixture needs the normal hook; no commit/PASS claimed
+for this WIP. A timestamp past expiry is not permission to seize peer resources.
+
 
 <a id="epg10-08-current-correspondence"></a>
 
@@ -11131,6 +11168,33 @@ The configured commit hook validates the final staged slice; its immutable
 terminal receipt/result is indexed by Edge Unified23.20.6 and the single08
 owner packet, without treating that source gate as installed authority.
 
+#### 14.13.3 Regime fixture correction and09 lifecycle follow-through
+
+Latest Bobby direction keeps Claude NOT_STARTED_BY_OWNER_DIRECTION and assigns
+all independently implementable backend gaps. No frontend edits, runtime/source
+activation, push or dev/main/release is implied. Entry HEAD remains fdab164c;
+the other owner's12staged current-relations paths/index are preserved.
+
+The shared normal hook ended08:38:59UTC with4773API PASS/1FAIL/3existing skips,
+no new commit. The only failure was this batch's checkout-relative Regime
+fixture lookup. It now obeys the canonical cell's PORTAL_CONTRACTS_DIR, with
+unchanged exact fixture equality. [Preserved failure and correction](execution_loop/evidence/ELP2-06/regime-publication.md#shared-hook-failure-and-owned-fixture-path-correction--0839utc)
+are not a blanket PASS or genuine policy/source acceptance.
+
+[09 lifecycle follow-through](execution_loop/evidence/ELP2-09/README.md#approved-backend-follow-through--2026-10-17)
+now implements private optional Hub coordination on the existing bounded serial
+Manager tick, including no-new-financial-data checks, owned-read cancellation
+and STOPPED latching. Focused real-PG/pure lifecycle gates are PENDING; actual
+source adapter/barrier/coverage/tail/revoke and runtime qualification stay OPEN.
+No new public fields or Claude consumer changes are required by that slice.
+
+Next backend independent work remains finite retained reader aliases/parents,
+exact per-grant command compatibility/workflow adapters and immutable policy-only
+calculation revisions. Review each actual source boundary; do not substitute
+fixture pins/config or hidden-row filtering for qualified current authority.
+The canonical census still controls02–10,11remains not entry-ready; future
+consumer handoff is AWAITING_CONSUMER_REVIEW, not accepted or auto-assigned.
+
 **Final exact-byte focus:**135PASS/0FAIL/0SKIP after the additional intake guard,
 72new correspondence plus63legacy cases; immutable overlay on current source,
 own container/lease removed and8SGP protected tuples unchanged. Receipt
@@ -11140,3 +11204,112 @@ This does not execute the new PG intake cases; those belong to the configured
 normal-hook build/PG/restore gate. PM readonly review confirms source boundary
 compatibility with proposal a4b9a570…; opaque revision/native-reference digest
 is an authenticated aggregate, not a native global sequence or installed fence.
+
+**Regime/09terminal focus,08:52UTC:**407/407API PASS in8files, APIbuild and
+scoped PGdump/restore PASS;[exact source/resource/cleanup receipt](execution_loop/evidence/ELP2-06/regime-publication.md#corrected-regimerealtime-focused-terminal--0852utc).
+This supersedes only their PENDING focused result above. Foreign index and
+eight protected runtimes unchanged, owned resources/lease removed. Normal-hook
+contracts/landing remain PENDING; no source/current-human commissioning,
+production budget/calibration, coexistence/G2 or browser acceptance inferred.
+Remaining approved backend and11entry are tracked in the[canonical census](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#current-backend-return--2026-10-17t0852utc).
+Claude remains NOT_STARTED_BY_OWNER_DIRECTION; no FE, push or runtime activation.
+
+**04/08next bounded implementation,2026-10-17:**[three finite retained aliases](execution_loop/evidence/ELP2-04/finite-retained-aliases.md)
+and[non-amount capital workflow](execution_loop/evidence/ELP2-08/nonamount-capital.md)
+are applied UNCOMMITTED/PENDING_GATE. Their single correctness cell follows
+the terminal407Regime/realtime cell, not parallel load. No foreign staged
+changes, field grant, source collector, endpoint, migration or UI is altered.
+Regenerate the existing workflow schema/fixture/type together; target-setting
+amount absence is not a transfer or source qualification.30other alias purposes,
+compound source-current proof, remaining command/source adapters and policy-only
+immutable revisions stay OPEN. Claude handoff AWAITING_CONSUMER_REVIEW, not an
+assignment; no ELP2-11 readiness is inferred from these component slices.
+
+**04/06/08 terminal update, 2026-10-17T09:04UTC:** the 04 three-alias subset
+and 08 non-amount target-setting correction now have focused PASS, not just
+drafts: 247/247 API tests in 7 files, API build/scoped PG restore/four row
+digests PASS; 84/84 impacted workflow/Manager contract tests PASS, including
+Regime schema/fixture parity. [Exact immutable receipt and cleanup](execution_loop/evidence/ELP2-04/finite-retained-aliases.md#terminal-focused-correctness--2026-10-17t090412z).
+No unaffected full-suite rerun for this docs addendum. These suites overlap
+older receipts; no summed unique coverage or full phase PASS is inferred.
+
+HEAD remains fdab164c; own Regime/realtime/reader/workflow bytes remain
+UNCOMMITTED / NORMAL_HOOK_PENDING. The other owner's 12 staged paths and
+their Unified hunk are preserved; do not unstage or commit them. Eight protected
+runtimes unchanged through the gate, own resources/lease removed. Latest PM
+read-only pin e14f0b4c adds original capital/control history but its manifest
+still says runtime/route/installed provider/native fence/delivery apply are
+unavailable or uncertified. Source presence is not an installed authority.
+
+[Canonical remaining backend return](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#current-backend-return--2026-10-17t0904utc)
+orders 03/07 exact grant/final-clock integration → 06 immutable policy-only
+recalculation → remaining 04/05/06/07/08/09 source/reader/command/realtime
+adapters → 10 genuine authority/config/budget/coexistence/G2 acceptance.
+02 source identity installation remains open; 11 is not entry-ready. These are
+real backend gaps, not all attributable to frontend or missing generic consent.
+Claude UXM00–10 remains NOT_STARTED_BY_OWNER_DIRECTION with delivered contracts/
+fixtures AWAITING_CONSUMER_REVIEW; no automatic assignment or acceptance claim.
+No UI edits, source/command/Live activation, push, dev/main, sign or deploy.
+
+**Next actual 06 implementation, 2026-10-17:** [immutable policy-only chain](execution_loop/evidence/ELP2-06/policy-recalculation.md)
+is assigned within the existing batch, not a new phase. Migration 138 reserved
+by primary after observing local 137; two derived tables, no runtime migration.
+Own original-PATH retention/worker/store/API integration may proceed without
+editing the other owner's staged access files. Private draft is not delivered;
+new tests NOT_RUN until terminal evidence. Full METRICS/Composition/Regime
+recalculation, actual calibration/source and consumer acceptance remain open.
+
+**06 current implementation entry,2026-10-17T09:37UTC:** HEAD now
+d483357a416f7944d06ab8d4e2a80062656dac92, foreign index released/empty.
+[Policy-only chain](execution_loop/evidence/ELP2-06/policy-recalculation.md#integrated-focused-gate-entry--2026-10-17t0937utc)
+has actual opt-in consumer/worker/store/API code and17 disposable-PG tests,
+not yet a terminal PASS or landed delivery. Preserve exact original JSON
+input bytes across JSONB; immutable source and ACK remain independent. A new
+source freeze/build/focused/restore gate follows; prior interleaved hook's
+source-drift verdict is preserved, not reused as this slice's acceptance.
+Next03/07 draft now has a free write window after peer commit; actual source,
+METRICS/Composition/Regime policy-only recalculation, production budget/config,
+coexistence/G2 and Claude acceptance remain open. No FE/start11/push/activation.
+
+**Current full backend return,2026-10-17T09:47UTC:**
+[Remaining phase-by-phase work and next sequence](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-backend-return-20261017-0947)
+now distinguishes implementable backend debt from genuine source/config/
+performance acceptance and Claude's explicit hold. Exact03/07 command grant/
+resource/environment/final-clock checks and ordinary-intake currentness are
+APPLIED/UNCOMMITTED, with new actual-PG tests NOT_RUN. [Delivery/review matrix](execution_loop/evidence/ELP2-07/current-grant-command.md).
+06 PATH recalculation focus was238/241PASS,3FAIL due to malformed OWN/PEER
+synthetic authority; corrected fixture, no permission relaxation. [Preserved
+failure/source/resource receipt](execution_loop/evidence/ELP2-06/policy-recalculation.md#focused-terminal-and-fixture-only-correction--2026-10-17t0941utc).
+One coherent normal hook now validates/lands all owned backend changes; no
+second full focus or baseline-only build. Branch remains docs/research-loop-plan
+at d483357a entry; no FE, source/command/Live activation, push, dev/main or deploy.
+02–10 missing mandatory gates stay OPEN;11 not entry-ready. Claude UXM00–10
+NOT_STARTED_BY_OWNER_DIRECTION, handoffs AWAITING_CONSUMER_REVIEW.
+
+**Latest backend correction,2026-10-17T10:16UTC:** the coherent normal hook
+ended FAIL_OR_INCOMPLETE; no new commit.715contracts/APIbuild and4873APItests
+PASS; one command-PG suite failed SETUP because the fixture credential was
+blocklisted, so its15cases have not passed. Fix fixture only, keep actual auth
+policy unchanged. Exact source/runtime/cleanup and failed receipt are preserved
+in the [terminal entry](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#normal-hook-terminal-and-bounded-correction--2026-10-17t1016utc).
+The [04narrow session-parent reader](execution_loop/evidence/ELP2-04/finite-retained-aliases.md#narrow-session-parent-followthrough--2026-10-17)
+is now applied UNCOMMITTED/PENDING focused validation: independent account/alpha
+scope, same snapshot, no new public fields or widening of shared-account
+authority. Four affected test files/build/scoped restore next; unchanged
+715contract result reused by hash, not rerun for docs. Full02–10mandatory
+source/config/command/replay/performance debts remain as in the canonical
+census;11not entry-ready. Claude UXM00–10 NOT_STARTED_BY_OWNER_DIRECTION.
+No FE, source/command/Live activation, push, dev/main, release or deploy.
+
+**Backend return2026-10-17T10:25UTC:** [current phase-by-phase census](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-backend-return-20261017-1025)
+separates genuine remaining local adapters/recalculation from source/config/
+performance acceptance. Reader session-parent/field-intersection75/75fixture
+PASS, command15/15actual-PG +25/25component +11/11transaction PASS, policy17/17
+actual-PG PASS. Failed setup/fixture/harness attempts preserved, not erased.
+No additive test count or native authority/runtime certification inferred.
+Own70-file backend batch still UNCOMMITTED at d483357a; coherent normal-hook
+landing/scoped restore next. Existing generated contract715test receipt reuses
+unchanged bytes; normal hook remains mandatory.02–10mandatory gaps OPEN,
+11NOT_ENTRY_READY. ClaudeExecutionV2 UXM00–10 NOT_STARTED_BY_OWNER_DIRECTION,
+handoffs AWAITING_CONSUMER_REVIEW. No UI,source/upstream/Live activation,push,
+dev/main,sign or deploy. Backend continues within Bobby's existing assignment.

@@ -7,6 +7,7 @@ import {commandAuthorization,type CommandAuthorization,type SourceCommandResult}
 import {ExecutionCommandService,intentHash,mergeSource,previewHash,validateAuthorization} from "../src/execution-v2/command.service";
 import {accessDigest,type AccessEvaluationContext} from "../src/execution-v2/access-policy";
 import type {CommandRecord} from "../src/execution-v2/command.store";
+import {capitalWorkflow} from "../src/execution-v2/workflow";
 const root=process.env.PORTAL_CONTRACTS_DIR??resolve(__dirname,"../../../packages/contracts");
 const fixture=JSON.parse(readFileSync(resolve(root,"fixtures/execution-trusted-commands.synthetic.valid.json"),"utf8"));
 const now=1792100000000,actor={user_id:"TEST_ONLY:user",session_id:"TEST_ONLY:session",session_generation:1};
@@ -90,6 +91,35 @@ describe("ELP2-07 strict command and status component",()=>{
     expect(()=>mergeSource(record(),wrong)).toThrow("COMMAND_STATUS_UNVERIFIED");
     expect(()=>mergeSource(record(),{...first,business:{...first.business,amounts:null}})).toThrow("COMMAND_STATUS_UNVERIFIED");
   });
+  it.each(["ADJUST_TARGET_BUDGET","SET_ROOT_LIMIT"] as const)(
+    "a validated %s target wire merges and projects a real-shaped null-amount receipt",operation=>{
+      const {amount:_amount,expected_versions:_versions,...base}=intent.business_payload;
+      const kind=operation==="SET_ROOT_LIMIT"?"ROOT":"PORTFOLIO";
+      const resource={kind,id:"TEST_ONLY:"+kind.toLowerCase()} as const;
+      const nextIntent=commandIntent.parse({...intent,resource,business_payload:{...base,operation,recipient_kind:kind,
+        expected_versions:operation==="SET_ROOT_LIMIT"?{budget:"9007199254740993",source:"2"}:
+          {budget:"9007199254740993",source:"2",parent:"3",book:"4"},
+        [operation==="SET_ROOT_LIMIT"?"target_root_limit":"target_budget"]:"200.000000000000000001"}});
+      expect(nextIntent.business_payload.amount).toBeUndefined();
+      expect(commandIntent.safeParse({...nextIntent,business_payload:{...nextIntent.business_payload,amount:"0"}}).success).toBe(false);
+      const a={...authorization(),operation,resource_kind:kind,resource_id:resource.id,
+        expected_versions:nextIntent.business_payload.expected_versions,intent_hash:intentHash(actor,nextIntent),
+        source_intent_digest:accessDigest("TEST_ONLY:non-amount-source:"+operation).slice(7)};
+      const old:CommandRecord={...record(),hash:intentHash(actor,nextIntent),intent:nextIntent,authorization:a,
+        status:commandStatus.parse({...fixture.ack_only,operation,resource})};
+      for(const state of ["APPLIED","REJECTED"] as const){
+        const raw:SourceCommandResult={...source(),operation,resource_kind:kind,resource_id:resource.id,
+          source_intent_digest:a.source_intent_digest,business:{...source().business,state,amounts:null}};
+        const merged=mergeSource(old,raw);
+        const projected=capitalWorkflow({workspace_id:nextIntent.workspace_id,environment:nextIntent.environment,resource,
+          policy_revision:nextIntent.expected_policy_revision,snapshot_ref:"TEST_ONLY:snapshot",source_as_of_ms:now-1,observed_at_ms:now},
+          nextIntent.business_payload.currency,merged);
+        expect(projected.status).toEqual(merged);
+        expect(projected.status.business.amounts).toBeNull();
+        expect(projected.public_copy_key).toBe(state==="REJECTED"?"SOURCE_REJECTED":"REVIEW_RECEIPT");
+        expect(()=>mergeSource(old,{...raw,business:{...raw.business,receipt_ref:null}})).toThrow("COMMAND_STATUS_UNVERIFIED");
+      }
+    });
   it("bounded I/O keeps slots occupied after timeout until provider actually settles",async()=>{
     vi.useFakeTimers();
     try{

@@ -104,4 +104,28 @@ describe("ELP2-08 generated workflow contract", () => {
     expect(validate("WorkflowLifecycle", { ...move, source_budget_return: { state: "APPLIED", receipt_ref: null } })).toBe(false);
     expect(validate("WorkflowLifecycle", { ...move, obligations: { ...move.obligations, coverage: "PARTIAL" } })).toBe(false);
   });
+  it("JSON and runtime preserve non-amount target receipts without weakening amount operations or UNKNOWN", () => {
+    for (const id of ["W08-ROOT-LIMIT-NONAMOUNT", "W08-TARGET-BUDGET-REJECTED-NONAMOUNT"]) {
+      const target = story(id);
+      const accepts = (v: unknown) => {
+        expect(validate("WorkflowCapital", v)).toBe(true);
+        expect(c.workflowCapital.safeParse(v).success).toBe(true);
+      };
+      const rejects = (v: unknown) => {
+        expect(validate("WorkflowCapital", v)).toBe(false);
+        expect(c.workflowCapital.safeParse(v).success).toBe(false);
+      };
+      accepts(target);
+      expect(target.status.business.amounts).toBeNull();
+      for (const field of ["receipt_ref", "source_event_ref", "revision"])
+        rejects({ ...target, status: { ...target.status, business: { ...target.status.business, [field]: null } } });
+      rejects({ ...target, status: { ...target.status, business: { ...target.status.business, state: "UNKNOWN" } } });
+      accepts({ ...target, status: { ...target.status, business: {
+        state: "UNKNOWN", receipt_ref: null, source_event_ref: null, revision: null, amounts: null,
+      } } });
+      for (const operation of ["FUND", "INITIAL_GRANT", "TOP_UP", "IMMEDIATE_DECREASE", "RECALL_PARTIAL", "RECALL_FULL"])
+        rejects({ ...target, status: { ...target.status, operation },
+          effect_kind: operation === "FUND" ? "ECONOMIC_ASSIGNMENT" : "MANAGEMENT_BUDGET" });
+    }
+  });
 });

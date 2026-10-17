@@ -1,8 +1,10 @@
 # ELP2-06 — Manager read models và 360 datasets
 
-Latest assigned backend continuation: [Composition publication chain](composition-publication.md).
-It supersedes the earlier always-null Composition implementation description
-only after its actual terminal gates; Regime/source/config/consumer remain open.
+Latest assigned backend continuation: [Composition publication chain](composition-publication.md)
+landed `fdab164c`; [descriptive Regime publication chain](regime-publication.md)
+is in the coherent normal-hook batch. These supersede earlier always-null or
+pure-calculator-only descriptions only to the delivery level in their actual
+receipts. Real source/config installation and consumer acceptance remain open.
 
 ## Entry / approved scope
 

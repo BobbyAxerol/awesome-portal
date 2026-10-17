@@ -174,3 +174,54 @@ erase old facts or blindly resend an unknown command.
 - **Recommended assignment:** ELP2-10 selected workload/placement with approved
   target/budgets, not automatic source/SSE/trading activation. No next phase,
   goal, push, dev/main merge, signing or deploy started by this packet.
+
+## Approved backend follow-through — 2026-10-17
+
+Entry `docs/research-loop-plan`@`fdab164ce0187ac164efbf30ee232e8f3e1d5f3a`;
+Bobby's02–11 backend-gap batch now also assigns the independent09 follow-through.
+The original no-next-assignment paragraph above remains historical, not a new
+restriction on that explicit batch. Foreign staged current-relations changes
+and index are preserved. Primary integrates the reviewed private lifecycle
+draft; no frontend, new source wire, route, migration or upstream activation.
+
+Implemented, PENDING_GATE: optional private independently qualified Hub on the
+existing Manager runtime installation. Its same serial tick polls the Hub
+before the financial consumer, including an IDLE/no-new-document tick. Thus
+financial inactivity cannot suppress an already installed Hub's current-scope
+checks. No second timer, listener, queue or grant is created; BUSINESS
+commissioning is not STREAM authority. Real source adapter/factory and its
+accepted continuity/coverage/installation remain OPEN.
+
+Stop now aborts owned Hub reads and settles poll waiters. An abort-ignoring
+source still occupies its original bounded flight until actual settlement;
+there is no replacement capacity or late protected delivery. Manager shutdown
+stops its Hub before awaiting financial work, and late ticks cannot restore
+TICK_OK after STOPPED. Existing financial adapters still require finite I/O;
+this change does not claim to make arbitrary abort-ignoring providers safe.
+
+New validation: cooperating/ignoring-source stop regressions and two actual
+disposable-PG Manager+Hub cases (IDLE/coalesced poll, stop-before-financial-work).
+Synthetic identities/publications are explicitly TEST_ONLY, not a mounted
+source or propagation-SLA proof. End-of-event-loop-turn synchronization replaces
+guessed microtask counts; no elapsed-time threshold is an acceptance shortcut.
+Focused and normal-hook results are NOT_RUN until the exact terminal receipts.
+One4CPU/4GiB/8GiB correctness lane; no engine/browser/load/G2 job.
+
+Rollback removes only optional unmounted coordination; keep all current grants,
+encrypted cursor rules and committed journal/checkpoints/ACKs. Full09 remains
+NOT_MET_SOURCE_PROPAGATION_BROWSER. Backend next: actual qualified source port,
+barrier/coverage/tail/correction/revoke connected proof. Claude remains
+NOT_STARTED_BY_OWNER_DIRECTION, handoff AWAITING_CONSUMER_REVIEW; consume the
+same existing five-state contract only when assigned, no new public fields.
+
+### Lifecycle focused terminal — 2026-10-17T08:52:23Z
+
+The coherent Regime/realtime focus completed exit0:407/407API tests, APIbuild
+and scoped PostgreSQL dump/restore PASS. The09subset is69Hub cases and the
+commissioning file's37cases(including two new actual-PG Hub/Manager cases),
+not an additional independent106tests beyond407. Exact terminal/source/resource
+receipt is linked in [the Regime packet](../ELP2-06/regime-publication.md#corrected-regimerealtime-focused-terminal--0852utc).
+No source factory/wire or propagation-SLA/browser commissioning was executed.
+Source/foreign index and eight protected runtimes unchanged; owned resources
+and lease removed. Final normal-hook landing remains PENDING; full09exit stays
+NOT_MET_SOURCE_PROPAGATION_BROWSER. No Claude change/assignment is implied.

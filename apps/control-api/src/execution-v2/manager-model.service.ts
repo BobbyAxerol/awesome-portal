@@ -5,12 +5,13 @@ import { ControlApiConfig, querySigningKeys } from "../config";
 import { KeysetCursorCodec } from "../query/cursor";
 import { QueryContractError } from "../query/contracts";
 import { ExecutionReadScopes, ExecutionReadScopeError, scopeReadPopulation, type ReadScopePrincipal, type ReadScopeRequirement } from "./read-scope";
-import { managerModelQuery } from "./manager-model.contract";
+import { managerModelQuery, type ManagerMember } from "./manager-model.contract";
 import { ManagerModelRepository } from "./manager-model.store";
 import { queryManagerModel, type ManagerSurface } from "./manager-model";
 import { ExecutionManagerRuntime } from "./manager-runtime";
 import type { ManagerScorePublication } from "./manager-score-publication.contract";
 import type { ManagerCompositionPublication } from "./manager-composition-publication.contract";
+import type { ManagerRegimePublication } from "./manager-regime-publication.contract";
 
 @Injectable()
 export class ManagerModelService {
@@ -54,33 +55,43 @@ export class ManagerModelService {
       if (surface === "DEPLOYMENT" && !scopeReadPopulation(scope).allowedTuples.some(t => t.deployment_id === id))
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
       const acceptedScores: ManagerScorePublication[]=[];
-      const acceptedCompositions:Array<{publication:ManagerCompositionPublication;rawScores:ManagerScorePublication[]}>=[];
-      const compositionCurrent=()=>acceptedCompositions.every(item=>this.runtime?.compositionFence.accepts(item.publication,item.rawScores));
+      const acceptedRegimes: ManagerRegimePublication[] = [];
+      const regimeCurrent = () => acceptedRegimes.every(value => this.runtime?.regimeFence.accepts(value));
+      const acceptedCompositions:Array<{publication:ManagerCompositionPublication;rawScores:ManagerScorePublication[];members:readonly Pick<ManagerMember,"tuple"|"stage">[]|undefined}>=[];
+      const compositionCurrent=()=>acceptedCompositions.every(item=>this.runtime?.compositionFence.accepts(item.publication,item.rawScores,item.members));
       const result = await this.scopes.deliver(scope, async () => {
-        const doc = await this.repository.document(principal.workspaceId, env, profile, head.revision);
+        const original = await this.repository.document(principal.workspaceId, env, profile, head.revision);
         // TEST_ONLY rows can be exercised through the pure component in a
         // disposable cell, never served by a product constructor/environment flag.
-        if (!doc || doc.qualification !== "SOURCE_VERIFIED") throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+        if (!original || original.qualification !== "SOURCE_VERIFIED") throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+        const recalculation=this.runtime?.recalculationFor({workspace_id:principal.workspaceId,environment:env,profile_id:profile});
+        const derived=recalculation?await recalculation.snapshot(original):null;
+        const doc=derived?.document??original;
         const response = queryManagerModel(scope, doc, q, this.codec, surface, id, this.runtime ? {accepts:score=>{
           if(!this.runtime!.scoreFence.accepts(score))return false;
           acceptedScores.push(score);return true;
-        }} : undefined,this.runtime?{project:(publication,rawScores)=>this.runtime!.compositionFence.project!(publication,rawScores),accepts:(publication,rawScores)=>{
-          if(!this.runtime!.compositionFence.accepts(publication,rawScores))return false;
-          acceptedCompositions.push({publication,rawScores:[...rawScores]});return true;
+        }} : undefined,this.runtime?{project:(publication,rawScores)=>this.runtime!.compositionFence.project!(publication,rawScores),accepts:(publication,rawScores,members)=>{
+          if(!this.runtime!.compositionFence.accepts(publication,rawScores,members))return false;
+          acceptedCompositions.push({publication,rawScores:[...rawScores],members:members?structuredClone(members):members});return true;
+        }}:undefined,this.runtime?{accepts:publication=>{
+          if(!this.runtime!.regimeFence.accepts(publication))return false;
+          acceptedRegimes.push(publication);return true;
         }}:undefined);
         const current = await this.repository.head(principal.workspaceId, env, profile);
         if (current?.payload_digest !== head.payload_digest || current.revision !== head.revision)
           throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        if(recalculation&&derived&&!await recalculation.unchanged(original,derived.key))
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
         if(acceptedScores.some(score=>!this.runtime?.scoreFence.accepts(score)))
           throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
-        if(!compositionCurrent())throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
+        if(!compositionCurrent() || !regimeCurrent())throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
         return response;
       });
       // deliver itself awaits the final current authority publication. A policy
       // expiry/revoke during that I/O must not return an earlier numeric score.
       if(acceptedScores.some(score=>!this.runtime?.scoreFence.accepts(score)))
         throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
-      if(!compositionCurrent())throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
+      if(!compositionCurrent() || !regimeCurrent())throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
       return result;
     } catch (error) {
       if (error instanceof ExecutionReadScopeError) throw error;

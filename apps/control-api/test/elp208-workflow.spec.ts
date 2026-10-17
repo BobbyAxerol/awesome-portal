@@ -135,6 +135,42 @@ describe("ELP2-08 capital receipt projections — no ledger or transport side ef
     expect(v.refresh).toBe("GET_ORIGINAL_COMMAND_NO_RESUBMIT");
     expect(v.form_cancel).toBe("DISCARD_LOCAL_DRAFT_ONLY");
   });
+  it.each(["ADJUST_TARGET_BUDGET", "SET_ROOT_LIMIT"] as const)(
+    "preserves genuine non-amount %s receipts, rejection and missing-amount absence", operation => {
+      for (const state of ["APPLIED", "REJECTED"] as const) {
+        const input = status({ operation, business: { ...business(state), amounts: null }, venue: "NOT_APPLICABLE" });
+        const v = capitalWorkflow(context(), "USDT", input);
+        expect(v.status.business).toEqual(input.business);
+        expect(v.status.business.amounts).toBeNull();
+        expect(v.public_copy_key).toBe(state === "REJECTED" ? "SOURCE_REJECTED" : "REVIEW_RECEIPT");
+        expect(v.effect_kind).toBe(operation === "SET_ROOT_LIMIT" ? "NOMINAL_ROOT_CAP" : "MANAGEMENT_BUDGET");
+        expect(v.physical_transfer_performed).toBe(false);
+        for (const field of ["receipt_ref", "source_event_ref", "revision"] as const)
+          expect(() => capitalWorkflow(context(), "USDT", status({
+            ...input, business: { ...input.business, [field]: null },
+          }))).toThrow("WORKFLOW_BUSINESS_RECEIPT_INVALID");
+      }
+      expect(() => capitalWorkflow(context(), "USDT", status({
+        operation, business: { ...business(), state: "UNKNOWN", amounts: null },
+      }))).toThrow("WORKFLOW_BUSINESS_RECEIPT_INVALID");
+      // Optional source-published amounts remain exact, not an unchecked escape.
+      expect(() => capitalWorkflow(context(), "USDT", status({
+        operation, business: business("APPLIED", {
+          requested: "100", applied: "99", pending: "0", cancelled: "0", rejected: "0",
+        }),
+      }))).toThrow("WORKFLOW_AMOUNT_PARTITION_INVALID");
+      expect(() => capitalWorkflow(context(), "USDT", status({
+        operation, business: business("APPLIED", {
+          requested: "100", applied: "40", pending: "60", cancelled: "0", rejected: "0",
+        }),
+      }))).toThrow("WORKFLOW_BUSINESS_AMOUNTS_INCONSISTENT");
+    });
+  it.each(["FUND", "INITIAL_GRANT", "TOP_UP", "IMMEDIATE_DECREASE", "RECALL_PARTIAL", "RECALL_FULL"] as const)(
+    "%s still needs a source amount partition for known business", operation => {
+      expect(() => capitalWorkflow(context(), "USDT", status({
+        operation, business: { ...business(), amounts: null },
+      }))).toThrow("WORKFLOW_BUSINESS_RECEIPT_INVALID");
+    });
   it("T08-04 immediate decrease rejection is not converted into a recall", () => {
     const v = capitalWorkflow(context(), "USDT", status({ operation: "IMMEDIATE_DECREASE", business: business("REJECTED", {
       requested: "100.000000000000000001", applied: "0", pending: "0", cancelled: "0", rejected: "100.000000000000000001",

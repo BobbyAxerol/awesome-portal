@@ -103,6 +103,7 @@ type Client={id:string;binding:ScopedReplayBinding;guard:ReplayDeliveryGuard;wri
 export class ScopedReplayHub {
   private readonly clients=new Map<string,Client>();
   private readonly flights=new Map<string,Promise<EdgeScopedNoticeBatch>>();
+  private readonly cancellations=new Map<string,AbortController>();
   private readonly timedOutFlights=new Set<string>();
   private queuedBytes=0;
   private pending=0;
@@ -138,7 +139,11 @@ export class ScopedReplayHub {
   revoke(predicate:(binding:ScopedReplayBinding)=>boolean):void{
     for(const c of this.clients.values())if(predicate(structuredClone(c.binding)))this.terminate(c,"access_revoked","ACCESS_CHANGED");
   }
-  stop():void{this.stopped=true;for(const c of this.clients.values())this.terminate(c,"unavailable","STOPPED");}
+  stop():void{
+    this.stopped=true;
+    for(const c of this.clients.values())this.terminate(c,"unavailable","STOPPED");
+    for(const controller of this.cancellations.values())controller.abort();
+  }
   diagnostics(){return{clients:this.clients.size,queued_bytes:this.queuedBytes,source_flights:this.flights.size,
     pending_subscriptions:this.pending,timed_out_flights:this.timedOutFlights.size,browser_source_calls:0,semantics:"NOTIFICATION_ONLY" as const};}
   private close(c:Client){if(c.closed)return;c.closed=true;this.queuedBytes-=c.bytes;c.bytes=0;c.queue=[];this.clients.delete(c.id);}
@@ -162,16 +167,27 @@ export class ScopedReplayHub {
     const key=accessDigest([c.binding,c.sourceCursor]);
     const existing=this.flights.get(key);if(existing)return existing;
     if(this.flights.size>=this.limits.maximumClients)throw new ScopedReplayError("RECONNECT_LIMIT");
-    const controller=new AbortController();let timer:ReturnType<typeof setTimeout>;
-    const source=Promise.resolve().then(()=>this.source.read(structuredClone(c.binding),c.sourceCursor,this.limits.maximumNoticesPerRead,controller.signal));
+    const controller=new AbortController();let timer:ReturnType<typeof setTimeout>|undefined;
+    const source=Promise.resolve().then(()=>{
+      if(this.stopped)throw new ScopedReplayError("STOPPED");
+      return this.source.read(structuredClone(c.binding),c.sourceCursor,this.limits.maximumNoticesPerRead,controller.signal);
+    });
     // A provider ignoring Abort keeps its slot occupied until real completion.
     // One stuck source cannot admit an unbounded sequence of replacement jobs.
-    const result=Promise.race([source,new Promise<never>((_,reject)=>{
-      timer=setTimeout(()=>{this.timedOutFlights.add(key);controller.abort();reject(new ScopedReplayError("SOURCE_UNAVAILABLE"));},this.limits.readTimeoutMs);
-      timer.unref();
-    })]);
+    let abort!:()=>void;
+    const cancelled=new Promise<never>((_,reject)=>{
+      abort=()=>{clearTimeout(timer);reject(new ScopedReplayError(this.stopped?"STOPPED":"SOURCE_UNAVAILABLE"));};
+      controller.signal.addEventListener("abort",abort,{once:true});
+    });
+    timer=setTimeout(()=>{this.timedOutFlights.add(key);controller.abort();},this.limits.readTimeoutMs);
+    timer.unref();
+    const result=Promise.race([source,cancelled]);
+    this.cancellations.set(key,controller);
     this.flights.set(key,result);
-    void source.finally(()=>{clearTimeout(timer);this.flights.delete(key);this.timedOutFlights.delete(key);}).catch(()=>undefined);
+    void source.finally(()=>{
+      clearTimeout(timer);controller.signal.removeEventListener("abort",abort);
+      this.flights.delete(key);this.timedOutFlights.delete(key);this.cancellations.delete(key);
+    }).catch(()=>undefined);
     return result;
   }
   private async pollClient(c:Client):Promise<void>{

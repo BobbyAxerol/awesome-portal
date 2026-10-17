@@ -154,3 +154,17 @@ runtime changed; no financial reversal, schema downgrade or source rollback.
   or reverse request received. No assumption that handoff means user approved UI.
 - **Bobby:** no extra formula/fixture decision required for this technical
   delivery; source activation, accepted HiFi and next phase remain separate.
+
+## Approved follow-through — 2026-10-17
+
+The[non-amount target-setting correction](nonamount-capital.md) fixes a real
+workflow mismatch with strict PM target wires. Applied UNCOMMITTED/PENDING_GATE;
+only SET_ROOT_LIMIT/ADJUST_TARGET_BUDGET may retain null amounts on a genuine
+known receipt. Canonical schema/fixtures regenerate together; source runtime
+and Claude consumer remain unqualified/owner-held. Full08exit is unchanged.
+
+**Terminal focused addendum,09:04UTC:** [non-amount workflow regressions](nonamount-capital.md#terminal-focused-correctness--2026-10-17t090412z)
+PASS within247/247API and84/84contract tests, APIbuild/scopedPGrestore PASS.
+Exact source/foreign index/protected runtimes unchanged; own resources removed.
+Only coherent normal-hook landing and actual source/consumer gates remain;
+do not treat this local correction as a commissioned executor.

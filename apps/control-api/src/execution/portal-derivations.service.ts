@@ -3,6 +3,7 @@ import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ExecutionReadScopes, ExecutionReadScopeError, type AuthorizedExecutionReadScope,
   type ReadScopeRequirement, scopeReadPopulation } from "../execution-v2/read-scope";
 import { scopedRetainedRows, fenceRetainedSnapshot, retainedFieldAllowed } from "./retained-operation-page";
+import { joinRetainedConditionalLegRows } from "./retained-business-aliases";
 import { projectionRowVisible } from "../execution-v2/read-projection";
 import { ControlApiConfig } from "../config";
 import { projectionExpired } from "./retained-read-profile";
@@ -425,15 +426,7 @@ export class PortalDerivationsService {
         // The child has no economic tuple of its own. Join only through an
         // unambiguous parent from this same immutable source revision.
         const parents = original.document.relations[RELATION.conditionalGroups]?.items ?? [];
-        sourceRows = sourceRows.flatMap(row => {
-          const matches = parents.filter(parent => parent.fields.group_id === row.fields.group_id);
-          if (matches.length !== 1) return [];
-          const parent = matches[0]!.fields;
-          const anchors = Object.fromEntries(["alpha_id", "alpha_version_id", "strategy_id", "deployment_id", "portfolio_id", "account_id"]
-            .filter(field => parent[field] !== undefined).map(field => [field, parent[field]]));
-          // A child's explicit contradictory anchor must never be replaced.
-          return [{ ...row, fields: { ...anchors, ...row.fields } }];
-        });
+        sourceRows = joinRetainedConditionalLegRows(sourceRows, parents);
       }
       const allowedRows = sourceRows.filter(row => projectionRowVisible(scope, row.fields));
       const required = key === RELATION.sessions && keys.includes(RELATION.deployments) && requirement.resource?.kind === "DEPLOYMENT"

@@ -7,8 +7,10 @@ import type { ManagerCompositionPublication } from "./manager-composition-public
 export interface ManagerCompositionReadFence {
   /** Remove separately expired diagnostics without recalculating assigned-capital A. */
   project?(publication:ManagerCompositionPublication,rawScores:readonly ManagerScorePublication[]):ManagerCompositionPublication|null;
-  /** Private current allocation approval AND all used raw-policy pins. Never a request flag. */
-  accepts(publication:ManagerCompositionPublication,rawScores:readonly ManagerScorePublication[]):boolean;
+  /** Private current allocation approval AND all used raw-policy pins. Never a request flag.
+   * Selector callers supply the full authorized tuple/stage census before table filters/pages. */
+  accepts(publication:ManagerCompositionPublication,rawScores:readonly ManagerScorePublication[],
+    expectedMembers?:readonly Pick<ManagerMember,"tuple"|"stage">[]):boolean;
 }
 /** Caller has already established full accounting + field authority; this
  * additional exact-population check is not an authority grant of its own. */
@@ -29,7 +31,7 @@ export function selectManagerCompositionPublications(doc:ManagerModelDocument,me
       b.window_start_ms<b.window_end_ms && b.window_end_ms<=doc.as_of_ms && p.source_as_of_ms===doc.as_of_ms &&
       p.scope.workspace_id===doc.workspace_id && p.scope.environment===doc.environment && p.scope.profile_id===doc.profile_id &&
       p.scope.catalogue_digest===doc.catalogue_digest && p.source_revision===doc.revision && p.source_set_digest===doc.source_set_digest &&
-      fence.accepts(s,doc.precomputed_scores??[]))accepted.push(s);
+      fence.accepts(s,doc.precomputed_scores??[],members))accepted.push(s);
   }
   // Ambiguous same-scope output never picks a favorable/latest result.
   return accepted.length===1?accepted:[];

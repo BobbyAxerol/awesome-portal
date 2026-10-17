@@ -6,6 +6,7 @@ import { ExecutionAccessService } from "./access.service";
 import { assertAmountPartition } from "./foundation.contract";
 import { CommandError,commandIntent,commandPreview,commandStatus,type CommandIntent,type CommandStatus } from "./command.contract";
 import { CommandStore,type CommandRecord } from "./command.store";
+import { commandMembershipCurrent } from "./command-current-authority";
 import { commandAuthorization,sourceCommandResult,unqualifiedCommandTrust,type CommandAuthorization,type CommandTrust,type SourceCommandResult } from "./command-trust";
 
 const action:Record<CommandIntent["business_payload"]["operation"],AccessAction>={FUND:"capital.fund",INITIAL_GRANT:"capital.initial_grant",
@@ -25,14 +26,12 @@ const bound=(a:CommandAuthorization,i:CommandIntent)=>({authority_ref:a.authorit
  * boundary independently checks all correlation fields and conservative states. */
 export function validateAuthorization(a:CommandAuthorization,actor:AccessActor,i:CommandIntent,c:AccessEvaluationContext,allowTestOnly:boolean,now:number) {
   if(a.qualification!=="OWNER_VERIFIED"&&!(allowTestOnly&&a.qualification==="TEST_ONLY"))throw new CommandError("COMMAND_RELAY_NOT_QUALIFIED",503);
-  const membership=c.relationsFor(actor.user_id).membership;
   if(a.actor_id!==actor.user_id||a.actor_id===a.workload_ref||a.ts_user_id===a.workload_ref||
     a.workspace_id!==i.workspace_id||a.environment!==i.environment||a.operation!==i.business_payload.operation||
     a.resource_kind!==i.resource.kind||a.resource_id!==i.resource.id||a.policy_revision!==c.policy?.revision||
     a.policy_revision!==i.expected_policy_revision||a.intent_hash!==intentHash(actor,i)||
     accessDigest(a.expected_versions)!==accessDigest(i.business_payload.expected_versions)||
-    !membership||membership.revision!==a.membership_revision||membership.mapping_revision!==a.mapping_revision||
-    membership.receipt_id!==a.membership_receipt_ref)throw new CommandError("COMMAND_CONTEXT_INVALID",403);
+    !commandMembershipCurrent(a,actor,i,c,action[i.business_payload.operation],now))throw new CommandError("COMMAND_CONTEXT_INVALID",403);
   if(a.issued_at_ms>now||a.expires_at_ms<=now||a.expires_at_ms<=a.issued_at_ms||a.expires_at_ms-a.issued_at_ms>60000||a.idempotency_retained_until_ms<a.expires_at_ms)
     throw new CommandError("COMMAND_CONTEXT_EXPIRED",403);
   if(a.approval_required!==(a.required_approval_gate!==null)||a.approval_required&&(!a.approval||a.approval.gate!==a.required_approval_gate||a.approval.intent_hash!==a.intent_hash||a.approval.policy_revision!==a.policy_revision))
@@ -127,7 +126,7 @@ export class ExecutionCommandService {
     const a=await this.prepare(actor,i,c);
     if(digest!==previewHash(a))throw new CommandError("COMMAND_PREVIEW_CHANGED");
     const claimed=await this.access.commandBoundary(actor,i.workspace_id,c,action[i.business_payload.operation],i.resource,i.environment,
-      now=>validateAuthorization(a,actor,i,c,this.allowTestOnly,now),async db=>{
+      (now,current)=>validateAuthorization(a,actor,i,current,this.allowTestOnly,now),async db=>{
         const record=await this.store.insert(db,actor.user_id,i,hash,a);
         return {record,attempt:await this.store.claim(db,record)};
       });

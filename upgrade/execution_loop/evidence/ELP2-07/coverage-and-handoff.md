@@ -141,10 +141,39 @@ that Claude has received/implemented/accepted it.
 
 | ID / owner | Observed / expected / impact | Done-when / destination | Status |
 | --- | --- | --- | --- |
-| ELP2-07-001 TS/PM + Edge/ops | Source EPG10-07 not started, relay denies, current PM candidate providers unconfigured/router unmounted. Technical fixture proof is not source authority | Exact source command/trust/status wire + authenticated human/workload commit checks, durable source/Edge correlation, retention proof and separately approved operation×environment activation; repin before connected acceptance | OPEN_SOURCE_RUNTIME; blocks real commands and full T07 source exit |
+| ELP2-07-001 TS/PM + Edge/ops | Historical entry said EPG10-07 not started; later source implementations/test slices now exist, while genuine selected provider/trust/router installation and connected authority remain unqualified. See latest source return below. Technical fixture proof is not installed authority | Exact source command/trust/status wire + authenticated human/workload commit checks, durable source/Edge correlation, retention proof and separately approved operation×environment activation; repin before connected acceptance | OPEN_SOURCE_RUNTIME; blocks real commands and full T07 source exit |
 | ELP2-07-002 Portal + source owners | Eight capital bodies wired technically; control/profile/management/autonomous families have distinct policy/schema/side effects and no commissioned end-to-end matrix | Freeze named per-operation action/target/gate adapters against current source contracts; test each selected family before admitting; no weaker-capability alias. Keep unselected actions denied | OPEN_EXACT_OPERATION_COVERAGE, not hidden as delivered |
 | ELP2-07-003 Claude/Bobby | No new UI assignment, browser proof or qualified non-retained consumer | UXM-09 explicit assignment; fixture story first, actual source/API/browser receipt only after001; exact delivery dimensions and negatives above | AWAITING_CONSUMER_REVIEW |
 
 No formula/weight/band decision reopened. No new Bobby choice required for the
 approved source-dark technical work. Activation/other operations require their
 actual source qualification, not another generic permission question.
+
+### Current source/Portal follow-through — 2026-10-17
+
+Read-only PM source at e14f0b4c8a6bc5d4f3e07496753ff5fd60ebee01 now contains
+original lifecycle/binding/capital-control history implementations. The capital
+history manifest still explicitly disables runtime/route/environments and
+certifies neither installed provider, native fence nor delivery apply. Native
+current-relations proposal a4b9a570… is not jointly accepted or installed.
+[Exact source observation and remaining ordered work](../ELP2-10/commissioning-followthrough.md#current-backend-return--2026-10-17t0904utc)
+refines the stale original "source not started" row, not the connected gate.
+
+Portal's per-grant command draft and final ordinary-intake expiry regression
+are not applied/tested yet: they share the other owner's 12 staged access
+paths. Integrate after write coordination, preserving original accepted fact,
+full DENY/ancestor graph and real final transaction time; require real PG
+rollback/zero-send evidence before delivery. Broader RETURN/control/profile/
+assignment/archive/monitoring operation adapters remain 07-002, not covered
+by the eight-operation capital body union. The locally corrected target-setting
+workflow is [08's focused delivery](../ELP2-08/nonamount-capital.md#terminal-focused-correctness--2026-10-17t090412z),
+not a new executor or actual source command. No new action/credential/runtime
+is enabled; Claude stays owner-held with published handoffs awaiting review.
+
+**Superseding implementation entry,2026-10-17T09:47UTC:** the peer index/source
+pin is released. [Exact per-grant command and ordinary final-clock correction](current-grant-command.md)
+are now APPLIED/UNCOMMITTED, with15 new actual-PG command cases, component
+regressions and6 ordinary-intake cases. All new cases await the coherent normal
+hook; private drafts are no longer the implementation state. Full07 source/
+held-COMMIT/installation and broader-family gaps remain OPEN. No wire/DTO/FE
+field or runtime enabled; consumer still AWAITING_CONSUMER_REVIEW.

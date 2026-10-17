@@ -6,6 +6,7 @@ import { KeysetCursorCodec } from "../query/cursor";
 import { sumExactDecimals } from "../research/exact-decimal";
 import { selectManagerScorePublications, type ManagerScoreReadFence } from "./manager-score-publication";
 import { selectManagerCompositionPublications,type ManagerCompositionReadFence } from "./manager-composition-publication";
+import { selectManagerRegimePublications, type ManagerRegimeReadFence } from "./manager-regime-publication";
 import { managerModelDocument, managerModelQuery, managerDatasetResponse, MANAGER_SCALARS, managerMoneyFields, managerStatementFields,
   type ManagerMember, type ManagerFact, type ManagerMetric, type ManagerModelDocument, type ManagerModelQuery } from "./manager-model.contract";
 
@@ -198,7 +199,7 @@ function rootFlows(facts: ManagerFact[], surface: ManagerSurface) {
  * This function still requires scopes.deliver at its service boundary. */
 export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: unknown, rawQuery: unknown,
   codec: KeysetCursorCodec, surface: ManagerSurface = "FLEET", resourceId?: string, scoreFence?: ManagerScoreReadFence,
-  compositionFence?:ManagerCompositionReadFence) {
+  compositionFence?:ManagerCompositionReadFence, regimeFence?: ManagerRegimeReadFence) {
   assertExecutionReadScope(scope);
   if (scope.mode !== "SCOPED_V2") fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED");
   const doc = managerModelDocument.parse(input), query = managerModelQuery.parse(rawQuery);
@@ -265,6 +266,14 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     scopeAllowsFullAccountingPopulation(scope,surface==="PORTFOLIO"?resourceId:undefined)?
     selectManagerCompositionPublications(doc,members,{type:surface==="FUND"?"manager_book":"portfolio",id:resourceId??scope.workspaceId},
       selectedStages,compositionPartition,compositionFence):[];
+  // Independent descriptive per-alpha/version evidence, not a financial or Fund score.
+  // Scope/reference corpus is exact BEFORE UI filters, groups, totals or pagination.
+  const regimes = ["regime", "binding_id", "provenance_ref"].every(field => scopeAllowsField(scope, field)) ?
+    selectManagerRegimePublications(doc, members, query.stage_filter,
+      query.economic_partition ? accessDigest(query.economic_partition) : null,
+      { type: surface === "DEPLOYMENT" ? "deployment" : "alpha",
+        ...(surface === "ALPHA" || surface === "DEPLOYMENT" ? { id: resourceId } : {}) }, regimeFence) : [];
+  const subjectRegime = (surface === "ALPHA" || surface === "DEPLOYMENT") && regimes.length === 1 ? regimes[0] : null;
   const rows = allRows.filter(row => filtered(row, query));
   rows.sort((a, b) => {
     for (const order of query.sort) {
@@ -276,7 +285,7 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     return lexical(a.row_key, b.row_key);
   });
   const queryId = accessDigest({ scope: scope.fingerprint, source: doc.revision, generation: doc.projection_generation,
-    surface, resourceId: resourceId ?? null, scores:accessDigest({details,compositions,rows:allRows.map(r => r.metrics.score)}),
+    surface, resourceId: resourceId ?? null, scores:accessDigest({details,compositions,regimes,rows:allRows.map(r => r.metrics.score)}),
     query: { ...query, after: undefined, before: undefined } });
   const cursorContext = { resourceId: `manager-model:${surface}`, workspaceId: scope.workspaceId, queryFingerprint: queryId };
   const encode = (row: ManagerDatasetRow, direction: "after" | "before") => codec.encode({ resource_id: cursorContext.resourceId,
@@ -322,11 +331,15 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     statement_scope: "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS" as const,
     scores: { raw: summary("RAW"), composition: compositions.length===1?
       {value:compositions[0].result.value,status:compositions[0].result.status}:{ value: null, status: "policy_pending" as const },
-      direct_nav: summary("DIRECT_NAV"), regime: { value: null, status: "unavailable" as const },
+      direct_nav: summary("DIRECT_NAV"), regime: { value: null, status: subjectRegime?.result.status ?? "unavailable" as const,
+        ...(doc.precomputed_regimes === undefined ? {} : { reason_code: subjectRegime ? null :
+          surface === "ALPHA" || surface === "DEPLOYMENT" ? "REGIME_POLICY_SOURCE_OR_AUTHORIZED_SLICE_NOT_QUALIFIED" as const :
+            "REGIME_IS_PER_ALPHA_OR_DEPLOYMENT_ONLY" as const }) },
       reason_code: details.some(s => s.quality.value !== null)||compositions.some(s=>s.result.value!==null) ? "QUALIFIED_PRECOMPUTED_SCORE" as const : "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED" as const,
       calculation_path: "PRECOMPUTED_ONLY" as const },
     ...(doc.precomputed_scores !== undefined ? {score_details:details} : {}),
     ...(doc.precomputed_compositions!==undefined?{composition_details:compositions}:{}),
+    ...(doc.precomputed_regimes !== undefined ? { regime_details: regimes } : {}),
     funding_bucket_pnl: { value: null, reason_code: "LOT_ATTRIBUTION_METHOD_NOT_APPROVED" as const },
     lineage: { reducer_revision: "manager-model.v1" as const, source_set_ref: accessDigest(facts.map(f => [f.fact_id, f.revision]).sort()),
       revision: accessDigest({ scope: scope.fingerprint, source: doc.revision }), supersedes_revision: doc.supersedes_revision ? accessDigest({ scope: scope.fingerprint, source: doc.supersedes_revision }) : null },

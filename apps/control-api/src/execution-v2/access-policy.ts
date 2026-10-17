@@ -240,6 +240,16 @@ export function evaluateAccess(context: AccessEvaluationContext, action: AccessA
   return decide(true,null,matches);
 }
 
+/** An internal receipt-selected ALLOW still needs the complete current graph.
+ * Never discard other grants: a DENY needs its own ancestry to remain current,
+ * and an unrelated ALLOW must not rescue this grant's denied delegation chain. */
+export function currentGrantAllows(context:AccessEvaluationContext,action:AccessAction,resource:AccessResource,
+  environment:"paper"|"sandbox"|"live",grantId:string):boolean {
+  if(!evaluateAccess(context,action,resource,environment).allowed)return false;
+  return matchingGrants(context,action,resource,environment)
+    .some(grant=>grant.effect==="ALLOW"&&grant.grant_id===grantId);
+}
+
 /** Full business read implies a business read, never technical, export or
  * mutation. A narrower current DENY still wins; no cross-action bypass. */
 export function evaluateBusinessRead(context:AccessEvaluationContext,

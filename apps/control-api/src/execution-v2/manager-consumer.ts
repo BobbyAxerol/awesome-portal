@@ -9,6 +9,7 @@ import { ManagerModelRepository, prepareManagerProjection, persistManagerProject
 import { datasetPublication, type DatasetPublication } from "./publication.contract";
 import { publicationCommissioningCurrent, publicationCommissioningDeadline,
   type PublicationCommissioning, type PublicationContinuity } from "./publication-adapter";
+import type { ManagerScoreRecalculation } from "./manager-score-recalculation";
 
 const scopeSchema = z.object({ workspace_id: z.string().min(1).max(256),
   environment: z.enum(["paper", "sandbox", "live"]), profile_id: z.string().min(1).max(256) }).strict();
@@ -71,7 +72,7 @@ export class ManagerProjectionConsumer {
 
   constructor(private readonly options: { pool: Pool; source: ManagerProjectionSource; scope: ManagerLeaseScope;
     bounds: ManagerConsumerBounds; holder_id?: string; commissioning?: PublicationCommissioning;
-    allowTestOnly?: boolean; now?: () => number }) {
+    allowTestOnly?: boolean; now?: () => number; recalculation?: ManagerScoreRecalculation }) {
     this.scope = Object.freeze(scopeSchema.parse(options.scope));
     this.bounds = Object.freeze(boundsSchema.parse(options.bounds));
     this.options = Object.freeze({ ...options });
@@ -144,7 +145,13 @@ export class ManagerProjectionConsumer {
         const delivery = await this.sourceCall(cancellation, Math.min(this.bounds.source_timeout_ms, remaining()),
           signal => this.options.source.read({ scope: { ...this.scope }, head: head && { ...head },
             maximum_bytes: this.bounds.maximum_document_bytes, maximum_rows: this.bounds.maximum_document_rows, signal }));
-        if (delivery === null) return result;
+        if (delivery === null) {
+          if(this.options.recalculation && this.lease && remaining())
+            await this.sourceCall(cancellation,Math.min(this.bounds.source_timeout_ms,remaining()),signal=>
+              this.options.recalculation!.idle({lease:this.lease!,signal,deadline_ms:started+this.bounds.maximum_tick_ms,
+                transaction_timeout_ms:this.bounds.transaction_timeout_ms,lease_ttl_ms:this.bounds.lease_ttl_ms}));
+          return result;
+        }
         if (Buffer.byteLength(JSON.stringify(delivery)) > this.bounds.maximum_document_bytes)
           throw new Error("MANAGER_PROJECTION_LIMIT");
         const document = managerModelDocument.parse(delivery.document), publication = datasetPublication.parse(delivery.publication);
@@ -164,17 +171,19 @@ export class ManagerProjectionConsumer {
         // The database caps expiry to this absolute timestamp atomically. A
         // clock sample followed by relative renewal could overshoot publication
         // expiry by the inter-query latency. Deferred validation fences COMMIT.
-        const notAfter = document.qualification === "SOURCE_VERIFIED" ?
+        const sourceNotAfter = document.qualification === "SOURCE_VERIFIED" ?
           Math.min(publication.expires_at_ms, this.options.commissioning ? publicationCommissioningDeadline(this.options.commissioning) : 0) :
           publication.expires_at_ms;
+        const notAfter = Math.min(sourceNotAfter,this.options.recalculation?.attachedDeadline(delivery)??Infinity);
         if (!await this.leases.renew(this.lease, this.bounds.lease_ttl_ms, notAfter))
           throw new Error("MANAGER_LEASE_LOST");
         const assertCurrent = () => {
           if (document.qualification === "SOURCE_VERIFIED" && !publicationCommissioningCurrent(this.options.commissioning,
             this.scope, Date.now())) throw new Error("MANAGER_COMMISSIONING_EXPIRED");
+          this.options.recalculation?.assertAttached(delivery);
           return current.assertCurrent?.();
         };
-        const committed = await this.commit(prepared, assertCurrent, cancellation.signal,
+        const committed = await this.commit(prepared, delivery, assertCurrent, cancellation.signal,
           Math.max(1, Math.min(this.bounds.transaction_timeout_ms, remaining())), started + this.bounds.maximum_tick_ms);
         result.committed++; result.state = "COMMITTED";
         const receipt: ManagerConsumerReceipt = { scope: { ...this.scope }, revision: committed.revision,
@@ -200,7 +209,7 @@ export class ManagerProjectionConsumer {
       throw new Error("MANAGER_COMMISSIONING_EXPIRED");
   }
 
-  private async commit(input: PreparedManagerProjection, assertCurrent: (() => void) | undefined,
+  private async commit(input: PreparedManagerProjection, delivery:ManagerConsumerDelivery, assertCurrent: (() => void) | undefined,
     signal: AbortSignal, timeoutMs: number, tickDeadlineMs: number) {
     const deadline = Math.min(tickDeadlineMs, performance.now() + timeoutMs);
     const client: PoolClient = await this.options.pool.connect(); let committed = false;
@@ -209,6 +218,7 @@ export class ManagerProjectionConsumer {
       this.check(signal); await client.query("BEGIN");
       await client.query("SELECT set_config('statement_timeout',$1,true),set_config('lock_timeout',$1,true)", [`${timeoutMs}ms`]);
       const result = await persistManagerProjection(client, input);
+      await this.options.recalculation?.persistAttached(client,delivery);
       this.check(signal);
       const fenceResult: unknown = assertCurrent?.();
       if (fenceResult !== undefined) {

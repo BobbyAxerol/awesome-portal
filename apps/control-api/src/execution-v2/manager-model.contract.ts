@@ -5,6 +5,8 @@ import { managerScorePublication } from "./manager-score-publication.contract";
 export { managerScorePublication } from "./manager-score-publication.contract";
 import { managerCompositionPublication } from "./manager-composition-publication.contract";
 export { managerCompositionPublication } from "./manager-composition-publication.contract";
+import { managerRegimePublication } from "./manager-regime-publication.contract";
+export { managerRegimePublication } from "./manager-regime-publication.contract";
 
 const text = z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$(?![\s\S])/);
 export const MANAGER_SCALARS = {
@@ -62,6 +64,7 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
   source_quality: managerQuality, members: z.array(managerMember).max(10_000), facts: z.array(managerFact).max(20_000),
   precomputed_scores: z.array(managerScorePublication).max(128).optional(),
   precomputed_compositions: z.array(managerCompositionPublication).max(128).optional(),
+  precomputed_regimes: z.array(managerRegimePublication).max(128).optional(),
 }).strict().superRefine((d, c) => {
   if (d.facts_through_ms !== null && d.facts_through_ms > d.as_of_ms || d.as_of_ms > d.observed_at_ms ||
     d.recorded_through_ms > d.observed_at_ms || d.members.some(m => m.valid_to_ms !== null && m.valid_to_ms <= m.valid_from_ms) ||
@@ -121,10 +124,12 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   capital_statements: z.array(partitionMetrics).max(200),
   statement_scope: z.literal("AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS"),
   scores: z.object({ raw: scorePending, composition: compositionSummary, direct_nav: scorePending,
-    regime: z.object({ value: z.null(), status: z.literal("unavailable") }).strict(),
+    regime: z.object({ value: z.null(), status: z.enum(["unavailable", "supported", "weak_support", "out_of_support", "insufficient_data", "stale", "unbound"]),
+      reason_code: z.enum(["REGIME_POLICY_SOURCE_OR_AUTHORIZED_SLICE_NOT_QUALIFIED", "REGIME_IS_PER_ALPHA_OR_DEPLOYMENT_ONLY"]).nullable().optional() }).strict(),
     reason_code: z.enum(["RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED", "QUALIFIED_PRECOMPUTED_SCORE"]), calculation_path: z.literal("PRECOMPUTED_ONLY") }).strict(),
   score_details: z.array(managerScorePublication).max(128).optional(),
   composition_details: z.array(managerCompositionPublication).max(128).optional(),
+  regime_details: z.array(managerRegimePublication).max(128).optional(),
   funding_bucket_pnl: z.object({ value: z.null(), reason_code: z.literal("LOT_ATTRIBUTION_METHOD_NOT_APPROVED") }).strict(),
   lineage: z.object({ reducer_revision: z.literal("manager-model.v1"), source_set_ref: publicationDigest,
     revision: publicationDigest, supersedes_revision: publicationDigest.nullable() }).strict(),

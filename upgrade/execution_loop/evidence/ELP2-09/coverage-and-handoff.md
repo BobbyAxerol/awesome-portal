@@ -126,3 +126,13 @@ declared deferred/accepted.
 > via cache/reconnect/legacy fallback. Record component/contract/browser mapping,
 > exact bundle/lane, reverse backend request and ACK09-001. Do not enable flags,
 > source TLS, pollers, commands, dev/main or deploy from this handoff.
+
+### 2026-10-17 private coordinator follow-through
+
+Backend now supplies an optional owned-Hub lifecycle in the existing serial
+Manager tick, including IDLE financial input, and abort-safe stop accounting.
+See [implementation/gate boundary](README.md#approved-backend-follow-through--2026-10-17).
+Public contract, fixtures and this consumer prompt are unchanged. No route,
+source factory or STREAM grant was commissioned; browser remains NOT_RUN and
+Claude NOT_STARTED_BY_OWNER_DIRECTION / AWAITING_CONSUMER_REVIEW. Do not create
+a frontend endpoint or enable a stream merely because the coordinator exists.

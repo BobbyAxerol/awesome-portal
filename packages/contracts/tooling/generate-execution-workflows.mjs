@@ -63,6 +63,20 @@ schemas.WorkflowCreate.allOf = [{
   if: { properties: { state: { const: 'CREATED_WITH_CAPITAL' } }, required: ['state'] },
   then: { properties: { create: { properties: { state: { const: 'APPLIED' } } }, fund: { properties: { state: { const: 'APPLIED' } } } } },
 }];
+// Preserve the runtime's receipt/null-amount distinction in served JSON too.
+// Decimal partition arithmetic remains a runtime obligation, never target-as-amount.
+const capitalBusiness = properties => ({ properties: { status: { properties: { business: { properties } } } } });
+schemas.WorkflowCapital.allOf = [{
+  if: capitalBusiness({ state: { const: 'UNKNOWN' } }),
+  then: capitalBusiness(Object.fromEntries(['amounts', 'receipt_ref', 'source_event_ref', 'revision'].map(k => [k, { type: 'null' }]))),
+  else: capitalBusiness(Object.fromEntries(['receipt_ref', 'source_event_ref', 'revision'].map(k => [k, { type: 'string' }]))),
+}, {
+  if: { properties: { status: { properties: {
+    operation: { not: { enum: ['ADJUST_TARGET_BUDGET', 'SET_ROOT_LIMIT'] } },
+    business: { properties: { state: { not: { const: 'UNKNOWN' } } } },
+  } } } },
+  then: capitalBusiness({ amounts: { type: 'object' } }),
+}];
 schemas.WorkflowLifecycle.allOf = [{
   if: { properties: { state: { const: 'READY_FOR_AUTHORITY_REVIEW' } }, required: ['state'] },
   then: { properties: { reason_code: { type: 'null' }, obligations: { properties: { coverage: { const: 'COMPLETE' }, freshness: { const: 'FRESH' }, source_receipt_ref: { type: 'string' } } } } },

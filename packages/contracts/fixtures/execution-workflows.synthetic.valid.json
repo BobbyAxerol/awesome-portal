@@ -292,6 +292,112 @@
       }
     },
     {
+      "id": "W08-ROOT-LIMIT-NONAMOUNT",
+      "gate": "T08-03",
+      "schema": "WorkflowCapital",
+      "response": {
+        "schema_version": "portal.execution.capital-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "ROOT",
+            "id": "TEST_ONLY:root"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "currency": "USDT",
+        "status": {
+          "schema_version": "portal.execution.command-status.v1",
+          "command_id": "ecm_00000000000000000000000000000001",
+          "operation": "SET_ROOT_LIMIT",
+          "resource": {
+            "kind": "ROOT",
+            "id": "TEST_ONLY:root"
+          },
+          "environment": "paper",
+          "profile_ref": "TEST_ONLY:paper",
+          "delivery": "ACKNOWLEDGED",
+          "business": {
+            "state": "APPLIED",
+            "receipt_ref": "TEST_ONLY:owning-receipt",
+            "source_event_ref": "TEST_ONLY:event",
+            "revision": "9007199254740993",
+            "amounts": null
+          },
+          "projection": "CATCHING_UP",
+          "venue": "NOT_APPLICABLE",
+          "next_action": "QUERY_SAME_INTENT",
+          "created_at_ms": 1792100000000,
+          "updated_at_ms": 1792100000000,
+          "authority": "TEST_ONLY"
+        },
+        "effect_kind": "NOMINAL_ROOT_CAP",
+        "physical_transfer_performed": false,
+        "form_cancel": "DISCARD_LOCAL_DRAFT_ONLY",
+        "after_submit_cancel": "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED",
+        "refresh": "GET_ORIGINAL_COMMAND_NO_RESUBMIT",
+        "public_copy_key": "REVIEW_RECEIPT",
+        "automatic_resend": false
+      }
+    },
+    {
+      "id": "W08-TARGET-BUDGET-REJECTED-NONAMOUNT",
+      "gate": "T08-04",
+      "schema": "WorkflowCapital",
+      "response": {
+        "schema_version": "portal.execution.capital-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "currency": "USDT",
+        "status": {
+          "schema_version": "portal.execution.command-status.v1",
+          "command_id": "ecm_00000000000000000000000000000001",
+          "operation": "ADJUST_TARGET_BUDGET",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "environment": "paper",
+          "profile_ref": "TEST_ONLY:paper",
+          "delivery": "ACKNOWLEDGED",
+          "business": {
+            "state": "REJECTED",
+            "receipt_ref": "TEST_ONLY:owning-receipt",
+            "source_event_ref": "TEST_ONLY:event",
+            "revision": "9007199254740993",
+            "amounts": null
+          },
+          "projection": "CATCHING_UP",
+          "venue": "NOT_APPLICABLE",
+          "next_action": "QUERY_SAME_INTENT",
+          "created_at_ms": 1792100000000,
+          "updated_at_ms": 1792100000000,
+          "authority": "TEST_ONLY"
+        },
+        "effect_kind": "MANAGEMENT_BUDGET",
+        "physical_transfer_performed": false,
+        "form_cancel": "DISCARD_LOCAL_DRAFT_ONLY",
+        "after_submit_cancel": "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED",
+        "refresh": "GET_ORIGINAL_COMMAND_NO_RESUBMIT",
+        "public_copy_key": "SOURCE_REJECTED",
+        "automatic_resend": false
+      }
+    },
+    {
       "id": "W08-DECREASE-REJECTED",
       "gate": "T08-04",
       "schema": "WorkflowCapital",

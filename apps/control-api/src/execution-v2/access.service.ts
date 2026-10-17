@@ -121,7 +121,7 @@ export class ExecutionAccessService {
    * perform relay I/O inside fn; TS still checks its own authority at commit. */
   async commandBoundary<T>(actor:AccessActor,workspace:string,expected:AccessEvaluationContext,
     action:AccessAction,resource:AccessResource,environment:"paper"|"sandbox"|"live",
-    check:(now:number)=>void,fn:(db:PoolClient)=>Promise<T>):Promise<T> {
+    check:(now:number,current:AccessEvaluationContext)=>void,fn:(db:PoolClient)=>Promise<T>):Promise<T> {
     if(expected.principal_id!==actor.user_id||expected.workspace_id!==workspace||!expected.authority_fingerprint)
       throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
     return this.transaction(workspace,actor,true,async tx=>{
@@ -130,7 +130,7 @@ export class ExecutionAccessService {
           throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
         const decision=evaluateAccess(tx.context,action,resource,environment);
         if(!decision.allowed)throw new AccessPolicyError(decision.reason_code??"ACCESS_DENIED");
-        check(tx.context.now_ms);
+        check(tx.context.now_ms,tx.context);
       });
       return fn(tx.db);
     },[],expected);
@@ -663,10 +663,10 @@ export class ExecutionAccessService {
         const ceiling=grants.find(g=>g.grant_id===row.change.ceiling_grant_id);
         validateDelegation(context,{...row.change,expected_policy_revision:policy.revision,
           expected_ceiling_revision:ceiling?.revision??row.change.expected_ceiling_revision});
+        this.validateTsBinding(fact,row,grant,policy,source.mapping,relationMap.get(grant.subject_user_id),context.now_ms);
         guard?.();
       };
       assertCurrent();
-      this.validateTsBinding(fact,row,grant,policy,source.mapping,relationMap.get(grant.subject_user_id),context.now_ms);
       if(!write)return null;
       const outcome=fact.outcome==="ACCEPTED"?"TS_APPLIED":fact.outcome==="REJECTED"?"TS_REJECTED":"TS_UNKNOWN";
       const updated=fact.outcome==="ACCEPTED"?{...grant,revision:randomId("acr"),ts_acceptance_digest:digest,ts_receipt:{receipt_id:fact.receipt_id,
@@ -707,6 +707,10 @@ export class ExecutionAccessService {
       throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
     // Never compare opaque revisions lexically; exact current source revision is authoritative.
     if(fact.outcome==="ACCEPTED") {
+      // New attachment must be effective at both initial and final DB clocks.
+      // The authenticated historical ACK path returns before this check.
+      if(fact.effective_at_ms>now||fact.expires_at_ms!==null&&fact.expires_at_ms<=now)
+        throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
       if(relations && Object.hasOwn(relations,"current_authority")) {
         const parsed=currentAccessRelations.safeParse(relations.current_authority);
         if(!relations.qualified || !parsed.success || !currentAcceptanceMatches(fact,grant,parsed.data,now))

@@ -64,6 +64,8 @@ export interface ManagerRegimeFeatures {
   source_locator: string;
 }
 export interface ManagerRegimeReference {
+  /** INTERNAL verified loader's independent proof known-at watermark, never a public approval flag. */
+  source_proof_available_at_ms?: number;
   reference_window_id: string;
   individual_evidence_binding_id: string;
   manifest_hash: string;
@@ -256,6 +258,10 @@ function featureIssues(features: ManagerRegimeFeatures, policy: ManagerRegimePol
   return unique(reasons);
 }
 function referenceIssues(reference: ManagerRegimeReference, input: ManagerRegimeInput, policy: ManagerRegimePolicy): string[] {
+  if (reference.source_proof_available_at_ms !== undefined) {
+    if (!time(reference.source_proof_available_at_ms)) return ["REFERENCE_PROOF_TIMESTAMP_INVALID"];
+    if (reference.source_proof_available_at_ms > input.as_of_ms) return ["REFERENCE_PROOF_NOT_AVAILABLE_AS_OF"];
+  }
   const reasons: string[] = [];
   if (![reference.reference_window_id, reference.individual_evidence_binding_id, reference.manifest_hash, reference.source_locator, reference.episode_id, reference.cost_assumptions_id].every(text)) reasons.push("REFERENCE_PROVENANCE_MISSING");
   if (!reference.binding || IDENTITY.some(key => reference.binding[key] !== input.binding?.[key])) reasons.push("REFERENCE_BINDING_MISMATCH");

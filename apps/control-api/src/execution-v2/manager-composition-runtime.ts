@@ -292,10 +292,20 @@ export function managerCompositionPublicationForRead(handle: ApprovedManagerAllo
     return freeze(managerCompositionPublication.parse(parsed));
   } catch { return null; }
 }
-/** Final delivery fence requires the already sanitized projection; no aggregate is computed in a read. */
+/** Final delivery fence requires the already sanitized projection; no aggregate is computed in a read.
+ * Product selectors also supply the exact authorized pre-filter/page tuple+stage census. */
 export function managerCompositionPublicationCurrent(handle: ApprovedManagerAllocation | null, pub: unknown,
-  raw_scores: readonly ManagerScorePublication[], rawFence: ManagerScoreReadFence, nowMs: number): boolean {
+  raw_scores: readonly ManagerScorePublication[], rawFence: ManagerScoreReadFence, nowMs: number,
+  expectedMembers?: readonly Population[number][]): boolean {
   try {
+    if (expectedMembers !== undefined) {
+      const record = handle ? allocations.get(handle) : undefined;
+      if (!record) return false;
+      // Capture before access: existing bounded input validation rejects getters/prototypes.
+      // Full Manager members may carry other reviewed fields; compare only exact identity/stage.
+      const expected = z.array(member.strip()).max(10_000).parse(capture(expectedMembers, BYTE_CEILING));
+      if (!same(expected.map(censusKey).sort(), record.artifact.population.map(censusKey).sort())) return false;
+    }
     const captured = capture(pub, BYTE_CEILING);
     const projected = managerCompositionPublicationForRead(handle, captured, raw_scores, rawFence, nowMs);
     return projected !== null && same(captured, projected);

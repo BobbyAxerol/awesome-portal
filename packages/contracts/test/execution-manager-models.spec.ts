@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 import { managerDatasetResponse, managerMetric, managerModelQuery, managerScorePublication,managerCompositionPublication } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
+import { managerRegimePublication } from "../../../apps/control-api/src/execution-v2/manager-regime-publication.contract";
 const root = resolve(__dirname,"..");
 const load = (file:string) => JSON.parse(readFileSync(resolve(root,file),"utf8"));
 const api = load("openapi/execution-manager-models.openapi.json");
@@ -11,6 +12,31 @@ const fixture = load("fixtures/execution-manager-dataset.synthetic.valid.json");
 const ajv = new Ajv2020({strict:true,allErrors:true});
 const validate = ajv.compile(schema);
 describe("ELP2-06 generated named Manager BFF contract",()=>{
+  it("publishes descriptive per-alpha Regime without a scalar, pooled outcomes or production fixture authority",()=>{
+    const sample=load("fixtures/execution-manager-regime.synthetic.valid.json");
+    expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    const check=ajv.compile(api.components.schemas.ManagerRegimePublication);
+    expect(check(sample.value),JSON.stringify(check.errors)).toBe(true);
+    expect(managerRegimePublication.parse(sample.value)).toEqual(sample.value);
+    const response={...structuredClone(fixture.value),surface:"ALPHA",regime_details:[sample.value]};
+    response.scores.regime={value:null,status:"supported"};
+    expect(validate(response),JSON.stringify(validate.errors)).toBe(true);
+    expect(managerDatasetResponse.safeParse(response).success).toBe(true);
+    expect(sample.value.result).not.toHaveProperty("value");
+    expect(sample.value.result).not.toHaveProperty("effective_sample_size");
+    expect(sample.value.result).not.toHaveProperty("matched_outcome_summary");
+    expect(sample.value.result.preview).toBeNull();
+  });
+  it.each(["scalar","preview","false-count","foreign-neighbor","pooled-outcome"])(
+    "rejects semantic Regime inconsistency %s",kind=>{
+      const sample=structuredClone(load("fixtures/execution-manager-regime.synthetic.valid.json").value);
+      if(kind==="scalar")sample.result.value="99";
+      if(kind==="preview")sample.result.preview={forecast:"0.5"};
+      if(kind==="false-count")sample.result.neighbor_count++;
+      if(kind==="foreign-neighbor")sample.result.stage_breakdown[0].neighbors[0].reference_window_id="TEST_ONLY:hidden";
+      if(kind==="pooled-outcome")sample.result.matched_outcome_summary=sample.result.stage_breakdown[0].matched_outcome_summary;
+      expect(managerRegimePublication.safeParse(sample).success).toBe(false);
+    });
   it("publishes Composition separately from RAW/DIRECT_NAV, with full-denominator absence semantics",()=>{
     const sample=load("fixtures/execution-manager-composition.synthetic.valid.json");
     expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
