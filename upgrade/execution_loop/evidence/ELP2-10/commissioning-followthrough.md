@@ -1018,3 +1018,241 @@ Backend next-ready remains actual current-human provider/trust, approved
 14-group numeric budget/calibration and allocated paired coexistence/original
 G2 in ELP2-10, not11. Normal hook is the landing gate for the exact seven paths
 above; do not repeat it solely to rewrite these pre-commit status lines.
+
+<a id="elp210-actual-provider-return-20261017"></a>
+
+## Actual-provider continuation — read-only return, 2026-10-17
+
+Bobby assigned continued provider/trust, budget/calibration and coexistence/G2
+work. Entry clean `9a3a27c8680451c59fcbeb82d3fdb576a2a54f58`, same shared
+branch/worktree. Local10-006 is now **VERIFIED** by the actual terminal
+`20261017/issuance-land-024925/controller.json`: exit0,691contract PASS,
+4308API PASS/3existing skips (including26new real-PG issuance tests), build
+and scoped restore PASS, eight runtime tuples unchanged and zero owned
+resources. Controller SHA256
+`bb04136a7ad8e84b4678371c122e30ee936a0a11547067308f902c3e173725e6`.
+These counts are reused, not newly run or added to earlier focused counts.
+
+### Fresh source and exact evidence
+
+Read-only HK observation03:23UTC /10:23Asia/Saigon:
+
+- PM `5f0d60b24207479477096789fe4f53c1bc8c49b6`, with concurrent
+  membership/owner-history WIP, explicitly preserved. Edge
+  `f26657aa2423db502ac07be2dc14d6fddade64ba`, only its untracked feasibility
+  document observed. Neither worktree was edited or made a selected runtime.
+- PM TLS handoff remains `c8bd50bf…`, current-read handoff `b859ce2c…`;
+  installed client/trust/grants/runtime flags remain false and genuine current
+  provider is `NONE_FAIL_CLOSED`. Existing interoperability/rehearsal/history
+  deliveries are not claimed missing, nor promoted into installed authority.
+- PM readiness `da65e9d1…` is dirty-source metadata, not a committed approval;
+  its approval packet is `DRAFT_NOT_APPROVED_FOR_EXECUTION` with actual
+  target/workload/SLO/resource inputs null. Edge plan `aaa1c7d0…` still has
+  **14/14 approval references null and32/32 metric baselines/bounds null**.
+- HK window `claude-s100-final-v224`,03:20:16–05:20:16UTC
+  (10:20:16–12:20:16Asia/Saigon), is foreign. Root guard was unreadable to the
+  read-only process: **not permission to launch**. No job/load was started;
+  expiry alone would not allocate a Portal measurement window.
+
+Private exact records under
+`/home/bobby/.local/state/portal-execution-elp210/20261017/`:
+
+| Record | SHA256 / meaning |
+| --- | --- |
+|`continuation-source-readback.json`|`5bb79f60416e6b4b589132a616483e0ceb4e503fc836239c35204577cf3ad2dc`; source/WIP/artifact hashes and observed nonsecret fields, not an atomic frozen source candidate |
+|`continuation-input.json`|`a328917d4faf3ff694ec96d0fe1ab24ac5c9938d7ca5022aeda9b41d1c9e52aa`; proposed Paper review target,30current local dependency hashes, no supplied runtime records or approvals |
+|`continuation-assessment.json`|Existing offline readiness checker result: BLOCKED,9missing evidence categories, no dependency mismatch; neither a new test PASS nor source/runtime certification |
+
+PM's newer delegated interoperability return `cf3a0d22…` pins Core30162a3f.
+Of its eight advertised source paths, six still match; candidate SQL and
+mutation coordinator differ because of9a3a27c8. Reuse the unchanged paths only
+for their original purposes. One-view issuance and the changed constraints
+still need the new connected commissioning lane; do not discard all old
+proofs or call that old receipt qualification of new issuance. Tool missing-
+record labels such as `SCORE_PUBLICATION_NOT_IMPLEMENTED` describe absent
+runtime evidence here, **not** absence of the delivered calculator/loader/code.
+
+### Independent review and next exact package
+
+Task map was frozen in private `continuation-scope.md` before delegation.
+10N-TRUST reviewed local candidate/composition/providers;10N-BUDGET reviewed
+local budgets/calibration/readiness. Both were read-only, with no files, Git,
+SSH, tests, DB or resource jobs delegated. No newly evidenced local defect or
+useful extra generic scaffold was found. Primary reviewed their returns.
+
+The remaining provider work is **actual source-specific implementation and
+installation**, not just a flag and not solely external measurement:
+
+1. Pin actual issuer/audience/kid/revision, stable Portal↔TS identity mapping,
+   candidate-only CA/leaf/hostname/workload bindings, accepted TS read grants,
+   and genuine current workload/application/field/mapping leases. Preserve
+   approved r1; no guessed identities, copied TEST_ONLY signers or new root seed.
+2. Implement only the missing source-backed `AccessTrustProvider` and selected
+   Manager read adapter from those authenticated inputs. Existing
+   `ControlApiDependencies` supports injection; default `main.ts` deliberately
+   does not install them. Exact held-source fences must cover serve/COMMIT,
+   including mapping/root/delegated receipt ingress, not cached booleans.
+3. A **new explicitly approved commissioning package** must cover trust/key
+   provisioning and private candidate installation, operations excluded from
+   the previous code/test-only package. Target the approved PM/Edge candidate
+   worktrees plus an isolated private Core cell, no public preview data
+   exposure, production/dev/main, credential reuse, business mutations or Live.
+   Retain existing source2CPU/1536MiB/300s per correctness run and local
+   4CPU/4GiB/8GiB ceilings, one heavy lane, exact readable guards/window.
+   Run only affected two-service identity/revoke/COMMIT/UNKNOWN/recovery and
+   field/mapping negatives; reuse unchanged local tests. Rollback stops new
+   issuance, resolves used leases from signed terminal facts, then unmounts;
+   never clears a drain manually or restores revoked access.
+4. Separately prepare source-matched baseline/bounds and calibration inputs.
+   Existing four identical Research tapes are custody evidence, not independent
+   economic calibration. The original paired protocol's600s repetitions exceed
+   the300s candidate cap: **do not shorten G2 or borrow the Core hook envelope**.
+   Exact target, workload, repetitions, numeric bounds and allocated capacity
+   window need their own concrete approved package before load. No blanket
+   capacity approval is requested while those inputs are still null.
+
+No runtime/credential installation or new code/public contract/FE change was
+made in this continuation. Tests/build/load run: **0**; no redundant hook.
+Only this packet and Unified are updated; commit remains PENDING for a future
+coherent normal-hook delivery, not bypassed to publish a read-only update.
+C4: no resources created; root free167426584576bytes/75%used,
+MemAvailable11181596KiB of32862520KiB (shared snapshot, not a peak/budget).
+NO_ACTION_NEEDED; no shared cache/image/volume cleanup during foreign work.
+
+Backend next is the exact input/installation package above in ELP2-10;
+05-001/06-002/07-001 stay IN_PROGRESS,00-005/10-002 OPEN,full10NOT_MET.
+Claude has no new field/UI request; existing six-operation handoffs remain
+AWAITING_CONSUMER_REVIEW when assigned. No acknowledgement or browser PASS
+is inferred. ELP2-11, push, dev/main, signing and deployment remain unopened.
+
+### Approved expanded candidate commissioning — entry 2026-10-17
+
+Bobby approved the preceding candidate package through the active goal:
+candidate-only trust/key provisioning, confirmed-source mapping/grants adapter
+and private installation. This supersedes the preceding requirement to ask for
+that same package, not its exclusions. Entry Core `9a3a27c8680451c59fcbeb82d3fdb576a2a54f58`;
+the preceding121 documentation lines are preserved uncommitted. No frontend,
+production/dev/main, business grant seed, command/Live or public listener.
+
+Task map: primary owns source-specific adapter/composition, shared wire schema,
+private candidate configuration, integration, Git and this packet/Unified.
+Independent readonly review owns no files and examines current source authority
+and missing input provenance. A disjoint test author, if assigned after wire
+freeze, owns only a new focused test file. No delegate Git, SSH mutation,
+credential, database, build or resource authority. Correctness ceilings remain
+source2CPU/1536MiB/300s and Core4CPU/4GiB/8GiB, one heavy lane after readable
+root+Bobby guard checks; no HK job during its foreign TS window. G2/load and
+numeric budget/calibration are explicitly not approved by this package.
+
+Acceptance: actual private source identity verification, current mapping/grant
+and policy fence through physical COMMIT, scope/field/revoke/mapping negatives,
+bounded UNKNOWN/recovery and safe private teardown. Source facts absent from
+the real producer must refuse explicitly, never be filled from test constants.
+Tests/installations at entry NOT_RUN; rollback stops new issuance, resolves
+used leases from authenticated terminal facts, then unmounts candidate only.
+Full10 remains NOT_MET until its distinct source, budget/calibration,
+coexistence/G2 and consumer gates are evidenced. Backend continues within10;
+Claude has no new public field/request at entry and11 is not opened.
+
+Disjoint source-adapter author, after the Core manifest freeze, may own only
+private drafts `20261017/pm-installation/portal_human_installation.py` and its
+matching focused test. The draft composes existing PM HumanVerifier,
+PortalHumanCandidate, pinned TLS client/recovery; it does not supply/infer a
+business-read policy. Primary alone reviews/transfers to the approved PM
+candidate worktree and schedules its isolated validation. No delegate remote
+edit, credential handling, Git or resource job. Exact manifest is
+`elp210.candidate-trust.v1`, selected candidate/workspace/SHA plus CA/leaf and
+both signer SPKI hashes, separate Core/PM secret directories, Paper-only and
+24h maximum lifetime. A configured private component is not installed source
+economic authority; accepted current workload/app/field facts still gate it.
+
+<a id="elp210-private-installation-20261017"></a>
+
+### Private candidate trust construction — 2026-10-17
+
+Owned Core delivery: `current-human-installation.ts`, the candidate scope check,
+`elp210-current-human-installation.spec.ts`, one real-PG scope/recovery regression
+in the existing candidate spec, and `scripts/execution-v2/provision-candidate-trust.mjs`.
+No public OpenAPI/type/FE/schema migration or startup installation changes.
+
+- Explicit provisioner creates an exclusive private directory, separate Core/PM
+  TLS and JWT keys, fresh candidate CA, dual-EKU loopback/hostname leaves,
+  reciprocal issuer/audience/kid/workload pins and both signer SPKI hashes.
+  CA private key is transient0600 and shredded before success; failed secrets
+  are retired at their exact owned paths. No production credential reuse.
+- Core loader requires independent candidate/workspace/manifest-SHA selection,
+  bounded private regular single-link files, exact certificates/key pairs,
+  Paper-only scope and at most24h validity. Config cannot grant mapping,
+  application/field authority, business reads, commands or Live. Composition
+  constructs the real bounded pool/candidate/mutation/TLS ports but never
+  listens, installs SQL, provisions a user/grant or changes `main.ts`.
+- Issue/ENTER enforce workspace/Paper/expiry in actual candidate operations;
+  issuance is clamped to installation expiry. Expiry does not clear an
+  ENTERED/UNKNOWN obligation or forbid authentic terminal-only resolution.
+  Private leaf expiry still needs an explicit transport rotation/recovery
+  procedure; this is not a claim of automatic TLS recovery after expiry.
+- PM private draft composes the actual existing HumanVerifier, candidate,
+  pinned HTTP client and unbound recovery port. Its loader reads only PM's
+  half through pinned directory/file descriptors; never Core private keys.
+  New preparation stops at installation expiry; terminal recovery is preserved.
+  Draft is private, not yet installed/committed into the remote candidate.
+
+**Actual tests, including failures retained:**
+
+| Lane | Actual result and limitation |
+| --- | --- |
+|Initial Core focused cell `installation-focus-034519`|93PASS/2FAIL, build PASS. The2positive loader cases found an actual defect: using flat HTTP-wire parser for nested numeric manifest. Negative passes alone were not accepted as coverage. Controller records eight unchanged runtimes and zero owned resources; raw failed receipt retained. |
+|Corrected Core host focus|68/68 tracked installation tests plus1/1 actual OpenSSL-bundle load PASS,0skips, about2.1s. Separate bounded recursive manifest parser rejects nested/escaped duplicate keys, malformed UTF8/JSON, arrays/null/nonfinite/trailing input/depth/key/file overflow without widening the flat HTTP wire. No DB/listener/G2. |
+|Initial PM draft collection|NOT_PASS: cached base omitted two already-delivered transport dependencies; corrected staged dependency manifest, not application behavior. |
+|PM final cell `installation-attempt-035517-z5z14_m_`|52/52 PASS,0warnings,0.64s pytest/2.93s controller. Includes actual provisioned OpenSSL PM-half load. Cached image `91681097…`, no network,1CPU/512MiB/300s ceiling; one observed34.61MiB/92.58%CPU sample is not a peak or approved production budget. Input/stage hashes unchanged; exact owned container removed, eight runtime tuples unchanged. |
+|Normal-hook landing|One coherent normal-hook commit is the remaining landing gate. Actual terminal result is the `installation-land-*` controller/log under the same20261017 evidence root; no future PASS or extra count is inferred here. New real-PG expiry/clamp/terminal-recovery test is included in that gate, not claimed from the host loader suite. |
+
+Exact private evidence (not committed credentials):
+
+- Core host `20261017/installation-host-check/receipt.json`, SHA256
+  `f414e69a77d1502907d248d7e38e8a9e71518bf70eb6035fd744232b6f8d982a`.
+- PM final controller under `20261016/source-candidate/installation-attempt-035517-z5z14_m_/`,
+  SHA256 `90283d5203bdc6b435b32016f59e3d085a85694e6d2bf6baf865ce4a68478e55`.
+- PM module/test drafts `20261017/pm-installation/`, hashes respectively
+  `9abf30e6337da6569e1ea09360668f4d676b68ed130056363014c94bfc3af86a` /
+  `fcf7790ad7088f2b21593e5196662de3ce1246f143475d092acf41c85979710e`.
+- Independently selected candidate `elp210-705269cc-6b3c-4a1f-a2de-00833f0a97a2`,
+  manifest SHA256 `c29b2496e40b5a285291741da0290eceb2162140aec7866c9a4434484615375a`,
+  candidate workspace `elp210-candidate-workspace`, expiry2026-10-18T03:43:29Z.
+  This isolated identifier is NOT an existing business mapping or read grant.
+
+Independent final static review ACCEPT: signer pins and operation-level scope
+findings closed; no new must-fix. Trusted owned0700 parent/no concurrent ancestor
+rename is an installation precondition, not a claim of hostile same-UID isolation.
+The new manifest parser defect and stage dependency failure remain visible above.
+
+**Fresh source advancement, not stale absence:** read-only HK03:56UTC observed
+PM `866b8e720201707aad910a7ed3f59b880f4075ef`; new concurrent WIP includes
+`current_access_source.py`, durable-current-authority handoff/opt-in SQL and
+`operator_session.py`. These may provide the missing real current-policy
+source; they are explicitly **WIP/NOT_ACCEPTED/NOT_IMPORTED** at this observation,
+not declared absent or installed. PM candidate remains clean `a03500ac…`,
+Edge `20dc3f94…` with its existing untracked feasibility document. Preserve all
+owner WIP. Foreign HK window changed to `claude P18.4 G13 dr05-quiet 20261017`,
+03:48:38–05:48:38UTC. No HK code/key installation, tests, load or service changes
+were made. Window end is still not a Portal allocation.
+
+Backend next stays inside10: review committed/accepted current-authority source,
+pin genuine existing mapping/grants and accepted workload/app/field policies,
+then connect selected private candidates and prove revoke/physical-COMMIT/
+UNKNOWN/recovery. Do not substitute the loader, a token, a default owner or a
+TEST_ONLY identity for those records. Budget/calibration artifacts and matched
+coexistence/originalG2 still require their distinct missing inputs/approval;
+no600s protocol is run inside300s correctness. Claude has no new public field or
+UI task; existing handoffs stay awaiting assignment/consumer acceptance. Full10
+NOT_MET;11, push, dev/main, signing and deploy remain unopened.
+
+C4 snapshot: root free167446614016bytes/75%used; MemAvailable11562164KiB,
+Docker images88.82GB, volumes32.49GB, build cache195.9GB (shared inventory,
+not phase-owned/reclaim permission). CI publication, deployment and rootless
+Docker runner units active; none restarted. All focused owned cells cleaned;
+private source/tests/raw receipts retained for reproducibility. Candidate keys
+remain private custody for the approved installation package, never public
+evidence; primary must retire these exact unused keys on abandonment/expiry.
+No shared image/cache/volume/data deletion; normal-hook controller separately
+checks runtime equality and zero owned resources before declaring clean.

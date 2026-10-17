@@ -112,6 +112,25 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     await candidate.enter(lease.token, await proof(lease.lease_id));
     expect(await phase(lease.lease_id)).toBe("ENTERED");
   });
+  it("clamps issuance to installation expiry and keeps signed terminal recovery possible after that expiry", async () => {
+    const validUntil = Date.now() + 20_000;
+    candidate = await CurrentHumanCandidate.create(pool, { ...config,
+      installation_scope: { workspace_id: binding.workspace_id, environment: "paper", valid_until_ms: validUntil } });
+    const lease = await enter();
+    expect(decodeJwt(lease.token).exp).toBe(Math.floor(validUntil / 1000));
+    expect(lease.expires_at_ms).toBeLessThanOrEqual(validUntil);
+    expect(await candidate.beginDrain("test-only-installation-expiry")).toMatchObject({ status: "DRAIN_PENDING", pending: 1 });
+    try {
+      vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(validUntil + 1000);
+      await expect(candidate.issue(actor, binding)).rejects.toMatchObject({ code: "CURRENT_HUMAN_INSTALLATION_SCOPE_INVALID" });
+      // Expired candidate configuration is not a terminal source receipt and
+      // must never clear an unresolved drain or prevent authentic resolution.
+      expect(await candidate.drainStatus("test-only-installation-expiry")).toMatchObject({ status: "DRAIN_PENDING", pending: 1 });
+      await candidate.resolve(await proof(lease.lease_id, "COMMITTED"));
+      expect(await phase(lease.lease_id)).toBe("COMMITTED");
+      expect(await candidate.drainStatus("test-only-installation-expiry")).toMatchObject({ status: "DRAIN_READY", pending: 0 });
+    } finally { vi.useRealTimers(); }
+  });
   it("rejects stale session generation and nonmember workspace instead of borrowing an owner identity", async () => {
     await expect(candidate.issue({ ...actor, session_generation: 6 }, binding)).rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED" });
     await expect(candidate.issue(actor, { ...binding, workspace_id: "test-only-other" })).rejects.toMatchObject({ code: "ACCESS_RESOURCE_NOT_FOUND" });

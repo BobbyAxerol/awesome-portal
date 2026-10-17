@@ -34,6 +34,10 @@ export interface CurrentHumanCandidateConfig {
   source: { issuer: string; audience: string; key_id: string; public_key: KeyLike; workload_id: string };
   /** Explicit correctness-cell limits, not approved production budgets. */
   limits: { ttl_ms: number; maximum_unresolved: number; maximum_retained: number };
+  /** Required by selected private installations. Legacy unmounted correctness
+   * constructors stay compatible; this does not make them installed authority.
+   * Expiry stops new issue/ENTER, NEVER clears an ENTERED/UNKNOWN obligation. */
+  installation_scope?: { workspace_id: string; environment: "paper"; valid_until_ms: number };
 }
 type Row = { lease_id: string; authority_revision: string; subject_id: string; session_id: string; session_revision: string;
   workspace_id: string; environment: "paper" | "sandbox" | "live"; workload_id: string; request_digest: string;
@@ -54,7 +58,15 @@ export class CurrentHumanCandidate {
     if ([pool.options.connectionTimeoutMillis, pool.options.query_timeout]
       .some(n => !Number.isSafeInteger(n) || Number(n) < 1 || Number(n) > 60_000))
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_POOL_TIMEOUT_REQUIRED");
-    const config = { ...input, source: { ...input.source }, limits: { ...input.limits } };
+    const config = { ...input, source: { ...input.source }, limits: { ...input.limits },
+      installation_scope: input.installation_scope ? { ...input.installation_scope } : undefined };
+    if (config.installation_scope) {
+      const scope = config.installation_scope;
+      if (!id.safeParse(scope.workspace_id).success || scope.environment !== "paper"
+        || !Number.isSafeInteger(scope.valid_until_ms) || scope.valid_until_ms <= Date.now())
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_INSTALLATION_SCOPE_INVALID");
+      Object.freeze(scope);
+    }
     for (const value of [config.issuer, config.audience, config.key_id, config.source.issuer,
       config.source.audience, config.source.key_id, config.source.workload_id]) id.parse(value);
     const { ttl_ms, maximum_unresolved, maximum_retained } = config.limits;
@@ -83,6 +95,7 @@ export class CurrentHumanCandidate {
 
   async issue(actor: AccessActor, untrustedBinding: CurrentHumanBinding): Promise<{ token: string; lease_id: string; expires_at_ms: number }> {
     const binding = currentHumanBinding.parse(untrustedBinding);
+    this.checkInstallation(binding, true);
     if (binding.workload_id !== this.config.source.workload_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_WORKLOAD_MISMATCH");
     const claims = await this.transaction(async (db, authority) => {
       if (authority.drain_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAINING");
@@ -91,7 +104,9 @@ export class CurrentHumanCandidate {
         count(*) FILTER (WHERE phase IN ('ISSUED','ENTERED','UNKNOWN'))::int AS unresolved FROM elp210_candidate.leases`)).rows[0];
       if (counts.unresolved >= this.config.limits.maximum_unresolved || counts.retained >= this.config.limits.maximum_retained)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_CAPACITY_EXHAUSTED");
-      const iat = Math.floor(current.now / 1000), exp = Math.floor(Math.min(current.now + this.config.limits.ttl_ms, current.lease_until_ms) / 1000);
+      this.checkInstallation(binding, true);
+      const iat = Math.floor(current.now / 1000), exp = Math.floor(Math.min(current.now + this.config.limits.ttl_ms,
+        current.lease_until_ms, this.config.installation_scope?.valid_until_ms ?? Number.MAX_SAFE_INTEGER) / 1000);
       if (exp <= iat) throw new CurrentHumanLeaseError("CURRENT_HUMAN_SESSION_EXPIRING");
       const body = humanClaims.parse({ iss: this.config.issuer, aud: this.config.audience, sub: actor.user_id,
         sid: actor.session_id, jti: randomUUID(), iat, nbf: iat, exp, purpose: "pma.identity.v1", principal_kind: "human",
@@ -122,11 +137,19 @@ export class CurrentHumanCandidate {
     } catch { throw new CurrentHumanLeaseError("CURRENT_HUMAN_SOURCE_PROOF_INVALID"); }
   }
 
+  private checkInstallation(binding: Pick<CurrentHumanBinding, "workspace_id" | "environment">, fresh: boolean): void {
+    const scope = this.config.installation_scope;
+    if (scope && (scope.workspace_id !== binding.workspace_id || scope.environment !== binding.environment
+      || (fresh && Date.now() >= scope.valid_until_ms)))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_INSTALLATION_SCOPE_INVALID");
+  }
+
   /** Source MUST enter once BEFORE borrowing its TS connection. Replayed entry
    * is refused, not permission for a second TS transaction. Lost enter ACK needs
    * the same source attempt's qualified resolution; never blindly retry a write. */
   async enter(humanToken: string, sourceProof: string): Promise<{ lease_id: string; attempt_id: string }> {
     const source = await this.attest(sourceProof);
+    this.checkInstallation(source, true);
     if (typeof humanToken !== "string" || Buffer.byteLength(humanToken) > 8192)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_TOKEN_INVALID");
     let human: z.infer<typeof humanClaims>;
@@ -139,6 +162,7 @@ export class CurrentHumanCandidate {
     } catch { throw new CurrentHumanLeaseError("CURRENT_HUMAN_TOKEN_INVALID"); }
     if (source.phase !== "ENTER" || source.lease_id !== human.jti) throw new CurrentHumanLeaseError("CURRENT_HUMAN_BINDING_MISMATCH");
     return this.transaction(async (db, authority) => {
+      this.checkInstallation(source, true);
       if (authority.drain_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAINING");
       const row = (await db.query<Row>("SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR UPDATE", [human.jti])).rows[0];
       if (!row || row.phase !== "ISSUED") throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
@@ -168,6 +192,7 @@ export class CurrentHumanCandidate {
    * prove that an async COMMIT did not succeed. No TTL-based auto-release. */
   async resolve(sourceProof: string): Promise<{ replayed: boolean; phase: string }> {
     const source = await this.attest(sourceProof);
+    this.checkInstallation(source, false);
     if (source.phase === "ENTER") throw new CurrentHumanLeaseError("CURRENT_HUMAN_TERMINAL_REQUIRED");
     return this.transaction(async db => {
       const row = (await db.query<Row>("SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR UPDATE", [source.lease_id])).rows[0];

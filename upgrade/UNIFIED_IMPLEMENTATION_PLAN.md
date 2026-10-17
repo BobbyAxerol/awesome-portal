@@ -9953,6 +9953,37 @@ contract/push. Tests NOT_RUN at entry. This resolves the decision, not actual
 provider commissioning or the remaining budget/calibration/coexistence/G2 gates.
 Claude has no new UI/type task; ELP2-11 is not started.
 
+**2026-10-17 — actual-provider/config/window readback after9a3a27c8.**
+One-view local10-006 is VERIFIED by its terminal normal-hook receipt; no tests
+repeated. [Current return and exact next package](./execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-actual-provider-return-20261017)
+pins PM5f0d60b2/Edgef26657aa and preserves PM membership-history WIP. Actual
+provider/trust remains uninstalled,14budget approvals/32metric baselines and
+bounds null; HK foreign stage-100 window ends12:20:16Asia/Saigon, not a Portal
+allocation. Source-specific provider implementation/installation still needs
+authenticated mapping/lease inputs and separately approved trust provisioning,
+not another generic scaffold. Original600s paired G2 cannot fit the approved
+300s correctness cap; exact capacity/threshold/calibration inputs remain OPEN.
+Two independent readonly reviews found no new local defect; no code, FE,
+runtime or source changes, no test/build/load/push. This documentation update
+is UNCOMMITTED/PENDING normal-hook delivery; no hook bypass or wasteful rerun.
+Next backend stays ELP2-10; Claude has no new field/request; full10NOT_MET.
+
+**2026-10-17 — approved private candidate trust construction, entry9a3a27c8.**
+The expanded commissioning package is approved; do not ask for it again.
+[Code, strict manifest/scope boundaries, actual failures/corrections, tests and resource receipts](./execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-private-installation-20261017)
+deliver separate Core/PM TLS/JWT custody, exact CA/leaf/signer pins and explicit
+unbound composition, not business authority or runtime activation. Corrected
+Core loader focus68/68 plus real OpenSSL compatibility1/1; PM isolated52/52,
+zero warnings, no network, exact cleanup/eight runtime tuples unchanged.
+One normal-hook landing is still required; its actual `installation-land-*`
+terminal receipt controls that result, not this pre-commit line. No FE/public
+contract/startup/DB migration/push changes. PM866b8e72 has new current-authority
+WIP under review, NOT_IMPORTED; PMcandidatea03500ac remains clean and the
+foreign HK window is now03:48:38–05:48:38UTC. Next: accept/pin genuine source
+policy/mapping/grants and private installation, then source-connected proof;
+approved numeric budgets/calibration and original coexistence/G2 remain distinct
+OPEN gates. Claude has no new field/request; full10NOT_MET,11 not opened.
+
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release
