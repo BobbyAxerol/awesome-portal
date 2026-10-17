@@ -44,11 +44,11 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.two{grid-template-columns:1fr}}
 .scroll table{min-width:520px}.dep td,.dep th{white-space:normal}.grid>*,.two>*,.split>*{min-width:0}
 </style></head>
-<body data-state="healthy" data-notes="on" data-peek="on">
+<body data-state="healthy" data-notes="on" data-peek="off">
 <div class="bar"><b>Lowfi · M05 Alpha 360</b>
  <span class="seg" data-ctl="state"><button data-v="healthy" aria-pressed="true">Healthy</button><button data-v="sparse">Source not ready</button><button data-v="denied">Researcher (own slice)</button><button data-v="loading">Loading</button></span>
  <span class="seg" data-ctl="notes"><button data-v="on" aria-pressed="true">Notes on</button><button data-v="off">Off</button></span>
- <span class="seg" data-ctl="peek"><button data-v="on" aria-pressed="true">Score drawer open</button><button data-v="off">Closed</button></span>
+ <span class="seg" data-ctl="peek"><button data-v="on" aria-pressed="false">Score drawer open</button><button data-v="off" aria-pressed="true">Closed</button></span>
  <span class="mute sm">Sample values only — not data from any source</span></div>
 <div class="shell"><nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a aria-current="page" href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Account</h6><a href="#">Profile &amp; Access</a></nav>
 <main>
@@ -296,7 +296,7 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 <li><b>Stage presence</b> is a state, not a total: Live and Paper are active now, Canary and Sandbox ended and are shown muted so the history is still readable.</li>
 <li><b>Domain, window, partition.</b> Real-funded and simulated paths are separate choices; there is no combined view. The partition chip says money is USDT real-funded only.</li>
 <li><b>Requested vs effective window.</b> The user asked for 30D but only 10 days of actual money exist, so the card says "requested 30D, effective 10D" instead of quietly stretching it.</li>
-<li><b>QBTS card.</b> Every score is policy pending in real data today, so "Pending" is the first state, not an error. No band or number. "Explain" opens the drawer, where the future layout is a clearly labelled variant.</li>
+<li><b>QBTS card.</b> Every score is policy pending in real data today, so "Pending" is the first state, not an error. No band or number. "Explain" opens the drawer (closed by default — Bobby, 2026-10-17), where the future layout is a clearly labelled variant.</li>
 <li><b>Regime Fit card</b> is a sibling of the score, not a child. Insufficient data and unbound are real states with their own chips; neither blocks the economics.</li>
 <li><b>Tabs</b> follow the guide: Performance, Deployments, Research Evidence, Regime Fit, Orders &amp; Fills, Activity &amp; Decisions. Tab is kept in the URL (?tab=). Deployments and Orders &amp; Fills link to the existing detail screens, which are unchanged.</li>
 <li><b>Three path facets, never merged.</b> Actual economic path, forward simulated (Paper, Sandbox) and Research OOS are switchable facets with their own captions. No simulated line is ever drawn on or converted into actual equity. The equity chart needs a manager time-series endpoint (FE-013).</li>
@@ -309,4 +309,4 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 </ol></aside>
 </main></div><script src="kit.js"></script>
 <script>(function(){document.querySelectorAll('[data-tg]').forEach(function(g){g.addEventListener('click',function(e){var a=e.target.closest('[data-t]');if(!a||!g.contains(a))return;e.preventDefault();var k=g.getAttribute('data-tg');g.querySelectorAll('[data-t]').forEach(function(x){var on=x===a;x.setAttribute(x.tagName==='A'?'aria-selected':'aria-pressed',on?'true':'false')});document.querySelectorAll('[data-pg="'+k+'"]').forEach(function(p){p.hidden=p.getAttribute('data-p')!==a.getAttribute('data-t')})})});
-document.querySelectorAll('[data-goto]').forEach(function(l){l.addEventListener('click',function(e){e.preventDefault();var t=document.querySelector('.tabs [data-t="rf"]');if(t)t.click()})})})();</script></body></html>
+document.querySelectorAll('[data-goto]').forEach(function(l){l.addEventListener('click',function(e){e.preventDefault();var t=document.querySelector('.tabs [data-t="rf"]');if(t)t.click()})})})();</script><script>document.querySelectorAll('a[href="#score-drawer"]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();var b=document.querySelector('[data-ctl="peek"] button[data-v="on"]');if(b)b.click();var d=document.getElementById('score-drawer');if(d&&d.scrollIntoView)d.scrollIntoView({block:'nearest'})})})</script></body></html>

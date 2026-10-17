@@ -17,9 +17,9 @@ Tài liệu đi kèm: [UXM-01 IA + metric dictionary](UXM-01-ia-and-metric-dicti
 
 | # | Câu hỏi | Màn | Khuyến nghị | Owner |
 | --- | --- | --- | --- | --- |
-| D1 | Score drawer mở sẵn hay mở khi cần | M05 | Mở khi cần (bấm "Explain"), ghim cạnh tab khi đang mở; sạch hơn, hợp web user | Bobby |
-| D2 | Canary→Live là một miền "Real-funded" hay bốn miền stage | M05 | Một miền "Real-funded" + breakdown theo stage (guide §9.1: cùng account/sleeve/config thì liên tục) | Bobby |
-| D3 | Researcher có được lưu trữ alpha của mình (cần manager duyệt) | M09, M10 | Có, nhưng tái kích hoạt chỉ manager | Bobby |
+| D1 | Score drawer mở sẵn hay mở khi cần | M05 | **ĐÃ CHỐT (Bobby 2026-10-17): mở khi cần** (bấm "Explain"), ghim cạnh tab khi đang mở | Bobby |
+| D2 | Canary→Live là một miền "Real-funded" hay bốn miền stage | M05 | **ĐÃ CHỐT (Bobby 2026-10-17):** một miền "Real-funded" + breakdown theo stage (guide §9.1: cùng account/sleeve/config thì liên tục) | Bobby |
+| D3 | Researcher có được lưu trữ alpha của mình (cần manager duyệt) | M09, M10 | **ĐÃ CHỐT (Bobby 2026-10-17): có; tái kích hoạt chỉ manager** | Bobby |
 | D4 | Physical binding ở Account 360: đổi view hay route riêng | M06 | Đổi view cùng route (`view=physical`), deep-link được | Claude (nháp) |
 | D5 | Rail hành động ở Portfolio 360 mở sẵn hay mở bằng nút Actions | M04 | Đóng sẵn, mở bằng Actions | Claude (nháp) |
 | D6 | Khối Initial/Added theo funding source: giữ disclosure "Not available" hay bỏ đến khi có attribution | M01, M04 | Giữ disclosure; bỏ nếu UXM-06 thấy gây nhiễu | Bobby |
@@ -28,3 +28,5 @@ Tài liệu đi kèm: [UXM-01 IA + metric dictionary](UXM-01-ia-and-metric-dicti
 | G1 | Preview có được backend giữ không (hàng "Preview only") | M09 | Codex trả lời; không thì bỏ hàng preview, chỉ ở drawer | Codex (FE-020) |
 | G2 | Nguồn audit đã qualified chưa | M09 | Codex trả lời (FE-021) | Codex |
 | G3 | Cách tính return paper sau archive; nguồn `w_i` ở cấp alpha; cửa sổ actual bắt đầu từ Canary hay Live | M05, M08 | Hỏi Codex/Research; hiện "Not available" | Codex (FE-022) |
+
+Bản xem riêng tư (Artifact, không phải nguồn chính; nguồn là các file trong repo): https://claude.ai/artifact/X7Aqzz9rEA4Q51C7ifnKAQ
