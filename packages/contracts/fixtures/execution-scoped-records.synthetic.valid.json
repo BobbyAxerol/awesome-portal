@@ -150,6 +150,109 @@
           }
         ]
       }
+    },
+    {
+      "type": "ServiceHeartbeatsPage",
+      "value": {
+        "schema_version": "portal.execution.retained-service-heartbeats.v1",
+        "workspace_id": "workspace_TEST_ONLY",
+        "read_scope": "TECHNICAL_AUTHORIZED",
+        "read_at_ms": 1790812800000,
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "record_basis": "PORTAL_RETAINED_OBSERVATION",
+        "capture_state": "OBSERVATIONS",
+        "availability": "AVAILABLE",
+        "captured_source_freshness": "STALE",
+        "captured_source_completeness": "PARTIAL",
+        "source_as_of_ms": null,
+        "source_as_of_reason_code": "SOURCE_CLOCK_NOT_PUBLISHED",
+        "snapshot_received_at_ms": 1790812790000,
+        "revision": "por1_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bounds": {
+          "maximum_captured_rows": 2000,
+          "maximum_response_bytes": 1048576
+        },
+        "page": {
+          "limit": 100,
+          "maximum_page_rows": 200,
+          "returned_count": 1,
+          "next_cursor": null
+        },
+        "records": [
+          {
+            "record_id": "por1_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "component": "SERVICE_HEARTBEAT",
+            "source_last_seen_at_ms": 1790812780000,
+            "source_last_seen_reason_code": null,
+            "source_status": null,
+            "health": null,
+            "status_reason_code": "SOURCE_STATUS_SEMANTICS_NOT_PUBLISHED"
+          }
+        ]
+      }
+    },
+    {
+      "type": "ServiceHeartbeatsPage",
+      "value": {
+        "schema_version": "portal.execution.retained-service-heartbeats.v1",
+        "workspace_id": "workspace_TEST_ONLY",
+        "read_scope": "TECHNICAL_AUTHORIZED",
+        "read_at_ms": 1790812800000,
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "record_basis": "PORTAL_RETAINED_OBSERVATION",
+        "capture_state": "EMPTY_COMPLETE",
+        "availability": "AVAILABLE",
+        "captured_source_freshness": "STALE",
+        "captured_source_completeness": "COMPLETE",
+        "source_as_of_ms": null,
+        "source_as_of_reason_code": "SOURCE_CLOCK_NOT_PUBLISHED",
+        "snapshot_received_at_ms": 1790812790000,
+        "revision": "por1_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bounds": {
+          "maximum_captured_rows": 2000,
+          "maximum_response_bytes": 1048576
+        },
+        "page": {
+          "limit": 100,
+          "maximum_page_rows": 200,
+          "returned_count": 0,
+          "next_cursor": null
+        },
+        "records": []
+      }
+    },
+    {
+      "type": "ServiceHeartbeatsPage",
+      "value": {
+        "schema_version": "portal.execution.retained-service-heartbeats.v1",
+        "workspace_id": "workspace_TEST_ONLY",
+        "read_scope": "TECHNICAL_AUTHORIZED",
+        "read_at_ms": 1790812800000,
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "record_basis": "PORTAL_RETAINED_OBSERVATION",
+        "capture_state": "SNAPSHOT_NOT_CAPTURED",
+        "availability": "UNAVAILABLE",
+        "captured_source_freshness": null,
+        "captured_source_completeness": null,
+        "source_as_of_ms": null,
+        "source_as_of_reason_code": "SOURCE_CLOCK_NOT_PUBLISHED",
+        "snapshot_received_at_ms": null,
+        "revision": "por1_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bounds": {
+          "maximum_captured_rows": 2000,
+          "maximum_response_bytes": 1048576
+        },
+        "page": {
+          "limit": 100,
+          "maximum_page_rows": 200,
+          "returned_count": 0,
+          "next_cursor": null
+        },
+        "records": []
+      }
     }
   ]
 }

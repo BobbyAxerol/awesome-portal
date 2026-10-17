@@ -566,3 +566,13 @@ Collector/PK code is APPLIED/UNCOMMITTED;15 actual-PG synthetic-source cases
 NOT_RUN until grouped gate. All29 V2 null purposes remain uncommissioned.
 This catalogue can add calls if later deployed into an enabled worker; no such
 deployment occurred. Existing legacy retained disclosure is not called private.
+
+### Current04 named technical read —2026-10-17, after PATH609d11dd
+
+[Heartbeat public reader, exact contract and future consumer handoff](heartbeat-public-reader.md)
+is APPLIED/UNCOMMITTED, validation PENDING. This closes neither all04-009
+aliases nor actual source/grant installation. Existing capture/private ROOT
+code already landed in earlier grouped commits; preceding uncommitted entry
+is historical. All29 generic V2 null purposes remain unchanged: this adds a
+separate named maintenance.read operation, not a blanket technical bypass.
+Claude04-010 remains NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW.

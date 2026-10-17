@@ -57,6 +57,8 @@ import { ExecutionRuntimeManifestController } from "./execution/runtime-manifest
 import { ExecutionRuntimeManifestService } from "./execution/runtime-manifest.service";
 import { ExecutionScopedRuntimeManifestController } from "./execution/scoped-runtime-manifest.controller";
 import { ExecutionScopedRuntimeManifestService } from "./execution/scoped-runtime-manifest.service";
+import { ExecutionServiceHeartbeatsController } from "./execution/service-heartbeats.controller";
+import { ExecutionServiceHeartbeatsService } from "./execution/service-heartbeats.service";
 import { ExecutionContractAuthorityController } from "./execution/contract-authority.controller";
 import { ExecutionContractAuthorityService } from "./execution/contract-authority.service";
 import { MaximumDataOperationController } from "./execution/maximum-data-operation.controller";
@@ -268,6 +270,7 @@ export class AppModule {
         MarketContextController,
         ExecutionRuntimeManifestController,
         ExecutionScopedRuntimeManifestController,
+        ExecutionServiceHeartbeatsController,
         ExecutionContractAuthorityController,
         MaximumDataOperationController,
         ExecutionProfileHistoryController,
@@ -503,6 +506,7 @@ export class AppModule {
         MarketContextService,
         ExecutionRuntimeManifestService,
         ExecutionScopedRuntimeManifestService,
+        ExecutionServiceHeartbeatsService,
         ExecutionContractAuthorityService,
         MaximumDataContinuationRepository,
         MaximumDataOperationService,

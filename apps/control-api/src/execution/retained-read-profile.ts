@@ -26,6 +26,7 @@ export function coreExecutionRead(path: string): boolean {
   // Additive scoped technical reader keeps Core authority; V1 retains the
   // historical source-workspace compatibility behavior below.
   if (path === "/api/v1/execution/runtime-manifest/v2") return true;
+  if (path === "/api/v1/execution/technical/service-heartbeats") return true;
   // Existing Core-owned gate envelopes keep the caller's workflow workspace;
   // they are not Manager deployment reads from the retained source workspace.
   if (/^\/api\/v1\/execution\/deployments\/[^/]+\/(?:canary|live)$/.test(path)) return true;

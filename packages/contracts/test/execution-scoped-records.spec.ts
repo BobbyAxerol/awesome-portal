@@ -4,6 +4,7 @@ import {describe,expect,it} from 'vitest';
 import {scopedAdapterFieldsSchema,scopedAdapterResponseSchema} from '../../../apps/control-api/src/execution-v2/profile-adapter.contract';
 import {scopedSubjectActivitySchema} from '../../../apps/control-api/src/execution-v2/subject-activity.contract';
 import {executionScopedRuntimeManifestSchema,technicalDiagnosticsSchema,technicalHealthSchema} from '../../../apps/control-api/src/execution-v2/technical-read.contract';
+import {serviceHeartbeatsPageSchema} from '../../../apps/control-api/src/execution-v2/service-heartbeats.contract';
 const spec=JSON.parse(readFileSync(new URL('../openapi/execution-scoped-records.openapi.json',import.meta.url),'utf8'));
 const fixtures=JSON.parse(readFileSync(new URL('../fixtures/execution-scoped-records.synthetic.valid.json',import.meta.url),'utf8'));
 const ajv=new Ajv2020({strict:false,allErrors:true});ajv.addSchema(spec,'scoped');
@@ -13,7 +14,7 @@ describe('ELP2-04 closed scoped record DTOs',()=>{
     expect(fixtures.lane).toBe('TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT');
     expect(validators[type](value),ajv.errorsText(validators[type].errors)).toBe(true);
     const runtime={ScopedAdapterResponse:scopedAdapterResponseSchema,ScopedSubjectRecordsResponse:scopedSubjectActivitySchema,
-      TechnicalHealth:technicalHealthSchema,TechnicalDiagnostics:technicalDiagnosticsSchema,ExecutionScopedRuntimeManifestV2:executionScopedRuntimeManifestSchema};
+      TechnicalHealth:technicalHealthSchema,TechnicalDiagnostics:technicalDiagnosticsSchema,ExecutionScopedRuntimeManifestV2:executionScopedRuntimeManifestSchema,ServiceHeartbeatsPage:serviceHeartbeatsPageSchema};
     expect(runtime[type].safeParse(value).success).toBe(true);
   });
   it.each(['credentials','source_cursor','global_count','global_nav','custody_balance','unknown'])('rejects unpublished/technical field %s',key=>{

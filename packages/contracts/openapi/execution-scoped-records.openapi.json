@@ -460,6 +460,94 @@
           }
         }
       }
+    },
+    "/api/v1/execution/technical/service-heartbeats": {
+      "get": {
+        "operationId": "executionRetainedServiceHeartbeatsPageV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^[A-Za-z0-9._-]+$(?![\\s\\S])"
+            }
+          }
+        ],
+        "description": "V2 alternative selected by durable server policy only. Existing legacy compatibility DTO is unchanged. No caller-provided scope, raw relation selector, credentials or global metadata. This document publishes scoped consumers; not a browser opt-in. HTTP private,no-store.",
+        "responses": {
+          "200": {
+            "description": "Scoped response on V2 authority",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceHeartbeatsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "401": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "403": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "404": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "409": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          },
+          "503": {
+            "description": "Typed safe refusal; never a legacy/upstream fallback."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1538,6 +1626,272 @@
           "durable_mirror"
         ],
         "description": "Finite local observations, not source qualification or command readiness. Core workspace authority and configured storage access are checked independently. Runtime validates matching ordered profile/environment pairs (paper, sandbox, live), nullable lag correlation and no future timestamps. health OBSERVED means snapshot clock observed only; state NOT_PUBLISHED also covers a missing persisted refresh-health row."
+      },
+      "ServiceHeartbeatObservation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "pattern": "^por1_[0-9a-f]{64}$(?![\\s\\S])"
+          },
+          "component": {
+            "const": "SERVICE_HEARTBEAT"
+          },
+          "source_last_seen_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_last_seen_reason_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "SOURCE_CLOCK_NOT_PUBLISHED",
+                  "SOURCE_CLOCK_INVALID",
+                  "SOURCE_CLOCK_AHEAD_OF_READ"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_status": {
+            "type": "null"
+          },
+          "health": {
+            "type": "null"
+          },
+          "status_reason_code": {
+            "const": "SOURCE_STATUS_SEMANTICS_NOT_PUBLISHED"
+          }
+        },
+        "required": [
+          "record_id",
+          "component",
+          "source_last_seen_at_ms",
+          "source_last_seen_reason_code",
+          "source_status",
+          "health",
+          "status_reason_code"
+        ],
+        "description": "Finite retained observation. Raw private service key, status text, instance identity and topology are withheld. A null source clock always has one typed reason; source status and health remain null until source semantics are reviewed."
+      },
+      "ServiceHeartbeatsPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.retained-service-heartbeats.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "read_scope": {
+            "const": "TECHNICAL_AUTHORIZED"
+          },
+          "read_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "record_basis": {
+            "const": "PORTAL_RETAINED_OBSERVATION"
+          },
+          "capture_state": {
+            "enum": [
+              "SNAPSHOT_NOT_CAPTURED",
+              "RELATION_NOT_CAPTURED",
+              "RELATION_UNAVAILABLE",
+              "EMPTY_COMPLETE",
+              "EMPTY_INCOMPLETE",
+              "OBSERVATIONS"
+            ]
+          },
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "UNAVAILABLE"
+            ]
+          },
+          "captured_source_freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "FRESH",
+                  "AGING",
+                  "STALE",
+                  "UNKNOWN"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "captured_source_completeness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "COMPLETE",
+                  "PARTIAL",
+                  "UNKNOWN"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_as_of_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_as_of_reason_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "SOURCE_CLOCK_NOT_PUBLISHED",
+                  "SOURCE_CLOCK_INVALID",
+                  "SOURCE_CLOCK_AHEAD_OF_READ"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snapshot_received_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision": {
+            "type": "string",
+            "pattern": "^por1_[0-9a-f]{64}$(?![\\s\\S])"
+          },
+          "bounds": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "maximum_captured_rows": {
+                "const": 2000
+              },
+              "maximum_response_bytes": {
+                "const": 1048576
+              }
+            },
+            "required": [
+              "maximum_captured_rows",
+              "maximum_response_bytes"
+            ]
+          },
+          "page": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 200
+              },
+              "maximum_page_rows": {
+                "const": 200
+              },
+              "returned_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200
+              },
+              "next_cursor": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "pattern": "^[A-Za-z0-9._-]+$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "limit",
+              "maximum_page_rows",
+              "returned_count",
+              "next_cursor"
+            ]
+          },
+          "records": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "$ref": "#/components/schemas/ServiceHeartbeatObservation"
+            }
+          }
+        },
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "read_scope",
+          "read_at_ms",
+          "environment",
+          "profile_id",
+          "record_basis",
+          "capture_state",
+          "availability",
+          "captured_source_freshness",
+          "captured_source_completeness",
+          "source_as_of_ms",
+          "source_as_of_reason_code",
+          "snapshot_received_at_ms",
+          "revision",
+          "bounds",
+          "page",
+          "records"
+        ],
+        "description": "Explicit current maintenance ROOT authorization for this exact retained technical dataset, not a business or ADMIN fallback. Core workspace and retained storage access are independent. Captured source flags do not assert present health; receive time is whole-profile only. Runtime validates capture-state/availability/clock/page/count/order correlations. Public revision/cursors bind only authorized finite heartbeat facts and current authority, excluding hidden finance/raw-status/profile receive-only changes. Source qualification and browser acceptance are separate gates. No refresh, write, source request, recovery, stream or command is triggered."
       }
     }
   }

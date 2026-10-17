@@ -65,6 +65,43 @@ fixtures.cases.push({type:'ExecutionScopedRuntimeManifestV2',value:{
     environment:'paper',profile_id:'profile_TEST_ONLY',component:'LOCAL_PROJECTION',state:'NOT_PUBLISHED',health:'NOT_PUBLISHED',lag_ms:null,last_error_code:null}]},
   durable_mirror:[fixtures.cases.find(item=>item.type==='TechnicalHealth').value],
 }});
+const heartbeatClockReason=nullable({enum:['SOURCE_CLOCK_NOT_PUBLISHED','SOURCE_CLOCK_INVALID','SOURCE_CLOCK_AHEAD_OF_READ']});
+const heartbeatReference={type:'string',pattern:'^por1_[0-9a-f]{64}$(?![\\s\\S])'};
+document.components.schemas.ServiceHeartbeatObservation=obj({record_id:heartbeatReference,component:{const:'SERVICE_HEARTBEAT'},
+  source_last_seen_at_ms:nullable(count),source_last_seen_reason_code:heartbeatClockReason,
+  source_status:{type:'null'},health:{type:'null'},status_reason_code:{const:'SOURCE_STATUS_SEMANTICS_NOT_PUBLISHED'}});
+document.components.schemas.ServiceHeartbeatObservation.description='Finite retained observation. Raw private service key, status text, instance identity and topology are withheld. A null source clock always has one typed reason; source status and health remain null until source semantics are reviewed.';
+document.components.schemas.ServiceHeartbeatsPage=obj({schema_version:{const:'portal.execution.retained-service-heartbeats.v1'},
+  workspace_id:text,read_scope:{const:'TECHNICAL_AUTHORIZED'},read_at_ms:count,...technicalProfile,
+  record_basis:{const:'PORTAL_RETAINED_OBSERVATION'},
+  capture_state:{enum:['SNAPSHOT_NOT_CAPTURED','RELATION_NOT_CAPTURED','RELATION_UNAVAILABLE','EMPTY_COMPLETE','EMPTY_INCOMPLETE','OBSERVATIONS']},
+  availability:{enum:['AVAILABLE','UNAVAILABLE']},captured_source_freshness:nullable({enum:['FRESH','AGING','STALE','UNKNOWN']}),
+  captured_source_completeness:nullable({enum:['COMPLETE','PARTIAL','UNKNOWN']}),
+  source_as_of_ms:nullable(count),source_as_of_reason_code:heartbeatClockReason,snapshot_received_at_ms:nullable(count),revision:heartbeatReference,
+  bounds:obj({maximum_captured_rows:{const:2000},maximum_response_bytes:{const:1048576}}),
+  page:obj({limit:{type:'integer',minimum:1,maximum:200},maximum_page_rows:{const:200},returned_count:{type:'integer',minimum:0,maximum:200},next_cursor:cursor}),
+  records:{type:'array',maxItems:200,items:ref('ServiceHeartbeatObservation')},
+});
+document.components.schemas.ServiceHeartbeatsPage.description='Explicit current maintenance ROOT authorization for this exact retained technical dataset, not a business or ADMIN fallback. Core workspace and retained storage access are independent. Captured source flags do not assert present health; receive time is whole-profile only. Runtime validates capture-state/availability/clock/page/count/order correlations. Public revision/cursors bind only authorized finite heartbeat facts and current authority, excluding hidden finance/raw-status/profile receive-only changes. Source qualification and browser acceptance are separate gates. No refresh, write, source request, recovery, stream or command is triggered.';
+document.paths['/api/v1/execution/technical/service-heartbeats']={get:op('executionRetainedServiceHeartbeatsPageV1','ServiceHeartbeatsPage',[
+  {...param('environment',{enum:['paper','sandbox','live']}),required:true},param('workspace_id',{...text,maxLength:96}),
+  param('limit',{type:'integer',minimum:1,maximum:200,default:100}),param('after',{type:'string',minLength:1,maxLength:4096,pattern:'^[A-Za-z0-9._-]+$(?![\\s\\S])'}),
+])};
+const heartbeatFixture={schema_version:'portal.execution.retained-service-heartbeats.v1',workspace_id:'workspace_TEST_ONLY',
+  read_scope:'TECHNICAL_AUTHORIZED',read_at_ms:1790812800000,environment:'paper',profile_id:'profile_TEST_ONLY',
+  record_basis:'PORTAL_RETAINED_OBSERVATION',capture_state:'OBSERVATIONS',availability:'AVAILABLE',
+  captured_source_freshness:'STALE',captured_source_completeness:'PARTIAL',source_as_of_ms:null,
+  source_as_of_reason_code:'SOURCE_CLOCK_NOT_PUBLISHED',snapshot_received_at_ms:1790812790000,revision:'por1_'+'a'.repeat(64),
+  bounds:{maximum_captured_rows:2000,maximum_response_bytes:1048576},
+  page:{limit:100,maximum_page_rows:200,returned_count:1,next_cursor:null},
+  records:[{record_id:'por1_'+'b'.repeat(64),component:'SERVICE_HEARTBEAT',source_last_seen_at_ms:1790812780000,
+    source_last_seen_reason_code:null,source_status:null,health:null,status_reason_code:'SOURCE_STATUS_SEMANTICS_NOT_PUBLISHED'}]};
+fixtures.cases.push({type:'ServiceHeartbeatsPage',value:heartbeatFixture},
+  {type:'ServiceHeartbeatsPage',value:{...heartbeatFixture,capture_state:'EMPTY_COMPLETE',captured_source_completeness:'COMPLETE',
+    page:{...heartbeatFixture.page,returned_count:0},records:[]}},
+  {type:'ServiceHeartbeatsPage',value:{...heartbeatFixture,capture_state:'SNAPSHOT_NOT_CAPTURED',availability:'UNAVAILABLE',
+    captured_source_freshness:null,captured_source_completeness:null,snapshot_received_at_ms:null,
+    page:{...heartbeatFixture.page,returned_count:0},records:[]}});
 for(const [file,data] of Object.entries({'openapi/execution-scoped-records.openapi.json':document,'fixtures/execution-scoped-records.synthetic.valid.json':fixtures})){
   const path=resolve(root,file),bytes=JSON.stringify(data,null,2)+'\n';
   if(process.argv.includes('--check')){if(readFileSync(path,'utf8')!==bytes)throw new Error(`Generated drift: ${file}`);}

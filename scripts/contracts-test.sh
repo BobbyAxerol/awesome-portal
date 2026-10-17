@@ -108,6 +108,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/profile-adapter.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/subject-activity.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/technical-read.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/service-heartbeats.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/retained-context.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/read-publication.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication.contract.ts" \

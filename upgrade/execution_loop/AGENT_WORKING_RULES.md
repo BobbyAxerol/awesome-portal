@@ -265,6 +265,28 @@ chỉ vì đã viết file. Backend chủ động yêu cầu FE nối field mớ
   absence có thể hoàn thiện contract handling nhưng không đóng missing source.
   Mandatory request chưa đạt done-when thì gate liên quan chưa COMPLETE.
 
+**Recurring Claude review intake — Bobby,2026-10-17:**
+
+- Trước entry một gói backend, freeze contract, landing và báo cáo exit, đọc
+  lại review, consumer receipt và request liên quan mới nhất của Claude. Ghi
+  path/revision cùng source/schema mà review đã xét; dependency đổi phải có
+  impact decision, receipt hợp lệ của phần không đổi không cần chạy lại.
+- Mỗi finding ghi một disposition có lý do: `ACCEPTED_FOR_IMPLEMENTATION`,
+  `ALREADY_DELIVERED_WITH_LOCATOR`, `CHANGES_REQUESTED_WITH_REASON` hoặc
+  `NEEDS_OWNER_DECISION`. Đây là kết luận triage, không thay lifecycle phía
+  trên. Giữ ID gốc và lịch sử; không chỉ trả lời trong chat hoặc tự đóng.
+- Đưa finding được nhận vào to-do/exit matrix của **packet phase sở hữu**:
+  owner, contract/consumer bị ảnh hưởng, test/receipt, dependency và done-when.
+  Unified chỉ link record và next step, không sinh queue song song. Review
+  code backend do Claude đóng góp cũng cần Codex kiểm tra trước integration.
+- Review không tự cho quyền đổi formula/economic semantics, accepted UI/
+  baseline, production calibration, kích hoạt runtime hoặc mở phase ngoài
+  assignment. Tách đúng dependency cần duyệt; tiếp tục phần độc lập đã duyệt.
+- Trả từng fix/contract với landed commit (hoặc UNCOMMITTED + diff hash),
+  generated type/field/availability, fixture và giới hạn validation. Chỉ
+  chuyển khỏi `AWAITING_CONSUMER_REVIEW` khi có acknowledgement/receipt thật
+  của Claude; viết handoff không chứng minh đã gửi, nhận hoặc nghiệm thu.
+
 ### 7.4 Cuối mỗi phase hoặc khi dừng giữa chừng
 
 Cập nhật packet + Unified trong cùng delivery. Báo cáo Bobby phải có đủ:

@@ -1,5 +1,95 @@
 # ELP2-10 — three-gate commissioning follow-through
 
+<a id="elp210-native-read-transport-20261017"></a>
+
+## Latest continuation — private native READ transport, heartbeat fixture correction
+
+HEAD remains609d11dd67d7ecd22f363707fd1e9476c7c7aa89, no push. Heartbeat
+normal hook actually ended760contracts/APIbuildPASS,API5,537PASS/1FAIL/
+3existing skips; restore NOT_RUN. The workspace-negative fixture changed its
+UUID on each source read, correctly causing409. Stable wrong-workspace
+fixture correction preserves production fences; retest still pending. Exact
+[failed terminal, hash and cleanup](../ELP2-04/heartbeat-public-reader.md#actual-second-landing-terminal-2026-10-17t1511utc)
+supersedes only the older PENDING entries; eight runtimes unchanged.
+
+[Private native READ codec/TLS client](native-read-transport.md) now
+APPLIED/UNCOMMITTED, tests NOT_RUN at entry. Six exact source-pinned actions,
+strict correlation/digests, actual TLS pre-send gate, bounded framing and
+actual-close quota; no DI/config/provider/credential/source installation or
+runtime/command/Live activation. Dedicated ephemeral-loopback tests and old
+TLS-helper regression are in the next coherent affected cell, not a source
+qualification claim. Composition/Regime history remains independent unfinished
+work; no private draft is counted as an integrated writer/History API.
+
+[Recurring Claude review rule](../../AGENT_WORKING_RULES.md#73-request-và-debt-ledger-hai-chiều)
+is now explicit at entry/freeze/landing/exit. Accepted findings go to the owning
+phase's existing ledger/exit matrix. No new Claude review is asserted merely
+from this amendment. UXM NOT_STARTED_BY_OWNER_DIRECTION /
+AWAITING_CONSUMER_REVIEW; all actual commissioning/calibration/budget/
+coexistence/P184G2 and phase11 gates remain as the census below, not blanket
+external blockers or synthetic PASS.
+
+**Actual corrected terminal15:34UTC:** [native/heartbeat affected build,
+221/221 tests and scoped PG restore PASS](native-read-transport.md#corrected-affected-gate-2026-10-17t1534utc).
+This supersedes the pending focused retest above, not the failed historical
+receipts or actual source commissioning. Protected runtimes unchanged,
+owned resources/lease clean. Coherent normal-hook commit PENDING; no push.
+
+<a id="elp210-backend-return-20261017-heartbeat"></a>
+
+## Latest backend return —PATH landed; named heartbeat reader in validation
+
+HEAD `609d11dd67d7ecd22f363707fd1e9476c7c7aa89`, integration branch
+`docs/research-loop-plan`, no push. [Actual PATH terminal](../ELP2-06/path-original-restated.md#path-terminal-20261017-1432)
+PASS:720contracts,APIbuild,5,430API PASS/3existing skips, scoped PG restore;
+own resources/lease clean, eight runtime tuples unchanged. Earlier PENDING
+and failed entries below are retained history, not current PATH failures.
+
+Next approved [named technical heartbeat reader](../ELP2-04/heartbeat-public-reader.md)
+is APPLIED/UNCOMMITTED. Contract generation/295route census completed;
+new pure/runtime-schema/actual-PG HTTP tests await one coherent normal hook.
+No new collector, storage, migration, pool, source call, frontend or runtime
+activation. Exact publication and source-eligibility fences cover final
+assembly; clock reasons use the exact returned read_at_ms.
+
+| Phase | Actual remaining backend / qualification |
+|---|---|
+|00–01|Maintain impacted route/schema/source pins; runtime calibration00-005 is not a new formula choice|
+|02–03|Accepted issuer/mapping/current-grant installation and delegated field ceiling; local OwnProfile/exact resource/environment/final-clock code already exists|
+|04|Land this heartbeat gate; other finite technical/audit/parent readers and accepted source mappings.54SCREEN_BOUND aliases still include29generic null purposes (four selected collectors/25other capture-purpose dispositions); named heartbeat does not broadly open them|
+|05–06|Real accepted independent PATH method proof and economic provider installation/tie-out; dependent historical Composition/Regime recomputation and cross-profile integration remain implementation debt|
+|07–08|Family-specific public DTO/policy/result bridges, authenticated factory/held current-human through owning COMMIT; RETURN writer and assignment/rebind/lifecycle/monitor families|
+|09|Authenticated serialized source adapter/factory/listener plus connected barrier/tail/correction/floor/hidden/revoke proof; local coordinator alone is insufficient|
+|10|Real trust/current-human/Core final-egress/owning COMMIT,14 approved numeric budget groups,Score/Regime calibration and matched coexistence/applicable original P184 performanceG2|
+|11|NOT_ENTRY_READY; no merge dev/main, signed release or deploy follows|
+
+Current read-only PM wire inspection at `89293d0d2ecb075f34250dd1d516b062ca6c3275`
+confirms six native read lifecycle routes exist but are UNMOUNTED/UNINSTALLED.
+Private `20261017/native-read-wire-current.md`, SHA256
+`ce6e13254c6c8fadb7d44e2df4640859193ee219eee254c7c708effec07efd66`.
+This is source evidence for an adapter, not a live trust or transport receipt;
+do not claim the provider is absent or deployable from branch/SHA alone.
+
+Later read-only repin14:45:15UTC: PM HEAD
+`f02ebd78a61af4f61e38daa8488048f411ba2797`, clean after owner committed
+reconciliation snapshot history. All six native READ protocol hashes unchanged;
+primary confirmed UTF8 canonical Binding and provider-delivery hash helpers.
+Private witness `20261017/native-read-wire-repin-144515.md`. No runtime/endpoint
+or trust installation observed; new reconciliation-history producer needs its
+own finite consumer impact review, not immediate authority from the commit.
+
+Heartbeat first normal hook14:45UTC:760contracts PASS,APIbuild failed only
+TS2322 inferred environment; explicit validated base type corrected. API/restore
+NOT_RUN there, all protected runtimes and own cleanup verified. Corrected
+normal-hook reservation `20261017/heartbeat-land-144607` PENDING at freeze;
+preserve exact [failure and terminal tracking](../ELP2-04/heartbeat-public-reader.md#actual-first-landing-terminal-2026-10-17t1445utc).
+
+Claude UXM00–10 NOT_STARTED_BY_OWNER_DIRECTION. All published handoffs are
+AWAITING_CONSUMER_REVIEW; the heartbeat contract is ready for assignment only
+after backend validation. No new decision required for this local reader.
+Continue independent backend work; code/source/config/acceptance gates stay
+separate, and correctness fixtures never stand in for commissioning.
+
 <a id="elp210-backend-return-20261017-path"></a>
 
 ## Current return — History landed; PATH custody validation next

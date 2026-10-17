@@ -11458,3 +11458,86 @@ Restore/final commit still pending; no whole-phase/source/browser PASS.
 One coherent normal-hook landing is reserved as `20261017/path-land-140613`,
 PENDING at freeze; exact terminal result/full SHA lives in its controller/log.
 No additional unaffected focus/engine/browser run or hook bypass.
+
+<a id="elp2-backend-heartbeat-20261017"></a>
+
+**Latest backend return —PATH terminal and named technical read:** PATH landed
+`609d11dd67d7ecd22f363707fd1e9476c7c7aa89`,13owned paths +811/−33.
+[Normal-hook terminal](execution_loop/evidence/ELP2-06/path-original-restated.md#path-terminal-20261017-1432)
+720contracts,APIbuild,5,430API PASS/3existing skips, scoped PG restore PASS;
+eight protected runtimes unchanged, owned resources/lease clean. Supersedes
+only the PATH pending entry above, retaining failures and source limits.
+
+[Named retained heartbeat reader and exact future Claude handoff](execution_loop/evidence/ELP2-04/heartbeat-public-reader.md)
+APPLIED/UNCOMMITTED; generated `ServiceHeartbeatsPage` and operation
+`executionRetainedServiceHeartbeatsPageV1` are additive. Three synthetic cases,
+strict runtime schema and actual-PG mounted HTTP regressions await one normal
+hook. No new storage/migration/source send/frontend; generic null-purpose
+aliases unchanged. Canonical04-009 remains OPEN for other aliases/source proof,
+04-010 remains NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW.
+
+[Latest phase-by-phase gaps and next backend work](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-backend-return-20261017-heartbeat)
+remain actual reader/history/family/realtime implementation, real trust and
+provider commissioning,14numeric budgets, calibration/coexistence/P184G2.
+ELP2-11 NOT_ENTRY_READY. Claude frontend has not begun; producer delivery is
+not consumer acceptance. No push/dev/main/sign/release/deploy authorized here.
+
+**Heartbeat validation correction:**760contracts PASS; first APIbuild stopped
+at TS2322 projector environment inference. Explicit base type corrected without
+runtime/authority change; API/restore NOT_RUN on that attempt, resources clean,
+eight runtimes unchanged. Corrected `heartbeat-land-144607` normal hook remains
+PENDING at freeze; [actual failure/log/terminal tracking](execution_loop/evidence/ELP2-04/heartbeat-public-reader.md#actual-first-landing-terminal-2026-10-17t1445utc).
+No new unchanged engine/browser/load/DR campaign. PM repin14:45UTC moved to
+`f02ebd78a61af4f61e38daa8488048f411ba2797` with unchanged native-wire bytes;
+source-only compatibility is not installation or runtime acceptance.
+
+<a id="elp2-claude-review-intake-20261017"></a>
+
+**Bobby workflow addendum,2026-10-17 — recurring Claude review intake:**
+[Campaign rules §7.3](execution_loop/AGENT_WORKING_RULES.md#73-request-và-debt-ledger-hai-chiều)
+now require reading the latest relevant Claude review/request/consumer receipt
+at backend entry, contract freeze, landing and exit. Record the reviewed
+revision and triage disposition; accepted changes enter the owning phase's
+existing requirement/to-do/exit matrix with owner, tests and done-when. Keep
+canonical IDs and link here, not another copied queue. Claude-authored backend
+code also needs independent integration review. A response in chat or a
+handoff file alone does not close the request or prove consumer acceptance.
+
+This is a coordination rule, not a new phase/activation approval. Existing
+04-009/010,06-002 and10 commissioning records retain their current owners and
+open gates. Execution frontend UXM00–10 remains
+NOT_STARTED_BY_OWNER_DIRECTION / AWAITING_CONSUMER_REVIEW until assigned;
+this addendum does not claim a new Claude receipt was received. Documentation
+validation is diff/links; no separate full rebuild/engine/browser/load/DR run
+just for this rule. Land with the next coherent backend batch through normal
+hooks; no hook bypass, push, merge dev/main, release or runtime activation.
+
+**Heartbeat actual terminal15:11UTC:** the normal hook ended contracts760PASS,
+APIbuildPASS,API5,537PASS/1FAIL/3existing skips; scoped restore NOT_RUN,
+no commit. The synthetic workspace-negative fixture changed UUID on every
+publication read, correctly triggering409 rather than its intended stable
+unqualified-publication503. Fixture stabilized only; production scope semantics
+unchanged. [Failure/hash/cleanup and retest status](execution_loop/evidence/ELP2-04/heartbeat-public-reader.md#actual-second-landing-terminal-2026-10-17t1511utc).
+Retest/landing PENDING; all eight protected runtimes unchanged and exact-owned
+resources/lease clean. Do not carry the earlier PENDING gate forward as PASS.
+
+**Approved backend continuation —private native business READ transport:**
+[10 source pins, implementation, tests and explicit commissioning limits](execution_loop/evidence/ELP2-10/native-read-transport.md)
+are APPLIED/UNCOMMITTED; new codec/client tests and extracted old TLS-helper
+regression NOT_RUN at entry. No public contract/route/DI/config, source
+listener/credential/signing provider, durable attempt/held authority or runtime
+activation is supplied. Reuse immutable Base, never infer cancellation from
+EOF/status/TTL or use a reverse-human lease issuer as a free JWT factory.
+One affected correctness cell before grouped normal-hook landing; no unrelated
+engine/browser/load/DR campaign. Shared recurring Claude review intake above
+applies; no frontend changes or acknowledgement are inferred.10 remains open,
+11NOT_ENTRY_READY; no push/dev/main/sign/release/deploy.
+
+**Actual affected terminal15:34UTC:** [221/221 across six suites,
+APIbuild and scoped PG restore PASS](execution_loop/evidence/ELP2-10/native-read-transport.md#corrected-affected-gate-2026-10-17t1534utc).
+This includes the corrected heartbeat39/39 mounted +69/69 projector cases,
+private native codec36/36 and actual-loopback TLS44/44, old TLS17/17 and
+auth16/16. Normal-hook coherent landing remains PENDING. No protected runtime
+change or owned resource leak; failed attempts retained. It is not source
+provider installation/commissioning, numeric calibration/budget, coexistence,
+P184G2 or Claude acceptance. No frontend changes or push.

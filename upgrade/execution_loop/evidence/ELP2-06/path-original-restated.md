@@ -141,3 +141,29 @@ above20% free; C4 `NO_ACTION_NEEDED`, no prune. Existing4CPU/4GiB/8GiB bounded
 test budget unchanged. After this gate, continue real backend debt rather than
 calling ELP2-06/10 or the campaign complete; genuine source, calibration,
 coexistence and consumer gates remain open as listed above.
+
+<a id="path-terminal-20261017-1432"></a>
+
+## Actual normal-hook terminal —2026-10-17T14:32UTC
+
+Controller `20261017/path-land-140613` finished14:32:36UTC, exit0,
+commit `609d11dd67d7ecd22f363707fd1e9476c7c7aa89`. This supersedes the
+pending landing entry above, not the preserved failed focus or external gates.
+Normal hook:720contracts/64files PASS; Control API build PASS;
+5,430API PASS/3existing SKIP,362files; actual scoped PostgreSQL dump/restore
+and four access-row digest comparisons PASS. New PATH42/42 and complete
+restatement37/37 are included; no separate unchanged retake is needed.
+
+Controller SHA256 `aab856ff098eab1e361cf357398559660dc6eccce34dae5a7cee72c34b42019c`;
+log SHA256 `7721d493f0752bfd404bf9aa0e0d6b8f559523e40f2f2ddad96fb9da9cf8ec6f`.
+Exact private controller/log directory is
+`/home/bobby/.local/state/portal-execution-elp210/20261017/path-land-140613`.
+Thirteen owned paths +811/−33; implementation5paths +132/−20, tests2paths
++420/−9, docs6paths +259/−4. No public schema/frontend/runtime change.
+
+Source/index freeze and all eight protected runtime image/start/restart tuples
+unchanged. Owned containers/network absent, remaining_owned_resources=[],
+lease released. Post-gate capacity156GiB free/75% used,10,680MiB RAM available,
+no swap; C4 NO_ACTION_NEEDED. No prune or foreign resource cleanup occurred.
+This closes local PATH custody correctness, not accepted real source proof,
+Composition/Regime historical recomputation, commissioning or full06/10/11.

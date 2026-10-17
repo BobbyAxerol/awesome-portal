@@ -2,8 +2,7 @@
  * Candidate DB operations alone are mocked. This is NOT installed authority,
  * real human/source crypto, PM COMMIT proof, capacity or commissioning evidence.
  * TEST_ONLY private keys are ephemeral process memory, never fixture files. */
-import { createHash, createPublicKey, generateKeyPairSync, randomBytes, sign, X509Certificate,
-  type KeyObject, type KeyPairKeyObjectResult } from "node:crypto";
+import { createHash, generateKeyPairSync, X509Certificate } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import { createServer, request, type Server } from "node:https";
 import type { Socket } from "node:net";
@@ -13,6 +12,7 @@ import { CurrentHumanCandidate } from "../src/execution-v2/current-human-candida
 import type { CurrentHumanRecoveryAttempt } from "../src/execution-v2/current-human-mutations";
 import { CurrentHumanRecoveryClient } from "../src/execution-v2/current-human-recovery-client";
 import { createCurrentHumanTransport } from "../src/execution-v2/current-human-transport";
+import { commonName, testCertificate, type TestAuthority } from "./fixtures/elp210-test-certificates";
 
 type Certificate = { key: Buffer; cert: Buffer; ca: Buffer; fingerprint: string };
 type Reply = { status: number; body: string };
@@ -26,44 +26,6 @@ const binding: CurrentHumanRecoveryAttempt = { lease_id: "TEST_ONLY-lease", atte
   session_id: "TEST_ONLY-session", session_revision: 2, authority_revision: 3, expires_at: 1 };
 const recoveryAck = { schema_version: "pma.current-human-recover-ack.v1", lease_id: binding.lease_id,
   attempt_id: binding.attempt_id, phase: "ROLLED_BACK", portal_acknowledged: true };
-
-/** Minimal TEST_ONLY RFC5280 cert writer using Node crypto. The pinned Node
- * test image intentionally has no openssl binary: do not install tools, commit
- * private PEM, or skip actual TLS tests. Node's real TLS/X509 verifier still
- * checks these freshly signed EC certificates; this is not a runtime CA tool. */
-const der = (tag: number, ...values: Buffer[]) => {
-  const bytes = Buffer.concat(values), length = bytes.length;
-  const encoded = length < 128 ? Buffer.from([length]) : (() => {
-    let hex = length.toString(16); if (hex.length % 2) hex = `0${hex}`;
-    const size = Buffer.from(hex, "hex"); return Buffer.concat([Buffer.from([0x80 | size.length]), size]);
-  })();
-  return Buffer.concat([Buffer.from([tag]), encoded, bytes]);
-};
-const seq = (...values: Buffer[]) => der(0x30, ...values);
-const oid = (hex: string) => der(0x06, Buffer.from(hex, "hex"));
-const boolean = () => der(0x01, Buffer.from([0xff]));
-const ecSha256 = seq(oid("2a8648ce3d040302"));
-const pem = (bytes: Buffer) => Buffer.from(`-----BEGIN CERTIFICATE-----\n${bytes.toString("base64").match(/.{1,64}/g)!.join("\n")}\n-----END CERTIFICATE-----\n`);
-const commonName = (name: string) => seq(der(0x31, seq(oid("550403"), der(0x0c, Buffer.from(name)))));
-type TestAuthority = { key: KeyObject; name: Buffer; certificate: Buffer };
-function testCertificate(name: Buffer, key: KeyPairKeyObjectResult, issuer: { name: Buffer; key: KeyObject }, ca: boolean) {
-  const time = (at: number) => der(0x17, Buffer.from(new Date(at).toISOString().replace(/[-:]/g, "").replace("T", "").slice(2, 14) + "Z"));
-  const extension = (id: string, value: Buffer, critical = false) => seq(oid(id), ...(critical ? [boolean()] : []), der(0x04, value));
-  const extensions = [extension("551d13", ca ? seq(boolean()) : seq(), true),
-    extension("551d0f", der(0x03, Buffer.from(ca ? [1, 6] : [7, 0x80])), true)];
-  if (!ca) extensions.push(extension("551d25", seq(oid("2b06010505070301"), oid("2b06010505070302"))),
-    extension("551d11", seq(der(0x87, Buffer.from([127, 0, 0, 1])), der(0x82, Buffer.from("localhost")))));
-  const now = Date.now();
-  const tbs = seq(der(0xa0, der(0x02, Buffer.from([2]))), der(0x02, Buffer.from([1]), randomBytes(15)), ecSha256,
-    issuer.name, seq(time(now - 60_000), time(now + 86_400_000)), name,
-    key.publicKey.export({ type: "spki", format: "der" }) as Buffer, der(0xa3, seq(...extensions)));
-  const certificate = pem(seq(tbs, ecSha256, der(0x03, Buffer.from([0]), sign("sha256", tbs, issuer.key))));
-  const parsed = new X509Certificate(certificate);
-  expect(parsed.verify(createPublicKey(issuer.key))).toBe(true);
-  expect(parsed.ca).toBe(ca);
-  if (!ca) { expect(parsed.checkIP("127.0.0.1")).toBe("127.0.0.1"); expect(parsed.checkHost("localhost")).toBe("localhost"); }
-  return certificate;
-}
 
 describe("ELP2-10 private current-human real TLS transport (TEST_ONLY candidate operations)", () => {
   let core: Certificate, source: Certificate, otherCore: Certificate,

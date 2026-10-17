@@ -106,6 +106,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/technical/service-heartbeats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description V2 alternative selected by durable server policy only. Existing legacy compatibility DTO is unchanged. No caller-provided scope, raw relation selector, credentials or global metadata. This document publishes scoped consumers; not a browser opt-in. HTTP private,no-store. */
+        get: operations["executionRetainedServiceHeartbeatsPageV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -297,6 +314,56 @@ export interface components {
             read_at_ms: number;
             local_projection: components["schemas"]["TechnicalDiagnostics"];
             durable_mirror: components["schemas"]["TechnicalHealth"][];
+        };
+        /** @description Finite retained observation. Raw private service key, status text, instance identity and topology are withheld. A null source clock always has one typed reason; source status and health remain null until source semantics are reviewed. */
+        ServiceHeartbeatObservation: {
+            record_id: string;
+            /** @constant */
+            component: "SERVICE_HEARTBEAT";
+            source_last_seen_at_ms: number | null;
+            source_last_seen_reason_code: ("SOURCE_CLOCK_NOT_PUBLISHED" | "SOURCE_CLOCK_INVALID" | "SOURCE_CLOCK_AHEAD_OF_READ") | null;
+            source_status: null;
+            health: null;
+            /** @constant */
+            status_reason_code: "SOURCE_STATUS_SEMANTICS_NOT_PUBLISHED";
+        };
+        /** @description Explicit current maintenance ROOT authorization for this exact retained technical dataset, not a business or ADMIN fallback. Core workspace and retained storage access are independent. Captured source flags do not assert present health; receive time is whole-profile only. Runtime validates capture-state/availability/clock/page/count/order correlations. Public revision/cursors bind only authorized finite heartbeat facts and current authority, excluding hidden finance/raw-status/profile receive-only changes. Source qualification and browser acceptance are separate gates. No refresh, write, source request, recovery, stream or command is triggered. */
+        ServiceHeartbeatsPage: {
+            /** @constant */
+            schema_version: "portal.execution.retained-service-heartbeats.v1";
+            workspace_id: string;
+            /** @constant */
+            read_scope: "TECHNICAL_AUTHORIZED";
+            read_at_ms: number;
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+            profile_id: string;
+            /** @constant */
+            record_basis: "PORTAL_RETAINED_OBSERVATION";
+            /** @enum {unknown} */
+            capture_state: "SNAPSHOT_NOT_CAPTURED" | "RELATION_NOT_CAPTURED" | "RELATION_UNAVAILABLE" | "EMPTY_COMPLETE" | "EMPTY_INCOMPLETE" | "OBSERVATIONS";
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "UNAVAILABLE";
+            captured_source_freshness: ("FRESH" | "AGING" | "STALE" | "UNKNOWN") | null;
+            captured_source_completeness: ("COMPLETE" | "PARTIAL" | "UNKNOWN") | null;
+            source_as_of_ms: number | null;
+            source_as_of_reason_code: ("SOURCE_CLOCK_NOT_PUBLISHED" | "SOURCE_CLOCK_INVALID" | "SOURCE_CLOCK_AHEAD_OF_READ") | null;
+            snapshot_received_at_ms: number | null;
+            revision: string;
+            bounds: {
+                /** @constant */
+                maximum_captured_rows: 2000;
+                /** @constant */
+                maximum_response_bytes: 1048576;
+            };
+            page: {
+                limit: number;
+                /** @constant */
+                maximum_page_rows: 200;
+                returned_count: number;
+                next_cursor: string | null;
+            };
+            records: components["schemas"]["ServiceHeartbeatObservation"][];
         };
     };
     responses: never;
@@ -658,6 +725,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExecutionScopedRuntimeManifestV2"];
+                };
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed safe refusal; never a legacy/upstream fallback. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    executionRetainedServiceHeartbeatsPageV1: {
+        parameters: {
+            query: {
+                environment: "paper" | "sandbox" | "live";
+                workspace_id?: string;
+                limit?: number;
+                after?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scoped response on V2 authority */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceHeartbeatsPage"];
                 };
             };
             /** @description Typed safe refusal; never a legacy/upstream fallback. */
