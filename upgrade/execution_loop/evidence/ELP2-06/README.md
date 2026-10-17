@@ -210,3 +210,13 @@ receipts. Never delete source facts, rewrite131, or switch to an incompatible
 generation silently. Local tests need no product rollback: shared runtime and
 all existing DBs were untouched. Six reads are deliberately source-unqualified
 until the proper dependency gate is met; TEST_ONLY cannot be served by them.
+
+### Backend follow-through — 2026-10-17
+
+The[approved02–11 batch](../../../UNIFIED_IMPLEMENTATION_PLAN.md#elp2-backend-gap-batch-02-11)
+now assigns the dependent implementation, not only a next-phase proposal.
+New[private Regime calculator/review packet](regime-calculator.md) records the
+locked formula, causal/archive/numerical corrections and explicit chain still
+missing. Shared identity/recovery + Regime normal-hook batching avoids duplicate
+full gates. No actual source/config/worker/public Regime projection is installed;
+06-002/00-005 remain OPEN, and Claude remains NOT_STARTED_BY_OWNER_DIRECTION.

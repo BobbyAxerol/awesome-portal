@@ -56,6 +56,23 @@ export class UsersRepository {
     return result.rows[0] ? toUser(result.rows[0]) : null;
   }
 
+  /** One read snapshot for own-profile's final post-source authority boundary.
+   * Do not assemble a positive session/user/workspace proof from three reads
+   * that can straddle a revoke. No locks or source I/O in this repository. */
+  async findCurrentSessionInWorkspace(input: {
+    userId: string; sessionId: string; sessionVersion: number; workspaceId: string;
+  }): Promise<PortalUser | null> {
+    const result = await this.pool.query<UserRow>(`SELECT u.* FROM portal_users u
+      JOIN auth_sessions s ON s.user_id=u.user_id
+      JOIN workspace_members m ON m.user_id=u.user_id AND m.workspace_id=$4
+      WHERE u.user_id=$1 AND s.session_id=$2 AND u.session_version=$3 AND s.session_version=$3
+        AND u.status='ACTIVE' AND u.archived_at IS NULL AND NOT u.must_change_password
+        AND s.state='ACTIVE' AND s.idle_expires_at>clock_timestamp()
+        AND s.absolute_expires_at>clock_timestamp()`,
+    [input.userId, input.sessionId, input.sessionVersion, input.workspaceId]);
+    return result.rows[0] ? toUser(result.rows[0]) : null;
+  }
+
   /** Transaction-only identity fence; never infer ownership from a name. */
   async lockById(userId: string): Promise<PortalUser | null> {
     const result = await this.pool.query<UserRow>(

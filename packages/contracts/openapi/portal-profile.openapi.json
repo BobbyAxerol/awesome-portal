@@ -13,6 +13,20 @@
             "PortalSession": []
           }
         ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            },
+            "description": "Optional currently joined workspace for this own identity observation. Defaults to the session personal workspace. Not a source selector, grant or another user lookup; unauthorized context returns404."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Own source-confirmed identity; private,no-store",
@@ -45,6 +59,16 @@
             }
           },
           "403": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
             "content": {
               "application/json": {
@@ -110,6 +134,18 @@
               "type": "string",
               "minLength": 1
             }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            },
+            "description": "Optional currently joined workspace for this own identity observation. Defaults to the session personal workspace. Not a source selector, grant or another user lookup; unauthorized context returns404."
           }
         ],
         "requestBody": {
@@ -154,6 +190,16 @@
             }
           },
           "403": {
+            "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileProblem"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Typed refusal; no secrets. Current authority is rechecked before replay/write.",
             "content": {
               "application/json": {
@@ -257,25 +303,75 @@
             }
           },
           "ts_identity": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "state",
-              "reason",
-              "source_locator"
-            ],
-            "properties": {
-              "state": {
-                "const": "UNMAPPED"
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reason",
+                  "source_locator"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "UNMAPPED"
+                  },
+                  "reason": {
+                    "enum": [
+                      "MAPPING_SOURCE_NOT_QUALIFIED",
+                      "MAPPING_NOT_PUBLISHED",
+                      "MAPPING_SOURCE_UNAVAILABLE"
+                    ]
+                  },
+                  "source_locator": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
               },
-              "reason": {
-                "const": "MAPPING_SOURCE_NOT_QUALIFIED"
-              },
-              "source_locator": {
-                "type": "string",
-                "minLength": 1
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "ts_user_id",
+                  "mapping_revision",
+                  "workspace_id",
+                  "observed_at_utc_ms",
+                  "source_locator"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "MAPPED"
+                  },
+                  "ts_user_id": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                  },
+                  "mapping_revision": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                  },
+                  "workspace_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  "observed_at_utc_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991,
+                    "description": "Portal observation time only; not source effective time, a business grant or researcher binding."
+                  },
+                  "source_locator": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
               }
-            }
+            ]
           },
           "researcher_identity": {
             "type": "object",

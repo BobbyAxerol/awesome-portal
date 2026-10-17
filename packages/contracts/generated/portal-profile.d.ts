@@ -41,8 +41,17 @@ export interface components {
             ts_identity: {
                 /** @constant */
                 state: "UNMAPPED";
+                /** @enum {unknown} */
+                reason: "MAPPING_SOURCE_NOT_QUALIFIED" | "MAPPING_NOT_PUBLISHED" | "MAPPING_SOURCE_UNAVAILABLE";
+                source_locator: string;
+            } | {
                 /** @constant */
-                reason: "MAPPING_SOURCE_NOT_QUALIFIED";
+                state: "MAPPED";
+                ts_user_id: string;
+                mapping_revision: string;
+                workspace_id: string;
+                /** @description Portal observation time only; not source effective time, a business grant or researcher binding. */
+                observed_at_utc_ms: number;
                 source_locator: string;
             };
             researcher_identity: {
@@ -99,7 +108,10 @@ export type $defs = Record<string, never>;
 export interface operations {
     portalOwnProfileGetV1: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Optional currently joined workspace for this own identity observation. Defaults to the session personal workspace. Not a source selector, grant or another user lookup; unauthorized context returns404. */
+                workspace_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -143,6 +155,15 @@ export interface operations {
                 };
             };
             /** @description Typed refusal; no secrets. Current authority is rechecked before replay/write. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileProblem"];
+                };
+            };
+            /** @description Typed refusal; no secrets. Current authority is rechecked before replay/write. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -164,7 +185,10 @@ export interface operations {
     };
     portalOwnProfilePatchV1: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Optional currently joined workspace for this own identity observation. Defaults to the session personal workspace. Not a source selector, grant or another user lookup; unauthorized context returns404. */
+                workspace_id?: string;
+            };
             header: {
                 "x-portal-idempotency-key": string;
                 "x-portal-csrf": string;
@@ -208,6 +232,15 @@ export interface operations {
             };
             /** @description Typed refusal; no secrets. Current authority is rechecked before replay/write. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileProblem"];
+                };
+            };
+            /** @description Typed refusal; no secrets. Current authority is rechecked before replay/write. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1,16 +1,18 @@
 import { Body, Controller, Get, Inject, Patch, Req, Res, UseGuards } from "@nestjs/common";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { AccountLifecycleService, LifecycleDeniedError } from "../admin/account-lifecycle.service";
 import { AuthError, AuthService } from "./auth.service";
-import { OwnerAccessService } from "./owner-access.service";
 import { mutationSecurityDenial, MUTATION_SECURITY_MESSAGE } from "./mutation-security";
-import { OwnProfilePatch, ownProfile } from "./profile.contract";
+import { OwnProfilePatch, OwnProfileQuery } from "./profile.contract";
+import { OwnProfileProjection } from "./profile-projection";
+import { WorkspacesRepository } from "../repos/workspaces";
 
 type ProfileRequest = FastifyRequest & {
   portalUser: PortalUser;
-  portalSession: { sessionId: string; csrfSecretHash: string };
+  portalSession: AuthSession & { csrfSecretHash: string };
+  portalWorkspaceId: string;
 };
 
 @Controller("/api/auth/profile")
@@ -18,17 +20,23 @@ type ProfileRequest = FastifyRequest & {
 export class ProfileController {
   constructor(@Inject(AuthService) private readonly auth: AuthService,
     @Inject(AccountLifecycleService) private readonly lifecycle: AccountLifecycleService,
-    @Inject(OwnerAccessService) private readonly access: OwnerAccessService) {}
+    @Inject(OwnProfileProjection) private readonly projection: OwnProfileProjection,
+    @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository) {}
 
-  private async project(user: PortalUser) {
-    return ownProfile(user, (await this.auth.bindings.findByUser(user.userId)).length,
-      await this.access.effectiveAccess(user.userId));
+  private async workspace(request: ProfileRequest) {
+    const query = OwnProfileQuery.safeParse(request.query);
+    if (!query.success) throw new AuthError("PROFILE_QUERY_INVALID", "Invalid profile context.", 400);
+    const id = query.data.workspace_id ?? request.portalWorkspaceId;
+    if (!await this.workspaces.isMember(id, request.portalUser.userId))
+      throw new AuthError("PROFILE_WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
+    return id;
   }
 
   @Get()
   async read(@Req() request: ProfileRequest, @Res({ passthrough: true }) reply: FastifyReply) {
     reply.header("Cache-Control", "private, no-store");
-    return this.project(request.portalUser);
+    return this.projection.project({ user: request.portalUser, session: request.portalSession,
+      workspaceId: await this.workspace(request) });
   }
 
   @Patch()
@@ -39,6 +47,8 @@ export class ProfileController {
       csrfSecretHash: request.portalSession.csrfSecretHash, allowedOrigin: this.auth.config.PORTAL_PUBLIC_ORIGIN,
     });
     if (denial) throw new AuthError(denial, MUTATION_SECURITY_MESSAGE[denial], 403);
+    // Validate the selected context before any display-name mutation occurs.
+    const workspaceId = await this.workspace(request);
     const parsed = OwnProfilePatch.safeParse(body);
     if (!parsed.success) throw new AuthError("PROFILE_FIELDS_INVALID", "Only a display name and current revision are accepted.", 400);
     const key = request.headers["x-portal-idempotency-key"];
@@ -55,6 +65,6 @@ export class ProfileController {
       });
     return { schema_version: "portal.profile-operation.v1", outcome: result.outcome,
       operation_id: result.operation.operationId, resulting_revision: result.operation.resultingRevision,
-      profile: await this.project(result.account) };
+      profile: await this.projection.project({ user: result.account, session: request.portalSession, workspaceId }) };
   }
 }

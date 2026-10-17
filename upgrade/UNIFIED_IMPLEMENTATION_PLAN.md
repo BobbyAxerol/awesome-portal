@@ -9984,6 +9984,33 @@ policy/mapping/grants and private installation, then source-connected proof;
 approved numeric budgets/calibration and original coexistence/G2 remain distinct
 OPEN gates. Claude has no new field/request; full10NOT_MET,11 not opened.
 
+**2026-10-17 terminal correction / current incoming-source review:** private
+trust construction landed `0d8bbaee` through its original normal hook:
+7files+1045/−2, contracts691PASS/API4377PASS+3existing skips, build/scoped
+restore PASS. [Exact terminal receipts, monitor discrepancy reconciliation,
+source WIP pins and next boundary](./execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-private-trust-terminal-20261017)
+supersede the preceding pending-hook line. All7raw-byte committed/working hashes
+match the tested freeze; eight runtime tuples unchanged, owned cell resources0.
+Provisioner smoke PASS and4new transient keys retired; no runtime/source install.
+PM866b8e72 now has real provider/importer/existing-mapping WIP, unqualified/
+unmounted, not absent implementation. Genuine accepted source records, reviewed
+installation pins/report producer and connected proof remain unmet; numeric
+budget/calibration and matched originalG2 are separately open. No HK job, FE,
+push/deploy/11. Claude has no new field/request and remains on owner hold.
+Terminal docs await the next coherent normal hook; do not repeat unchanged
+full suites just to land after-the-fact status.
+
+**2026-10-17 parallel mapping reconciliation:** incoming Edge original08 owns
+the additive existing-identity client at [§14.12.1](#elp2-10-existing-identity-mapping).
+Primary withdrew only its duplicate uncommitted adapter/refactor, preserving
+peer files and original recovery/installation bytes. No new tests were run or
+claimed. [Static review, private draft custody and exact identity alignment](./execution_loop/evidence/ELP2-10/commissioning-followthrough.md#parallel-owner-reconciliation--2026-10-17-0435utc)
+record source-only acceptance and pre-mount inflight/lifetime requirements.
+Stable source issuer cannot be replaced with a fresh candidate issuer; the
+reviewed real binding/acceptance and source-connected proof remain required.
+This preserves one writer/adapter, not a runtime/provider qualification or
+full10PASS. No FE/public fields, HK writes, push/deploy or11 start.
+
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release
@@ -10897,4 +10924,70 @@ not solved by candidate PKI. Backend next is exact accepted-source commissioning
 then Edge08 revoke/cache/cursor/SSE; no09, runtime/secret/grant/financial mutation.
 Frontend remains NOT_STARTED_BY_OWNER_DIRECTION; no new public schema/field or
 UI request. Handoff is source-only, AWAITING_CONSUMER_REVIEW, not owner acceptance.
+
+<a id="elp2-backend-gap-batch-02-11"></a>
+
+### 14.13 Approved remaining backend batch02–11 — 2026-10-17
+
+Bobby's active goal explicitly assigns the remaining02–11 backend scope;
+the latest request reiterates backend continuation while Claude has not started.
+This supersedes earlier next-phase-not-assigned notes for this named batch,
+not their failed/missing gates. Entry `8ba33de3cf2cb91a4d58bf7421c6b7b4fc5ce462`,
+same `/home/bobby/portal-research`, `docs/research-loop-plan`. Preserve the four
+existing recovery/docs WIP paths; no frontend, push, dev/main merge, release,
+deploy, real capital command or Live activation. Full scope and remaining
+requirements stay in the [canonical gap census](execution_loop/evidence/ELP2-10/commissioning-followthrough.md#elp210-backend-gap-census-20261017),
+not a second request ledger.
+
+Ordered integration:02 current scoped OwnProfile mapping;03 independent grant/
+resource/environment acceptance;04 positive scoped readers/cache proof;05–06
+qualified source plus Composition/Regime materialization;07–08 exact command/
+workflow adapters;09 concrete notice source/coordinator;10 actual commissioning,
+approved config/budgets and compatible coexistence/G2;11 integrated migration/
+recovery/operator handoff after mandatory dependencies. Incomplete actual source,
+calibration and browser acceptance remain explicit; typed absence is not their
+completion. No upstream capability is enabled by finishing local code.
+
+First coherent batch task map (one writer per file):
+
+| Task / owner | Owned output | Boundary / acceptance |
+| --- | --- | --- |
+|ID02 / primary|OwnProfile controller/contract, application DI, profile generator/types/fixtures/tests; recovery hardening; shared packets/Unified|Fresh mapping only in a currently authorized workspace, recheck actor/session/membership after I/O; no TS→researcher inference, no role/name fallback. Preserve PATCH receipt on mapping absence; publish generated compatible states|
+|ID03 / independent reviewer|Read-only exact per-grant/resource/environment compatibility design against `access-policy`, service/root/delegated fences and current PM source|Return concrete change/test plan before write; no invented source revisions or latest-receipt shortcut. Primary freezes integration shape|
+|RG06 / independent writer|New internal `manager-regime.ts` and disjoint `elp206-manager-regime.spec.ts` only|Score FINAL§9/R01–R25 eligibility, robust distance/kernel/descriptive math and bounded policy/input validation. Receive frozen vectors/scaler/support config, never choose feature definitions/calibration or expose fixture-derived runtime authority. No shared schema/generator/app/worker edits|
+|SRC10 / independent source audit|Read-only current PM/Edge pins, WIP hashes, producer receipts and actual live measurement handles|No remote writes/jobs/DB/business rows, credential/config/service changes; report exact missing wire/installation inputs without overwriting current owner work|
+
+Primary integrates/reviews all changes, owns shared contracts/generation and
+schedules at most one heavy lane (Core≤4CPU/4GiB/8GiB transient). Agents do not
+run builds/tests/DB/Docker, commit or edit shared tracking. Recovery22 fault
+cases and17 real mTLS regressions are pending, not PASS. Run impacted tests
+and one normal-hook gate for the coherent batch; preserve prior valid receipts
+without rerunning unchanged scopes. Source candidate resource/window and
+original matched coexistence/G2 requirements remain separate. Rollback removes
+only additive unmounted wiring; keep identities, grants, accepted/UNKNOWN leases,
+revocations, audit and immutable projection history. Claude remains
+NOT_STARTED_BY_OWNER_DIRECTION / AWAITING_CONSUMER_REVIEW.
+
+ID02 focused gate completed13:07Asia/Saigon:19 mapping +18identity +22recovery
+fault +17actualmTLS =76 relevantPASS; APIbuild/PGrestore PASS.51 initial Regime
+cases in that cell are not acceptance: source review found prospective-time,
+distance-cancellation and archive-history defects; writer is correcting them.
+See[exact profile receipt/handoff](execution_loop/evidence/ELP2-02/current-mapping.md#focused-gate--2026-10-17-1307asiasaigon).
+One coherent identity/recovery normal-hook landing is next. No source provider,
+grant, calibration or frontend/runtime has been installed or activated.
+
+Normal-hook batch includes the corrected[private Regime foundation](execution_loop/evidence/ELP2-06/regime-calculator.md)
+as well as ID02/recovery: freeze source/tests/generated snapshot once, one full
+gate/commit, no second hook for that independent calculator alone. It does not
+close06-002/00-005 or publish a worker/API/approved runtime policy. Prospective
+knowledge, pre-archive history and decimal-distance regression fixes require
+terminal PASS; historical51 cases are not current qualification.
+
+Corrected Regime local pure retake72/72PASS,0FAIL/SKIP (0.563s); source
+review ACCEPT_SOURCE_ONLY. Contract snapshot regenerated from the narrow
+profile generator, no unrelated published schema changed. All owned code,
+tests and packets now freeze for the single normal-hook landing; exact result,
+commit and cleanup are recorded by `profile-recovery-land-*` under the private
+20261017 commissioning receipt root. This is component delivery only, not
+02/06/10 full product/source/calibration acceptance.
 

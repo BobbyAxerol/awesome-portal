@@ -14,7 +14,8 @@ describe("ELP2-02 generated profile boundary",()=>{
     const path=spec.paths["/api/auth/profile"];
     expect(path.get.operationId).toBe("portalOwnProfileGetV1");
     expect(path.patch.operationId).toBe("portalOwnProfilePatchV1");
-    expect(path.patch.parameters.map((p:any)=>p.name)).toEqual(["x-portal-idempotency-key","x-portal-csrf","Origin"]);
+    expect(path.patch.parameters.map((p:any)=>p.name)).toEqual(["x-portal-idempotency-key","x-portal-csrf","Origin","workspace_id"]);
+    expect(path.get.parameters).toMatchObject([{name:"workspace_id",in:"query",required:false}]);
     expect(spec.components.securitySchemes.PortalSession.name).toBe("__Host-portal_session");
   });
   it("synthetic identity preserves absent TS/researcher proof and disabled recovery",()=>{
@@ -33,6 +34,20 @@ describe("ELP2-02 generated profile boundary",()=>{
     expect(validate("OwnProfilePatch",{...body,display_name:"😀".repeat(120)})).toBe(true);
     expect(validate("OwnProfilePatch",{...body,display_name:"😀".repeat(121)})).toBe(false);
     expect(validate("OwnProfilePatch",{...body,expected_revision:Number.MAX_SAFE_INTEGER+1})).toBe(false);
+  });
+  it("publishes a scoped TS observation without implying a researcher binding or business grant",()=>{
+    const mapped=JSON.parse(readFileSync(resolve(root,"fixtures/portal-profile.mapped.synthetic.valid.json"),"utf8"));
+    expect(validate("OwnProfile",mapped)).toBe(true);
+    expect(mapped.researcher_identity.state).toBe("UNMAPPED");
+    for(const key of ["workspace_id","mapping_revision","observed_at_utc_ms","ts_user_id"]){
+      const invalid=structuredClone(mapped); delete invalid.ts_identity[key];
+      expect(validate("OwnProfile",invalid),key).toBe(false);
+    }
+    expect(validate("OwnProfile",{...mapped,researcher_identity:mapped.ts_identity})).toBe(false);
+    expect(validate("OwnProfile",{...mapped,ts_identity:{...mapped.ts_identity,may_trade:true}})).toBe(false);
+    for(const reason of ["MAPPING_NOT_PUBLISHED","MAPPING_SOURCE_UNAVAILABLE"])
+      expect(validate("OwnProfile",{...fixture,ts_identity:{...fixture.ts_identity,reason}})).toBe(true);
+    expect(spec.paths["/api/auth/profile"].get.responses[404]).toBeDefined();
   });
   it("operation and error fixtures match actual wire envelopes",()=>{
     expect(validate("OwnProfileOperation",{schema_version:"portal.profile-operation.v1",outcome:"REPLAYED",operation_id:"alo_TEST",resulting_revision:1,profile:fixture})).toBe(true);

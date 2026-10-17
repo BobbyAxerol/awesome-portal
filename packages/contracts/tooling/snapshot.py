@@ -68,6 +68,7 @@ TRACKED = (
     "tooling/generate-portal-profile.mjs",
     "openapi/portal-profile.openapi.json",
     "fixtures/portal-profile.synthetic.valid.json",
+    "fixtures/portal-profile.mapped.synthetic.valid.json",
     "generated/portal-profile.d.ts",
     "schemas/execution-v2-foundation.v1.schema.json",
     "openapi/execution-v2-foundation.openapi.json",

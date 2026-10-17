@@ -1,5 +1,11 @@
 # ELP2-02 — Identity, current sessions and safe profile lifecycle
 
+**Current continuation2026-10-17:** approved remaining-backend batch02–11,
+entry `8ba33de3`. [OwnProfile mapping follow-through](current-mapping.md)
+now owns the additive current workspace-scoped mapping delivery and its test/
+handoff status. Earlier always-UNMAPPED source locators below are historical;
+actual source installation and researcher binding remain separate open gates.
+
 Status: BACKEND_TECHNICAL_CHECKPOINT_PASS / EXTERNAL_MAPPING_BLOCKED.
 Landed `b448c0be655817dc49dd02f86aa2544e64c00d48` at2026-10-15T20:37Z.
 ELP2-01 landed at

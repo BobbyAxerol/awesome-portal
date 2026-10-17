@@ -6,6 +6,7 @@ import { DynamicModule, Module } from "@nestjs/common";
 import { Pool } from "pg";
 import { AuthController } from "./auth/auth.controller";
 import { ProfileController } from "./auth/profile.controller";
+import { OwnProfileProjection } from "./auth/profile-projection";
 import { ExecutionAccessController } from "./execution-v2/access.controller";
 import { ExecutionAccessService } from "./execution-v2/access.service";
 import { ExecutionCommandService } from "./execution-v2/command.service";
@@ -354,6 +355,12 @@ export class AppModule {
             ownerAccess: OwnerAccessService,
           ) => new GovernanceGrantsService(db, auth, ownerAccess, dependencies.currentHumanMutations),
           inject: [CONTROL_API_POOL, AuthService, OwnerAccessService],
+        },
+        {
+          provide: OwnProfileProjection,
+          useFactory: (auth: AuthService, owner: OwnerAccessService, workspaces: WorkspacesRepository) =>
+            new OwnProfileProjection(auth, owner, workspaces, accessTrust),
+          inject: [AuthService, OwnerAccessService, WorkspacesRepository],
         },
         {
           provide: ExecutionAccessService,

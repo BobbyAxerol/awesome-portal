@@ -1256,3 +1256,418 @@ remain private custody for the approved installation package, never public
 evidence; primary must retire these exact unused keys on abandonment/expiry.
 No shared image/cache/volume/data deletion; normal-hook controller separately
 checks runtime equality and zero owned resources before declaring clean.
+
+<a id="elp210-private-trust-terminal-20261017"></a>
+
+### Terminal trust delivery and incoming source review — 2026-10-17
+
+The preceding pre-commit landing gate is now satisfied by normal-hook commit
+`0d8bbaee0f4bf07efaccab7b742ed64d0ea2ffe2`, parent `9a3a27c8`: **7 files,
++1045/−2**, comprising implementation375/−2, tests401/−0 and docs269/−0.
+Actual contracts **691PASS**; API **4377PASS/3existing skips**; build and scoped
+PostgreSQL restore PASS. These are the completed original hook, not a rerun or
+additional unique coverage. The68 installation tests and38 candidate tests are
+included in API counts, not added again. No frontend/public contract/migration,
+push, deployment or runtime installation.
+
+The original interactive monitor was interrupted; the Git/hook survived and
+completed. Its adopted watcher recorded `FAIL_OR_INCOMPLETE` because its final
+`source_unchanged` boolean was false. Preserve that record unchanged. Independent
+terminal raw-byte reconciliation verifies **all seven committed and working
+files equal the original adoption hashes**, exact parent/branch/path set, the
+terminal hook log, eight unchanged runtime tuples and zero owned cell resources.
+The boolean discrepancy was not reproduced; do not invent its cause. Original
+process exit is not reapable and stays null, not a fabricated exit0. Durable
+normal-hook success is verified from the actual commit and terminal log.
+
+Private evidence root `/home/bobby/.local/state/portal-execution-elp210/20261017/`:
+
+| Receipt | SHA256 / actual disposition |
+| --- | --- |
+|`installation-land-035933/gate.log`|`00d27a53e5d4bf34fb5ccb45ad821e5308618a97322cc038ad2920902b30acd6`; actual terminal gate/commit |
+|`installation-land-035933/adoption.json`|`e53c145cfd4d698f7d1fb2aedd16fb0ea2f35162b668948269ccba96ef8ced31`; original monitor discrepancy retained |
+|`installation-land-035933/terminal-reconciliation.json`|`d7079cb4bc9d8699da91aefee3c7949bd1086eabad6016a05aec522fe54827da`; PASS_DURABLE_COMMIT_SOURCE_RUNTIME_AND_CLEANUP_RECONCILED |
+|`provision-current-smoke/receipt.json`|`13606901fccf46ae1c60d90f29fc0ff86979af2645299416ac61c6355cdc2bf9`; current exact provisioner PASS, four exact new party keys shredded, transient CA key retired; no listener/DB/network/source job |
+
+The original terminal reservation was removed only after exact owner/deadline
+and durable commit/source/runtime/resource checks. C4: root free167324446720
+bytes/75%used, MemAvailable12933588KiB. Shared images88.82GB, volumes32.5GB,
+build cache195.9GB are inventory, not phase-owned cleanup authority. Three
+runner units remain active; none restarted. Exact test containers/network absent.
+Four original candidate-custody keys remain0600 in the owned0700 PLC92w bundle
+for approved private installation, expiry2026-10-18T03:43:29Z. Named follow-up:
+primary retires those exact unused keys on abandonment/expiry; no persistent
+cleanup job or installed trust is claimed. No broad deletion/prune.
+
+#### PM source progress and the exact next boundary
+
+Read-only independent audit04:27–04:30UTC and primary confirmation at the same
+PM HEAD `866b8e720201707aad910a7ed3f59b880f4075ef` found new **implemented
+owner WIP**, not absent code: durable provider, pinned acceptance importer and
+existing-identity mapping. Preserve WIP; none was copied into the candidate.
+
+| Source file under PM worktree | Last-read SHA256 / disposition |
+| --- | --- |
+|`services/portfolio_management/current_access_source.py`|`583981d46529937de346db074acfdae293568d407fbc726529c3aff2080ba596`; owning-transaction policy source, not mounted |
+|`services/portfolio_management/current_access_installer.py`|`0ed2ad8b2450619235fbddd9b34ecd1b49f0568274319e103c2bd00b3af7c9af`; independently pinned importer, not grant approval |
+|`services/portfolio_management/existing_identity_mapping.py`|`dbe93c32f4db98432a4173abb870bc755b014a328354ce054b7f0bc7aafb20a0`; existing ACTIVE exact issuer/subject→TS UUID/version lookup, no provisioning/authentication |
+|`contracts/baseline/portfolio-account-v1_1/pma11-03-04-durable-current-authority.json`|`d50a41440f012d9c197cb90b96adc5c5c89c490814e8695e70dba01a436b201a`; SOURCE_IMPLEMENTATION_QUALIFICATION_PENDING_UNMOUNTED |
+|`contracts/baseline/portfolio-account-v1_1/pma11-03-04-pinned-importer.json`|`043615fcf0ecbf6a6dafb0ad3354c2ff215fd7274c6158bab947673e3d14480c`; PRIVATE_SOURCE_IMPLEMENTED_QUALIFICATION_PENDING_UNMOUNTED |
+
+PM journal §58.99 reports66PG+223unit cases **prepared, not executed PASS**;
+mapping §58.99.1 is IN_PROGRESS. Fixtures explicitly use TEST_ONLY identities/
+disposable DB, not genuine accepted business authority. Primary read importer
+trust boundary: external delegation/ceiling/grant lineage and reviewed exact
+manifest/DB/role pins must already be qualified; submitted hash, role name or
+ADMIN cannot supply approval. Actual DB contents were not queried; no assertion
+is made that genuine rows cannot exist. No qualified installation/acceptance
+return was observed. `report_source` remains unbound; missing census/valuation
+refuses CURRENT_REPORT_SOURCE_UNAVAILABLE, not invented empty data.
+
+HK user window was observed04:27:12UTC, owner Claude G13 DR05,04:20–06:20UTC;
+primary's later read found that user lock absent. These are successive snapshots,
+not a continuing-lock assertion or a Portal allocation. No HK install/test/load
+was attempted. Current readiness stays DRAFT_NOT_APPROVED_FOR_EXECUTION with
+actual target/image/pool/resource/workload/SLO approvals null; no new numeric
+budget/calibration approval found. Original600s G2 still cannot be substituted
+with300s correctness or silently authorized by the credential package.
+
+**Backend next within approved ELP2-10:** pin the qualified immutable PM source
+bundle/receipt and genuine existing mapping plus accepted workload/app/field
+records; bind the private trust installation and run connected revoke/physical
+COMMIT/UNKNOWN/recovery proof in an allocated correctness cell. Importer/mapping
+code alone does not satisfy these inputs. No repeated generic permission request
+and no TEST_ONLY records used as real grants. Budget/calibration and matched
+coexistence/original G2 retain existing canonical00-005/10-002 owners and distinct
+qualification/approval. Full10NOT_MET;11 not opened.
+
+Claude: no new public field/consumer request after comparison; frontend remains
+NOT_STARTED_BY_OWNER_DIRECTION, existing handoffs AWAITING_CONSUMER_REVIEW.
+No new request ID duplicates05-001/06-002/07-001/00-005/10-002. This terminal
+documentation addendum is PENDING_NEXT_COHERENT_NORMAL_HOOK; do not rerun the
+unchanged full suites solely to commit after-the-fact receipt status.
+
+### Source mapping adapter continuation — entry0d8bbaee
+
+Approved expanded candidate commissioning continues, same branch/worktree;
+the preceding106 terminal documentation lines are preserved. Actual incoming
+PM mapping wire is source-confirmed WIP at866b8e72, not runtime-qualified.
+Implement the missing Core adapter to its exact closed request/result, not a
+mapping invented from names/admin. Source grant/provider qualification remains
+independent. No PM owner WIP is imported into a selected candidate.
+
+Primary owns the fixed private HTTPS transport helper, new mapping client,
+optional explicit private composition and shared docs. Independent test author
+owns only a new focused mapping-client spec after API freeze; no Git, credentials,
+remote writes or jobs. Primary reviews/integrates; independent security review
+has no writes. Mandatory source-scope/expiry/request correlation, exact UUID/
+revision grammar, no cache/retry, bounded admission/bytes/time and sanitized
+absence/errors. Mapping observation never supplies a held COMMIT or business
+grant. No frontend/OpenAPI/startup/migration or production/dev/main changes.
+Use real ephemeral TLS fixtures in the isolated correctness cell, ceilings
+unchanged Core4CPU/4GiB/8GiB, one heavy lane, allocated local window required;
+HK remains read-only. Actual tests NOT_RUN at entry. One normal-hook coherent
+landing only; no duplicate full test just for the preceding docs.
+
+#### Parallel-owner reconciliation — 2026-10-17 04:35UTC
+
+The preceding paragraph is an entry plan, **not a delivered adapter**. While
+preparing it, primary observed the additive Edge original08 writer in the same
+checkout: `existing-identity-mapping-client.ts` and its matching test, indexed
+in [Unified §14.12.1](../../../UNIFIED_IMPLEMENTATION_PLAN.md#elp2-10-existing-identity-mapping).
+Those are peer-owned UNCOMMITTED paths, not this primary's contribution. Keep
+one adapter, not two equivalent wire clients. No peer file was edited/staged.
+
+Primary withdrew only its own uncommitted `current-human-mapping-client.ts`,
+`current-human-source-json.ts`, optional installation addition and recovery
+refactor. The last two tracked files are byte-identical to `0d8bbaee` again.
+The three new draft files (including the independent author's61 unrun cases)
+were moved to exact `20261017/withdrawn-*` private evidence paths, not deleted
+or counted as PASS. No test/build/resource allocation was started for them.
+This avoids invalidating the original recovery/installation receipts and
+prevents duplicated source adapters. Primary removed its never-executed
+`mapping` batch from the private controller as well: no executable allowlist or
+automatic staging path remains for the withdrawn draft. Other batches/evidence
+are preserved; the controller was not executed.
+
+Independent static peer review: **ACCEPT_SOURCE_ONLY**, not runtime-qualified.
+The fixed PM mapping wire/UTF-8 <=512bytes/UUID/BIGINT/closed FOUND vs NOT_FOUND,
+actual CA/hostname/leaf checks, sanitised failures and preservation of every
+current AccessTrust callback match incoming PM source at866b8e72. Test vectors
+remain TEST_ONLY, not accepted existing identities. Two private-installation
+conditions still need an owner implementation before mounting: finite aggregate
+inflight admission and explicit candidate-installation expiry, including a
+post-I/O expiry check. Peer `lookup()` currently has neither; global HTTP rate
+limits or TLS leaf validity are not substitutes. These are peer handoff findings,
+not permission to overwrite its live work or a second request ID.
+
+Identity alignment remains a separate source gate: the existing trust loader
+deliberately accepts only fresh `urn:<candidate_id>:core` assertion issuers;
+PM current-access lookup uses the verified assertion issuer plus subject.
+The standalone existing-identity mapper correctly selects an independently
+accepted stable human issuer, but that lookup alone cannot make the fresh
+candidate assertion match a pre-existing TS identity. Do not seed a matching
+user/grant or relabel NOT_FOUND as accepted authority. Before connected
+commissioning, pin the actual stable issuer/subject and independently reviewed
+trust binding for that logical issuer; then align assertion, mapping,
+trusted-binding tuple and current-access acceptance on that same source identity.
+The current v1 construction intentionally remains unmounted/fail-closed.
+
+Backend next: integrate the peer adapter only after its coherent commit and
+bounded-installation checks, and after genuine source acceptance/install pins
+are returned. Source report producer is still absent for its dependent lane;
+receipt/history may proceed first when their real authority inputs exist.
+No new public contract/Claude field or UI request; frontend is still on owner
+hold. Same mandatory budget/calibration and original coexistence/G2 gates stay
+OPEN; no full10PASS or ELP2-11. Shared terminal docs remain pending the next
+coherent normal hook, not a reason to repeat unchanged full suites.
+
+### Backend-only continuation and failure boundary — 2026-10-17
+
+Bobby asks to finish independently available backend work and report every
+remaining phase/gap; frontend remains NOT_STARTED_BY_OWNER_DIRECTION. Scope
+stays ELP2-10/read-only source commissioning, not new command/Live/ELP2-11.
+Entry0d8bbaee, docs/research-loop-plan, same checkout. Preserve the peer's
+staged existing-identity mapper/test/Unified hunk and active normal-hook window;
+no edits to those paths, no shared index manipulation or concurrent heavy job.
+
+New local security defect **ELP2-REQ-10-007**, primary review → Codex:
+`current-human-recovery-client.ts` constructs/ends the actual HTTPS request
+without sanitising synchronous TLS/driver failures; serialization/config edge
+cases also escape typed errors. A native diagnostic must not become public
+copy, and every failed request must release its socket/deadline without
+pretending recovery proved rollback. Status IN_PROGRESS, no test PASS claimed.
+Done-when: exact recovery ACK/correlation/UNKNOWN semantics unchanged; raw
+configuration/serialization/transport exceptions replaced by existing stable
+error codes; response header/declared-byte bounds and deterministic teardown;
+focused failure regressions plus existing real mTLS tests and normal-hook gate.
+
+Owned writes: the existing recovery client, a disjoint new recovery-failure
+spec, this packet/Unified integration after peer landing. No public API/schema,
+grant, migration, startup/provider activation, frontend, source writes or new
+credentials. Test agent owns only the new spec, no jobs/Git. Primary owns code,
+integration and resource scheduling. Approved Core4CPU/4GiB/8GiB/one heavy lane
+applies after the current peer reservation is terminal; no G2/capacity claims.
+Rollback only this recovery hardening; preserve all used/UNKNOWN lease records
+and existing authority. One coherent normal-hook landing, not a full rerun for
+the pending terminal-documentation updates alone.
+
+<a id="elp210-backend-gap-census-20261017"></a>
+
+### Current backend gap census and next sequence — 2026-10-17
+
+Read-only cross-review of the actual Portal code and phase00–10 packets,
+not a new phase/activation assignment. Later source returns below supersede
+earlier observations without deleting their historical failures/unknowns.
+**The backend is not fully complete, independently of Claude's owner hold.**
+Existing denial barriers/schema/math/state-machine tests do not prove that
+every positive source reader, workflow or stream adapter is commissioned.
+
+| Phase / existing canonical request | Remaining backend implementation or proof | Next action / boundary |
+| --- | --- | --- |
+|02 /00-003,T02-09|Local OwnProfile now has a current workspace-scoped mapping projection/additive generated union;19 new HTTP/PG tests PASS, normal-hook landing pending. Genuine source installation and independent researcher identity remain open|See[current profile packet](../ELP2-02/current-mapping.md). No TS→researcher inference, admin/name fallback or unscoped workspace disclosure; source-only fixtures are not installation proof|
+|03 /00-002,00-003|Source-qualified effective grants/current policy, stable issuer and exact Stan ceiling/field extensions are not installed|Reuse implemented root/delegated receipt and COMMIT/drain fences; qualify exact existing identities/acceptance/policy revisions. Do not reopen already accepted restricted-researcher r1 or invent genuine grants|
+|04 /04-008|`governance.controller.ts:484–494` and `operational-composition.service.ts:132–146` still refuse scoped operation parents with OPERATIONS_SCOPED_PARENT_NOT_COMMISSIONED|Finite parent DTO/lineage/action/purpose adapter and own/full/denied/revoked positives, not removing the safety barrier|
+|04 /04-009|33 entries in `execution/retained-operation-page.ts:NAMED_RETAINED_PURPOSES` still have null technical/audit/custody/parent purpose; runtime-manifest V2 technical read remains refused|Exact named source field/purpose/lineage authority before exposing those aliases. Six new Manager readers do not replace them; business ALL is not technical/custody authority|
+|04 /T04-11|Physical cache leader/follower concurrency proof is not delivered for the applicable path|Measure real applicable coalescing/cache path and authority changes; do not introduce a new response cache just to test one or relabel callback mocks as physical proof|
+|05 /05-001|Authenticated current publication/writer generation/continuity/floor/barrier/privacy source installation and connected proof remain open|Repin the incoming committed source and its exact accepted installation; do not repeat the stale assertion that producer implementation is wholly absent|
+|06 /06-002|Concrete normalized-source→ManagerProjectionSource→installation/tie-out adapter is not mounted|Reuse consumer/lease/atomic projection+checkpoint/ACK machinery; connect selected qualified source, retaining time/coverage/grain and authority|
+|06 /06-002,00-005|Composition/Regime are not merely awaiting config: publication/runtime only accept RAW or DIRECT_NAV; `manager-model.ts:310–311` fixes composition to policy_pending/null and regime to unavailable/null|Finish allocation/input/result projection chain, then source/config qualification; shared alpha aggregation math alone is not this chain. No formula/weights/bands changes or fixture calibration defaults|
+|07 /07-001|Real installed current-human/mapping/provider authority and physical-COMMIT/revoke/UNKNOWN/recovery proof remain open|Align stable human issuer, accepted existing identity/workload/app/field tuple and private trust installation; source-mapping lookup is preflight, not a held business grant|
+|07 /07-002|Broader RETURN/control/profile/create/assignment/archive/monitor command families are not complete merely because the eight capital-operation union is delivered|Exact per-operation capability/source adapter and tests; do not alias FUND/TOP_UP or R1 executor. Candidate commissioning remains no-command/no-Live activation|
+|08 /08-001|Workflow contracts/projectors/fixtures exist, but selected source-mounted adapters/executors and consumer acceptance do not|Connect only qualified workflow facts/operations, preserve explicit runtime-disabled states for unqualified operations|
+|09 /09 source gates|`ScopedNoticeSource` is an interface and ScopedReplayHub is implemented; a concrete source adapter/coordinator/listener and real journal proof are still missing|One bounded ingestion path; prove barrier→tail race, correction/floor/hidden skips and current-scope revoke. Preserve existing encrypted cursor and durable ACK-after-COMMIT logic|
+|10 /00-005,10-002|Approved numeric14-group budgets/calibration and compatible matched coexistence/original applicable G2 remain open|Actual artifacts/approval and allocated matched protocol. No guessed production thresholds, no600s protocol inside300s correctness, no combined PASS across different candidates|
+|10 /10-001|Claude UXM00–10/browser consumer has not been assigned/started|NOT_STARTED_BY_OWNER_DIRECTION, not backend/runtime PASS and not a request to start Claude automatically|
+|11|Selected mandatory00–10 gates, migration/recovery/consumer final acceptance are not entry-ready|Not started. Later exact candidate/schema/config/trust + expand/backfill/shadow/tie-out + preservation/restore/rollback + operator handoff; stop before dev/main/sign/deploy|
+
+These are existing requests/gates, not duplicate new ledgers. Technical
+foundation/privacy negatives and History closeout already delivered in00–09
+are preserved; no repeat full audits or accepted tests without an impact.
+ALL-profile navigation remains partitioned, not permission to add virtual Paper/
+Sandbox NAV into actual economic capital. DEC01 protected-owner recovery stays
+intentionally disabled, not an unimplemented backdoor to open.
+
+#### Fresh committed source and peer progress, not installed authority
+
+Read-only HK observation05:16–05:19UTC (12:16–12:19Asia/Saigon), PMworktree
+`/home/bobby/.worktrees/trading-system-pm-v1_1`, branch
+`feat/portfolio-account-v1_1-parallel`, HEAD
+`66743c88e12952302a976e92abda65d0785702f7`:
+
+| Immutable source return | Owner-reported isolated qualification | What it does NOT prove |
+| --- | --- | --- |
+|`f9b5b32c6f1f9766060dabd34d89de983955265d` existing-identity mapper|61PASS including5PG|Actual genuine identity mapping/accepted installation|
+|`74474c96aa8ce9842991d2f9b79e1b7ff513cee4` durable current provider/pinned importer|292functionalPASS =69PG+223unit;25offline separate|Reviewed real workload/app/field acceptance, trust installation or runtime commissioning|
+|`66743c88e12952302a976e92abda65d0785702f7` BUSINESS stored-report source|416functionalPASS =122PG+294unit;25offline separate|Qualified genuine report definitions/census/valuation/installed authority|
+
+Primary confirmed source/commit changes read-only; these counts are source-owner
+receipts, **not newly rerun Portal PASS or mutually additive coverage**. Correct
+report manifest locator is
+`contracts/baseline/portfolio-account-v1_1/pma11-13-stored-report-source.json`
+(sha2566f8f7f48a05e56b05fe49a51af47884909e188ad0ac6fd96f464fd643dd012ae).
+Thus the earlier absent/unbound-report-implementation observation is superseded:
+BUSINESS source code exists; restricted linked-source is newer concurrent WIP,
+not accepted runtime. Current-access HEAD hash61d3df5e86566e3e7d1706978257948db44f9eb322081c07b71024b1483899d3
+differs from observed WIPcee54902c8491533f4a20fe0838f3a21562ab5f5a4e2e5485273df7f8960e2b2;
+do not reuse the old hash blindly or overwrite owner WIP. Actual DB contents
+were not inspected, so no assertion of nonexistent genuine rows is made.
+
+Edge HEAD20dc3f943c705dca926412396440f8492439c3e6 has newer producer-qualification
+WIP hash33d52eca988908a5c93fb88620e69fd9653c3dc574b21566682e6f4dda656039.
+The concrete Core `relations(userId,workspaceId)` producer is still not normalized
+from PM scoped revisions/receipts. This is actual implementation/integration
+work, not just a missing environment variable. Genuine stable-issuer alignment,
+qualified memberships and connected Edge08 revoke/cache/cursor/SSE/export remain
+unmet. Runtime/installed/production-authority flags stay false. Source readiness
+budget is DRAFT_NOT_APPROVED_FOR_EXECUTION with actual target/resources/workload/
+SLO approvals null. Foreign HKwindow04:59–07:59UTC is not a Portal allocation;
+no remote writes/jobs/DB reads/install/restarts/load were performed.
+
+Peer Portal mapper has now fixed both earlier inflight and absolute-installation
+expiry findings, including post-I/O expiry; its corrected focused103PASS include
+86mapping +17existing real transport tests, not new genuine-source authority.
+See [its exact source/test/JUnit hashes and normal-hook landing state](../../../UNIFIED_IMPLEMENTATION_PLAN.md#elp2-10-existing-identity-mapping).
+Do not leave those fixed findings OPEN or count the peer's code twice. Its
+staged paths/shared index and active normal-hook window remain untouched here.
+
+**Backend next sequence inside the approved work:** finish10-007 regression/
+normal-hook landing once the peer window ends; then current identity/relations
+source normalization and exact reviewed installation; scoped positive reader/
+Manager/Score/workflow/realtime chains above as their real source inputs become
+available; then approved budget/calibration + paired coexistence/G2. No frontend
+dependency is invented for the independently implementable backend work.
+Missing genuine authority/config/capacity inputs stay explicit, not fabricated.
+ELP2-11 and actual commands/Live are not opened by this census.
+
+**Claude handoff:** existing00–09 contracts/fixtures/handoffs are available for
+UXM00 audit, UXM01/02 IA/identity, catalogue/fleet/360/Score, confirmation/status/
+workflow and notification/revoke states when Bobby assigns them. Design/fixture,
+real source, command and consumer acceptance remain separate delivery levels.
+No frontend/public field change is introduced by10-007; no consumer action is
+needed for that fix. Public Profile/Composition/Regime/source changes above
+must each publish regenerated contract/fixtures and an explicit future handoff,
+not ask the UI to infer unavailable facts.
+
+#### Current-relations model boundary — follow-up to00-003/07-001
+
+Independent current-source comparison found a concrete model mismatch:
+`access-policy.ts:6–15,77–84` currently compares every TS-dependent grant with
+one workspace-wide membership receipt/revision/mapping tuple. PM
+`membership_repository.py:38–75` has distinct portfolio/environment heads and
+per-command receipts; `current_access_source.py:24–58,103–167` has workload/app/
+field acceptance, not acceptance correlation for each Core proposal/action/
+selector. The current private mTLS listener only publishes mapping and recovery.
+The workload scope list is not automatically a business membership set, and
+the latest command receipt cannot be substituted for every independent grant.
+
+**Producer handoff required before a concrete client:** pin an authenticated
+closed envelope for exact issuer/subject/TSmapping/workspace/environment/
+workload; current per-scope membership/parent/owner revisions and expiry/revoke;
+finite own-alpha/member-portfolio/root populations (or explicit unsupported
+selectors); immutable exact proposal/grant/action/selector/environment
+acceptance and its current heads; held source-current lease/revoke ordering;
+finite bytes/time/concurrency and real reviewed receipt/installation pins.
+If concurrent independent acceptances are valid, adjust the Core single-tuple
+compatibility model deliberately and add two-live-grant/cross-environment/revoke
+regressions. Do not hash rows into an invented membership revision, confuse
+protected-owner UUID with the full root population or use ADMIN as a fallback.
+Owner: PM/Core authority integration under existing00-003/07-001; status
+BLOCKED_EXACT_NORMALIZED_SOURCE_CONTRACT. Workload/importer/mapping/report
+implementations are reusable, not this missing contract. No extra generic
+provider scaffold, duplicate grant engine or public frontend inference is added.
+
+####10-007 prepared checkpoint — 2026-10-17 12:29Asia/Saigon
+
+Implementation **UNCOMMITTED**, source
+d9757d7486ed4add047fdf2cabf360ea4c8eed415cc34d7f6ca952420831a36f,
+tracked diff+55/−44 including indentation. New fault-injection spec158lines/
+22cases, hash19e11e8725c4096a46d6d6ba55f284f965977d30667b9cef64ad96840174ac33.
+Independent static security review ACCEPT; its response-error/aborted and
+malformed Content-Length coverage findings were added. `git diff --check`
+PASS. Test/build/normal-hook **NOT_RUN**, not22PASS: foreign mapping commit
+1795382 and its isolated full API gate remained active at05:27UTC, reserved
+until05:44:23UTC. No second job/cell/credential/resource was created, no foreign
+index/lease was changed. Peer staged mapper/test/Unified hunk remain theirs.
+The prepared existing bounded controller has a recovery-boundaries allowlist
+for the next coherent normal-hook batch; it has not been executed. Before
+running, recheck terminal peer commit/lease, refresh Unified integration and
+exact source hashes, then execute one normal hook containing these22cases and
+the existing17 real mTLS regressions; no redundant standalone full run.
+No new public schema/FE request, push, deploy or source runtime change.
+
+### Approved backend02–11 continuation and fresh source — 2026-10-17
+
+Bobby's active remaining-backend goal now explicitly assigns02–11; earlier
+not-assigned notes remain historical, not permission blockers for that batch.
+Scope/task map is [Unified§14.13](../../../UNIFIED_IMPLEMENTATION_PLAN.md#elp2-backend-gap-batch-02-11).
+OwnProfile current mapping is being completed in the [02 packet](../ELP2-02/current-mapping.md),
+including independent security review and one-snapshot post-source authority
+check. Recovery10-007 fault regressions remain pending actual test execution.
+Regime independent math writer owns only its new internal module/test; no
+public source/config/worker activation is implied by that implementation.
+
+Peer mapper normal hook is now terminal: commit `8ba33de3`,63 contract files/
+691PASS,331 API files/4463PASS and3existing skips; build/PGrestore PASS. Receipt
+`/tmp/epg10-existing-mapping-commit-ymw74flm/receipt.json`, normal log sha256
+d84cf71e12b3c9fc05585956acad7e0611ab45a3c5ebedf43c0e85b3c2d2e564.
+All owned cells/window removed, protected runtime unchanged. Original receipt's
+whole-working-tree hash differs because independently owned docs were edited;
+staged peer source/test/Unified blobs and landed commit are separately pinned.
+Do not relabel that diagnostic as an unchanged entire checkout or add103 focus
+tests to the overlapping full count. No new genuine authority was installed.
+
+Fresh read-only HK05:58–06:00UTC: PM now
+`c7c3997f28339a540775a2a17d8f52bebfc10f57`, restrictedr1 source committed;
+owner reports601uniquePASS (183PG/418unit),25offline separate, still TEST_ONLY
+external authority/unmounted. Edge now
+`7657da7628de68333b71e9591c1e57e0d444e36f`, producer qualification
+`MAPPING_SOURCE_QUALIFIED_RELATIONS_PRODUCER_CONTRACT_OPEN`, actual08NOT_MET.
+PM's new untracked `pma11-03-04-current-relations-proposal.json` (under
+`contracts/baseline/portfolio-account-v1_1/`) sha256
+a4b9a570ef0926776fe6b12e2ce9931e67a3720e5def7d3cd8b0153d418ca800 records
+native source meaning; authenticated adapter/joint acceptance/installed flags
+are allfalse. One Core grant may need several native resource/environment legs.
+Unrelated-leg revoke must not withdraw a separately valid leg; original receipt,
+mapping-at-acceptance and current ancestor proof remain separate. A per-grant
+singleton or a latest receipt is not a sufficient joint normalization contract.
+Primary read the exact proposal, not only the source-owner summary.
+
+Actual foreign HK G12 process `g12.sh` PID2608680/start276992742 and Python
+PID2618570/start276997355 observed in data-layer worktree, reserved05:52:59–
+07:07:59UTC. No remote jobs, DB reads, writes, credentials, installs/restarts or
+load were performed. Preserve the owner WIP and real capacity window. This
+does not block independent local profile/Regime work or imply source commissioning.
+
+####10-007 and ID02 focused gate — 2026-10-17 13:07Asia/Saigon
+
+Recovery22/22fault cases and17/17actual loopback-mTLS regressions PASS in the
+same isolated run as19 OwnProfile mapping and18 identity regressions. Relevant
+identity/recovery total76; the51 initial Regime draft cases also green in the
+127total are not full Regime acceptance (three source-review findings are being
+corrected). APIbuild and PGrestore/four scoped-row digests PASS. Receipt
+`/home/bobby/.local/state/portal-execution-elp210/20261017/profile-recovery-focus-060405/controller.json`,
+logsha256 `4a1fa80e5f5db038e6acd2776ff8c8d62e0df2e36f008a2f70910b09be2d8d92`.
+Eight protected runtime tuples unchanged; own Node3GiB/PG1GiB cells/network and
+measurement lease removed. No HK/source test under its foreign live workload.
+Normal-hook landing/contract regression still pending.10-007 has no public field;
+02 additive profile contract/handoff is[here](../ELP2-02/current-mapping.md).
+
+Corrected[private Regime foundation](../ELP2-06/regime-calculator.md) joins that
+one normal-hook batch to avoid duplicate full gates. Initial51 green cases did
+not prevent review findings; causal-time, exact delta/large-offset numerical
+and frozen archive-history regressions are required in the final test freeze.
+No approved runtime policy, source/worker/public projection or frontend field
+is delivered by a private mathematical function.
+
+Final corrected Regime pure retake72/72PASS,0FAIL/SKIP at13:12Asia/Saigon,
+source `c74aba37cfb6e8a304f23b198fb4011453af37dedad9eb99557083a4b2cb0110`,
+test `4abf70dc3c9b2c3949bc47bdc6ce7a8c7c6da7d268113d2ea75318c184b0e336`.
+Independent reviewer ACCEPT_SOURCE_ONLY. Profile snapshot regeneration pins
+exact generator/OpenAPI/type/mapped fixture. These corrected source bytes,
+identity/recovery and their packets freeze into one normal-hook batch; terminal
+controller/log, commit SHA and cleanup are recorded under
+`/home/bobby/.local/state/portal-execution-elp210/20261017/profile-recovery-land-*/`.
+Do not add the72 to overlapping full-suite totals or relabel the initial51 as
+proof for the corrected source. G2/coexistence, actual grants/source installation,
+numeric budget/calibration and frontend browser gates remain OPEN.
