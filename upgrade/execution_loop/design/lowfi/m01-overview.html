@@ -5,7 +5,8 @@
  <span class="mute sm">Sample values only — not data from any source</span></div>
 <div class="shell"><nav class="side"><h6>Execution</h6><a aria-current="page" href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Account</h6><a href="#">Profile &amp; Access</a></nav>
 <main>
-<div class="ctx"><h1 data-show="healthy sparse loading">Fund overview</h1><h1 data-show="denied">My execution overview</h1>
+<div class="v1wrap"><figure><img src="v1/command-center.png" alt="Current Execution Command Center"><figcaption>Closest screen today (V1): Execution Command Center at <code>/execution</code> — preview build, 1440px, BFF-double sample data. It shows source health, a ranked “needs you now” list, fleet counts and the promotion pipeline, but <b>no NAV, PnL, return, drawdown, score or capital</b>. M01 Overview is therefore new; it sits beside Command Center and reuses its ranked list. Where M01 lives (<code>/execution</code> or a new route) is an open decision.</figcaption></figure></div>
+<div class="ctx" data-chg="changed" title="Today: greeting + CRITICAL badge + raw as_of timestamp. Proposed: scope title, one freshness chip, date window, environment switch, partition chip."><h1 data-show="healthy sparse loading">Fund overview</h1><h1 data-show="denied">My execution overview</h1>
  <span class="chip" data-s="fresh" data-show="healthy"><i></i>Fresh · as of 12s ago</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Source not qualified</span>
  <span class="seg" data-seg><button aria-pressed="false">7D</button><button aria-pressed="true">30D</button><button aria-pressed="false">90D</button><button aria-pressed="false">Custom</button></span>
  <span class="seg" data-seg data-show="healthy sparse loading"><button aria-pressed="true">Live</button><button aria-pressed="false">Paper</button><button aria-pressed="false">Sandbox</button></span><span class="note">1</span>
@@ -14,7 +15,7 @@
 <div class="banner" data-show="denied">Showing your slice only. Fund totals, peers and aggregate denominators are not available to your role.</div>
 <div class="banner warn" data-show="sparse"><b>Most figures are not available yet.</b> The fund data source has not been qualified for this environment. Nothing below is estimated.</div>
 
-<div class="grid g5" data-show="healthy sparse loading">
+<div class="grid g5" data-show="healthy sparse loading" data-chg="new" title="No NAV / PnL / return / drawdown / score tiles exist today.">
  <div class="card kpi hero"><div class="l">Net asset value</div>
   <div class="v" data-show="healthy">1,248,330.12 <span class="sm mute">USDT</span></div>
   <div data-show="sparse"><span class="na">Not available</span><span class="reason">Source not qualified</span></div><div class="sk" data-show="loading"></div></div>
@@ -25,9 +26,9 @@
 </div>
 
 <div class="grid g2" style="margin-top:12px" data-show="healthy sparse loading">
- <div class="card"><h2>Performance <span class="seg" data-seg style="margin-left:8px"><button aria-pressed="true">Net PnL</button><button aria-pressed="false">Return</button><button aria-pressed="false">Equity</button></span><span class="note">5</span></h2>
+ <div class="card" data-chg="new" title="No performance chart today; only the equity chart inside Paper Workbench."><h2>Performance <span class="seg" data-seg style="margin-left:8px"><button aria-pressed="true">Net PnL</button><button aria-pressed="false">Return</button><button aria-pressed="false">Equity</button></span><span class="note">5</span></h2>
   <div class="chart"><span data-show="healthy">Chart · cash-flow markers (▲ added · ▼ returned) are separate from profit</span><span data-show="sparse">No series published yet — nothing to draw</span><span data-show="loading"><span class="sk" style="width:200px;display:block"></span></span></div></div>
- <div class="card"><h2>Capital <span class="note">6</span></h2>
+ <div class="card" data-chg="new" title="No capital statement today (Portfolio 360 has a capital board for one portfolio)."><h2>Capital <span class="note">6</span></h2>
   <table><tbody>
    <tr><td>Initial funds</td><td class="n" data-show="healthy">1,000,000.00</td><td class="n na" data-show="sparse loading">—</td></tr>
    <tr><td>+ Added funds</td><td class="n" data-show="healthy">120,000.00</td><td class="n na" data-show="sparse loading">—</td></tr>
@@ -39,7 +40,7 @@
   <details style="margin-top:8px"><summary class="sm">By funding source (Initial vs Added)</summary><p class="na">Not available — no approved per-source attribution. Profit is never split by deposit date.</p></details></div>
 </div>
 
-<div class="card" style="margin-top:12px" data-show="healthy sparse"><h2>Performance statement <span class="mute sm">every requested row, with its method</span> <span class="note">7</span></h2>
+<div class="card" style="margin-top:12px" data-show="healthy sparse" data-chg="new" title="Maps every row of lowfi image 1 with its method."><h2>Performance statement <span class="mute sm">every requested row, with its method</span> <span class="note">7</span></h2>
  <table><thead><tr><th>Measure</th><th class="n">Value</th><th>Basis / method</th><th>Status</th></tr></thead><tbody>
   <tr><td>Current total</td><td class="n"><span data-show="healthy">1,248,330.12</span><span class="na" data-show="sparse">—</span></td><td>NAV, selected valuation basis</td><td><span class="chip" data-s="fresh" data-show="healthy"><i></i>Complete</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Unavailable</span></td></tr>
   <tr><td>Profit amount</td><td class="n"><span data-show="healthy">+84,210.55</span><span class="na" data-show="sparse">—</span></td><td>Net, realized + unrealized, after fees/funding</td><td><span class="chip" data-s="partial" data-show="healthy"><i></i>Partial</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Unavailable</span></td></tr>
@@ -51,17 +52,29 @@
  </tbody></table></div>
 
 <div class="grid g3" style="margin-top:12px" data-show="healthy sparse">
- <div class="card"><h2>Needs attention <span class="note">8</span></h2>
-  <div data-show="healthy"><p><b>Pending recall</b> · Portfolio Alpha-1<br><span class="sm mute">Since 09:14 · budget not yet returned · <a href="#">Open</a></span></p><p><b>Unreconciled valuation</b> · Account Binance-02<br><span class="sm mute">Stale 14m · <a href="#">Open</a></span></p></div>
+ <div class="card" data-chg="changed" title="Today this ranked list IS the page (Needs you now: incident, operation, approval with SLA). It becomes one panel and keeps the rank + SLA."><h2>Needs attention <span class="note">8</span></h2>
+  <div data-show="healthy"><p><span class="pill on">INCIDENT</span> <b>Broker sync diverged</b> · Binance-02<br><span class="sm mute">Overdue +2:00 · <a href="#">Investigate →</a></span></p><p><span class="pill">OPERATION</span> <b>Recall pending</b> · Portfolio Core<br><span class="sm mute">Due in 4:00 · <a href="#">Verify →</a></span></p></div>
   <p class="na" data-show="sparse">Nothing can be evaluated until the source is ready.</p></div>
- <div class="card"><h2>Contributors <span class="seg" data-seg style="margin-left:6px"><button aria-pressed="true">Amount</button><button aria-pressed="false">Return</button><button aria-pressed="false">Score</button></span><span class="note">9</span></h2>
+ <div class="card" data-chg="new" title="Nothing like it today."><h2>Contributors <span class="seg" data-seg style="margin-left:6px"><button aria-pressed="true">Amount</button><button aria-pressed="false">Return</button><button aria-pressed="false">Score</button></span><span class="note">9</span></h2>
   <table data-show="healthy"><tbody><tr><td>BTC-Trend v3</td><td class="n">+21,430</td></tr><tr><td>ETH-Mean v2</td><td class="n">+12,980</td></tr><tr><td class="mute">… bottom</td><td class="n">−4,120</td></tr></tbody></table><p class="na" data-show="sparse">Not available.</p></div>
- <div class="card"><h2>Portfolios <a class="sm" href="#" style="margin-left:6px">View all</a></h2>
+ <div class="card" data-chg="new" title="Fleet health counts exist today; a portfolio comparison does not."><h2>Portfolios <a class="sm" href="#" style="margin-left:6px">View all</a></h2>
   <table data-show="healthy"><tbody><tr><td>Core</td><td class="n">612k</td><td class="n">+4.1%</td></tr><tr><td>Satellite</td><td class="n">380k</td><td class="n">+9.8%</td></tr><tr><td>Canary</td><td class="n">256k</td><td class="n">−0.6%</td></tr></tbody></table><p class="na" data-show="sparse">Not available.</p></div>
 </div>
 
 <div class="card" style="margin-top:12px" data-show="denied"><h2>My alphas</h2><table><thead><tr><th>Alpha / version</th><th>Stage</th><th class="n">Allocation</th><th class="n">Net PnL</th><th>Health</th></tr></thead><tbody><tr><td>BTC-Trend v3</td><td>Live · Paper</td><td class="n">120,000</td><td class="n">+21,430</td><td><span class="chip" data-s="fresh"><i></i>OK</span></td></tr></tbody></table></div>
 
+
+<section class="chgtable card"><h2>What changes vs today — Overview (nearest today: Execution Command Center, <span class="mono">/execution</span>)</h2>
+<table><thead><tr><th></th><th>Region</th><th>Today (V1, from the screenshot)</th><th>Proposed</th><th>Why · needs backend</th></tr></thead><tbody>
+<tr><td><span class="tag new">NEW</span></td><td>Headline KPIs (NAV, Net PnL, Return, Drawdown, Score)</td><td>None. Command Center shows counts and queues only</td><td>One hero NAV tile + four secondary tiles for the selected environment</td><td>Manager dataset `current_nav`, `net_pnl`…; today most are unavailable (source not qualified), which the sparse state designs for.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Performance chart, Capital statement, Performance statement</td><td>None at fund level</td><td>Chart with flow markers, cash-flow capital list, every row of the lowfi with method + status</td><td>Chart needs a manager time-series (FE-013). No Net external flows field exists; shown only if published.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Environment switch Live / Paper / Sandbox + partition chip</td><td>Environment appears only as table rows in Source health</td><td>Segmented switch; money stays within one partition</td><td>Backend requires one environment; no combined “All”.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Needs attention</td><td>The page itself: “Needs you now”, ranked by severity → SLA → age (incident, operation, approval)</td><td>One panel; keeps the rank and the SLA/overdue wording</td><td>The ranked list is good; it just stops being the whole screen.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Source health</td><td>A full table (state, availability, freshness, completeness, as_of, projection, replay) for 3 environments</td><td>One freshness chip in the header; the table moves to a “Data sources” disclosure</td><td>Same facts, less noise for web users.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Fleet health counts, Portfolios</td><td>Counts per stage (Live 42, Canary 8…) and broker sync / findings</td><td>Portfolios mini-table with NAV, return, health; stage counts live in Alpha Fleet tabs</td><td>Needs Portfolios directory (FE-014).</td></tr>
+<tr><td><span class="tag kept">KEPT</span></td><td>Command Center, Promotion pipeline, Operations queue</td><td>Own routes and screens</td><td>Untouched; M01 links to them</td><td>Existing triage and pipeline remain.</td></tr>
+<tr><td><span class="tag removed">REMOVED</span></td><td>Greeting line and “snapshot only; reload to re-read” sentence</td><td>“Good morning, bobby · 1 CRITICAL”, explanatory copy</td><td>Title plus freshness chip; critical count appears inside Needs attention</td><td>Less chatter.</td></tr>
+</tbody></table></section>
 <aside class="notes"><b>Annotations</b><ol>
 <li><b>Environment, not "All".</b> The backend requires one environment (live / paper / sandbox); there is no combined NAV. Live may include Canary only when the source set proves it (guide §6.1). Paper/Sandbox are labelled simulated.</li>
 <li><b>Partition chip.</b> Money is shown for one economic partition and currency; USDT is never added to USD/BTC.</li>

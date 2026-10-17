@@ -39,3 +39,27 @@ tr.grp td{background:var(--fill);font-weight:600;font-size:12px}tr.child td{colo
 .note{position:static}
 .grid>*,.split>*{min-width:0}.card{overflow-x:auto}main{min-width:0}
 .drawer{min-width:0;overflow-x:auto}
+/* --- compare layer: view = proposed | changes | v1 ; skin = wire | app --- */
+.v1wrap{display:none}.chgtable{display:none}
+body[data-view=v1] main>*:not(.v1wrap):not(.chgtable):not(.ctx){display:none}
+body[data-view=v1] .v1wrap,body[data-view=v1] .chgtable,body[data-view=changes] .chgtable{display:block}
+.v1wrap figure{margin:0 0 12px}.v1wrap img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px;display:block}.v1wrap figcaption{font-size:12px;color:var(--mute);margin-top:6px}
+.v1wrap .none{padding:24px;border:1px dashed var(--line);border-radius:8px;text-align:center;color:var(--mute)}
+body[data-view=changes] [data-chg]{outline:2px dashed var(--chg,var(--mute));outline-offset:2px;position:relative}
+body[data-view=changes] [data-chg]::before{position:absolute;top:3px;right:6px;z-index:0;padding:0 6px;border-radius:3px;font:700 10px/16px system-ui;letter-spacing:.05em;color:#fff;background:var(--chg,var(--mute))}
+[data-chg=new]{--chg:#1a7f4b}[data-chg=new]::before{content:"NEW"}
+[data-chg=changed]{--chg:#b7791f}[data-chg=changed]::before{content:"CHANGED"}
+[data-chg=kept]{--chg:#6b6b66}[data-chg=kept]::before{content:"KEPT"}
+[data-chg=removed]{--chg:#b83232}[data-chg=removed]::before{content:"REMOVED"}
+.legend{display:none;gap:8px;align-items:center;font-size:11px}body[data-view=changes] .legend{display:inline-flex}
+.legend i{font-style:normal;padding:0 6px;border-radius:3px;color:#fff;font-weight:700;line-height:16px}
+.chgtable{margin:16px 0}.chgtable h2{font-size:14px;margin:0 0 8px}.chgtable td{white-space:normal;vertical-align:top}
+.tag{display:inline-block;padding:0 6px;border-radius:3px;color:#fff;font:700 10px/16px system-ui;letter-spacing:.05em}
+.tag.new{background:#1a7f4b}.tag.changed{background:#b7791f}.tag.kept{background:#6b6b66}.tag.removed{background:#b83232}
+/* app skin: mimics the current dark Execution look (IBM Plex, dark carbon) */
+body[data-skin=app]{--bg:#0f0f10;--panel:#161618;--ink:#e6e6e6;--mute:#9a9aa0;--line:#2c2c30;--fill:#222226;--accent:#78a9ff;--good:#42be65;--warn:#f1c21b;--bad:#fa4d56;color-scheme:dark;font-family:"IBM Plex Sans",system-ui,sans-serif}
+body[data-skin=app] .mono,body[data-skin=app] td.n,body[data-skin=app] .kpi .v{font-family:"IBM Plex Mono",ui-monospace,monospace}
+body[data-skin=app] th{letter-spacing:.08em}body[data-skin=app] .card{border-radius:2px}body[data-skin=app] .chip,body[data-skin=app] .pill{border-radius:2px}
+body[data-skin=app] .seg button[aria-pressed=true]{background:var(--accent);color:#0b0b0c}
+.chgtable th{position:static}
+.btn,.seg,.tool input,.chip,.tool .chip{position:relative;z-index:1}

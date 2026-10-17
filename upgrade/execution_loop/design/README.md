@@ -30,3 +30,31 @@ Tài liệu đi kèm: [UXM-01 IA + metric dictionary](UXM-01-ia-and-metric-dicti
 | G3 | Cách tính return paper sau archive; nguồn `w_i` ở cấp alpha; cửa sổ actual bắt đầu từ Canary hay Live | M05, M08 | Hỏi Codex/Research; hiện "Not available" | Codex (FE-022) |
 
 Bản xem riêng tư (Artifact, không phải nguồn chính; nguồn là các file trong repo): https://claude.ai/artifact/X7Aqzz9rEA4Q51C7ifnKAQ
+
+## Cách đọc lowfi (cập nhật 2026-10-17, theo phản hồi của Bobby)
+
+Mỗi trang có ba chế độ xem ở thanh trên: **What changes** (mặc định: màn đề xuất, mỗi vùng gắn nhãn NEW / CHANGED / KEPT / REMOVED so với màn hiện tại),
+**Proposed** (sạch, không nhãn) và **Current (V1)** (ảnh màn hiện tại thật). Nút **App look** vẽ lowfi bằng giao diện tối giống app hiện tại để so mắt.
+Dưới mỗi trang có bảng "What changes vs today" (vùng · V1 đang có gì · đề xuất · vì sao/cần backend).
+
+Ảnh V1: `lowfi/v1/*.png`, chụp 1440px full-page từ **build preview + BFF double** (dữ liệu giả, một alpha mẫu), **không phải deployment đang chạy**.
+Cách chụp: `tools/v1-baseline.spec.ts` + `tools/v1-baseline.config.ts` (chép vào `apps/portal/frontend` để chạy; không nằm trong gate). Đây là lane FIXTURE/BFF_DOUBLE.
+Màn M08 không có tương đương V1; M01 gần nhất là Command Center.
+
+## Chức năng V1 mà bản đề xuất đã làm rơi (phát hiện khi đặt cạnh V1; khuyến nghị: GIỮ LẠI trừ khi Bobby bảo bỏ)
+
+| # | Màn | V1 đang có | Bản đề xuất đang làm gì | Khuyến nghị |
+| --- | --- | --- | --- | --- |
+| R1 | M09 | Acknowledge / Resolve một operation, lens "Mine" | Không có | Giữ cả hai (operator cần) |
+| R2 | M09 | Source health theo profile, Canary twin, command journal | Bỏ | Source health thành panel thu gọn; journal giữ ở drawer |
+| R3 | M09 | Grain một `operation_id` từ plan → apply → verify | Một hàng mỗi command request | Đối chiếu với Codex (grain) trước khi khóa |
+| R4 | M10 | SEE/DECIDE theo từng gate (R1, R2, Canary, Live); cờ STEP-UP REQUIRED khi cấp quyền | Gộp thành "Approve stage exits" | Giữ chi tiết từng gate + step-up |
+| R5 | M02 | Cột Allocations, Allocated capital; hàng `pf_unallocated` | Chỉ còn trong column chooser; không có hàng unallocated | Giữ hàng unallocated, đưa Allocated capital lại cột mặc định |
+| R6 | M04 | Tab Approvals, Incidents; selector benchmark; Configuration log; Capital Ledger, Structure & Correlation | Không có tab Approvals/Incidents | Giữ Approvals/Incidents như tab phụ; Ledger/Correlation vào Allocations/Risk |
+| R7 | M04 | Chart tools (Lin/Log, 1W/1M/3M/ALL, Table, Expand, Export), Report pack | Đã thêm lại | Đã xử lý |
+| R8 | M05 | 10 tab (Trade Replay, Positions, Risk, Sessions, Accounting, Reconciliation, Audit, Insight Charts) | Sáu tab guide | Đã thêm "More ▾" để giữ; Bobby chốt có nên thêm tab hay gộp |
+| R9 | M05 | Biểu đồ Contribution-by-venue | Không có chỗ | Bobby quyết đặt ở đâu (đề xuất tab Performance) |
+| R10 | M06 | Cột "Difference" (Δ derived) | Ban đầu bỏ | Giữ chỉ trong Reconciliation với scope khớp; số dư shared binding là "Not computed" — cần Bobby xác nhận |
+| R11 | M07 | Dải hành trình R1→R2→PAPER→SANDBOX→CANARY→LIVE | Pills stage trùng một phần | Giữ dải hành trình, bỏ pills trùng |
+
+Lưu ý giới hạn: ảnh V1 của các màn danh sách chỉ thấy phần trên (1 alpha/1 portfolio mẫu); phần dưới của một số tab không nằm trong ảnh nên không được khẳng định.

@@ -52,9 +52,10 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
  <span class="mute sm">Sample values only — not data from any source</span></div>
 <div class="shell"><nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a aria-current="page" href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Account</h6><a href="#">Profile &amp; Access</a></nav>
 <main>
+<div class="v1wrap"><figure><img src="v1/alpha-360.png" alt="Current Alpha 360 screen"><figcaption>Current screen (V1) at <code>/deployments/alphas/:id</code> — preview build, 1440px, BFF-double sample data. Switch to “What changes” to see the proposal marked against it.</figcaption></figure></div>
 
 <!-- HEADER -->
-<div class="card">
+<div class="card" data-chg="changed" title="Today: ALPHA tag, “Carry A · av_2041”, READY chip, WF tag, an info bar (artifact version, owner, current stages) and an as_of chip. Proposed: name + version, lifecycle, research binding, evidence, owner as author, stage presence.">
  <div class="crumb"><a href="#">Alpha Fleet</a> › <b style="color:var(--ink)">BTC-Trend v3</b> <span class="mono">a-7f3a91</span> &nbsp;·&nbsp; <a href="#">← Back to Fleet results</a> <span class="mono">?stage=live&amp;portfolio=core&amp;sort=-allocation</span> <span class="note">1</span></div>
  <div class="ctx" style="margin:0"><h1>BTC-Trend</h1><span class="chip mono">v3</span><span class="chip" data-s="fresh"><i></i>Active</span>
   <span class="chip" data-s="fresh" data-show="healthy denied loading"><i></i>Fresh · 9s</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Identity only · metrics not ready</span>
@@ -69,7 +70,7 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 </div>
 
 <!-- DOMAIN / WINDOW -->
-<div class="ctx" style="margin:12px 0 8px">
+<div class="ctx" style="margin:12px 0 8px" data-chg="changed" title="Today: a scope bar with four selects (Portfolio, Mode, Venue, Window). Proposed: economic-domain and window segments; Portfolio and Venue selectors are not drawn here.">
  <span class="seg" data-seg><button aria-pressed="true">Real-funded · Canary→Live</button><button aria-pressed="false">Paper (simulated)</button><button aria-pressed="false">Sandbox (simulated)</button></span>
  <span class="seg" data-seg><button aria-pressed="false">7D</button><button aria-pressed="true">30D</button><button aria-pressed="false">90D</button></span>
  <span class="chip">USDT · real-funded</span><span class="note">3</span></div>
@@ -77,7 +78,7 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 <div class="banner warn" data-show="sparse"><b>Identity and stage presence are shown; money, score and chart figures are not available yet.</b> The source is not qualified. Nothing is estimated.</div>
 
 <!-- SUMMARY STRIP -->
-<div class="grid g5">
+<div class="grid g5" data-chg="new" title="Today no economic or score summary is visible above the tabs (only order-count tiles). Proposed: five-card strip with QBTS Pending and Regime Fit as separate cards.">
  <div class="card kpi hero"><div class="l">Net PnL</div>
   <div class="v" data-show="healthy denied">+4,120.80 <span class="sm mute">USDT</span></div><span class="reason" data-show="healthy denied">Actual · requested 30D, effective 10D <span class="note">4</span></span>
   <div data-show="sparse"><span class="na">Not available</span><span class="reason">Source not qualified</span></div><div class="sk" data-show="loading"></div></div>
@@ -94,17 +95,17 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 </div>
 
 <!-- TABS + CONTENT -->
-<div class="tabs" role="tablist" style="margin-top:16px" data-tg="tab">
- <a href="#" data-t="perf" aria-selected="true">Performance</a><a href="#" data-t="dep" aria-selected="false">Deployments <span class="mute sm">4</span></a><a href="#" data-t="evi" aria-selected="false">Research Evidence</a><a href="#" data-t="rf" aria-selected="false">Regime Fit</a><a href="#" data-t="ord" aria-selected="false">Orders &amp; Fills</a><a href="#" data-t="act" aria-selected="false">Activity &amp; Decisions</a><span class="note">7</span></div>
+<div class="tabs" role="tablist" style="margin-top:16px" data-tg="tab" data-chg="changed" title="Today: 10 tabs (Overview, Insight Charts, Trade Replay, Positions, Orders &amp; Fills, Risk, Sessions, Accounting, Reconciliation, Audit). Proposed: the six guide tabs plus a More menu that keeps the other V1 tabs unchanged.">
+ <a href="#" data-t="perf" aria-selected="true">Performance</a><a href="#" data-t="dep" aria-selected="false">Deployments <span class="mute sm">4</span></a><a href="#" data-t="evi" aria-selected="false">Research Evidence</a><a href="#" data-t="rf" aria-selected="false">Regime Fit</a><a href="#" data-t="ord" aria-selected="false">Orders &amp; Fills</a><a href="#" data-t="act" aria-selected="false">Activity &amp; Decisions</a><a href="#" title="Existing V1 tabs, unchanged: Trade Replay, Positions, Risk, Sessions, Accounting, Reconciliation, Audit (Insight Charts content moves into Performance)">More ▾</a><span class="note">7</span></div>
 
 <div class="split"><div>
 
 <!-- ============ PERFORMANCE ============ -->
 <section data-pg="tab" data-p="perf">
- <div class="card">
+ <div class="card" data-chg="changed" title="Today: one “Equity by stage” chart (Lin / Log / Table / Expand / Export). Proposed: three separate facets (actual, forward simulated, research OOS); the chart toolbar is kept.">
   <h2>Economic path <span class="seg" data-tg="fac" style="margin-left:8px"><button data-t="act" aria-pressed="true">Actual</button><button data-t="sim" aria-pressed="false">Forward simulated</button><button data-t="oos" aria-pressed="false">Research OOS</button></span><span class="note">8</span></h2>
   <div data-pg="fac" data-p="act">
-   <div class="chart" style="height:170px"><span data-show="healthy denied">Chart · actual equity, Canary→Live, 10 days · deposits/withdrawals as markers</span><span data-show="sparse">No series published yet — nothing to draw</span><span data-show="loading"><span class="sk" style="width:200px;display:block"></span></span></div>
+   <div class="sm mute" style="margin-bottom:4px">Lin · Log · Table · Expand · Export <span class="mute">(toolbar kept from V1)</span></div><div class="chart" style="height:170px"><span data-show="healthy denied">Chart · actual equity, Canary→Live, 10 days · deposits/withdrawals as markers</span><span data-show="sparse">No series published yet — nothing to draw</span><span data-show="loading"><span class="sk" style="width:200px;display:block"></span></span></div>
    <div class="kv" style="margin-top:10px" data-show="healthy denied loading sparse">
     <div><div class="l">Net PnL</div><div class="v"><span data-show="healthy denied">+4,120.80</span><span class="na" data-show="sparse loading">Not available</span></div></div>
     <div><div class="l">Return (Modified-Dietz)</div><div class="v"><span data-show="healthy denied">+3.4%</span><span class="na" data-show="sparse loading">Not available</span></div></div>
@@ -123,7 +124,7 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
   </div>
  </div>
 
- <div class="card" style="margin-top:12px"><h2>Cross-stage timeline <span class="mute sm">Paper → Sandbox → Canary → Live</span><span class="note">9</span></h2>
+ <div class="card" style="margin-top:12px" data-chg="new" title="Today stages appear only as lines inside the Equity-by-stage chart and a Deployment map; no segment durations, no actual-vs-forward split."><h2>Cross-stage timeline <span class="mute sm">Paper → Sandbox → Canary → Live</span><span class="note">9</span></h2>
   <div data-show="healthy denied">
    <div class="tl" role="img" aria-label="Paper 40 days, Sandbox 20 days, Canary 4 days, Live 6 days">
     <i class="s-paper" style="flex:40" title="Paper 40d">Paper</i><i class="s-sbx" style="flex:20" title="Sandbox 20d">Sandbox</i><i class="s-can" style="flex:4" title="Canary 4d">C</i><i class="s-live" style="flex:6" title="Live 6d">L</i></div>
@@ -140,7 +141,7 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
   <div data-show="loading"><div class="sk" style="height:34px"></div><div class="sk" style="margin-top:8px"></div></div>
  </div>
 
- <div class="facet" data-show="healthy denied loading">
+ <div class="facet" data-chg="new" title="No cross-stage forward observation exists today. Needs a continuity manifest from the backend." data-show="healthy denied loading">
   <header>Separate facet · Forward observation across stages — not an actual track record <span class="note">10</span></header>
   <div class="in">
    <div class="duo">
@@ -161,7 +162,7 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 </section>
 
 <!-- ============ DEPLOYMENTS ============ -->
-<section data-pg="tab" data-p="dep" hidden>
+<section data-pg="tab" data-p="dep" hidden data-chg="changed" title="Today: a Deployment map (venue × stage grid with a Broker sync column showing SYNC UNKNOWN). Proposed: a deployments table with account, runtime, native profile, dates and deployer.">
  <div class="card scroll" style="padding:0"><table class="dep"><thead><tr><th>Stage</th><th>Deployment</th><th>Account · portfolio · native profile</th><th>Runtime · dates</th><th>Deployed by</th><th class="n">Receipts</th></tr></thead><tbody>
   <tr><td><span class="pill on">Live</span></td><td><b>live-0192</b></td><td>Binance-02 sleeve · Core<br><span class="sm mute">USDT-M · hedge · cross</span></td><td><span class="chip" data-s="fresh"><i></i>Running</span><br><span class="sm mute">11 Oct → —</span></td><td><span data-show="healthy sparse loading">bjones</span><span class="na" data-show="denied">Not available</span></td><td class="n">2</td></tr>
   <tr><td><span class="pill on">Paper</span></td><td><b>paper-0044</b> <span class="chip">simulated</span></td><td>Paper-sim-01 · Core<br><span class="sm mute">Simulated</span></td><td><span class="chip" data-s="fresh"><i></i>Running</span><br><span class="sm mute">12 Oct → —</span></td><td>asmith</td><td class="n">1</td></tr>
@@ -186,7 +187,7 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 </section>
 
 <!-- ============ REGIME FIT ============ -->
-<section data-pg="tab" data-p="rf" hidden>
+<section data-pg="tab" data-p="rf" hidden data-chg="changed" title="Today a Regime tile exists and reads insufficient_data (UXM-00 §3; not visible in the first screen of the screenshot). Proposed: its own tab with six explicit states.">
  <div class="card"><h2>Regime Fit <span class="chip">Historical support — not a forecast</span><span class="note">11</span></h2>
   <p class="sm" style="margin:0">Is the market now similar to periods where this version and params have data, and how did it perform then? It is not a probability of winning and is <b>not an input</b> to QBTS, contribution or band.</p>
   <div class="rf-sts" aria-label="Possible states"><span class="pill">Supported</span><span class="pill">Weak support</span><span class="pill">Out of support</span><span class="pill on">Insufficient data</span><span class="pill">Stale</span><span class="pill">Unbound</span><span class="sm mute" style="align-self:center">current state highlighted</span></div>
@@ -241,7 +242,7 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 </div>
 
 <!-- ============ SCORE DRAWER ============ -->
-<div class="drawer" id="score-drawer">
+<div class="drawer" id="score-drawer" data-chg="new" title="No score surface is visible on today’s Alpha 360 (UXM-00 lists a Score component as a gap). Proposed: explanation drawer, Pending first.">
  <div style="display:flex;justify-content:space-between;align-items:center"><b>Score explanation</b><span class="note">12</span></div>
  <p class="sm mute" style="margin:2px 0 8px">BTC-Trend v3 · real-funded path · USDT · requested 30D</p>
  <span class="seg" data-tg="sd"><button data-t="now" aria-pressed="true">Today (real)</button><button data-t="fut" aria-pressed="false">Future layout</button></span>
@@ -291,6 +292,20 @@ main{min-width:0}@media(max-width:1100px){.shell{grid-template-columns:minmax(0,
 </div>
 </div>
 
+<section class="chgtable card"><h2>What changes vs today — Alpha 360 (<span class="mono">/deployments/alphas/:id</span>)</h2>
+<table><thead><tr><th></th><th>Region</th><th>Today (V1, from the screenshot)</th><th>Proposed</th><th>Why · needs backend</th></tr></thead><tbody>
+<tr><td><span class="tag kept">KEPT</span></td><td>Route, Orders &amp; Fills tab and the existing detail screens</td><td>Route <span class="mono">/deployments/alphas/:id</span> with an Orders &amp; Fills tab</td><td>Same route; Orders &amp; Fills keeps its name and links to the existing detail</td><td>Existing behaviour is right.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Header</td><td>ALPHA tag, “Carry A · av_2041”, READY chip, WF tag, as_of chip; info bar “artifact version 3.2 · owner Bobby-001 · current stages PAPER_OBSERVATION”</td><td>Name, version, lifecycle, research binding (run, params digest), evidence revision, owner as author, stage presence; the ID moves to the breadcrumb</td><td>Guide §9: deployer is never the author. Needs the research-binding fields.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Scope controls</td><td>Scope bar: Portfolio, Mode, Venue, Window selects, all “ALL”</td><td>Economic-domain segment and window segment; Portfolio and Venue are not drawn</td><td>Open question: where Portfolio and Venue filters live.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Tab bar</td><td>10 tabs: Overview, Insight Charts, Trade Replay, Positions, Orders &amp; Fills, Risk, Sessions, Accounting, Reconciliation, Audit</td><td>Performance, Deployments, Research Evidence, Regime Fit, Orders &amp; Fills, Activity &amp; Decisions, plus “More ▾” holding the V1 tabs</td><td>The other V1 tabs are not dropped; they stay reachable and unchanged.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Summary strip</td><td>None above the tabs</td><td>Net PnL, Return (Modified-Dietz), Max drawdown, QBTS Pending, Regime Fit</td><td>Return method is labelled (FE-006). QBTS shows Pending until policy exists (FE-011).</td></tr>
+<tr><td><span class="tag removed">REMOVED</span></td><td>Order-count tiles and Contribution-by-venue chart on the Overview</td><td>Tiles: orders, filled, formula version, submitted, risk/broker rejected, reject rate, latency with raw code <span class="mono">N28_BROKER_ACK_TIMESTAMP_NOT_ACTIVATED</span>; bar chart “Contribution by venue · USDT”</td><td>Not on the main view; counts belong to Orders &amp; Fills with plain-word reasons; venue contribution is not drawn</td><td>Flag: the venue contribution chart has no home yet in this proposal.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Equity chart</td><td>“Equity by stage” with Lin / Log / Table / Expand / Export</td><td>Facets for actual, forward simulated and research OOS; same toolbar</td><td>Needs a manager time-series endpoint (FE-013).</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Cross-stage timeline and forward-observation facet</td><td>None; stages only as lines in one chart</td><td>Proportional Paper → Sandbox → Canary → Live bar, per-stage cards, and a separate 70d-forward vs 10d-actual facet</td><td>Guide §9.1. Mixed return needs a verified continuity manifest.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Deployments</td><td>“Deployment map — venue × stage” grid with a Broker sync column (SYNC UNKNOWN)</td><td>Table: stage, deployment, account, runtime, native profile, dates, deployed by, receipts</td><td>Guide §9 tab 2.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Regime Fit</td><td>A Regime tile reading insufficient_data (per UXM-00; below the fold of the screenshot)</td><td>Own tab: six states, matched windows, outcomes; TradeState separate</td><td>Independent of score. Needs exact research binding.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Score explanation drawer</td><td>No score surface seen</td><td>Pending first; Future layout toggle</td><td>Score policy is pending in real data.</td></tr>
+</tbody></table></section>
 <aside class="notes"><b>Annotations</b><ol>
 <li><b>Identity and back path.</b> Breadcrumb reads by display name, IDs stay in mono for routing. "Back to Fleet results" keeps the exact query so the list returns to the same place. The header holds only identity: owner, binding, evidence, stage presence. The researcher owner is the author; deployers appear per deployment row only.</li>
 <li><b>Stage presence</b> is a state, not a total: Live and Paper are active now, Canary and Sandbox ended and are shown muted so the history is still readable.</li>

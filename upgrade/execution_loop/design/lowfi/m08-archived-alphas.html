@@ -23,14 +23,15 @@ body:not([data-state=healthy]) [data-has=zero],body:not([data-empty=zero]) [data
  <span class="mute sm">Sample values only</span></div>
 <div class="shell"><nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a aria-current="page" href="#">Archived Alphas</a><a href="#">Operations</a><h6>Account</h6><a href="#">Profile &amp; Access</a></nav>
 <main>
-<div class="ctx"><h1>Archived Alphas</h1>
+<div class="v1wrap"><div class="none">No screen like this exists today — Archived Alphas is new, and V1's left nav has no entry for it. The closest current pattern is the Alpha Fleet list (below).</div><figure><img src="v1/fleet.png" alt="Current Alpha Fleet screen"><figcaption>Closest current pattern (V1) at <code>/deployments/alphas</code> — preview build, 1440px, BFF-double sample data (one alpha). Switch to “What changes” to see the proposal marked against it.</figcaption></figure></div>
+<div class="ctx" data-chg="new" title="No such header today. Fleet shows ‘N alphas · N deployments’ and a raw source timestamp; this adds the lifecycle framing and a simulated-monitor chip."><h1>Archived Alphas</h1>
  <span class="chip" data-s="fresh" data-show="healthy denied loading"><i></i>Fresh · 21s</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Archive list not available</span>
  <span class="chip">Monitor figures: Paper · simulated</span><span class="note">1</span><span class="note">2</span></div>
 
 <div class="banner" data-show="denied">Showing archived alphas you own. Other owners and fund-level counts are not available to your role.</div>
 <div class="banner warn" data-show="sparse"><b>The archive list is not available yet.</b> The data source does not publish archived alphas for this environment. That is different from “nothing is archived”, so no count is shown.</div>
 
-<div class="grid g3" data-show="healthy sparse loading" data-has="rows">
+<div class="grid g3" data-show="healthy sparse loading" data-has="rows" data-chg="new" title="Today Fleet has a five-tile money strip; there is no archive summary. This strip is counts only.">
  <div class="card kpi"><div class="l">Archived alphas <span class="note">3</span></div>
   <div class="v" data-show="healthy">17</div><div class="sub" data-show="healthy">alphas · 1 requested · 2 pending drain · 14 archived</div>
   <div data-show="sparse"><span class="na">Not available</span><span class="reason">Archive list not published</span></div><div class="sk" data-show="loading"></div></div>
@@ -42,12 +43,12 @@ body:not([data-state=healthy]) [data-has=zero],body:not([data-empty=zero]) [data
   <div data-show="sparse"><span class="na">Not available</span><span class="reason">Needs the archive list</span></div><div class="sk" data-show="loading"></div></div>
 </div>
 
-<div data-show="healthy" data-has="rows" style="margin-top:12px">
+<div data-show="healthy" data-has="rows" style="margin-top:12px" data-chg="changed" title="Fleet has stage tabs (All/Live/Canary/Sandbox/Paper/Research) and Venue/Owner dropdowns; same pattern, now lifecycle tabs and lifecycle filters.">
 <div class="tabs" role="tablist"><a aria-selected="true" href="#">All <span class="mute sm">17</span></a><a aria-selected="false" href="#">Archive requested <span class="mute sm">1</span></a><a aria-selected="false" href="#">Pending drain <span class="mute sm">2</span></a><a aria-selected="false" href="#">Archived <span class="mute sm">14</span></a><span class="note">4</span></div>
 <div class="tool"><input placeholder="Search alpha or version" aria-label="Search"><button class="btn">Previous stage ▾</button><button class="btn">Monitor ▾</button><button class="btn">Review status ▾</button><button class="btn">Owner ▾</button><span style="flex:1"></span><button class="btn">Columns ▾</button><button class="btn" disabled title="Export is not available yet">Export</button></div></div>
 
 <div class="split" data-show="healthy denied loading" data-has="rows">
-<div class="card scroll" style="padding:0;align-self:start">
+<div class="card scroll" style="padding:0;align-self:start" data-chg="new" title="No archive list today. New lifecycle columns on the Fleet table pattern.">
 <table><thead><tr><th>Alpha / version</th><th>Archived</th><th>Open obligations <span class="note">5</span></th><th>Paper monitor <span class="note">6</span></th><th>Evidence since start <span class="note">7</span></th><th>Review</th></tr></thead>
 <tbody data-show="healthy">
  <tr class="sel"><td><b>BTC-Momentum</b> <span class="mono">v2</span><br><span class="pill">Pending drain</span> <span class="sm mute">bjones</span></td>
@@ -88,7 +89,7 @@ body:not([data-state=healthy]) [data-has=zero],body:not([data-empty=zero]) [data
 </table>
 <div class="sm mute" style="padding:8px 12px" data-show="healthy">Showing 5 of 17 authorized archived alphas · <a href="#">Next 50</a> · counts above cover the whole authorized set</div></div>
 
-<div class="drawer" data-show="healthy"><b>BTC-Momentum v2</b> <span class="pill">Pending drain</span> <span class="note">8</span>
+<div class="drawer" data-show="healthy" data-chg="new" title="Fleet rows only expand to deployments. New drawer with two separate timelines and the reactivation entry."><b>BTC-Momentum v2</b> <span class="pill">Pending drain</span> <span class="note">8</span>
  <p class="sm mute" style="margin:2px 0 0">Archive requested 18 Sep by Stan · reason: superseded by v3</p>
  <div class="sec">Still open (archive does not close these)</div>
  <table><tbody><tr><td>Open positions</td><td class="n">0</td></tr><tr><td>Working orders</td><td class="n">1</td></tr><tr><td>Reservations</td><td class="n">0</td></tr><tr><td>Unknown outcomes</td><td class="n">0</td></tr><tr><td>Settlement pending</td><td class="n">1</td></tr></tbody></table>
@@ -110,7 +111,7 @@ body:not([data-state=healthy]) [data-has=zero],body:not([data-empty=zero]) [data
  <p style="margin-top:8px"><button class="btn" disabled title="Reviews are started by managers">Start reactivation review</button><span class="reason">Reviews are started by managers. You can follow the review here.</span></p></div>
 </div>
 
-<div class="card" style="margin-top:12px" data-show="healthy" data-has="rows"><details><summary><b>What a reactivation review asks for</b> <span class="mute sm">preview of the review form, not a command</span></summary>
+<div class="card" style="margin-top:12px" data-show="healthy" data-has="rows" data-chg="new" title="No reactivation flow today. New review form, default target Paper."><details><summary><b>What a reactivation review asks for</b> <span class="mute sm">preview of the review form, not a command</span></summary>
  <div class="steps" style="margin-top:8px">
   <div><b>1 · Reason</b><br><span class="sm mute">Why reconsider, in words.</span></div>
   <div><b>2 · Version and parameters</b><br><span class="sm mute">Bound to a version. Changing parameters creates a new version; the archived one is untouched.</span></div>
@@ -120,7 +121,7 @@ body:not([data-state=healthy]) [data-has=zero],body:not([data-empty=zero]) [data
   <div><b>6 · Target stage</b><br><span class="sm mute">Starts at Paper. Anything further needs its own approval.</span></div>
  </div></details></div>
 
-<div class="card empty" data-show="sparse">
+<div class="card empty" data-show="sparse" data-chg="new" title="V1 Fleet has no unavailable-list state. New: says the list is not published, shows no count.">
  <h2>Archived alphas can't be listed yet</h2>
  <p class="mute">We don't know whether any are archived, so this page shows no list and no zero. Nothing is estimated from other screens.</p>
  <p><a href="#">Go to Alpha Fleet</a> · <a href="#">Open Operations</a></p>
@@ -132,6 +133,16 @@ body:not([data-state=healthy]) [data-has=zero],body:not([data-empty=zero]) [data
  <p class="mute">This is a real empty result, not a missing source. Archiving is a decision made from an alpha's detail page; archived alphas then appear here with their paper monitor.</p>
  <p><a href="#">Go to Alpha Fleet</a></p></div>
 
+<section class="chgtable card"><h2>What changes vs today — Archived Alphas (<span class="mono">new route, no V1 equivalent</span>)</h2>
+<table><thead><tr><th></th><th>Region</th><th>Today (V1, from the screenshot)</th><th>Proposed</th><th>Why · needs backend</th></tr></thead><tbody>
+<tr><td><span class="tag new">NEW</span></td><td>The screen and its nav entry</td><td>None. The left nav has no “Archived Alphas”; Alpha Fleet has stage tabs All / Live / Canary / Sandbox / Paper / Research and no archive view</td><td>One lifecycle watchlist, separate from Fleet</td><td>Guide §4.1 and §13. Archive is a lifecycle, not a stage. Backend has no archive read yet (FE-016), so Source not ready is the first real state.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Summary strip (archived, open obligations, monitors)</td><td>Fleet has a five-tile money strip (exposure, PnL, deployments…); nothing for archive</td><td>Three count tiles, no money</td><td>Needs the archive list to count anything.</td></tr>
+<tr><td><span class="tag kept">KEPT</span></td><td>List pattern: tabs as filters, dropdown filters, “Showing N of M”, paging</td><td>Fleet: stage tabs with counts, Venue / Owner dropdowns, Previous / Next buttons</td><td>Same pattern, with lifecycle tabs (Requested / Pending drain / Archived) and Fleet-style filters; paging shows “5 of 17 authorized”</td><td>Reuse the Fleet table component rather than a new one.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Columns: lifecycle, previous stage, open obligations, paper monitor, evidence since start, review</td><td>Fleet columns are alloc, PnL, exposure, balance, equity, health</td><td>Six lifecycle columns; obligations and monitor are independent chips</td><td>Guide §13. QBTS and regime show “Pending / Insufficient data” until policy exists.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Row drawer with two separate timelines</td><td>None; Fleet rows only expand to deployments</td><td>Obligations, prior history vs forward paper monitor, support evidence, reactivation</td><td>Monitor is never backfilled; needs a monitor-evidence read.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Reactivation review</td><td>None</td><td>A review form; default Paper; never auto-live</td><td>Needs a review command and capability; disabled for researchers.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Empty states</td><td>V1 Fleet has no empty or unavailable state for a list</td><td>Not available, Zero archived and Loading as three different screens</td><td>Unavailable never shows 0.</td></tr>
+</tbody></table></section>
 <aside class="notes"><b>Annotations</b><ol>
 <li><b>Lifecycle, not a stage.</b> “Archived” is a decision label. Previous stage stays Paper / Sandbox / Canary / Live and is shown as a pill; there is no fifth stage and these alphas are not in Fleet's stage tabs by default. An archived alpha that still holds capital or obligations stays inside fund NAV and score denominators (guide §13).</li>
 <li><b>No 7D / 30D picker here.</b> Evidence runs from the day the monitor actually started, so a window picker would mislabel it. Monitor figures are always tagged “Paper · simulated”.</li>

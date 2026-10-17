@@ -17,20 +17,21 @@ main{min-width:0}th{position:static}td .reason{font-family:system-ui;white-space
  <span class="mute sm">Sample values only — not data from any source</span></div>
 <div class="shell"><nav class="side"><h6>Execution</h6><a href="#">Overview</a><a aria-current="page" href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Account</h6><a href="#">Profile &amp; Access</a></nav>
 <main>
+<div class="v1wrap"><figure><img src="v1/portfolio-360.png" alt="Current Portfolio 360 screen"><figcaption>Current screen (V1) at <code>/deployments/portfolios/:id</code> — preview build, 1440px, BFF-double sample data (PF-CRYPTO). Switch to “What changes” to see the proposal marked against it.</figcaption></figure></div>
 <div class="sm mute crumb"><a href="#">Portfolios</a> › <span data-show="healthy sparse loading">Core</span><span data-show="denied">Core (my slice)</span> <span class="note">16</span></div>
-<div class="ctx"><h1 data-show="healthy sparse loading">Core</h1><h1 data-show="denied">Core · my slice</h1><span class="mono mute sm">pf_0001</span>
+<div class="ctx" data-chg="changed" title="Today: “PF-CRYPTO — Portfolio 360°”, ID box, “WF 3a” tag, execution as-of chip, Report pack and one “Rebalance plan ▾” button. Adds environment/partition chips and window; drops the WF tag and the single rebalance button."><h1 data-show="healthy sparse loading">Core</h1><h1 data-show="denied">Core · my slice</h1><span class="mono mute sm">pf_0001</span>
  <span class="chip" data-s="fresh" data-show="healthy loading"><i></i>Fresh · as of 12s ago</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Identity only · metrics not ready</span><span class="chip" data-s="fresh" data-show="denied"><i></i>Fresh · 9s</span>
  <span class="chip">Live</span><span class="chip" data-show="healthy sparse loading">USDT · real-funded</span>
  <span class="seg" data-seg><button aria-pressed="false">7D</button><button aria-pressed="true">30D</button><button aria-pressed="false">90D</button></span>
- <span style="flex:1"></span><span class="sm mute" data-show="healthy sparse loading">Manager M. Tran · 4 alphas · 5 deployments</span></div>
+ <span style="flex:1"></span><span class="sm mute" data-show="healthy sparse loading">Manager M. Tran · 4 alphas · 5 deployments</span><button class="btn" data-show="healthy sparse loading" title="Kept from today; capability and reason shown like every other action">Report pack</button></div>
 <div class="banner" data-show="denied"><span class="note">15</span> Showing your slice of this portfolio only. Capital statement, totals, peers and aggregate denominators are not available to your role.</div>
 <div class="banner warn" data-show="sparse"><b>Identity and structure are shown; money, risk and score figures are not available yet.</b> Nothing below is estimated.</div>
 
-<div class="tabs" role="tablist" id="tabs"><a href="#overview" role="tab" data-tab="overview" aria-selected="true">Overview</a><a href="#allocations" role="tab" data-tab="allocations" aria-selected="false" data-show="healthy sparse loading">Allocations</a><a href="#alphas" role="tab" data-tab="alphas" aria-selected="false">Alphas <span class="mute sm" data-show="healthy sparse loading">4</span></a><a href="#accounts" role="tab" data-tab="accounts" aria-selected="false" data-show="healthy sparse loading">Accounts <span class="mute sm">3</span></a><a href="#risk" role="tab" data-tab="risk" aria-selected="false" data-show="healthy sparse loading">Risk &amp; Health</a><a href="#people" role="tab" data-tab="people" aria-selected="false" data-show="healthy sparse loading">People &amp; Activity</a><span class="note">1</span></div>
+<div class="tabs" role="tablist" id="tabs" data-chg="changed" title="Today: Overview, Structure &amp; Correlation, Capital Ledger, Approvals, Incidents, Audit. Becomes Overview, Allocations, Alphas, Accounts, Risk &amp; Health, People &amp; Activity."><a href="#overview" role="tab" data-tab="overview" aria-selected="true">Overview</a><a href="#allocations" role="tab" data-tab="allocations" aria-selected="false" data-show="healthy sparse loading">Allocations</a><a href="#alphas" role="tab" data-tab="alphas" aria-selected="false">Alphas <span class="mute sm" data-show="healthy sparse loading">4</span></a><a href="#accounts" role="tab" data-tab="accounts" aria-selected="false" data-show="healthy sparse loading">Accounts <span class="mute sm">3</span></a><a href="#risk" role="tab" data-tab="risk" aria-selected="false" data-show="healthy sparse loading">Risk &amp; Health</a><a href="#people" role="tab" data-tab="people" aria-selected="false" data-show="healthy sparse loading">People &amp; Activity</a><span class="note">1</span></div>
 <div class="split">
 <div>
 <section data-tabp="overview">
-<div class="grid kp" data-show="healthy sparse loading">
+<div class="grid kp" data-show="healthy sparse loading" data-chg="new" title="Today the Overview opens straight on an equity chart; no KPI strip, drawdown or score tiles.">
  <div class="card kpi hero"><div class="l">Economic capital · USDT </div><div class="v" data-show="healthy">612,480.40</div><span class="reason" data-show="healthy">NAV, one partition</span><div data-show="sparse"><span class="na">Not available</span><span class="reason">Source not qualified</span></div><div class="sk" data-show="loading"></div></div>
  <div class="card kpi "><div class="l">Net PnL · 30D </div><div class="v" data-show="healthy">+9,310.22</div><div data-show="sparse"><span class="na">Not available</span><span class="reason">Fees &amp; funding not complete</span></div><div class="sk" data-show="loading"></div></div>
  <div class="card kpi "><div class="l">Return · 30D <span class="note">2</span></div><div class="v" data-show="healthy">+1.6%</div><span class="reason" data-show="healthy">Modified-Dietz</span><div data-show="sparse"><span class="na">Not available</span><span class="reason">Method not certified</span></div><div class="sk" data-show="loading"></div></div>
@@ -39,7 +40,7 @@ main{min-width:0}th{position:static}td .reason{font-family:system-ui;white-space
 </div>
 
 <div class="grid ov2" style="margin-top:12px" data-show="healthy sparse loading">
- <div class="card"><h2>Capital statement <span class="mute sm">USDT · Live · one partition</span> <span class="note">3</span></h2>
+ <div class="card" data-chg="changed" title="Today: a separate Capital Ledger tab (its content is not in the screenshot). Becomes a cash-flow statement on Overview with budget kept apart."><h2>Capital statement <span class="mute sm">USDT · Live · one partition</span> <span class="note">3</span></h2>
   <table><tbody>
    <tr class="grp"><td colspan="2">Cash flows</td></tr>
    <tr><td>Initial funds</td><td class="n"><span data-show="healthy">500,000.00</span><span data-show="sparse"><span class="na">Not available</span><span class="reason">Not published</span></span><span class="sk ski" data-show="loading"></span></td></tr>
@@ -55,13 +56,14 @@ main{min-width:0}th{position:static}td .reason{font-family:system-ui;white-space
    <tr><td>Unallocated headroom</td><td class="n"><span data-show="healthy">160,000.00</span><span data-show="sparse"><span class="na">Not available</span><span class="reason">Not published</span></span><span class="sk ski" data-show="loading"></span></td></tr>
   </tbody></table>
   <details style="margin-top:8px"><summary class="sm">By funding source (Initial vs Added)</summary><p class="na">Not available — no approved per-source attribution. These are cash flows in one record; profit is never split by deposit date.</p></details></div>
- <div class="card"><h2>Performance <span class="seg" data-seg style="margin-left:8px"><button aria-pressed="true">Net PnL</button><button aria-pressed="false">Return</button><button aria-pressed="false">Equity</button></span></h2>
+ <div class="card" data-chg="changed" title="Today: Equity vs benchmark chart with Lin/Log, 1W/1M/3M/ALL, Table, Expand, Export. Keeps those tools; adds a Net PnL / Return / Equity toggle and cash-flow markers."><h2>Performance <span class="seg" data-seg style="margin-left:8px"><button aria-pressed="true">Net PnL</button><button aria-pressed="false">Return</button><button aria-pressed="false">Equity</button></span></h2>
+  <div class="tool sm" style="margin:0 0 6px"><span class="seg" data-seg><button aria-pressed="false">1W</button><button aria-pressed="false">1M</button><button aria-pressed="false">3M</button><button aria-pressed="true">ALL</button></span><span class="seg" data-seg><button aria-pressed="true">Lin</button><button aria-pressed="false">Log</button></span><button class="btn">Table</button><button class="btn">Expand</button><button class="btn" disabled title="Export needs a policy decision">Export</button></div>
   <div class="chart" style="height:180px"><span data-show="healthy">Chart · cash-flow markers (▲ added · ▼ returned) are separate from profit</span><span data-show="sparse">No series published yet — nothing to draw</span><span data-show="loading"><span class="sk" style="width:200px;display:block"></span></span></div>
-  <p class="reason">Needs a manager time-series read (FE-013); until then this card says nothing is published.</p></div>
+  <p class="reason">Retained snapshot range — not event replay, not total history (kept from today). Needs a manager time-series read (FE-013); until then this card says nothing is published.</p></div>
 </div>
 
 <div class="grid" style="margin-top:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))" data-show="healthy sparse loading">
- <div class="card"><h2>Scores and coverage</h2>
+ <div class="card" data-chg="new" title="Today there is no score or coverage on this screen."><h2>Scores and coverage</h2>
   <table><tbody>
    <tr><td>Portfolio score</td><td class="n"><span class="na" title="Score policy pending">Pending</span></td></tr>
    <tr><td>Alpha score (weighted)</td><td class="n"><span class="na" title="Score policy pending">Pending</span></td></tr>
@@ -87,7 +89,7 @@ main{min-width:0}th{position:static}td .reason{font-family:system-ui;white-space
  <div class="card kpi"><div class="l">My deployments</div><div class="v" style="font-size:16px"><span class="chip" data-s="fresh"><i></i>OK</span> <span class="chip" data-s="partial"><i></i>Pending recall</span></div></div></div>
  <div class="card" style="margin-top:12px"><h2>Not shown to your role</h2><p class="sm mute" style="margin:0">Portfolio capital statement, budget, other owners, peers, concentration and the aggregate denominator. They are absent, not hidden behind a lock.</p></div>
 </div></section>
-<section data-tabp="allocations" data-show="healthy sparse loading"><div class="tool sm"><span class="mute">Hierarchy: portfolio › alpha › deployment · USDT · three separate bases, never one balance</span><span class="note">6</span></div><div class="card scroll" style="padding:0"><table class="hier"><thead>
+<section data-tabp="allocations" data-show="healthy sparse loading" data-chg="changed" title="Today: Structure &amp; Correlation tab (content not in the screenshot). Becomes an allocation hierarchy with budget, exposure and native margin kept separate."><div class="tool sm"><span class="mute">Hierarchy: portfolio › alpha › deployment · USDT · three separate bases, never one balance</span><span class="note">6</span></div><div class="card scroll" style="padding:0"><table class="hier"><thead>
  <tr><th rowspan="2">Node</th><th class="n gl" style="text-align:center">BUDGET <span class="reason" style="text-transform:none;letter-spacing:0">allocation, not cash</span></th><th class="gl" style="text-align:center">PENDING / LOCK</th><th class="n gl" style="text-align:center">EXPOSURE <span class="reason" style="text-transform:none;letter-spacing:0">position notional</span></th><th class="n gl" style="text-align:center">NATIVE MARGIN <span class="reason" style="text-transform:none;letter-spacing:0">venue-reported</span></th></tr>
  <tr><th class="n gl">USDT</th><th class="gl">state</th><th class="n gl">USDT</th><th class="gl">USDT · per account</th></tr></thead>
 <tbody data-show="loading"><tr><td colspan="5"><div class="sk"></div></td></tr><tr><td colspan="5"><div class="sk"></div></td></tr><tr><td colspan="5"><div class="sk"></div></td></tr></tbody>
@@ -101,7 +103,7 @@ main{min-width:0}th{position:static}td .reason{font-family:system-ui;white-space
 <tr class=""><td>&nbsp;&nbsp;▸ <b>Funding-Carry</b> <span class='mono'>v4</span><br><span class="sm mute">alpha · 1 deployment</span></td><td class="n gl"><span data-show="healthy">80,000.00</span><span data-show="sparse"><span class="na">Not available</span><span class="reason">Not published</span></span><span class="sk ski" data-show="loading"></span></td><td class="gl"></td><td class="n gl"><span data-show="healthy">78,400.00</span><span data-show="sparse"><span class="na">Not available</span><span class="reason">Positions not published</span></span><span class="sk ski" data-show="loading"></span></td><td class="gl"><span class="sm mute">see deployment</span></td></tr>
 </tbody></table></div>
  <p class="reason">Pending recall stays in the child's budget and is not available cash to the parent. Venue free margin is not an amount the manager can allocate.</p></section>
-<section data-tabp="alphas">
+<section data-tabp="alphas" data-chg="new" title="No Alphas tab today; the Fleet is a separate screen.">
 <div data-show="healthy sparse loading"><div class="tool sm"><span class="mute">Alpha Fleet scoped to this portfolio · sorted by Allocation ↓</span><span style="flex:1"></span><a href="#">Open in Alpha Fleet (Portfolio = Core)</a><span class="note">8</span></div>
 <div class="card scroll" style="padding:0"><table><thead><tr><th>Alpha / version</th><th>Stage</th><th class="n">Allocation · USDT</th><th class="n">Net PnL · 30D</th><th class="n" title="Share of the portfolio's net PnL; offsetting rows can be negative">Share of PnL</th><th>Health</th><th class="n">QBTS</th></tr></thead>
 <tbody data-show="loading"><tr><td colspan="7"><div class="sk"></div></td></tr><tr><td colspan="7"><div class="sk"></div></td></tr></tbody>
@@ -116,7 +118,7 @@ main{min-width:0}th{position:static}td .reason{font-family:system-ui;white-space
 <div data-show="denied"><div class="card scroll" style="padding:0"><table><thead><tr><th>My alpha / version</th><th>Stage</th><th class="n">My allocation · USDT</th><th class="n">Net PnL · 30D</th><th>Health</th><th class="n">QBTS</th></tr></thead><tbody>
 <tr><td><b>BTC-Trend</b> <span class="mono">v3</span></td><td><span class="pill on">Live</span></td><td class="n">200,000.00</td><td class="n">+5,420.10</td><td><span class="chip" data-s="partial"><i></i>Pending recall</span></td><td class="n"><span class="na" title="Score policy pending">Pending</span></td></tr></tbody></table>
 <div class="sm mute" style="padding:8px 12px">Only alphas you own. No share-of-portfolio column: it would reveal the portfolio total.</div></div></div></section>
-<section data-tabp="accounts" data-show="healthy sparse loading">
+<section data-tabp="accounts" data-show="healthy sparse loading" data-chg="new" title="No Accounts tab today; today only has a Venue scope filter.">
 <div class="banner warn" data-show="healthy sparse"><b>Shared account.</b> Binance-02 serves 2 deployments here and also serves sleeves outside this portfolio (not listed). Its venue balance is the venue total, not this portfolio's money, and is never added to allocation. <span class="note">9</span></div>
 <div class="card scroll" style="padding:0"><table><thead><tr><th>Physical account (venue)</th><th>Currency</th><th>Profile</th><th>Serves here</th><th class="n">Venue balance (total)</th><th>Status</th></tr></thead>
 <tbody data-show="loading"><tr><td colspan="6"><div class="sk"></div></td></tr><tr><td colspan="6"><div class="sk"></div></td></tr></tbody>
@@ -127,7 +129,7 @@ main{min-width:0}th{position:static}td .reason{font-family:system-ui;white-space
 <tr><td><b>OKX-01</b> <span class="mono sm mute">…a9c2</span></td><td>USDT</td><td>USDT-M swap</td><td>2 deployments</td><td class="n"><span data-show="healthy">188,300.00</span><span data-show="sparse"><span class="na">Not available</span><span class="reason">Balance not published</span></span><span class="sk ski" data-show="loading"></span></td><td><span data-show="healthy loading"><span class="chip" data-s="fresh"><i></i>OK · 20s</span></span><span data-show="sparse"><span class="chip" data-s="stale"><i></i>Identity only</span></span></td></tr>
 <tr><td><b>Bybit-01</b> <span class="mono sm mute">…77d0</span></td><td>USDT</td><td>USDT perpetual</td><td>1 deployment</td><td class="n"><span data-show="healthy">96,520.00</span><span data-show="sparse"><span class="na">Not available</span><span class="reason">Balance not published</span></span><span class="sk ski" data-show="loading"></span></td><td><span data-show="healthy loading"><span class="chip" data-s="fresh"><i></i>OK · 41s</span></span><span data-show="sparse"><span class="chip" data-s="stale"><i></i>Identity only</span></span></td></tr>
 </tbody></table></div></section>
-<section data-tabp="risk" data-show="healthy sparse loading">
+<section data-tabp="risk" data-show="healthy sparse loading" data-chg="changed" title="Today: Incidents tab and Structure &amp; Correlation. Risk, reconciliation and margin are grouped on one tab.">
 <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
  <div class="card"><h2>Drawdown and exposure <span class="note">10</span></h2><table><tbody>
   <tr><td>Drawdown, current / max (30D)</td><td class="n"><span data-show="healthy">−1.8% / −3.9%</span><span data-show="sparse"><span class="na">Not available</span><span class="reason">Needs NAV series</span></span><span class="sk ski" data-show="loading"></span></td></tr>
@@ -148,7 +150,7 @@ main{min-width:0}th{position:static}td .reason{font-family:system-ui;white-space
   <tr><td>Correlation</td><td class="n"><span data-show="healthy sparse"><span class="na">Not available</span><span class="reason">No correlation data source</span></span><span class="sk ski" data-show="loading"></span></td></tr></tbody></table>
   <p class="reason">Missing correlation is never shown as 0 or as "well diversified".</p></div>
 </div></section>
-<section data-tabp="people" data-show="healthy sparse loading">
+<section data-tabp="people" data-show="healthy sparse loading" data-chg="changed" title="Today: Audit tab (and a configuration log under Overview). Becomes attribution plus an activity list with command and read-side state.">
 <div class="grid" style="grid-template-columns:minmax(0,1fr)">
  <div class="card"><h2>Attribution and roles <span class="note">11</span></h2><table><thead><tr><th>Person</th><th>Role here</th><th>Basis</th></tr></thead><tbody>
   <tr><td>M. Tran</td><td>Portfolio manager</td><td class="sm mute">Current grant</td></tr>
@@ -165,7 +167,7 @@ main{min-width:0}th{position:static}td .reason{font-family:system-ui;white-space
 </div></section>
 </div>
 <div>
-<div class="drawer rail rail-menu"><b>Actions</b> <span class="mute sm">on this portfolio</span> <span class="note">13</span>
+<div class="drawer rail rail-menu" data-chg="changed" title="Today: one “Rebalance plan ▾” button in the header. Becomes a per-action menu with capability state and a disabled reason; no single money-moving button."><b>Actions</b> <span class="mute sm">on this portfolio</span> <span class="note">13</span>
  <div data-show="healthy">
  <div class="act"><div class="r1"><b>Grant budget</b><span class="chip" data-s="fresh"><i></i>Available</span></div><div class="sm mute">Changes: allocation budget only; no cash moves</div><div><button class="btn">Review grant…</button></div></div>
  <div class="act"><div class="r1"><b>Adjust / recall budget</b><span class="chip" data-s="fresh"><i></i>Available</span></div><div class="sm mute">Changes: target budget; stays pending until obligations clear</div><div><button class="btn" data-open-confirm>Review recall…</button></div></div>
@@ -178,7 +180,7 @@ main{min-width:0}th{position:static}td .reason{font-family:system-ui;white-space
  <div class="sk" data-show="loading"></div>
  <p class="reason" style="margin-top:8px">Each action is its own command: grant, recall, return and lock change different things. There is no single "Move money" button.</p></div>
 
-<div class="drawer rail rail-confirm"><b>Review: adjust target budget</b> <span class="note">14</span>
+<div class="drawer rail rail-confirm" data-chg="new" title="No confirmation preview is visible on today’s screen."><b>Review: adjust target budget</b> <span class="note">14</span>
  <p style="margin:6px 0"><span class="stamp">PREVIEW · NOT APPLIED</span><br><span class="sm mute">No receipt exists yet.</span></p>
  <dl class="kv">
   <dt>Action</dt><dd>Adjust target budget (recall)</dd>
@@ -192,6 +194,20 @@ main{min-width:0}th{position:static}td .reason{font-family:system-ui;white-space
  <p class="reason">Closing or cancelling never submits. After submit you will see separate states: request sent → authoritative receipt (applied / rejected / outcome unknown) → read-side current. A target-style command may return a receipt without amounts; the screen then shows the effect, not an invented split.</p></div></div>
 </div>
 
+<section class="chgtable card"><h2>What changes vs today — Portfolio 360 (<span class="mono">/deployments/portfolios/:id</span>)</h2>
+<table><thead><tr><th></th><th>Region</th><th>Today (V1, from the screenshot)</th><th>Proposed</th><th>Why · needs backend</th></tr></thead><tbody>
+<tr><td><span class="tag kept">KEPT</span></td><td>Route, breadcrumb, freshness chip, Report pack</td><td><span class="mono">/deployments/portfolios/:id</span>; Deployments / Portfolios / name; “EXECUTION as_of … OK”; Report pack button</td><td>Same route, name and ID chip, freshness chip and Report pack</td><td>Existing behaviour; breadcrumb loses the “Deployments” prefix.</td></tr>
+<tr><td><span class="tag kept">KEPT</span></td><td>Equity chart tools and honesty caption</td><td>Lin/Log, 1W/1M/3M/ALL, Table, Expand, Export; “Retained snapshot range — not event replay, not total history”</td><td>Same tools and caption; Export stays disabled until a grant exists</td><td>Existing chart behaviour (table alternative, expand) is worth keeping.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Header actions</td><td>“Rebalance plan ▾” primary button</td><td>Per-action menu: Grant, Adjust/recall, Return, Lock, Deploy — each with capability state and reason</td><td>No single money-moving button (guide §7). Needs eligibility list per row (FE-015).</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Scope bar</td><td>Window COMPLETE, Mode All, Venue All, Benchmark not published</td><td>Environment chip (required), window selector, partition chip</td><td>“Mode All” goes away (no cross-environment All). Venue moves to the Accounts tab.</td></tr>
+<tr><td><span class="tag removed">REMOVED</span></td><td>Benchmark scope and “WF 3a” tag</td><td>“Benchmark not published”; “WF 3a” label beside the ID</td><td>Not drawn</td><td><b>Needs a decision:</b> keep a benchmark selector once a benchmark is published? WF tag is internal wording.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Tabs</td><td>Overview, Structure &amp; Correlation, Capital Ledger, Approvals, Incidents, Audit</td><td>Overview, Allocations, Alphas, Accounts, Risk &amp; Health, People &amp; Activity</td><td>Guide §7 tab set. <b>Approvals and Incidents have no tab</b>: incidents surface in Needs attention and Operations; approvals need an owner decision.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>KPI strip and scores card</td><td>Overview starts at the equity chart; no capital, drawdown or score tiles</td><td>Economic capital, Net PnL, Return (Modified-Dietz), Drawdown, Score “Pending”; scores card</td><td>Needs NAV, flows and drawdown per portfolio. Scores stay “Pending” (policy pending).</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Capital and structure</td><td>Capital Ledger and Structure &amp; Correlation tabs (content not in the screenshot)</td><td>Capital statement on Overview; Allocations tab with budget, exposure, native margin; Accounts and Alphas tabs</td><td>Initial vs Added is a cash-flow list, not two track records. Shared-account warning is new.</td></tr>
+<tr><td><span class="tag removed">REMOVED</span></td><td>Cross-portfolio table on Overview</td><td>Other portfolios’ first/last equity and snapshots per currency</td><td>Gone from this screen; comparison lives in the Directory (M02)</td><td>Peer rows next to one portfolio can leak peers to a researcher.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Audit / configuration log</td><td>Audit tab; “Configuration log” below the Overview</td><td>People &amp; Activity: attribution plus activity with command and read-side state</td><td>Guide §14: separate transport, authoritative and projection states.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Confirmation preview</td><td>Not visible on the screenshot</td><td>Preview with target IDs, amount/unit, expected version, authority and obligations; stamped “not applied”</td><td>Cancel never submits; a receipt appears only after submit.</td></tr>
+</tbody></table></section>
 <aside class="notes"><b>Annotations</b><ol>
 <li><b>Tabs live in the URL</b> (<span class="mono">/portfolios/pf_0001/risk?env=live&amp;window=30D</span>). Back/forward and deep links keep tab, window and environment. Six tabs; the researcher only sees Overview and Alphas.</li>
 <li><b>Return label.</b> Modified-Dietz, shown under the number; never called TWR. Environment and partition chips stay in the header so every number has a stated basis.</li>

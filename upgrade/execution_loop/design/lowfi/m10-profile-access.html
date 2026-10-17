@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M10 Profile &amp; Access — lowfi</title><link rel="stylesheet" href="kit.css">
 <style>
 /* page-local only: reading column, persona toggle, fact grid */
-.col{max-width:1040px}
+main{max-width:1080px}
 .chip{white-space:nowrap}
 .scroll td,.scroll th{white-space:normal}.scroll th{position:static}
 body:not([data-who=restr]) [data-w=restr],body[data-who=restr] [data-w=mgr]{display:none}
@@ -18,15 +18,16 @@ body:not([data-who=restr]) [data-w=restr],body[data-who=restr] [data-w=mgr]{disp
  <span class="seg" data-ctl="who"><button data-v="mgr" aria-pressed="true">Healthy: manager</button><button data-v="restr">Healthy: restricted</button></span>
  <span class="mute sm">Sample values only</span></div>
 <div class="shell"><nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Account</h6><a aria-current="page" href="#">Profile &amp; Access</a></nav>
-<main><div class="col">
-<div class="ctx"><h1>Profile &amp; Access</h1>
+<main>
+<div class="v1wrap"><figure><img src="v1/profile-access.png" alt="Current Profile and Access"><figcaption>Current screen (V1) at <code>/administration/profile-access</code> — preview build, 1440px, BFF-double sample data. It is an admin grid of other accounts, not a self-view. Switch to “What changes” to see the proposal marked against it.</figcaption></figure></div>
+<div class="ctx" data-chg="changed" title="Same title. V1’s long italic subtitle is replaced by a subtitle on each section."><h1>Profile &amp; Access</h1>
  <span class="chip" data-s="fresh" data-show="healthy denied loading"><i></i>Fresh · 20s</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Business permissions not loaded</span></div>
 
 <div class="banner warn" data-show="sparse"><span class="note">8</span> <b>Your business permissions could not be loaded.</b> Your sign-in works. This is not the same as “no access”: nothing below is assumed, and no action is shown as allowed or blocked.</div>
 <div class="banner" data-show="denied">You are a researcher. You see your own alphas and your part of any portfolio that contains them.</div>
 <div class="banner" data-w="restr" data-show="healthy"><span class="note">9</span> You can sign in, but no business access is active for your account right now. Ask a manager to renew it.</div>
 
-<div class="card" style="margin-bottom:12px"><div class="facts">
+<div class="card" style="margin-bottom:12px" data-chg="new" title="V1 has no view of the signed-in user. New: identity, app sign-in vs business access."><div class="facts">
  <div><div class="l">Signed in as</div><div class="v" data-show="healthy sparse loading">Stan <span class="note">1</span></div><div class="v" data-show="denied">asmith</div><div class="sk" data-show="loading" style="margin-top:4px"></div><div class="sm mute mono">user_7f3a…e1</div></div>
  <div><div class="l">Role label <span class="mute">(a description only)</span></div>
   <div class="v" data-show="healthy"><span data-w="mgr">Manager · read-all</span><span data-w="restr">Researcher · inactive</span></div><div class="v" data-show="denied">Researcher · own slice</div>
@@ -38,7 +39,7 @@ body:not([data-who=restr]) [data-w=restr],body[data-who=restr] [data-w=mgr]{disp
   <div data-show="sparse"><span class="na">Not available</span><span class="reason">Trading system not reachable</span></div></div>
 </div></div>
 
-<div class="card sec"><h2>1 · What you can see <span class="note">3</span></h2><p class="sub sm mute">Visibility only. It says nothing about what you may change.</p>
+<div class="card sec" data-chg="new" title="V1 shows only Governance gate SEE cells for other accounts. New: per-area visibility for you."><h2>1 · What you can see <span class="note">3</span></h2><p class="sub sm mute">Visibility only. It says nothing about what you may change.</p>
 <div class="scroll"><table><thead><tr><th>Area</th><th>What you see</th><th>Note</th></tr></thead>
 <tbody data-show="healthy" data-w="mgr">
  <tr><td>Overview</td><td><span class="chip" data-s="fresh"><i></i>All authorized</span></td><td class="sm mute">Fund totals with their source and coverage</td></tr>
@@ -73,14 +74,14 @@ body:not([data-who=restr]) [data-w=restr],body[data-who=restr] [data-w=mgr]{disp
 
 <div class="divide">Seeing something never lets you change it <span class="note">4</span></div>
 
-<div class="card sec"><h2>2 · What you can do <span class="note">5</span></h2><p class="sub sm mute">Each action says why it is off, in plain words.</p>
+<div class="card sec" data-chg="changed" title="V1: icon-only DECIDE cells per gate with no reason. Now: named actions with status and plain reason."><h2>2 · What you can do <span class="note">5</span></h2><p class="sub sm mute">Each action says why it is off, in plain words.</p>
 <div class="scroll"><table><thead><tr><th>Action</th><th>Status</th><th>Why</th></tr></thead>
 <tbody data-show="healthy" data-w="mgr">
  <tr><td>Change fund budgets or recall capital</td><td><span class="chip" data-s="stale"><i></i>Not available yet</span></td><td class="sm">Capital commands are not turned on for this environment. Your role allows them once they are.</td></tr>
  <tr><td>Archive an alpha</td><td><span class="chip" data-s="partial"><i></i>Allowed · needs approval</span></td><td class="sm">A second person approves before anything changes.</td></tr>
  <tr><td>Start a reactivation review</td><td><span class="chip" data-s="fresh"><i></i>Allowed</span></td><td class="sm">Opens a review only. It never goes live by itself.</td></tr>
  <tr><td>Approve stage exits</td><td><span class="chip" data-s="partial"><i></i>Partly allowed</span></td><td class="sm">Paper and Sandbox exits: yes. Canary to Live is waiting for confirmation (see section 3). <span class="note">6</span></td></tr>
- <tr><td>Manage users and grants</td><td><span class="chip" data-s="fresh"><i></i>Allowed · within limit</span></td><td class="sm">You can give up to the access you hold, not above. <a href="#">Open Users &amp; access</a></td></tr>
+ <tr><td>Manage users and grants</td><td><span class="chip" data-s="fresh"><i></i>Allowed · within limit</span></td><td class="sm">You can give up to the access you hold, not above. Changing grants asks you to re-confirm. <a href="#">Open Users &amp; access</a></td></tr>
  <tr><td>Change your own admin rights</td><td><span class="chip"><i></i>Not allowed</span></td><td class="sm">Nobody can change their own admin rights. Another administrator does it.</td></tr>
  <tr><td>Export tables</td><td><span class="chip" data-s="stale"><i></i>Not available yet</span></td><td class="sm">Export is not built yet. It will need its own grant.</td></tr></tbody>
 <tbody data-show="healthy" data-w="restr">
@@ -100,7 +101,7 @@ body:not([data-who=restr]) [data-w=restr],body[data-who=restr] [data-w=mgr]{disp
 <tbody data-show="loading"><tr><td colspan="3"><div class="sk"></div></td></tr><tr><td colspan="3"><div class="sk"></div></td></tr><tr><td colspan="3"><div class="sk"></div></td></tr></tbody>
 </table></div></div>
 
-<div class="card sec" style="margin-top:12px"><h2>3 · How you got this access <span class="note">7</span></h2><p class="sub sm mute">Who granted what to you, and until when.</p>
+<div class="card sec" style="margin-top:12px" data-chg="new" title="V1 shows no grantor, start or expiry. New: who granted what, since and until when."><h2>3 · How you got this access <span class="note">7</span></h2><p class="sub sm mute">Who granted what to you, and until when.</p>
 <div class="scroll"><table><thead><tr><th>Access</th><th>Granted by</th><th>Scope</th><th>Since</th><th>Expires</th><th>State</th></tr></thead>
 <tbody data-show="healthy" data-w="mgr">
  <tr><td>Manager read-all</td><td>Bobby (owner)</td><td>All business data</td><td>1 Sep 2026</td><td class="mute">No end date</td><td><span class="chip" data-s="fresh"><i></i>Effective</span></td></tr>
@@ -119,6 +120,17 @@ body:not([data-who=restr]) [data-w=restr],body[data-who=restr] [data-w=mgr]{disp
 <p class="sm mute" style="margin:8px 0 0" data-show="healthy" data-w="restr">To get access back, ask a manager.</p>
 </div>
 
+<section class="chgtable card"><h2>What changes vs today — Profile &amp; Access (<span class="mono">/administration/profile-access</span>)</h2>
+<table><thead><tr><th></th><th>Region</th><th>Today (V1, from the screenshot)</th><th>Proposed</th><th>Why · needs backend</th></tr></thead><tbody>
+<tr><td><span class="tag kept">KEPT</span></td><td>See and act kept apart</td><td>Every gate has separate SEE and DECIDE columns</td><td>Two separate sections: what you can see, what you can do</td><td>Same principle, now stated in words.</td></tr>
+<tr><td><span class="tag kept">KEPT</span></td><td>Owner protection</td><td>“The Portal owner is not in this grid… no cell here could change it”</td><td>“Owner accounts cannot be changed from here”</td><td>Guide §3.1: owner anchor stays out of reach.</td></tr>
+<tr><td><span class="tag kept">KEPT</span></td><td>Admin grid of other accounts × gates (stan, thanhvuong, former-analyst, search by username, STEP-UP REQUIRED)</td><td>The whole V1 page</td><td>Not redrawn; reached from “Open Users &amp; access” for people who may manage grants</td><td>Managing others stays an admin tool; only the self-view is new here.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Self-view identity</td><td>No view of the signed-in user; only a list of accounts</td><td>Who you are, app sign-in vs business access, membership revision</td><td>Needs a self-access read.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>What you can see, by area</td><td>Only Governance gate SEE cells (R1, R2, Canary, Live)</td><td>Overview, Portfolios, Fleet, Accounts, Archived, Operations: all authorized / your slice / nothing yet</td><td>Guide §3 and XLC-09. Never shows counts of hidden items.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>What you can do</td><td>Icon-only DECIDE cells per gate; greyed or dashed with no reason</td><td>Named actions with a status and a plain reason; per-gate detail stays in the admin grid</td><td>Reasons need the public copy dictionary (FE-015). Per-gate rows are summarised as “Approve stage exits”.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>How you got this access</td><td>None. The grid shows a state, not who granted it, since when or until when</td><td>Granted by, scope, since, expires, state (Effective, Waiting for confirmation, Expired)</td><td>Needs grant provenance and expiry from the business system.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Page header and wording</td><td>Italic subtitle: “Granting a capability here changes nothing outside the Portal — it records no command and moves no capital”</td><td>Short section subtitles; the app-only vs business split appears as “App sign-in” and “Business access”</td><td>Keeps the same warning, in plain words.</td></tr>
+</tbody></table></section>
 <aside class="notes"><b>Annotations</b><ol>
 <li><b>Identity is an ID, not a name.</b> The stable user ID is what is checked; the role label is only a description. Nothing on this page compares names or labels to decide rights.</li>
 <li><b>Two separate facts:</b> app sign-in and business access. Business access reads “Accepted” only after the trading system accepted it (with its membership revision). A working sign-in never implies business access.</li>
@@ -131,4 +143,4 @@ body:not([data-who=restr]) [data-w=restr],body[data-who=restr] [data-w=mgr]{disp
 <li><b>Restricted persona</b> (toggle in the bar, healthy only): can sign in, has no active business access, sees the expired grant and who can renew it. No data and no guesses.</li>
 <li><b>Alternative considered:</b> one matrix of areas × (see / act) with ticks. Rejected: it puts seeing and doing in one cell, which invites reading “I can see it, so I can change it”, and leaves no room for a reason sentence per row.</li>
 </ol></aside>
-</div></main></div><script src="kit.js"></script></body></html>
+</main></div><script src="kit.js"></script></body></html>
