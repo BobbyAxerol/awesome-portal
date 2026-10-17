@@ -10188,6 +10188,10 @@ Latest native held bridge/recovery exact final bytes93PASS (68regression+25new,
 including10newPG), PM source commitdb95be4c, remains UNMOUNTED. See§23.20.7 and
 [bounded recovery qualification](evidence/execution-edge-v1_2/EPG10-08/business-root-recovery-qualification.json).
 Preserve the current peer hook/source/index pin.
+Authenticated native READ listener now source-qualified206PASS (35new, including
+5actualTLS;171regression), PM89293d0d, still UNMOUNTED. Full50source pins,
+exact evidence scope and cleanup:
+[native READ listener](evidence/execution-edge-v1_2/EPG10-08/native-business-read-provider-qualification.json).
 Exact [qualification](evidence/execution-edge-v1_2/EPG10-08/current-correspondence-qualification.json)
 separates fixture corrections, draft/source landing and actual authority.
 Historical16/10 pins below do not override this fresh disposition.
@@ -16448,5 +16452,90 @@ checkout and branch, not deployed runtime. Stable HK release remains
 SGP `/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose`;
 runtime digest/config/service tuples and feature worktree inventory stay linked
 from current-correspondence-runtime.json plus the fresh40tuple test receipts.
+
+**Authenticated native READ qualification preparation /12:57UTC, NOT_RUN:**
+the reserved reviewer froze exactly four private outputs: provider2e58d908…,
+listener/helper patch35ae6eab…, provider tests9af9ce9a… and parser/TLS tests
+67e72cda…. Root reviewed all four; the patch extracts the SAME pure signed-human
+request verification and adds fixed six-route native dispatch to the existing
+actual-socket TLS1.3 listener. Native-only composition requires no reverse-human
+candidate. Default recovery/mapping behavior remains unchanged. New35definitions
+are20provider/source-double,10parser and5actual TLS cases; none is connected
+native/Core/egress acceptance. Both issue/ENTER require exact signed provider
+POST digest, original closed Manager intent binding and current assertion;
+same-key recovery never authorizes new READ. Native BIGINT revisions remain
+strings; configured inputs, separate pools, total deadlines and admission are
+bounded. No arbitrary DB/SQL/URL/role/grant/identity or financial endpoint.
+
+Prepare only new HK target `/tmp/epg10-08-native-provider-HK-8o7BhDPM`, preserving
+the qualified37source closure/receipts. Mechanically copy that closure, six
+existing auth/helper modules, four bounded regression test files and three new
+provider/test files, then materialize the reviewed two-file patch only in the
+disposable copy. Pin all50inputs and AST-check; before qualification journal
+exact count/selection. Reuse the guarded <=300s cached1CPU/512MiB Python plus
+1CPU/1GiB tmpfs PG envelope, internal network/no host ports/build/pull/install/
+operational data. Ephemeral TEST_ONLY TLS keys exist only in worker tmpfs and
+are cleaned by the fixture; no credentials or DB data are transferred. Require
+new35 plus prior93 and affected listener/mapping/transport/crypto regressions,
+zero failed/error/skipped cases, both actual host guards, reviewed40runtime
+tuple pre/post equality and exact worker/PG/network/lease teardown.
+
+At12:55:29 HK peer economic-range correctness lock became active until13:00:29;
+no new job starts under it. Light source/harness preparation does not replace
+that gate. SGP peer hook is independently protected and untouched. Original
+approved source transfer was already exercised/cleaned; no new Core transfer
+permission is inferred. This is original08 owned work, not a new phase or a
+claim of runtime authority; installation/Core final-delivery work remains open.
+
+**Ready for guarded HK qualification12:58UTC / before job:** both actual root
+and Bobby locks are now ABSENT (the peer released early; expiry was not assumed).
+Prepared50inputs/646509logical bytes, AST PASS, prior37 unchanged. Runner SHA256
+05925dcdb2d14f5fdbc19c869dff74c7c2542d815c51ec6ce29963127dc61180.
+Exact206expected = prior93 +35new +23recovery +17transport +16mapping +22
+pinned-human crypto regressions. Run exactly the explicit file/node selection
+recorded by the runner, not gateway/financial/full-migration tests. Require206
+PASS/0FAIL/ERROR/SKIP and actual5TLS cases; TLS sockets are worker-loopback only.
+The runner additionally refuses foreign live jobs or40tuple baseline drift
+before acquiring its own exclusive <=300s correctness window. No capacity or
+connected acceptance claim. Host has python3, not python; initial preparation
+command did not run until corrected, no test result is claimed for that command.
+
+**Actual125809 / authenticated native READ source landing:** **206PASS/0FAIL/
+ERROR/SKIP**,36.770s,12:58:09.977→12:58:46.643UTC. All206JUnit cases unique,
+including5actual TLS1.3 socket cases. New20provider/source-double +10parser +5TLS;
+171regressions as declared, including prior18actualPG. No new source-double test
+is presented as native/Core connected proof. All50canonical PM input hashes
+match the tested copied source; prior37snapshot remains unchanged. Receipt
+5b59c96fc15ca79a2e666bb90b77ab7fb1f9ece14a9dead14e85b9478d0f766c,
+JUnitbde39f1222726242e0a71a2a53c22846a768479c5e238a66f0f35d025a00aacf.
+Bounded50pins/selection/provenance are published in
+[native READ qualification](evidence/execution-edge-v1_2/EPG10-08/native-business-read-provider-qualification.json).
+
+Source commit89293d0d2ecb075f34250dd1d516b062ca6c3275 on PM feature lands ONLY
+five intended source/test paths, guide pointer and owned58.102.1 plan hunk;
+normal Git/Bobby identity, no push/merge. Existing pure request verification and
+TLS listener are reused; native-only does not instantiate reverse-human authority.
+Lifecycle recovery has no new-read permission, original observed native proof
+does not grant Core app/session authority, and no route is mounted by import.
+Explicit allmode bindings are tested; no implicit Paper product ceiling.
+
+Both actual host guards clear after terminal. Exact worker/PG/internal network/
+lease and ephemeral TEST_ONLY TLS PKI cleaned,40operational tuples unchanged
+(before/after canonical digest2c59eba4efea1de3b3adc55fe0e91bfc3a7fa7807e9588d2c08c5c906ab1045e).
+Shared free235851591680→235740684288B, not exclusive consumption. Zero host
+ports/opdata/build/pull/install/new image/cache, production schema/grant/user/
+session or restart. Retain active source copy/harness/receipts for original08
+Core/installer composition; retain shared active/peer images plus named r59/r49
+rollbacks, no shared prune. Canonical Portal54c6f5f3, active Edge feature, stable
+HK/SGP release locations and registered worktree/service/digest/config set stay
+as reconciled above; this is source progress, not a new deployed revision.
+
+**Still original08 owned and runnable:** actual authenticated Core client plus
+Manager-domain app/current-human composition, durable finite READ sender/terminal
+and per-frame integration, reviewed genuine-input minimal installation and
+connected revoke/cache/cursor/SSE drills. Do not call these config-only/external
+debt, claim08closed or start09connected. SGP peer job/index and the unanswered
+exact two-file Core transfer request affect only their actual dependent jobs;
+they do not defer independent owned source/harness preparation.
 
 
