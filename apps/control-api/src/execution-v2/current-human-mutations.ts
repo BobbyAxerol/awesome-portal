@@ -30,6 +30,11 @@ const verifiedBinding = z.discriminatedUnion("family", [
     key_digest: hash, request_digest: hash, target_id: accessText }).strict(),
   z.object({ family: z.literal("QUALIFIED_DELEGATED_RECEIPT"), operation: z.literal("ACCEPT_RECEIPT"),
     key_digest: hash, request_digest: hash, target_id: accessText }).strict(),
+  // A newly verified login cannot present a prior Portal session. Only the
+  // in-process auth service may use this purpose; never browser-supplied JSON.
+  z.object({ family: z.literal("VERIFIED_AUTH_ISSUANCE"), operation: z.enum(["LOGIN", "PREVIEW"]),
+    key_digest: hash, request_digest: hash, target_id: accessText,
+    user_revision: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER) }).strict(),
 ]);
 export type CurrentHumanVerifiedMutationBinding = z.infer<typeof verifiedBinding>;
 export type CurrentHumanRecoveryAttempt = Awaited<ReturnType<CurrentHumanCandidate["recoverableAttempts"]>>[number];
@@ -127,16 +132,21 @@ export class CurrentHumanMutations {
     const stable = { ...binding } as Record<string, unknown>;
     delete stable.session_id; delete stable.session_revision;
     const replayDigest = accessDigest(stable);
+    const oneView = binding.family === "VERIFIED_AUTH_ISSUANCE";
     let intent: Intent;
     try { intent = await this.transaction(async db => {
-      await hooks.authorize(db);
+      if (!oneView) await hooks.authorize(db);
       const prior = (await db.query<Intent>("SELECT * FROM elp210_candidate.mutations WHERE key_digest=$1", [binding.key_digest])).rows[0];
       if (prior) {
         if (prior.state === "FINISHED" ? prior.replay_digest !== replayDigest : prior.binding_digest !== bindingDigest)
           throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_KEY_CONFLICT");
         if (prior.state === "REFUSED") throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_PREVIOUSLY_REFUSED");
+        if (oneView && prior.state === "FINISHED")
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_ISSUANCE_ALREADY_COMMITTED");
+        if (oneView) await hooks.authorize(db);
         return prior;
       }
+      if (oneView) await hooks.authorize(db);
       const authority = (await db.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0];
       if (authority.drain_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAIN_CONFLICT");
       const count = Number((await db.query("SELECT count(*) AS n FROM elp210_candidate.mutations")).rows[0].n);
@@ -181,6 +191,9 @@ export class CurrentHumanMutations {
         // Another exact retry may already have committed while source recovery
         // was in flight. Re-read its immutable receipt, never apply twice.
         if (row.state === "FINISHED") {
+          // Recovery can establish COMMIT, not recover bearer/CSRF secrets.
+          // Do not even call authorize/apply to reconstruct a login response.
+          if (oneView) throw new CurrentHumanLeaseError("CURRENT_HUMAN_ISSUANCE_ALREADY_COMMITTED");
           const replayed = await this.replay(db, row, hooks);
           assertFence(fence);
           return replayed;

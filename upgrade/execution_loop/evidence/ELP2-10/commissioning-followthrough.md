@@ -931,3 +931,90 @@ paired coexistence/original performanceG2. Consumer10-001 remains owner-held.
 Claude: no public type/field/design change; existing six Manager/360 handoffs
 AWAITING_CONSUMER_REVIEW. No new frontend request after comparison. Full10
 NOT_MET;11, push/dev/main/release/deploy/Live not started.
+
+## Verified pre-session issuance — owner recommendation accepted, 2026-10-17
+
+Entry `30162a3f356cf2fefb1d2ec2affd5e1914df2ecd`, clean
+`/home/bobby/portal-research`, `docs/research-loop-plan`. Bobby requested the
+safest recommended disposition instead of another permission question.
+**Decision: one-view credentials.** Recovery establishes only COMMIT/ROLLBACK;
+it cannot redeliver session/CSRF cookies, turn a terminal record into a login,
+or revive a consumed activation. After response/process loss: fresh password
+login, or the existing authorized activation reissue flow. Persist no plaintext,
+encrypted/reconstructible token, password, assertion or credential fingerprint
+in coordinator metadata. No public recovery route or new browser contract.
+
+Local request **ELP2-REQ-10-006**, primary security review → Codex, IN_PROGRESS:
+separate verified pre-session purpose (LOGIN/PREVIEW; no invented prior actor
+session), current locked identity/credential recheck after drain, and atomic
+activation/binding/session/success-audit. FINISHED issuance never invokes a
+replay callback. Exact password row/hash remain ephemeral for final comparison;
+external identity and activation expiry use wall clock at final authorization.
+Unknown source outcome keeps the drain closed; private recovery is abort-only.
+Actual current-human provider commissioning stays under05-001/07-001.
+
+Scope/task map: primary owns `auth.service.ts`, password repository row-lock
+option (same credential DTO), mutation coordinator, isolated
+candidate SQL installer, Unified/this packet and integration. Independent test
+author owns only new `test/elp210-auth-issuance.spec.ts`; readonly reviewer owns
+no paths. No delegate Git/build/DB/resource authority. Acceptance: real disposable
+PG success, drain/recovery, credential/identity race, rollback, lost physical
+COMMIT ACK, restart/one-view and metadata-no-secret regressions. Tests NOT_RUN
+at entry. One grouped normal hook, approved local4CPU/4GiB/8GiB envelope,
+one heavy lane with both measurement locks respected. No FE/public generated
+schema, numbered migration, HK workload, runtime update, push or ELP2-11.
+Rollback: optional composition stays unmounted; preserve authority/audit and
+resolve used source leases before any future unmount. Backend next remains
+ELP2-10 external provider/trust, approved budget/calibration and allocated
+coexistence/original G2; Claude consumer work remains owner-held.
+
+### One-view implementation frozen for one normal-hook batch
+
+Local10-005 landed in30162a3f: terminal delegated gate PASS,
+691contracts/4282API+3existing skips, build/restore; eight runtime tuples
+unchanged, zero owned resources. This is reuse only for unchanged delegation,
+not a passing result for new issuance bytes. Private delegated controller hash
+`b033225f45a6c401f988e40b69b4c1b8580668029eedf841f20b71d4133c6567`.
+
+10-006 code now has a strict `VERIFIED_AUTH_ISSUANCE` purpose with LOGIN/PREVIEW,
+target user/generation, and NULL prior-session metadata. Per-attempt server
+random identity is not a persistent username/credential idempotency key.
+Initial/final authorization locks current user and exact password/activation,
+checks external identity against DB wall clock and rechecks expiry after
+transactional writes. Activation consumption itself also uses wall clock,
+not PostgreSQL transaction-start `now()`. Activation, binding, session,
+login counters and success audit commit or roll back together. Existing
+Origin/credential timing/preview-only config guards remain in force.
+
+FINISHED cannot run either authorize or apply again for this purpose. Lost
+physical COMMIT ACK yields safe503/no Set-Cookie, even when durable session and
+audit exist; terminal recovery remains observation/abort-only. A fresh verified
+password login may issue a NEW session. Spent activation is never auto-reused:
+existing `ACTIVATION_RECOVERY_REQUIRED` and authorized admin reissue are the
+only recovery path. UNKNOWN/signed-or-unsigned ACK is not terminal resolution.
+Operator procedure, when optional composition is eventually commissioned:
+inspect the private singleton `drain_id`; use `recoverAbandoned` for its exact
+intent. Leave unresolved source leases closed; never clear drain manually.
+`ALREADY_TERMINAL` is NOT an authenticated browser response or usable cookie.
+
+Authored26 real-PG cases:25 delegated test-author cases plus primary's exact
+expiry-at-consumption regression. Includes physical COMMIT then thrown ACK
+failure, restart, credential replacement/deletion, identity/binding/generation
+races, real write failures, real wall-clock expiry and metadata rejection/
+secret exclusion. Independent static review ACCEPT; tests still NOT_RUN at
+freeze. This is not deployed HTTP/browser or real external-provider evidence.
+No separate repeated full focus suite; one normal hook supplies all impacted
+regressions/build/restore. Private `20261017/issuance-land-HHMMSS/controller.json`
+records exact source hashes/HEAD/log, actual non-skipped counts and outcome.
+Only exit0 + matching committed source + unchanged runtime + zero owned
+resources can close this LOCAL seam. Keep all failure logs, if any.
+
+Public successful response/cookie/ContextState shape is unchanged; safe auth
+failure uses existing error envelope and no credential-bearing recovery route.
+No OpenAPI/generated/FE change. Claude: preserve existing activation-recovery
+state, never infer login success from a terminal receipt or503. No new UI task
+after comparison; actual installed provider and consumer acceptance still open.
+Backend next-ready remains actual current-human provider/trust, approved
+14-group numeric budget/calibration and allocated paired coexistence/original
+G2 in ELP2-10, not11. Normal hook is the landing gate for the exact seven paths
+above; do not repeat it solely to rewrite these pre-commit status lines.

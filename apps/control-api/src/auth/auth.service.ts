@@ -13,7 +13,7 @@ import {
 import { ControlApiConfig } from "../config";
 import { AuditRepository } from "../repos/audit";
 import { BindingsRepository } from "../repos/bindings";
-import { CredentialsRepository } from "../repos/credentials";
+import { CredentialsRepository, type PasswordCredential } from "../repos/credentials";
 import { SessionsRepository } from "../repos/sessions";
 import { UsersRepository } from "../repos/users";
 import { Argon2CredentialService, constantTimeEqual, randomToken, sha256 } from "./argon";
@@ -51,7 +51,7 @@ export interface AuthContextResult {
 
 type CredentialProof =
   | { kind: "ACTIVATION"; activationId: string }
-  | { kind: "PASSWORD"; activationId: null };
+  | { kind: "PASSWORD"; activationId: null; password: PasswordCredential };
 
 export class AuthService {
   readonly users: UsersRepository;
@@ -428,16 +428,17 @@ export class AuthService {
       throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
     }
 
-    try {
-      return await withTransaction(this.pool, async (client) => {
-        await client.query("SET LOCAL lock_timeout='1500ms'; SET LOCAL statement_timeout='5000ms'");
+    // Credential verification is outside Core locks. Recheck its EXACT row
+    // afterwards; the user generation alone is not a credential fingerprint.
+    const authorize = async (client: PoolClient) => {
         const users = new UsersRepository(client), bindings = new BindingsRepository(client);
-        const audit = new AuditRepository(client);
         const current = await users.lockById(user.userId);
         if (!current || current.status === "DISABLED" || current.archivedAt ||
+            current.username !== user.username || current.status !== user.status ||
             current.sessionVersion !== user.sessionVersion || current.mustChangePassword !== user.mustChangePassword) {
           throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
         }
+        await this.requireCurrentAccessIdentity(client, identity);
         const existing = await bindings.findByUser(current.userId);
         const byIdentity = await bindings.findByProviderIdentity(identity.iss, identity.sub);
         const byEmail = await bindings.findByProviderEmail(identity.iss, identity.email);
@@ -445,6 +446,26 @@ export class AuthService {
             (existing.length > 0 && !existing.some((b) => b.issuer === identity.iss && b.subject === identity.sub))) {
           throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
         }
+        if (credentialProof.kind === "PASSWORD") {
+          const actual = await new CredentialsRepository(client).findPassword(current.userId, true);
+          const verified = credentialProof.password;
+          if (!actual || actual.credentialId !== verified.credentialId || actual.passwordHash !== verified.passwordHash ||
+              actual.changedAt?.getTime() !== verified.changedAt?.getTime())
+            throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
+        } else {
+          const activation = await client.query(`SELECT activation_id FROM activation_credentials
+            WHERE activation_id=$1 AND user_id=$2 AND token_hash=$3 AND used_at IS NULL
+              AND revoked_at IS NULL AND expires_at>clock_timestamp() FOR UPDATE`,
+          [credentialProof.activationId, current.userId, sha256(input.credential)]);
+          if (!activation.rowCount) throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
+        }
+    };
+    const apply = async (client: PoolClient) => {
+        const users = new UsersRepository(client), bindings = new BindingsRepository(client);
+        const audit = new AuditRepository(client);
+        const current = (await users.lockById(user.userId))!;
+        const existing = await bindings.findByUser(current.userId);
+        const byIdentity = await bindings.findByProviderIdentity(identity.iss, identity.sub);
         // Credential verification does not spend an activation. Binding,
         // consumption and session creation must commit together: a candidate
         // drain/guard failure must not burn the only credential and strand the
@@ -487,14 +508,26 @@ export class AuthService {
           eventType: "login_succeeded", actorUserId: current.userId, targetUserId: current.userId,
           accessSubject: identity.sub, result: "SUCCESS", requestId: input.requestId, sourceIp: input.sourceIp,
         });
-        return this.createSession(
+        const session = await this.createSession(
           current, identity, credentialProof.activationId, input.requestId, new SessionsRepository(client),
         );
+        await this.requireCurrentAccessIdentity(client, identity);
+        return session;
+    };
+    try {
+      if (this.currentHumanMutations)
+        return await this.issueVerifiedSession(user, identity, "LOGIN", credentialProof.kind === "ACTIVATION"
+          ? credentialProof.activationId : credentialProof.password.credentialId, authorize, apply);
+      return await withTransaction(this.pool, async client => {
+        await client.query("SET LOCAL lock_timeout='1500ms'; SET LOCAL statement_timeout='5000ms'");
+        await authorize(client);
+        return apply(client);
       });
     } catch (error) {
       if ((error as { code?: string }).code === "23505") {
         throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
       }
+      if (this.currentHumanMutations) this.rethrowIssuanceError(error);
       throw error;
     }
   }
@@ -535,7 +568,7 @@ export class AuthService {
       return null;
     }
     return (await this.argon2.verify(password.passwordHash, credential))
-      ? { kind: "PASSWORD", activationId: null }
+      ? { kind: "PASSWORD", activationId: null, password }
       : null;
   }
 
@@ -595,18 +628,66 @@ export class AuthService {
     // eligible-user check and both durable success facts share one bounded
     // transaction; a race cannot issue a stale preview session or false audit.
     const identity = await this.verifyAccessIdentity(undefined, devEmail);
-    return withTransaction(this.pool, async client => {
-      await client.query("SET LOCAL lock_timeout='1000ms'; SET LOCAL statement_timeout='3000ms'");
+    const authorize = async (client: PoolClient) => {
       const current = await new UsersRepository(client).lockById(user.userId);
       if (!current || current.username !== user.username || current.status !== "ACTIVE" ||
-          current.archivedAt || current.mustChangePassword || current.sessionVersion !== user.sessionVersion) return null;
+          current.archivedAt || current.mustChangePassword || current.sessionVersion !== user.sessionVersion)
+        throw new AuthError("PREVIEW_IDENTITY_CHANGED", "Preview identity is not available.", 401);
+      await this.requireCurrentAccessIdentity(client, identity);
+    };
+    const apply = async (client: PoolClient) => {
+      const current = (await new UsersRepository(client).lockById(user.userId))!;
       const session = await this.createSession(current, identity, null, undefined, new SessionsRepository(client));
       await new AuditRepository(client).record({
         eventType: "login_succeeded", actorUserId: current.userId, targetUserId: current.userId,
         accessSubject: identity.sub, result: "SUCCESS", reasonCode: "PREVIEW_AUTO_LOGIN",
       });
+      await this.requireCurrentAccessIdentity(client, identity);
       return session;
-    });
+    };
+    try {
+      if (this.currentHumanMutations)
+        return await this.issueVerifiedSession(user, identity, "PREVIEW", null, authorize, apply);
+      return await withTransaction(this.pool, async client => {
+        await client.query("SET LOCAL lock_timeout='1000ms'; SET LOCAL statement_timeout='3000ms'");
+        await authorize(client);
+        return apply(client);
+      });
+    } catch (error) {
+      if (error instanceof AuthError && error.code === "PREVIEW_IDENTITY_CHANGED") return null;
+      if (this.currentHumanMutations) this.rethrowIssuanceError(error);
+      throw error;
+    }
+  }
+
+  private async requireCurrentAccessIdentity(client: PoolClient, identity: VerifiedAccessIdentity): Promise<void> {
+    const now = (await client.query<{ now: Date }>("SELECT clock_timestamp() AS now")).rows[0].now.getTime();
+    if (!Number.isFinite(identity.tokenExpiresAt.getTime()) || identity.tokenExpiresAt.getTime() <= now)
+      throw new AuthError("ACCESS_REQUIRED", GENERIC_LOGIN_ERROR, 401);
+  }
+
+  /** Each verified request is a fresh one-view issuance, NOT an idempotency
+   * key derived from username/password/generation. Only non-secret identity
+   * metadata is hashed; no credential/assertion/token fingerprint is retained.
+   * Lost COMMIT ACK fails closed. Private recovery cannot recreate cookies. */
+  private async issueVerifiedSession(user: PortalUser, identity: VerifiedAccessIdentity,
+    operation: "LOGIN" | "PREVIEW", credentialId: string | null,
+    authorize: (client: PoolClient) => Promise<void>, apply: (client: PoolClient) => Promise<SessionResult>): Promise<SessionResult> {
+    const attemptId = randomId("iss");
+    return this.currentHumanMutations!.executeVerified({
+      family: "VERIFIED_AUTH_ISSUANCE", operation, target_id: user.userId, user_revision: user.sessionVersion,
+      key_digest: accessDigest({ family: "VERIFIED_AUTH_ISSUANCE", attempt_id: attemptId }),
+      request_digest: accessDigest({ attempt_id: attemptId, operation, user_id: user.userId,
+        user_revision: user.sessionVersion, credential_id: credentialId,
+        issuer: identity.iss, subject: identity.sub, audience: identity.aud,
+        authenticated_at: identity.authenticationTime.toISOString(), expires_at: identity.tokenExpiresAt.toISOString() }),
+    }, { authorize, apply, terminal: result => ({ outcome: "APPLIED", receipt_ref: result.sessionId, reason_code: null }) });
+  }
+
+  private rethrowIssuanceError(error: unknown): never {
+    if (error instanceof AuthError) throw error;
+    if (error instanceof CurrentHumanLeaseError) this.rethrowCurrentHumanAuthError(error);
+    throw new AuthError("AUTH_ISSUANCE_UNAVAILABLE", "Sign-in could not be confirmed. Please sign in again.", 503);
   }
 
   private async createSession(

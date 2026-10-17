@@ -9941,6 +9941,18 @@ provider/trust, approved numeric budget/calibration, allocated coexistence/G2.
 Claude six existing Manager/360 handoffs AWAITING_CONSUMER_REVIEW; no new fields
 or consumer request. Full10NOT_MET;11/dev/main/release/deploy remain unopened.
 
+**2026-10-17 — one-view login recovery decision / local10-006 (IN_PROGRESS).**
+Bobby requested the safest recommendation: recover only durable COMMIT/ROLLBACK,
+never reconstruct lost cookies or claim authentication from a receipt. Fresh
+password login; consumed activation uses the existing authorized reissue flow.
+Separate verified pre-session purpose, final current credential/identity checks
+and atomic session/binding/audit are scoped in the
+[canonical packet](./execution_loop/evidence/ELP2-10/commissioning-followthrough.md#verified-pre-session-issuance--owner-recommendation-accepted-2026-10-17).
+Entry30162a3f, clean shared branch; one normal-hook batch, no runtime/FE/public
+contract/push. Tests NOT_RUN at entry. This resolves the decision, not actual
+provider commissioning or the remaining budget/calibration/coexistence/G2 gates.
+Claude has no new UI/type task; ELP2-11 is not started.
+
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release
