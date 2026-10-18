@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, Header, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { ControlApiConfig } from "../config";
@@ -9,7 +9,6 @@ import { WorkspacesRepository } from "../repos/workspaces";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { OperationalCompositionService } from "./operational-composition.service";
 import { PortalDerivationError } from "./portal-derivations.service";
-import { OperationQueueQuerySchema } from "../operations/contracts";
 
 /** The raw query as an object; the guards below decide what any of it means. */
 function asQuery(raw: unknown): Record<string, unknown> {
@@ -77,16 +76,15 @@ export class OperationalCompositionController {
 
   /** Same substitution rule; the queue's triage filter and keyset come through. */
   @Get("/operations")
+  @Header("Cache-Control", "private, no-store")
   async operations(@Req() request: CompositionRequest, @Query() raw: unknown) {
     const principal = await this.principal(request, raw, PrincipalOnlySchema);
-    const parsed = OperationQueueQuerySchema.safeParse(asQuery(raw));
-    if (!parsed.success) {
-      throw new PortalDerivationError("EDS05_OPERATION_QUEUE_QUERY_INVALID", 400, "Invalid operation queue query.");
-    }
-    return this.compositions.operationsQueue(principal, parsed.data as Record<string, unknown>);
+    // The service selects sticky Core mode BEFORE the strict mode parser.
+    return this.compositions.operationsQueue(principal, asQuery(raw));
   }
 
   @Get("/incidents/:incident_id")
+  @Header("Cache-Control", "private, no-store")
   async incident(@Req() request: CompositionRequest, @Param("incident_id") incidentId: string, @Query() raw: unknown) {
     this.assertId(incidentId);
     return this.compositions.incidentDetail(await this.principal(request, raw), incidentId);

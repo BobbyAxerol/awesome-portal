@@ -138,6 +138,8 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/command.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"
 cp -a "${ROOT_DIR}/apps/control-api/src/resource-read/scoped-resource.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/resource-read/"
+cp -a "${ROOT_DIR}/apps/control-api/src/operations/operational-read.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/operations/"
 # Access validation reuses the finite capability vocabulary. Its PostgreSQL
 # imports are type-only: copying this explicit dependency opens no DB/runtime
 # access and keeps contract/parser parity in the networkless test cell.

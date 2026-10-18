@@ -459,24 +459,295 @@
     "/api/v1/execution/operations": {
       "get": {
         "operationId": "listExecutionOperationsQueue",
-        "description": "ADMIN-only Portal-owned queue with exact counts and opaque bidirectional keysets. Source integration remains unavailable in F1a.",
+        "description": "Sticky current Core mode is selected before strict parsing. Legacy v1 remains separate. V2 requires complete current TS-accepted audit tuples ACCOUNT/PORTFOLIO/DEPLOYMENT per environment BEFORE SQL counts/page; USER/ADMIN are not grants. Source journal unavailable, no mutation. assigned_to is unsupported in V2 (400), not ignored. Existing limit1..250 and both cursor directions preserved; optional target_id narrows the query.",
         "parameters": [
-          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 3, "maxLength": 96 } },
-          { "name": "after", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } },
-          { "name": "before", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } },
-          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 250 } },
-          { "name": "triage_state", "in": "query", "required": false, "schema": { "type": "string", "enum": ["UNACKNOWLEDGED", "ACKNOWLEDGED", "RESOLVED"] } },
-          { "name": "environment", "in": "query", "required": false, "schema": { "type": "string", "enum": ["PAPER", "SANDBOX", "LIVE"] } },
-          { "name": "source_status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["BLOCKED", "PENDING", "RUNNING", "SUCCEEDED", "FAILED", "EXPIRED", "UNCERTAIN"] } },
-          { "name": "verification_result", "in": "query", "required": false, "schema": { "type": "string", "enum": ["NOT_STARTED", "PENDING", "SUCCEEDED", "FAILED", "PARTIAL", "UNCERTAIN", "DENIED", "EXPIRED"] } },
-          { "name": "severity", "in": "query", "required": false, "schema": { "type": "string", "enum": ["INFO", "WARNING", "ERROR", "CRITICAL"] } },
-          { "name": "target_type", "in": "query", "required": false, "schema": { "type": "string", "enum": ["ACCOUNT", "BROKER_BINDING", "DEPLOYMENT", "ORDER", "PORTFOLIO", "SYSTEM"] } },
-          { "name": "command_key", "in": "query", "required": false, "schema": { "type": "string" } },
-          { "name": "sort", "in": "query", "required": false, "schema": { "type": "string", "enum": ["created_at:asc", "created_at:desc"], "default": "created_at:desc" } }
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 96
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250
+            }
+          },
+          {
+            "name": "triage_state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "UNACKNOWLEDGED",
+                "ACKNOWLEDGED",
+                "RESOLVED"
+              ]
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PAPER",
+                "SANDBOX",
+                "LIVE"
+              ]
+            }
+          },
+          {
+            "name": "source_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BLOCKED",
+                "PENDING",
+                "RUNNING",
+                "SUCCEEDED",
+                "FAILED",
+                "EXPIRED",
+                "UNCERTAIN"
+              ]
+            }
+          },
+          {
+            "name": "verification_result",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NOT_STARTED",
+                "PENDING",
+                "SUCCEEDED",
+                "FAILED",
+                "PARTIAL",
+                "UNCERTAIN",
+                "DENIED",
+                "EXPIRED"
+              ]
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "ERROR",
+                "CRITICAL"
+              ]
+            }
+          },
+          {
+            "name": "target_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACCOUNT",
+                "BROKER_BINDING",
+                "DEPLOYMENT",
+                "ORDER",
+                "PORTFOLIO",
+                "SYSTEM"
+              ]
+            }
+          },
+          {
+            "name": "command_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at:asc",
+                "created_at:desc"
+              ],
+              "default": "created_at:desc"
+            }
+          },
+          {
+            "name": "target_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+            }
+          }
         ],
         "responses": {
-          "200": { "description": "Bounded Portal operations queue", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationQueueResponse" } } } },
-          "403": { "description": "ADMIN or query policy required" }
+          "200": {
+            "description": "Legacy Portal queue OR finite current-audit V2 cohort, never a global/source completeness claim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationQueueResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalQueueV2"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Strict input/cursor invalid or unsupported assigned_to filter; contextual refusal fenced after current authority.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Authenticated current Portal session/authority required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Authenticated current Portal session/authority required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Uniform missing/hidden operational record or no usable current audit authority.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current authority/cursor/incident root changed; refresh without legacy fallback.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Fixed unqualified/not-configured/integrity/byte/census unavailable; never raw provider/SQL/prose or false empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -503,7 +774,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized named operation detail; no generic parent or queue commissioning.",
+            "description": "Authorized concrete operation; current-audit finite workflow variant is additive.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -532,6 +803,9 @@
                     },
                     {
                       "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandStatus"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalWorkflowV2"
                     }
                   ]
                 }
@@ -557,7 +831,7 @@
             "description": "Typed current-authority refusal; no upstream or legacy fallback."
           }
         },
-        "description": "Named operation detail. Exact ecm_ intents use current workspace/resource/environment audit authority and finite CommandStatus; GET never dispatches or reconciles. Existing Portal/F0 decision readers retain their gate checks and scoped-parent refusal. An ACK is not business APPLIED or venue FILLED. HTTP private, no-store."
+        "description": "Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. Other SCOPED_V2 ids require actual immutable queue/F0 provenance under exact target/environment audit, never creator/ADMIN/read_all permission or a family fallback. Legacy decision readers remain separate with their gate checks. GET never dispatches/reconciles; ACK is not APPLIED/FILLED. HTTP private, no-store."
       }
     },
     "/api/v1/execution/operations/{operation_id}/acknowledge": {
@@ -589,12 +863,155 @@
     "/api/v1/execution/operations/incidents/{incident_id}": {
       "get": {
         "operationId": "getExecutionIncidentDetail",
-        "description": "ADMIN-only bounded incident detail. Findings, alerts, dead letters and trace-order panels remain explicitly unavailable.",
+        "description": "Legacy detail remains separate. SCOPED_V2 publishes only current finite Portal root under current exact audit; original children are NOT_PUBLISHED. No title/prose/actors/evidence hashes/counts loaded. No mutation or source side effects.",
         "parameters": [
-          { "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } },
-          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 3, "maxLength": 96 } }
+          {
+            "name": "incident_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 96
+            }
+          }
         ],
-        "responses": { "200": { "description": "Portal-owned incident detail", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentDetail" } } } } }
+        "responses": {
+          "200": {
+            "description": "Legacy incident OR finite authorized current root.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentDetail"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalIncidentCurrentV2"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Strict input/cursor invalid or unsupported assigned_to filter; contextual refusal fenced after current authority.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Authenticated current Portal session/authority required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Authenticated current Portal session/authority required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Uniform missing/hidden operational record or no usable current audit authority.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current authority/cursor/incident root changed; refresh without legacy fallback.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Fixed unqualified/not-configured/integrity/byte/census unavailable; never raw provider/SQL/prose or false empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/execution/operations/incidents/{incident_id}/acknowledge": {
@@ -685,6 +1102,24 @@
       },
       "F0CommandCollection": {
         "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/F0CommandCollection"
+      },
+      "OperationalQueueItemV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalQueueItemV2"
+      },
+      "OperationalQueueV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalQueueV2"
+      },
+      "OperationalWorkflowV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalWorkflowV2"
+      },
+      "OperationalIncidentCurrentV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalIncidentCurrentV2"
+      },
+      "OperationalQueueCompositionV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalQueueCompositionV2"
+      },
+      "OperationalIncidentCompositionV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalIncidentCompositionV2"
       }
     }
   }

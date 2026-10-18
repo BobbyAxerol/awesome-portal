@@ -93,6 +93,8 @@ import { ExecutionOperationsRepository } from "./operations/operations.repositor
 import { ExecutionOperationsService } from "./operations/operations.service";
 import { ExecutionF0ReadController } from "./operations/f0-read.controller";
 import { ExecutionF0ReadService } from "./operations/f0-read.service";
+import { OperationalReadRepository } from "./operations/operational-read.repository";
+import { OperationalReadService } from "./operations/operational-read.service";
 import { OperationsWorkflowRepository } from "./operations/workflow.repository";
 import { OperationsWorkflowService } from "./operations/workflow.service";
 import { IncidentController } from "./operations/incident.controller";
@@ -491,6 +493,8 @@ export class AppModule {
         },inject:[ExecutionOperationsRepository,ExecutionAccessService,CONTROL_API_CONFIG]},
         OperationsWorkflowRepository,
         OperationsWorkflowService,
+        OperationalReadRepository,
+        OperationalReadService,
         IncidentRepository,
         IncidentService,
         SandboxCertificationRepository,

@@ -712,7 +712,7 @@
     "/api/v1/execution/operations/{operation_id}": {
       "get": {
         "operationId": "getPaperExitDecisionOperation",
-        "description": "Named operation detail. Exact ecm_ intents use current workspace/resource/environment audit authority and finite CommandStatus; GET never dispatches or reconciles. Existing Portal/F0 decision readers retain their gate checks and scoped-parent refusal. An ACK is not business APPLIED or venue FILLED. HTTP private, no-store.",
+        "description": "Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. Other SCOPED_V2 ids require actual immutable queue/F0 provenance under exact target/environment audit, never creator/ADMIN/read_all permission or a family fallback. Legacy decision readers remain separate with their gate checks. GET never dispatches/reconciles; ACK is not APPLIED/FILLED. HTTP private, no-store.",
         "parameters": [
           {
             "$ref": "#/components/parameters/OperationId"
@@ -723,7 +723,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized named operation detail; no generic parent or queue commissioning.",
+            "description": "Authorized concrete operation; current-audit finite workflow variant is additive.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -752,6 +752,9 @@
                     },
                     {
                       "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandStatus"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalWorkflowV2"
                     }
                   ]
                 }

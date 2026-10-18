@@ -247,10 +247,10 @@ describe("ELP2 Governance read boundaries", () => {
     return { controller, request, mode, record, queue };
   }
 
-  it.each(["queue", "detail"] as const)("refuses V2 operation %s without fetching parents", async branch => {
+  it.each(["queue", "detail"] as const)("refuses V2 operation %s without an installed finite provider or legacy fallback", async branch => {
     const f = operationController();
     const call = branch === "queue" ? f.controller.operationsQueue(f.request, {}) : f.controller.operation(f.request, "operation");
-    await expect(call).rejects.toMatchObject({ code: "OPERATIONS_SCOPED_PARENT_NOT_COMMISSIONED", status: 503 });
+    await expect(call).rejects.toMatchObject({ code: "OPERATIONAL_READ_NOT_CONFIGURED", status: 503 });
     expect(f.queue).not.toHaveBeenCalled(); expect(f.record).not.toHaveBeenCalled();
     expect(f.mode).toHaveBeenCalledWith({ ...principal, viewerWorkspaceId: "ws_a" });
   });
@@ -272,7 +272,7 @@ describe("ELP2 Governance read boundaries", () => {
     const service = new OperationalCompositionService(config, { sourceHealth } as never, {} as never,
       {} as never, {} as never, { list } as never, {} as never, {} as never, {} as never,
       undefined, { coreSelectionMode } as never);
-    await expect(service.operationsQueue(principal)).rejects.toMatchObject({ code: "OPERATIONS_SCOPED_PARENT_NOT_COMMISSIONED" });
+    await expect(service.operationsQueue(principal)).rejects.toMatchObject({ code: "OPERATIONAL_READ_NOT_CONFIGURED" });
     expect(list).not.toHaveBeenCalled(); expect(sourceHealth).not.toHaveBeenCalled();
     scoped = false;
     await expect(service.operationsQueue(principal)).rejects.toMatchObject({ code: "OPERATIONS_SCOPED_PARENT_NOT_COMMISSIONED" });
@@ -282,14 +282,21 @@ describe("ELP2 Governance read boundaries", () => {
   it("does not misclassify static ADMIN task metadata as a scoped parent or grant", async () => {
     const coreSelectionMode = vi.fn(async () => "SCOPED_V2");
     const taskCatalogue = vi.fn(() => ({ tasks: [{ task_id: "static-task" }] }));
-    const service = new OperationalCompositionService(config, { sourceHealth: async () => ({ input_digest: "source" }) } as never,
-      {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, { taskCatalogue } as never,
+    const sourceHealth = vi.fn(), snapshot = vi.fn(), snapshotMetadata = vi.fn(), rawSnapshot = vi.fn();
+    const service = new OperationalCompositionService(config, { sourceHealth } as never,
+      { snapshot, snapshotMetadata, rawSnapshot } as never, {} as never, {} as never, {} as never, {} as never, {} as never, { taskCatalogue } as never,
       undefined, { coreSelectionMode } as never);
     const admin = { ...principal, user: { ...user, role: "ADMIN" as const } };
     const result = await service.adminActionDrawer(admin);
     expect(taskCatalogue).toHaveBeenCalledWith(admin.user, admin.workspaceId);
-    expect(coreSelectionMode).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ data: { command_authority: { state: "FAIL_CLOSED", relay_active: false,
+    // Reading the mode suppresses unqualified source I/O. It does not make
+    // this static catalogue an audit parent or confer a technical grant.
+    expect(coreSelectionMode).toHaveBeenCalledExactlyOnceWith(admin);
+    for (const sourceRead of [sourceHealth, snapshot, snapshotMetadata, rawSnapshot]) expect(sourceRead).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ source_authority: "PORTAL_CONTROL_ONLY",
+      source_health: { state: "UNAVAILABLE", reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED" },
+      redacted_command_journal: { state: "UNAVAILABLE", reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED" },
+      data: { command_authority: { state: "FAIL_CLOSED", relay_active: false,
       source_side_effect_requested: false } } });
   });
 });

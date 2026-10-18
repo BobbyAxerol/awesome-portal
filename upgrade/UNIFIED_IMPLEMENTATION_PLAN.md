@@ -11915,3 +11915,58 @@ Actual corrected qualification21:06:16.131619–21:07:29.428425UTC:348PASS (278u
 - Existing actual session min(idle,absolute) is propagated internally through both read captures and checked with the entire unchanged audit graph at max(Core,host); snapshot-shaped contexts cannot bypass it via TEST_ONLY/ADMIN. Genuine renewed final ceiling wins over an earlier snapshot, pure witness-free evaluator vectors keep explicit-clock compatibility. Internal deadline is not a browser/PM/schema field.
 - Claude can consume executionF0BlockedOperationsListV2/F0CommandCollection with the canonical synthetic fixture only when assigned; [exact query/page/error/absence handoff](execution_loop/evidence/ELP2-04/f0-current-audit-read.md#additive-consumer-handoff). FE NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW, no acknowledgement invented. One affected PG/HTTP/contracts gate then one normal hook; unchanged engine/load/DR/browser not repeated. Wider04/09/10source/config/budget/calibration/coexistence/P184G2/browser and11entry remain OPEN; no push/dev/main/release/deploy.
 - Actual F0 collection terminal2026-10-18T03:46:03UTC:7API suites/454PASS,45operations-contract PASS, build/scopedPGrestore/four access-row digests/frozen source-index/eight runtimes/owned cleanup PASS. [Exact receipt and preserved compiler failure](execution_loop/evidence/ELP2-04/f0-current-audit-read.md#affected-terminal--2026-10-18t034603utc). Shared real-session ceiling and renewal/expiry races now verified locally; current PM/provider authority remains TEST_ONLY in this lane. One coherent normal-hook landing remains; original04-008/009 full-source and04-010 consumer/09/10/11 gates remain open, no scope reduction or source/FE/release activation.
+
+<a id="elp204-current-operational-parents-20261018"></a>
+### ELP2-04 continuation — finite current operational parents
+
+- Previous F0 collection hook actually exited0 at2026-10-18T04:21:14UTC,
+  landed `d9fc67fb1a6437e4d6af4ab68dfe6342b8eb9c52`:870contracts/6758API PASS,
+  3existing skips, build/scopedPGrestore/source-index/8runtime freeze/owned cleanup
+  PASS. [Terminal pins and new original04-008/009 scope](execution_loop/evidence/ELP2-04/current-operational-parents.md)
+  supersede the prior pending-hook statement, not full04/source acceptance.
+- Approved next subset APPLIED_UNCOMMITTED/NOT_RUN at entry: current-audit
+  Operations queue, provenance-backed generic F0 workflow, finite Incident root
+  and same-body compositions. Complete target/environment authority before SQL
+  counts/page; additive0141 view/forward guard, no old data rewrite or source
+  journal/prose/actor disclosure. Exact SQL F0 writer precision fixed; historical
+  millisecond representation labelled explicitly, not arbitrary tolerance.
+- [Claude type/field/absence/query/error handoff](execution_loop/evidence/ELP2-04/contract-handoff.md#2026-10-18--finite-current-operational-variants)
+  remains NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW. New review
+  intake goes to canonical owning request lifecycle, not a parallel queue.
+  One affected actualPG/HTTP/contracts gate followed by one normal hook; no
+  unchanged engine/load/browser retest. Wider04source/otherparents,09actual
+  source adapter,10trust/budget/calibration/coexistence/P184G2/browser and11entry
+  remain OPEN; no push/dev/main/sign/release/deploy/runtime activation.
+- Operational parents affected terminal04:55:32UTC: API build PASS,
+  242/244 tests PASS,2 test-only failures preserved. Independent review
+  accepted precise terminal-clock scheduling and static catalogue no-source-I/O
+  assertions; no production authorization relaxed. [Failure, dispositions and
+  bounded retake plan](execution_loop/evidence/ELP2-04/current-operational-parents.md#affected-terminal-2026-10-18t045532utc).
+  Pure affected contracts then one normal hook own the retake/restore; do not
+  call the package/full04 green before actual terminal success. Claude remains
+  owner-held/AWAITING_CONSUMER_REVIEW; no new acknowledgement inferred.
+- Operations pure contract terminal04:57:41UTC:58/58PASS, source/index/eight
+  runtimes unchanged, no owned resources. [Exact hashes and review pin](execution_loop/evidence/ELP2-04/current-operational-parents.md#pure-contract-terminal-2026-10-18t045741utc).
+  Single normal-hook API/build/restore retake and landing remain pending; no
+  duplicate focused PG build, no full04/10/11 or consumer acceptance inferred.
+- First coherent operational hook stopped05:01:30UTC at stale N29 generated
+  OpenAPI hash, before contract/API build/test/restore. [Preserved failure and
+  exact four derived hash refreshes](execution_loop/evidence/ELP2-04/current-operational-parents.md#early-hook-terminal-2026-10-18t050130utc).
+- Operational normal hook050552 then proved canonical contracts883PASS and
+  current operational55PASS, but exposed legacy Operations microsecond cursor
+  loss. Its owned failed cell was stopped early, cleanup/source/index/runtime8
+  unchanged, no full API/restore/commit PASS. [Preserved failure, independent
+  accepted diagnosis and index-preserving bounded correction](execution_loop/evidence/ELP2-04/current-operational-parents.md#confirmed-legacy-precision-defect--bounded-retake-2026-10-18).
+  Exact timestamp SELECT-only cursor metadata, legacy private context version
+  and deterministic PG/HTTP regressions are APPLIED/DEFINED_UNCOMMITTED,
+  NOT_RUN. No UI/role/migration/source precision change; approved whole04 and
+  original09/10 runtime/consumer/budget gates remain OPEN,11NOT_ENTRY_READY.
+  N29/EDS-12 semantics/runtime_effect NONE unchanged; snapshot460 matches.
+  Retry the same owned normal hook, no duplicate focused PG lane or bypass.
+- Actual precision retake053139 terminal2026-10-18T05:35:46UTC:3 affected
+  suites/105PASS, build/scopedPGrestore/four access digests, source/index/eight
+  runtime freeze and owned teardown PASS. [Exact controller/log and reuse
+  boundary](execution_loop/evidence/ELP2-04/current-operational-parents.md#precision-retake-terminal-2026-10-18t053546utc).
+  Earlier failures remain preserved; unchanged contracts are reused, not new
+  coverage. One coherent normal-hook landing remains, no further focused PG
+  build for receipt-only edits; whole04/09/10/11 and Claude-owner gates unchanged.

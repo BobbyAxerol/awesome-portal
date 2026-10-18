@@ -9,6 +9,9 @@ import { PaperExitService } from "../governance/paper-exit.service";
 import { IncidentService } from "../operations/incident.service";
 import { ExecutionOperationsService } from "../operations/operations.service";
 import { OperationsWorkflowService } from "../operations/workflow.service";
+import { OperationQueueQuerySchema } from "../operations/contracts";
+import { OperationalReadService } from "../operations/operational-read.service";
+import { OperationalReadError } from "../operations/current-operational-read";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { retainedReview } from "./retained-read-profile";
 import { ExecutionReadScopes, ExecutionReadScopeError, type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
@@ -63,6 +66,7 @@ export class OperationalCompositionService {
     @Inject(ExecutionOperationsService) private readonly operations: ExecutionOperationsService,
     @Optional() @Inject(WorkspacesRepository) private readonly workspaces?: WorkspacesRepository,
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
+    @Optional() @Inject(OperationalReadService) private readonly currentReads?: OperationalReadService,
   ) {}
 
   async approval(
@@ -133,6 +137,16 @@ export class OperationalCompositionService {
     principal: PortalDerivationPrincipal,
     query: Record<string, unknown> = {},
   ): Promise<Record<string, unknown>> {
+    if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.currentReads) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      const prepared = await this.currentReads.prepareQueue(principal, query, 50);
+      // LAST await, including held parser/cursor/body refusals. The wrapper
+      // below is finite and pure: no source panel creates a discarded scope.
+      return this.currentReads.finish(prepared,
+        queue => this.currentComposition(principal, "operations_queue", { operations_queue: queue }));
+    }
+    const parsed = OperationQueueQuerySchema.safeParse(query);
+    if (!parsed.success) throw new PortalDerivationError("EDS05_OPERATION_QUEUE_QUERY_INVALID", 400, "Invalid operation queue query.");
     const fence = async () => {
       if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2")
         throw new GovernanceError("OPERATIONS_SCOPED_PARENT_NOT_COMMISSIONED", "Scoped operation records are not commissioned.", 503);
@@ -140,8 +154,7 @@ export class OperationalCompositionService {
     await fence();
     const queue = await this.workflows.list(principal.user, principal.workspaceId, {
       limit: 50,
-      sort: "created_at:desc",
-      ...query,
+      ...parsed.data,
     });
     await fence();
     return this.compose(principal, "operations_queue", {
@@ -150,6 +163,12 @@ export class OperationalCompositionService {
   }
 
   async incidentDetail(principal: PortalDerivationPrincipal, incidentId: string): Promise<Record<string, unknown>> {
+    if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.currentReads) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      const prepared = await this.currentReads.prepareIncident(principal, incidentId);
+      return this.currentReads.finish(prepared,
+        incident => this.currentComposition(principal, "incident_detail", { incident }));
+    }
     return this.compose(principal, "incident_detail", {
       incident: await this.incidents.detail(principal.user, principal.workspaceId, incidentId, principal),
     });
@@ -188,6 +207,13 @@ export class OperationalCompositionService {
     validateBody?: () => Promise<void>,
   ): Promise<Record<string, unknown>> {
     const readAt = new Date();
+    const scoped = await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2";
+    if (scoped) {
+      // A catalogue/business permission must not open an audit journal. These
+      // existing parents keep their OWN authority gates; no source read below.
+      await validateBody?.();
+      return this.currentComposition(principal, surface, body);
+    }
     const allowed = !retainedReview(this.config) || !this.workspaces || (!!this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
       await this.workspaces.canReadExecution(this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,principal.user.userId));
     const sourcePrincipal = this.sourcePrincipal(principal);
@@ -221,6 +247,23 @@ export class OperationalCompositionService {
       lineage,
       data: body,
     };
+  }
+
+  private currentComposition(principal: PortalDerivationPrincipal, surface: OperationalSurface,
+    body: Record<string, unknown>): Record<string, unknown> {
+    const readAt = new Date();
+    const sourceHealth = { input_digest: digest("CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED"),
+      ...unavailable("CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED") };
+    const journal = { digest: digest("CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED"),
+      ...unavailable("CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED") };
+    const lineage = { source_health_input_digest: sourceHealth.input_digest, command_journal_digest: journal.digest,
+      workflow_digest: digest(stable(body, true)), formula_version: "execution.operational-composition.v1" };
+    return { schema_version: "execution.operational-composition.v1", logical_operation_id: operationIdFor(surface),
+      record_authority: "PORTAL_CONTROL", source_authority: "PORTAL_CONTROL_ONLY",
+      workspace_id: principal.workspaceId, read_at_ms: readAt.valueOf(), read_at: readAt.toISOString(),
+      composite_revision: digest({ surface, lineage }), source_health: sourceHealth, redacted_command_journal: journal,
+      canary_twin_comparison: unavailable("E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED"),
+      command_authority: { state: "UNCHANGED_FAIL_CLOSED", source_side_effect_requested: false }, lineage, data: body };
   }
 
   private sourcePrincipal(principal: PortalDerivationPrincipal): PortalDerivationPrincipal {
@@ -326,12 +369,13 @@ function digest(value: unknown): string {
   return `sha256:${createHash("sha256").update(canonical(value), "utf8").digest("hex")}`;
 }
 
-function stable(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stable);
+function stable(value: unknown, operational = false): unknown {
+  if (Array.isArray(value)) return value.map(item => stable(item, operational));
   if (!value || typeof value !== "object") return value;
   return Object.fromEntries(Object.entries(value as Record<string, unknown>)
-    .filter(([key]) => key !== "read_at" && key !== "read_at_ms")
-    .map(([key, item]) => [key, stable(item)]));
+    .filter(([key]) => key !== "read_at" && key !== "read_at_ms" &&
+      (!operational || !["observed_at_ms", "next_cursor", "prev_cursor"].includes(key)))
+    .map(([key, item]) => [key, stable(item, operational)]));
 }
 
 function canonical(value: unknown): string {

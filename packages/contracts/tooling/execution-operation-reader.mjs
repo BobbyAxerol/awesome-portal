@@ -3,6 +3,7 @@
 import {readFileSync,writeFileSync} from "node:fs";
 import {dirname,resolve} from "node:path";
 import {fileURLToPath} from "node:url";
+import {operationalCurrentSchemas,updateOperationalPaths,synchronizeOperationalFixture} from "./execution-operational-current-reader.mjs";
 const root=resolve(dirname(fileURLToPath(import.meta.url)),"..");
 const route="/api/v1/execution/operations/{operation_id}";
 export const f0ReadRoute="/api/v1/execution/operations/f0/{operation_id}";
@@ -87,6 +88,7 @@ export const operationReaderSchema=()=>({oneOf:[
   ...["R1","R2","Live"].map(prefix=>({$ref:"../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/"+prefix+"DecisionOperation"})),
   {$ref:"../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionOperation"},
   {$ref:"execution-trusted-commands.openapi.json#/components/schemas/CommandStatus"},
+  {$ref:"../schemas/execution-operations.v1.schema.json#/$defs/OperationalWorkflowV2"},
 ]});
 
 /** The published catalogue is generated from the same reviewed 64-key source
@@ -132,25 +134,30 @@ export function synchronizeOperationReaders(check=false) {
   const schemaPath=resolve(root,"schemas/execution-operations.v1.schema.json"),schemaBefore=readFileSync(schemaPath,"utf8");
   let schemaAfter=member(schemaBefore,"F0BlockedOperationRead",f0BlockedReaderSchema(),"$defs",4);
   schemaAfter=member(schemaAfter,"F0CommandCollection",f0CollectionSchema(),"$defs",4);
+  for(const [name,value] of Object.entries(operationalCurrentSchemas()))schemaAfter=member(schemaAfter,name,value,"$defs",4);
   if(check){if(schemaBefore!==schemaAfter)throw new Error("Finite F0 reader schema drift");}
   else writeFileSync(schemaPath,schemaAfter);
   for(const name of ["execution-operations","execution-governance"]) {
     const path=resolve(root,"openapi/"+name+".openapi.json"),before=readFileSync(path,"utf8"),api=JSON.parse(before);
     const get=api.paths[route].get;
-    get.description="Named operation detail. Exact ecm_ intents use current workspace/resource/environment audit authority and finite CommandStatus; GET never dispatches or reconciles. Existing Portal/F0 decision readers retain their gate checks and scoped-parent refusal. An ACK is not business APPLIED or venue FILLED. HTTP private, no-store.";
-    get.responses["200"]={description:"Authorized named operation detail; no generic parent or queue commissioning.",
+    get.description="Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. Other SCOPED_V2 ids require actual immutable queue/F0 provenance under exact target/environment audit, never creator/ADMIN/read_all permission or a family fallback. Legacy decision readers remain separate with their gate checks. GET never dispatches/reconciles; ACK is not APPLIED/FILLED. HTTP private, no-store.";
+    get.responses["200"]={description:"Authorized concrete operation; current-audit finite workflow variant is additive.",
       headers:{"Cache-Control":{schema:{const:"private, no-store"}}},
       content:{"application/json":{schema:operationReaderSchema()}}};
     for(const status of [400,401,403,404,409,503]) get.responses[status]??={description:
       status===404?"Unknown and hidden commands have the same safe envelope.":"Typed current-authority refusal; no upstream or legacy fallback."};
     let after=member(before,route,api.paths[route],"paths",4);
     if(name==="execution-operations"){
+      const updated=JSON.parse(after);updateOperationalPaths(updated);
+      for(const p of ["/api/v1/execution/operations","/api/v1/execution/operations/incidents/{incident_id}"])
+        after=member(after,p,updated.paths[p],"paths",4);
       after=member(after,f0ReadRoute,f0Path(),"paths",4);
       after=member(after,f0CollectionRoute,f0CollectionPath(),"paths",4);
       const components=JSON.parse(after).components;
       components.schemas??={};
       components.schemas.F0BlockedOperationRead={$ref:"../schemas/execution-operations.v1.schema.json#/$defs/F0BlockedOperationRead"};
       components.schemas.F0CommandCollection={$ref:"../schemas/execution-operations.v1.schema.json#/$defs/F0CommandCollection"};
+      for(const key of Object.keys(operationalCurrentSchemas()))components.schemas[key]={$ref:"../schemas/execution-operations.v1.schema.json#/$defs/"+key};
       after=member(after,"components",components,null,2);
     }
     if(check){if(before!==after)throw new Error("Operation reader contract drift: "+name);}
@@ -160,6 +167,7 @@ export function synchronizeOperationReaders(check=false) {
   const bytes=JSON.stringify(f0CollectionFixture(),null,2)+"\n";
   if(check){if(readFileSync(fixture,"utf8")!==bytes)throw new Error("F0 collection fixture drift");}
   else writeFileSync(fixture,bytes);
+  synchronizeOperationalFixture(check);
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))
   synchronizeOperationReaders(process.argv.includes("--check"));

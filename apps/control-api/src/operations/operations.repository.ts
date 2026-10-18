@@ -244,19 +244,13 @@ export class ExecutionOperationsRepository {
                 target_type, target_id, risk_tier, severity, source_authority,
                 source_status, verification_result, triage_state, workflow_version,
                 created_at, updated_at)
-             VALUES ($1, $2, 'EXECUTION_COMMAND', $3, $4, $5, $6, $7,
-                     'WARNING', 'PORTAL', 'BLOCKED', 'NOT_STARTED',
-                     'UNACKNOWLEDGED', 1, $8, $9)`,
+             SELECT operation_id, workspace_id, 'EXECUTION_COMMAND', command_key, environment,
+                    target_type, target_id, risk_tier, 'WARNING', 'PORTAL', 'BLOCKED', 'NOT_STARTED',
+                    'UNACKNOWLEDGED', 1, created_at, updated_at
+             FROM execution_command_plans_f0 WHERE operation_id=$1 AND workspace_id=$2`,
             [
               inserted.rows[0].operation_id,
               inserted.rows[0].workspace_id,
-              inserted.rows[0].command_key,
-              inserted.rows[0].environment,
-              inserted.rows[0].target_type,
-              inserted.rows[0].target_id,
-              inserted.rows[0].risk_tier,
-              inserted.rows[0].created_at,
-              inserted.rows[0].updated_at,
             ],
           );
           await client.query(

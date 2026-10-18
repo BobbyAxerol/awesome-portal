@@ -25,6 +25,7 @@ const MAX_SCOPE_COLUMNS = 8;
 const MAX_SCOPE_TUPLES = 2_000;
 const MAX_SCOPE_STRING_BYTES = 4_096;
 const MAX_SCOPE_BYTES = 1_048_576;
+const TIMESTAMP_BOUNDARY_PREFIX = "__query_timestamp_boundary_";
 
 interface SqlPart {
   sql: string;
@@ -187,6 +188,16 @@ function keysetSql<TRow extends Record<string, unknown>, TItem>(
 }
 
 function boundaryValue(value: unknown, definition: SortDefinition): QueryScalar {
+  if (definition.timestampPrecision === "microseconds") {
+    // Only the fixed PostgreSQL SELECT projection below supplies this value;
+    // never pass it through Date, which would silently discard microseconds.
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(value)) {
+      return value;
+    }
+    throw new QueryContractError(
+      "QUERY_CURSOR_BOUNDARY_UNAVAILABLE", "A stable cursor cannot be produced for this row.", 500,
+    );
+  }
   if (value instanceof Date) return value.toISOString();
   if (definition.kind === "timestamp" && typeof value === "string") {
     const date = new Date(value);
@@ -207,9 +218,11 @@ function rowBoundary<TRow extends Record<string, unknown>, TItem>(
   sort: readonly AppliedSort[],
   row: TRow,
 ): readonly QueryScalar[] {
-  return sort.map((item) => {
+  return sort.map((item, index) => {
     const definition = resource.sorts[item.field];
-    return boundaryValue(row[definition.column], definition);
+    const column = definition.timestampPrecision === "microseconds"
+      ? `${TIMESTAMP_BOUNDARY_PREFIX}${index}` : definition.column;
+    return boundaryValue(row[column], definition);
   });
 }
 
@@ -235,6 +248,14 @@ function validateResource<TRow extends Record<string, unknown>, TItem>(
   if (resource.allowedRoles.length === 0) throw new Error("query resource requires an RBAC policy");
   for (const definition of Object.values(resource.sorts)) {
     identifier(definition.column);
+    if (definition.timestampPrecision !== undefined &&
+        (definition.kind !== "timestamp" || definition.timestampPrecision !== "microseconds")) {
+      throw new Error("timestamp cursor precision requires a timestamp sort");
+    }
+    if (definition.timestampPrecision &&
+        resource.selectColumns.some(column => column.startsWith(TIMESTAMP_BOUNDARY_PREFIX))) {
+      throw new Error("selected columns collide with the private timestamp cursor namespace");
+    }
     if (!resource.selectColumns.includes(definition.column)) {
       throw new Error("selected columns must include every cursor sort column");
     }
@@ -301,7 +322,21 @@ function pageQuery<TRow extends Record<string, unknown>, TItem>(input: {
     return `${identifier(input.resource.sorts[item.field].column)} ${effective}`;
   });
   const limit = bindings.add(input.query.limit + 1);
-  const projection = input.resource.selectColumns.map(identifier).join(", ");
+  const projectionColumns = input.resource.selectColumns.map(identifier);
+  for (const [index, item] of input.query.sort.entries()) {
+    const definition = input.resource.sorts[item.field];
+    if (definition.timestampPrecision === "microseconds") {
+      const column = identifier(definition.column);
+      projectionColumns.push(
+        // YYYY omits the era: a BC timestamp must never be rebound as AD.
+        // Unsupported eras/extended years/infinity fail closed via NULL;
+        // finite pre-1970 AD dates remain representable. This CASE affects
+        // only SELECT metadata, never the native indexed WHERE/ORDER.
+        `CASE WHEN ${column} >= TIMESTAMPTZ '0001-01-01 00:00:00+00' AND ${column} < TIMESTAMPTZ '10000-01-01 00:00:00+00' THEN to_char(${column} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') END AS ${identifier(`${TIMESTAMP_BOUNDARY_PREFIX}${index}`)}`,
+      );
+    }
+  }
+  const projection = projectionColumns.join(", ");
   return {
     sql: `SELECT ${projection} FROM ${tableIdentifier(input.resource.table)} WHERE ${where.join(" AND ")} ORDER BY ${order.join(", ")} LIMIT ${limit}`,
     values: bindings.values,
@@ -458,7 +493,17 @@ export class ControlPlaneQueryService {
             boundary: lastBoundary,
           })
         : null;
-      const rows = canonicalRows.map(resource.mapRow);
+      const privateBoundaries = query.sort.flatMap((item, index) =>
+        resource.sorts[item.field].timestampPrecision === "microseconds"
+          ? [`${TIMESTAMP_BOUNDARY_PREFIX}${index}`] : []);
+      const rows = canonicalRows.map(row => {
+        if (privateBoundaries.length === 0) return resource.mapRow(row);
+        // Cursor metadata is not part of the resource row/public DTO, even
+        // when a mapper copies all of its declared source columns.
+        const publicRow = { ...row };
+        for (const column of privateBoundaries) delete publicRow[column];
+        return resource.mapRow(publicRow);
+      });
 
       this.emitTelemetry({
         resource_id: resource.resourceId,

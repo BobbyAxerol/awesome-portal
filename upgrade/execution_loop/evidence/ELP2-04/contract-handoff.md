@@ -223,3 +223,69 @@ and final revoke/expiry aborts prepared bytes even for omitted/shadowed scopes.
 This correction is APPLIED_UNCOMMITTED/NOT_RUN at entry; pin actual terminal
 and commit before integration. Claude remains NOT_STARTED_BY_OWNER_DIRECTION /
 AWAITING_CONSUMER_REVIEW; no frontend edit/assignment/acknowledgement inferred.
+
+## 2026-10-18 — finite current operational variants
+
+Producer is APPLIED_UNCOMMITTED until the actual normal hook lands. Read the
+[owning packet](current-operational-parents.md) for exact scope/receipts and
+original04-008/009 remaining debt. No Claude review/consumer ACK was received
+for this new package. FE NOT_STARTED_BY_OWNER_DIRECTION remains in force.
+
+When assigned, regenerate via `npm --prefix packages/contracts run generate:execution-operation-reader`
+and discriminate the additive response by `schema_version`; never cast V2 as
+the legacy rich body. Six named components in `execution-operations.d.ts`:
+`OperationalQueueItemV2`, `OperationalQueueV2`, `OperationalWorkflowV2`,
+`OperationalIncidentCurrentV2`, `OperationalQueueCompositionV2`,
+`OperationalIncidentCompositionV2`. Existing operationIds/legacy and
+trusted-capital variants are preserved.
+
+- GET `/api/v1/execution/operations`: finite current accepted audit cohort;
+  target/account/environment correlation precedes all counts/page/filter/sort.
+  Coverage is AUTHORIZED_SUPPORTED_TARGETS_ONLY, not global/source completeness.
+  `target_id` narrows; existing limit1..250 and both keyset directions remain.
+  `assigned_to=me` is explicitly unsupported in V2 (typed400), not silently
+  ignored. Nonzero authority with no rows is EMPTY; no usable authority404.
+- Generic GET `/api/v1/execution/operations/{operation_id}`: actual immutable
+  Portal F0/queue identity match, not source execution. Another author's intent
+  requires current target audit; explicit `/operations/f0` retains its separate
+  own-only ceiling. `provenance_basis` distinguishes SQL_EXACT_SOURCE_TIMESTAMP
+  from the exact known LEGACY_DATE_MILLISECOND_COPY representation; neither is
+  broker/economic proof. No arbitrary drift/history rewriting is allowed.
+- GET `/api/v1/execution/operations/incidents/{incident_id}`: current root only,
+  no prose/actors/evidence hashes/children/counts. `historical_children` is
+  NOT_PUBLISHED/ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED; triage is not broker safety.
+- Existing `/api/v1/execution/compositions/operations` and
+  `/api/v1/execution/compositions/incidents/{incident_id}` share those bodies and
+  the final current fence. Their two new component types describe only the V2
+  variant, not a new global legacy composition OpenAPI claim. Source panels
+  are UNAVAILABLE/CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED before projection I/O.
+  Content revision excludes observation clocks and opaque transport cursors;
+  actual response cursor validation/rows/counts remain unchanged.
+
+Canonical examples: `fixtures/execution-operational-current.synthetic.valid.json`
+is TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT/runtime_qualified=false. UTC timestamps
+retain six digits for queue keysets; observation time is not source freshness.
+No source/mutation/stream/Live capability is implied. All responses no-store;
+fixed CommandProblem400/401/403/404/409/503, no raw provider/driver/error strings.
+409 requires refresh, never legacy fallback; revoked/expired authority wins
+over a previously held body/cursor/validation error. Browser/actual source
+acceptance remains pending assignment and a real qualified environment.
+
+Legacy Operations compatibility correction (UNCOMMITTED/NOT_RUN at this
+entry): public `execution.operations-queue.v1`, filters/default sort/roles and
+Date-valued millisecond DTO are unchanged. Its private signed cursor context
+now uses `execution.operations-queue.precise-v2` and preserves SQL microseconds;
+old cursors return the existing context-mismatch error. Restart at page1,
+never round/reconstruct the cursor client-side or fall back to a different
+authority. No new generated type or component/layout change is required.
+Exact private metadata never enters the DTO. Finite pre-1970 AD times remain
+supported; BC/extended-year/infinite timestamps cannot silently become an AD
+boundary and fail closed. See the owning packet's preserved failed hook and
+pending deterministic actual-PG/HTTP precision regression; no runtime/consumer
+acceptance is implied by publishing this note.
+
+Precision follow-through: actual affected retake053139 passed105/105,
+build/scopedPGrestore/source-index/eight runtime freeze and owned cleanup at
+2026-10-18T05:35:46UTC. This supersedes NOT_RUN for those cases only; normal
+hook/landing still pending. See [the exact terminal](current-operational-parents.md#precision-retake-terminal-2026-10-18t053546utc).
+Claude review/acceptance is separate and remains awaited, not inferred.

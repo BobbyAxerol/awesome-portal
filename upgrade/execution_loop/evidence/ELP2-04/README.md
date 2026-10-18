@@ -632,3 +632,20 @@ code already landed in earlier grouped commits; preceding uncommitted entry
 is historical. All29 generic V2 null purposes remain unchanged: this adds a
 separate named maintenance.read operation, not a blanket technical bypass.
 Claude04-010 remains NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW.
+
+## Current operational parents —2026-10-18
+
+[Original04-008/009 owning scope, independent findings and validation](current-operational-parents.md)
+continues on `d9fc67fb1a6437e4d6af4ab68dfe6342b8eb9c52`. The preceding
+exact-own F0 collection normal hook is actually terminal/PASS at04:21:14UTC,
+not still pending:870 contracts/6758 API PASS,3 existing skips, build/restore/
+runtime freeze/owned cleanup PASS; exact receipt and limits in that packet.
+Do not rerun those gates just to record their terminal state.
+
+New finite current-audit Operations queue/F0-backed generic workflow/Incident
+root and compositions are APPLIED_UNCOMMITTED, affected validation NOT_RUN at
+entry. Additive migration0141 is disposable-test-only, not installed. Complete
+target/environment scope is enforced before counts/page; own-only F0 remains
+separate; source panels remain unavailable before wrong-purpose source I/O.
+This is not whole04 acceptance. Claude remains NOT_STARTED_BY_OWNER_DIRECTION /
+AWAITING_CONSUMER_REVIEW; no acknowledgement, runtime or release activation.

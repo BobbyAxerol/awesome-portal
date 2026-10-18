@@ -216,7 +216,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Named operation detail. Exact ecm_ intents use current workspace/resource/environment audit authority and finite CommandStatus; GET never dispatches or reconciles. Existing Portal/F0 decision readers retain their gate checks and scoped-parent refusal. An ACK is not business APPLIED or venue FILLED. HTTP private, no-store. */
+        /** @description Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. Other SCOPED_V2 ids require actual immutable queue/F0 provenance under exact target/environment audit, never creator/ADMIN/read_all permission or a family fallback. Legacy decision readers remain separate with their gate checks. GET never dispatches/reconciles; ACK is not APPLIED/FILLED. HTTP private, no-store. */
         get: operations["getPaperExitDecisionOperation"];
         put?: never;
         post?: never;
@@ -1757,6 +1757,65 @@ export interface components {
             /** @enum {string} */
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
         };
+        /** @description Finite immutable Portal labels plus current local triage, not TS execution. Runtime additionally enforces nonnegative finite dates, updated>=created and the existing triage/timestamp shape. SQL retains six fractional UTC digits for exact keyset boundaries. */
+        OperationalQueueItemV2: {
+            operation_id: string;
+            /** @constant */
+            operation_kind: "EXECUTION_COMMAND";
+            command_key: string;
+            target: {
+                /** @enum {string} */
+                type: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            /** @enum {string} */
+            risk_tier: "R0_READ" | "R1_PAPER_MUTATION" | "R2_SANDBOX" | "R3_LIVE_PROTECTIVE" | "R4_LIVE_RISK_INCREASING" | "UNCLASSIFIED" | "BLOCKED";
+            /** @enum {string} */
+            severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+            /** @enum {string} */
+            source_authority: "PORTAL" | "EXECUTION" | "BROKER";
+            /** @enum {string} */
+            source_status: "BLOCKED" | "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "EXPIRED" | "UNCERTAIN";
+            /** @enum {string} */
+            verification_result: "NOT_STARTED" | "PENDING" | "SUCCEEDED" | "FAILED" | "PARTIAL" | "UNCERTAIN" | "DENIED" | "EXPIRED";
+            /** @enum {string} */
+            triage_state: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
+            workflow_version: number;
+            acknowledged_at: string | null;
+            resolved_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /**
+         * Finite current-authorized F0 blocked intent
+         * @description Same twelve-field execution.command-operation.v1 body, no source status or dispatch. Stored target is requested intent, not TS attestation. created_at and updated_at are Portal timestamps, not source freshness. Runtime additionally enforces nonnegative finite epochs and updated_at >= created_at.
+         */
+        F0BlockedOperationRead: components["schemas"]["ExecutionCommandOperation"] & {
+            /** @enum {string} */
+            command_key?: "account/policy" | "account/reconcile-open-orders" | "account/reconcile-positions" | "account/seed-paper" | "account/state" | "account/sync" | "allocation/<root>" | "alpha/inspect" | "alpha/register" | "authority/create" | "authority/list" | "bracket-audit/<root>" | "broker/bindings" | "broker/exposure" | "broker/reconcile-open-orders" | "broker/reconcile-positions" | "broker/state" | "capital/history" | "config/apply" | "config/plan" | "copy/policies" | "copy/policy" | "deployment/state" | "health/<root>" | "ops/alerts" | "ops/alpha-activity" | "ops/command-journal" | "ops/dead-letters" | "ops/emergency-close" | "ops/emergency-close-verify" | "ops/findings" | "ops/redis-retention" | "ops/streams" | "ops/trace-order" | "order-group/list" | "order-group/show" | "performance/account" | "performance/account-history" | "performance/dashboard" | "performance/instrument" | "performance/portfolio" | "performance/portfolio-history" | "portfolio/create" | "portfolio/list" | "portfolio/state" | "redis/alpha-auth" | "redis/get" | "redis/scan" | "redis/stream" | "redis/trading-state" | "replay/compare" | "replay/create" | "replay/events" | "replay/export" | "replay/jobs" | "replay/lifecycle" | "replay/quantbt-diff" | "replay/run" | "replay/show" | "risk/profile" | "risk/state" | "sizing/decision" | "sizing/history" | "sizing/summary";
+            blockers?: ("COMMAND_RELAY_DISABLED" | "GENERIC_REDIS_ACCESS_PROHIBITED" | "N16B_CURRENT_PRIMITIVE_PLAN_INVALID" | "N16B_RUNTIME_ACTIVATION_PENDING" | "N16B_TARGET_SCOPE_UNSUPPORTED" | "OWNER_REVIEW_REQUIRED" | "SOURCE_ROUTE_MAPPING_AMBIGUOUS" | "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED" | "TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED")[];
+            warnings?: unknown[];
+        };
+        /** @description Actual immutable workspace/id/key/target/environment/source queue-F0 join, not inferred family. provenance_basis distinguishes exact SQL timestamp copy from the existing writer's historical JS Date millisecond truncation (not arbitrary tolerance); historical bytes are not rewritten. Different author with full exact current audit is allowed; explicit F0 routes retain their own-author ceiling. Runtime additionally enforces operation ids equal; original planning expiry is not read expiry. */
+        OperationalWorkflowV2: {
+            /** @constant */
+            schema_version: "portal.execution.operational-workflow.v2";
+            /** @constant */
+            family: "F0_BACKED_PORTAL_WORKFLOW";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_side_effect_requested: false;
+            /** @enum {string} */
+            provenance_basis: "SQL_EXACT_SOURCE_TIMESTAMP" | "LEGACY_DATE_MILLISECOND_COPY";
+            observed_at_ms: number;
+            operation: components["schemas"]["OperationalQueueItemV2"];
+            intent: components["schemas"]["F0BlockedOperationRead"];
+        };
         "execution-sandbox-certification.v1.schema_$defs-Actor": {
             user_id: components["schemas"]["$defs-Identifier"];
             username: string;
@@ -2495,14 +2554,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Authorized named operation detail; no generic parent or queue commissioning. */
+            /** @description Authorized concrete operation; current-audit finite workflow variant is additive. */
             200: {
                 headers: {
                     "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExecutionCommandOperation"] | components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"] | components["schemas"]["CommandStatus"];
+                    "application/json": components["schemas"]["ExecutionCommandOperation"] | components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"] | components["schemas"]["CommandStatus"] | components["schemas"]["OperationalWorkflowV2"];
                 };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */

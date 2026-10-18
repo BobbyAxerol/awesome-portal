@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Pool, QueryResultRow } from "pg";
 import { Role } from "../src/domain";
 import {
@@ -8,6 +8,7 @@ import {
   QueryContractError,
   QueryTelemetrySample,
   normalizeKeysetQuery,
+  queryFingerprint,
 } from "../src/query";
 import { exactPageReadTruth } from "../src/query/read-truth";
 
@@ -17,6 +18,20 @@ const DATABASE_URL =
 const WORKSPACE = "workspace_alpha";
 const OTHER_WORKSPACE = "workspace_beta";
 const CORPUS_SIZE = 182_000;
+const PRECISE_WORKSPACE = "workspace_microsecond_keyset";
+// All eight timestamps collapse to the same JS Date. Identical-time groups
+// also cross page boundaries, so neither Date precision nor timestamp alone
+// can stand in for the native timestamp + immutable-ID keyset.
+const PRECISE_FIXTURES = [
+  { id: 600001, createdAt: "2026-05-01T12:00:00.123900Z" },
+  { id: 600002, createdAt: "2026-05-01T12:00:00.123001Z" },
+  { id: 600003, createdAt: "2026-05-01T12:00:00.123900Z" },
+  { id: 600004, createdAt: "2026-05-01T12:00:00.123500Z" },
+  { id: 600005, createdAt: "2026-05-01T12:00:00.123000Z" },
+  { id: 600006, createdAt: "2026-05-01T12:00:00.123900Z" },
+  { id: 600007, createdAt: "2026-05-01T12:00:00.123500Z" },
+  { id: 600008, createdAt: "2026-05-01T12:00:00.123999Z" },
+] as const;
 
 interface ApprovalRow extends QueryResultRow {
   approval_id: number;
@@ -106,6 +121,19 @@ const approvalResource = {
   }),
 } satisfies PostgresListResource<ApprovalRow, ApprovalItem>;
 
+function preciseApprovalResource(): PostgresListResource<ApprovalRow, ApprovalItem & { createdAt: string }> {
+  return {
+    ...approvalResource,
+    resourceId: "governance.approvals.precise-v2",
+    sorts: {
+      ...approvalResource.sorts,
+      created_at: { column: "created_at", kind: "timestamp", timestampPrecision: "microseconds" },
+    },
+    defaultSort: [{ field: "created_at", direction: "desc" }],
+    mapRow: row => ({ ...approvalResource.mapRow(row), createdAt: row.created_at.toISOString() }),
+  };
+}
+
 function actor(
   workspaceId = WORKSPACE,
   role: Role = "ADMIN",
@@ -169,6 +197,15 @@ describe("EX-BE-04a control-plane query primitives", () => {
          'other-workspace-secret'
        FROM generate_series(1, 100) AS item`,
       [OTHER_WORKSPACE],
+    );
+    await pool.query(
+      `INSERT INTO ex_be_04a_query_records
+         (approval_id, workspace_id, status, gate, environment, requester,
+          evidence_complete, sla_due_at, created_at, sensitive_secret)
+       SELECT fixture.id, $1, 'PENDING', 'R1', 'PAPER', 'precise-user', true,
+              fixture.created_at, fixture.created_at, 'precise-private-secret'
+       FROM unnest($2::integer[], $3::timestamptz[]) AS fixture(id, created_at)`,
+      [PRECISE_WORKSPACE, PRECISE_FIXTURES.map(row => row.id), PRECISE_FIXTURES.map(row => row.createdAt)],
     );
     await pool.query(
       `CREATE INDEX ex_be_04a_query_order_idx
@@ -270,6 +307,194 @@ describe("EX-BE-04a control-plane query primitives", () => {
     expect(back.rows.map((row) => row.id)).toEqual(first.rows.map((row) => row.id));
     expect(back.has_previous).toBe(false);
     expect(back.has_more).toBe(true);
+  });
+
+  it.each(["asc", "desc"] as const)(
+    "round-trips native microsecond boundaries and identical-time ID ties in %s order",
+    async direction => {
+      const resource = preciseApprovalResource();
+      const mappedKeys: string[][] = [];
+      const mapRow = resource.mapRow;
+      resource.mapRow = row => {
+        mappedKeys.push(Object.keys(row).sort());
+        return mapRow(row);
+      };
+      const cursors = codec();
+      const service = new ControlPlaneQueryService(pool, cursors);
+      // The branch selects only a server-owned SQL keyword, not client input.
+      const order = direction === "asc" ? "ASC" : "DESC";
+      const truth = await pool.query<{ approval_id: number; exact_created_at: string }>(
+        `SELECT approval_id,
+                to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS exact_created_at
+         FROM ex_be_04a_query_records WHERE workspace_id = $1
+         ORDER BY created_at ${order}, approval_id ${order}`,
+        [PRECISE_WORKSPACE],
+      );
+      expect(truth.rows).toHaveLength(PRECISE_FIXTURES.length);
+      expect(truth.rows.every(row => row.exact_created_at.endsWith("Z"))).toBe(true);
+      const sort = [{ field: "created_at", direction }];
+      const first = await service.list(resource, actor(PRECISE_WORKSPACE), { limit: 2, sort });
+      const pages = [first];
+      for (let index = 1; index < PRECISE_FIXTURES.length / 2; index += 1) {
+        expect(pages[index - 1].next_cursor).toBeTypeOf("string");
+        pages.push(await service.list(resource, actor(PRECISE_WORKSPACE), {
+          limit: 2, sort, after: pages[index - 1].next_cursor,
+        }));
+      }
+      expect(pages.flatMap(page => page.rows.map(row => row.id))).toEqual(truth.rows.map(row => row.approval_id));
+      expect(new Set(pages.flatMap(page => page.rows.map(row => row.id))).size).toBe(PRECISE_FIXTURES.length);
+      for (const [index, page] of pages.entries()) {
+        expect(page.total_count).toBe(PRECISE_FIXTURES.length);
+        expect(page.filtered_count).toBe(PRECISE_FIXTURES.length);
+        expect(page.rows).toHaveLength(2);
+        expect(page.has_previous).toBe(index > 0);
+        expect(page.has_more).toBe(index < pages.length - 1);
+        expect(page.rows.every(row => row.createdAt === "2026-05-01T12:00:00.123Z")).toBe(true);
+        if (page.next_cursor) {
+          const edge = truth.rows[index * 2 + 1];
+          expect(cursors.decode(page.next_cursor, {
+            resourceId: resource.resourceId, workspaceId: PRECISE_WORKSPACE, direction: "after",
+            queryFingerprint: queryFingerprint({
+              resourceId: resource.resourceId, limit: 2, filters: [], sort: page.applied_sort, rowVisibility: null,
+            }),
+            boundarySize: 2,
+          })).toEqual([edge.exact_created_at, edge.approval_id]);
+        }
+      }
+      expect(pages[0].prev_cursor).toBeNull();
+      expect(pages.at(-1)!.next_cursor).toBeNull();
+      let reverse = pages.at(-1)!;
+      for (let index = pages.length - 2; index >= 0; index -= 1) {
+        expect(reverse.prev_cursor).toBeTypeOf("string");
+        reverse = await service.list(resource, actor(PRECISE_WORKSPACE), {
+          limit: 2, sort, before: reverse.prev_cursor,
+        });
+        expect(reverse.rows).toEqual(pages[index].rows);
+        expect(reverse.has_previous).toBe(index > 0);
+        expect(reverse.has_more).toBe(true);
+      }
+      expect(reverse.prev_cursor).toBeNull();
+      expect(mappedKeys.every(keys => JSON.stringify(keys) === JSON.stringify([...resource.selectColumns].sort()))).toBe(true);
+      expect(JSON.stringify(pages)).not.toContain("__query_timestamp_boundary_");
+      expect(JSON.stringify(pages)).not.toContain("precise-private-secret");
+    },
+  );
+
+  it("keeps ID-only pagination valid on a resource with an unapplied precise timestamp sort", async () => {
+    const resource = preciseApprovalResource();
+    const service = new ControlPlaneQueryService(pool, codec());
+    const query = { limit: 3, sort: [{ field: "approval_id", direction: "desc" as const }] };
+    const first = await service.list(resource, actor(PRECISE_WORKSPACE), query);
+    const second = await service.list(resource, actor(PRECISE_WORKSPACE), { ...query, after: first.next_cursor });
+    const back = await service.list(resource, actor(PRECISE_WORKSPACE), { ...query, before: second.prev_cursor });
+    expect(first.rows.map(row => row.id)).toEqual([600008, 600007, 600006]);
+    expect(second.rows.map(row => row.id)).toEqual([600005, 600004, 600003]);
+    expect(back.rows).toEqual(first.rows);
+    expect(first.applied_sort).toEqual(query.sort);
+  });
+
+  it("rejects old resource cursors when a resource opts into precise timestamp keys", async () => {
+    const service = new ControlPlaneQueryService(pool, codec());
+    const query = { limit: 2, sort: [{ field: "created_at", direction: "desc" as const }] };
+    const oldPage = await service.list(approvalResource, actor(PRECISE_WORKSPACE), query);
+    const precise = preciseApprovalResource();
+    const precisePage = await service.list(precise, actor(PRECISE_WORKSPACE), query);
+    for (const [resource, after] of [
+      [precise, oldPage.next_cursor], [approvalResource, precisePage.next_cursor],
+    ] as const) {
+      await expect(service.list(resource, actor(PRECISE_WORKSPACE), { ...query, after }))
+        .rejects.toMatchObject({ code: "CURSOR_CONTEXT_MISMATCH", status: 400 });
+    }
+  });
+
+  it("retains pre-1970 AD microseconds without changing the public Date precision", async () => {
+    const workspace = "workspace_precise_pre_epoch";
+    await pool.query(
+      `INSERT INTO ex_be_04a_query_records
+       SELECT 610000 + item, $1, 'PENDING', 'R1', 'PAPER', 'pre-epoch', true,
+              timestamptz '1969-12-31 23:59:59.123900+00' + item * interval '1 microsecond',
+              timestamptz '1969-12-31 23:59:59.123900+00' + item * interval '1 microsecond', 'secret'
+       FROM generate_series(1, 3) item`,
+      [workspace],
+    );
+    try {
+      const service = new ControlPlaneQueryService(pool, codec());
+      const resource = preciseApprovalResource();
+      const first = await service.list(resource, actor(workspace), { limit: 1 });
+      const second = await service.list(resource, actor(workspace), { limit: 1, after: first.next_cursor });
+      const back = await service.list(resource, actor(workspace), { limit: 1, before: second.prev_cursor });
+      expect(first.rows).toMatchObject([{ id: 610003, createdAt: "1969-12-31T23:59:59.123Z" }]);
+      expect(second.rows.map(row => row.id)).toEqual([610002]);
+      expect(back.rows).toEqual(first.rows);
+    } finally {
+      await pool.query("DELETE FROM ex_be_04a_query_records WHERE workspace_id = $1", [workspace]);
+    }
+  });
+
+  it.each([
+    ["BC", "0001-01-01 00:00:00+00 BC"],
+    ["extended-year", "10000-01-01 00:00:00+00"],
+    ["positive-infinity", "infinity"],
+    ["negative-infinity", "-infinity"],
+  ])("refuses unsafe %s native timestamp boundaries instead of rebinding a different AD date", async (label, timestamp) => {
+    const workspace = `workspace_precise_unsafe_${label}`;
+    await pool.query(
+      `INSERT INTO ex_be_04a_query_records VALUES
+       (620001, $1, 'PENDING', 'R1', 'PAPER', 'unsafe-time', true,
+        $2::timestamptz, $2::timestamptz, 'secret')`,
+      [workspace, timestamp],
+    );
+    try {
+      await expect(new ControlPlaneQueryService(pool, codec()).list(preciseApprovalResource(), actor(workspace), {}))
+        .rejects.toMatchObject({ code: "QUERY_CURSOR_BOUNDARY_UNAVAILABLE", status: 500 });
+    } finally {
+      await pool.query("DELETE FROM ex_be_04a_query_records WHERE workspace_id = $1", [workspace]);
+    }
+  });
+
+  it.each([
+    { label: "missing", present: false, value: undefined },
+    { label: "null", present: true, value: null },
+    { label: "millisecond-only", present: true, value: "2026-05-01T12:00:00.123Z" },
+    { label: "offset-not-UTC", present: true, value: "2026-05-01T12:00:00.123456+00:00" },
+    { label: "Date-instance", present: true, value: new Date("2026-05-01T12:00:00.123Z") },
+  ])("fails closed on $label precise SQL metadata without falling back to the row Date", async ({ present, value }) => {
+    // Decoder failure vector only. Positive precision/pagination evidence above
+    // uses actual PostgreSQL; this stub cannot qualify a source or authority.
+    const row: ApprovalRow = {
+      approval_id: 1, workspace_id: WORKSPACE, status: "PENDING", gate: "R1", environment: "PAPER",
+      requester: "boundary-vector", evidence_complete: true,
+      sla_due_at: new Date("2026-05-01T12:00:00.123Z"), created_at: new Date("2026-05-01T12:00:00.123Z"),
+    };
+    if (present) row.__query_timestamp_boundary_0 = value;
+    const client = {
+      query: vi.fn(async (sql: string) => ({
+        rows: sql.startsWith("SELECT COUNT(*)") ? [{ count: "1" }]
+          : sql.startsWith("SELECT ") && sql.includes(' FROM "ex_be_04a_query_records" ') ? [row] : [],
+        rowCount: 0,
+      })),
+      release: vi.fn(),
+    };
+    const syntheticPool = { connect: vi.fn(async () => client) } as unknown as Pool;
+    await expect(new ControlPlaneQueryService(syntheticPool, codec()).list(preciseApprovalResource(), actor(), { limit: 1 }))
+      .rejects.toMatchObject({ code: "QUERY_CURSOR_BOUNDARY_UNAVAILABLE", status: 500 });
+    expect(client.query).toHaveBeenCalledWith("ROLLBACK");
+    expect(client.release).toHaveBeenCalledOnce();
+  });
+
+  it("rejects illegal precision metadata and private-alias column collisions before SQL", async () => {
+    const resource = preciseApprovalResource();
+    const invalid = {
+      ...resource,
+      sorts: {
+        ...resource.sorts,
+        requester: { column: "requester", kind: "text" as const, timestampPrecision: "microseconds" as const },
+      },
+    };
+    const service = new ControlPlaneQueryService(pool, codec());
+    await expect(service.list(invalid, actor(), {})).rejects.toThrow("timestamp cursor precision requires a timestamp sort");
+    await expect(service.list({ ...resource, selectColumns: [...resource.selectColumns, "__query_timestamp_boundary_0"] }, actor(), {}))
+      .rejects.toThrow("selected columns collide with the private timestamp cursor namespace");
   });
 
   it("keeps mixed-direction multi-sort stable across canonicalized filter order", async () => {

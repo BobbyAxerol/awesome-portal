@@ -290,12 +290,12 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 exact trusted-command p
     }); } finally { broken.mockRestore(); }
   });
 
-  it("keeps other parent ids and the operation queue V2-blocked before raw reads", async () => {
+  it("without the finite operational provider, keeps other ids and queue closed before legacy reads", async () => {
     const f = await fixture();
     await mounted(f, async http => {
       for (const response of [await http.get("op_TEST_ONLY_unqualified"), await http.queue()]) {
         expect(response.statusCode).toBe(503);
-        expect(response.json()).toMatchObject({ error: { code: "OPERATIONS_SCOPED_PARENT_NOT_COMMISSIONED" } });
+        expect(response.json()).toMatchObject({ error: { code: "OPERATIONAL_READ_NOT_CONFIGURED" } });
         expect(response.body).not.toContain(f.resource.id);
       }
       expect(f.legacyRead).not.toHaveBeenCalled(); expect(f.paperRead).not.toHaveBeenCalled();

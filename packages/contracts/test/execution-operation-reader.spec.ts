@@ -5,6 +5,8 @@ import addFormats from "ajv-formats";
 import {describe,expect,it} from "vitest";
 import {operationReaderSchema,f0BlockedReaderSchema,f0ReadRoute,f0CollectionRoute,f0CollectionSchema} from "../tooling/execution-operation-reader.mjs";
 import {f0BlockedOperation,f0ReadQuery,f0CollectionQuery,f0Collection} from "../../../apps/control-api/src/operations/f0-read.contract";
+import {operationalQueue,operationalQueueQuery,operationalWorkflow,operationalIncident} from "../../../apps/control-api/src/operations/operational-read.contract";
+import {operationalCurrentSchemas} from "../tooling/execution-operational-current-reader.mjs";
 const root=resolve(__dirname,".."),load=(name:string)=>JSON.parse(readFileSync(resolve(root,name),"utf8"));
 const names=["execution-operations","execution-governance"];
 const base="https://schemas.primusspark.com/portal/";
@@ -21,7 +23,7 @@ const validators=names.map(name=>ajv.compile({$ref:base+"openapi/"+name+".openap
 const trusted=load("fixtures/execution-trusted-commands.synthetic.valid.json");
 const old=load("fixtures/execution-command-operation.valid.json");
 describe("ELP2-04 one named operation reader across historical documents",()=>{
-  it("preserves operationIds and one canonical union of six existing concrete schemas",()=>{
+  it("preserves operationIds and adds current workflow to the six existing concrete schemas",()=>{
     expect(documents.map(api=>api.paths["/api/v1/execution/operations/{operation_id}"].get.operationId))
       .toEqual(["getExecutionCommandOperationF0","getPaperExitDecisionOperation"]);
     for(const api of documents){
@@ -30,7 +32,7 @@ describe("ELP2-04 one named operation reader across historical documents",()=>{
       expect(get.responses["200"].headers["Cache-Control"].schema.const).toBe("private, no-store");
       for(const status of [400,401,403,404,409,503])expect(get.responses[status]).toBeDefined();
     }
-    expect(operationReaderSchema().oneOf).toHaveLength(6);
+    expect(operationReaderSchema().oneOf).toHaveLength(7);
   });
   it.each(names.map((name,index)=>[name,index] as const))("%s retains F0 and accepts strict trusted status without inferring APPLIED",(name,index)=>{
     const validate=validators[index];
@@ -47,6 +49,73 @@ describe("ELP2-04 one named operation reader across historical documents",()=>{
       "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/"+name+"DecisionOperation");
     expect(refs).toContain("../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionOperation");
     for(const validate of validators)expect(validate({schema_version:"arbitrary",payload:{}})).toBe(false);
+  });
+});
+
+describe("ELP2-04 finite current operational variants and canonical runtime parity",()=>{
+  const fixture=load("fixtures/execution-operational-current.synthetic.valid.json");
+  const definitions=operationalCurrentSchemas();
+  const validate=(name:string)=>ajv.compile({$ref:base+"openapi/execution-operations.openapi.json#/components/schemas/"+name});
+  const cases=[
+    ["queue","OperationalQueueV2",operationalQueue],
+    ["workflow","OperationalWorkflowV2",operationalWorkflow],
+    ["incident","OperationalIncidentCurrentV2",operationalIncident],
+  ] as const;
+  it("publishes six finite additive component types without replacing legacy bodies",()=>{
+    expect(Object.keys(definitions)).toHaveLength(6);
+    for(const [name,schema] of Object.entries(definitions)){
+      expect(load("schemas/execution-operations.v1.schema.json").$defs[name]).toEqual(schema);
+      expect(documents[0].components.schemas[name]).toEqual({$ref:"../schemas/execution-operations.v1.schema.json#/$defs/"+name});
+    }
+    expect(fixture.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");expect(fixture.runtime_qualified).toBe(false);
+    for(const get of [documents[0].paths["/api/v1/execution/operations"].get,
+      documents[0].paths["/api/v1/execution/operations/incidents/{incident_id}"].get]){
+      expect(get.responses["200"].content["application/json"].schema.oneOf).toHaveLength(2);
+      for(const status of [200,400,401,403,404,409,503])expect(get.responses[status].headers["Cache-Control"].schema.const).toBe("private, no-store");
+    }
+  });
+  it.each(cases)("%s accepts the labelled fixture and rejects unapproved additional fields",(key,name,runtime)=>{
+    const check=validate(name),body=fixture[key];
+    expect(check(body),JSON.stringify(check.errors)).toBe(true);expect(runtime.safeParse(body).success).toBe(true);
+    expect(check({...body,private_actor_id:"TEST_ONLY"})).toBe(false);expect(runtime.safeParse({...body,private_actor_id:"TEST_ONLY"}).success).toBe(false);
+  });
+  it.each([
+    ["source execution",{...fixture.queue,source_side_effect_requested:true}],
+    ["global completeness",{...fixture.queue,coverage:"GLOBAL_COMPLETE"}],
+    ["hidden counts",{...fixture.queue,page:{...fixture.queue.page,hidden_count:1}}],
+    ["unbounded page",{...fixture.queue,page:{...fixture.queue.page,rows:Array(251).fill(fixture.queue.page.rows[0])}}],
+    ["actor field",{...fixture.queue,page:{...fixture.queue.page,rows:[{...fixture.queue.page.rows[0],actor_user_id:"TEST_ONLY"}]}}],
+    ["wrong purpose target",{...fixture.queue,page:{...fixture.queue.page,rows:[{...fixture.queue.page.rows[0],target:{type:"ORDER",id:"TEST_ONLY"}}]}}],
+  ])("queue rejects %s in schema and runtime",(_label,body)=>{
+    expect(validate("OperationalQueueV2")(body)).toBe(false);expect(operationalQueue.safeParse(body).success).toBe(false);
+  });
+  it("labels exact SQL versus the actual historical millisecond writer without arbitrary tolerance",()=>{
+    for(const basis of ["SQL_EXACT_SOURCE_TIMESTAMP","LEGACY_DATE_MILLISECOND_COPY"]){
+      const body={...fixture.workflow,provenance_basis:basis};
+      expect(validate("OperationalWorkflowV2")(body)).toBe(true);expect(operationalWorkflow.safeParse(body).success).toBe(true);
+      for(const check of validators)expect(check(body),JSON.stringify(check.errors)).toBe(true);
+    }
+    for(const body of [{...fixture.workflow,provenance_basis:"CLOSE_ENOUGH"},
+      {...fixture.incident,historical_children:{availability:"AVAILABLE",count:0}},
+      {...fixture.incident,workflow_version:Number.MAX_SAFE_INTEGER+1}]){
+      const runtime="incident_id" in body?operationalIncident:operationalWorkflow;
+      expect(runtime.safeParse(body).success).toBe(false);
+      expect(validate("incident_id" in body?"OperationalIncidentCurrentV2":"OperationalWorkflowV2")(body)).toBe(false);
+    }
+  });
+  it("keeps lifecycle/count/cursor cross-field runtime checks explicit",()=>{
+    expect(definitions.OperationalQueueV2.description).toContain("total>=filtered");
+    for(const page of [{...fixture.queue.page,total_count:0},{...fixture.queue.page,filtered_count:0},
+      {...fixture.queue.page,has_more:true},{...fixture.queue.page,prev_cursor:"TEST_ONLY"}])
+      expect(operationalQueue.safeParse({...fixture.queue,page}).success).toBe(false);
+    expect(operationalWorkflow.safeParse({...fixture.workflow,intent:{...fixture.workflow.intent,operation_id:"TEST_ONLY:other"}}).success).toBe(false);
+    expect(operationalIncident.safeParse({...fixture.incident,workflow_state:"RESOLVED"}).success).toBe(false);
+  });
+  it("publishes strict bounded two-direction query while refusing duplicates and guessed target kinds",()=>{
+    const query={workspace_id:fixture.queue.workspace_id,target_type:"ACCOUNT",target_id:"TEST_ONLY:account",limit:"250"};
+    expect(operationalQueueQuery.safeParse(query).success).toBe(true);
+    for(const patch of [{limit:"251"},{limit:["1","2"]},{target_type:"ORDER"},{after:"a",before:"b"},{private_actor:"TEST_ONLY"}])
+      expect(operationalQueueQuery.safeParse({...query,...patch}).success).toBe(false);
   });
 });
 
@@ -142,7 +211,7 @@ describe("ELP2-04 separate exact-own F0 collection contract",()=>{
     expect(f0CollectionQuery.parse(fixture.query)).toEqual(fixture.query);
     expect(f0Collection.safeParse(fixture.response).success).toBe(true);
     expect(validate(fixture.response),JSON.stringify(validate.errors)).toBe(true);
-    expect(operationReaderSchema().oneOf).toHaveLength(6);
+    expect(operationReaderSchema().oneOf).toHaveLength(7);
   });
   it.each([200,400,401,403,404,409,503])("has a no-store typed response for %s",status=>{
     const response=path.get.responses[status];expect(response.headers["Cache-Control"].schema.const).toBe("private, no-store");

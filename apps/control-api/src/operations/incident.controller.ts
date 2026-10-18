@@ -5,6 +5,7 @@ import {
   Header,
   HttpCode,
   Inject,
+  Optional,
   Param,
   Post,
   Query,
@@ -32,6 +33,7 @@ import {
   IncidentResolveRequestSchema,
 } from "./contracts";
 import { IncidentService } from "./incident.service";
+import { OperationalReadService } from "./operational-read.service";
 
 interface IncidentRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -47,6 +49,7 @@ export class IncidentController {
     @Inject(IncidentService) private readonly incidents: IncidentService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(OperationalReadService) private readonly currentReads?: OperationalReadService,
   ) {}
 
   @Post()
@@ -73,10 +76,12 @@ export class IncidentController {
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.incidents.detail(request.portalUser, workspaceId, incidentId, {
+    const principal = {
       user: request.portalUser, session: request.portalSession, workspaceId,
       viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId,
-    });
+    };
+    if (await this.currentReads?.mode(principal) === "SCOPED_V2") return this.currentReads!.incident(principal, incidentId);
+    return this.incidents.detail(request.portalUser, workspaceId, incidentId, principal);
   }
 
   @Post(":incident_id/acknowledge")

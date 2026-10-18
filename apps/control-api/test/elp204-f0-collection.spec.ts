@@ -28,11 +28,14 @@ import { CONTROL_API_CONFIG } from "../src/tokens";
 import { ExecutionOperationsRepository } from "../src/operations/operations.repository";
 import { ExecutionF0ReadController } from "../src/operations/f0-read.controller";
 import { ExecutionF0ReadService } from "../src/operations/f0-read.service";
+import { OperationalReadService } from "../src/operations/operational-read.service";
+import { OperationalReadRepository } from "../src/operations/operational-read.repository";
 import { f0Collection, f0BlockedOperation, type F0Collection } from "../src/operations/f0-read.contract";
 import type { AccessActor, AccessResource, ReviewedAccessPolicy, ScopedAccessGrant } from "../src/execution-v2/access.contract";
 import { accessDigest, evaluateAccess, validateDelegation, type AccessRelations } from "../src/execution-v2/access-policy";
 import { AccessRepository } from "../src/execution-v2/access.repository";
 import { ExecutionAccessService } from "../src/execution-v2/access.service";
+import { ExecutionReadScopes } from "../src/execution-v2/read-scope";
 import type { AccessTrustProvider } from "../src/execution-v2/access-trust";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 
@@ -203,6 +206,10 @@ describe.skipIf(!URL)("ELP2-04 F0-only exact-own collection / actual PG HTTP / T
     // Only the service's TEST_ONLY authority dependencies are delegated. The
     // actual complete AppModule router/guards/controller/contract stay mounted.
     const delegate = vi.spyOn(appService, "collection").mockImplementation((actor, raw) => f.service.collection(actor, raw));
+    const current = new OperationalReadService(new OperationalReadRepository(ctx.pool), f.access,
+      new ExecutionReadScopes(ctx.pool, f.access, ctx.config), ctx.config);
+    const parent = vi.spyOn(ctx.app.get(OperationalReadService), "workflow")
+      .mockImplementation((principal, id) => current.workflow(principal, id));
     const http = ctx.app.getHttpAdapter().getInstance() as FastifyInstance;
     const headers = { cookie: `${SESSION_COOKIE}=${creator.session.token}`, "x-request-id": "TEST_ONLY-f0-collection" };
     try {
@@ -216,10 +223,11 @@ describe.skipIf(!URL)("ELP2-04 F0-only exact-own collection / actual PG HTTP / T
         resource_kind: f.resource.kind, resource_id: f.resource.id, environment: f.environment, limit: 1 }));
       const generic = await http.inject({ method: "GET", headers,
         url: `/api/v1/execution/operations/op_TEST_ONLY_nonexistent?workspace_id=${encodeURIComponent(f.workspace)}` });
-      error(generic, 503, "OPERATIONS_SCOPED_PARENT_NOT_COMMISSIONED");
+      error(generic, 404, "OPERATIONAL_READ_NOT_FOUND");
+      expect(parent).toHaveBeenCalledOnce();
       expect(delegate).toHaveBeenCalledTimes(1); expect(f.forbidden).not.toHaveBeenCalled();
       // Route precedence + explicit fixture authority only, not PM commissioning.
-    } finally { delegate.mockRestore(); }
+    } finally { parent.mockRestore(); delegate.mockRestore(); }
   });
   it("authorized empty is exact-own only, never global queue or inferred authority", async () => {
     const f = await fixture(); await seed(f, { author: delegator });

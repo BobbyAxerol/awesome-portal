@@ -49,6 +49,8 @@ TRACKED = (
     "tooling/generate-execution-manager-scoped.mjs",
     "tooling/generate-execution-scoped-records.mjs",
     "tooling/execution-operation-reader.mjs",
+    "tooling/execution-operational-current-reader.mjs",
+    "fixtures/execution-operational-current.synthetic.valid.json",
     "tooling/generate-execution-resource-scoped.mjs",
     "tooling/generate-execution-retained-scoped.mjs",
     "tooling/generate-execution-analytics-scoped.mjs",

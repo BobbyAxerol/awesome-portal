@@ -1,0 +1,140 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "queue": {
+    "schema_version": "portal.execution.operational-queue.v2",
+    "workspace_id": "ws_TEST_ONLY_operational",
+    "record_authority": "PORTAL",
+    "record_basis": "PORTAL_CURRENT_OPERATIONAL_WORKFLOW",
+    "coverage": "AUTHORIZED_SUPPORTED_TARGETS_ONLY",
+    "supported_target_types": [
+      "ACCOUNT",
+      "PORTFOLIO",
+      "DEPLOYMENT"
+    ],
+    "source_integration_state": "UNAVAILABLE",
+    "source_side_effect_requested": false,
+    "source_as_of_ms": null,
+    "observed_at_ms": 0,
+    "read_truth": {
+      "state": "AVAILABLE",
+      "reason_code": null,
+      "scope": "REQUEST"
+    },
+    "page": {
+      "rows": [
+        {
+          "operation_id": "op_01K3COMMANDPLAN000000000000",
+          "operation_kind": "EXECUTION_COMMAND",
+          "command_key": "account/sync",
+          "target": {
+            "type": "ACCOUNT",
+            "id": "acc_TEST_ONLY_operational"
+          },
+          "environment": "PAPER",
+          "risk_tier": "BLOCKED",
+          "severity": "WARNING",
+          "source_authority": "PORTAL",
+          "source_status": "BLOCKED",
+          "verification_result": "NOT_STARTED",
+          "triage_state": "UNACKNOWLEDGED",
+          "workflow_version": 1,
+          "acknowledged_at": null,
+          "resolved_at": null,
+          "created_at": "2026-08-22T12:00:00Z",
+          "updated_at": "2026-08-22T12:00:00Z"
+        }
+      ],
+      "total_count": 1,
+      "filtered_count": 1,
+      "next_cursor": null,
+      "prev_cursor": null,
+      "has_more": false,
+      "has_previous": false,
+      "applied_filters": [],
+      "applied_sort": [
+        {
+          "field": "created_at",
+          "direction": "desc"
+        },
+        {
+          "field": "operation_id",
+          "direction": "desc"
+        }
+      ]
+    }
+  },
+  "workflow": {
+    "schema_version": "portal.execution.operational-workflow.v2",
+    "family": "F0_BACKED_PORTAL_WORKFLOW",
+    "record_authority": "PORTAL",
+    "source_side_effect_requested": false,
+    "provenance_basis": "SQL_EXACT_SOURCE_TIMESTAMP",
+    "observed_at_ms": 0,
+    "operation": {
+      "operation_id": "op_01K3COMMANDPLAN000000000000",
+      "operation_kind": "EXECUTION_COMMAND",
+      "command_key": "account/sync",
+      "target": {
+        "type": "ACCOUNT",
+        "id": "acc_TEST_ONLY_operational"
+      },
+      "environment": "PAPER",
+      "risk_tier": "BLOCKED",
+      "severity": "WARNING",
+      "source_authority": "PORTAL",
+      "source_status": "BLOCKED",
+      "verification_result": "NOT_STARTED",
+      "triage_state": "UNACKNOWLEDGED",
+      "workflow_version": 1,
+      "acknowledged_at": null,
+      "resolved_at": null,
+      "created_at": "2026-08-22T12:00:00Z",
+      "updated_at": "2026-08-22T12:00:00Z"
+    },
+    "intent": {
+      "schema_version": "execution.command-operation.v1",
+      "operation_id": "op_01K3COMMANDPLAN000000000000",
+      "command_type": "EXECUTION_COMMAND",
+      "command_key": "account/sync",
+      "status": "BLOCKED",
+      "verification_result": "NOT_STARTED",
+      "blockers": [
+        "COMMAND_RELAY_DISABLED"
+      ],
+      "warnings": [],
+      "relay_receipt": null,
+      "source_side_effect_requested": false,
+      "created_at": "2026-08-22T12:00:00Z",
+      "updated_at": "2026-08-22T12:00:00Z"
+    }
+  },
+  "incident": {
+    "schema_version": "portal.execution.incident-current-root.v2",
+    "record_authority": "PORTAL",
+    "record_basis": "CURRENT_ROOT_NOT_HISTORICAL_LINEAGE",
+    "incident_id": "inc_TEST_ONLY_operational",
+    "workspace_id": "ws_TEST_ONLY_operational",
+    "target": {
+      "type": "ACCOUNT",
+      "id": "acc_TEST_ONLY_operational"
+    },
+    "environment": "PAPER",
+    "severity": "WARNING",
+    "workflow_state": "OPEN",
+    "workflow_version": 1,
+    "acknowledged_at": null,
+    "mitigated_at": null,
+    "resolved_at": null,
+    "created_at": "2026-08-22T12:00:00Z",
+    "updated_at": "2026-08-22T12:00:00Z",
+    "observed_at_ms": 0,
+    "source_integration_state": "UNAVAILABLE",
+    "source_side_effect_requested": false,
+    "deployment_resume_requested": false,
+    "historical_children": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED"
+    }
+  }
+}

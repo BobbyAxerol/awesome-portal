@@ -33,6 +33,8 @@ import {
 } from "../operations/contracts";
 import { ExecutionOperationsService } from "../operations/operations.service";
 import { OperationsWorkflowService } from "../operations/workflow.service";
+import { OperationalReadService } from "../operations/operational-read.service";
+import { OperationalReadError } from "../operations/current-operational-read";
 import {
   PortalApplyOperationRequestSchema,
   ApprovalCreateRequestSchema,
@@ -71,6 +73,7 @@ export class GovernanceController {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
     @Optional() @Inject(ExecutionCommandService) private readonly trustedCommands?: ExecutionCommandService,
+    @Optional() @Inject(OperationalReadService) private readonly currentReads?: OperationalReadService,
   ) {}
 
   @Get("/governance/review-capture-capabilities")
@@ -107,15 +110,22 @@ export class GovernanceController {
   }
 
   @Get("/operations")
+  @Header("Cache-Control", "private, no-store")
   async operationsQueue(
     @Req() request: GovernanceRequest,
     @Query() query: Record<string, unknown>,
   ) {
+    const workspaceId = await this.workspace(request, query.workspace_id);
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalWorkspaceId };
+    if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.currentReads) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      return this.currentReads.queue(principal, query);
+    }
     const parsed = OperationQueueQuerySchema.safeParse(query);
     if (!parsed.success) {
       throw new GovernanceError("INVALID_OPERATION_QUEUE_QUERY", "Invalid operation queue query.", 400);
     }
-    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
     return this.compatibleOperationParent(request, workspaceId,
       () => this.operationWorkflow.list(request.portalUser, workspaceId, parsed.data));
   }
@@ -481,6 +491,12 @@ export class GovernanceController {
         return this.trustedCommands.status({ user_id: request.portalUser.userId,
           session_id: request.portalSession.sessionId, session_generation: request.portalSession.sessionVersion }, workspaceId, id.data);
       });
+    }
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalWorkspaceId };
+    if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.currentReads) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      return this.currentReads.workflow(principal, operationId);
     }
     return this.compatibleOperationParent(request, workspaceId, async () => {
       const execution = await this.operations.operationOrNull(

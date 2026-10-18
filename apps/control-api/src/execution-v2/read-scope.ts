@@ -201,7 +201,9 @@ export async function revalidateNativeExecutionNotice(input:PreparedExecutionNat
  * unrelated transitions can shorten a private frame but never widen a grant.
  * Capture receipt/target start as well as expiry so future DENYs cannot become
  * effective between the DB clock and physical callback. No TTL releases rows. */
-function nativeNoticeValidUntil(context:AccessEvaluationContext,environment:ReadEnvironment,
+// Reused by finite current Core audit reads; this is a temporal ceiling only,
+// never a permission, source custody token or physical-send guarantee.
+export function nativeNoticeValidUntil(context:AccessEvaluationContext,environment:ReadEnvironment,
   sessionUntil:number):number {
   let until=sessionUntil;
   const transition=(value:number|null|undefined)=>{

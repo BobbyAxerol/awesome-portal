@@ -931,6 +931,138 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
       .toEqual(first.json().page.rows.map((item: { operation_id: string }) => item.operation_id));
   });
 
+  it("preserves native F0 source microseconds and round-trips same-millisecond HTTP queue pages", async () => {
+    const timestamps = [
+      "2026-05-01T12:00:00.123900Z",
+      "2026-05-01T12:00:00.123001Z",
+      "2026-05-01T12:00:00.123900Z",
+      "2026-05-01T12:00:00.123500Z",
+      "2026-05-01T12:00:00.123000Z",
+      "2026-05-01T12:00:00.123900Z",
+      "2026-05-01T12:00:00.123500Z",
+      "2026-05-01T12:00:00.123999Z",
+    ];
+    const expectedByOperation = new Map<string, string>();
+    try {
+      // Legal pre-insert fixture, never UPDATE/disable the immutable source or
+      // queue guard. Everything else still goes through the real HTTP planner,
+      // transaction, queue projection and existing product authority checks.
+      await ctx.pool.query(`
+        CREATE FUNCTION test_n04_f0_insert_microseconds() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW.request_key ~ '^ops:precision:[0-7]$' THEN
+            NEW.created_at := (ARRAY[
+              timestamptz '2026-05-01T12:00:00.123900Z',
+              timestamptz '2026-05-01T12:00:00.123001Z',
+              timestamptz '2026-05-01T12:00:00.123900Z',
+              timestamptz '2026-05-01T12:00:00.123500Z',
+              timestamptz '2026-05-01T12:00:00.123000Z',
+              timestamptz '2026-05-01T12:00:00.123900Z',
+              timestamptz '2026-05-01T12:00:00.123500Z',
+              timestamptz '2026-05-01T12:00:00.123999Z'
+            ])[split_part(NEW.request_key, ':', 3)::integer + 1];
+            NEW.updated_at := NEW.created_at;
+          END IF;
+          RETURN NEW;
+        END;
+        $$;
+        CREATE TRIGGER test_n04_f0_insert_microseconds
+        BEFORE INSERT ON execution_command_plans_f0
+        FOR EACH ROW EXECUTE FUNCTION test_n04_f0_insert_microseconds();
+      `);
+      for (const [index, timestamp] of timestamps.entries()) {
+        const created = await mutation(bobby, "/api/v1/execution/commands/plans", payload({
+          request_key: `ops:precision:${index}`,
+          target: { type: "ACCOUNT", id: `paper-precision-${index}` },
+        }));
+        expect(created.statusCode).toBe(201);
+        expect(created.json()).toMatchObject({
+          status: "BLOCKED", source_side_effect_requested: false,
+        });
+        expectedByOperation.set(created.json().operation_id, timestamp);
+      }
+      const truth = await ctx.pool.query<{
+        operation_id: string;
+        source_created_at: string;
+        queue_created_at: string;
+        source_updated_at: string;
+        queue_updated_at: string;
+        exact_source_copy: boolean;
+      }>(
+        `SELECT q.operation_id,
+                to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS source_created_at,
+                to_char(q.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS queue_created_at,
+                to_char(p.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS source_updated_at,
+                to_char(q.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS queue_updated_at,
+                (q.created_at = p.created_at AND q.updated_at = p.updated_at) AS exact_source_copy
+         FROM execution_operation_queue_items q
+         JOIN execution_command_plans_f0 p
+           ON p.operation_id = q.operation_id AND p.workspace_id = q.workspace_id
+         WHERE q.workspace_id = $1 AND p.actor_user_id = $2
+           AND p.request_key ~ '^ops:precision:[0-7]$'
+         ORDER BY q.created_at DESC, q.operation_id DESC`,
+        [workspaceId, bobby.userId],
+      );
+      expect(truth.rows).toHaveLength(timestamps.length);
+      expect(new Set(expectedByOperation.keys()).size).toBe(timestamps.length);
+      for (const row of truth.rows) {
+        const expected = expectedByOperation.get(row.operation_id);
+        expect(expected).toBeTypeOf("string");
+        expect(row).toMatchObject({
+          source_created_at: expected, queue_created_at: expected,
+          source_updated_at: expected, queue_updated_at: expected, exact_source_copy: true,
+        });
+      }
+      const base = `/api/v1/execution/operations?workspace_id=${workspaceId}` +
+        "&triage_state=UNACKNOWLEDGED&environment=PAPER&limit=2";
+      type QueuePage = {
+        rows: { operation_id: string; created_at: string; updated_at: string }[];
+        total_count: number; filtered_count: number;
+        next_cursor: string | null; prev_cursor: string | null;
+        has_more: boolean; has_previous: boolean;
+      };
+      const pages: QueuePage[] = [];
+      for (let index = 0; index < timestamps.length / 2; index += 1) {
+        const cursor = index > 0 ? pages[index - 1].next_cursor : null;
+        if (index > 0) expect(cursor).toBeTypeOf("string");
+        const response = await inject(bobby, base + (cursor ? `&after=${encodeURIComponent(cursor)}` : ""));
+        expect(response.statusCode).toBe(200);
+        const page = response.json().page as QueuePage;
+        expect(page).toMatchObject({
+          total_count: timestamps.length, filtered_count: timestamps.length,
+          has_previous: index > 0, has_more: index < timestamps.length / 2 - 1,
+        });
+        expect(page.rows).toHaveLength(2);
+        expect(page.rows.map(row => row.operation_id)).toEqual(truth.rows.slice(index * 2, index * 2 + 2).map(row => row.operation_id));
+        expect(page.rows.every(row => row.created_at === "2026-05-01T12:00:00.123Z" && row.updated_at === row.created_at)).toBe(true);
+        expect(JSON.stringify(response.json())).not.toContain("__query_timestamp_boundary_");
+        pages.push(page);
+      }
+      const forwardIds = pages.flatMap(page => page.rows.map(row => row.operation_id));
+      expect(forwardIds).toEqual(truth.rows.map(row => row.operation_id));
+      expect(new Set(forwardIds).size).toBe(timestamps.length);
+      expect(pages[0].prev_cursor).toBeNull();
+      expect(pages.at(-1)!.next_cursor).toBeNull();
+      let reverse = pages.at(-1)!;
+      for (let index = pages.length - 2; index >= 0; index -= 1) {
+        expect(reverse.prev_cursor).toBeTypeOf("string");
+        const response = await inject(bobby, `${base}&before=${encodeURIComponent(reverse.prev_cursor!)}`);
+        expect(response.statusCode).toBe(200);
+        reverse = response.json().page as QueuePage;
+        expect(reverse.rows).toEqual(pages[index].rows);
+        expect(reverse.has_previous).toBe(index > 0);
+        expect(reverse.has_more).toBe(true);
+      }
+      expect(reverse.prev_cursor).toBeNull();
+    } finally {
+      await ctx.pool.query(`
+        DROP TRIGGER IF EXISTS test_n04_f0_insert_microseconds ON execution_command_plans_f0;
+        DROP FUNCTION IF EXISTS test_n04_f0_insert_microseconds();
+      `);
+    }
+  });
+
   it("defines Mine as explicit assignment and publishes the correlated incident id", async () => {
     const assigned = await mutation(bobby, "/api/v1/execution/commands/plans", payload({
       request_key: "ops:mine:assigned",

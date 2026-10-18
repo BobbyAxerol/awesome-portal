@@ -130,7 +130,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description ADMIN-only Portal-owned queue with exact counts and opaque bidirectional keysets. Source integration remains unavailable in F1a. */
+        /** @description Sticky current Core mode is selected before strict parsing. Legacy v1 remains separate. V2 requires complete current TS-accepted audit tuples ACCOUNT/PORTFOLIO/DEPLOYMENT per environment BEFORE SQL counts/page; USER/ADMIN are not grants. Source journal unavailable, no mutation. assigned_to is unsupported in V2 (400), not ignored. Existing limit1..250 and both cursor directions preserved; optional target_id narrows the query. */
         get: operations["listExecutionOperationsQueue"];
         put?: never;
         post?: never;
@@ -147,7 +147,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Named operation detail. Exact ecm_ intents use current workspace/resource/environment audit authority and finite CommandStatus; GET never dispatches or reconciles. Existing Portal/F0 decision readers retain their gate checks and scoped-parent refusal. An ACK is not business APPLIED or venue FILLED. HTTP private, no-store. */
+        /** @description Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. Other SCOPED_V2 ids require actual immutable queue/F0 provenance under exact target/environment audit, never creator/ADMIN/read_all permission or a family fallback. Legacy decision readers remain separate with their gate checks. GET never dispatches/reconciles; ACK is not APPLIED/FILLED. HTTP private, no-store. */
         get: operations["getExecutionCommandOperationF0"];
         put?: never;
         post?: never;
@@ -215,7 +215,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description ADMIN-only bounded incident detail. Findings, alerts, dead letters and trace-order panels remain explicitly unavailable. */
+        /** @description Legacy detail remains separate. SCOPED_V2 publishes only current finite Portal root under current exact audit; original children are NOT_PUBLISHED. No title/prose/actors/evidence hashes/counts loaded. No mutation or source side effects. */
         get: operations["getExecutionIncidentDetail"];
         put?: never;
         post?: never;
@@ -394,6 +394,263 @@ export interface components {
                 returned_count: number;
                 has_more: boolean;
                 next_cursor: string | null;
+            };
+        };
+        /** @description Finite immutable Portal labels plus current local triage, not TS execution. Runtime additionally enforces nonnegative finite dates, updated>=created and the existing triage/timestamp shape. SQL retains six fractional UTC digits for exact keyset boundaries. */
+        OperationalQueueItemV2: {
+            operation_id: string;
+            /** @constant */
+            operation_kind: "EXECUTION_COMMAND";
+            command_key: string;
+            target: {
+                /** @enum {string} */
+                type: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            /** @enum {string} */
+            risk_tier: "R0_READ" | "R1_PAPER_MUTATION" | "R2_SANDBOX" | "R3_LIVE_PROTECTIVE" | "R4_LIVE_RISK_INCREASING" | "UNCLASSIFIED" | "BLOCKED";
+            /** @enum {string} */
+            severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+            /** @enum {string} */
+            source_authority: "PORTAL" | "EXECUTION" | "BROKER";
+            /** @enum {string} */
+            source_status: "BLOCKED" | "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "EXPIRED" | "UNCERTAIN";
+            /** @enum {string} */
+            verification_result: "NOT_STARTED" | "PENDING" | "SUCCEEDED" | "FAILED" | "PARTIAL" | "UNCERTAIN" | "DENIED" | "EXPIRED";
+            /** @enum {string} */
+            triage_state: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
+            workflow_version: number;
+            acknowledged_at: string | null;
+            resolved_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description Counts are scoped BEFORE filters/page/sort/edge probes to current supported audit tuples. Nonzero authority with zero rows is EMPTY; no authority is404. Runtime additionally enforces total>=filtered>=page rows, exact read_truth, and has_more/previous iff their opaque cursor is nonnull. Bound1MiB. No ADMIN/read_all/creator bypass or actor/prose/incident/source journal disclosure. */
+        OperationalQueueV2: {
+            /** @constant */
+            schema_version: "portal.execution.operational-queue.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            record_basis: "PORTAL_CURRENT_OPERATIONAL_WORKFLOW";
+            /** @constant */
+            coverage: "AUTHORIZED_SUPPORTED_TARGETS_ONLY";
+            supported_target_types: [
+                "ACCOUNT",
+                "PORTFOLIO",
+                "DEPLOYMENT"
+            ];
+            /** @constant */
+            source_integration_state: "UNAVAILABLE";
+            /** @constant */
+            source_side_effect_requested: false;
+            source_as_of_ms: null;
+            observed_at_ms: number;
+            read_truth: {
+                /** @enum {string} */
+                state: "AVAILABLE" | "EMPTY";
+                reason_code: string | null;
+                /** @constant */
+                scope: "REQUEST";
+            };
+            page: {
+                rows: components["schemas"]["OperationalQueueItemV2"][];
+                total_count: number;
+                filtered_count: number;
+                next_cursor: string | null;
+                prev_cursor: string | null;
+                has_more: boolean;
+                has_previous: boolean;
+                applied_filters: {
+                    field: string;
+                    /** @constant */
+                    op: "eq";
+                    value: string;
+                }[];
+                applied_sort: {
+                    /** @enum {string} */
+                    field: "created_at" | "operation_id";
+                    /** @enum {string} */
+                    direction: "asc" | "desc";
+                }[];
+            };
+        };
+        /** @description Actual immutable workspace/id/key/target/environment/source queue-F0 join, not inferred family. provenance_basis distinguishes exact SQL timestamp copy from the existing writer's historical JS Date millisecond truncation (not arbitrary tolerance); historical bytes are not rewritten. Different author with full exact current audit is allowed; explicit F0 routes retain their own-author ceiling. Runtime additionally enforces operation ids equal; original planning expiry is not read expiry. */
+        OperationalWorkflowV2: {
+            /** @constant */
+            schema_version: "portal.execution.operational-workflow.v2";
+            /** @constant */
+            family: "F0_BACKED_PORTAL_WORKFLOW";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_side_effect_requested: false;
+            /** @enum {string} */
+            provenance_basis: "SQL_EXACT_SOURCE_TIMESTAMP" | "LEGACY_DATE_MILLISECOND_COPY";
+            observed_at_ms: number;
+            operation: components["schemas"]["OperationalQueueItemV2"];
+            intent: components["schemas"]["F0BlockedOperationRead"];
+        };
+        /** @description Current Portal root only; target/env/version rechecked before final authority. Forward target guard never attests old annotations/evidence/links/actors or counts. MITIGATED/RESOLVED are local triage, not broker safety. Runtime additionally enforces finite ordered dates and lifecycle timestamp shape. */
+        OperationalIncidentCurrentV2: {
+            /** @constant */
+            schema_version: "portal.execution.incident-current-root.v2";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            record_basis: "CURRENT_ROOT_NOT_HISTORICAL_LINEAGE";
+            incident_id: string;
+            workspace_id: string;
+            target: {
+                /** @enum {string} */
+                type: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            /** @enum {string} */
+            severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+            /** @enum {string} */
+            workflow_state: "OPEN" | "MITIGATED" | "RESOLVED";
+            workflow_version: number;
+            acknowledged_at: string | null;
+            mitigated_at: string | null;
+            resolved_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            observed_at_ms: number;
+            /** @constant */
+            source_integration_state: "UNAVAILABLE";
+            /** @constant */
+            source_side_effect_requested: false;
+            /** @constant */
+            deployment_resume_requested: false;
+            historical_children: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED";
+            };
+        };
+        OperationalQueueCompositionV2: {
+            /** @constant */
+            schema_version: "execution.operational-composition.v1";
+            /** @constant */
+            logical_operation_id: "executionOperationalOperationsQueueV1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            source_authority: "PORTAL_CONTROL_ONLY";
+            workspace_id: string;
+            read_at_ms: number;
+            /** Format: date-time */
+            read_at: string;
+            composite_revision: string;
+            source_health: {
+                input_digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            redacted_command_journal: {
+                digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            canary_twin_comparison: {
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            command_authority: {
+                /** @constant */
+                state: "UNCHANGED_FAIL_CLOSED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            lineage: {
+                source_health_input_digest: string;
+                command_journal_digest: string;
+                workflow_digest: string;
+                /** @constant */
+                formula_version: "execution.operational-composition.v1";
+            };
+            data: {
+                operations_queue: components["schemas"]["OperationalQueueV2"];
+            };
+        };
+        OperationalIncidentCompositionV2: {
+            /** @constant */
+            schema_version: "execution.operational-composition.v1";
+            /** @constant */
+            logical_operation_id: "executionOperationalIncidentDetailV1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            source_authority: "PORTAL_CONTROL_ONLY";
+            workspace_id: string;
+            read_at_ms: number;
+            /** Format: date-time */
+            read_at: string;
+            composite_revision: string;
+            source_health: {
+                input_digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            redacted_command_journal: {
+                digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            canary_twin_comparison: {
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            command_authority: {
+                /** @constant */
+                state: "UNCHANGED_FAIL_CLOSED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            lineage: {
+                source_health_input_digest: string;
+                command_journal_digest: string;
+                workflow_digest: string;
+                /** @constant */
+                formula_version: "execution.operational-composition.v1";
+            };
+            data: {
+                incident: components["schemas"]["OperationalIncidentCurrentV2"];
             };
         };
         Identifier: string;
@@ -1757,6 +2014,7 @@ export interface operations {
                 target_type?: "ACCOUNT" | "BROKER_BINDING" | "DEPLOYMENT" | "ORDER" | "PORTFOLIO" | "SYSTEM";
                 command_key?: string;
                 sort?: "created_at:asc" | "created_at:desc";
+                target_id?: string;
             };
             header?: never;
             path?: never;
@@ -1764,21 +2022,75 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded Portal operations queue */
+            /** @description Legacy Portal queue OR finite current-audit V2 cohort, never a global/source completeness claim. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OperationQueueResponse"];
+                    "application/json": components["schemas"]["OperationQueueResponse"] | components["schemas"]["OperationalQueueV2"];
                 };
             };
-            /** @description ADMIN or query policy required */
-            403: {
+            /** @description Strict input/cursor invalid or unsupported assigned_to filter; contextual refusal fenced after current authority. */
+            400: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session/authority required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session/authority required. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Uniform missing/hidden operational record or no usable current audit authority. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authority/cursor/incident root changed; refresh without legacy fallback. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed unqualified/not-configured/integrity/byte/census unavailable; never raw provider/SQL/prose or false empty. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
         };
     };
@@ -1795,14 +2107,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Authorized named operation detail; no generic parent or queue commissioning. */
+            /** @description Authorized concrete operation; current-audit finite workflow variant is additive. */
             200: {
                 headers: {
                     "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExecutionCommandOperation"] | components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"] | components["schemas"]["CommandStatus"];
+                    "application/json": components["schemas"]["ExecutionCommandOperation"] | components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"] | components["schemas"]["CommandStatus"] | components["schemas"]["OperationalWorkflowV2"];
                 };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */
@@ -1938,13 +2250,74 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Portal-owned incident detail */
+            /** @description Legacy incident OR finite authorized current root. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IncidentDetail"];
+                    "application/json": components["schemas"]["IncidentDetail"] | components["schemas"]["OperationalIncidentCurrentV2"];
+                };
+            };
+            /** @description Strict input/cursor invalid or unsupported assigned_to filter; contextual refusal fenced after current authority. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session/authority required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session/authority required. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Uniform missing/hidden operational record or no usable current audit authority. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authority/cursor/incident root changed; refresh without legacy fallback. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed unqualified/not-configured/integrity/byte/census unavailable; never raw provider/SQL/prose or false empty. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
                 };
             };
         };

@@ -100,6 +100,13 @@ export interface FilterDefinition {
 export interface SortDefinition {
   column: string;
   kind: QueryScalarKind;
+  /**
+   * Server-only opt-in for PostgreSQL timestamptz keys finer than a JS Date.
+   * Preserve the native indexed predicate/order; use a private exact UTC text
+   * projection solely for signed cursor boundaries. Not a request option.
+   * Version the resource ID when opting an existing resource in.
+   */
+  timestampPrecision?: "microseconds";
 }
 
 /**
