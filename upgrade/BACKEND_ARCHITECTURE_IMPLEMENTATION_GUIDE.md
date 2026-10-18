@@ -650,6 +650,21 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 current Core reconciliation23:35UTC:** the
+[e19 source delta](integration/execution-native-read-v1/current-core-reconciliation/README.md)
+is SOURCE_QUALIFIED, not installed or connected acceptance. Core
+e19ad906 commits the previously captured WIP with zero1168-path source drift.
+Keep current self-eligibility/current-grants/metadata-only journal and qualified
+HTTP/SSE same-coordinator mount/drain;22-file delta includes a strictly typed
+synthetic projection-fixture repair. First expanded-spec strict has11fixture
+diagnostics; fixture repaired and fresh21-spec strict PASS.931behavior executions
+(393+534+4) PASS/0FAIL/ERROR/SKIP, no historical/failed-run credit. Exact
+patch/output/wrong-preimage rehearsal3PASS; production strict precedes only one
+EOF-newline removal, not a logic change. No peer/runtime/DB/secret transfer.
+Core e19 is local/committed but not yet in the checked remote line; preserve
+owner publication authority. Full08NOT_MET,09connected NOT_STARTED; see original08
+journal for cleanup, runtime and the actual Core mounting action.
+
 **Original08 actual Core inputs22:50UTC:** the
 [same native commissioning packet](integration/execution-native-read-v1/native-db-commissioning/README.md#current-core-private-inputs--2026-10-182250utc)
 now records six actual same-RR/READONLY observations, genuine Core DB/39-ledger/

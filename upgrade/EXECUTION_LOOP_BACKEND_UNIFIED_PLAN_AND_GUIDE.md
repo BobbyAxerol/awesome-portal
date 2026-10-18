@@ -21589,6 +21589,228 @@ hashes only; active private provider/source/config/history and cached necessary
 public dependencies stay retained. No new image/build cache was created by
 these cached helper runs; inventory/normal-hook cleanup remains exact-owned.
 
+**Publication/cleanup23:01UTC confirmed:** f7549cb7 is committed and pushed to
+the exact awesome-portal feature ref (ls-remote verified),5docs/+192lines,
+Bobby identity/normal hooks intact. Contracts130PASS;72API suites/717PASS,
+normal workspace/restore gates PASS. Receipt/log under the declared actual-input
+root, logfe67001a/91519B.41runtime tuples unchanged,own lease removed;
+BuildKit428→428/new ownedIDs0. Removed only new unreferenced hook image
+4f4aa2d4 after exact metadata/no-ancestor/quiet checks; free214220423168→
+214219366400B (shared FS, not a reclaimed-GB assertion). Active native producer,
+private PKI/config/native history, all old services and rollback images retained.
+HTTPS origin lacked interactive credentials; exact SSH awesome-portal push
+succeeded without remote-config change, force, merge, dev/main or mirror.
+
+**Original08 current-source reconciliation / before code23:04UTC:** approved
+full objective remains unchanged; previous turn is PROGRESS, not a verified
+connected acceptance or wait. Retain readonly captured17source/test paths
+621832B at /tmp/epg10-08-core-current-reconcile-68Q5Tn0w, manifest51f3ca0a,
+plus sole missing direct dependency self-eligibility.ts27574B/77354d0d, verified
+against actual SGP bytes. No ENV/credential/DB input or remote write. Eight paths
+were not changed by our SSE delta; two match the previously qualified finite
+profile; three raw mismatches are blank-only. Do not confuse all17hash mismatches
+with17new semantic conflicts or discard the real new self-eligibility behavior.
+
+Scope/goal: construct a private current-Core-compatible specimen preserving
+peer source/writer/eligibility changes plus the already qualified native HTTP,
+SSE and runtime factory. First collect bounded safe source-closure hashes/current
+new dependencies; no peer source/index changes. Reconstruct the common reviewed
+finite-profile base by exact reverse/full and forward/finite patches in a NEW
+disposable copy only, preserve pinned originals, then three-way merge current
+bytes with the qualified SSE changes. No force/reject, invented BASE, broad
+rewrite or weakening current permission predicates. Manually review real
+conflicts, keep independent earlier source receipts; previous393cases are not
+new-current acceptance. Test source/patch/closure integrity and fresh strict
+compile first, then affected real PG/mTLS/HTTP/SSE/recovery and new peer semantics
+with the existing bounded cached apparatus after fresh user/root locks and
+physical-job checks. Keep test provenance separate from actual native/Core
+runtime. No operational DB/schema/grant/session/listener/deploy/secret transfer
+in this source slice. Stop on drift; preserve current services and private
+intakes (check finite expiry before later installation). Exact-copy/worker/PG/
+network/image/cache/disk cleanup and current source/release/runtime reconciliation
+are part of this slice. Publish only reviewed delta/manifest/sanitized evidence
+and update both backend indices via normal hooks. Same08 NOT_MET,09connected
+NOT_STARTED; actual Core binding/drills and07/03/01/06 remain required, not
+redefined complete by another private specimen or compile-only result.
+
+**Source closure and base construction23:08UTC:** initial metadata considered
+untracked-but-not-index-added files and missed new staged dependencies; preserve
+that1154-path result. Corrected readonly cached+untracked census753b2127 sees
+1168paths/20358050B,1085qualified-exact,23authored differences,40other changed,
+14new staged source/tests and6missing runtime-profile paths. This is per-file
+pinning, NOT an atomic repository snapshot; recheck before application. Native
+command/governance changes are preserved verbatim, not implemented/activated
+by this READ integration. One bounded SFTP session copies only53additional
+TypeScript source/tests, reuses18pinned inputs; full71-path source manifest
+c5a4dce0/2326559B. No ENV/secret/DB/dependency or remote write. Common finite
+base is mechanically reconstructed by exact reverse43/forward32 patches in
+the new specimen,1148finite pins verified, then exact qualified1154 restored;
+original frozen input unchanged. Common-base receipt1254b23b; copy disk
+214707503104→214679826432B. First merge helper invocation stopped at Git CLI
+validation129: installed merge-file accepts -L, not --label. No file was
+three-way merged; only earlier exact current copies were made. Fix that runner
+option and retain this failed result; no force/ours/theirs/union shortcut.
+
+**Reconciliation review23:13UTC:** the reconstructed finite profile is an exact
+reviewed comparison aid, NOT a proven Git/common historical ancestor of the
+current peer WIP. In particular, current composition lacks the previously
+published finite mount helper while its consumer matches that finite profile;
+absence does not prove an intentional peer deletion. The mechanical attempt
+auto-merged13paths and copied54current paths verbatim;4conflicts are retained
+separately, leaving the original qualified specimen files intact. Review all17
+overlaps manually against both exact inputs before tests/publication, preserving
+current eligibility/current-grant additions AND qualified HTTP/SSE completion,
+same-pool/coordinator mounting and recovery invariants. No automatic deletion
+based on the comparison aid, no claim of new-current qualification from old393
+cases. Fresh source integrity/strict/affected tests are required. The user has
+confirmed the historical exact SSE source/public-dependency transfer; it does
+not authorize retransmitting a different reconciliation packet or bypassing
+live peer jobs. No new SGP copy/test/deploy has occurred in this slice.
+
+**Current source and strict gate23:18UTC:** Core owner has committed e19ad906
+(parent5291), clean at the bounded read. Fresh per-file1168-path comparison
+1c41ac65 has ZERO drift from the previously captured WIP bytes; no new source
+copy/application is needed. Earlier live test pair and user/root windows are
+absent at this read, but fresh actual job checks still precede future jobs.
+All17overlaps reviewed,54outside-profile current files preserved byte-for-byte.
+Keep current eligibility/domain grants, scalar-only journal query and finite
+policy code/status translation. Keep qualified physical HTTP/SSE/mounted tests
+where current source merely predates the unadopted mount; retain Core's three
+settleSourceReads tests and API using the same original retained-flight join
+as full drain (no duplicate source job/false abort ACK). Review decisions8eb95d18.
+Frozen specimen1172regular source/layout files pin2dc5aba6. Fresh production
+strict compile PASS/exit0 at23:18:21;33interference samples/0overlap,41protected
+tuples unchanged,own helper/network/lease0remaining, source hashes unchanged.
+Shared free213737197568→213830844416B. Ordinary sandbox could not inspect sudo
+Docker because no-new-privileges; read-only guard rerun through reviewed host
+execution succeeded before any heavy job. Not a product-test failure. No SGP
+write/transfer, operational DB/schema/grant/session change, new image or build.
+Fresh affected-spec strict and behavior/PG/recovery gates remain runnable now;
+no old393case credit or connected08 completion is claimed.
+
+**Owned strict-fixture correction23:23UTC:** expanded affected-spec strict
+attempt exited2 with11diagnostics, all in current profile-projection.spec.ts:
+seven legacy flat principals lack current user/session shape; four provenance
+fixtures infer an overly narrow lineage type. Preserve the failed log/receipt
+and zero acceptance,33samples/0overlap,41tuples unchanged,own resources0.
+Repair only the private fixture with an explicitly SYNTHETIC typed local-reader
+principal (not an actual authenticated identity/provider or positive connected
+control) and explicit ProjectionRow annotations; do not weaken production types
+or permissions. Remove two inherited trailing empty lines that generated patch
+whitespace warnings. One manual apply_patch attempt failed preflight before any
+file edit; corrected exact context applied atomically. Old pins/draft/rehearsal
+are preserved as before-fix evidence, not overwritten or counted green.
+Current22-file/e19delta is154883B/21b865a8;1168appclosure +4aux/layout
+pin1ea53c1b/review1cb27605. Exact preimage→apply→all1172outputs/already-applied
+and wrong-preimage refusal:3fresh integrity cases PASS, c6b279a3; no whitespace
+warning,0peer/runtime/DBwrites. Repeat affected-spec strict then behavior/PG/
+recovery on these exact output pins. Earlier production strict predates only
+one production EOF-newline removal, not a logic change; retain exact provenance
+rather than mislabel it as a rerun of final bytes. Full08 remains NOT_MET.
+
+**Fresh final-fixture strict23:26:35UTC PASS:** complete21-spec strict set
+(13native/realtime suites +7current read/eligibility/projection suites +the
+separate PG rollback spec), exit0, exact final1172pins1ea53c1b.34samples,
+0foreign overlap/observer errors,41protected tuples unchanged, own containers/
+networks/lease0remaining. Shared free212654030848→212867198976B. Preserve the
+previous failed strict receipt; no new test counts inferred from compilation.
+Behavior runs are partitioned13native/realtime,7current peer semantics and
+4PGrollback cases to preserve the existing250s/job bound; all use the same
+source/dependency pins. JUnit paths include profile+run ID so a retry cannot
+overwrite an earlier receipt. No bound expansion, synthetic-as-real acceptance
+or SGP/runtime/DB change. Publication remains unqualified until these gates.
+
+**Runner-only namespace correction23:28UTC:** first behavior run exits1:
+12suites/341cases PASS, one suite fails setup and52cases SKIP because the
+new disposable PG name has a `-reconcile` suffix, while the existing safety
+guard deliberately accepts numeric-only control-api-test-postgres names. This
+is an owned runner defect, not an external dependency or product PASS. Preserve
+the full failed receipt/JUnit and do not carry341PASS into the retry. Fix only
+the exact disposable cell names to a unique numeric namespace; do not relax
+the test's target guard, source or bound.12interference samples/0overlap,
+41runtime tuples unchanged, own containers/network/lease0remaining; free
+213199114240→213498392576B. One earlier startup refused a transient actual-job
+guard before resources; a fresh read was quiet before the failed test attempt.
+No operational stop/delete was needed: the failed run already tore down its
+own cells. Retry the complete13-suite profile with identical finalsource pins.
+
+**Fresh13-suite retry23:30:56UTC PASS:**393unique cases/13suites,0FAIL/ERROR/
+SKIP on final1ea53c1b source, actual disposable PG/mTLS/HTTP/SSE and explicit
+TEST_ONLY PM protocol fixture (not deployed PM authority). Cases cover physical
+frame/ACK/COMMIT uncertainty, native mounted HTTP/current revoke, observation
+cursor/generation/reconnect, READ-versus-STREAM and joined shutdown.23actual
+interference samples/0overlap,41runtime tuples unchanged, source unchanged,
+own containers/networks/lease0remaining, shared free213534212096→213638672384B.
+The failed341PASS/52SKIP setup run stays separate and is not added to393.
+Next independently runnable gates in this same slice are7current-source peer
+semantics suites and separate4PGrollback cases, then bounded publication and
+exact source-copy/image/cache reconciliation. No SGP copy/deploy/DB change.
+Parallel SHAs rechecked unchanged: TS668e1032/nextf2229d7a/PM908169aa/DL5bf5cd54;
+their WIP remains untouched. Full08NOT_MET/09connected NOT_STARTED.
+
+**Fresh peer-semantics profile23:33:49UTC PASS:**534unique cases/7suites,
+0FAIL/ERROR/SKIP on exact finalpins. Current policy, actual transaction/recovery
+writers, current grants/self-eligibility/navigation, metadata-only journal and
+legacy projection correctness all retained.30interference samples/0overlap,
+41tuples unchanged, own cells/network/lease0, free213565562880→213571297280B.
+Combined accepted behavior so far927cases, not927new cases authored in this
+slice and not deployed-PM acceptance. Separate4-case PG rollback still pending.
+
+**Publication/SGP facts23:32UTC:** awesome-portal Edge ref stillf7549cb7;
+Core local e19ad906 is NOT an ancestor of currently advertised remote
+docs/research-loop-plan d3d99f26. Do not say e19 can already be fetched from
+that remote. Its exact source is present/committed on the owning SGP checkout;
+Core owner publication or that verified local commit is the prerequisite for
+reproduction elsewhere. Do not push/rewrite their branch or include171peer
+paths in our delta. Exact historical approved SSE directory prefix on SGP has
+0matches; no new transfer/test resources were created there this slice. Eight
+stable SGP services still use existing image set (Core d2c23ad6), no restart or
+runtime/source/DB mutation. The historical packet is not retransmitted or its
+tainted360run reclassified as acceptance.
+
+**Final source qualification23:35UTC:** separate PG rollback4PASS/0FAIL/SKIP,
+2interference samples/0overlap,41tuples unchanged, cells/network/lease removed,
+free213195214848→213175783424B. Combined393+534+4=931accepted test executions
+across21disjoint suite files,0FAIL/ERROR/SKIP, plus3separate patch-integrity
+cases. Evidence collector initially assumed unique rendered labels and refused
+before publication: null/nonfinite parameter inputs share2labels. Correct the
+collector to prove disjoint accepted suite files and publish both931executions
+and929distinct rendered labels; do not treat failure/retry executions as extra
+coverage. No product/source change or rerun was needed for that metadata fix.
+Production gate has an explicit independently checked one-EOF-LF bridge; final
+affected strict/behavior use exact1ea53c1b bytes. Current22-file/e19profile is
+SOURCE_QUALIFIED, not installed/connected. Original failed strict/setup receipts
+remain immutable. Guard refused4-case startup while actual PM process tests
+held HK until23:39:08; no job started then. Actual PM job ended earlier, a fresh
+full physical guard passed, then the4-case job ran23:34:56–23:35:02 with0overlap.
+
+**Exact source cleanup and independent audit23:39UTC:** removed only10owned
+disposable source/draft/rehearsal trees and18flat source files, manifest-derived
+3644regular files plus declared node_modules symlinks unlinked without following.
+All hashes/UID/nlink/no-operational-mount checks and41-runtime equality passed
+before the final receipt writer failed (binary handle received str). Initial
+empty receipt is preserved; no deletion rerun. Fix writer encoding and add a
+durable before-delete intent for future invocations. Independent audit34ea8a41
+confirms all exact paths absent,0owned containers/networks/lease,41protected
+services and source-recovery via owning Core e19+published22-file patch. The
+initial deletion disk measurements were not retained; do NOT reconstruct or
+claim reclaimedGB. Fresh independent audit free213165694976→213164609536B.
+One audit attempt deferred during a transient foreign job; fresh quiet audit
+completed. No Docker/image/cache/volume/DB/operational-source mutation by this
+cleanup. Retain bounded local receipts/manifests/logs/helpers, active private
+native runtime/PKI/config/history, shared public dependencies and named rollback;
+SGP exact historical source prefix absent/no new resources. No source-copy debt.
+
+**Publication preparation / approved scope:** main plan +both backend indices,
+two existing handoff indices and seven e19packet files only. Source patch
+21b865a8/154883B has22source/test paths,1168appdependency pins; no secrets or
+runtime state. Preserve three unrelated untracked peer areas. Verify Bobby
+identity/staged scope/diff checks; run normal hooks under a fresh quiet owned
+finite lease, inventory images/BuildKit before/after and remove only any new
+unreferenced hook image. Push only the approved exact awesome-portal Edge
+feature ref, never peer Core/dev/main/mirror. Full08 remains owned integration/
+NOT_MET,09connected NOT_STARTED; no full-phase or release completion claim.
+
 
 
 

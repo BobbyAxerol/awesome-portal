@@ -7,6 +7,19 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 current Core e19 reconciliation (2026-10-18,23:35UTC):**
+  [22-file source delta](../integration/execution-native-read-v1/current-core-reconciliation/README.md)
+  preserves current eligibility/grants/scalar-only journal and genuine same-pool
+  HTTP/SSE mount/drain. Source e19ad906 matches captured WIP with zero drift.
+  Expanded-spec strict found11synthetic-fixture diagnostics, corrected only in
+  the private specimen; fresh21-spec strict and931behavior executions
+  (393+534+4) PASS/0FAIL/ERROR/SKIP, no inherited historical/failed-run counts.
+  Production strict has an explicit single-EOF-LF format bridge; exact final
+  affected strict/behavior pins are in the receipt. Core e19 is committed on
+  SGP, not yet in the checked advertised remote line; do not push its branch.
+  Exact application/output/wrong-preimage rehearsal3PASS; no Core/DB/runtime
+  install or secret transfer. Full08NOT_MET,09connected NOT_STARTED.
+
 - **Original08 actual Core private inputs (2026-10-18,22:50UTC):**
   [same native commissioning packet](../integration/execution-native-read-v1/native-db-commissioning/README.md#current-core-private-inputs--2026-10-182250utc)
   records six genuine same-RR observations and the verified actual Core target/

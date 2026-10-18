@@ -1,0 +1,110 @@
+{
+  "comparison_base_is_git_ancestor": false,
+  "current_input_manifest_sha256": "1c41ac65896d79c6dba5c14f1c204097e14d4cbc59a69e33eaf6d0f065f6178a",
+  "files": {
+    "apps/control-api/src/app.module.ts": {
+      "after_sha256": "2db8f24de18385471e069854c389ef73ac7cafe0ec248ffc9a142a778145dc0a",
+      "before_sha256": "8526993d49de5aceb341b2a1f1831404ae9dc80865a09103d2e965c356ee4de1"
+    },
+    "apps/control-api/src/db/pool.ts": {
+      "after_sha256": "d669eeded5ffb2527fb8cdd7a330907779b65be6fb2fa79bf40d2ec4b1cee0ab",
+      "before_sha256": "2f838bf4f8d00ff0c2643fd164b7fd97ca09d4dc8668c6f56760d1ab0bd37619"
+    },
+    "apps/control-api/src/execution-v2/manager-observation-source.ts": {
+      "after_sha256": "48daf86e933c0738cfe48dae8225e2529f91350b12d7e6f544acac1e115df22a",
+      "before_sha256": "10ed895278240423ca9b3da04e1a01c93547ea5e41ab5a4677107a4ad83685c8"
+    },
+    "apps/control-api/src/execution-v2/native-core-composition.ts": {
+      "after_sha256": "5488e356e6294ce85bec69265c32033e8134f2052bcfc098fb6764dccedaad04",
+      "before_sha256": "7979764bbee12794149e811aa35cd09bc5eee31401bf66d8035b2f0729c96a5a"
+    },
+    "apps/control-api/src/execution-v2/native-core-runtime.ts": {
+      "after_sha256": "415ca5af915ffaf53f03f35e95f1cac2dbb104ed52255ed2a375223630bfecba",
+      "before_sha256": null
+    },
+    "apps/control-api/src/execution-v2/native-manager-consumer.ts": {
+      "after_sha256": "a90f136b8f61bb075a7c685b3e3dfff2a54c87409b8db498e2329b3baa148c73",
+      "before_sha256": "288bb26756155f0c6129a471a5e766f92abfa2ea4571e34a807ad8fb2b2183a7"
+    },
+    "apps/control-api/src/execution-v2/realtime.ts": {
+      "after_sha256": "65d22e51fc42c51c556d44fabc05b6bf73df88b7d065dce1bc74f31170ba0016",
+      "before_sha256": "c77c67854e9b227513e30d0f04622ed3a4e661e0e39b57c06b6c42f3749a4763"
+    },
+    "apps/control-api/src/execution/maximum-data-operation.controller.ts": {
+      "after_sha256": "0084d54a00a53f6b0018673455d0a1ba1aeaadc5da1e5e80641a3be780e04426",
+      "before_sha256": "b57f70ce5ab345d25fde20c2f6d10a7985d9ace7e21cac68496df723f59ef28c"
+    },
+    "apps/control-api/src/execution/maximum-data-operation.service.ts": {
+      "after_sha256": "090b3773f85aee29f11f6e21b270408fbade814705a40af93e6a313a4556d1dc",
+      "before_sha256": "953e34a86383973002c56f95a9f3cdf1274ad972de58639fe1d9332f2d1585af"
+    },
+    "apps/control-api/src/execution/profile-realtime.service.ts": {
+      "after_sha256": "882d85bd8752320a1e3eacd78f5574d54d567ba1b18fcd73c8bc35f483144070",
+      "before_sha256": "5c7116ed271f5fda1710c39c0600a186e5ef512decd9baf67a0ebe32ada21d67"
+    },
+    "apps/control-api/src/execution/realtime.controller.ts": {
+      "after_sha256": "55b5adcb0922c98de60e6764769434bcd31f6d02b8d3078c6ac00e0da041db69",
+      "before_sha256": "2d5837fbf557eac3ddbbcf9b168c6f5e68b72a7e17f1fede03b62549d0f59e2f"
+    },
+    "apps/control-api/src/main.ts": {
+      "after_sha256": "70028436029e1ee679db7f33177e2adec978673ace7320c15f1a9fb7a1dec3fd",
+      "before_sha256": "d9383c44b73cbd6eaccfe986a1737487611c8d032f7f64df1227274a39738b34"
+    },
+    "apps/control-api/test/elp209-realtime.spec.ts": {
+      "after_sha256": "affcf5d046b76600329b2e55f7f5f2686e42d3537bd7372c1a60220b7a30a820",
+      "before_sha256": "fa77f431e446a097996ccff022ba8e68d18525d6bde29399584cb9f7d712a925"
+    },
+    "apps/control-api/test/elp210-native-core-runtime.spec.ts": {
+      "after_sha256": "b6439b7f8f07d3ee1a9042524c6dcbd389ca0d8b43e097ce55214f254d4fa054",
+      "before_sha256": null
+    },
+    "apps/control-api/test/elp210-native-frame-coupled.spec.ts": {
+      "after_sha256": "d729fc6fa6e2997d3f4c39f0012059887b879216066d6ae077fa4c55149b60be",
+      "before_sha256": "834a6636286cf7681dacbe1257e8eb26ca2e46b70bcda70a93d08fc687b550a6"
+    },
+    "apps/control-api/test/execution-realtime.spec.ts": {
+      "after_sha256": "165950e05ac4b64a48fbb835963821de01867f4d462d3641c9c4a48c8ec0fd65",
+      "before_sha256": "fac5a6d3702b902c22fa2e447c61eef29e38094e2b8ffe632a45ad8c389544be"
+    },
+    "apps/control-api/test/native-core-pool-profile.spec.ts": {
+      "after_sha256": "1fa7152adcdb69bd733ae568d8ee222cd1c521141826847f952114508d049df6",
+      "before_sha256": null
+    },
+    "apps/control-api/test/native-manager-preparation.spec.ts": {
+      "after_sha256": "88ac6bbedd8cbcff05c776b0b40d7728ca3a4b1675dce040cb47f398c69301c9",
+      "before_sha256": "6257f4a4b7e9fd934a083b5845d855d43d2239c6fce121776e2cdbe7a0a73fb4"
+    },
+    "apps/control-api/test/native-profile-realtime-mount.spec.ts": {
+      "after_sha256": "c07220f56fb82fe6dac847b557432bc73204be86ffdf093c928faec647d6fab5",
+      "before_sha256": null
+    },
+    "apps/control-api/test/profile-projection.spec.ts": {
+      "after_sha256": "338d4d994e04a49cef3cc2a6b6f27f0e8f3b37422dcbec677f03fea799c9e530",
+      "before_sha256": "9ac77b9ac90e748621d0c24fe88e6a4a642dd76287e2da1e141b113bf75dfe2c"
+    },
+    "apps/control-api/test/stable-native-rollback-pg.spec.ts": {
+      "after_sha256": "d7e3579356e8d94c31fe799067057da09807a3504af6924fb2b09aee99a093dd",
+      "before_sha256": null
+    },
+    "apps/control-api/test/stable-native-rollback.spec.ts": {
+      "after_sha256": "6b806e0bf4a9e89756caaa6a34fde2f4b6dd15806a8dcb228b20f16f8e63e057",
+      "before_sha256": null
+    }
+  },
+  "patch_sha256": "21b865a86cf151b3e44f23da6bcd205e87dfc0e62e506da0975a06004fe4cf41",
+  "qualification": {
+    "connected_acceptance": "NOT_MET",
+    "receipt": "qualification.json",
+    "status": "SOURCE_QUALIFIED"
+  },
+  "qualification_auxiliary_sources": {
+    "apps/control-api/tooling/generate-eds02-contract-source.mjs": "114dec24de0d29d4375642191bfc19475381e1cff08a9b371ab97aa2980701b7",
+    "apps/control-api/tooling/generate-eds11r-manager-relation-registry.mjs": "b03941506ba7384bc5d63a890c0ccd808875d9f3cd68bf22606405ad883f57c9",
+    "deploy/control-api/bootstrap-users.yaml": "f59617a7c1163f63222d3d0d0a0b83b776bae04765a98b540b4dbed7f7b4d632"
+  },
+  "qualified_source_manifest_sha256": "c9eb87f1ad69892c3f022f68193e6dbcc73d9b80d919650109fad00d28711771",
+  "review_decisions_sha256": "1cb2760518adeda2ebf3619ccca9f9c19c110172d2346f5cc4e61fdbd6d5bb1c",
+  "schema_version": "portal.epg10-08.qualified-source-handoff.v2",
+  "source_base": "e19ad906d713d59688390ca24affdf626e22e16f",
+  "source_file_count": 22
+}

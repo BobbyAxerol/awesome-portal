@@ -1,0 +1,2190 @@
+--- a/apps/control-api/src/app.module.ts
++++ b/apps/control-api/src/app.module.ts
+@@ -23,0 +24,4 @@
++import { composeNativeCore,nativeCoreManagerReadConsumer } from "./execution-v2/native-core-composition";
++import { NativeManagerReadConsumer } from "./execution-v2/native-manager-consumer";
++import { ScopedReplayCursorCodec } from "./execution-v2/scoped-replay-cursor";
++import type { ScopedReplayLimits } from "./execution-v2/realtime";
+@@ -92 +96 @@
+-import { ExecutionProfileRealtimeService } from "./execution/profile-realtime.service";
++import { ExecutionProfileRealtimeService, NATIVE_MANAGER_REALTIME_COORDINATOR } from "./execution/profile-realtime.service";
+@@ -248,0 +253,4 @@
++  /** Genuine private composition only; never reconstructed from HTTP or ENV. */
++  nativeManagerRead?: Awaited<ReturnType<typeof composeNativeCore>>;
++  /** Explicit private connected-budget input, not a public/env activation. */
++  nativeManagerRealtimeLimits?: ScopedReplayLimits;
+@@ -254,0 +263,2 @@
++    if (dependencies.nativeManagerRealtimeLimits !== undefined && dependencies.nativeManagerRead === undefined)
++      throw new Error("NATIVE_MANAGER_REALTIME_COMPOSITION_REQUIRED");
+@@ -563,0 +574,12 @@
++        ...(dependencies.nativeManagerRead!==undefined?[{
++          provide:NativeManagerReadConsumer,
++          useFactory:(operations:MaximumDataOperationService,scopes:ExecutionReadScopes,
++            repository:ExecutionProfileProjectionRepository,cfg:ControlApiConfig)=>nativeCoreManagerReadConsumer(
++            dependencies.nativeManagerRead!,pool,operations,dependencies,
++            dependencies.nativeManagerRealtimeLimits === undefined ? undefined : {
++              scopes, repository, limits: {...dependencies.nativeManagerRealtimeLimits},
++              codec:new ScopedReplayCursorCodec(cfg.QUERY_CURSOR_ACTIVE_KEY_ID,querySigningKeys(cfg),
++                Math.min(300_000,cfg.QUERY_CURSOR_TTL_SECONDS*1000)),
++            }),
++          inject:[MaximumDataOperationService,ExecutionReadScopes,ExecutionProfileProjectionRepository,CONTROL_API_CONFIG],
++        },{ provide:NATIVE_MANAGER_REALTIME_COORDINATOR, useExisting:NativeManagerReadConsumer }]:[]),
+--- a/apps/control-api/src/db/pool.ts
++++ b/apps/control-api/src/db/pool.ts
+@@ -6,0 +7 @@
++const corePoolProfiles = new WeakMap<Pool,string>();
+@@ -8 +9,20 @@
+-export function buildPool(connectionString: string): Pool {
++/** Explicit private installation bounds; never mutate a live cached pool. */
++export interface CorePoolProfile {
++  max:number; connectionTimeoutMillis:number; statement_timeout:number;
++  query_timeout:number; idle_in_transaction_session_timeout:number;
++}
++function reviewedCorePoolProfile(input:CorePoolProfile):CorePoolProfile {
++  const profile={max:input.max,connectionTimeoutMillis:input.connectionTimeoutMillis,
++    statement_timeout:input.statement_timeout,query_timeout:input.query_timeout,
++    idle_in_transaction_session_timeout:input.idle_in_transaction_session_timeout};
++  if(!Number.isSafeInteger(profile.max)||profile.max<1||profile.max>10||
++    [profile.connectionTimeoutMillis,profile.statement_timeout,profile.query_timeout,
++      profile.idle_in_transaction_session_timeout].some(n=>!Number.isSafeInteger(n)||n<1||n>60000)||
++    profile.query_timeout<=profile.statement_timeout)
++    throw new Error("CURRENT_HUMAN_CORE_POOL_PROFILE_INVALID");
++  return Object.freeze(profile);
++}
++
++export function buildPool(connectionString: string, input?:CorePoolProfile): Pool {
++  const profile=input===undefined?undefined:reviewedCorePoolProfile(input);
++  const fingerprint=profile===undefined?"LEGACY":JSON.stringify(profile);
+@@ -11 +31,5 @@
+-      !(existing as Pool & {ended:boolean}).ended) { sharedPool = existing; return existing; }
++      !(existing as Pool & {ended:boolean}).ended) {
++    if(profile!==undefined&&corePoolProfiles.get(existing)!==fingerprint)
++      throw new Error("CURRENT_HUMAN_CORE_POOL_PROFILE_MISMATCH");
++    sharedPool = existing; return existing;
++  }
+@@ -17,0 +42 @@
++      ...profile,
+@@ -19,0 +45 @@
++    corePoolProfiles.set(sharedPool,fingerprint);
+@@ -95,0 +122 @@
++  let discardClient = false;
+@@ -102 +129,2 @@
+-    await client.query("ROLLBACK");
++    try { await client.query("ROLLBACK"); }
++    catch { discardClient = true; }
+@@ -105 +133,2 @@
+-    client.release();
++    if(discardClient) client.release(true);
++    else client.release();
+--- a/apps/control-api/src/execution-v2/manager-observation-source.ts
++++ b/apps/control-api/src/execution-v2/manager-observation-source.ts
+@@ -26 +26 @@
+-function sourceDigest(selection:ManagerObservationSelection,head:ManagerObservationHead):string{
++export function managerObservationSourceSetDigest(selection:ManagerObservationSelection,head:ManagerObservationHead):string{
+@@ -45 +45 @@
+-  const head={...snapshot,sourceContractRevision:d.source_contract_revision},source_set_digest=sourceDigest(selection,head);
++  const head={...snapshot,sourceContractRevision:d.source_contract_revision},source_set_digest=managerObservationSourceSetDigest(selection,head);
+@@ -85 +85 @@
+-      if(sourceDigest(s,head)!==binding.source_set_digest)return invalid("SCOPE_CHANGED");
++      if(managerObservationSourceSetDigest(s,head)!==binding.source_set_digest)return invalid("SCOPE_CHANGED");
+--- a/apps/control-api/src/execution-v2/native-core-composition.ts
++++ b/apps/control-api/src/execution-v2/native-core-composition.ts
+@@ -17,0 +18,2 @@
++import { NativeManagerReadConsumer, type NativeManagerRealtimeOptions } from "./native-manager-consumer";
++import type { MaximumDataOperationService } from "../execution/maximum-data-operation.service";
+@@ -35,0 +38,19 @@
++}
++const managerBindings=new WeakMap<object,{
++  pool:Pool;trust:AccessTrustProvider;mutations:CurrentHumanMutations;
++  selections:readonly NativeCoreSelection[];
++}>();
++
++/** Private app DI only: select the genuine composition and the SAME authority,
++ * pool and recovery coordinator. A copied/fake object cannot mount a reader.
++ * This does not install policies, start a source or authorize any request. */
++export function nativeCoreManagerReadConsumer(
++  composition:Awaited<ReturnType<typeof composeNativeCore>>,pool:Pool,
++  operations:MaximumDataOperationService,
++  dependencies:{executionAccessTrust?:AccessTrustProvider;currentHumanMutations?:CurrentHumanMutations},
++  realtime?:NativeManagerRealtimeOptions,
++):NativeManagerReadConsumer{
++  const binding=managerBindings.get(composition);
++  if(!binding||binding.pool!==pool||binding.trust!==dependencies.executionAccessTrust||
++    binding.mutations!==dependencies.currentHumanMutations)return invalid();
++  return new NativeManagerReadConsumer(pool,operations,composition,binding.selections,realtime);
+@@ -128 +149 @@
+-  return Object.freeze({
++  const composition=Object.freeze({
+@@ -144,0 +166,3 @@
++  managerBindings.set(composition,{pool,trust,mutations,
++    selections:Object.freeze(active.map(entry=>Object.freeze({selector:entry.selector,config:entry.config})))});
++  return composition;
+--- /dev/null
++++ b/apps/control-api/src/execution-v2/native-core-runtime.ts
+@@ -0,0 +1,166 @@
++/** Private original08 runtime-reference adapter. Configuration selects existing
++ * components; it never installs policy, creates authority or opens a listener.
++ * Root-only owner artifacts remain offline and are never read by this module. */
++import { constants } from "node:fs";
++import { lstat, open } from "node:fs/promises";
++import { createHash } from "node:crypto";
++import { isAbsolute, normalize } from "node:path";
++import { importPKCS8, exportJWK, type KeyLike } from "jose";
++import { z } from "zod";
++import type { Pool } from "pg";
++import type { CorePoolProfile } from "../db/pool";
++import type { ControlApiDependencies } from "../app.module";
++import { captureNativeBusinessReadSelectedPins } from "./native-business-read-codec";
++import { SelectedNativeBusinessReadSource } from "./native-business-read-selected-source";
++import { composeNativeCore, type NativeCoreSelection, type NativeCoreCompositionInput } from "./native-core-composition";
++import { unqualifiedAccessTrust } from "./access-trust";
++
++export class NativeCoreRuntimeError extends Error {
++  readonly code="CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID";
++  constructor(){super("The private native Core configuration is not available.");}
++}
++const fail=():never=>{throw new NativeCoreRuntimeError();};
++const text=z.string().min(1).max(256).refine(v=>!/[\u0000-\u001f\u007f]/u.test(v));
++const hash=z.string().length(64).regex(/^[a-f0-9]{64}$/);
++const path=z.string().min(1).max(4096).refine(v=>isAbsolute(v)&&normalize(v)===v&&!/[\u0000-\u001f\u007f]/u.test(v));
++const ref=z.object({path,sha256:hash}).strict();
++export type NativeCoreRuntimeReference=z.infer<typeof ref>;
++const positive=z.number().int().positive().safe();
++const boundedMs=positive.max(60000);
++const environment=z.enum(["paper","sandbox","live"]);
++const domain=z.object({profile_id:text,catalogue_sha256:hash,profile_sha256:hash,field_policy_sha256:hash}).strict();
++const poolProfile=z.object({max:positive.max(10),connectionTimeoutMillis:boundedMs,
++  statement_timeout:boundedMs,query_timeout:boundedMs,idle_in_transaction_session_timeout:boundedMs})
++  .strict().refine(p=>p.query_timeout>p.statement_timeout);
++const selector=z.object({portal_user_id:text,human_issuer:text,subject:text,workspace_id:text,environment,domain}).strict();
++const source=z.object({
++  transport:z.object({origin:text,tls:z.object({ca_ref:ref,cert_ref:ref,key_ref:ref}).strict(),
++    pm_leaf_sha256:z.string().length(71).regex(/^sha256:[a-f0-9]{64}$/),workload_id:text,
++    deadline_ms:positive,request_bytes:positive,response_bytes:positive,max_inflight:positive}).strict(),
++  pins:z.unknown().transform(value=>captureNativeBusinessReadSelectedPins(value)),
++  installation_expires_at_utc_ms:positive,
++}).strict();
++const selection=z.object({selector,config:z.object({
++  issuer:text,audience:text,key_id:text,private_key_ref:ref,selected_source:source,
++  limits:z.object({ttl_ms:positive,maximum_unresolved:positive,maximum_retained:positive}).strict(),
++  installation_scope:z.object({workspace_id:text,environment,valid_until_ms:positive}).strict(),
++  terminal:z.object({issuer:text,audience:text,key_id:text,private_key_ref:ref,ttl_seconds:positive}).strict(),
++  egress:z.object({maximum_response_bytes:positive,maximum_inflight:positive,send_timeout_ms:positive,quiesce_timeout_ms:positive}).strict(),
++}).strict()}).strict();
++const target=z.object({database_name:text,database_system_identifier:z.string().regex(/^[0-9]{1,20}$/),
++  role_name:text,protected_owner_user_id:text,workspace_id:text,
++  principal_workspace_pins:z.array(z.object({user_id:text,workspace_id:text}).strict()).min(1).max(65)}).strict();
++const ownerIntake=z.object({artifact_path:path,approved_sha256:hash,target,
++  intake_not_before_ms:z.number().int().nonnegative().safe(),intake_not_after_ms:positive}).strict()
++  .refine(p=>p.intake_not_before_ms<p.intake_not_after_ms);
++const realtimeLimits=z.object({maximumClients:positive.max(4096),maximumEntriesPerClient:positive.max(4096),
++  maximumFrameBytes:positive.max(1048576),maximumClientBytes:positive,
++  maximumTotalBytes:positive.max(64*1048576),maximumNoticesPerRead:positive.max(200),readTimeoutMs:boundedMs})
++  .strict().refine(v=>v.maximumClientBytes>=v.maximumFrameBytes&&v.maximumTotalBytes>=v.maximumClientBytes);
++const manifest=z.object({schema_version:z.literal("portal.native-core-runtime.v1"),pool_profile:poolProfile,
++  realtime_limits:realtimeLimits.optional(),
++  composition:z.object({expected_workload_id:text,selections:z.array(selection).min(1).max(64),
++    retained_recovery:z.array(selection).max(63),owner_intakes:z.array(ownerIntake).min(1).max(2),
++    mutation_limits:z.object({maximum_intents:positive.max(4096),maximum_recoveries_per_request:positive.max(16)}).strict(),
++  }).strict().refine(c=>c.selections.length+c.retained_recovery.length<=64),
++}).strict();
++
++/** The only new env pair. Empty, partial or malformed values fail closed.
++ * Existing loadConfig remains unchanged and never receives secret values. */
++export function nativeCoreRuntimeReference(env:NodeJS.ProcessEnv=process.env):NativeCoreRuntimeReference|undefined {
++  const file=env.CONTROL_API_NATIVE_CORE_CONFIG_FILE,sha=env.CONTROL_API_NATIVE_CORE_CONFIG_SHA256;
++  if(file===undefined&&sha===undefined)return undefined;
++  try{return ref.parse({path:file,sha256:sha});}catch{return fail();}
++}
++
++/** Fixed source-boundary caps, not inferred production capacity budgets. */
++const CONFIG_BYTES=131072,TLS_BYTES=32768,KEY_BYTES=16384;
++async function readReference(input:NativeCoreRuntimeReference,maximumBytes:number):Promise<Buffer>{
++  const uid=process.geteuid?.();
++  if(uid===undefined)return fail();
++  const pin=ref.parse(input),before=await lstat(pin.path);
++  const eligible=(s:typeof before)=>s.isFile()&&!s.isSymbolicLink()&&s.uid===uid&&
++    ((s.mode&0o7777)===0o400||(s.mode&0o7777)===0o600)&&s.size>0&&s.size<=maximumBytes;
++  if(!eligible(before))return fail();
++  const file=await open(pin.path,constants.O_RDONLY|constants.O_NOFOLLOW);
++  const buffer=Buffer.alloc(maximumBytes+1);
++  let length=0,success=false;
++  try{
++    const actual=await file.stat();
++    if(!eligible(actual)||actual.dev!==before.dev||actual.ino!==before.ino||actual.size!==before.size)return fail();
++    while(length<buffer.length){
++      const part=await file.read(buffer,length,buffer.length-length,null);
++      if(part.bytesRead===0)break;
++      length+=part.bytesRead;
++    }
++    const after=await file.stat();
++    if(!eligible(after)||after.dev!==actual.dev||after.ino!==actual.ino||after.size!==actual.size||
++      length!==actual.size||length>maximumBytes||createHash("sha256").update(buffer.subarray(0,length)).digest("hex")!==pin.sha256)return fail();
++    success=true;return buffer.subarray(0,length);
++  }finally{await file.close();if(!success)buffer.fill(0);}
++}
++async function signingKey(pin:NativeCoreRuntimeReference):Promise<KeyLike>{
++  const bytes=await readReference(pin,KEY_BYTES);
++  try{
++    const key=await importPKCS8(bytes.toString("utf8"),"EdDSA"),jwk=await exportJWK(key);
++    if(jwk.kty!=="OKP"||jwk.crv!=="Ed25519"||typeof jwk.d!=="string")return fail();
++    return key;
++  }finally{bytes.fill(0);}
++}
++async function hydrate(entry:z.infer<typeof selection>):Promise<NativeCoreSelection>{
++  const c=entry.config,s=c.selected_source,t=s.transport;
++  const ca=await readReference(t.tls.ca_ref,TLS_BYTES);
++  let cert:Buffer|undefined,key:Buffer|undefined;
++  try{
++    cert=await readReference(t.tls.cert_ref,TLS_BYTES);key=await readReference(t.tls.key_ref,KEY_BYTES);
++    const selected_source=new SelectedNativeBusinessReadSource({
++      ...s,transport:{origin:t.origin,tls:{ca,cert,key},pm_leaf_sha256:t.pm_leaf_sha256,
++        workload_id:t.workload_id,deadline_ms:t.deadline_ms,request_bytes:t.request_bytes,
++        response_bytes:t.response_bytes,max_inflight:t.max_inflight}});
++    const {private_key_ref,selected_source:_source,terminal,...rest}=c;
++    const {private_key_ref:terminalRef,...terminalRest}=terminal;
++    return{selector:entry.selector,config:{...rest,private_key:await signingKey(private_key_ref),selected_source,
++      terminal:{...terminalRest,private_key:await signingKey(terminalRef)}}};
++  }finally{ca.fill(0);cert?.fill(0);key?.fill(0);}
++}
++export interface PreparedNativeCoreRuntime {
++  readonly poolProfile:CorePoolProfile;
++  compose(pool:Pool):Promise<ControlApiDependencies>;
++}
++export async function prepareNativeCoreRuntime(input:NativeCoreRuntimeReference):Promise<PreparedNativeCoreRuntime>{
++  try{
++    const bytes=await readReference(input,CONFIG_BYTES);
++    let parsed:z.infer<typeof manifest>;
++    try{
++      const value:unknown=JSON.parse(bytes.toString("utf8"));
++      if(!Buffer.from(JSON.stringify(value),"utf8").equals(bytes))return fail();
++      parsed=manifest.parse(value);
++    }finally{bytes.fill(0);}
++    const selections:NativeCoreSelection[]=[],retained:NativeCoreSelection[]=[];
++    // Sequential bounded construction: no source request, Core DB query,
++    // listener, owner-artifact read, policy installation or background job.
++    for(const entry of parsed.composition.selections)selections.push(await hydrate(entry));
++    for(const entry of parsed.composition.retained_recovery)retained.push(await hydrate(entry));
++    const compositionInput:NativeCoreCompositionInput={...parsed.composition,selections,retained_recovery:retained};
++    const profile=Object.freeze({...parsed.pool_profile});
++    return Object.freeze({poolProfile:profile,compose:async(pool:Pool)=>{
++      try{
++        const composed=await composeNativeCore(pool,unqualifiedAccessTrust,compositionInput);
++        // Constructors above validate the SAME already-bounded pool. Target
++        // metadata is not proof of where this connection actually points.
++        const actual=await pool.query<{database_name:string;role_name:string;session_role_name:string;database_system_identifier:string}>(
++          "SELECT current_database() AS database_name,current_user AS role_name,session_user AS session_role_name,(pg_control_system()).system_identifier::text AS database_system_identifier");
++        const observed=actual.rows[0];
++        if(actual.rowCount!==1||!observed||compositionInput.owner_intakes.some(({target})=>
++          observed.database_name!==target.database_name||observed.database_system_identifier!==target.database_system_identifier||
++          observed.role_name!==target.role_name||observed.session_role_name!==target.role_name))return fail();
++        // AppModule's existing private factory verifies SAME pool/trust/mutation
++        // and genuine composition provenance. Never construct another consumer
++        // here or expose an unrecognized dependency property that mounts nothing.
++        return Object.freeze({...composed.dependencies,nativeManagerRead:composed,
++          ...(parsed.realtime_limits===undefined?{}:{nativeManagerRealtimeLimits:Object.freeze({...parsed.realtime_limits})})
++        }) satisfies ControlApiDependencies;
++      }catch{return fail();}
++    }});
++  }catch{return fail();}
++}
+--- a/apps/control-api/src/execution-v2/native-manager-consumer.ts
++++ b/apps/control-api/src/execution-v2/native-manager-consumer.ts
+@@ -18 +18 @@
+-import type { AccessActor } from "./access.contract";
++import type { AccessActor, ManagerDomainReadDecision } from "./access.contract";
+@@ -23 +23,11 @@
+-import { managerNativeReplayContext,type AuthorizedManagerNativeNoticeScope } from "./read-scope";
++import { ExecutionReadScopes,managerNativeReplayContext,type AuthorizedManagerNativeNoticeScope } from "./read-scope";
++import { ScopedReplayHub, type ScopedReplayLimits } from "./realtime";
++import { ScopedReplayCursorCodec,ScopedReplayError,encodeScopedReplayContinuation,
++  decodeScopedReplayContinuationWithBinding } from "./scoped-replay-cursor";
++import { ManagerObservationNoticeSource,managerObservationBaseline,managerObservationQueryDigest,
++  managerObservationSourceSetDigest,MANAGER_OBSERVATION_BASELINE_MODEL,MANAGER_OBSERVATION_STREAM_MODEL,
++  type ManagerObservationSelection } from "./manager-observation-source";
++import { decodeManagerObservationCoordinate } from "./manager-observation-coordinate";
++import type { ScopedReplayBinding } from "./realtime.contract";
++import type { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
++import type { ExecutionProfileRealtimeService } from "../execution/profile-realtime.service";
+@@ -28 +38,6 @@
+-  ttl_ms:number; installation_until_ms:number; maximum_response_bytes:number }>;
++  ttl_ms:number; installation_until_ms:number; maximum_response_bytes:number;
++  observation?:Readonly<{selection:ManagerObservationSelection;query_digest:string;reader:ManagerObservationNoticeSource}> }>;
++export interface NativeManagerRealtimeOptions {
++  scopes:ExecutionReadScopes;repository:ExecutionProfileProjectionRepository;
++  codec:ScopedReplayCursorCodec;limits:ScopedReplayLimits;
++}
+@@ -45,0 +61,5 @@
++  private readonly realtime?:Readonly<Omit<NativeManagerRealtimeOptions,"limits"> & {hub:ScopedReplayHub}>;
++  private realtimeStopped=false;
++  private realtimePreparations=0;
++  private realtimePreparationIdle=Promise.resolve();
++  private resolveRealtimePreparationIdle?:()=>void;
+@@ -47 +67 @@
+-    private readonly composition:Composition, selections:readonly NativeCoreSelection[]) {
++    private readonly composition:Composition, selections:readonly NativeCoreSelection[], realtime?:NativeManagerRealtimeOptions) {
+@@ -57,0 +78,4 @@
++      const observationSelection:ManagerObservationSelection=Object.freeze({workspace_id:selector.workspace_id,
++        environment:selector.environment,profile_id:selector.domain.profile_id,source_identity_digest:source.source_identity_digest,
++        source_contract_revision:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceContractRevision,
++        source_catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256});
+@@ -63 +87,4 @@
+-        maximum_response_bytes:entry.config.egress.maximum_response_bytes}));
++        maximum_response_bytes:entry.config.egress.maximum_response_bytes,
++        ...(realtime&&source.domain.catalogue_sha256===raw(MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256)?{observation:Object.freeze({selection:observationSelection,
++          query_digest:managerObservationQueryDigest(observationSelection),
++          reader:new ManagerObservationNoticeSource(realtime.repository,observationSelection,realtime.limits.maximumNoticesPerRead)})}:{})}));
+@@ -65,0 +93,12 @@
++    if(realtime){
++      const hub=new ScopedReplayHub({read:async(binding,after,limit,signal)=>{
++        const matches=this.entries.filter(e=>e.observation?.query_digest===binding.query_digest&&
++          e.selector.workspace_id===binding.workspace_id&&e.selector.environment===binding.environment&&
++          e.selector.domain.profile_id===binding.profile_id);
++        if(!matches.length||matches.some(e=>accessDigest(e.observation!.selection)!==
++          accessDigest(matches[0]!.observation!.selection)))throw new ScopedReplayError("SCOPE_CHANGED");
++        return matches[0]!.observation!.reader.read(binding,after,limit,signal);
++      }},realtime.codec,realtime.limits,{candidate:composition.selectedCandidate(entries[0]!.selector),
++        scopes:realtime.scopes,selectManagerCandidate:scope=>this.managerNoticeCandidate(scope)});
++      this.realtime=Object.freeze({scopes:realtime.scopes,repository:realtime.repository,codec:realtime.codec,hub});
++    }
+@@ -92,9 +131 @@
+-    const candidates=this.entries.filter(e=>e.selector.portal_user_id===principal.user.userId&&
+-      e.selector.workspace_id===principal.workspaceId&&e.selector.environment===query.environment&&
+-      e.source.domain.profile_id===selected.profile_id&&e.source.domain.catalogue_sha256===raw(selected.catalogue_sha256));
+-    if(candidates.length!==1)throw denied();
+-    const entry=candidates[0]!;
+-    if(principal.session.userId!==principal.user.userId||principal.session.state!=="ACTIVE"||
+-      principal.user.status!=="ACTIVE"||principal.user.mustChangePassword||principal.user.archivedAt!==null||
+-      principal.session.sessionVersion!==principal.user.sessionVersion||
+-      entry.source.binding.subject!==principal.user.userId||entry.source.human.portal_user_id!==principal.user.userId)throw denied();
++    const entry=this.selectedEntry(principal,query.environment,selected.profile_id,selected.catalogue_sha256);
+@@ -105,2 +136 @@
+-    const candidate=this.composition.selectedCandidate(entry.selector);
+-    if(!candidate.usesPool(this.pool))throw unavailable();
++    const candidate=this.candidate(entry);
+@@ -111,0 +142,132 @@
++    if(decision.actor.user_id!==actor.user_id||decision.actor.session_id!==actor.session_id||
++      decision.actor.session_generation!==actor.session_generation||
++      decision.field_policy_sha256!==entry.source.domain.field_policy_sha256)throw denied();
++    return this.deliver(entry,candidate,principal,query,decision,nativeEpochDigest,selected.operation_id,dto,reply);
++  }
++
++  /** Same captured snapshot -> READ-baseline token, not an app STREAM grant.
++   * The existing finite JSON body is unchanged; only opt-in protocol headers
++   * are additive. No source fetch, latest-head rebaseline or entity ROOT. */
++  async serveProfileSnapshot(principal:MaximumDataOperationPrincipal,environment:"paper"|"sandbox"|"live",profileId:string,
++    local:ExecutionProfileRealtimeService,reply:FastifyReply):Promise<boolean>{
++    principal=structuredClone(principal);
++    if(!this.knownPeople.has(principal.user.userId))return false;
++    const finish=this.beginRealtimePreparation();
++    try{
++    const entry=this.selectedEntry(principal,environment,profileId,MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256);
++    const rt=this.realtime,query={environment,limit:200};
++    const {decision,nativeEpochDigest}=await this.operations.currentNativeManagerRead(this.pool,principal,
++      {kind:"OBSERVATION"},query,entry.selectedSource);
++    if(this.realtimeStopped)throw unavailable();
++    const prepared=await local.prepareSnapshot(principal.workspaceId,environment,profileId);
++    if(this.realtimeStopped)throw unavailable();
++    // Native Candidate owns raw HTTP, not Fastify's deferred header writer.
++    if(rt){
++      const baseline=managerObservationBaseline(prepared.snapshot,entry.observation!.selection);
++      const binding=this.observationBinding(principal,entry,{policy_revision:decision.policy_revision,
++        field_policy_ref:decision.field_policy_ref,read_scope_digest:decision.scope_digest},baseline);
++      const cursor=encodeScopedReplayContinuation(rt.codec,binding,baseline.source_cursor);
++      reply.raw.setHeader("X-Portal-Realtime-State","NATIVE_SCOPED_BASELINE_V1");
++      reply.raw.setHeader("X-Portal-Realtime-Cursor",cursor);
++    }else{
++      reply.raw.setHeader("X-Portal-Realtime-State","NATIVE_SCOPED_STREAM_UNAVAILABLE");
++    }
++    return await this.deliver(entry,this.candidate(entry),principal,query,decision,nativeEpochDigest,
++      "portal.manager-observation.snapshot.v1",prepared.envelope,reply);
++    }finally{finish();}
++  }
++
++  /** Existing route; current STREAM is independent of the READ-baseline token.
++   * All checks/opaque decoding precede Hub registration and HTTP ownership. */
++  async serveProfileStream(principal:MaximumDataOperationPrincipal,environment:"paper"|"sandbox"|"live",profileId:string,
++    token:string|undefined,reply:FastifyReply):Promise<boolean>{
++    principal=structuredClone(principal);
++    if(!this.knownPeople.has(principal.user.userId))return false;
++    const finish=this.beginRealtimePreparation();
++    try{
++    const entry=this.selectedEntry(principal,environment,profileId,MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256);
++    const rt=this.requiredRealtime();
++    if(!token)throw new ScopedReplayError("SNAPSHOT_REQUIRED");
++    const current=()=>rt.scopes.authorizeManagerNativeStream(principal,{environment,profileId},entry.selectedSource);
++    const scope=await current();
++    if(this.realtimeStopped)throw unavailable();
++    const context=managerNativeReplayContext(scope);
++    const head=await rt.repository.snapshotMetadata(principal.workspaceId,environment,profileId);
++    if(this.realtimeStopped)throw unavailable();
++    if(!head)throw new ScopedReplayError("SOURCE_UNAVAILABLE");
++    const resolve=(source:string,stream:boolean):ScopedReplayBinding=>{
++      const coordinate=decodeManagerObservationCoordinate(source);
++      if(coordinate.projection_epoch!==head.projectionEpoch)throw new ScopedReplayError("GENERATION_CHANGED");
++      if(!Number.isSafeInteger(head.projectionSequence)||coordinate.after_sequence>head.projectionSequence)
++        throw new ScopedReplayError("SOURCE_COVERAGE_UNPROVED");
++      const baseline={snapshot_id:coordinate.original_snapshot_id,
++        source_set_digest:managerObservationSourceSetDigest(entry.observation!.selection,head),
++        source_continuity_epoch:coordinate.projection_epoch,projection_generation:coordinate.projection_epoch};
++      const binding=this.observationBinding(principal,entry,context,baseline);
++      return stream?{...binding,principal_scope_digest:context.principal_scope_digest,model_revision:MANAGER_OBSERVATION_STREAM_MODEL}:binding;
++    };
++    // Purpose attempts authenticate the SAME closed token; no alternate source
++    // or authorization fallback. Fresh READ baseline and resumed STREAM differ.
++    let decoded:ReturnType<typeof decodeScopedReplayContinuationWithBinding>;
++    try{decoded=decodeScopedReplayContinuationWithBinding(rt.codec,token,source=>resolve(source,false));}
++    catch(error){
++      if(!(error instanceof ScopedReplayError))throw error;
++      decoded=decodeScopedReplayContinuationWithBinding(rt.codec,token,source=>resolve(source,true));
++    }
++    const binding=resolve(decoded.source,true);
++    const continuation=encodeScopedReplayContinuation(rt.codec,binding,decoded.source);
++    if(reply.raw.headersSent||reply.raw.destroyed||reply.raw.writableEnded)throw unavailable();
++    const subscription=await rt.hub.subscribeNative({kind:"MANAGER",binding,response:reply.raw,current,
++      baselineCursor:decoded.source,lastEventId:continuation});
++    const close=()=>{subscription.close();reply.raw.removeListener("close",close);};
++    reply.raw.once("close",close);
++    if(reply.raw.destroyed||reply.raw.writableEnded){close();return true;}
++    try { reply.hijack(); } catch (error) { close(); throw error; }
++    return true;
++    }finally{finish();}
++  }
++  hasRealtimeClients():boolean{return !!this.realtime&&!this.realtimeStopped&&this.realtime.hub.diagnostics().clients>0;}
++  async pollRealtime():Promise<void>{if(this.hasRealtimeClients())await this.realtime!.hub.poll();}
++  stopRealtime():Promise<void>{
++    this.realtimeStopped=true;
++    const drain=this.realtime?.hub.drain()??Promise.resolve();
++    return Promise.all([this.realtimePreparationIdle,drain]).then(()=>undefined);
++  }
++  private beginRealtimePreparation():()=>void{
++    if(this.realtimeStopped)throw unavailable();
++    if(this.realtimePreparations++===0)this.realtimePreparationIdle=new Promise(resolve=>{this.resolveRealtimePreparationIdle=resolve;});
++    return ()=>{if(--this.realtimePreparations===0){this.resolveRealtimePreparationIdle?.();this.resolveRealtimePreparationIdle=undefined;}};
++  }
++  private requiredRealtime(){if(this.realtimeStopped||!this.realtime)throw unavailable();return this.realtime;}
++  private selectedEntry(principal:MaximumDataOperationPrincipal,environment:"paper"|"sandbox"|"live",profileId:string,catalogue:string):Entry{
++    const matches=this.entries.filter(e=>e.selector.portal_user_id===principal.user.userId&&
++      e.selector.workspace_id===principal.workspaceId&&e.selector.environment===environment&&
++      e.source.domain.profile_id===profileId&&e.source.domain.catalogue_sha256===raw(catalogue));
++    if(matches.length!==1)throw denied();
++    const entry=matches[0]!;
++    if(principal.session.userId!==principal.user.userId||principal.session.state!=="ACTIVE"||
++      principal.user.status!=="ACTIVE"||principal.user.mustChangePassword||principal.user.archivedAt!==null||
++      principal.session.sessionVersion!==principal.user.sessionVersion||entry.source.binding.subject!==principal.user.userId||
++      entry.source.human.portal_user_id!==principal.user.userId)throw denied();
++    return entry;
++  }
++  private candidate(entry:Entry){const candidate=this.composition.selectedCandidate(entry.selector);
++    if(!candidate.usesPool(this.pool))throw unavailable();return candidate;}
++  private observationBinding(principal:MaximumDataOperationPrincipal,entry:Entry,
++    proof:{policy_revision:string;field_policy_ref:string;read_scope_digest:string},
++    baseline:Pick<ScopedReplayBinding,"snapshot_id"|"source_set_digest"|"source_continuity_epoch"|"projection_generation">):ScopedReplayBinding{
++    return {workspace_id:principal.workspaceId,environment:entry.selector.environment,profile_id:entry.source.domain.profile_id,
++      principal_scope_digest:accessDigest({schema_version:"portal.manager-observation.read-baseline-scope.v1",
++        actor:{user_id:principal.user.userId,session_id:principal.session.sessionId,session_generation:principal.session.sessionVersion},
++        viewer_workspace_id:principal.viewerWorkspaceId??null,read_scope_digest:proof.read_scope_digest}),
++      app_policy_revision:proof.policy_revision,field_policy_revision:proof.field_policy_ref,
++      model_revision:MANAGER_OBSERVATION_BASELINE_MODEL,schema_revision:"portal.execution.scoped-realtime.v1",
++      dataset:"execution_profile_observation",query_digest:entry.observation!.query_digest,window:null,
++      snapshot_id:baseline.snapshot_id,source_set_digest:baseline.source_set_digest,
++      source_continuity_epoch:baseline.source_continuity_epoch,projection_generation:baseline.projection_generation};
++  }
++  private async deliver(entry:Entry,candidate:ReturnType<Composition["selectedCandidate"]>,principal:MaximumDataOperationPrincipal,
++    query:MaximumDataDeploymentQuery,decision:ManagerDomainReadDecision,nativeEpochDigest:string,
++    operationId:string,dto:unknown,reply:FastifyReply):Promise<boolean>{
++    const actor:AccessActor={user_id:principal.user.userId,session_id:principal.session.sessionId,
++      session_generation:principal.session.sessionVersion};
+@@ -133 +295 @@
+-      operation_id:selected.operation_id,query:{environment:query.environment,limit:query.limit,cursor:query.cursor??null},
++      operation_id:operationId,query:{environment:query.environment,limit:query.limit,cursor:query.cursor??null},
+--- a/apps/control-api/src/execution-v2/realtime.ts
++++ b/apps/control-api/src/execution-v2/realtime.ts
+@@ -91,3 +91 @@
+-  private readonly flights=new Map<string,Promise<EdgeScopedNoticeBatch>>();
+-  /** Original source promises, never the timeout/abort race returned to pollers. */
+-  private readonly sourceSettlements=new Set<Promise<EdgeScopedNoticeBatch>>();
++  private readonly flights=new Map<string,{result:Promise<EdgeScopedNoticeBatch>;settled:Promise<void>}>();
+@@ -97,0 +96,3 @@
++  private operations=0;
++  private operationIdle=Promise.resolve();
++  private resolveOperationIdle?:()=>void;
+@@ -112,0 +114 @@
++    const finish=this.beginOperation();
+@@ -125 +127 @@
+-    }finally{this.pending--;}
++    }finally{this.pending--;finish();}
+@@ -135,0 +138 @@
++    const finish=this.beginOperation();
+@@ -161,0 +165 @@
++      finish();
+@@ -166 +170,3 @@
+-    await Promise.all([...this.clients.values()].map(c=>this.pollClient(c)));
++    const finish=this.beginOperation();
++    try{await Promise.all([...this.clients.values()].map(c=>this.pollClient(c)));}
++    finally{finish();}
+@@ -178,4 +184,9 @@
+-  /** Private lifecycle join only. Stop remains synchronous and pollers settle
+-   * promptly, but source teardown/pool shutdown must wait for the original
+-   * source calls, including providers that ignored abort. This is not a source
+-   * ACK or a native-custody/transport settlement proof. No timeout frees slots. */
++  /** App shutdown joins ACTUAL source work, not the timeout/abort race. A
++   * non-cooperating source keeps its bounded slot until it really settles. */
++  async drain():Promise<void>{
++    this.stop();
++    await this.operationIdle;
++    await Promise.all([...this.flights.values()].map(flight=>flight.settled));
++  }
++  /** Existing Core lifecycle API. Join original source work, not the aborted
++   * poller promise. The same retained flights also back full Hub drain. */
+@@ -184 +195,5 @@
+-    await Promise.allSettled([...this.sourceSettlements]);
++    await Promise.all([...this.flights.values()].map(flight=>flight.settled));
++  }
++  private beginOperation():()=>void{
++    if(this.operations++===0)this.operationIdle=new Promise(resolve=>{this.resolveOperationIdle=resolve;});
++    return ()=>{if(--this.operations===0){this.resolveOperationIdle?.();this.resolveOperationIdle=undefined;}};
+@@ -253 +268 @@
+-    const existing=this.flights.get(key);if(existing)return existing;
++    const existing=this.flights.get(key);if(existing)return existing.result;
+@@ -271,3 +286 @@
+-    this.flights.set(key,result);
+-    this.sourceSettlements.add(source);
+-    void source.finally(()=>{
++    const settled=source.then(()=>undefined,()=>undefined).finally(()=>{
+@@ -276,2 +289,2 @@
+-      this.sourceSettlements.delete(source);
+-    }).catch(()=>undefined);
++    });
++    this.flights.set(key,{result,settled});
+--- a/apps/control-api/src/execution/maximum-data-operation.controller.ts
++++ b/apps/control-api/src/execution/maximum-data-operation.controller.ts
+@@ -1,2 +1,2 @@
+-import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
+-import { FastifyRequest } from "fastify";
++import { Controller, Get, Inject, Optional, Param, Query, Req, Res, UseGuards } from "@nestjs/common";
++import { FastifyRequest, type FastifyReply } from "fastify";
+@@ -11,0 +12 @@
++import { NativeManagerReadConsumer } from "../execution-v2/native-manager-consumer";
+@@ -38,0 +40 @@
++    @Optional() @Inject(NativeManagerReadConsumer) private readonly nativeRead?: NativeManagerReadConsumer,
+@@ -42 +44,2 @@
+-  async deployments(@Req() request: MaximumDataRequest, @Query() raw: unknown) {
++  async deployments(@Req() request: MaximumDataRequest, @Query() raw: unknown,
++    @Res({passthrough:true}) reply?:FastifyReply) {
+@@ -47,0 +51,9 @@
++    }
++    if(this.nativeRead){
++      if(!reply)throw new MaximumDataOperationError("NATIVE_MANAGER_READ_UNAVAILABLE",503);
++      if(await this.nativeRead.serve({
++        principal:{user:request.portalUser,session:request.portalSession,workspaceId,
++          viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId},
++        operation:{kind:"DEPLOYMENTS"},query:{environment:query.data.environment,limit:query.data.limit,
++          ...(query.data.cursor?{cursor:query.data.cursor}:{})},
++      },reply))return;
+@@ -78,0 +91 @@
++    @Res({passthrough:true}) reply?:FastifyReply,
+@@ -87,0 +101,9 @@
++    }
++    if(this.nativeRead){
++      if(!reply)throw new MaximumDataOperationError("NATIVE_MANAGER_READ_UNAVAILABLE",503);
++      if(await this.nativeRead.serve({
++        principal:{user:request.portalUser,session:request.portalSession,workspaceId,
++          viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId},
++        operation:{kind:"RELATION",route_id:operationId},query:{environment:query.data.environment,limit:query.data.limit,
++          ...(query.data.cursor?{cursor:query.data.cursor}:{})},
++      },reply))return;
+--- a/apps/control-api/src/execution/maximum-data-operation.service.ts
++++ b/apps/control-api/src/execution/maximum-data-operation.service.ts
+@@ -197,2 +197,2 @@
+-  async prepareNativeManagerPage(expectedPool:Pool,principal:MaximumDataOperationPrincipal,
+-    operation:NativeManagerOperation,query:MaximumDataDeploymentQuery,source:SelectedNativeBusinessReadSource){
++  async currentNativeManagerRead(expectedPool:Pool,principal:MaximumDataOperationPrincipal,
++    operation:NativeManagerOperation|{kind:"OBSERVATION"},query:MaximumDataDeploymentQuery,source:SelectedNativeBusinessReadSource){
+@@ -203 +203 @@
+-    if(operation.kind!=="DEPLOYMENTS"&&!relation||!Number.isInteger(query.limit)||query.limit<1||query.limit>200||
++    if(operation.kind!=="DEPLOYMENTS"&&operation.kind!=="OBSERVATION"&&!relation||!Number.isInteger(query.limit)||query.limit<1||query.limit>200||
+@@ -207,4 +207,4 @@
+-    const profile=operation.kind==="DEPLOYMENTS"?maximumDataDeploymentBinding(query.environment).profileId:
+-      managerRelationProfileBinding(query.environment).profileId;
+-    const catalogue=operation.kind==="DEPLOYMENTS"?MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256:
+-      MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
++    const profile=operation.kind==="RELATION"?managerRelationProfileBinding(query.environment).profileId:
++      maximumDataDeploymentBinding(query.environment).profileId;
++    const catalogue=operation.kind==="RELATION"?MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest:
++      MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256;
+@@ -236 +236,2 @@
+-      operation_id:operation.kind==="DEPLOYMENTS"?MAXIMUM_DATA_DEPLOYMENT_OPERATION.logicalOperationId:relation!.operationId,
++      operation_id:operation.kind==="OBSERVATION"?"portal.manager-observation.snapshot.v1":
++        operation.kind==="DEPLOYMENTS"?MAXIMUM_DATA_DEPLOYMENT_OPERATION.logicalOperationId:relation!.operationId,
+@@ -237,0 +239,7 @@
++    return {decision,nativeEpochDigest};
++  }
++
++  async prepareNativeManagerPage(expectedPool:Pool,principal:MaximumDataOperationPrincipal,
++    operation:NativeManagerOperation,query:MaximumDataDeploymentQuery,source:SelectedNativeBusinessReadSource){
++    const {decision,nativeEpochDigest}=await this.currentNativeManagerRead(expectedPool,principal,operation,query,source);
++    const relation=operation.kind==="RELATION"?managerRelationOperationByRoute(operation.route_id):undefined;
+--- a/apps/control-api/src/execution/profile-realtime.service.ts
++++ b/apps/control-api/src/execution/profile-realtime.service.ts
+@@ -1 +1 @@
+-import { Inject, Injectable, OnApplicationShutdown } from "@nestjs/common";
++import { Inject, Injectable, OnApplicationShutdown, Optional } from "@nestjs/common";
+@@ -14,0 +15,5 @@
++import type { NativeManagerReadConsumer } from "../execution-v2/native-manager-consumer";
++
++// A private alias to the SAME consumer, not another coordinator. A value import
++// would cycle through retained-operation-page before LocalRealtimeError exists.
++export const NATIVE_MANAGER_REALTIME_COORDINATOR = Symbol("NATIVE_MANAGER_REALTIME_COORDINATOR");
+@@ -123,0 +129,4 @@
++  private nativeFlight: Promise<void> | null = null;
++  private actualReads = 0;
++  private actualReadsIdle = Promise.resolve();
++  private resolveActualReadsIdle?: () => void;
+@@ -141,0 +151 @@
++    @Optional() @Inject(NATIVE_MANAGER_REALTIME_COORDINATOR) private readonly nativeManager?: NativeManagerReadConsumer,
+@@ -148,0 +159,12 @@
++    return (await this.prepareSnapshot(workspaceId, environment, profileId)).envelope;
++  }
++
++  /** Capture once: the body and native baseline must describe the SAME row. */
++  async prepareSnapshot(workspaceId: string, environment: ProjectionEnvironment, profileId: string) {
++    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
++    return this.serialize(scopeKey(workspaceId, environment, profileId), () =>
++      this.prepareSnapshotLocked(workspaceId, environment, profileId));
++  }
++
++  private async prepareSnapshotLocked(workspaceId: string, environment: ProjectionEnvironment, profileId: string) {
++    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
+@@ -150,2 +172,3 @@
+-    const health = await localRead(this.repository.refreshHealth(workspaceId, environment, profileId));
+-    return envelope(
++    const health = await this.localRead(() => this.repository.refreshHealth(workspaceId, environment, profileId));
++    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
++    return { snapshot, envelope: envelope(
+@@ -157 +180,7 @@
+-    );
++    ) };
++  }
++
++  /** Called only after the native Hub owns an authenticated subscription. */
++  startNativePolling(): void {
++    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
++    if (this.nativeManager?.hasRealtimeClients()) this.ensureTimer();
+@@ -183,0 +213 @@
++    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
+@@ -186 +216,2 @@
+-    const health = active?.health ?? await localRead(this.repository.refreshHealth(workspaceId, environment, profileId));
++    const health = active?.health ?? await this.localRead(() => this.repository.refreshHealth(workspaceId, environment, profileId));
++    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
+@@ -205 +236 @@
+-      const replay = (await localRead(this.repository.journalAfter(
++      const replay = (await this.localRead(() => this.repository.journalAfter(
+@@ -207,0 +239 @@
++      if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
+@@ -246 +278 @@
+-      if (this.groups.size === 0 && this.timer) {
++      if (this.groups.size === 0 && !this.nativeManager?.hasRealtimeClients() && this.timer) {
+@@ -281 +313 @@
+-  onApplicationShutdown(): void {
++  async onApplicationShutdown(): Promise<void> {
+@@ -282,0 +315 @@
++    const nativeStop = this.nativeManager?.stopRealtime();
+@@ -286,0 +320,3 @@
++    await Promise.allSettled([...this.jobs.values(), ...(this.nativeFlight ? [this.nativeFlight] : []),
++      ...(nativeStop ? [nativeStop] : [])]);
++    await this.actualReadsIdle;
+@@ -337,0 +374,9 @@
++    if (this.stopped) return;
++    if (!this.nativeFlight && this.nativeManager?.hasRealtimeClients()) {
++      const flight = this.nativeManager.pollRealtime().catch(() => undefined);
++      this.nativeFlight = flight;
++      void flight.finally(() => {
++        if (this.nativeFlight === flight) this.nativeFlight = null;
++        this.stopIdleTimer();
++      });
++    }
+@@ -344,0 +390,7 @@
++    this.stopIdleTimer();
++  }
++
++  private stopIdleTimer(): void {
++    if (!this.groups.size && !this.nativeManager?.hasRealtimeClients() && this.timer) {
++      clearInterval(this.timer); this.timer = null;
++    }
+@@ -351 +403 @@
+-      const metadata = await localRead(this.repository.snapshotMetadata(group.workspaceId, group.environment, group.profileId));
++      const metadata = await this.localRead(() => this.repository.snapshotMetadata(group.workspaceId, group.environment, group.profileId));
+@@ -359 +411 @@
+-        group.health = await localRead(this.repository.refreshHealth(group.workspaceId, group.environment, group.profileId));
++        group.health = await this.localRead(() => this.repository.refreshHealth(group.workspaceId, group.environment, group.profileId));
+@@ -365 +417,2 @@
+-        const changed = await localRead(this.repository.snapshot(group.workspaceId,group.environment,group.profileId));
++        const changed = await this.localRead(() => this.repository.snapshot(group.workspaceId,group.environment,group.profileId));
++        if (this.groups.get(key) !== group || this.stopped) return;
+@@ -370 +423 @@
+-        const entries = (await localRead(this.repository.journalAfter(
++        const entries = (await this.localRead(() => this.repository.journalAfter(
+@@ -403 +456 @@
+-    if (!this.groups.size && this.timer) { clearInterval(this.timer); this.timer = null; }
++    this.stopIdleTimer();
+@@ -430 +483 @@
+-      if (this.groups.size === 0 && this.timer) {
++      if (this.groups.size === 0 && !this.nativeManager?.hasRealtimeClients() && this.timer) {
+@@ -446 +499 @@
+-    const snapshot = await localRead(this.repository.snapshot(workspaceId, environment, profileId));
++    const snapshot = await this.localRead(() => this.repository.snapshot(workspaceId, environment, profileId));
+@@ -448,0 +502,14 @@
++  }
++
++  /** A timeout ends the response, not the underlying PG operation. Keep its
++   * lifetime separate so pool teardown cannot race a late repository result. */
++  private localRead<T>(read: () => Promise<T>): Promise<T> {
++    if (this.stopped) return Promise.reject(new LocalRealtimeError("N31_SERVICE_STOPPED", 503));
++    if (this.actualReads++ === 0) this.actualReadsIdle = new Promise(resolve => { this.resolveActualReadsIdle = resolve; });
++    const finish = () => {
++      if (--this.actualReads === 0) { this.resolveActualReadsIdle?.(); this.resolveActualReadsIdle = undefined; }
++    };
++    let actual: Promise<T>;
++    try { actual = read(); } catch (error) { finish(); return Promise.reject(error); }
++    void actual.then(finish, finish);
++    return localRead(actual);
+--- a/apps/control-api/src/execution/realtime.controller.ts
++++ b/apps/control-api/src/execution/realtime.controller.ts
+@@ -34 +34 @@
+-import { retainedReview } from "./retained-read-profile";
++import { retainedReview, localProfileReadable } from "./retained-read-profile";
+@@ -36,0 +37,3 @@
++import { NativeManagerReadConsumer } from "../execution-v2/native-manager-consumer";
++import { ScopedReplayError } from "../execution-v2/scoped-replay-cursor";
++import { MaximumDataOperationError } from "./maximum-data-operation.service";
+@@ -56,0 +60 @@
++    @Optional() @Inject(NativeManagerReadConsumer) private readonly nativeManager?: NativeManagerReadConsumer,
+@@ -61,0 +66,7 @@
++  }
++
++  private nativeProfileAvailable(environment: ProjectionEnvironment): void {
++    if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true")
++      throw new LocalRealtimeError("EXECUTION_LOCAL_READ_DISABLED", 404);
++    if (!localProfileReadable(this.config, environment))
++      throw new LocalRealtimeError("EXECUTION_PROFILE_READ_DISABLED", 404);
+@@ -167,0 +179,9 @@
++    if (this.nativeManager && !retainedReview(this.config)) {
++      if (!reply) throw new LocalRealtimeError("N31_NATIVE_REPLY_REQUIRED", 503);
++      try {
++        this.nativeProfileAvailable(environment);
++        if (await this.nativeManager.serveProfileSnapshot({user:request.portalUser,session:request.portalSession,
++          workspaceId,viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId},
++          environment,profileId,this.localRealtime,reply)) return;
++      } catch (error) { throw localHttpError(error); }
++    }
+@@ -196,0 +217,10 @@
++      const cursor = singleHeader(request.headers["last-event-id"]) ?? singleValue(rawCursor);
++      if (this.nativeManager) this.nativeProfileAvailable(environment);
++      if (this.nativeManager && await this.nativeManager.serveProfileStream(
++        {user:request.portalUser,session:request.portalSession,workspaceId,
++          viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId},
++        environment,profileId,cursor,reply)) {
++        try { this.localRealtime.startNativePolling(); }
++        catch { reply.raw.destroy(); }
++        return;
++      }
+@@ -199 +228,0 @@
+-      const cursor = singleHeader(request.headers["last-event-id"]) ?? singleValue(rawCursor);
+@@ -275,0 +305 @@
++      if (reply.raw.destroyed || reply.raw.writableEnded) return;
+@@ -458,0 +489,2 @@
++  if (error instanceof ScopedReplayError) return error.code === "RECONNECT_LIMIT" ? 429 :
++    ["SOURCE_UNAVAILABLE", "STOPPED"].includes(error.code) ? 503 : 409;
+@@ -460 +492,2 @@
+-    error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ? error.status : 500;
++    error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ||
++      error instanceof MaximumDataOperationError ? error.status : 500;
+@@ -467 +500,2 @@
+-      code: error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ? error.code : "N31_LOCAL_REALTIME_FAILED",
++      code: error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ||
++        error instanceof MaximumDataOperationError || error instanceof ScopedReplayError ? error.code : "N31_LOCAL_REALTIME_FAILED",
+@@ -474 +508,2 @@
+-  if (error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError) return error;
++  if (error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ||
++    error instanceof MaximumDataOperationError) return error;
+--- a/apps/control-api/src/main.ts
++++ b/apps/control-api/src/main.ts
+@@ -4,0 +5 @@
++import { nativeCoreRuntimeReference, prepareNativeCoreRuntime } from "./execution-v2/native-core-runtime";
+@@ -8,2 +9,5 @@
+-  const pool = buildPool(config.DATABASE_URL);
+-  const app = await createControlApiApp(config, pool);
++  const reference = nativeCoreRuntimeReference();
++  const native = reference ? await prepareNativeCoreRuntime(reference) : undefined;
++  const pool = buildPool(config.DATABASE_URL, native?.poolProfile);
++  const dependencies = native ? await native.compose(pool) : undefined;
++  const app = await createControlApiApp(config, pool, undefined, dependencies);
+--- a/apps/control-api/test/elp209-realtime.spec.ts
++++ b/apps/control-api/test/elp209-realtime.spec.ts
+@@ -563,0 +564,47 @@
++  it("shutdown drain joins the actual abort-ignoring source, not only the stopped poll", async () => {
++    const h=harness(),pending=deferred<EdgeScopedNoticeBatch>();
++    h.read.mockReturnValueOnce(pending.promise);await h.subscribe();const polling=h.hub.poll();await flush();
++    let drained=false;const drain=h.hub.drain().then(()=>{drained=true;});
++    try {
++      await polling;await flush();expect(drained).toBe(false);
++      expect(h.hub.diagnostics()).toMatchObject({clients:0,source_flights:1});
++      expect(h.read.mock.calls[0][3].aborted).toBe(true);
++      await h.hub.poll();expect(h.read).toHaveBeenCalledOnce();
++    } finally { pending.resolve(batch());await drain; }
++    expect(drained).toBe(true);expect(h.hub.diagnostics().source_flights).toBe(0);
++    expect(h.authority.writes).toBe(0);
++  });
++  it("drain joins pending subscription authorization before reporting quiescence",async()=>{
++    const h=harness(),pending=deferred<string>();
++    const work=h.subscribe({guard:{...h.guard,currentIdentity:()=>pending.promise}});
++    const refused=expect(work).rejects.toMatchObject({code:"STOPPED"});
++    let drained=false;const drain=h.hub.drain().then(()=>{drained=true;});
++    try{
++      await flush();expect(drained).toBe(false);expect(h.hub.diagnostics().pending_subscriptions).toBe(1);
++      pending.resolve(binding().principal_scope_digest);await refused;await drain;
++      expect(h.hub.diagnostics()).toMatchObject({clients:0,pending_subscriptions:0,source_flights:0});
++      expect(h.read).not.toHaveBeenCalled();expect(h.authority.writes).toBe(0);
++    }finally{pending.resolve(binding().principal_scope_digest);await drain;}
++  });
++  it("drain joins poll authorization even before a source flight exists",async()=>{
++    const h=harness(),pending=deferred<string>();await h.subscribe();
++    vi.spyOn(h.guard,"currentIdentity").mockReturnValue(pending.promise);
++    const polling=h.hub.poll();let drained=false;const drain=h.hub.drain().then(()=>{drained=true;});
++    try{
++      await flush();expect(drained).toBe(false);expect(h.hub.diagnostics().source_flights).toBe(0);
++      pending.resolve(binding().principal_scope_digest);await polling;await drain;
++      expect(h.read).not.toHaveBeenCalled();expect(h.authority.writes).toBe(0);
++      await h.hub.poll();expect(h.read).not.toHaveBeenCalled();
++    }finally{pending.resolve(binding().principal_scope_digest);await polling;await drain;}
++  });
++  it("shutdown drain also joins a timed-out provider before its actual rejection", async () => {
++    const h=harness(),pending=deferred<EdgeScopedNoticeBatch>();
++    h.read.mockReturnValueOnce(pending.promise);await h.subscribe();const polling=h.hub.poll();await flush();
++    await polling;
++    expect(h.hub.diagnostics()).toMatchObject({source_flights:1,timed_out_flights:1});
++    let drained=false;const drain=h.hub.drain().then(()=>{drained=true;});
++    try {await flush();expect(drained).toBe(false);}
++    finally {pending.reject(new Error("TEST_ONLY-late-source-rejection"));await drain;}
++    expect(drained).toBe(true);expect(h.hub.diagnostics().source_flights).toBe(0);
++    expect(h.authority.writes).toBe(0);
++  });
+--- /dev/null
++++ b/apps/control-api/test/elp210-native-core-runtime.spec.ts
+@@ -0,0 +1,244 @@
++/** TEST_ONLY loader/security/orchestration; NOT_RUN. Mocked filesystem and
++ * compose boundary, actual SHA/jose/selected-source/consumer construction.
++ * Metadata SELECT is mocked; no actual DB/TLS/session/source authority or
++ * factory acceptance is claimed. */
++import { constants } from "node:fs";
++import { lstat, open } from "node:fs/promises";
++import { createHash } from "node:crypto";
++import { generateKeyPair, exportPKCS8 } from "jose";
++import type { Pool } from "pg";
++import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
++import { nativeCoreRuntimeReference, prepareNativeCoreRuntime } from "../src/execution-v2/native-core-runtime";
++import { composeNativeCore } from "../src/execution-v2/native-core-composition";
++import { unqualifiedAccessTrust } from "../src/execution-v2/access-trust";
++vi.mock("node:fs/promises",async original=>({...await original<typeof import("node:fs/promises")>(),lstat:vi.fn(),open:vi.fn()}));
++vi.mock("../src/execution-v2/native-core-composition",()=>({composeNativeCore:vi.fn()}));
++const sha=(bytes:Buffer)=>createHash("sha256").update(bytes).digest("hex"),raw=(c:string)=>c.repeat(64);
++type File={bytes:Buffer;uid:number;mode:number;ino:number;link?:boolean;size?:number;replaceOnOpen?:boolean};
++const files=new Map<string,File>(),opened:string[]=[];
++let edPem:string,ecPem:string,serial=0;
++const uid=()=>process.geteuid?.()??-1;
++function stat(f:File){return{uid:f.uid,mode:f.mode,ino:f.ino,dev:1,size:f.size??f.bytes.length,
++  isFile:()=>true,isSymbolicLink:()=>Boolean(f.link)};}
++function register(path:string,value:string|Buffer){
++  const bytes=Buffer.isBuffer(value)?Buffer.from(value):Buffer.from(value,"utf8");
++  files.set(path,{bytes,uid:uid(),mode:0o100400,ino:++serial});return{path,sha256:sha(bytes)};
++}
++function fixture(){
++  files.clear();opened.length=0;
++  const keyRef=register("/TEST_ONLY/native-runtime/human.key",edPem),terminalRef=register("/TEST_ONLY/native-runtime/terminal.key",edPem);
++  const caRef=register("/TEST_ONLY/native-runtime/ca.crt","TEST_ONLY-CA-NO-SOCKET"),
++    certRef=register("/TEST_ONLY/native-runtime/client.crt","TEST_ONLY-CERT-NO-SOCKET"),
++    tlsKeyRef=register("/TEST_ONLY/native-runtime/client.key","TEST_ONLY-CLIENT-KEY-NO-SOCKET");
++  const now=Date.now(),until=now+60000,person="TEST_ONLY-bobby",workspace="TEST_ONLY-workspace",
++    workload="TEST_ONLY-native-pm",issuer="TEST_ONLY-core-human";
++  const domain={profile_id:"TEST_ONLY-profile",catalogue_sha256:raw("a"),profile_sha256:raw("b"),field_policy_sha256:raw("c")};
++  const selected={transport:{origin:"https://10.70.0.2:28445",tls:{ca_ref:caRef,cert_ref:certRef,key_ref:tlsKeyRef},
++    pm_leaf_sha256:"sha256:"+raw("f"),workload_id:workload,deadline_ms:1000,request_bytes:32768,response_bytes:32768,max_inflight:2},
++    pins:{binding:{human_issuer:issuer,subject:person,workspace_id:workspace,environment:"paper",workload_id:workload},domain,
++      human:{issuer,subject:person,portal_user_id:person,ts_user_id:"33333333-3333-3333-3333-333333333333",
++        mapping_revision:"ts-user:33333333-3333-3333-3333-333333333333:1"},
++      native:{revision:"1",receipt_id:"44444444-4444-4444-4444-444444444444",receipt_digest:"sha256:"+raw("1"),
++        document_digest:"sha256:"+raw("2"),policy_revision:"1",owner_mapping_revision:"ts-user:33333333-3333-3333-3333-333333333333:1",
++        semantic_revision:"sha256:"+raw("3"),effective_from:new Date(now-1000).toISOString(),expires_at:new Date(until).toISOString()},
++      source_fingerprint:raw("e")},installation_expires_at_utc_ms:until};
++  const value={schema_version:"portal.native-core-runtime.v1",pool_profile:{max:4,connectionTimeoutMillis:2000,
++    statement_timeout:3000,query_timeout:6000,idle_in_transaction_session_timeout:3000},
++    composition:{expected_workload_id:workload,selections:[{selector:{portal_user_id:person,human_issuer:issuer,
++      subject:person,workspace_id:workspace,environment:"paper",domain},config:{issuer,audience:"TEST_ONLY-pm-human",key_id:"TEST_ONLY-human-key",
++      private_key_ref:keyRef,selected_source:selected,limits:{ttl_ms:10000,maximum_unresolved:4,maximum_retained:32},
++      installation_scope:{workspace_id:workspace,environment:"paper",valid_until_ms:until},
++      terminal:{issuer:"TEST_ONLY-terminal",audience:"TEST_ONLY-pm-terminal",key_id:"TEST_ONLY-terminal-key",private_key_ref:terminalRef,ttl_seconds:30},
++      egress:{maximum_response_bytes:1048576,maximum_inflight:2,send_timeout_ms:1000,quiesce_timeout_ms:1000}}}],
++      retained_recovery:[],owner_intakes:[{artifact_path:"/root/TEST_ONLY-OFFLINE-owner-artifact.json",approved_sha256:raw("8"),
++        target:{database_name:"TEST_ONLY-control",database_system_identifier:"7675333655652302882",role_name:"TEST_ONLY-runtime-role",
++          protected_owner_user_id:person,workspace_id:workspace,principal_workspace_pins:[{user_id:person,workspace_id:workspace}]},
++        intake_not_before_ms:now-1000,intake_not_after_ms:until}],mutation_limits:{maximum_intents:64,maximum_recoveries_per_request:8}}};
++  return{value,pin:()=>register("/TEST_ONLY/native-runtime/config.json",JSON.stringify(value)),keyRef,terminalRef,caRef,certRef,tlsKeyRef};
++}
++beforeAll(async()=>{
++  edPem=await exportPKCS8((await generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true})).privateKey);
++  ecPem=await exportPKCS8((await generateKeyPair("ES256",{extractable:true})).privateKey);
++});
++beforeEach(()=>{
++  files.clear();opened.length=0;vi.clearAllMocks();
++  vi.mocked(lstat).mockImplementation((async(path:unknown)=>{
++    const f=files.get(String(path));if(!f)throw Error("TEST_ONLY-unmounted-file");return stat(f);
++  })as any);
++  vi.mocked(open).mockImplementation((async(path:unknown,flags:unknown)=>{
++    const name=String(path),f=files.get(name);if(!f)throw Error("TEST_ONLY-unmounted-file");
++    expect(flags).toBe(constants.O_RDONLY|constants.O_NOFOLLOW);opened.push(name);
++    if(f.replaceOnOpen)f.ino++;
++    let offset=0;
++    return{stat:async()=>stat(f),close:vi.fn(async()=>undefined),
++      read:async(buffer:Buffer,start:number,length:number,_position:null)=>{
++        const count=Math.min(length,f.bytes.length-offset);
++        if(count>0)f.bytes.copy(buffer,start,offset,offset+count);offset+=count;return{bytesRead:count,buffer};
++      }};
++  })as any);
++  vi.mocked(composeNativeCore).mockResolvedValue({dependencies:{executionAccessTrust:unqualifiedAccessTrust},
++    selectedCandidate:vi.fn(),installOwnerPolicies:vi.fn()}as never);
++});
++function runtimePool(){
++  const metadata={database_name:"TEST_ONLY-control",role_name:"TEST_ONLY-runtime-role",
++    session_role_name:"TEST_ONLY-runtime-role",database_system_identifier:"7675333655652302882"};
++  const query=vi.fn().mockResolvedValue({rowCount:1,rows:[metadata]});
++  const pool={options:{connectionTimeoutMillis:2000,query_timeout:6000},query,connect:vi.fn()}as unknown as Pool;
++  return{pool,query,metadata};
++}
++describe("TEST_ONLY closed native runtime refs",()=>{
++  it("keeps absent optional env pair on the untouched legacy path with no file or compose work",()=>{
++    expect(nativeCoreRuntimeReference({})).toBeUndefined();
++    expect(lstat).not.toHaveBeenCalled();expect(open).not.toHaveBeenCalled();expect(composeNativeCore).not.toHaveBeenCalled();
++  });
++  it("refuses partial, empty and malformed env pairs rather than silently selecting legacy",()=>{
++    for(const env of[
++      {CONTROL_API_NATIVE_CORE_CONFIG_FILE:"/TEST_ONLY/runtime.json"},
++      {CONTROL_API_NATIVE_CORE_CONFIG_SHA256:raw("a")},
++      {CONTROL_API_NATIVE_CORE_CONFIG_FILE:"",CONTROL_API_NATIVE_CORE_CONFIG_SHA256:raw("a")},
++      {CONTROL_API_NATIVE_CORE_CONFIG_FILE:"relative.json",CONTROL_API_NATIVE_CORE_CONFIG_SHA256:raw("a")},
++      {CONTROL_API_NATIVE_CORE_CONFIG_FILE:"/TEST_ONLY/runtime.json",CONTROL_API_NATIVE_CORE_CONFIG_SHA256:raw("a")+"\n"},
++    ])expect(()=>nativeCoreRuntimeReference(env)).toThrowError("The private native Core configuration is not available.");
++    expect(open).not.toHaveBeenCalled();expect(composeNativeCore).not.toHaveBeenCalled();
++  });
++  it("requires independent exact manifest SHA before opening any TLS or signing reference",async()=>{
++    const f=fixture(),pin=f.pin();
++    await expect(prepareNativeCoreRuntime({...pin,sha256:raw("0")})).rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
++    expect(opened).toEqual([pin.path]);expect(composeNativeCore).not.toHaveBeenCalled();
++  });
++  it("refuses symlink, wrong UID/mode, oversized and inode-replaced reference files",async()=>{
++    const axes=["symlink","uid","mode","oversized","inode"]as const;
++    for(const axis of axes){
++      const f=fixture(),pin=f.pin(),file=files.get(pin.path)!;
++      if(axis==="symlink")file.link=true;
++      if(axis==="uid")file.uid=uid()+1;
++      if(axis==="mode")file.mode=0o100640;
++      if(axis==="oversized")file.size=131073;
++      if(axis==="inode")file.replaceOnOpen=true;
++      await expect(prepareNativeCoreRuntime(pin)).rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
++    }
++    expect(composeNativeCore).not.toHaveBeenCalled();
++  });
++  it("rejects unknown fields, extra references and noncanonical/duplicate/invalid-UTF8 manifest bytes",async()=>{
++    for(const alter of[
++      (v:any)=>{v.schema_version="portal.native-core-runtime.v2";},
++      (v:any)=>{v.extra=true;},
++      (v:any)=>{v.composition.selections[0].config.private_key="TEST_ONLY-inline-key";},
++      (v:any)=>{v.composition.selections[0].config.selected_source.transport.tls.issuer_key_ref={path:"/TEST_ONLY/not-allowed",sha256:raw("a")};},
++    ]){
++      const f=fixture();alter(f.value);
++      await expect(prepareNativeCoreRuntime(f.pin())).rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
++      expect(opened).toEqual(["/TEST_ONLY/native-runtime/config.json"]);
++    }
++    // Each malformed representation has its OWN matching SHA: this proves
++    // the byte/parse guard, not merely the independent file-hash check.
++    for(const axis of["duplicate","pretty","invalid-utf8"]){
++      const f=fixture(),json=JSON.stringify(f.value),invalidUtf8=Buffer.from(json);
++      invalidUtf8[json.indexOf("TEST_ONLY-OFFLINE")]=0xff;
++      const bytes=axis==="duplicate"
++        ?Buffer.from(json.replace('{"schema_version":','{"schema_version":"TEST_ONLY-ignored-duplicate","schema_version":'))
++        :axis==="pretty"?Buffer.from(JSON.stringify(f.value,null,2))
++        :invalidUtf8;
++      const pin=register("/TEST_ONLY/native-runtime/config.json",bytes);
++      await expect(prepareNativeCoreRuntime(pin)).rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
++      expect(opened).toEqual([pin.path]);
++    }
++    expect(composeNativeCore).not.toHaveBeenCalled();
++  });
++  it("validates explicit pool limits before materializing source keys or permitting buildPool",async()=>{
++    for(const change of[
++      {max:11},{connectionTimeoutMillis:0},{statement_timeout:60001},{query_timeout:3000},
++    ]){
++      const f=fixture();Object.assign(f.value.pool_profile,change);
++      await expect(prepareNativeCoreRuntime(f.pin())).rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
++      expect(opened).toEqual(["/TEST_ONLY/native-runtime/config.json"]);
++    }
++    expect(composeNativeCore).not.toHaveBeenCalled();
++  });
++  it("independently pins TLS and signing bytes without reflecting material or paths in errors",async()=>{
++    for(const axis of["ca","human"]){
++      const f=fixture(),bad=axis==="ca"?f.caRef:f.keyRef;
++      files.get(bad.path)!.bytes=Buffer.from("TEST_ONLY-do-not-echo-secret");
++      const error=(await prepareNativeCoreRuntime(f.pin()).catch(error=>error))as Error&{code:string};
++      expect(error).toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
++      expect(error.message).not.toContain("TEST_ONLY-do-not-echo-secret");expect(error.message).not.toContain(bad.path);
++    }
++    expect(composeNativeCore).not.toHaveBeenCalled();
++  });
++  it("imports only actual Ed25519 private PKCS8 keys before any Core composition",async()=>{
++    const f=fixture(),replacement=register(f.keyRef.path,ecPem);
++    f.value.composition.selections[0]!.config.private_key_ref=replacement;
++    await expect(prepareNativeCoreRuntime(f.pin())).rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
++    expect(composeNativeCore).not.toHaveBeenCalled();
++  });
++  it("retains existing selected-source issuer, workload and strict pin validators",async()=>{
++    for(const alter of[
++      (v:ReturnType<typeof fixture>["value"])=>{v.composition.selections[0]!.config.selected_source.pins.human.subject="TEST_ONLY-other";},
++      (v:ReturnType<typeof fixture>["value"])=>{v.composition.selections[0]!.config.selected_source.transport.workload_id="TEST_ONLY-other";},
++      (v:ReturnType<typeof fixture>["value"])=>{v.composition.selections[0]!.config.selected_source.pins.native.receipt_digest="sha256:invalid";},
++    ]){
++      const f=fixture();alter(f.value);
++      await expect(prepareNativeCoreRuntime(f.pin())).rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
++    }
++    expect(composeNativeCore).not.toHaveBeenCalled();
++  });
++  it("refuses wrong actual database/system/current-role/session-role and unavailable introspection before app mounting",async()=>{
++    for(const axis of["database","system","current-role","session-role","introspection"]){
++      const f=fixture(),prepared=await prepareNativeCoreRuntime(f.pin()),actual=runtimePool();
++      if(axis==="database")actual.metadata.database_name="TEST_ONLY-other-database";
++      if(axis==="system")actual.metadata.database_system_identifier="1111111111111111111";
++      if(axis==="current-role")actual.metadata.role_name="TEST_ONLY-other-role";
++      if(axis==="session-role")actual.metadata.session_role_name="TEST_ONLY-other-session-role";
++      if(axis==="introspection")actual.query.mockRejectedValueOnce(Error("TEST_ONLY-no-introspection"));
++      await expect(prepared.compose(actual.pool)).rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
++      expect(actual.query).toHaveBeenCalledTimes(1);expect(actual.pool.connect).not.toHaveBeenCalled();
++    }
++  });
++  it("prepares inert components then verifies actual DB target before SAME-pool injection without owner artifact I/O",async()=>{
++    const f=fixture(),pin=f.pin(),prepared=await prepareNativeCoreRuntime(pin);
++    expect(prepared.poolProfile).toEqual(f.value.pool_profile);expect(Object.isFrozen(prepared.poolProfile)).toBe(true);
++    expect(composeNativeCore).not.toHaveBeenCalled();
++    const {pool,query}=runtimePool();
++    const dependencies=await prepared.compose(pool);
++    expect(composeNativeCore).toHaveBeenCalledTimes(1);expect(vi.mocked(composeNativeCore).mock.calls[0]![0]).toBe(pool);
++    expect(query).toHaveBeenCalledTimes(1);
++    expect(query).toHaveBeenCalledWith("SELECT current_database() AS database_name,current_user AS role_name,session_user AS session_role_name,(pg_control_system()).system_identifier::text AS database_system_identifier");
++    expect(pool.connect).not.toHaveBeenCalled();
++    expect(opened).not.toContain("/root/TEST_ONLY-OFFLINE-owner-artifact.json");
++    expect(vi.mocked(composeNativeCore).mock.results).toHaveLength(1);
++    const composed=await vi.mocked(composeNativeCore).mock.results[0]!.value;
++    expect(dependencies.nativeManagerRead).toBe(composed);
++    expect(dependencies.executionAccessTrust).toBe(composed.dependencies.executionAccessTrust);
++    expect(dependencies.currentHumanMutations).toBe(composed.dependencies.currentHumanMutations);
++    expect(dependencies).not.toHaveProperty("nativeManagerConsumer");
++    expect(dependencies).not.toHaveProperty("nativeManagerRealtimeLimits");
++    expect(composed.installOwnerPolicies).not.toHaveBeenCalled();
++    expect(new Set(opened)).toEqual(new Set([pin.path,f.caRef.path,f.certRef.path,f.tlsKeyRef.path,f.keyRef.path,f.terminalRef.path]));
++  });
++  it("passes optional explicit SSE limits without changing finite composition or installing policy",async()=>{
++    const f=fixture(),limits={maximumClients:2,maximumEntriesPerClient:4,maximumFrameBytes:32768,
++      maximumClientBytes:65536,maximumTotalBytes:131072,maximumNoticesPerRead:8,readTimeoutMs:1000};
++    const value={...f.value,realtime_limits:limits};
++    const pin=register("/TEST_ONLY/native-runtime/config.json",JSON.stringify(value));
++    const prepared=await prepareNativeCoreRuntime(pin),{pool}=runtimePool();
++    const dependencies=await prepared.compose(pool);
++    expect(dependencies.nativeManagerRealtimeLimits).toEqual(limits);
++    expect(Object.isFrozen(dependencies.nativeManagerRealtimeLimits)).toBe(true);
++    expect(dependencies.nativeManagerRead).toBe(await vi.mocked(composeNativeCore).mock.results[0]!.value);
++    expect(dependencies.nativeManagerRead!.installOwnerPolicies).not.toHaveBeenCalled();
++  });
++  it("rejects partial, excessive, unknown and incoherent SSE bounds before source materialization",async()=>{
++    const valid={maximumClients:2,maximumEntriesPerClient:4,maximumFrameBytes:32768,
++      maximumClientBytes:65536,maximumTotalBytes:131072,maximumNoticesPerRead:8,readTimeoutMs:1000};
++    for(const change of[{maximumClients:0},{maximumNoticesPerRead:201},{maximumTotalBytes:67108865},
++      {maximumClientBytes:32767},{maximumTotalBytes:65535},{extra:1}]){
++      const f=fixture(),pin=register("/TEST_ONLY/native-runtime/config.json",JSON.stringify({...f.value,realtime_limits:{...valid,...change}}));
++      await expect(prepareNativeCoreRuntime(pin)).rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
++      expect(opened).toEqual([pin.path]);
++    }
++    const f=fixture(),{readTimeoutMs:_,...partial}=valid;
++    await expect(prepareNativeCoreRuntime(register("/TEST_ONLY/native-runtime/config.json",JSON.stringify({...f.value,realtime_limits:partial}))))
++      .rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
++    expect(composeNativeCore).not.toHaveBeenCalled();
++  });
++});
+--- a/apps/control-api/test/elp210-native-frame-coupled.spec.ts
++++ b/apps/control-api/test/elp210-native-frame-coupled.spec.ts
+@@ -15,0 +16 @@
++import { Agent, fetch as fixtureFetch } from "undici";
+@@ -16,0 +18 @@
++import type { FastifyReply } from "fastify";
+@@ -40 +42,8 @@
+-import { SelectedNativeBusinessReadSource } from "../src/execution-v2/native-business-read-selected-source";
++import { MAXIMUM_DATA_DEPLOYMENT_OPERATION } from "../src/execution/maximum-data-operation.registry";
++import { managerRelationOperationByRoute } from "../src/execution/eds11r-manager-relation.registry";
++import { ExecutionCurrentSourceProxy } from "../src/execution/current-source.proxy";
++import { WorkspacesRepository } from "../src/repos/workspaces";
++import { createControlApiApp } from "../src/app";
++import { ExecutionProfileProjectionRepository,type ProfileProjectionDocument } from "../src/execution/profile-projection.repository";
++import { ExecutionProfileProjectionWorker } from "../src/execution/profile-projection.worker";
++import { SelectedNativeBusinessReadSource,selectedNativeBusinessReadSelection } from "../src/execution-v2/native-business-read-selected-source";
+@@ -165 +174,3 @@
+-        expect(input.manager_intent).toMatchObject({schema_version:"pma.manager-read-intent.v2",action:"scoped_notice"});
++        expect(input.manager_intent).toMatchObject(input.manager_intent.schema_version==="pma.manager-read-intent.v2"
++          ?{schema_version:"pma.manager-read-intent.v2",action:"scoped_notice"}
++          :{schema_version:"pma.manager-read-intent.v1",action:"relation_page"});
+@@ -206 +217,3 @@
+-          const kind=jwt.payload.phase==="SERVED"?"FINAL_SSE_FRAME_WRITE_COMPLETED":"FINAL_SSE_FRAME_ABORT_CONFIRMED";
++          const isFrame=input.manager_intent.schema_version==="pma.manager-read-intent.v2";
++          const kind=isFrame?(jwt.payload.phase==="SERVED"?"FINAL_SSE_FRAME_WRITE_COMPLETED":"FINAL_SSE_FRAME_ABORT_CONFIRMED"):
++            (jwt.payload.phase==="SERVED"?"FINAL_HTTP_SEND_COMPLETED":"FINAL_HTTP_ABORT_CONFIRMED");
+@@ -615 +628,2 @@
+-    subject:actor.user_id,workspace_id:workspace,environment:"paper",domain:{...domain}},config:selectedConfig});
++    subject:actor.user_id,workspace_id:workspace,environment:"paper",
++    domain:{...selectedNativeBusinessReadSelection(selectedConfig.selected_source).domain}},config:selectedConfig});
+@@ -624 +638 @@
+-  async function currentComposition(){
++  async function currentComposition(selectedConfig=config){
+@@ -630 +644 @@
+-      expected_workload_id:selectedInput.pins.binding.workload_id,selections:[managerSelection()],retained_recovery:[],
++      expected_workload_id:selectedInput.pins.binding.workload_id,selections:[managerSelection(selectedConfig)],retained_recovery:[],
+@@ -634,0 +649,208 @@
++  /** Existing production route and actual local committed projection. PM
++   * remains the TEST_ONLY mTLS protocol fixture described at the file header. */
++  async function mountedObservation(withStream=true){
++    const repo=new AccessRepository(pool),original=await repo.policy(workspace);
++    if(!original)throw Error("TEST_ONLY_CURRENT_POLICY_REQUIRED");
++    const actualDomain={...domain,profile_id:"PAPER_BINANCE_USDM",
++      catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256.slice(7)};
++    const policy={...original,revision:original.revision+"-observation",
++      manager_read_domains:[{...original.manager_read_domains![0]!,domain:actualDomain}]};
++    const grant=(await repo.storedGrants(workspace)).find(row=>row.kind==="MANAGER_DOMAIN");
++    if(!grant||grant.kind!=="MANAGER_DOMAIN")throw Error("TEST_ONLY_DOMAIN_GRANT_REQUIRED");
++    await repo.putPolicy(policy);await repo.saveManagerDomainGrant({...grant.fact,
++      revision:grant.fact.revision+"-observation",policy_revision:policy.revision,domain:actualDomain});
++    await managerOnly();if(!withStream)await revokeDomain("stream.subscribe");
++    const selectedSource=new SelectedNativeBusinessReadSource({...selectedInput,pins:{...selectedInput.pins,domain:actualDomain}});
++    const composition=await currentComposition({...config,selected_source:selectedSource});
++    const cookie="TEST_ONLY-native-observation-cookie";
++    await pool.query("UPDATE auth_sessions SET session_token_hash=$2 WHERE session_id=$1",
++      [actor.session_id,createHash("sha256").update(cookie).digest("hex")]);
++    await app.app.get(WorkspacesRepository).ensurePersonal(actor.user_id,"TEST_ONLY-native-observation");
++    // A local fixture supplies committed rows. Stop/join only its actual local
++    // worker before enabling read availability; no upstream source is contacted.
++    const cfg:typeof app.config={...app.config,FEATURE_EXECUTION_LOCAL_PROJECTION:"true" as const,
++      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER:"false" as const,FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE:"false" as const,
++      FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX:"false" as const,FEATURE_EXECUTION_CURRENT_SOURCE_LIVE:"false" as const,
++      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID:workspace,EXECUTION_EDGE_PAPER_PROFILE_ID:actualDomain.profile_id};
++    const mounted=await createControlApiApp(cfg,pool,undefined,{...composition.dependencies,nativeManagerRead:composition,
++      nativeManagerRealtimeLimits:{maximumClients:2,maximumEntriesPerClient:4,maximumFrameBytes:16384,
++        maximumClientBytes:65536,maximumTotalBytes:131072,maximumNoticesPerRead:2,readTimeoutMs:2000}});
++    await mounted.get(ExecutionProfileProjectionWorker).onApplicationShutdown();
++    cfg.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER="true";
++    const consumer=mounted.get(NativeManagerReadConsumer),repository=mounted.get(ExecutionProfileProjectionRepository);
++    const served=vi.spyOn(consumer,"serveProfileSnapshot"),poll=vi.spyOn(consumer,"pollRealtime");
++    const aborters=new Set<AbortController>();
++    const dispatcher=new Agent({connections:2,pipelining:1});
++    const commit=async(step:number,sourceEpoch="TEST_ONLY-observation-source")=>{
++      const document:ProfileProjectionDocument={schema_version:"portal.execution.profile-projection.v1",workspace_id:workspace,
++        environment:"paper",profile_id:actualDomain.profile_id,source_contract_revision:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceContractRevision,
++        source_catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256,relations:{
++          "TEST_ONLY-source:TEST_ONLY-observation":{source_id:"TEST_ONLY-source",relation:"TEST_ONLY-observation",
++            availability:"AVAILABLE",reason_code:null,as_of:null,freshness:"UNKNOWN",completeness:"UNKNOWN",
++            source_catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256,
++            items:[{lineage:{workspace_id:workspace,profile_id:actualDomain.profile_id,
++              source_contract_revision:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceContractRevision,
++              source_catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256},fields:{TEST_ONLY_revision:step}}]}}};
++      return repository.commit(document,{sourceEpoch,sourceCursor:"TEST_ONLY-private-cursor-"+step,sourceAsOf:null,
++        receivedAt:new Date(),completeness:"UNKNOWN",retentionSeconds:600,maximumJournalEntries:16});
++    };
++    try{
++      await commit(1);await mounted.listen(0,"127.0.0.1");
++      const address=mounted.getHttpServer().address();if(!address||typeof address==="string")throw Error("TEST_ONLY_LISTENER_REQUIRED");
++      const origin=`http://127.0.0.1:${address.port}/api/v1/execution/profiles/paper`,headers={cookie:`__Host-portal_session=${cookie}`};
++      const snapshot=async()=>{
++        const response=await bounded(fixtureFetch(origin+`/realtime-snapshot?workspace_id=${workspace}`,{headers,dispatcher}));
++        const body=await response.json();
++        // Join actual finite delivery/settlement, not only flushed HTTP bytes.
++        const last=served.mock.results.at(-1);if(last?.type==="return")await last.value;
++        return {response,body,token:response.headers.get("x-portal-realtime-cursor")!};
++      };
++      const stream=(token:string,lastEventId?:string)=>{
++        const abort=new AbortController();aborters.add(abort);
++        const response=fixtureFetch(origin+`/stream?workspace_id=${workspace}&cursor=${encodeURIComponent(token)}`,{
++          headers:{...headers,...(lastEventId?{"last-event-id":lastEventId}:{})},signal:abort.signal,dispatcher});
++        return {response,abort};
++      };
++      const frame=async(response:Awaited<ReturnType<typeof fixtureFetch>>)=>{
++        const reader=response.body!.getReader();let text="";
++        while(!text.includes("\n\n")){const next=await bounded(reader.read());if(next.done)throw Error("TEST_ONLY_FRAME_MISSING");
++          text+=Buffer.from(next.value).toString("utf8");}
++        const flight=poll.mock.results.at(-1);if(flight?.type==="return")await flight.value;
++        return {text,reader,eventId:text.match(/^id: (.+)$/m)?.[1]};
++      };
++      return {mounted,consumer,repository,commit,snapshot,stream,frame,poll,
++        close:async()=>{for(const abort of aborters)abort.abort();await consumer.stopRealtime();
++          await dispatcher.destroy();await mounted.close();}};
++    }catch(error){for(const abort of aborters)abort.abort();await consumer.stopRealtime();
++      await dispatcher.destroy();await mounted.close();throw error;}
++  }
++  it("mounted observation READ baseline is not STREAM permission, actual session/PG/HTTP",async()=>{
++    const f=await mountedObservation(false);try{
++      const read=await f.snapshot();expect(read.response.status).toBe(200);expect(read.token).toMatch(/^sr1\./);
++      expect(read.body).toMatchObject({schema_version:"portal.execution.profile-realtime.v1",projection_sequence:1});
++      const issues=actionCount("issue"),attempt=f.stream(read.token),response=await bounded(attempt.response);
++      expect([403,404,503]).toContain(response.status);await response.arrayBuffer();
++      expect(actionCount("issue")).toBe(issues);expect(f.consumer.hasRealtimeClients()).toBe(false);
++      expect((await f.snapshot()).response.status).toBe(200);
++    }finally{await f.close();}
++  });
++  it("actual Manager scope and PG metadata preparation stay joined until shutdown settles",async()=>{
++    const f=await mountedObservation(),entered=deferred<void>(),release=deferred<void>();
++    try{
++      const baseline=await f.snapshot(),issues=actionCount("issue"),actual=f.repository.snapshotMetadata.bind(f.repository);
++      vi.spyOn(f.repository,"snapshotMetadata").mockImplementation(async(...args)=>{
++        const result=await actual(...args);entered.resolve();await release.promise;return result;
++      });
++      await exchange(async({response,body})=>{
++        const opening=f.consumer.serveProfileStream(principal,"paper","PAPER_BINANCE_USDM",baseline.token,
++          {raw:response,hijack:()=>undefined} as unknown as FastifyReply);
++        const refused=expect(opening).rejects.toMatchObject({code:"NATIVE_MANAGER_READ_UNAVAILABLE"});
++        await bounded(entered.promise);let ended=false;const stop=f.consumer.stopRealtime().then(()=>{ended=true;});
++        try{
++          await new Promise<void>(done=>setImmediate(done));expect(ended).toBe(false);
++          expect(response.headersSent).toBe(false);expect(actionCount("issue")).toBe(issues);
++        }finally{release.resolve();await refused;await bounded(stop);}
++        expect(body()).toHaveLength(0);expect(f.consumer.hasRealtimeClients()).toBe(false);expect(await pending()).toBe(0);
++      });
++    }finally{release.resolve();await f.close();}
++  });
++  it("mounted observation resumes original baseline after commit and Last-Event-ID, actual PG/socket",async()=>{
++    const f=await mountedObservation();try{
++      const baseline=await f.snapshot();expect(baseline.response.status).toBe(200);
++      const opened=f.stream(baseline.token);await f.commit(2);const response=await bounded(opened.response);
++      expect(response.status).toBe(200);const first=await f.frame(response);expect(first.eventId).toMatch(/^sr1\./);
++      expect(first.text).not.toContain("TEST_ONLY-private-cursor");expect(first.text).not.toContain("TEST_ONLY_revision");
++      opened.abort.abort();await first.reader.cancel().catch(()=>undefined);
++      await until(()=>!f.consumer.hasRealtimeClients());
++      await f.commit(3);const resumed=f.stream(baseline.token,first.eventId),next=await bounded(resumed.response);
++      expect(next.status).toBe(200);const second=await f.frame(next);expect(second.eventId).not.toBe(first.eventId);
++      expect(second.text).not.toContain("TEST_ONLY-private-cursor");resumed.abort.abort();await second.reader.cancel().catch(()=>undefined);
++      expect(await pending()).toBe(0);
++    }finally{await f.close();}
++  });
++  it("mounted observation STREAM revoke stops further native issue while finite READ survives",async()=>{
++    const f=await mountedObservation();try{
++      const baseline=await f.snapshot(),opened=f.stream(baseline.token);await f.commit(2);
++      const first=await f.frame(await bounded(opened.response)),issues=actionCount("issue");
++      await revokeDomain("stream.subscribe");await f.commit(3);
++      await until(()=>!f.consumer.hasRealtimeClients());
++      const flight=f.poll.mock.results.at(-1);if(flight?.type==="return")await flight.value;
++      expect(actionCount("issue")).toBe(issues);expect(f.consumer.hasRealtimeClients()).toBe(false);
++      opened.abort.abort();await first.reader.cancel().catch(()=>undefined);
++      expect((await f.snapshot()).response.status).toBe(200);expect(await pending()).toBe(0);
++    }finally{await f.close();}
++  });
++  it.each(["cursor","generation"] as const)("mounted observation rejects changed %s before native issue",async mode=>{
++    const f=await mountedObservation();try{
++      const baseline=await f.snapshot(),issues=actionCount("issue");
++      if(mode==="generation")await f.commit(2,"TEST_ONLY-new-source-epoch");
++      const opened=f.stream(mode==="cursor"?baseline.token.slice(0,-3)+"bad":baseline.token),response=await bounded(opened.response);
++      expect(response.status).toBe(409);await response.arrayBuffer();expect(actionCount("issue")).toBe(issues);
++      expect(f.consumer.hasRealtimeClients()).toBe(false);
++    }finally{await f.close();}
++  });
++  it.each(["deployments","relation"] as const)("mounted %s uses actual SessionGuard/HTTP/native egress and current revoke, TEST_ONLY source",async route=>{
++    // Add the route's canonical profile only in this disposable fixture.
++    // The original generic/entity/Manager/SSE cases keep their original scope.
++    const repo=new AccessRepository(pool),original=await repo.policy(workspace);
++    if(!original)throw Error("TEST_ONLY_CURRENT_POLICY_REQUIRED");
++    const actualDomain={...domain,profile_id:"PAPER_BINANCE_USDM",
++      catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256.slice(7)};
++    const policy={...original,revision:original.revision+"-http",
++      manager_read_domains:[{...original.manager_read_domains![0]!,domain:actualDomain}]};
++    const grant=(await repo.storedGrants(workspace)).find(row=>row.kind==="MANAGER_DOMAIN");
++    if(!grant||grant.kind!=="MANAGER_DOMAIN")throw Error("TEST_ONLY_DOMAIN_GRANT_REQUIRED");
++    await repo.putPolicy(policy);
++    await repo.saveManagerDomainGrant({...grant.fact,revision:grant.fact.revision+"-http",
++      policy_revision:policy.revision,domain:actualDomain});
++    const selectedSource=new SelectedNativeBusinessReadSource({...selectedInput,
++      pins:{...selectedInput.pins,domain:actualDomain}});
++    const composition=await currentComposition({...config,selected_source:selectedSource});
++    const cookie="TEST_ONLY-native-mounted-cookie";
++    await pool.query("UPDATE auth_sessions SET session_token_hash=$2 WHERE session_id=$1",
++      [actor.session_id,createHash("sha256").update(cookie).digest("hex")]);
++    await app.app.get(WorkspacesRepository).ensurePersonal(actor.user_id,"TEST_ONLY-native-mounted");
++    const mounted=await createControlApiApp(app.config,pool,undefined,
++      {...composition.dependencies,nativeManagerRead:composition});
++    try{
++      const operations=mounted.get(MaximumDataOperationService),consumer=mounted.get(NativeManagerReadConsumer);
++      expect(consumer.uses(pool,operations)).toBe(true);
++      const nativeServe=vi.spyOn(consumer,"serve");
++      const legacyDeployment=vi.spyOn(operations,"deploymentPage"),legacyRelation=vi.spyOn(operations,"relationPage");
++      const relation=route==="deployments"?MAXIMUM_DATA_DEPLOYMENT_OPERATION.relation:
++        managerRelationOperationByRoute("account-balances")!.relation;
++      const response={schema_version:"portal.execution.current-source-bff.v2",authority:"PORTAL_CONTROL_API",
++        requested_environment:"paper",source_environment:"paper",profile_id:actualDomain.profile_id,
++        source:{contract_version:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceContractRevision,authority:"EXECUTION_CELL",
++          profile_id:actualDomain.profile_id,catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256,
++          availability:"AVAILABLE",freshness:"FRESH",completeness:"COMPLETE",as_of:new Date().toISOString(),
++          data:{relation:{schema:"public",relation},items:[],next_cursor:null}}};
++      const source=mounted.get(ExecutionCurrentSourceProxy);
++      const sourceDeployment=vi.spyOn(source,"relationForNamedOperation").mockResolvedValue(response),
++        sourceRelation=vi.spyOn(source,"relationForCataloguedOperation").mockResolvedValue(response);
++      await mounted.listen(0,"127.0.0.1");
++      const address=mounted.getHttpServer().address();
++      if(!address||typeof address==="string")throw Error("TEST_ONLY_MOUNT_LISTENER_REQUIRED");
++      const path=route==="deployments"?"deployments":"current/account-balances";
++      const url=`http://127.0.0.1:${address.port}/api/v1/execution/manager/${path}?workspace_id=${workspace}&environment=paper`;
++      const unauthenticated=await fetch(url);expect(unauthenticated.status).toBe(401);await unauthenticated.arrayBuffer();
++      expect(calls).toEqual([]);expect(sourceDeployment).not.toHaveBeenCalled();expect(sourceRelation).not.toHaveBeenCalled();
++      const served=await fetch(url,{headers:{cookie:`__Host-portal_session=${cookie}`}});
++      expect(served.status).toBe(200);expect(served.headers.get("cache-control")).toContain("no-store");
++      const dto=await served.json();expect(JSON.stringify(dto)).not.toContain("TEST_ONLY-native-frame-pm");
++      // Reading HTTP bytes is earlier than the real native terminal ACK.
++      // Join the actual call-through promise, without borrowing this Core
++      // pool concurrently with the fixture's independent native peer checks.
++      expect(nativeServe).toHaveBeenCalledTimes(1);
++      await expect(nativeServe.mock.results[0]!.value).resolves.toBe(true);
++      expect(await rows()).toHaveLength(1);expect((await rows())[0]).toMatchObject({phase:"SERVED",source_reconciled:true,lifecycle_kind:"MANAGER_HTTP"});
++      expect(terminalKinds).toEqual(["FINAL_HTTP_SEND_COMPLETED"]);expect(await pending()).toBe(0);
++      expect(legacyDeployment).not.toHaveBeenCalled();expect(legacyRelation).not.toHaveBeenCalled();
++      expect(sourceDeployment.mock.calls.length+sourceRelation.mock.calls.length).toBe(1);
++      await revokeDomain("business.read_all");
++      const denied=await fetch(url,{headers:{cookie:`__Host-portal_session=${cookie}`}});
++      expect([403,404]).toContain(denied.status);await denied.arrayBuffer();
++      expect(sourceDeployment.mock.calls.length+sourceRelation.mock.calls.length).toBe(1);
++      expect(actionCount("issue")).toBe(1);expect(legacyDeployment).not.toHaveBeenCalled();expect(legacyRelation).not.toHaveBeenCalled();
++    }finally{await mounted.close();}
++  });
+@@ -742,0 +965,19 @@
++  it("native Hub drain joins accepted genuine Manager authorization before registration",async()=>{
++    await managerOnly();const scope=await managerCurrent(),binding=await managerBinding(),release=deferred<typeof scope>();
++    const read=vi.fn(async()=>({notices:[],next_cursor:"TEST_ONLY.manager0",caught_up:true}));
++    const hub=new ScopedReplayHub({read},codec,{maximumClients:2,maximumEntriesPerClient:4,maximumFrameBytes:16384,
++      maximumClientBytes:65536,maximumTotalBytes:131072,maximumNoticesPerRead:2,readTimeoutMs:2000},{candidate,scopes});
++    try{await exchange(async({response,body})=>{
++      const opening=hub.subscribeNative({kind:"MANAGER",binding,response,current:()=>release.promise,
++        baselineCursor:"TEST_ONLY.manager0"});
++      const refused=expect(opening).rejects.toMatchObject({code:"STOPPED"});
++      let ended=false;const stop=hub.drain().then(()=>{ended=true;});
++      try{
++        await new Promise<void>(done=>setImmediate(done));expect(ended).toBe(false);
++        expect(hub.diagnostics().pending_subscriptions).toBe(1);expect(read).not.toHaveBeenCalled();
++      }finally{release.resolve(scope);await refused;await bounded(stop);}
++      expect(response.headersSent).toBe(false);expect(body()).toHaveLength(0);
++      expect(hub.diagnostics()).toMatchObject({clients:0,pending_subscriptions:0,source_flights:0});
++      expect(calls).toEqual([]);expect(await rows()).toEqual([]);
++    });}finally{release.resolve(scope);await hub.drain();}
++  });
+--- a/apps/control-api/test/execution-realtime.spec.ts
++++ b/apps/control-api/test/execution-realtime.spec.ts
+@@ -170 +170 @@
+-      close(code?: number) {
++      close(this: EventEmitter & { closeCalls: Array<number | undefined> }, code?: number) {
+@@ -203 +203 @@
+-      close() {
++      close(this: EventEmitter & { closeCalls: number }) {
+--- /dev/null
++++ b/apps/control-api/test/native-core-pool-profile.spec.ts
+@@ -0,0 +1,54 @@
++/** TEST_ONLY actual pg Pool construction/cache, NEVER connects to a database. */
++import type { Pool } from "pg";
++import { afterEach,describe,expect,it } from "vitest";
++import { buildPool,getPool,type CorePoolProfile } from "../src/db/pool";
++
++const pools=new Set<Pool>();let serial=0;
++const profile=():CorePoolProfile=>({max:4,connectionTimeoutMillis:2000,statement_timeout:3000,
++  query_timeout:6000,idle_in_transaction_session_timeout:3000});
++const dsn=()=>`postgres://TEST_ONLY@127.0.0.1:1/TEST_ONLY-no-connect-${++serial}`;
++function pool(url:string,input?:CorePoolProfile){const value=buildPool(url,input);pools.add(value);return value;}
++afterEach(async()=>{
++  for(const value of pools){expect(value.totalCount).toBe(0);
++    if(!(value as Pool&{ended:boolean}).ended)await value.end();}
++  pools.clear();
++});
++describe("TEST_ONLY bounded native pool profile without any socket",()=>{
++  it("preserves original legacy max and connection timeout defaults",()=>{
++    const value=pool(dsn());expect(value.options.max).toBe(10);
++    expect(value.options.connectionTimeoutMillis).toBe(5000);
++    expect(value.options.statement_timeout).toBeUndefined();expect(getPool()).toBe(value);
++  });
++  it("constructs actual pg Pool with every independently supplied bound",()=>{
++    const input=profile(),value=pool(dsn(),input);
++    for(const [key,bound] of Object.entries(input))expect(value.options[key as keyof typeof value.options]).toBe(bound);
++    input.max=9;expect(value.options.max).toBe(4);expect(getPool()).toBe(value);
++  });
++  it("reuses the same profile and lets legacy callers use that SAME already bounded pool",()=>{
++    const url=dsn(),value=pool(url,profile());
++    expect(pool(url,{...profile()})).toBe(value);expect(pool(url)).toBe(value);
++    expect(value.options.statement_timeout).toBe(3000);
++  });
++  it("refuses upgrading a live legacy cache entry, leaving original options untouched",()=>{
++    const url=dsn(),value=pool(url);
++    expect(()=>pool(url,profile())).toThrow("CURRENT_HUMAN_CORE_POOL_PROFILE_MISMATCH");
++    expect(value.options.statement_timeout).toBeUndefined();expect(pool(url)).toBe(value);
++  });
++  it("refuses a changed native profile rather than mutating the live pool",()=>{
++    const url=dsn(),value=pool(url,profile());
++    expect(()=>pool(url,{...profile(),max:5})).toThrow("CURRENT_HUMAN_CORE_POOL_PROFILE_MISMATCH");
++    expect(value.options.max).toBe(4);expect(pool(url,profile())).toBe(value);
++  });
++  it("validates every bound and query-vs-statement ordering before cache reuse",()=>{
++    const url=dsn(),value=pool(url,profile());
++    for(const alter of[{max:0},{max:11},{max:1.5},{connectionTimeoutMillis:0},{statement_timeout:60001},
++      {query_timeout:3000},{idle_in_transaction_session_timeout:Number.NaN}])
++      expect(()=>pool(url,{...profile(),...alter})).toThrow("CURRENT_HUMAN_CORE_POOL_PROFILE_INVALID");
++    expect(pool(url,profile())).toBe(value);
++  });
++  it("removes only the ended cache entry, allowing fresh bounded reconstruction",async()=>{
++    const url=dsn(),first=pool(url);await first.end();
++    const next=pool(url,profile());expect(next).not.toBe(first);
++    expect(next.options.statement_timeout).toBe(3000);expect(getPool()).toBe(next);
++  });
++});
+--- a/apps/control-api/test/native-manager-preparation.spec.ts
++++ b/apps/control-api/test/native-manager-preparation.spec.ts
+@@ -15,0 +16 @@
++import { accessDigest } from "../src/execution-v2/access-policy";
+@@ -20 +21,4 @@
+-import type { NativeCoreSelection } from "../src/execution-v2/native-core-composition";
++import { composeNativeCore,nativeCoreManagerReadConsumer,type NativeCoreSelection } from "../src/execution-v2/native-core-composition";
++import type { AccessTrustProvider } from "../src/execution-v2/access-trust";
++import { MaximumDataOperationController } from "../src/execution/maximum-data-operation.controller";
++import type { WorkspacesRepository } from "../src/repos/workspaces";
+@@ -28,0 +33,6 @@
++import { ExecutionProfileRealtimeService } from "../src/execution/profile-realtime.service";
++import type { ExecutionProfileProjectionRepository,ProfileProjectionSnapshot } from "../src/execution/profile-projection.repository";
++import { ScopedReplayCursorCodec,decodeScopedReplayContinuation } from "../src/execution-v2/scoped-replay-cursor";
++import { managerObservationBaseline,managerObservationQueryDigest,MANAGER_OBSERVATION_BASELINE_MODEL,
++  MANAGER_OBSERVATION_STREAM_MODEL } from "../src/execution-v2/manager-observation-source";
++import type { ScopedReplayBinding } from "../src/execution-v2/realtime.contract";
+@@ -33,0 +44,2 @@
++function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(done=>{resolve=done;});return {promise,resolve};}
++const nextTurn=()=>new Promise<void>(done=>setImmediate(done));
+@@ -107,0 +120,223 @@
++async function composedFixture(){
++  const f=await fixture();
++  const unused=async():Promise<never>=>{throw Error("TEST_ONLY_NO_AUTHORITY_IO_DURING_CONSTRUCTION");};
++  const base:AccessTrustProvider={verifyPolicy:unused,verifyReceipt:unused,relations:unused,verifiedHumanMapping:unused};
++  const composition=await composeNativeCore(f.db.pool,base,{
++    expected_workload_id:"TEST_ONLY-pm",selections:[f.e],retained_recovery:[],
++    owner_intakes:[{artifact_path:"/TEST_ONLY-unopened-owner-intake",approved_sha256:raw("a"),
++      target:{database_name:"TEST_ONLY_control",database_system_identifier:"1234567890",role_name:"TEST_ONLY_core",
++        protected_owner_user_id:"TEST_ONLY-owner",workspace_id:f.p.workspaceId,
++        principal_workspace_pins:[{user_id:f.p.user.userId,workspace_id:f.p.workspaceId}]},
++      intake_not_before_ms:Date.now()-1000,intake_not_after_ms:Date.now()+60000}],
++    mutation_limits:{maximum_intents:16,maximum_recoveries_per_request:16}});
++  return {...f,composition};
++}
++async function observationFixture(withRealtime=true){
++  const f=await fixture(),selected=selectedNativeBusinessReadSelection(f.e.config.selected_source);
++  const observation={workspace_id:f.p.workspaceId,environment:"paper" as const,profile_id:f.e.selector.domain.profile_id,
++    source_identity_digest:selected.source_identity_digest,source_contract_revision:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceContractRevision,
++    source_catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256};
++  const snapshot:ProfileProjectionSnapshot={document:{schema_version:"portal.execution.profile-projection.v1",
++    workspace_id:f.p.workspaceId,environment:"paper",profile_id:observation.profile_id,relations:{},
++    source_contract_revision:observation.source_contract_revision,source_catalogue_sha256:observation.source_catalogue_sha256},
++    sourceEpoch:"TEST_ONLY-original-source",sourceCursor:"TEST_ONLY-private-source",sourceAsOf:null,receivedAt:new Date(),
++    lastSuccessfulRefreshAt:new Date(),completeness:"UNKNOWN",projectionEpoch:"12345678-1234-1234-1234-123456789abc",
++    projectionSequence:10,payloadDigest:hash("a"),sourceCatalogueSha256:observation.source_catalogue_sha256};
++  const repository={snapshot:vi.fn(async()=>snapshot),refreshHealth:vi.fn(async()=>({state:"HEALTHY",reasonCode:null,retryNotBefore:null})),
++    snapshotMetadata:vi.fn(async()=>({...snapshot,sourceContractRevision:observation.source_contract_revision})),journalAfter:vi.fn(async()=>[])};
++  const stream=vi.fn(async()=>{throw Error("TEST_ONLY_NO_STREAM_AUTHORITY");});
++  const codec=new ScopedReplayCursorCodec("test",{test:"TEST_ONLY-cursor-key-at-least-32-bytes"},300_000);
++  const local=new ExecutionProfileRealtimeService({FEATURE_EXECUTION_LOCAL_PROJECTION:"true",
++    EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS:1000} as ControlApiConfig,repository as unknown as ExecutionProfileProjectionRepository);
++  const consumer=new NativeManagerReadConsumer(f.db.pool,f.operations,{selectedCandidate:f.select},[f.e],withRealtime?{
++    scopes:{authorizeManagerNativeStream:stream} as unknown as ExecutionReadScopes,
++    repository:repository as unknown as ExecutionProfileProjectionRepository,codec,
++    limits:{maximumClients:2,maximumEntriesPerClient:2,maximumFrameBytes:8192,maximumClientBytes:16384,
++      maximumTotalBytes:32768,maximumNoticesPerRead:2,readTimeoutMs:1000}}:undefined);
++  const baseline=managerObservationBaseline(snapshot,observation),binding:ScopedReplayBinding={workspace_id:f.p.workspaceId,
++    environment:"paper",profile_id:observation.profile_id,principal_scope_digest:accessDigest({
++      schema_version:"portal.manager-observation.read-baseline-scope.v1",actor:{user_id:f.p.user.userId,
++        session_id:f.p.session.sessionId,session_generation:f.p.session.sessionVersion},viewer_workspace_id:null,read_scope_digest:f.d.scope_digest}),
++    app_policy_revision:f.d.policy_revision,field_policy_revision:f.d.field_policy_ref,model_revision:MANAGER_OBSERVATION_BASELINE_MODEL,
++    schema_revision:"portal.execution.scoped-realtime.v1",dataset:"execution_profile_observation",query_digest:managerObservationQueryDigest(observation),
++    window:null,snapshot_id:baseline.snapshot_id,source_set_digest:baseline.source_set_digest,
++    source_continuity_epoch:baseline.source_continuity_epoch,projection_generation:baseline.projection_generation};
++  return {...f,consumer,local,repository,codec,baseline,binding,stream};
++}
++describe("TEST_ONLY original observation baseline preparation, no commissioned STREAM",()=>{
++  it("shutdown joins pending READ authority and starts no projection or Candidate afterward",async()=>{
++    const f=await observationFixture(),wait=deferred<Awaited<ReturnType<typeof f.operations.currentNativeManagerRead>>>();
++    const current=vi.spyOn(f.operations,"currentNativeManagerRead").mockReturnValue(wait.promise);
++    const pending=f.consumer.serveProfileSnapshot(f.p,"paper",f.e.selector.domain.profile_id,f.local,f.response);
++    const refused=expect(pending).rejects.toMatchObject({code:"NATIVE_MANAGER_READ_UNAVAILABLE"});
++    let ended=false;const stop=f.consumer.stopRealtime().then(()=>{ended=true;});
++    try{
++      await nextTurn();expect(ended).toBe(false);expect(current).toHaveBeenCalledOnce();
++      wait.resolve({decision:f.d,nativeEpochDigest:hash("a")});await refused;await stop;
++      expect(f.repository.snapshot).not.toHaveBeenCalled();expect(f.acquire).not.toHaveBeenCalled();expect(f.send).not.toHaveBeenCalled();
++    }finally{wait.resolve({decision:f.d,nativeEpochDigest:hash("a")});await stop;await f.local.onApplicationShutdown();}
++  });
++  it("shutdown joins STREAM authorization and starts no metadata lookup afterward",async()=>{
++    const f=await observationFixture(),wait=deferred<never>();f.stream.mockReturnValue(wait.promise);
++    const pending=f.consumer.serveProfileStream(f.p,"paper",f.e.selector.domain.profile_id,"TEST_ONLY-not-an-authority",reply());
++    const refused=expect(pending).rejects.toMatchObject({code:"NATIVE_MANAGER_READ_UNAVAILABLE"});
++    let ended=false;const stop=f.consumer.stopRealtime().then(()=>{ended=true;});
++    try{
++      await nextTurn();expect(ended).toBe(false);expect(f.stream).toHaveBeenCalledOnce();
++      // No scope is minted: shutdown must refuse BEFORE interpreting a result.
++      wait.resolve(undefined as never);await refused;await stop;
++      expect(f.repository.snapshotMetadata).not.toHaveBeenCalled();expect(f.acquire).not.toHaveBeenCalled();
++    }finally{wait.resolve(undefined as never);await stop;await f.local.onApplicationShutdown();}
++  });
++  it("shutdown joins captured snapshot preparation before refusing new admission",async()=>{
++    const f=await observationFixture(),wait=deferred<Awaited<ReturnType<typeof f.local.prepareSnapshot>>>(),entered=deferred<void>();
++    vi.spyOn(f.local,"prepareSnapshot").mockImplementation(async()=>{entered.resolve();return wait.promise;});
++    const pending=f.consumer.serveProfileSnapshot(f.p,"paper",f.e.selector.domain.profile_id,f.local,f.response);
++    const refused=expect(pending).rejects.toMatchObject({code:"NATIVE_MANAGER_READ_UNAVAILABLE"});
++    await entered.promise;let ended=false;const stop=f.consumer.stopRealtime().then(()=>{ended=true;});
++    try{
++      await nextTurn();expect(ended).toBe(false);wait.resolve(undefined as never);await refused;await stop;
++      expect(f.acquire).not.toHaveBeenCalled();expect(f.send).not.toHaveBeenCalled();
++      expect(f.response.raw.headersSent).toBe(false);
++    }finally{wait.resolve(undefined as never);await stop;await f.local.onApplicationShutdown();}
++  });
++  it("already admitted final delivery settles through its SAME Candidate before shutdown resolves",async()=>{
++    const f=await observationFixture(),wait=deferred<Awaited<ReturnType<typeof f.candidate.sendNativeRead>>>(),entered=deferred<void>();
++    f.send.mockImplementation(async()=>{entered.resolve();return wait.promise;});
++    const pending=f.consumer.serveProfileSnapshot(f.p,"paper",f.e.selector.domain.profile_id,f.local,f.response);
++    await entered.promise;let ended=false;const stop=f.consumer.stopRealtime().then(()=>{ended=true;});
++    try{
++      await nextTurn();expect(ended).toBe(false);expect(f.acquire).toHaveBeenCalledOnce();
++      wait.resolve({state:"RECONCILED",context:{} as never});expect(await pending).toBe(true);await stop;
++      await expect(f.consumer.serveProfileSnapshot(f.p,"paper",f.e.selector.domain.profile_id,f.local,reply()))
++        .rejects.toMatchObject({code:"NATIVE_MANAGER_READ_UNAVAILABLE"});
++      expect(f.acquire).toHaveBeenCalledOnce();expect(f.send).toHaveBeenCalledOnce();
++    }finally{wait.resolve({state:"RECONCILED",context:{} as never});await pending;await stop;await f.local.onApplicationShutdown();}
++  });
++  it("uses actual current READ and the SAME captured snapshot without STREAM or upstream fetch",async()=>{
++    const f=await observationFixture();try{
++      expect(await f.consumer.serveProfileSnapshot(f.p,"paper",f.e.selector.domain.profile_id,f.local,f.response)).toBe(true);
++      const token=f.response.raw.getHeader("X-Portal-Realtime-Cursor") as string;
++      expect(f.response.raw.getHeader("X-Portal-Realtime-State")).toBe("NATIVE_SCOPED_BASELINE_V1");
++      expect(decodeScopedReplayContinuation(f.codec,token,f.binding)).toBe(f.baseline.source_cursor);
++      expect(f.repository.snapshot).toHaveBeenCalledOnce();expect(f.stream).not.toHaveBeenCalled();
++      expect(f.source.relationForNamedOperation).not.toHaveBeenCalled();expect(f.source.relationForCataloguedOperation).not.toHaveBeenCalled();
++      expect(f.acquire).toHaveBeenCalledOnce();expect(f.send).toHaveBeenCalledOnce();
++      const body=JSON.parse((f.send.mock.calls[0]![2] as Buffer).toString("utf8"));
++      expect(body.projection_sequence).toBe(10);expect(body.payload.snapshot_mode).toBe("CURSOR_ONLY");
++      expect(body.cursor).toBe(f.binding.projection_generation+":10");
++      expect(()=>decodeScopedReplayContinuation(f.codec,token,{...f.binding,model_revision:MANAGER_OBSERVATION_STREAM_MODEL})).toThrow();
++    }finally{f.consumer.stopRealtime();await f.local.onApplicationShutdown();}
++  });
++  it("cannot open STREAM from that READ baseline when current STREAM refuses",async()=>{
++    const f=await observationFixture();try{
++      await f.consumer.serveProfileSnapshot(f.p,"paper",f.e.selector.domain.profile_id,f.local,f.response);
++      const token=f.response.raw.getHeader("X-Portal-Realtime-Cursor") as string,streamReply=reply();
++      await expect(f.consumer.serveProfileStream(f.p,"paper",f.e.selector.domain.profile_id,token,streamReply))
++        .rejects.toThrow("TEST_ONLY_NO_STREAM_AUTHORITY");
++      expect(streamReply.raw.headersSent).toBe(false);expect(f.consumer.hasRealtimeClients()).toBe(false);
++      expect(f.repository.snapshotMetadata).not.toHaveBeenCalled();expect(f.acquire).toHaveBeenCalledTimes(1);
++    }finally{f.consumer.stopRealtime();await f.local.onApplicationShutdown();}
++  });
++  it("requires an explicit baseline without requesting source metadata",async()=>{
++    const f=await observationFixture();try{
++      await expect(f.consumer.serveProfileStream(f.p,"paper",f.e.selector.domain.profile_id,undefined,f.response))
++        .rejects.toMatchObject({code:"SNAPSHOT_REQUIRED"});
++      expect(f.stream).not.toHaveBeenCalled();expect(f.repository.snapshotMetadata).not.toHaveBeenCalled();
++    }finally{f.consumer.stopRealtime();await f.local.onApplicationShutdown();}
++  });
++  it("keeps finite READ usable without replay budgets, while STREAM is unavailable",async()=>{
++    const f=await observationFixture(false);try{
++      expect(await f.consumer.serveProfileSnapshot(f.p,"paper",f.e.selector.domain.profile_id,f.local,f.response)).toBe(true);
++      expect(f.response.raw.getHeader("X-Portal-Realtime-State")).toBe("NATIVE_SCOPED_STREAM_UNAVAILABLE");
++      expect(f.response.raw.getHeader("X-Portal-Realtime-Cursor")).toBeUndefined();
++      expect(f.repository.snapshot).toHaveBeenCalledOnce();expect(f.acquire).toHaveBeenCalledOnce();expect(f.send).toHaveBeenCalledOnce();
++      const body=JSON.parse((f.send.mock.calls[0]![2] as Buffer).toString("utf8"));
++      expect(body.projection_sequence).toBe(10);expect(body.cursor).toBe(f.binding.projection_generation+":10");
++      await expect(f.consumer.serveProfileStream(f.p,"paper",f.e.selector.domain.profile_id,"TEST_ONLY-baseline",reply()))
++        .rejects.toMatchObject({code:"NATIVE_MANAGER_READ_UNAVAILABLE",status:503});
++      expect(f.stream).not.toHaveBeenCalled();expect(f.repository.snapshotMetadata).not.toHaveBeenCalled();
++    }finally{await f.consumer.stopRealtime();await f.local.onApplicationShutdown();}
++  });
++  it("denies field seal drift before native delivery, never entity/ROOT fallback",async()=>{
++    const f=await observationFixture();try{
++      vi.mocked(evaluateManagerDomainRead).mockResolvedValue({...f.d,field_policy_sha256:raw("f")});
++      await expect(f.consumer.serveProfileSnapshot(f.p,"paper",f.e.selector.domain.profile_id,f.local,f.response))
++        .rejects.toMatchObject({code:"NATIVE_MANAGER_READ_DENIED"});
++      expect(f.acquire).not.toHaveBeenCalled();expect(f.response.raw.headersSent).toBe(false);
++      expect(f.entityAuthorize).not.toHaveBeenCalled();
++    }finally{f.consumer.stopRealtime();await f.local.onApplicationShutdown();}
++  });
++  it.each(["profile","workspace","session"] as const)("denies changed %s before projection/native work",async axis=>{
++    const f=await observationFixture();try{
++      if(axis==="workspace")f.p.workspaceId="TEST_ONLY-wrong-workspace";
++      if(axis==="session")f.p.session.sessionVersion++;
++      await expect(f.consumer.serveProfileSnapshot(f.p,"paper",axis==="profile"?"TEST_ONLY-wrong-profile":f.e.selector.domain.profile_id,f.local,f.response))
++        .rejects.toMatchObject({code:"NATIVE_MANAGER_READ_DENIED"});
++      expect(f.repository.snapshot).not.toHaveBeenCalled();expect(f.acquire).not.toHaveBeenCalled();
++    }finally{f.consumer.stopRealtime();await f.local.onApplicationShutdown();}
++  });
++  it("stopped composition refuses even with an original READ baseline",async()=>{
++    const f=await observationFixture();try{f.consumer.stopRealtime();
++      await expect(f.consumer.serveProfileSnapshot(f.p,"paper",f.e.selector.domain.profile_id,f.local,f.response))
++        .rejects.toMatchObject({code:"NATIVE_MANAGER_READ_UNAVAILABLE"});
++      expect(f.acquire).not.toHaveBeenCalled();
++    }finally{await f.local.onApplicationShutdown();}
++  });
++});
++describe("TEST_ONLY private composition and existing BFF mounting, no runtime authority",()=>{
++  it("genuine same-pool/trust/coordinator DI constructs inertly",async()=>{
++    const f=await composedFixture(),consumer=nativeCoreManagerReadConsumer(
++      f.composition,f.db.pool,f.operations,f.composition.dependencies);
++    expect(consumer.uses(f.db.pool,f.operations)).toBe(true);
++    expect(f.db.pool.connect).not.toHaveBeenCalled();expect(f.source.relationForNamedOperation).not.toHaveBeenCalled();
++  });
++  it.each(["clone","fake","pool","trust","coordinator"] as const)("refuses %s binding before any source or DB I/O",async mode=>{
++    const f=await composedFixture();
++    const composition=mode==="clone"?{...f.composition}:mode==="fake"?{selectedCandidate:()=>f.candidate}:f.composition;
++    const pool=mode==="pool"?fakePool().pool:f.db.pool;
++    const dependencies={...f.composition.dependencies,...(mode==="trust"?{executionAccessTrust:{} as AccessTrustProvider}:{}),
++      ...(mode==="coordinator"?{currentHumanMutations:undefined}:{})};
++    expect(()=>nativeCoreManagerReadConsumer(composition as typeof f.composition,pool,f.operations,dependencies)).toThrow();
++    expect(f.db.pool.connect).not.toHaveBeenCalled();expect(f.source.relationForNamedOperation).not.toHaveBeenCalled();
++  });
++  for(const route of ["deployments","relation"] as const){
++    const invoke=(controller:MaximumDataOperationController,f:Awaited<ReturnType<typeof fixture>>,query:unknown)=>{
++      const request={portalUser:f.p.user,portalSession:f.p.session,portalWorkspaceId:f.p.workspaceId,
++        portalViewerWorkspaceId:"TEST_ONLY-viewer"};
++      return route==="deployments"?controller.deployments(request as never,query,f.response):
++        controller.currentRelation(request as never,"account-balances",query,f.response);
++    };
++    it(`${route} passes trusted principal/query/reply to the sole native writer`,async()=>{
++      const f=await fixture(),serve=vi.fn(async()=>true),legacy=vi.fn();
++      const operations={deploymentPage:legacy,relationPage:legacy} as unknown as MaximumDataOperationService;
++      const check=vi.fn(async()=>true),workspaces={canReadExecution:check} as unknown as WorkspacesRepository;
++      const controller=new MaximumDataOperationController(operations,workspaces,{serve} as unknown as NativeManagerReadConsumer);
++      expect(await invoke(controller,f,{environment:"paper",limit:17,cursor:"TEST_ONLY-cursor"})).toBeUndefined();
++      expect(check).toHaveBeenCalledWith(f.p.workspaceId,f.p.user.userId,"paper");expect(legacy).not.toHaveBeenCalled();
++      expect(serve).toHaveBeenCalledExactlyOnceWith({principal:{...f.p,viewerWorkspaceId:"TEST_ONLY-viewer"},
++        operation:route==="deployments"?{kind:"DEPLOYMENTS"}:{kind:"RELATION",route_id:"account-balances"},
++        query:{environment:"paper",limit:17,cursor:"TEST_ONLY-cursor"}},f.response);
++    });
++    it(`${route} never falls back after a selected native refusal`,async()=>{
++      const f=await fixture(),serve=vi.fn(async()=>{throw Error("TEST_ONLY_NATIVE_DENIED");}),legacy=vi.fn();
++      const controller=new MaximumDataOperationController({deploymentPage:legacy,relationPage:legacy} as unknown as MaximumDataOperationService,
++        {canReadExecution:async()=>true} as unknown as WorkspacesRepository,{serve} as unknown as NativeManagerReadConsumer);
++      await expect(invoke(controller,f,{})).rejects.toThrow("TEST_ONLY_NATIVE_DENIED");expect(legacy).not.toHaveBeenCalled();
++    });
++    it(`${route} preserves the legacy path only for an unselected user`,async()=>{
++      const f=await fixture(),serve=vi.fn(async()=>false),legacy=vi.fn(async()=>({TEST_ONLY:"legacy"}));
++      const controller=new MaximumDataOperationController({deploymentPage:legacy,relationPage:legacy} as unknown as MaximumDataOperationService,
++        {canReadExecution:async()=>true} as unknown as WorkspacesRepository,{serve} as unknown as NativeManagerReadConsumer);
++      expect(await invoke(controller,f,{})).toEqual({TEST_ONLY:"legacy"});expect(legacy).toHaveBeenCalledTimes(1);
++    });
++    it(`${route} rejects hidden workspace and invalid query before native dispatch`,async()=>{
++      const f=await fixture(),serve=vi.fn(),legacy=vi.fn();
++      const controller=new MaximumDataOperationController({deploymentPage:legacy,relationPage:legacy} as unknown as MaximumDataOperationService,
++        {canReadExecution:async()=>false} as unknown as WorkspacesRepository,{serve} as unknown as NativeManagerReadConsumer);
++      await expect(invoke(controller,f,{})).rejects.toMatchObject({code:"WORKSPACE_NOT_FOUND"});
++      await expect(invoke(controller,f,{limit:201})).rejects.toMatchObject({status:400});
++      expect(serve).not.toHaveBeenCalled();expect(legacy).not.toHaveBeenCalled();
++    });
++  }
++});
+--- /dev/null
++++ b/apps/control-api/test/native-profile-realtime-mount.spec.ts
+@@ -0,0 +1,216 @@
++/** TEST_ONLY coordinator/dispatch units. Stub consumer is NOT native authority;
++ * actual SessionGuard/PM/PG/physical-frame qualification remains separate. */
++import { afterEach, describe, expect, it, vi } from "vitest";
++import { EventEmitter } from "node:events";
++import { HttpException } from "@nestjs/common";
++import type { ControlApiConfig } from "../src/config";
++import { AppModule } from "../src/app.module";
++import { ExecutionProfileRealtimeService, NATIVE_MANAGER_REALTIME_COORDINATOR } from "../src/execution/profile-realtime.service";
++import { ExecutionRealtimeController } from "../src/execution/realtime.controller";
++import { MaximumDataOperationError } from "../src/execution/maximum-data-operation.service";
++import { ScopedReplayError } from "../src/execution-v2/scoped-replay-cursor";
++import type { NativeManagerReadConsumer } from "../src/execution-v2/native-manager-consumer";
++import type { ExecutionProfileProjectionRepository, ProfileProjectionSnapshot } from "../src/execution/profile-projection.repository";
++
++const workspace="TEST_ONLY-workspace",profile="PAPER_BINANCE_USDM";
++const config={FEATURE_EXECUTION_LOCAL_PROJECTION:"true",FEATURE_EXECUTION_CURRENT_SOURCE_PAPER:"true",
++  FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX:"true",FEATURE_EXECUTION_CURRENT_SOURCE_LIVE:"true",EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS:1000,
++  EXECUTION_EDGE_PAPER_PROFILE_ID:profile,EXECUTION_EDGE_SANDBOX_PROFILE_ID:"SANDBOX_BINANCE_USDM",
++  EXECUTION_EDGE_LIVE_PROFILE_ID:"LIVE_BINANCE_USDM",EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID:workspace} as ControlApiConfig;
++const snapshot:ProfileProjectionSnapshot={document:{schema_version:"portal.execution.profile-projection.v1",
++  workspace_id:workspace,environment:"paper",profile_id:profile,source_contract_revision:"TEST_ONLY-r1",
++  source_catalogue_sha256:"sha256:"+"a".repeat(64),relations:{}},sourceEpoch:"TEST_ONLY-source-epoch",
++  sourceCursor:"TEST_ONLY-private-source",sourceAsOf:null,receivedAt:new Date(1000),lastSuccessfulRefreshAt:new Date(1000),
++  completeness:"UNKNOWN",projectionEpoch:"12345678-1234-1234-1234-123456789abc",projectionSequence:10,
++  payloadDigest:"sha256:"+"b".repeat(64),sourceCatalogueSha256:"sha256:"+"a".repeat(64)};
++const health={state:"HEALTHY",reasonCode:null,retryNotBefore:null} as const;
++function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r;});return {promise,resolve};}
++function coordinator(){
++  let clients=true;
++  const native={hasRealtimeClients:vi.fn(()=>clients),pollRealtime:vi.fn(async():Promise<void>=>undefined),
++    stopRealtime:vi.fn(async():Promise<void>=>{clients=false;})};
++  const repository={snapshot:vi.fn(async()=>snapshot),refreshHealth:vi.fn(async()=>health)};
++  const service=new ExecutionProfileRealtimeService(config,repository as unknown as ExecutionProfileProjectionRepository,
++    native as unknown as NativeManagerReadConsumer);
++  return {service,native,repository,setClients:(value:boolean)=>{clients=value;}};
++}
++function controller(){
++  const local={startNativePolling:vi.fn(),snapshot:vi.fn(async()=>({TEST_ONLY:"legacy"})),subscribe:vi.fn(),
++    prepareSnapshot:vi.fn(),heartbeat:vi.fn(),authExpired:vi.fn()};
++  const native={serveProfileSnapshot:vi.fn(async(..._args:unknown[])=>true),serveProfileStream:vi.fn(async(..._args:unknown[])=>true)};
++  const authority={authorize:vi.fn(async()=>undefined)},scopes={assertLegacyStream:vi.fn()};
++  const raw=Object.assign(new EventEmitter(),{headersSent:false,destroyed:false,writableEnded:false,
++    writeHead:vi.fn(),write:vi.fn(),end:vi.fn(),destroy:vi.fn()});
++  const response={raw,hijack:vi.fn(),status:vi.fn().mockReturnThis(),send:vi.fn()};
++  const request={portalUser:{userId:"TEST_ONLY-user"},portalSession:{sessionId:"TEST_ONLY-session"},
++    portalWorkspaceId:"TEST_ONLY-viewer",headers:{"last-event-id":"TEST_ONLY-last-event"}};
++  const instance=new ExecutionRealtimeController({} as never,{} as never,local as never,{} as never,{} as never,
++    config,authority as never,scopes as never,native as never);
++  return {instance,local,native,authority,scopes,request,response,raw,config};
++}
++afterEach(()=>vi.useRealTimers());
++describe("Native observation uses the existing shared coordinator",()=>{
++  it("captures one original row for both baseline and unchanged finite envelope",async()=>{
++    const f=coordinator();try{
++      const prepared=await f.service.prepareSnapshot(workspace,"paper",profile);
++      expect(prepared.snapshot).toBe(snapshot);expect(prepared.envelope.projection_sequence).toBe(10);
++      expect(prepared.envelope.cursor).toBe(snapshot.projectionEpoch+":10");
++      expect(prepared.envelope.payload).toEqual({snapshot_mode:"CURSOR_ONLY",relation_count:0,
++        source_contract_revision:snapshot.document.source_contract_revision,source_catalogue_sha256:snapshot.sourceCatalogueSha256});
++      expect(f.repository.snapshot).toHaveBeenCalledTimes(1);
++      expect(f.repository.refreshHealth).toHaveBeenCalledTimes(1);
++    }finally{await f.service.onApplicationShutdown();}
++  });
++  it("keeps the old snapshot JSON without an extra projection read",async()=>{
++    const f=coordinator();try{
++      expect((await f.service.snapshot(workspace,"paper",profile)).schema_version).toBe("portal.execution.profile-realtime.v1");
++      expect(f.repository.snapshot).toHaveBeenCalledTimes(1);
++    }finally{await f.service.onApplicationShutdown();}
++  });
++  it("shares one timer and only one in-flight native poll",async()=>{
++    vi.useFakeTimers();const f=coordinator(),wait=deferred<void>();f.native.pollRealtime.mockReturnValue(wait.promise);
++    try{
++      f.service.startNativePolling();f.service.startNativePolling();expect(vi.getTimerCount()).toBe(1);
++      await vi.advanceTimersByTimeAsync(1000);expect(f.native.pollRealtime).toHaveBeenCalledTimes(1);
++      f.setClients(false);wait.resolve();await Promise.resolve();await Promise.resolve();
++      expect(vi.getTimerCount()).toBe(0);expect(f.repository.snapshot).not.toHaveBeenCalled();
++    }finally{wait.resolve();await f.service.onApplicationShutdown();}
++  });
++  it("does not create a timer or source poll without native clients",async()=>{
++    vi.useFakeTimers();const f=coordinator();f.setClients(false);
++    try{f.service.startNativePolling();await vi.advanceTimersByTimeAsync(1000);
++      expect(vi.getTimerCount()).toBe(0);expect(f.native.pollRealtime).not.toHaveBeenCalled();
++    }finally{await f.service.onApplicationShutdown();}
++  });
++  it("marks stopped, aborts and joins the actual in-flight poll before shutdown finishes",async()=>{
++    vi.useFakeTimers();const f=coordinator(),wait=deferred<void>();f.native.pollRealtime.mockReturnValue(wait.promise);
++    f.service.startNativePolling();await vi.advanceTimersByTimeAsync(250);
++    let ended=false;const stop=f.service.onApplicationShutdown().then(()=>{ended=true;});
++    expect(f.native.stopRealtime).toHaveBeenCalledOnce();expect(vi.getTimerCount()).toBe(0);
++    await Promise.resolve();expect(ended).toBe(false);
++    expect(()=>f.service.startNativePolling()).toThrow("N31_SERVICE_STOPPED");
++    wait.resolve();await stop;expect(ended).toBe(true);
++  });
++  it("joins native drain even after the public poll promise has already settled",async()=>{
++    const f=coordinator(),wait=deferred<void>();f.native.stopRealtime.mockReturnValue(wait.promise);
++    let ended=false;const stop=f.service.onApplicationShutdown().then(()=>{ended=true;});
++    await Promise.resolve();expect(ended).toBe(false);wait.resolve();await stop;expect(ended).toBe(true);
++  });
++  it("denies a snapshot finishing after shutdown rather than handing it to a writer",async()=>{
++    const f=coordinator(),wait=deferred<typeof health>(),entered=deferred<void>();
++    f.repository.refreshHealth.mockImplementation(async()=>{entered.resolve();return wait.promise;});
++    const pending=f.service.prepareSnapshot(workspace,"paper",profile);
++    const rejected=expect(pending).rejects.toMatchObject({code:"N31_SERVICE_STOPPED"});
++    await entered.promise;let ended=false;const stop=f.service.onApplicationShutdown().then(()=>{ended=true;});
++    await Promise.resolve();expect(ended).toBe(false);wait.resolve(health);await rejected;await stop;expect(ended).toBe(true);
++  });
++  it("queued snapshot cannot begin repository work after stop",async()=>{
++    const f=coordinator(),wait=deferred<ProfileProjectionSnapshot>(),entered=deferred<void>();
++    f.repository.snapshot.mockImplementation(async()=>{entered.resolve();return wait.promise;});
++    const first=f.service.prepareSnapshot(workspace,"paper",profile),queued=f.service.prepareSnapshot(workspace,"paper",profile);
++    const rejected=Promise.all([expect(first).rejects.toMatchObject({code:"N31_SERVICE_STOPPED"}),
++      expect(queued).rejects.toMatchObject({code:"N31_SERVICE_STOPPED"})]);
++    await entered.promise;let ended=false;const stop=f.service.onApplicationShutdown().then(()=>{ended=true;});
++    await Promise.resolve();expect(ended).toBe(false);wait.resolve(snapshot);await rejected;await stop;
++    expect(f.repository.snapshot).toHaveBeenCalledOnce();expect(f.repository.refreshHealth).not.toHaveBeenCalled();
++    await expect(f.service.prepareSnapshot(workspace,"paper",profile)).rejects.toMatchObject({code:"N31_SERVICE_STOPPED"});
++    expect(f.repository.snapshot).toHaveBeenCalledOnce();
++  });
++  it.each(["resolve","reject"] as const)("shutdown joins actual repository %s after its response timed out",async outcome=>{
++    vi.useFakeTimers();const f=coordinator(),entered=deferred<void>();
++    let resolve!:(value:ProfileProjectionSnapshot)=>void,reject!:(error:Error)=>void;
++    const actual=new Promise<ProfileProjectionSnapshot>((done,fail)=>{resolve=done;reject=fail;});
++    f.repository.snapshot.mockImplementation(async()=>{entered.resolve();return actual;});
++    const pending=f.service.prepareSnapshot(workspace,"paper",profile);
++    const timedOut=expect(pending).rejects.toMatchObject({code:"N31_LOCAL_READ_TIMEOUT"});
++    await entered.promise;await vi.advanceTimersByTimeAsync(2001);await timedOut;
++    let ended=false;const stop=f.service.onApplicationShutdown().then(()=>{ended=true;});
++    await Promise.resolve();expect(ended).toBe(false);expect(f.repository.refreshHealth).not.toHaveBeenCalled();
++    if(outcome==="resolve")resolve(snapshot);else reject(new Error("TEST_ONLY-late-PG-rejection"));
++    await stop;expect(ended).toBe(true);expect(vi.getTimerCount()).toBe(0);
++  });
++});
++describe("Existing profile BFF opts into sole native writer, no legacy fallback",()=>{
++  it.each(["paper","sandbox","live"] as const)("disabled %s profile denies native snapshot and stream before work",async environment=>{
++    const f=controller(),flag=environment==="paper"?"FEATURE_EXECUTION_CURRENT_SOURCE_PAPER":
++      environment==="sandbox"?"FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX":"FEATURE_EXECUTION_CURRENT_SOURCE_LIVE";
++    const before=f.config[flag];f.config[flag]="false";
++    try{
++      await expect(f.instance.profileSnapshot(f.request as never,environment,f.response as never)).rejects.toMatchObject({status:404});
++      await f.instance.profileStream(f.request as never,f.response as never,environment);
++      expect(f.response.status).toHaveBeenCalledWith(404);expect(f.native.serveProfileSnapshot).not.toHaveBeenCalled();
++      expect(f.native.serveProfileStream).not.toHaveBeenCalled();expect(f.local.startNativePolling).not.toHaveBeenCalled();
++      expect(f.raw.writeHead).not.toHaveBeenCalled();expect(f.response.hijack).not.toHaveBeenCalled();
++    }finally{f.config[flag]=before;}
++  });
++  it("disabled local projection denies both native routes before authority or transport",async()=>{
++    const f=controller(),before=f.config.FEATURE_EXECUTION_LOCAL_PROJECTION;f.config.FEATURE_EXECUTION_LOCAL_PROJECTION="false";
++    try{
++      await expect(f.instance.profileSnapshot(f.request as never,"paper",f.response as never)).rejects.toMatchObject({status:404});
++      await f.instance.profileStream(f.request as never,f.response as never,"paper");
++      expect(f.response.status).toHaveBeenCalledWith(404);expect(f.native.serveProfileSnapshot).not.toHaveBeenCalled();
++      expect(f.native.serveProfileStream).not.toHaveBeenCalled();expect(f.authority.authorize).not.toHaveBeenCalled();
++      expect(f.local.startNativePolling).not.toHaveBeenCalled();expect(f.raw.writeHead).not.toHaveBeenCalled();
++    }finally{f.config.FEATURE_EXECUTION_LOCAL_PROJECTION=before;}
++  });
++  it("mounts native finite delivery before legacy ADMIN/STREAM gates",async()=>{
++    const f=controller();await f.instance.profileSnapshot(f.request as never,"paper",f.response as never);
++    expect(f.native.serveProfileSnapshot).toHaveBeenCalledWith(expect.objectContaining({workspaceId:workspace,
++      viewerWorkspaceId:f.request.portalWorkspaceId}),"paper",profile,f.local,f.response);
++    expect(f.authority.authorize).not.toHaveBeenCalled();expect(f.scopes.assertLegacyStream).not.toHaveBeenCalled();
++    expect(f.local.snapshot).not.toHaveBeenCalled();expect(f.response.send).not.toHaveBeenCalled();
++  });
++  it("starts the SAME coordinator after the selected stream owns transport",async()=>{
++    const f=controller();await f.instance.profileStream(f.request as never,f.response as never,"paper","TEST_ONLY-query-cursor");
++    expect(f.native.serveProfileStream.mock.calls[0]?.[3]).toBe("TEST_ONLY-last-event");
++    expect(f.local.startNativePolling).toHaveBeenCalledOnce();expect(f.authority.authorize).not.toHaveBeenCalled();
++    expect(f.raw.writeHead).not.toHaveBeenCalled();expect(f.raw.write).not.toHaveBeenCalled();
++    expect(f.local.subscribe).not.toHaveBeenCalled();expect(f.response.hijack).not.toHaveBeenCalled();
++  });
++  it("has no legacy timer, heartbeat, lease monitor or subscription on native path",async()=>{
++    vi.useFakeTimers();const f=controller();await f.instance.profileStream(f.request as never,f.response as never,"paper");
++    await vi.advanceTimersByTimeAsync(30_000);expect(vi.getTimerCount()).toBe(0);
++    expect(f.local.heartbeat).not.toHaveBeenCalled();expect(f.scopes.assertLegacyStream).not.toHaveBeenCalled();
++  });
++  it("selected native finite denial never falls back or emits an error body itself",async()=>{
++    const f=controller();f.native.serveProfileSnapshot.mockRejectedValue(new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403));
++    await expect(f.instance.profileSnapshot(f.request as never,"paper",f.response as never)).rejects.toMatchObject({status:403});
++    expect(f.authority.authorize).not.toHaveBeenCalled();expect(f.local.snapshot).not.toHaveBeenCalled();
++    expect(f.response.send).not.toHaveBeenCalled();expect(f.raw.write).not.toHaveBeenCalled();
++  });
++  it.each(["CURSOR_INVALID_OR_EXPIRED","SNAPSHOT_REQUIRED","SCOPE_CHANGED"] as const)("returns safe409 for %s without fallback",async code=>{
++    const f=controller();f.native.serveProfileStream.mockRejectedValue(new ScopedReplayError(code));
++    await f.instance.profileStream(f.request as never,f.response as never,"paper");
++    expect(f.response.status).toHaveBeenCalledWith(409);expect(f.response.send).toHaveBeenCalledWith(
++      {error:{code,message:"Local execution realtime is unavailable."}});
++    expect(f.local.startNativePolling).not.toHaveBeenCalled();expect(f.authority.authorize).not.toHaveBeenCalled();
++    expect(f.raw.writeHead).not.toHaveBeenCalled();
++  });
++  it("does not send a second body when native transport is already destroyed",async()=>{
++    const f=controller();f.raw.destroyed=true;
++    f.native.serveProfileStream.mockRejectedValue(new ScopedReplayError("SOURCE_UNAVAILABLE"));
++    await f.instance.profileStream(f.request as never,f.response as never,"paper");
++    expect(f.response.send).not.toHaveBeenCalled();expect(f.response.status).not.toHaveBeenCalled();
++  });
++  it("unselected finite user retains the legacy behavior",async()=>{
++    const f=controller();f.native.serveProfileSnapshot.mockResolvedValue(false);
++    expect(await f.instance.profileSnapshot(f.request as never,"paper",f.response as never)).toEqual({TEST_ONLY:"legacy"});
++    expect(f.authority.authorize).toHaveBeenCalledOnce();expect(f.scopes.assertLegacyStream).toHaveBeenCalledOnce();
++  });
++  it("rejects orphan private realtime budgets without constructing a source",()=>{
++    expect(()=>AppModule.register(config,{} as never,undefined,{nativeManagerRealtimeLimits:{maximumClients:1,
++      maximumEntriesPerClient:1,maximumFrameBytes:1024,maximumClientBytes:1024,maximumTotalBytes:1024,
++      maximumNoticesPerRead:1,readTimeoutMs:1000}})).toThrow("NATIVE_MANAGER_REALTIME_COMPOSITION_REQUIRED");
++  });
++  it("does not register a dangling coordinator alias when private native composition is absent",()=>{
++    const providers=AppModule.register(config,{} as never).providers??[];
++    expect(providers.some(provider=>typeof provider==="object"&&provider!==null&&
++      "provide" in provider&&provider.provide===NATIVE_MANAGER_REALTIME_COORDINATOR)).toBe(false);
++  });
++  it("does not translate a native snapshot cursor refusal into an untyped500",async()=>{
++    const f=controller();f.native.serveProfileSnapshot.mockRejectedValue(new ScopedReplayError("SOURCE_COVERAGE_UNPROVED"));
++    await expect(f.instance.profileSnapshot(f.request as never,"paper",f.response as never)).rejects.toBeInstanceOf(HttpException);
++    try{await f.instance.profileSnapshot(f.request as never,"paper",f.response as never);}
++    catch(error){expect((error as HttpException).getStatus()).toBe(409);}
++  });
++});
+--- a/apps/control-api/test/profile-projection.spec.ts
++++ b/apps/control-api/test/profile-projection.spec.ts
+@@ -8 +8 @@
+-import { CurrentSourceProxyError } from "../src/execution/current-source.proxy";
++import { CurrentSourceProxyError, type CurrentSourcePrincipal } from "../src/execution/current-source.proxy";
+@@ -17,0 +18 @@
++  type ProjectionRow,
+@@ -37,0 +39,15 @@
++/** Synthetic projection-only fixture, not a real session or access proof.
++ * These legacy local-reader tests do not install or replace read authority. */
++function testOnlyProjectionPrincipal(sessionId: string): CurrentSourcePrincipal {
++  const now = new Date();
++  return {
++    workspaceId,
++    user: { userId: "usr_bobby", username: "TEST_ONLY_projection", displayName: "TEST_ONLY projection",
++      role: "ADMIN", status: "ACTIVE", mustChangePassword: false, failedLoginCount: 0,
++      lockedUntil: null, sessionVersion: 1, createdAt: now, updatedAt: now, disabledAt: null,
++      accountRevision: 1, archivedAt: null },
++    session: { sessionId, userId: "usr_bobby", state: "ACTIVE", sessionVersion: 1,
++      authenticationTime: now, idleExpiresAt: new Date(now.getTime() + 60_000),
++      absoluteExpiresAt: new Date(now.getTime() + 60_000) },
++  };
++}
+@@ -385,4 +401 @@
+-    const principal = {
+-      principalId: "usr_bobby", sessionId: "ses_1", workspaceId,
+-      roles: ["ADMIN"], authenticationTime: new Date(), authenticationMethods: ["portal_session"],
+-    };
++    const principal = testOnlyProjectionPrincipal("ses_1");
+@@ -421,4 +434 @@
+-    const principal = {
+-      principalId: "usr_bobby", sessionId: "ses_eds03", workspaceId,
+-      roles: ["ADMIN"], authenticationTime: new Date(), authenticationMethods: ["portal_session"],
+-    };
++    const principal = testOnlyProjectionPrincipal("ses_eds03");
+@@ -452,4 +462 @@
+-    const principal = {
+-      principalId: "usr_bobby", sessionId: "ses_r2_3", workspaceId,
+-      roles: ["ADMIN"], authenticationTime: new Date(), authenticationMethods: ["portal_session"],
+-    };
++    const principal = testOnlyProjectionPrincipal("ses_r2_3");
+@@ -1763,2 +1770,2 @@
+-  const bare = { lineage: { ...base }, fields: { id: "old", ts: "2026-09-01T00:00:00.000Z" } };
+-  const stamped = { lineage: { ...base, source_catalogue_sha256: digest }, fields: { id: "new", ts: "2026-09-02T00:00:00.000Z" } };
++  const bare: ProjectionRow = { lineage: { ...base }, fields: { id: "old", ts: "2026-09-01T00:00:00.000Z" } };
++  const stamped: ProjectionRow = { lineage: { ...base, source_catalogue_sha256: digest }, fields: { id: "new", ts: "2026-09-02T00:00:00.000Z" } };
+--- /dev/null
++++ b/apps/control-api/test/stable-native-rollback-pg.spec.ts
+@@ -0,0 +1,143 @@
++/** TEST_ONLY / NOT_RUN.
++ * Run only on the disposable native-core-read-db/native_core_read_test target.
++ * ACK faults are injected at the pg query-result boundary AFTER real PostgreSQL
++ * executes ROLLBACK/COMMIT; a separate case actually terminates the victim
++ * PostgreSQL backend. These are not production/network-failure acceptance.
++ * No authority state is installed, settled, replayed or inferred by this spec.
++ */
++import { Pool, type PoolClient, type QueryResult } from "pg";
++import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
++import { withTransaction } from "../src/db/pool";
++
++const database=process.env.TEST_DATABASE_URL;
++const enabled=process.env.EPG10_08_NATIVE_READ_TEST_ONLY==="1" && Boolean(database);
++type QueryPort={query:(text:string,values?:unknown[])=>Promise<QueryResult>};
++type ConnectPort={connect:()=>Promise<PoolClient>};
++describe.skipIf(!enabled)("TEST_ONLY actual PG stable transaction rollback custody",()=>{
++  let pool:Pool, created=false;
++  function guardedUrl():string{
++    if(!database || process.env.EPG10_08_NATIVE_READ_TEST_ONLY!=="1")
++      throw new Error("TEST_ONLY_NATIVE_DATABASE_REQUIRED");
++    const url=new URL(database);
++    if(!["postgres:","postgresql:"].includes(url.protocol) ||
++       url.hostname!=="native-core-read-db" || url.pathname!=="/native_core_read_test")
++      throw new Error("TEST_ONLY_NATIVE_DATABASE_TARGET_REFUSED");
++    return database;
++  }
++  beforeAll(async()=>{
++    pool=new Pool({connectionString:guardedUrl(),max:3,connectionTimeoutMillis:2000,
++      statement_timeout:3000,query_timeout:5000,idle_in_transaction_session_timeout:6000});
++    pool.on("error",()=>{});
++    const identity=(await pool.query("SELECT current_database() name")).rows[0];
++    if(identity.name!=="native_core_read_test")throw new Error("TEST_ONLY_NATIVE_DATABASE_TARGET_REFUSED");
++    await pool.query("CREATE TABLE public.test_only_stable_native_rollback (id text PRIMARY KEY)");
++    created=true;
++  });
++  afterEach(()=>{vi.restoreAllMocks();});
++  afterAll(async()=>{
++    if(pool){if(created)await pool.query("DROP TABLE public.test_only_stable_native_rollback");await pool.end();}
++  });
++  async function prepare(){
++    const client=await pool.connect(), keeper=await pool.connect();
++    client.on("error",()=>{});
++    const pid=Number((await client.query("SELECT pg_backend_pid() pid")).rows[0].pid);
++    const keeperPid=Number((await keeper.query("SELECT pg_backend_pid() pid")).rows[0].pid);
++    return {client,keeper,pid,keeperPid};
++  }
++  function routeOnce(client:PoolClient){
++    vi.spyOn(pool as unknown as ConnectPort,"connect").mockImplementationOnce(async()=>client);
++  }
++  async function rows(id:string):Promise<number>{
++    return Number((await pool.query("SELECT count(*) n FROM public.test_only_stable_native_rollback WHERE id=$1",[id])).rows[0].n);
++  }
++  async function assertKeeper(keeper:PoolClient,pid:number){
++    expect(Number((await keeper.query("SELECT pg_backend_pid() pid")).rows[0].pid)).toBe(pid);
++  }
++  it("physical ROLLBACK followed by lost ACK discards the victim, preserves original error and keeps another borrower",async()=>{
++    const f=await prepare(), original=new Error("TEST_ONLY_BODY_FAILURE"), lost=new Error("TEST_ONLY_ROLLBACK_ACK_LOST");
++    const query=f.client.query.bind(f.client) as QueryPort["query"], release=vi.spyOn(f.client,"release");
++    let handed=false;
++    try{
++      vi.spyOn(f.client as unknown as QueryPort,"query").mockImplementation(async(text,values)=>{
++        const result=await query(text,values);
++        if(text==="ROLLBACK")throw lost;
++        return result;
++      });
++      routeOnce(f.client);handed=true;
++      await expect(withTransaction(pool,async db=>{
++        await db.query("INSERT INTO public.test_only_stable_native_rollback(id) VALUES($1)",["TEST_ONLY-rollback-ack"]);
++        throw original;
++      })).rejects.toBe(original);
++      expect(release).toHaveBeenCalledTimes(1);expect(release).toHaveBeenCalledWith(true);
++      vi.restoreAllMocks();
++      await assertKeeper(f.keeper,f.keeperPid);expect(await rows("TEST_ONLY-rollback-ack")).toBe(0);
++      const replacement=await pool.connect();
++      try{expect(Number((await replacement.query("SELECT pg_backend_pid() pid")).rows[0].pid)).not.toBe(f.pid);}
++      finally{replacement.release();}
++    }finally{if(!handed)f.client.release(true);f.keeper.release();}
++  });
++  it("failed ROLLBACK before execution destroys the open transaction instead of returning it to the pool",async()=>{
++    const f=await prepare(), original=new Error("TEST_ONLY_BODY_FAILURE");
++    const query=f.client.query.bind(f.client) as QueryPort["query"], release=vi.spyOn(f.client,"release");
++    let handed=false;
++    try{
++      vi.spyOn(f.client as unknown as QueryPort,"query").mockImplementation(async(text,values)=>{
++        if(text==="ROLLBACK")throw new Error("TEST_ONLY_ROLLBACK_NOT_ACKNOWLEDGED");
++        return query(text,values);
++      });
++      routeOnce(f.client);handed=true;
++      await expect(withTransaction(pool,async db=>{
++        await db.query("INSERT INTO public.test_only_stable_native_rollback(id) VALUES($1)",["TEST_ONLY-unexecuted-rollback"]);
++        throw original;
++      })).rejects.toBe(original);
++      expect(release).toHaveBeenCalledTimes(1);expect(release).toHaveBeenCalledWith(true);
++      vi.restoreAllMocks();
++      await assertKeeper(f.keeper,f.keeperPid);expect(await rows("TEST_ONLY-unexecuted-rollback")).toBe(0);
++      const replacement=await pool.connect();
++      try{
++        expect(Number((await replacement.query("SELECT pg_backend_pid() pid")).rows[0].pid)).not.toBe(f.pid);
++        expect((await replacement.query("SHOW transaction_read_only")).rows[0].transaction_read_only).toBe("off");
++        expect((await replacement.query("SELECT 1 ready")).rows[0].ready).toBe(1);
++      }finally{replacement.release();}
++    }finally{if(!handed)f.client.release(true);f.keeper.release();}
++  });
++  it("actual backend termination makes rollback fail without replacing the callback failure or flushing a healthy borrower",async()=>{
++    const f=await prepare(), original=new Error("TEST_ONLY_BODY_FAILURE"), release=vi.spyOn(f.client,"release");
++    let handed=false;
++    try{
++      routeOnce(f.client);handed=true;
++      await expect(withTransaction(pool,async db=>{
++        await db.query("INSERT INTO public.test_only_stable_native_rollback(id) VALUES($1)",["TEST_ONLY-terminated"]);
++        expect((await f.keeper.query("SELECT pg_terminate_backend($1) terminated",[f.pid])).rows[0].terminated).toBe(true);
++        throw original;
++      })).rejects.toBe(original);
++      expect(release).toHaveBeenCalledTimes(1);expect(release).toHaveBeenCalledWith(true);
++      vi.restoreAllMocks();
++      await assertKeeper(f.keeper,f.keeperPid);expect(await rows("TEST_ONLY-terminated")).toBe(0);
++    }finally{if(!handed)f.client.release(true);f.keeper.release();}
++  });
++  it("physical COMMIT followed by lost ACK remains the original ambiguous failure, with no retry or fabricated rollback absence",async()=>{
++    const f=await prepare(), original=new Error("TEST_ONLY_COMMIT_ACK_LOST");
++    const query=f.client.query.bind(f.client) as QueryPort["query"], release=vi.spyOn(f.client,"release");
++    const body=vi.fn(async(db:PoolClient)=>{
++      await db.query("INSERT INTO public.test_only_stable_native_rollback(id) VALUES($1)",["TEST_ONLY-commit-ack"]);
++      return 1;
++    });
++    let handed=false;
++    try{
++      vi.spyOn(f.client as unknown as QueryPort,"query").mockImplementation(async(text,values)=>{
++        const result=await query(text,values);
++        if(text==="COMMIT")throw original;
++        return result;
++      });
++      routeOnce(f.client);handed=true;
++      await expect(withTransaction(pool,body)).rejects.toBe(original);
++      expect(body).toHaveBeenCalledTimes(1);
++      expect(release).toHaveBeenCalledTimes(1);expect(release).toHaveBeenCalledWith();
++      vi.restoreAllMocks();
++      await assertKeeper(f.keeper,f.keeperPid);expect(await rows("TEST_ONLY-commit-ack")).toBe(1);
++      // Actual committed rows are NOT proof that an authority terminal was
++      // acknowledged. This helper must not settle/retry any native obligation.
++    }finally{if(!handed)f.client.release(true);f.keeper.release();}
++  });
++});
+--- /dev/null
++++ b/apps/control-api/test/stable-native-rollback.spec.ts
+@@ -0,0 +1,83 @@
++/** TEST_ONLY. Focused withTransaction compatibility; no DB/authority/network. */
++import type { Pool, PoolClient } from "pg";
++import { describe, expect, it, vi } from "vitest";
++import { withTransaction } from "../src/db/pool";
++
++function fixture(failures: Partial<Record<"BEGIN"|"COMMIT"|"ROLLBACK",unknown>> = {}) {
++  const query = vi.fn(async (text: string) => {
++    if (Object.prototype.hasOwnProperty.call(failures,text)) throw failures[text as keyof typeof failures];
++    return { rows: [], rowCount: 0 };
++  });
++  const release = vi.fn();
++  const client = { query, release } as unknown as PoolClient;
++  const connect = vi.fn(async () => client), end = vi.fn();
++  const pool = { connect, end } as unknown as Pool;
++  return { pool, client, query, release, connect, end };
++}
++describe("TEST_ONLY stable native transaction rollback custody", () => {
++  it("returns success after COMMIT and releases normally", async () => {
++    const f=fixture(), result={value:"TEST_ONLY"}, fn=vi.fn(async () => result);
++    expect(await withTransaction(f.pool,fn)).toBe(result);
++    expect(fn).toHaveBeenCalledOnce(); expect(fn).toHaveBeenCalledWith(f.client);
++    expect(f.query.mock.calls.map(c=>c[0])).toEqual(["BEGIN","COMMIT"]);
++    expect(f.release).toHaveBeenCalledTimes(1); expect(f.release).toHaveBeenCalledWith(); expect(f.end).not.toHaveBeenCalled();
++  });
++  it("preserves the callback error after acknowledged ROLLBACK", async () => {
++    const f=fixture(), original=new Error("TEST_ONLY_BODY_FAILURE");
++    await expect(withTransaction(f.pool,async()=>{throw original;})).rejects.toBe(original);
++    expect(f.query.mock.calls.map(c=>c[0])).toEqual(["BEGIN","ROLLBACK"]);
++    expect(f.release).toHaveBeenCalledTimes(1); expect(f.release).toHaveBeenCalledWith(); expect(f.end).not.toHaveBeenCalled();
++  });
++  it("preserves the callback error and discards only its client after failed ROLLBACK ACK", async () => {
++    const rollback=new Error("TEST_ONLY_ROLLBACK_ACK_LOST"), f=fixture({ROLLBACK:rollback});
++    const original=new Error("TEST_ONLY_BODY_FAILURE"), fn=vi.fn(async()=>{throw original;});
++    await expect(withTransaction(f.pool,fn)).rejects.toBe(original);
++    expect(fn).toHaveBeenCalledOnce();
++    expect(f.query.mock.calls.map(c=>c[0])).toEqual(["BEGIN","ROLLBACK"]);
++    expect(f.release).toHaveBeenCalledTimes(1); expect(f.release).toHaveBeenCalledWith(true); expect(f.end).not.toHaveBeenCalled();
++  });
++  it("does not call the body when BEGIN fails and preserves that error if rollback also fails", async () => {
++    const original=new Error("TEST_ONLY_BEGIN_ACK_LOST"), f=fixture({BEGIN:original,ROLLBACK:new Error("TEST_ONLY_ROLLBACK_FAILED")});
++    const fn=vi.fn(async()=>1);
++    await expect(withTransaction(f.pool,fn)).rejects.toBe(original);
++    expect(fn).not.toHaveBeenCalled(); expect(f.release).toHaveBeenCalledTimes(1); expect(f.release).toHaveBeenCalledWith(true);
++    expect(f.connect).toHaveBeenCalledOnce(); expect(f.end).not.toHaveBeenCalled();
++  });
++  it("preserves ambiguous COMMIT failure if rollback also fails, without retrying the body", async () => {
++    const original=new Error("TEST_ONLY_COMMIT_ACK_LOST"), f=fixture({COMMIT:original,ROLLBACK:new Error("TEST_ONLY_ROLLBACK_FAILED")});
++    const fn=vi.fn(async()=>7);
++    await expect(withTransaction(f.pool,fn)).rejects.toBe(original);
++    expect(fn).toHaveBeenCalledOnce();
++    expect(f.query.mock.calls.map(c=>c[0])).toEqual(["BEGIN","COMMIT","ROLLBACK"]);
++    expect(f.release).toHaveBeenCalledTimes(1); expect(f.release).toHaveBeenCalledWith(true); expect(f.end).not.toHaveBeenCalled();
++  });
++  it("keeps acknowledged-rollback release behavior after COMMIT failure without claiming rollback proves absence", async () => {
++    const original=new Error("TEST_ONLY_COMMIT_ACK_LOST"), f=fixture({COMMIT:original});
++    await expect(withTransaction(f.pool,async()=>8)).rejects.toBe(original);
++    expect(f.query.mock.calls.map(c=>c[0])).toEqual(["BEGIN","COMMIT","ROLLBACK"]);
++    expect(f.release).toHaveBeenCalledTimes(1); expect(f.release).toHaveBeenCalledWith(); expect(f.end).not.toHaveBeenCalled();
++  });
++  it("does not release or retry when pool.connect itself fails", async () => {
++    const f=fixture(), original=new Error("TEST_ONLY_CONNECT_FAILED"), fn=vi.fn(async()=>0);
++    f.connect.mockRejectedValueOnce(original);
++    await expect(withTransaction(f.pool,fn)).rejects.toBe(original);
++    expect(f.connect).toHaveBeenCalledOnce(); expect(fn).not.toHaveBeenCalled();
++    expect(f.query).not.toHaveBeenCalled(); expect(f.release).not.toHaveBeenCalled();
++    expect(f.end).not.toHaveBeenCalled();
++  });
++  it("preserves a primitive original failure instead of replacing it with rollback failure", async () => {
++    const f=fixture({ROLLBACK:new Error("TEST_ONLY_ROLLBACK_FAILED")});
++    await expect(withTransaction(f.pool,async()=>{throw "TEST_ONLY_PRIMITIVE";})).rejects.toBe("TEST_ONLY_PRIMITIVE");
++    expect(f.release).toHaveBeenCalledTimes(1); expect(f.release).toHaveBeenCalledWith(true);
++  });
++  it("leaves a healthy later borrower usable instead of flushing or ending the pool", async () => {
++    const bad=fixture({ROLLBACK:new Error("TEST_ONLY_ROLLBACK_FAILED")}), good=fixture();
++    const pool={connect:vi.fn().mockResolvedValueOnce(bad.client).mockResolvedValueOnce(good.client),end:vi.fn()} as unknown as Pool;
++    const original=new Error("TEST_ONLY_BODY_FAILURE");
++    await expect(withTransaction(pool,async()=>{throw original;})).rejects.toBe(original);
++    expect(await withTransaction(pool,async()=>42)).toBe(42);
++    expect(bad.release).toHaveBeenCalledTimes(1); expect(bad.release).toHaveBeenCalledWith(true);
++    expect(good.release).toHaveBeenCalledTimes(1); expect(good.release).toHaveBeenCalledWith();
++    expect(pool.connect).toHaveBeenCalledTimes(2); expect(pool.end).not.toHaveBeenCalled();
++  });
++});

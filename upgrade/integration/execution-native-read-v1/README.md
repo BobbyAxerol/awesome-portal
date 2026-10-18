@@ -1,5 +1,15 @@
 # Original EPG10-08 — qualified Core source publication
 
+**Latest source reconciliation2026-10-18,23:35UTC:** use the
+[22-file delta against current Core e19](current-core-reconciliation/README.md)
+instead of applying the5291 profile over later Core source. Final affected
+strict and931behavior executions (393+534+4) PASS,0FAIL/ERROR/SKIP;3exact patch
+integrity checks PASS. It preserves new eligibility/grants/scalar journal and
+same-pool HTTP/SSE lifecycle; original failures remain recorded. Core e19 is
+committed on SGP but not yet in the checked remote line, so use its verified
+owning commit or request owner publication. No peer push/runtime/DB mutation.
+Full08NOT_MET/09connected NOT_STARTED; exact cleanup is in the original journal.
+
 **Actual commissioning update2026-10-18 22:25UTC:**
 [native DB and private producer packet](native-db-commissioning/README.md)
 records genuine additive schema/3identity/3role/6READ acceptance installation

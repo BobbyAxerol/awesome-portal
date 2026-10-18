@@ -82,6 +82,27 @@ Do not run all TS migrations or copy a live catalogue as expected input.
 
 ## Boundaries, cleanup and next action
 
+### Current source reconciliation — 2026-10-18,23:35UTC
+
+The [e19 integration delta](../current-core-reconciliation/README.md) now
+qualifies the exact current Core source plus native HTTP/SSE/runtime mount:
+final21-spec strict and931behavior executions (393+534+4) PASS/0FAIL/ERROR/SKIP,
+with3exact application checks. It preserves eligibility/current grants and
+metadata-only observation reads, rather than discarding peer changes. Core
+owner committed the captured WIP as e19 with zero source drift; the earlier
+pair of Core test containers has ended. The advertised remote line still lacks
+e19 at the recorded check; use that owning local commit or its owner's later
+publication, never overwrite/push their checkout/branch. Read the new receipt
+before using older5291 instructions below, which remain historical evidence.
+
+This is isolated source qualification, not the actual Core schema/owner-intake
+installation or connected acceptance. No credential transfer, new SGP test,
+runtime restart or operational DB/grant/session mutation occurred. The private
+finite intakes still need their exact installation-time/window checks; the
+config does not become permission merely because source tests passed. Continue
+genuine same-coordinator Core commissioning and actual revoke/cache/cursor/SSE
+in original08; full08NOT_MET/09connected NOT_STARTED.
+
 ### Current Core private inputs — 2026-10-18,22:50UTC
 
 Six actual native observations were captured in **one RR/READONLY source
