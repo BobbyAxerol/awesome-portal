@@ -176,6 +176,25 @@ const COMMAND_OPERATION_ID = String(
  * matches any stage the alpha is in, `owner` and `health` are exact, `after`
  * and `before` are alpha ids of the page edge.
  */
+/**
+ * The original single-row answer, kept for every consumer that is not a V2 screen: the V1 command
+ * center and account journeys record baselines against it, so richer fixture data for the V2 Fleet
+ * must never reach them (it grew the V1 pages by 170 px).
+ */
+function legacyAlphaFleet(search: URLSearchParams): Answer {
+  const requested = search.get("search");
+  if (!requested) return ok(ALPHA_FLEET);
+  const page = ALPHA_FLEET.page as Record<string, unknown>;
+  const rows = Array.isArray(page.rows) ? page.rows as Record<string, unknown>[] : [];
+  return ok({
+    ...ALPHA_FLEET,
+    page: {
+      ...page,
+      rows: rows.map((row) => ({ ...row, alpha_id: requested, alpha_label: requested })),
+    },
+  });
+}
+
 export function alphaFleet(search: URLSearchParams): Answer {
   const page = ALPHA_FLEET.page as Record<string, unknown>;
   const base = (Array.isArray(page.rows) ? page.rows as Record<string, unknown>[] : [])[0] ?? {};
@@ -1215,7 +1234,7 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     if ((seg[0] === "alphas" || seg[0] === "portfolios") && seg[2] === "query-analytics") return ok(QUERY_ANALYTICS_EMPTY);
     if (path === "/commands/tasks") return ok(COMMAND_TASKS);
     if (path === "/commands/catalog") return ok(COMMAND_CATALOGUE_FIXTURE);
-    if (path === "/alphas") return alphaFleet(search);
+    if (path === "/alphas") return options.screensV2 ? alphaFleet(search) : legacyAlphaFleet(search);
     if (path === "/portfolios") return ok(PORTFOLIO_LIST);
     if (path === "/broker-bindings") return ok(BINDINGS_LIST);
     if (seg[0] === "broker-bindings" && seg.length === 2) {
