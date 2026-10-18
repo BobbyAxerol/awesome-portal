@@ -3,7 +3,7 @@
 <main><div class="stack">
 <div class="mast"><div><h1 data-roles="manager reviewer">Approvals</h1><h1 data-roles="researcher">My requests</h1><h1 data-roles="operator">Approvals</h1>
  <div class="sub" data-roles="manager reviewer">Every decision, sorted by SLA</div><div class="sub" data-roles="researcher">Read only · you can withdraw while waiting</div></div>
- <div class="ctrls"><span class="chipx"><span class="dot" data-data="ok"></span><span class="dot warn" data-data="nq"></span><span data-data="ok">Fresh · 12:04Z</span><span data-data="nq">Source not qualified</span></span><button class="btn" id="ck-help" data-roles="manager reviewer"><span class="kbd">?</span> Keys</button></div></div>
+ <div class="ctrls"><span class="chipx"><span class="dot" data-data="ok"></span><span class="dot warn" data-data="nq"></span><span data-data="ok">Fresh · 12:04Z</span><span data-data="nq">Source not qualified</span></span><span id="newreq"></span><button class="btn" id="ck-help" data-roles="manager reviewer"><span class="kbd">?</span> Keys</button></div></div>
 <div class="banner" data-data="nq">Source not qualified. Evidence and statuses stay unavailable.</div>
 
 <div id="cockpit">
@@ -24,4 +24,4 @@
 <div class="ov on" id="ck-helpbox" style="display:none;background:var(--paper);opacity:.97"><div class="pal" style="margin-top:120px;width:380px"><div class="ph" style="margin:0;padding:9px 16px">Keys <span class="r">Esc closes</span></div><table><tbody>
  <tr><td><span class="kbd">J</span> <span class="kbd">K</span></td><td>Next · previous request</td></tr><tr><td><span class="kbd">A</span></td><td>Primary decision, then <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span></td></tr><tr><td><span class="kbd">R</span></td><td>Deny · note required</td></tr><tr><td><span class="kbd">N</span></td><td>Focus the note</td></tr><tr><td><span class="kbd">Esc</span></td><td>Cancel the pending decision</td></tr></tbody></table></div></div>
 <script src="kit.js"></script><script src="charts.js"></script><script src="modules/cockpit.js"></script>
-<script>Cockpit.mount();</script></body></html>
+<script>Cockpit.mount();KIT.on(function(){var r=KIT.state.role,e=document.getElementById("newreq");e.innerHTML=r==="manager"||r==="researcher"?'<a class="btn" href="new-approval.html" style="text-decoration:none">New request</a>':r==="reviewer"?KIT.disabled("New request","Reviewers decide requests; they don\'t open them"):""});</script></body></html>

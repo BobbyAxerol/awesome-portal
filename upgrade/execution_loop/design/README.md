@@ -129,3 +129,12 @@ Cần từ backend để thành thật (đã ghi trong sổ đồng bộ khi và
 | A3 | Cockpit sở hữu **mọi loại quyết định** (gate, exit, archive, reactivation, capital, waiver), mỗi loại một làn |
 | A5 | Researcher thấy **allocation + PnL của mình**; ẩn Accounts và heat map; ⌘K do server lọc quyền |
 | A4, B1–B11, C, D, E, F | Áp theo khuyến nghị đồng thuận trong sổ quyết định (context bar của shell, 90D + fallback, Fleet 3 chế độ, Compare là hành động hàng, JourneySpine/EventFeed dùng chung, sidebar 9 mục, vai trò = capability, URL/redirect, thuật ngữ, cờ ngữ nghĩa) |
+
+## Quyết định trước khi code (Bobby, 2026-10-18)
+| Mã | Quyết định |
+| --- | --- |
+| U1 | Lát code đầu: nền tảng + lát có dữ liệu thật (Approvals cockpit chưa chart, Operations, Access, Fleet danh tính) |
+| U2 | Reader: viết tay + bảng ràng buộc chéo Codex ghi |
+| U3 | Cockpit sau khi ghi quyết định: ở lại receipt, có "Next request" |
+| U4 | Operations và Incident: reviewer/researcher bị chặn; chỉ thấy trạng thái yêu cầu của mình ở Approvals |
+Thẻ phạm vi: [evidence/UXM-07](../evidence/UXM-07/README.md) (PROPOSED, chưa giao).
