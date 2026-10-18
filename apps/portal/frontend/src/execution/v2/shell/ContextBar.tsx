@@ -108,5 +108,7 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
 /** URL-bound: env and window come from the query and are written back with other params kept. */
 export function ConnectedContextBar(props: Omit<ContextBarProps, "env" | "window" | "ccy" | "onChange">) {
   const { value, set } = useExecUrlState();
-  return <ContextBar {...props} env={value.env} window={value.window} ccy={value.ccy} onChange={(patch) => set(patch)} />;
+  // No read accepts a window yet (FE-025), so the control starts locked; a caller that knows better passes `windowLock={null}`.
+  const windowLock = props.windowLock === undefined ? { reason: WINDOW_NOT_SERVED_REASON } : props.windowLock;
+  return <ContextBar {...props} windowLock={windowLock} env={value.env} window={value.window} ccy={value.ccy} onChange={(patch) => set(patch)} />;
 }

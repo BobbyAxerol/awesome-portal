@@ -38,7 +38,7 @@ import type { DeliveryPolicy } from "./profile";
 import { NewApprovalRequestContainer } from "./screens/NewApprovalRequest";
 import { WaiversRegisterContainer } from "./screens/WaiversRegister";
 import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
-import { EXECUTION_V2_SHELL } from "./v2/flags";
+import { EXECUTION_V2_SHELL, isV2Screen } from "./v2/flags";
 
 // UXM-07: the V2 context bar loads only when the build flag names it. The
 // condition reads the raw env string so the bundler folds it away when the
@@ -47,6 +47,12 @@ import { EXECUTION_V2_SHELL } from "./v2/flags";
 const V2ContextBar = import.meta.env.VITE_EXECUTION_V2_SCREENS
   ? lazy(() => import("./v2/shell/ContextBar").then((m) => ({ default: m.ConnectedContextBar })))
   : null;
+
+// UXM-07 S1: each V2 screen has its own manifest key and lazy chunk. The raw
+// env string gates the import() so a flag-off build emits none of them.
+const V2Fleet = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/fleet")) : null;
+const V2Cockpit = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/cockpit")) : null;
+const V2Operations = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/operations")) : null;
 import {
   AdminCatalogueContainer,
   ApprovalInboxContainer,
@@ -72,6 +78,14 @@ const GOVERNANCE_SCREENS = new Set([
   "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
   "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
   "EXECUTION_WAIVERS_REGISTER_SCREEN",
+]);
+
+const COCKPIT_SCREENS = new Set([
+  "EXECUTION_APPROVAL_INBOX_SCREEN",
+  "EXECUTION_GATE_R1_REVIEW_SCREEN",
+  "EXECUTION_GATE_R2_REVIEW_SCREEN",
+  "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
+  "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
 ]);
 
 /**
@@ -151,7 +165,9 @@ export function PreviewFrame({ screenId, profile, children }: { screenId: string
   useLayoutEffect(() => { ensureRetainedReview(sessionKey); }, [sessionKey]);
   // "Refresh" in a retained review re-reads the screen once: the subtree is remounted, so every reader — ticked or not — reads again.
   const refreshEpoch = useRetainedReview().epoch;
-  const kind: ExecutionSurfaceKind = GOVERNANCE_SCREENS.has(screenId)
+  // One Carbon theme (decision A2): with the cockpit on, the approval and review screens leave the light governance surface.
+  const onCockpit = V2Cockpit !== null && isV2Screen("cockpit") && COCKPIT_SCREENS.has(screenId);
+  const kind: ExecutionSurfaceKind = GOVERNANCE_SCREENS.has(screenId) && !onCockpit
     ? "governance"
     : "deployments";
 
@@ -299,6 +315,12 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
     return () => setEntityLabel(null);
   }, [entity, setEntityLabel]);
 
+  // The four review routes keep their paths; with the cockpit on they open it with that request selected.
+  const cockpitAt = (id: string | null | undefined, kind: "r1" | "r2" | "exit" | "live"): ReactNode | null =>
+    V2Cockpit && isV2Screen("cockpit") && id
+      ? <Suspense fallback={null}><V2Cockpit api={api} workspaceId={routeWorkspaceId} pathSelection={{ id, kind }} onClearPathSelection={() => navigate("/governance/approvals")} /></Suspense>
+      : null;
+
   let content: ReactNode;
   switch (screenId) {
     case "EXECUTION_COMMAND_CENTER_SCREEN":
@@ -308,33 +330,39 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       // The clock belongs to the screen, not to this render. `new Date()` here
       // was evaluated once and then never again, so every age on the queue
       // froze at first paint.
-      content = <OperationsQueueContainer api={api} requestedOperation={search.get("operation")} />;
+      content = V2Operations && isV2Screen("ops")
+        ? <Suspense fallback={null}><V2Operations api={api} workspaceId={routeWorkspaceId} requestedOperation={search.get("operation")} /></Suspense>
+        : <OperationsQueueContainer api={api} requestedOperation={search.get("operation")} />;
       break;
     case "EXECUTION_INCIDENT_DETAIL_SCREEN":
-      content = <IncidentDetailContainer api={api} incidentId={incidentId} workspaceId={routeWorkspaceId} />;
+      content = V2Operations && isV2Screen("ops")
+        ? <Suspense fallback={null}><V2Operations api={api} workspaceId={routeWorkspaceId} incidentId={incidentId} /></Suspense>
+        : <IncidentDetailContainer api={api} incidentId={incidentId} workspaceId={routeWorkspaceId} />;
       break;
     case "EXECUTION_APPROVAL_INBOX_SCREEN":
       // EL-V2-05: a row (and the rail's Open) navigates to the review its gate owns.
-      content = <ApprovalInboxContainer api={api} workspaceId={routeWorkspaceId} onOpenRequest={(id, gate) => navigate(reviewRouteFor({ id, gate }))} />;
+      content = V2Cockpit && isV2Screen("cockpit")
+        ? <Suspense fallback={null}><V2Cockpit api={api} workspaceId={routeWorkspaceId} /></Suspense>
+        : <ApprovalInboxContainer api={api} workspaceId={routeWorkspaceId} onOpenRequest={(id, gate) => navigate(reviewRouteFor({ id, gate }))} />;
       break;
     case "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN":
       content = <NewApprovalRequestContainer api={api} />;
       break;
     case "EXECUTION_GATE_LIVE_REVIEW_SCREEN":
-      content = approvalId ? <GateLiveReviewContainer key={`${approvalId}|${routeWorkspaceId ?? ""}`} api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
+      content = cockpitAt(approvalId, "live") ?? (approvalId ? <GateLiveReviewContainer key={`${approvalId}|${routeWorkspaceId ?? ""}`} api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />);
       break;
     case "EXECUTION_WAIVERS_REGISTER_SCREEN":
       content = <WaiversRegisterContainer api={api} />;
       break;
     case "EXECUTION_GATE_R1_REVIEW_SCREEN":
       // keyed by approval AND workspace: a changed workspace remounts the screen, so a previous workspace's ready decision state can never survive into the next read
-      content = approvalId ? <GateR1ReviewContainer key={`${approvalId}|${routeWorkspaceId ?? ""}`} api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
+      content = cockpitAt(approvalId, "r1") ?? (approvalId ? <GateR1ReviewContainer key={`${approvalId}|${routeWorkspaceId ?? ""}`} api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />);
       break;
     case "EXECUTION_GATE_R2_REVIEW_SCREEN":
-      content = approvalId ? <GateR2ReviewContainer key={`${approvalId}|${routeWorkspaceId ?? ""}`} api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
+      content = cockpitAt(approvalId, "r2") ?? (approvalId ? <GateR2ReviewContainer key={`${approvalId}|${routeWorkspaceId ?? ""}`} api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />);
       break;
     case "EXECUTION_PAPER_EXIT_REVIEW_SCREEN":
-      content = <PaperExitReviewContainer key={`${reviewId ?? ""}|${routeWorkspaceId ?? ""}`} api={api} reviewId={reviewId} workspaceId={routeWorkspaceId} />;
+      content = cockpitAt(reviewId, "exit") ?? (<PaperExitReviewContainer key={`${reviewId ?? ""}|${routeWorkspaceId ?? ""}`} api={api} reviewId={reviewId} workspaceId={routeWorkspaceId} />);
       break;
     case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN":
       content = deploymentId ? <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} variant="vnm" /> : <MissingRouteId what="deployment" />;
@@ -364,12 +392,14 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = <FullBlotterRichContainer api={api} />;
       break;
     case "EXECUTION_ALPHA_FLEET_LIST_SCREEN":
-      content = <AlphaFleetRichContainer api={api} />;
+      content = V2Fleet && isV2Screen("fleet") ? <Suspense fallback={null}><V2Fleet api={api} /></Suspense> : <AlphaFleetRichContainer api={api} />;
       break;
     case "EXECUTION_ALPHA_360_SCREEN":
       // The feature's canonical route (/deployments/alphas, no alphaId) is the
       // fleet list — the entry screen of WF 2a; a row opens the alpha's 360.
-      content = params.alphaId ? <AlphaThreeSixtyRichContainer api={api} alphaId={params.alphaId} /> : <AlphaFleetRichContainer api={api} />;
+      content = params.alphaId
+        ? <AlphaThreeSixtyRichContainer api={api} alphaId={params.alphaId} />
+        : V2Fleet && isV2Screen("fleet") ? <Suspense fallback={null}><V2Fleet api={api} /></Suspense> : <AlphaFleetRichContainer api={api} />;
       break;
     case "EXECUTION_PORTFOLIO_360_SCREEN":
       // Feature canonical route (/deployments/portfolios) = the real portfolio

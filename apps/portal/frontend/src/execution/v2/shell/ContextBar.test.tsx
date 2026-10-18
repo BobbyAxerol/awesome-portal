@@ -92,10 +92,10 @@ describe("ConnectedContextBar", () => {
     const { pathname, search } = useLocation();
     return <output data-testid="where">{`${pathname}${search}`}</output>;
   }
-  const mount = (url: string) =>
+  const mount = (url: string, lock?: null) =>
     render(
       <MemoryRouter initialEntries={[url]}>
-        <ConnectedContextBar />
+        <ConnectedContextBar {...(lock === null ? { windowLock: null } : {})} />
         <Where />
       </MemoryRouter>,
     );
@@ -107,8 +107,18 @@ describe("ConnectedContextBar", () => {
     expect(screen.getByRole("button", { name: "90D" }).getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("starts with the window locked and says why, since no read accepts one yet", () => {
+    mount("/execution");
+    const button = screen.getByRole("button", { name: "30D" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    const described = button.getAttribute("aria-describedby");
+    expect(described && document.getElementById(described)?.textContent).toContain(WINDOW_NOT_SERVED_REASON);
+    fireEvent.click(button);
+    expect(where()).toBe("/execution");
+  });
+
   it("writes the choice and keeps every other param", () => {
-    mount("/execution?q=btc&sel=al_1&workspace_id=ws_9&tab=risk");
+    mount("/execution?q=btc&sel=al_1&workspace_id=ws_9&tab=risk", null);
     fireEvent.click(screen.getByRole("button", { name: "30D" }));
     expect(where()).toBe("/execution?q=btc&sel=al_1&workspace_id=ws_9&tab=risk&window=30d");
     fireEvent.click(screen.getByRole("button", { name: "Sandbox" }));
@@ -116,7 +126,7 @@ describe("ConnectedContextBar", () => {
   });
 
   it("keeps the URL value live for Real-funded and drops a default from the URL", () => {
-    mount("/execution?env=paper&window=7d&q=x");
+    mount("/execution?env=paper&window=7d&q=x", null);
     fireEvent.click(screen.getByRole("button", { name: "Real-funded" }));
     expect(where()).toBe("/execution?window=7d&q=x");
     fireEvent.click(screen.getByRole("button", { name: "90D" }));

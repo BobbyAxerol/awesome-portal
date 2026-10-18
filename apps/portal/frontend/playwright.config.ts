@@ -74,13 +74,27 @@ export default defineConfig({
         VITE_EXECUTION_PREVIEW_ENABLED: "true",
       },
     },
+    {
+      // UXM-07 S1: the V2 screens behind their manifest. Its own build and port
+      // so the two builds above (and every V1 baseline) never see the flag.
+      command:
+        "npx vite build --outDir dist-v2 && npx vite preview --outDir dist-v2 --host 127.0.0.1 --port 4176",
+      url: "http://127.0.0.1:4176",
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+      env: {
+        VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY: "true",
+        VITE_EXECUTION_PREVIEW_ENABLED: "true",
+        VITE_EXECUTION_V2_SCREENS: "shell,fleet,cockpit,ops",
+      },
+    },
   ],
   projects: [
     {
       name: "chromium",
       // The Research real-API receipt reads the isolated preview stack and its
       // local credentials; it runs only through playwright.research-preview.config.ts.
-      testIgnore: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts", "**/_probe*.spec.ts", "**/_preview-research-*.spec.ts"],
+      testIgnore: ["**/execution-v2-*.spec.ts", "**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts", "**/_probe*.spec.ts", "**/_preview-research-*.spec.ts"],
       use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4174" },
     },
     {
@@ -91,6 +105,11 @@ export default defineConfig({
       // journeys and must never participate in the immutable visual baseline.
       testMatch: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts"],
       use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4175" },
+    },
+    {
+      name: "chromium-v2",
+      testMatch: ["**/execution-v2-*.spec.ts"],
+      use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4176" },
     },
   ],
 });

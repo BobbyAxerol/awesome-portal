@@ -15,6 +15,7 @@
  * screen classification, never from `delivery_profile` — data delivery and
  * visual mode are different concepts — and granting no capability.
  */
+import { isV2Screen } from "../execution/v2/flags";
 import {
   createContext,
   useContext,
@@ -51,6 +52,15 @@ export type PortalPresentationMode = "research-light" | "governance-light" | "ex
  * address, and flipping the whole workspace theme on a build flag would make
  * the flag change presentation — exactly the coupling §4.2 forbids.
  */
+// UXM-07 S1: with the V2 cockpit on, the approval and review routes join the one
+// Carbon workspace (decision A2, 2026-10-18). Waivers and the new-request form
+// stay on their V1 light surface until they have V2 screens.
+const COCKPIT_ROUTES = [
+  /^\/governance\/approvals\/?$/,
+  /^\/governance\/approvals\/(?!new\/?$)[^/]+\/(?:r1|r2|live)\/?$/,
+  /^\/governance\/exit-reviews(?:\/[^/]+)?\/?$/,
+];
+
 export function presentationModeFor(
   registry: PortalRegistryDocument | null,
   pathname: string,
@@ -59,6 +69,7 @@ export function presentationModeFor(
   // workspace" note): Governance — Inbox, Gate R1/R2, exit reviews, waivers —
   // is the light review room the hi-fi draws. The workspace still flips as a
   // whole; only the address decides.
+  if (isV2Screen("cockpit") && COCKPIT_ROUTES.some((route) => route.test(pathname))) return "execution-carbon";
   if (pathname === "/governance" || pathname.startsWith("/governance/")) return "governance-light";
   if (pathname === "/execution" || pathname.startsWith("/execution/")) return "execution-carbon";
   if (!registry) return "research-light";
