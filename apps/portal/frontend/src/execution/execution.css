@@ -7275,8 +7275,9 @@ details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "â
  * Governance component kit â€” drawn controls, one radius language (pill for toggles, 8 for buttons, 10 for cards), sans controls, tokens only.
  * ------------------------------------------------------------------------ */
 .exec-gov .exec-btn-apply, .exec-gov .exec-btn-ghost, .exec-gov .exec-gov-cta { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 34px; padding: 0 var(--space-4); border-radius: 8px; font: var(--exec-font-control); text-decoration: none; transition: background 120ms, border-color 120ms; }
-.exec-gov .exec-btn-apply { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
-.exec-gov .exec-btn-apply:hover:not([disabled]) { background: var(--accent-strong); border-color: var(--accent-strong); }
+/* DEBT-UXM07-001: white on the Carbon accent measured 2.35:1; the surface ink reads above 7:1, and the hover fill is the strong accent, where white is the legible ink. */
+.exec-gov .exec-btn-apply { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.exec-gov .exec-btn-apply:hover:not([disabled]) { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-contrast); }
 .exec-gov .exec-btn-ghost { background: var(--paper-raised); border: 1px solid var(--line-strong); color: var(--ink); }
 .exec-gov .exec-btn-ghost:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
 .exec-gov .exec-btn-apply[disabled], .exec-gov .exec-btn-ghost[disabled] { background: var(--surface-2); border-color: var(--line); color: var(--ink-mute); }
