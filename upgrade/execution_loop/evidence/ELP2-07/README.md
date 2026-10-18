@@ -1,5 +1,19 @@
 # ELP2-07 — Trusted command và status bridge
 
+**Current2026-10-18T12:44UTC:** original07-002's complete named
+[instance-registration family](instance-registration.md) is
+APPLIED_UNCOMMITTED/FOCUSED_PASS/NORMAL_HOOK_PENDING on25218372. Actual
+279API/17affected contract PASS, supported Node22 build/scoped PG restore,
+four access-row digests and exact cleanup PASS; prior two fixture failures
+are preserved in the packet. Four session-guarded named
+routes, separate additive Core correlation/history143, exact current register
+versus independent audit, source rollback preview/receipt correlation and
+same-key recovery; default provider stays dark. [Independent source review](registration-source-review.md)
+is ACCEPT_WITH_LIMITS, not a test/provider/consumer receipt. [Remaining full
+families and exact source prerequisites](remaining-source-families-review.md)
+preserve original07-002 beyond this registration slice. No frontend/runtime/
+source command activation, push or next-phase acceptance.
+
 **2026-10-17 continuation:** [current-authorized capital workflow GET](../ELP2-08/capital-workflow-read.md)
 connects one immutable stored command to the canonical08 projection. Applied,
 uncommitted/NOT_RUN at entry; no command-source executor, financial effect,

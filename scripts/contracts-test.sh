@@ -136,6 +136,9 @@ cp -a "${ROOT_DIR}/apps/control-api/src/research/exact-decimal.ts" \
 cp -a "${ROOT_DIR}/apps/control-api/src/manager-lists/scoped-manager.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/manager-lists/"
 cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/command.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/instance-registration.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/pm-instance-registration-adapter.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/pm-http-request-binding.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/command-collection.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/realtime.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow.contract.ts" \

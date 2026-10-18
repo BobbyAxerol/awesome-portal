@@ -43,6 +43,8 @@ const wireSchema = z.object({
   schema_version: z.literal("pma.management-command.v1"), operation: z.literal("REGISTER_INSTANCE"),
   idempotency_key: text, reason: text, expected_version: counter, expected_policy_revision: counter, parameters,
 }).strict();
+/** Shared exact management wire; exporting it does not qualify a provider. */
+export const pmaInstanceRegistrationWireSchema = wireSchema;
 /** Management-parser shape only. The owning writer still validates initial
  * version, registered alpha, venue/account type and actual registration rules. */
 export function parsePmaInstanceRegistrationWire(input: unknown): PmaInstanceRegistrationWire {

@@ -1,5 +1,34 @@
 # Original04 — selected operations and finite Sandbox/Canary roots
 
+## Actual normal-hook terminal —2026-10-18T12:27UTC
+
+The technical-readers retry114510 / shell23493 is TERMINAL/PASS, finished
+2026-10-18T12:27:51.958500UTC. Landed
+`25218372a10147b9910458f08a85c93479169d3f`:84files,+22033/−251 against
+0d5ceaba. Original failed receipts remain historical; no assertions, current
+authorization gates or thresholds were weakened to obtain this result.
+
+- Contracts71files/960PASS; supported Node22 API build PASS.
+- API396files:394PASS/2existing skipped;7389PASS/3existing skipped cases,
+  7392total,2097.61s. Earlier focused counts are not added as unique coverage.
+- Disposable PostgreSQL restore including all four scoped-access row digests
+  PASS; eight protected runtime tuples, source and index remained unchanged
+  during the gate. Exact owned network/node/PostgreSQL resources are absent.
+- Controller/log directory:
+  `/home/bobby/.local/state/portal-execution-elp210/20261017/technical-readers-land-114510/`;
+  gate.log SHA256
+  `84c8b143f5acd5648e60af37b3df42c5a719a8127074436f30e5b4023ca05520`.
+  Local correctness lane4CPU/4GiB/8GiB transient; not coexistence/G2/SLO proof.
+
+This lands the finite current-scoped parents/selected operations, Live source
+panels and Activation metadata plus the original03 literal-qualified repair.
+It does not commission an installed source/field/audit/current-human provider,
+mutations, stream, whole04/10 or consumer acceptance. No FE changes, push,
+dev/main merge, release, deploy or Live effect;11NOT_ENTRY_READY.
+Claude intake7.3 has no new acknowledgement; generated consumer handoff remains
+AWAITING_CONSUMER_REVIEW/NOT_STARTED_BY_OWNER_DIRECTION. Continue original07
+registration independently; preserve the original05/06/09/10 source gates.
+
 ## Entry, assignment and ownership
 
 2026-10-18; `/home/bobby/portal-research`, `docs/research-loop-plan`, entry

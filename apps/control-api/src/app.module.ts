@@ -12,6 +12,9 @@ import { ExecutionAccessService } from "./execution-v2/access.service";
 import { ExecutionCommandService } from "./execution-v2/command.service";
 import { ExecutionCommandController } from "./execution-v2/command.controller";
 import type { CommandTrust } from "./execution-v2/command-trust";
+import { InstanceRegistrationController } from "./execution-v2/instance-registration.controller";
+import { InstanceRegistrationService } from "./execution-v2/instance-registration.service";
+import type { InstanceRegistrationTrust } from "./execution-v2/instance-registration.trust";
 import type { AccessTrustProvider } from "./execution-v2/access-trust";
 import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "./execution-v2/manager-runtime";
 import type { CurrentHumanMutations } from "./execution-v2/current-human-mutations";
@@ -232,6 +235,7 @@ import { CurrentHumanWorkspaceProvisioner } from "./execution-v2/current-human-w
  * runtime environment flags. TEST_ONLY authority cannot enter a non-test app. */
 export interface ControlApiDependencies {
   executionCommandTrust?: CommandTrust;
+  executionInstanceRegistrationTrust?: InstanceRegistrationTrust;
   executionAccessTrust?: AccessTrustProvider;
   allowTestOnlyExecutionAccess?: boolean;
   executionManagerRuntime?: ManagerRuntimeInstallation;
@@ -265,6 +269,7 @@ export class AppModule {
         ProfileController,
         ExecutionAccessController,
         ExecutionCommandController,
+        InstanceRegistrationController,
         ExecutionF0ReadController,
         // A4-2 retired the six /api/admin/users* routes. They mutated
         // accounts with no expected revision, no idempotency, no step-up and
@@ -402,6 +407,12 @@ export class AppModule {
             dependencies.executionCommandTrust,dependencies.allowTestOnlyExecutionAccess===true,
             {activeKeyId:cfg.QUERY_CURSOR_ACTIVE_KEY_ID,keys:querySigningKeys(cfg),ttlSeconds:cfg.QUERY_CURSOR_TTL_SECONDS}),
           inject:[CONTROL_API_POOL,ExecutionAccessService,CONTROL_API_CONFIG],
+        },
+        {
+          provide: InstanceRegistrationService,
+          useFactory: (db:Pool,access:ExecutionAccessService)=>new InstanceRegistrationService(db,access,
+            dependencies.executionInstanceRegistrationTrust,dependencies.allowTestOnlyExecutionAccess===true),
+          inject:[CONTROL_API_POOL,ExecutionAccessService],
         },
         {
           provide: AccountLifecycleService,

@@ -286,3 +286,23 @@ three unchanged original revoke/safe-error assertions. [Receipt and narrow
 test follow-through](workflow-parity-and-read-fences.md#corrected-spy-affected-terminal--2026-10-18t070835utc).
 Public generated types/fixtures and owner-held Claude handoff stay unchanged.
 One combined normal hook owns landing; no extra focused build for docs.
+# Registration consumer dependency —2026-10-18
+
+Original07-002 now has an APPLIED_UNCOMMITTED/VALIDATION_NOT_RUN
+[named registry family](../ELP2-07/instance-registration.md), while complete08
+source/workflow/consumer acceptance stays OPEN. Reuse the existing pure Create
+and confirmation states, but use the separate generated registration DTO/route
+family: registry generation1/APPLIED is not FUND, accepted grant, canonical
+account/deployment, binding or activation. Missing canonical pair is typed
+NOT_PUBLISHED; no invented map or capital receipt. UNKNOWN recovery keeps the
+same command/key and performs lookup only. Retained preview rejects POSTs;
+Core status GET has independent current exact audit authorization.
+
+Claude remains NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW.
+When assigned, acknowledge the exact landed producer/schema pin and test the
+creation→receipt→reload/unknown/current-revoke stories with existing components.
+Writing this handoff is not acknowledgement or browser acceptance. Accepted
+requests/review follow recurring7.3 in their original phase packet, no parallel
+queue and no silent UI/state change. Remaining command families and installed
+source/trust/budgets/calibration/coexistence/P184G2/browser stay OPEN.
+

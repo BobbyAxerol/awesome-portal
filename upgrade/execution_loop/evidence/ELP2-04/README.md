@@ -1,5 +1,11 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+**Latest actual2026-10-18T12:27:51UTC:** normal hook PASS, landed25218372;
+960contract/7389API PASS+3existing skips, build/scoped restore/four access
+digests/frozen eight runtimes/owned cleanup PASS. [Exact narrow result and
+remaining source/consumer boundaries](positive-parent-operations-and-following.md#actual-normal-hook-terminal--2026-10-18t1227utc).
+Earlier failed receipts below remain historical, not the current terminal.
+
 **Latest actual2026-10-18T10:52:53UTC:** technical affected gate build PASS,
 748API PASS/7FAIL; restore NOT_RUN. [Seven exact dispositions and corrected
 86/86 pure ProductRead diagnostic](positive-parent-operations-and-following.md#actual-affected-technical-gate--2026-10-18t105253utc).

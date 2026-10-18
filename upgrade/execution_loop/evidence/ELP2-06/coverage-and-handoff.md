@@ -155,3 +155,30 @@ next assignment**, with upstream execution still gated by exact authority.
 selected dependencies are satisfied. No goal or next phase is auto-started.
 Rollback: compatible reader/generation off, keep135/history/checkpoints and
 source facts. Never rollback by deleting evidence or relaxing policy/source gates.
+# Current source/worker dependency return —2026-10-18
+
+Original06-002 remains OPEN. [Current05source audit](../ELP2-05/manager-source-intake.md)
+distinguishes implemented PM selected-history/delivery from the missing
+qualified financial assembly. Existing ManagerRuntimeInstallation,
+ManagerProjectionConsumer, RAW/Composition/Regime workers, original/historical
+custody and six named scoped APIs are present: do not build them again.
+
+Next dependency-closed implementation: bind accepted source normalization and
+RAW/Composition task factories to the existing runtime partition, preserving
+its source-set/config/lease/revision/atomic-commit/ACK semantics. Full economic
+ownership/NAV/flow/cost/denominator inputs are still missing as specified in
+original05-001; an injected fixture proof callback is not a genuine producer.
+Independent own-NAV/direct score must not wait for all child q or Research.
+
+Regime additionally requires accepted exact Research/Alpha-version/params/
+trade-params/reference population, knowable feature/outcome grid, split/
+purge/embargo/untouched/selection/archive manifests and its approved artifact.
+PM financial reports alone cannot certify that corpus. Formula/weights/bands
+are already selected; no new formula decision or production fixture defaults.
+Done-when is actual producer→existing worker→immutable projection→scoped API
+proof, including full-denominator and final current-authority negatives, not
+source code presence or only a calibration signature. Reuse compatible
+component receipts without rerunning unrelated gates; installed-source and
+consumer acceptance remain separate. No new FE field or Claude ACK in this
+intake; consumer owner-held/AWAITING_CONSUMER_REVIEW under7.3.
+

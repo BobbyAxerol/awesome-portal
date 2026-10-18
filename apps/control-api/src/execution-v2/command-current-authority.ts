@@ -8,7 +8,9 @@ import { currentGrantAllows, type AccessEvaluationContext } from "./access-polic
  * The private command receipt triple must retain its original accepted-fact
  * meaning. Current native leg identity remains opaque; delegation_ref is not a
  * Core grant ID. Real PM authentication/held-COMMIT qualification is separate. */
-export function commandMembershipCurrent(authorization:CommandAuthorization,actor:AccessActor,intent:CommandIntent,
+export function commandMembershipCurrent(
+  authorization:Pick<CommandAuthorization,"ts_user_id"|"mapping_revision"|"membership_revision"|"membership_receipt_ref">,
+  actor:AccessActor,intent:Pick<CommandIntent,"workspace_id"|"resource"|"environment">,
   context:AccessEvaluationContext,expectedAction:AccessAction,now:number):boolean {
   if(context.principal_id!==actor.user_id||context.workspace_id!==intent.workspace_id)return false;
   const relations=context.relationsFor(actor.user_id);

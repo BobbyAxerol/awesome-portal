@@ -220,3 +220,32 @@ Private exact source note SHA256
 `0b5e400e9b8829ca98877cc1967a7f3d90350267bd2382e4b2a7ce99b478df40`.
 Journal tail output was truncated; no new full journal/runtime acceptance
 claimed. Original source family/action/COMMIT/installation gates stay OPEN.
+# Current original07-002 registration and next-family return —2026-10-18
+
+The [complete registration contract/coordinator packet](instance-registration.md)
+is APPLIED_UNCOMMITTED/VALIDATION_NOT_RUN on25218372, not another parser-only
+delivery. Read its four generated operation IDs, strict input/error/availability
+matrix, migration143 reservation, exact per-action native acceptance, independent
+current audit, durable attempt/recovery, public absence and affected test bar.
+Default selected provider remains unqualified; TEST_ONLY never supplies real
+source authentication or held-COMMIT qualification. Capital union/amount/receipt
+types and capital collections are not widened to fit registry commands.
+
+Claude UXM-09, when assigned: use the new generated
+`execution-instance-registration.d.ts` types/fixture; distinguish registry
+APPLIED/REGISTERED_UNFUNDED from canonical Account/Deployment mapping, FUND,
+binding/grants and activation. Do not call old capital routes for this family,
+infer IDs from opaque source refs, offer a new-key resend after UNKNOWN, or
+interpret source-dark preview as success. Current status is owner-held /
+AWAITING_CONSUMER_REVIEW, not an actual consumer acknowledgement.
+
+[Source-only remaining-family review](remaining-source-families-review.md)
+accepted for implementation under original07-002: APPLY_PENDING+
+CANCEL_REMAINING first, with exact new actions/current acceptance, original
+recall/new control key/fiveCAS/named DTOs/durable coordination/source trust and
+PG/HTTP proof. PM already owns the real recall writer/journal. Then distinct
+lock/unlock, three-budget reallocation, binding/assignment, physical-profile,
+lifecycle/trading-state and source RETURN/risk prerequisites remain mandatory.
+No alias to R1/capital/recall_full or a second economic writer. Readonly source
+pins are not deployment authority; preserve concurrent PM/Edge WIP.
+

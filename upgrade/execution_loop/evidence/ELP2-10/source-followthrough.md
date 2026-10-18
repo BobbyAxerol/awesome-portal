@@ -660,3 +660,35 @@ inputs, approved budget/calibration/coexistence/P184G2/browser remain OPEN;
 11NOT_ENTRY_READY. No Claude acknowledgement inferred; keep source and consumer
 requests under their original owning IDs. No resources created; cleanup and
 rollback NO_ACTION_NEEDED.
+# Current Manager source intake —2026-10-18T12:28UTC
+
+Main read the complete [05source intake](../ELP2-05/manager-source-intake.md),
+SHA25604983b4f8526268408f7ba9872a898f7c9e262a547f59909130d149a79bb8cd7,
+and [07remaining-family audit](../ELP2-07/remaining-source-families-review.md).
+SOURCE_ONLY/NOT_RUN, not installed provider or consumer acceptance. Actual PM
+39aaa9c6 has17history factories plus strict correlation and mTLS storage/delivery
+composition; reuse them. Owner delivery157PASS and correlation180PASS are
+separate compatible-source receipts, not Main tests or new combined coverage.
+Current-history completeness/publication/generation/applied-checkpoint fields
+remain explicitly absent; source financial normalization/NAV/full denominator/
+flows/cost grid/five-ID+stage and distinct Regime corpus remain unfinished code/
+assembly/installation, not only calibration. Existing Portal runtime/consumer/
+workers/history/scoped APIs are already implemented and must not be duplicated.
+
+Readonly follow-up12:24UTC rechecked PM HEAD39aaa9c6 and latest journal58.149,
+preserving its concurrent candidate/concurrency WIP. Owner's new binding-process
+schedule had a Python3.10 variable-fraction timestamp oracle failure, corrected
+for a future retake; no observed final PASS or new registration-source change
+is inferred. No remote write/test/build/DB/business HTTP/credential/service
+action or resource creation by Main. Edge's SAME observation/reducer current
+114unit/stub PASS plus strict timeout remains overall NOT_PASS/NOT_MOUNTED;
+historical240/15 receipts do not qualify those changed bytes.
+
+Original05-001/06-002/07-001/07-002/09-001/10-002 retain exact owners and
+done-when gates. Registration now has a complete local family pending tests,
+not mounted command authority. Full current-human/field/publication/STREAM
+installation, source custody/atomic apply, approved runtime budget/calibration,
+coexistence/P184G2/browser remain OPEN;11NOT_ENTRY_READY. Claude intake7.3
+remains recurring and phase-owned; no actual new ACK/FE assignment. No push,
+dev/main merge, sign/release/deploy/Live; no owned source resources to clean.
+

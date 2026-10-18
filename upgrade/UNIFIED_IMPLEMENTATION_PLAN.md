@@ -12159,3 +12159,47 @@ Actual corrected qualification21:06:16.131619–21:07:29.428425UTC:348PASS (278u
   is mandatory rules7.3 with explicit owning disposition/to-do/exit and actual
   ACK; no new acknowledgement inferred. Full04/source/09/10 remain OPEN,
   11NOT_ENTRY_READY; no FE/runtime/push/dev/main/release.
+### Original ELP2 continuation —2026-10-18T12:28UTC
+
+- Original04 technical-reader hook114510 actually TERMINAL/PASS, landed
+  `25218372a10147b9910458f08a85c93479169d3f`:84files,+22033/−251,
+  960contract/7389API PASS+3existing skips; supported build/scopedPGrestore/
+  four access digests/eight frozen runtimes/owned cleanup PASS. [Exact result,
+  log hash and limits](execution_loop/evidence/ELP2-04/positive-parent-operations-and-following.md#actual-normal-hook-terminal--2026-10-18t1227utc).
+  Failed predecessors remain historical, not the current terminal. No new
+  source/provider/consumer/whole04 or10 qualification is inferred.
+- Original07-002's [complete named registration family](execution_loop/evidence/ELP2-07/instance-registration.md)
+  is APPLIED_UNCOMMITTED/VALIDATION_NOT_RUN on25218372:4named session APIs,
+  runtime-derived OpenAPI/client/fixture, additive separate Core143 metadata,
+  exact register/audit correspondence, rollback preview, durable same-key
+  UNKNOWN recovery and monotonic registry receipt. No capital union/funding/
+  binding/activation/canonical ID inference. Source provider default-dark;
+  new pure/PG/HTTP/contract focus then one coherent normal-hook landing.
+- [Current05/06 source intake](execution_loop/evidence/ELP2-05/manager-source-intake.md)
+  accepts PM's actual17history/delivery implementation without duplication;
+  full financial input assembly/denominator/NAV and Regime corpus remain
+  original05-001/06-002 dependencies, not just calibration. [Original07full
+  next-family matrix](execution_loop/evidence/ELP2-07/remaining-source-families-review.md)
+  prioritizes pending-recall controls while preserving all mandatory families.
+- Recurring Claude review/request intake7.3 at entry/freeze/landing/exit:
+  retain original IDs, explicit dispositions, owning packet to-do/exit and
+  exact schema/consumer/test dependency. No actual new acknowledgement;
+  frontend NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW.
+  All original02–10 remain the approved goal;11NOT_ENTRY_READY. No frontend,
+  source/runtime activation, push, dev/main, signed release, deploy or Live.
+
+- Original07 registration's first affected run actually terminated12:36UTC:
+  supported build PASS;277API PASS/2FAIL, restore/contracts NOT_RUN. [Original
+  log hash, exact failure causes and bounded corrections](execution_loop/evidence/ELP2-07/instance-registration.md#first-focused-terminal--2026-10-18t1236utc).
+  Both fixture assertions were checked against unchanged current-grant and
+  CSRF authority; no security/zero-send check was weakened. Same approved
+  isolated retry precedes coherent landing; no source/runtime/consumer PASS.
+
+- Original07 registration corrected affected run124011 actually terminated
+  12:44:20UTC/PASS:279API +17affected contract tests, Node22 build, real PG
+  restore/four access digests, frozen source/index/eight runtimes and exact
+  owned cleanup PASS. [Actual result/hash and preserved predecessor failures](execution_loop/evidence/ELP2-07/instance-registration.md#corrected-focused-terminal--2026-10-18t1244utc).
+  Complete local family is UNCOMMITTED; coherent normal-hook landing next.
+  Default provider dark, source commissioning/Claude consumer OPEN; original
+  07-002 retains all remaining families,11NOT_ENTRY_READY. No FE/runtime/push.
+

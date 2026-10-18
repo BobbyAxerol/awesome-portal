@@ -6,7 +6,8 @@ export class CommandHttpError extends AuthError {
   readonly publicCopyKey:string;
   readonly safeNextAction:"QUERY_SAME_INTENT"|"REVIEW_BLOCKER";
   constructor(code:string,message:string,status:number){super(code,message,status);this.publicCopyKey=code;
-    this.safeNextAction=["COMMAND_UNAVAILABLE","COMMAND_STATUS_UNVERIFIED","COMMAND_RETRY_REQUIRED"].includes(code)?"QUERY_SAME_INTENT":"REVIEW_BLOCKER";}
+    this.safeNextAction=["COMMAND_UNAVAILABLE","COMMAND_STATUS_UNVERIFIED","COMMAND_RETRY_REQUIRED",
+      "REGISTRATION_UNAVAILABLE","REGISTRATION_RECEIPT_UNVERIFIED"].includes(code)?"QUERY_SAME_INTENT":"REVIEW_BLOCKER";}
 }
 
 /** One public boundary for named command and parent-detail reads. Never expose

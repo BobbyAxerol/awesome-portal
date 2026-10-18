@@ -7,6 +7,8 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  "execution_instance_registration_events",
+  "execution_instance_registration_commands",
   "execution_manager_score_mode_heads",
   "execution_manager_calculation_heads",
   "execution_manager_calculation_revisions",

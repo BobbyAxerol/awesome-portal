@@ -1,5 +1,35 @@
 # ELP2-05 coverage and consumer handoff
 
+## Current source return —2026-10-18
+
+Original05-001 remains OPEN for a qualified selected financial publication,
+not for rebuilding code already supplied by PM. [Full readonly source intake,
+exact byte pins, owner receipts and missing assembly](manager-source-intake.md)
+is SOURCE_ONLY/NOT_RUN. PM observed39aaa9c6 now implements17selected-history
+factories, strict request/selection correlation, existing mTLS storage/status
+and a source-COMMIT-before-network delivery coordinator. Reuse those named
+paths; STORED is not Portal projection applied or source whole-census proof.
+Owner157/180-case receipts overlap historical receipts and are not Main tests,
+one combined run, installed-provider acceptance or new Portal coverage.
+
+Accepted next implementation/request to the source owner, in original05-001:
+exact five-ID+stage/time mapping; unique economic ownership/full member census;
+actual independent account/root/Portfolio NAV and classified flows; full
+allocated denominator including absent/unscored/archived members; complete
+cost/mark/FX/notional/observation grid; accepted source-set/cuts/epoch/generation
+and owning ReportSourceDefinition/publication. Existing typed missing fields
+must not become zeros, Portal observation time or a fabricated TS checkpoint.
+These are actual assembly/installation gaps, not merely calibration approval.
+
+Done-when: qualified owning bytes and current human/workload/field publication
+enter the existing06consumer/worker transaction with exact receipts, one atomic
+raw+Manager revision/head/checkpoint and ACK after release, plus affected
+source/PG/API proof. Regime corpus is separate; independent finite current
+reads and approved command preparation continue. No new producer endpoint,
+parallel ledger/poller, schema availability, installed provider or frontend
+change is claimed. Claude remains owner-held/AWAITING_CONSUMER_REVIEW; apply
+recurring7.3 intake at entry/freeze/landing/exit, with original finding IDs.
+
 Producer branch `docs/research-loop-plan`, entry `2ec5924d`; coherent commit
 supplies the landing pin. This handoff is prepared for Bobby to assign Claude,
 not proof of consumer acknowledgement. Frontend NOT_STARTED_BY_OWNER_DIRECTION;
