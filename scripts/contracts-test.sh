@@ -98,6 +98,8 @@ cp -a \
   "${WORKSPACE_DIR}/apps/portal/registry/openapi/"
 cp -a \
   "${ROOT_DIR}/apps/control-api/src/operations/catalog.generated.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/contracts.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/f0-read.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations/"
 # ELP2-01 validates its runtime parser against the identical published fixtures.
 # Copy only this pure validator and compatibility dictionary, not app config,

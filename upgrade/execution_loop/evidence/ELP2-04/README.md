@@ -1,5 +1,24 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+**Current continuation2026-10-18:** [Portfolio actual normal-hook terminal](explicit-resource-and-portfolio.md#portfolio-normal-hook-terminal-20261018-003634)
+landed67e5ea66,829contracts/6530API PASS plus3 existing skipped tests,
+build/scopedPGrestore/access digests/eight runtimes/owned cleanup PASS.
+[Finite F0 blocked-intent reader](f0-current-audit-read.md) is the next applied
+uncommitted04-008/009 subset; validation NOT_RUN at entry, not a generic parent
+or relay commissioning. Exact current audit helper also hardens qualified
+legacy receipts for existing command detail/collection/workflow. Consumer
+04-010 stays owner-held/AWAITING_CONSUMER_REVIEW; full04/source/10 remain OPEN.
+
+F0 initial focused terminal00:43:09UTC:319API/21contract PASS with actual scoped
+PG restore, frozen source/index/eight runtimes and owned teardown. Integrated
+review accepted two follow-ups: SQL scalar byte limits and canonical typed
+refusal bodies. [Owning receipt/dispositions/reuse](f0-current-audit-read.md#actual-receipt-resources-exit-and-next-work)
+records the affected-only F0/contract retake; normal-hook landing still pending.
+Affected retake terminal00:48:55UTC:69API/27contract PASS, scopedPGrestore and
+all freeze/runtime/owned teardown checks PASS. Two accepted review findings
+are now verified locally; five unchanged suites252PASS explicitly reused.
+Normal-hook commit is the remaining local gate, not full04/source acceptance.
+
 2026-10-17 current approved subset: [independent exact Alpha/Portfolio sharing
 and mixed-purpose Portfolio collection](explicit-resource-and-portfolio.md),
 entry da3a5f5c, APPLIED_UNCOMMITTED/NOT_RUN at entry. Ordinary and restricted

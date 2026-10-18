@@ -1,6 +1,7 @@
 /** TEST_ONLY synthetic Core compatibility vectors. No users/grants/receipts
  * inserted, no actual source, held native fence or production acceptance. */
 import { describe, expect, it } from "vitest";
+import { requireCurrentTsAuditRead } from "../src/execution-v2/current-audit-read";
 import type { AccessResource, ScopedAccessGrant, TsMembershipAcceptance, TsRootMembershipAcceptance } from "../src/execution-v2/access.contract";
 import { tsRootMembershipAcceptance } from "../src/execution-v2/access.contract";
 import { currentAcceptanceMatches, currentAccessRelations, currentGrantProof, grantBindingDigest,
@@ -267,5 +268,41 @@ describe("original08 current native/Core grant compatibility (TEST_ONLY)",()=>{
       removeLeg(s,P,"paper");await expect(scopes.revalidate(scope)).rejects.toMatchObject({code:"EXECUTION_READ_NOT_AVAILABLE"});
     }
     expect(changed).toBe(true);
+  });
+});
+
+// Append to elp210-current-grant-relations.spec.ts; add shared-helper import.
+// Pure TEST_ONLY vectors, not a source/native qualification receipt.
+describe("current exact audit-read helper — preserves the shared policy graph",()=>{
+  function legacyAudit(){
+    const gs=[grant(undefined,{action:"audit.read"})],c=context(gs),r=relations(source(gs));
+    delete r.current_authority;
+    r.membership={receipt_id:gs[0].ts_receipt!.receipt_id,revision:gs[0].ts_receipt!.membership_revision,mapping_revision:mapping};
+    c.relationsFor=()=>r;return {c,r};
+  }
+  it("accepts qualified legacy compatibility while keeping the accepted grant immutable",()=>{
+    const {c}=legacyAudit(),before=structuredClone(c.grants);
+    expect(requireCurrentTsAuditRead(c,P,"paper").allowed).toBe(true);
+    expect(c.grants).toEqual(before);
+  });
+  it.each([false,undefined,null,"false","true",1,{}])("nonliteral qualification %j is never audit authority",invalid=>{
+    const {c,r}=legacyAudit();(r as unknown as Record<string,unknown>).qualified=invalid;
+    expect(()=>requireCurrentTsAuditRead(c,P,"paper"))
+      .toThrowError(expect.objectContaining({code:"ACCESS_RESOURCE_NOT_FOUND",status:404}));
+  });
+  it.each([null,undefined,{}, {schema_version:"UNKNOWN"}])("present invalid current proof %j does not recover through matching legacy fields",invalid=>{
+    const {c,r}=legacyAudit();(r as {current_authority:unknown}).current_authority=invalid;
+    expect(()=>requireCurrentTsAuditRead(c,P,"paper"))
+      .toThrowError(expect.objectContaining({code:"ACCESS_RESOURCE_NOT_FOUND",status:404}));
+  });
+  it.each([NaN,Infinity,-1,1.25,Number.MAX_SAFE_INTEGER+1])("invalid evaluation clock %j fails closed",now=>{
+    const {c}=legacyAudit();c.now_ms=now;
+    expect(()=>requireCurrentTsAuditRead(c,P,"paper"))
+      .toThrowError(expect.objectContaining({code:"ACCESS_RESOURCE_NOT_FOUND",status:404}));
+  });
+  it("an app-only audit leaf cannot borrow the qualified provider's legacy membership",()=>{
+    const {c}=legacyAudit();c.grants=[{...c.grants[0],requires_ts_acceptance:false,ts_receipt:null}];
+    expect(()=>requireCurrentTsAuditRead(c,P,"paper"))
+      .toThrowError(expect.objectContaining({code:"ACCESS_RESOURCE_NOT_FOUND",status:404}));
   });
 });

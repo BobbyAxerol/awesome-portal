@@ -379,3 +379,23 @@ claim is authorized by merely observing the worktree.
 No remote writes, tests/builds/DB queries/migration, credentials, listener/service
 changes, grant/calibration install, public runtime, frontend edits or push.
 No resources created; no cleanup action required for this read-only intake.
+
+### Read-only PM intake — 2026-10-18T00:24UTC
+
+Direct SSH read on the same HK PM worktree observes HEAD
+94822b53b68147430199a10db47a369521b9e4eb, branch
+feat/portfolio-account-v1_1-parallel. Dirty PM history/export/report catalogue,
+provider/package/request/response/tests/journal and untracked report-publication
+history files are WIP, preserved without any remote write. Journal58.135
+reports source-defined immutable report-history selection and tests; its two
+attempts are explicitly FAIL (358cases345PASS/13FAIL, then359cases353PASS/6FAIL),
+with a double exact-codec conversion fix still proposed. Do not inherit those
+results as Portal coverage, qualification or runtime authority. The observed
+tail was truncated; this entry does not claim a complete reread of that journal
+or independently attest uncommitted source hashes.
+
+No need to wait for that unrelated WIP to finish the local F0 reader. It does
+not commission current-human/workload/app/field provider, v2 final-egress/native
+trust installation, approved budgets/calibration/coexistence/P184G2/browser.
+Those original09/10 records remain OPEN;11NOT_ENTRY_READY. No remote build,
+tests/SQL/migration/credential/listener/runtime change or new resource.

@@ -8,6 +8,157 @@
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
   "paths": {
+    "/api/v1/execution/operations/f0/{operation_id}": {
+      "get": {
+        "operationId": "executionF0BlockedOperationGetV2",
+        "description": "Explicit F0 family only; creator is an extra lookup ceiling, not permission. Requires current TS-accepted audit.read for the exact original ACCOUNT/PORTFOLIO/DEPLOYMENT target and paper/sandbox/live environment. No owner/ADMIN/read_all override, target-kind alias, generic-family fallback, source call or mutation. Original planning expiry does not expire historical read. Private no-store with final current Core/receipt fence.",
+        "x-strict-query-keys": [
+          "workspace_id"
+        ],
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 96
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current exact audit authority; finite retained BLOCKED intent only.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/F0BlockedOperationRead"
+                }
+              }
+            }
+          },
+          "400": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "COMMAND_INPUT_INVALID: explicit workspace and one compatible opaque operation id required; no extra or duplicate query keys."
+          },
+          "401": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "Authenticated current Portal session required."
+          },
+          "403": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "Current actor/session lifecycle refused; no record disclosed."
+          },
+          "404": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "COMMAND_RESOURCE_NOT_FOUND: unknown, other creator/workspace/family, unsupported target and hidden intents have the same safe envelope."
+          },
+          "409": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "ACCESS_RETRY_REQUIRED: current authority changed during read; no legacy or family fallback."
+          },
+          "503": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "Fixed COMMAND_STATUS_UNVERIFIED or COMMAND_UNAVAILABLE; no raw stored/provider/validation text."
+          }
+        }
+      }
+    },
     "/api/v1/execution/commands/catalog": {
       "get": {
         "operationId": "executionCommandCatalog",
@@ -319,7 +470,16 @@
   },
   "components": {
     "securitySchemes": {
-      "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" }
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
+    },
+    "schemas": {
+      "F0BlockedOperationRead": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/F0BlockedOperationRead"
+      }
     }
   }
 }

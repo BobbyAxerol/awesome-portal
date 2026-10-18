@@ -8,7 +8,7 @@ const ExecutionRiskTierSchema = z.enum([
   "R0_READ", "R1_PAPER_MUTATION", "R2_SANDBOX", "R3_LIVE_PROTECTIVE",
   "R4_LIVE_RISK_INCREASING", "UNCLASSIFIED", "BLOCKED",
 ]);
-const IdentifierSchema = z.string().regex(/^[A-Za-z0-9._:-]{1,191}$/);
+export const IdentifierSchema = z.string().regex(/^[A-Za-z0-9._:-]{1,191}$/);
 
 const PAYLOAD_MAX_UTF8_BYTES = 32_768;
 const PAYLOAD_MAX_DEPTH = 6;

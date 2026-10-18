@@ -3,6 +3,116 @@
   "$id": "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json",
   "title": "Portal execution operations contracts v1",
   "$defs": {
+    "F0BlockedOperationRead": {
+      "title": "Finite current-authorized F0 blocked intent",
+      "description": "Same twelve-field execution.command-operation.v1 body, no source status or dispatch. Stored target is requested intent, not TS attestation. created_at and updated_at are Portal timestamps, not source freshness. Runtime additionally enforces nonnegative finite epochs and updated_at >= created_at.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ExecutionCommandOperation"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_key": {
+              "type": "string",
+              "enum": [
+                "account/policy",
+                "account/reconcile-open-orders",
+                "account/reconcile-positions",
+                "account/seed-paper",
+                "account/state",
+                "account/sync",
+                "allocation/<root>",
+                "alpha/inspect",
+                "alpha/register",
+                "authority/create",
+                "authority/list",
+                "bracket-audit/<root>",
+                "broker/bindings",
+                "broker/exposure",
+                "broker/reconcile-open-orders",
+                "broker/reconcile-positions",
+                "broker/state",
+                "capital/history",
+                "config/apply",
+                "config/plan",
+                "copy/policies",
+                "copy/policy",
+                "deployment/state",
+                "health/<root>",
+                "ops/alerts",
+                "ops/alpha-activity",
+                "ops/command-journal",
+                "ops/dead-letters",
+                "ops/emergency-close",
+                "ops/emergency-close-verify",
+                "ops/findings",
+                "ops/redis-retention",
+                "ops/streams",
+                "ops/trace-order",
+                "order-group/list",
+                "order-group/show",
+                "performance/account",
+                "performance/account-history",
+                "performance/dashboard",
+                "performance/instrument",
+                "performance/portfolio",
+                "performance/portfolio-history",
+                "portfolio/create",
+                "portfolio/list",
+                "portfolio/state",
+                "redis/alpha-auth",
+                "redis/get",
+                "redis/scan",
+                "redis/stream",
+                "redis/trading-state",
+                "replay/compare",
+                "replay/create",
+                "replay/events",
+                "replay/export",
+                "replay/jobs",
+                "replay/lifecycle",
+                "replay/quantbt-diff",
+                "replay/run",
+                "replay/show",
+                "risk/profile",
+                "risk/state",
+                "sizing/decision",
+                "sizing/history",
+                "sizing/summary"
+              ]
+            },
+            "blockers": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 3,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "COMMAND_RELAY_DISABLED",
+                  "GENERIC_REDIS_ACCESS_PROHIBITED",
+                  "N16B_CURRENT_PRIMITIVE_PLAN_INVALID",
+                  "N16B_RUNTIME_ACTIVATION_PENDING",
+                  "N16B_TARGET_SCOPE_UNSUPPORTED",
+                  "OWNER_REVIEW_REQUIRED",
+                  "SOURCE_ROUTE_MAPPING_AMBIGUOUS",
+                  "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED",
+                  "TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED"
+                ]
+              },
+              "contains": {
+                "const": "COMMAND_RELAY_DISABLED"
+              }
+            },
+            "warnings": {
+              "type": "array",
+              "maxItems": 0
+            }
+          }
+        }
+      ]
+    },
     "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" },
     "Hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
     "Date": { "type": "string", "format": "date" },

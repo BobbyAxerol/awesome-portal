@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/execution/operations/f0/{operation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Explicit F0 family only; creator is an extra lookup ceiling, not permission. Requires current TS-accepted audit.read for the exact original ACCOUNT/PORTFOLIO/DEPLOYMENT target and paper/sandbox/live environment. No owner/ADMIN/read_all override, target-kind alias, generic-family fallback, source call or mutation. Original planning expiry does not expire historical read. Private no-store with final current Core/receipt fence. */
+        get: operations["executionF0BlockedOperationGetV2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/commands/catalog": {
         parameters: {
             query?: never;
@@ -329,8 +346,49 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Hash: string;
+        /**
+         * Finite current-authorized F0 blocked intent
+         * @description Same twelve-field execution.command-operation.v1 body, no source status or dispatch. Stored target is requested intent, not TS attestation. created_at and updated_at are Portal timestamps, not source freshness. Runtime additionally enforces nonnegative finite epochs and updated_at >= created_at.
+         */
+        F0BlockedOperationRead: components["schemas"]["ExecutionCommandOperation"] & {
+            /** @enum {string} */
+            command_key?: "account/policy" | "account/reconcile-open-orders" | "account/reconcile-positions" | "account/seed-paper" | "account/state" | "account/sync" | "allocation/<root>" | "alpha/inspect" | "alpha/register" | "authority/create" | "authority/list" | "bracket-audit/<root>" | "broker/bindings" | "broker/exposure" | "broker/reconcile-open-orders" | "broker/reconcile-positions" | "broker/state" | "capital/history" | "config/apply" | "config/plan" | "copy/policies" | "copy/policy" | "deployment/state" | "health/<root>" | "ops/alerts" | "ops/alpha-activity" | "ops/command-journal" | "ops/dead-letters" | "ops/emergency-close" | "ops/emergency-close-verify" | "ops/findings" | "ops/redis-retention" | "ops/streams" | "ops/trace-order" | "order-group/list" | "order-group/show" | "performance/account" | "performance/account-history" | "performance/dashboard" | "performance/instrument" | "performance/portfolio" | "performance/portfolio-history" | "portfolio/create" | "portfolio/list" | "portfolio/state" | "redis/alpha-auth" | "redis/get" | "redis/scan" | "redis/stream" | "redis/trading-state" | "replay/compare" | "replay/create" | "replay/events" | "replay/export" | "replay/jobs" | "replay/lifecycle" | "replay/quantbt-diff" | "replay/run" | "replay/show" | "risk/profile" | "risk/state" | "sizing/decision" | "sizing/history" | "sizing/summary";
+            blockers?: ("COMMAND_RELAY_DISABLED" | "GENERIC_REDIS_ACCESS_PROHIBITED" | "N16B_CURRENT_PRIMITIVE_PLAN_INVALID" | "N16B_RUNTIME_ACTIVATION_PENDING" | "N16B_TARGET_SCOPE_UNSUPPORTED" | "OWNER_REVIEW_REQUIRED" | "SOURCE_ROUTE_MAPPING_AMBIGUOUS" | "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED" | "TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED")[];
+            warnings?: unknown[];
+        };
         Identifier: string;
+        /** Format: date-time */
+        DateTime: string;
+        ExecutionCommandOperation: {
+            /** @constant */
+            schema_version: "execution.command-operation.v1";
+            operation_id: components["schemas"]["Identifier"];
+            /** @constant */
+            command_type: "EXECUTION_COMMAND";
+            command_key: string;
+            /** @constant */
+            status: "BLOCKED";
+            /** @constant */
+            verification_result: "NOT_STARTED";
+            blockers: string[];
+            warnings: string[];
+            relay_receipt: null;
+            /** @constant */
+            source_side_effect_requested: false;
+            created_at: components["schemas"]["DateTime"];
+            updated_at: components["schemas"]["DateTime"];
+        };
+        CommandProblem: {
+            error: {
+                code: string;
+                message: string;
+            };
+            request_id: string;
+            public_copy_key?: string;
+            /** @enum {string} */
+            safe_next_action?: "QUERY_SAME_INTENT" | "REVIEW_BLOCKER";
+        };
+        Hash: string;
         /** @enum {unknown} */
         RiskTier: "R0_READ" | "R1_PAPER_MUTATION" | "R2_SANDBOX" | "R3_LIVE_PROTECTIVE" | "R4_LIVE_RISK_INCREASING" | "UNCLASSIFIED" | "BLOCKED";
         CommandCatalogueScope: {
@@ -672,8 +730,6 @@ export interface components {
             params: components["schemas"]["OperatorParams"];
             conditions: Record<string, never>[];
         };
-        /** Format: date-time */
-        DateTime: string;
         ExecutionCommandPlan: {
             /** @constant */
             schema_version: "execution.command-plan.v1";
@@ -806,25 +862,6 @@ export interface components {
                 applied_filters: Record<string, never>[];
                 applied_sort: Record<string, never>[];
             };
-        };
-        ExecutionCommandOperation: {
-            /** @constant */
-            schema_version: "execution.command-operation.v1";
-            operation_id: components["schemas"]["Identifier"];
-            /** @constant */
-            command_type: "EXECUTION_COMMAND";
-            command_key: string;
-            /** @constant */
-            status: "BLOCKED";
-            /** @constant */
-            verification_result: "NOT_STARTED";
-            blockers: string[];
-            warnings: string[];
-            relay_receipt: null;
-            /** @constant */
-            source_side_effect_requested: false;
-            created_at: components["schemas"]["DateTime"];
-            updated_at: components["schemas"]["DateTime"];
         };
         R1DecisionOperation: {
             /** @constant */
@@ -1324,6 +1361,91 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    executionF0BlockedOperationGetV2: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path: {
+                operation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current exact audit authority; finite retained BLOCKED intent only. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["F0BlockedOperationRead"];
+                };
+            };
+            /** @description COMMAND_INPUT_INVALID: explicit workspace and one compatible opaque operation id required; no extra or duplicate query keys. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current actor/session lifecycle refused; no record disclosed. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_RESOURCE_NOT_FOUND: unknown, other creator/workspace/family, unsupported target and hidden intents have the same safe envelope. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ACCESS_RETRY_REQUIRED: current authority changed during read; no legacy or family fallback. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed COMMAND_STATUS_UNVERIFIED or COMMAND_UNAVAILABLE; no raw stored/provider/validation text. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+        };
+    };
     executionCommandCatalog: {
         parameters: {
             query?: {

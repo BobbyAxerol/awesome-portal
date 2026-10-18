@@ -47,6 +47,25 @@ interface PlanRow {
   updated_at: Date;
 }
 
+/** Narrow retained disclosure candidate; all stored values are untrusted until
+ * identity, exact current audit authority and finite public validation pass.
+ * No payload, condition prose, hashes, request key or source status is loaded.
+ */
+export interface F0ReadCandidate {
+  operation_id: unknown;
+  workspace_id: unknown;
+  actor_user_id: unknown;
+  target_type: unknown;
+  target_id: unknown;
+  environment: unknown;
+  command_key: unknown;
+  status: unknown;
+  blocker_codes: unknown;
+  warning_codes: unknown;
+  created_at: unknown;
+  updated_at: unknown;
+}
+
 function plan(row: PlanRow): ExecutionCommandPlanRecord {
   return {
     operationId: row.operation_id,
@@ -74,6 +93,39 @@ function plan(row: PlanRow): ExecutionCommandPlanRecord {
 @Injectable()
 export class ExecutionOperationsRepository {
   constructor(@Inject(CONTROL_API_POOL) readonly pool: Pool) {}
+
+  async findF0ReadCandidate(workspace: string, actor: string, id: string): Promise<F0ReadCandidate | null> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      await client.query("SET LOCAL statement_timeout = '5s'");
+      const result = await client.query<F0ReadCandidate>(
+        `SELECT operation_id, workspace_id, actor_user_id, target_type,
+                CASE WHEN octet_length(target_id) BETWEEN 1 AND 191
+                     THEN target_id ELSE NULL END AS target_id,
+                environment,
+                CASE WHEN octet_length(command_key) BETWEEN 3 AND 128
+                     THEN command_key ELSE NULL END AS command_key,
+                status,
+                CASE WHEN cardinality(blocker_codes) BETWEEN 1 AND 3
+                          AND octet_length(blocker_codes::text) <= 512
+                     THEN blocker_codes ELSE NULL END AS blocker_codes,
+                CASE WHEN cardinality(warning_codes) = 0
+                     THEN warning_codes ELSE NULL END AS warning_codes,
+                created_at, updated_at
+         FROM execution_command_plans_f0
+         WHERE workspace_id = $1 AND actor_user_id = $2 AND operation_id = $3`,
+        [workspace, actor, id],
+      );
+      await client.query("COMMIT");
+      return result.rows[0] ?? null;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 
   async findByRequestKey(
     workspaceId: string,

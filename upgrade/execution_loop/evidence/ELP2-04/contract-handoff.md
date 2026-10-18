@@ -1,5 +1,24 @@
 # ELP2-04 — Scoped reader handoff to Claude
 
+**2026-10-18 finite F0 continuation:** Portfolio producer landed67e5ea66;
+[actual normal-hook terminal](explicit-resource-and-portfolio.md#portfolio-normal-hook-terminal-20261018-003634)
+supersedes the prior pending landing, not source/runtime/consumer qualification.
+[F0 exact contract and consumer map](f0-current-audit-read.md#contract-and-claude-handoff)
+publishes additive executionF0BlockedOperationGetV2/F0BlockedOperationRead.
+Required workspace_id, same finite12field BLOCKED body, no source call/command.
+Use only for a known F0 intent; do not infer family by op_ or retry generic
+parent/legacy after refusal. Synthetic fixture is not a broker/source receipt.
+Generation command, typed errors and current authority/date semantics are in
+the owning packet; entry APPLIED_UNCOMMITTED/NOT_RUN until actual terminal.
+FE remains NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW. Prepared
+handoff does not establish Claude receipt, assignment or acceptance.
+
+F0 affected validation00:48:55UTC:69actual-PG/HTTP tests+27contract tests PASS;
+five unchanged suites252PASS reused separately. Canonical CommandProblem now
+types400/401/403/404/409/503 bodies; do not parse prose or expect copy/action on
+every guard error. [Exact receipt/limits](f0-current-audit-read.md#affected-retake-terminal-2026-10-18t004855utc).
+Normal-hook landing remains pending; no shared preview rebuild or FE assignment.
+
 **2026-10-18 exact-sharing/mixed-Portfolio validation:**
 [Owning04-009 packet](explicit-resource-and-portfolio.md#affected-retake-terminal--2026-10-18t000452z)
 has actual112/112 affected tests/build/scopedPGrestore PASS and separately

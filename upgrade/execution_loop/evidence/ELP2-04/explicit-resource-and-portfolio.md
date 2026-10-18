@@ -205,3 +205,27 @@ with original EPG10-08, and10 actual current trust/install, approved budgets/
 calibration/coexistence/P184G2. PM94822b53 actual joint-protocol source receipt
 is a concrete accepted09/10 input, not missing source or installed authority.
 11NOT_ENTRY_READY; no push/dev/main/sign/release/deploy/UI/runtime activation.
+
+<a id="portfolio-normal-hook-terminal-20261018-003634"></a>
+### Normal-hook terminal — 2026-10-18T00:36:34UTC
+
+Producer landed `67e5ea66af84f9401f14b89e0dc1269cb71792b7`, twelve files
++1862/−82: implementation3 +422/−76, tests3 +1085/−6, docs6 +355/−0.
+Actual normal unbypassed hook exit0:69 contract files/829PASS;385 API files
+passed/2 existing files skipped,6530PASS/3 existing tests skipped. API source
+build, actual scoped PostgreSQL restore and all four access-row digests PASS.
+These counts repeat focused cases; do not sum them as independent coverage.
+
+Actual private receipt directory `explicit-portfolio-land-000600`, controller
+SHA256 `7f689eafdb45552761f9cd5befc7b3dc1c39edd44a9dc7ae827bad72b22ce226`,
+gate log SHA256 `268e14113f3d1b177d725b6d2a178addbdfbe6634b545eb50e91c3c0f67db572`.
+Source/index freeze and all eight protected runtime image/start/restart tuples
+unchanged. Exact owned Node/PG/network and measurement lease removed; clean
+canonical checkout verified after terminal. Capacity155GiB free/10,497MiB
+memory available; NO_ACTION_NEEDED, no image/cache/volume pruning. Earlier
+failed attempt and affected retake remain preserved above.
+
+This closes the demonstrated local Portfolio/exact-sharing correction, not
+full04/source/trust/browser. The [next finite F0 reader](f0-current-audit-read.md)
+uses this landed baseline; its own validation is separate. No source call,
+new grant, frontend/push/dev/main/release/deploy or operating runtime change.

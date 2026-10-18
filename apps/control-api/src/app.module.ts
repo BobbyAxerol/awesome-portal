@@ -91,6 +91,8 @@ import { CommandCenterRepository } from "./command-center/command-center.reposit
 import { CommandCenterService } from "./command-center/command-center.service";
 import { ExecutionOperationsRepository } from "./operations/operations.repository";
 import { ExecutionOperationsService } from "./operations/operations.service";
+import { ExecutionF0ReadController } from "./operations/f0-read.controller";
+import { ExecutionF0ReadService } from "./operations/f0-read.service";
 import { OperationsWorkflowRepository } from "./operations/workflow.repository";
 import { OperationsWorkflowService } from "./operations/workflow.service";
 import { IncidentController } from "./operations/incident.controller";
@@ -253,6 +255,7 @@ export class AppModule {
         ProfileController,
         ExecutionAccessController,
         ExecutionCommandController,
+        ExecutionF0ReadController,
         // A4-2 retired the six /api/admin/users* routes. They mutated
         // accounts with no expected revision, no idempotency, no step-up and
         // no operation record, so leaving them mounted beside the control
@@ -481,6 +484,7 @@ export class AppModule {
         CommandCenterService,
         ExecutionOperationsRepository,
         ExecutionOperationsService,
+        ExecutionF0ReadService,
         OperationsWorkflowRepository,
         OperationsWorkflowService,
         IncidentRepository,

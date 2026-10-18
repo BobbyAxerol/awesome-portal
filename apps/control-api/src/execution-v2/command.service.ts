@@ -13,6 +13,7 @@ import { CommandStore,type CommandRecord } from "./command.store";
 import { capitalWorkflow } from "./workflow";
 import { workflowCommandRecord,workflowCommandTarget } from "./capital-workflow-record";
 import { commandMembershipCurrent } from "./command-current-authority";
+import { requireCurrentTsAuditRead } from "./current-audit-read";
 import { commandAuthorization,sourceCommandResult,unqualifiedCommandTrust,type CommandAuthorization,type CommandTrust,type SourceCommandResult } from "./command-trust";
 
 const action:Record<CommandIntent["business_payload"]["operation"],AccessAction>={FUND:"capital.fund",INITIAL_GRANT:"capital.initial_grant",
@@ -96,15 +97,7 @@ export class ExecutionCommandService {
     private readonly allowTestOnly=false,cursor?:CursorKeyring){this.store=new CommandStore(pool);
     this.collectionCursor=cursor?new KeysetCursorCodec(cursor):null;}
   private report(c:AccessEvaluationContext,resource:CommandIntent["resource"],environment:CommandIntent["environment"]) {
-    // Identical financial-receipt rule for detail and collection, never read_all.
-    // Remove only app-only audit ALLOW leaves. Keep every DENY and all
-    // access.grant ancestors: dropping a ceiling invalidates its delegated
-    // DENY and can incorrectly let an independent accepted ALLOW win.
-    const effective={...c,grants:c.grants.filter(g=>
-      g.action!=="audit.read"||g.effect==="DENY"||g.requires_ts_acceptance)};
-    const result=evaluateAccess(effective,"audit.read",resource,environment);
-    if(!result.allowed)throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
-    return result;
+    return requireCurrentTsAuditRead(c,resource,environment);
   }
   private permit(c:AccessEvaluationContext,i:CommandIntent,read=false) {
     if(read){this.report(c,i.resource,i.environment);return;}
