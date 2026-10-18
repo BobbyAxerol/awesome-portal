@@ -1,0 +1,136 @@
+/**
+ * A small JSON Schema checker for the conformance gate (Rules 9.8.3: "every
+ * fixture the frontend adds passes the published schema").
+ *
+ * It covers exactly the keywords the published execution schemas use. Any
+ * other validating keyword makes it throw, so a schema that grows a keyword
+ * this file does not know cannot silently pass everything.
+ *
+ * Returns the list of violations (empty means valid); it never throws on a
+ * bad instance, only on a schema it cannot interpret.
+ */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { SCHEMA_DIR } from "./loadCanonical";
+
+type Json = Record<string, unknown>;
+
+const IGNORED = new Set(["$schema", "$id", "$defs", "$comment", "title", "description", "default", "examples", "format"]);
+const KNOWN = new Set([
+  "type", "enum", "const", "required", "properties", "additionalProperties", "items", "minItems", "maxItems", "minimum",
+  "maximum", "maxLength", "minLength", "pattern", "oneOf", "anyOf", "uniqueItems", "$ref",
+]);
+
+const documents = new Map<string, Json>();
+function document(file: string): Json {
+  let doc = documents.get(file);
+  if (!doc) {
+    doc = JSON.parse(readFileSync(resolve(SCHEMA_DIR, file), "utf8")) as Json;
+    documents.set(file, doc);
+  }
+  return doc;
+}
+
+function pointer(doc: Json, ptr: string): Json {
+  let node: unknown = doc;
+  for (const part of ptr.split("/").filter((segment) => segment.length > 0)) node = (node as Json | undefined)?.[part];
+  if (typeof node !== "object" || node === null) throw new Error(`unresolvable $ref pointer ${ptr}`);
+  return node as Json;
+}
+
+interface Scope { file: string }
+
+function typeOf(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  if (typeof value === "number") return Number.isInteger(value) ? "integer" : "number";
+  return typeof value;
+}
+
+function matchesType(value: unknown, wanted: string): boolean {
+  const actual = typeOf(value);
+  return actual === wanted || (wanted === "number" && actual === "integer");
+}
+
+function same(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function check(schema: Json, value: unknown, at: string, scope: Scope, out: string[]): void {
+  for (const key of Object.keys(schema)) {
+    if (!KNOWN.has(key) && !IGNORED.has(key)) throw new Error(`schema keyword not supported by the testkit checker: ${key}`);
+  }
+  const ref = schema.$ref;
+  if (typeof ref === "string") {
+    const [file, ptr] = ref.split("#");
+    const target = file ? file : scope.file;
+    check(pointer(document(target), ptr ?? ""), value, at, { file: target }, out);
+    return;
+  }
+  if (schema.type !== undefined) {
+    const types = Array.isArray(schema.type) ? (schema.type as string[]) : [schema.type as string];
+    if (!types.some((wanted) => matchesType(value, wanted))) {
+      out.push(`${at}: expected ${types.join("|")}, got ${typeOf(value)}`);
+      return;
+    }
+  }
+  if (schema.const !== undefined && !same(schema.const, value)) out.push(`${at}: expected const ${JSON.stringify(schema.const)}`);
+  if (Array.isArray(schema.enum) && !schema.enum.some((member) => same(member, value))) out.push(`${at}: not in enum`);
+  if (Array.isArray(schema.oneOf)) {
+    const passing = schema.oneOf.filter((branch) => {
+      const branchOut: string[] = [];
+      check(branch as Json, value, at, scope, branchOut);
+      return branchOut.length === 0;
+    }).length;
+    if (passing !== 1) out.push(`${at}: matched ${passing} oneOf branches`);
+  }
+  if (Array.isArray(schema.anyOf)) {
+    const any = schema.anyOf.some((branch) => {
+      const branchOut: string[] = [];
+      check(branch as Json, value, at, scope, branchOut);
+      return branchOut.length === 0;
+    });
+    if (!any) out.push(`${at}: matched no anyOf branch`);
+  }
+  if (typeof value === "string") {
+    if (typeof schema.minLength === "number" && value.length < schema.minLength) out.push(`${at}: shorter than ${schema.minLength}`);
+    if (typeof schema.maxLength === "number" && value.length > schema.maxLength) out.push(`${at}: longer than ${schema.maxLength}`);
+    if (typeof schema.pattern === "string" && !new RegExp(schema.pattern).test(value)) out.push(`${at}: pattern ${schema.pattern}`);
+  }
+  if (typeof value === "number") {
+    if (typeof schema.minimum === "number" && value < schema.minimum) out.push(`${at}: below ${schema.minimum}`);
+    if (typeof schema.maximum === "number" && value > schema.maximum) out.push(`${at}: above ${schema.maximum}`);
+  }
+  if (Array.isArray(value)) {
+    if (typeof schema.minItems === "number" && value.length < schema.minItems) out.push(`${at}: fewer than ${schema.minItems} items`);
+    if (typeof schema.maxItems === "number" && value.length > schema.maxItems) out.push(`${at}: more than ${schema.maxItems} items`);
+    if (schema.uniqueItems === true && new Set(value.map((item) => JSON.stringify(item))).size !== value.length) out.push(`${at}: items not unique`);
+    if (schema.items && typeof schema.items === "object") {
+      value.forEach((item, index) => check(schema.items as Json, item, `${at}[${index}]`, scope, out));
+    }
+  }
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    const record = value as Json;
+    const props = (schema.properties ?? {}) as Record<string, Json>;
+    for (const name of (schema.required ?? []) as string[]) {
+      if (!Object.prototype.hasOwnProperty.call(record, name)) out.push(`${at}.${name}: required`);
+    }
+    for (const [name, child] of Object.entries(record)) {
+      const propSchema = Object.prototype.hasOwnProperty.call(props, name) ? props[name] : undefined;
+      if (propSchema) check(propSchema, child, `${at}.${name}`, scope, out);
+      else if (schema.additionalProperties === false) out.push(`${at}.${name}: not allowed`);
+      else if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+        check(schema.additionalProperties as Json, child, `${at}.${name}`, scope, out);
+      }
+    }
+  }
+}
+
+/** Violations of `file#pointer` by `value`; empty when the value conforms. */
+export function validateAgainst(file: string, ptr: string, value: unknown): string[] {
+  const name = file.endsWith(".json") ? file : `${file}.schema.json`;
+  const out: string[] = [];
+  check(ptr === "" ? document(name) : pointer(document(name), ptr), value, "$", { file: name }, out);
+  return out;
+}
