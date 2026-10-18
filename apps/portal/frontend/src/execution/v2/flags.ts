@@ -20,6 +20,11 @@ export const EXEC_V2_SCREEN_KEYS = [
   "overview",
   "cockpit",
   "shell",
+  "compare",
+  "blotter",
+  "admin",
+  "users",
+  "replay",
 ] as const;
 export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
 

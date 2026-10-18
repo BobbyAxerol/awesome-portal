@@ -17,7 +17,7 @@ describe("parseV2Manifest", () => {
 
   it("knows every screen of review2/07 s5 plus the shell", () => {
     expect([...parseV2Manifest(EXEC_V2_SCREEN_KEYS.join(","))].sort()).toEqual(
-      ["account", "alpha", "archived", "cockpit", "fleet", "ops", "overview", "portfolios", "profile", "shell", "workbench"],
+      ["account", "admin", "alpha", "archived", "blotter", "cockpit", "compare", "fleet", "ops", "overview", "portfolios", "profile", "replay", "shell", "users", "workbench"],
     );
   });
 
