@@ -1,0 +1,82 @@
+/* Compare (UXM-07 S2). Layout and the candidate chips; the panels, banners and
+ * buttons come from portfolios.css and the charts from charts.css. Tokens and
+ * type roles only; no uppercase, no raw colour. */
+.exec-cmpr-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-cmpr-v2 > * {
+  min-width: 0;
+}
+.exec-cmpr-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-cmpr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 10px;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-cmpr-chip small {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-cmpr-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-cmpr-chip[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--paper-raised);
+  border-color: var(--ink-soft);
+}
+.exec-cmpr-chip[disabled] {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.exec-cmpr-sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--ink-faint);
+}
+.exec-cmpr-chip[data-tone="series"] .exec-cmpr-sw {
+  background: var(--series);
+  border-color: var(--series);
+}
+.exec-cmpr-chip[data-tone="series-2"] .exec-cmpr-sw {
+  background: var(--series-2);
+  border-color: var(--series-2);
+}
+.exec-cmpr-chip[data-tone="series-3"] .exec-cmpr-sw {
+  background: var(--series-3);
+  border-color: var(--series-3);
+}
+.exec-cmpr-chip[data-tone="series-4"] .exec-cmpr-sw {
+  background: var(--series-4);
+  border-color: var(--series-4);
+}
+.exec-cmpr-sw[data-glyph="circle"] {
+  border-radius: var(--radius-pill);
+}
+.exec-cmpr-sw[data-glyph="diamond"] {
+  transform: rotate(45deg);
+}
+.exec-cmpr-parts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

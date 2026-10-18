@@ -1,0 +1,275 @@
+/**
+ * Compare, portfolios side by side (UXM-07 S2, flag key `compare`,
+ * route `/deployments/compare`).
+ *
+ * Two to four portfolios from the URL param `in` (`ids` is read as an alias).
+ * Identity and scalars come from the portfolio list read: name, owner, state,
+ * domain, counts and `allocatedByCurrency`, each portfolio in its own currency.
+ *
+ * What it refuses, and says so:
+ * - the overlay: aligned and rebased series are not published, so
+ *   `CompareOverlay` prints `Not available` with `FE-033`, and still lists who
+ *   would have been left out of one basis;
+ * - mixing: the basis is the currency and domain of the first portfolio
+ *   picked. Another currency, a Simulated book beside a Real-funded one, or a
+ *   portfolio whose single allocation figure spans both domains is listed
+ *   apart with the reason. Nothing is converted, summed or ranked across them;
+ * - a best-in-row mark: it would need a number that is not published.
+ *
+ * Alphas are the same screen on another kind; their compare needs the
+ * multi-subject read, so that choice is off with FE-033.
+ *
+ * URL: `in` (the picks), `from` (where Back goes: `portfolios`,
+ * `portfolio:<id>`, `fleet`), `q` (filter the chips), `window` (shared).
+ *
+ * | Cell | Value |
+ * |---|---|
+ * | Cardinality | hi-fi 6 candidates and 3 picks; real 10 to 100 candidates, 2 to 4 picks |
+ * | Break point | 100 candidate chips; 4 columns under 660px |
+ * | Degradation | candidate chips filtered by `q` and capped at 100; the table stacks as cards at or below 660px; a fifth pick is refused |
+ * | Server contract | list read only; requested: `IN` filter and aligned rebased series with a common-partition check (FE-033), windowed metrics (FE-005, FE-006, FE-025) |
+ * | Invariant | no cross-currency or cross-domain figure, ever; basis caption always printed; unresolved ids named, not dropped |
+ * | Perf budget | one read; at most 100 chips and 4 table columns |
+ */
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+
+import type { ExecutionApi } from "../../../api/ports";
+import { PanelState } from "../../../components/states";
+import { utcStamp } from "../../../time";
+import { SectionPanel } from "../../blocks";
+import { CardsTable, type CardsColumn } from "../../cardsTable";
+import { CompareOverlay, type NotComparable } from "../../charts";
+import { Flag } from "../../Flag";
+import { holds, V2_CAPABILITY } from "../../shell/roleNav";
+import { useExecUrlState, withContext } from "../../urlState";
+import { PF_FE, npReason, npText } from "../portfolios/fe";
+import { Absent, MoneyList, Np, freshnessFlag } from "../portfolios/format";
+import { toRows, type PortfolioRow } from "../portfolios/listModel";
+import { DEFAULT_ROUTES, type PortfolioRoutes } from "../portfolios/routes";
+import { COMPARE_MAX, selectionFrom, withSelection } from "../portfolios/selection";
+import { useRead } from "../portfolios/useRead";
+import { backTarget, basisOf, resolveSelection, selectionHint, selectionState } from "./model";
+
+import "../../css/portfolios.css";
+import "../../css/compare.css";
+
+export const COMPARE_SCREEN_KEY = "compare" as const;
+
+export interface CompareScreenProps {
+  api: ExecutionApi;
+  /** A portfolio to start from (the 360's "Compare with"); used only while the URL names no pick. */
+  portfolioId?: string;
+  /** The session's capability list; without `execution.portfolios.read` the screen is the denial. */
+  capabilities?: ReadonlySet<string>;
+  routes?: PortfolioRoutes;
+}
+
+const CHIP_CAP = 100;
+const TONES = ["series", "series-2", "series-3", "series-4"] as const;
+const GLYPHS = ["circle", "square", "diamond", "triangle"] as const;
+const SEARCH_DEBOUNCE_MS = 300;
+
+interface MetricRow { id: string; label: string; cell(row: PortfolioRow): ReactNode }
+
+const METRICS: readonly MetricRow[] = [
+  { id: "currency", label: "Base currency", cell: (r) => r.baseCurrency },
+  { id: "owner", label: "Owner", cell: (r) => r.owner ?? <Absent reason="owner not published" /> },
+  { id: "state", label: "State", cell: (r) => <Flag kind={r.stateKind} label={r.stateLabel} size="sm" /> },
+  { id: "domain", label: "Domain", cell: (r) => r.domainLabel },
+  { id: "allocations", label: "Allocations", cell: (r) => String(r.allocationCount) },
+  { id: "deployments", label: "Deployments", cell: (r) => String(r.deploymentCount) },
+  { id: "allocated", label: "Allocated capital", cell: (r) => <MoneyList entries={r.allocated} empty={<Absent reason="no allocation published" />} /> },
+  { id: "nav", label: "NAV", cell: () => <Np fact={PF_FE.nav} /> },
+  { id: "pnl", label: "Net PnL", cell: () => <Np fact={PF_FE.netPnl} /> },
+  { id: "ret", label: "Return", cell: () => <Np fact={PF_FE.ret} /> },
+  { id: "dd", label: "Max drawdown", cell: () => <Np fact={PF_FE.drawdown} /> },
+  { id: "score", label: "Score", cell: () => <Np fact={PF_FE.score} /> },
+];
+
+export default function CompareScreen({ api, portfolioId, capabilities, routes = DEFAULT_ROUTES }: CompareScreenProps) {
+  const url = useExecUrlState();
+  const [params, setParams] = useSearchParams();
+  const reasonId = useId();
+  const permitted = capabilities === undefined || holds(capabilities, { allOf: [V2_CAPABILITY.portfoliosRead] });
+  const read = useRead(api, permitted, "list", (scoped) => scoped.listPortfolios());
+  const envelope = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+
+  const { q, window: windowLabel, from } = url.value;
+  const picked = selectionFrom(params);
+  const all = useMemo(() => (envelope ? toRows(envelope.items) : []), [envelope]);
+  const { rows: chosen, unresolved } = useMemo(() => resolveSelection(all, picked.ids), [all, picked.ids.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  const basis = useMemo(() => basisOf(chosen), [chosen]);
+  const kindWanted = params.get("kind");
+
+  // The 360 hands over one id. It becomes the first pick once, as a replace.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current || portfolioId === undefined || picked.ids.length > 0) return;
+    seeded.current = true;
+    setParams(withSelection(params, [portfolioId]), { replace: true });
+  }, [portfolioId, picked.ids.length, params, setParams]);
+
+  const setPicks = (ids: readonly string[]) => setParams(withSelection(params, ids.slice(0, COMPARE_MAX)), { replace: true });
+  const toggle = (id: string) => setPicks(picked.ids.includes(id) ? picked.ids.filter((x) => x !== id) : [...picked.ids, id]);
+
+  const [text, setText] = useState(q ?? "");
+  const setUrl = useRef(url.set);
+  setUrl.current = url.set;
+  useEffect(() => setText(q ?? ""), [q]);
+  useEffect(() => {
+    const next = text.trim() === "" ? null : text.trim();
+    if (next === q) return;
+    const timer = setTimeout(() => setUrl.current({ q: next }, { replace: true }), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [text, q]);
+
+  if (!permitted) {
+    return (
+      <div className="exec-cmpr-v2" data-screen="compare-v2">
+        <header className="exec-pf-head"><h1 className="exec-pf-h1">Compare</h1></header>
+        <section className="exec-pf-denied" aria-label="Access">
+          <PanelState status="denied" reason="Your session does not hold execution.portfolios.read." />
+          <Link to={routes.access}>See what you can access</Link>
+        </section>
+      </div>
+    );
+  }
+
+  const state = selectionState(picked.ids.length);
+  const hint = selectionHint(state);
+  const needle = q?.trim().toLowerCase() ?? "";
+  const candidates = all.filter((row) => needle === "" || [row.label, row.portfolioId, row.owner ?? ""].some((part) => part.toLowerCase().includes(needle)));
+  const chips = candidates.slice(0, CHIP_CAP);
+  const back = backTarget(from);
+  const backHref = back.kind === "portfolio" ? routes.portfolio(back.portfolioId) : back.kind === "fleet" ? routes.fleet : routes.list;
+  const backLabel = back.kind === "portfolio" ? "Back to Portfolio" : back.kind === "fleet" ? "Back to Alpha Fleet" : "Back to Portfolios";
+  const fresh = envelope ? freshnessFlag(envelope.freshness) : null;
+  const toneOf = (id: string) => picked.ids.indexOf(id);
+
+  const apart: NotComparable[] = [
+    ...basis.apart.map(({ row, reason }) => ({ id: row.portfolioId, label: row.label, reason })),
+    ...unresolved.map((id) => ({ id, label: id, reason: "Not in the loaded portfolios" })),
+  ];
+  const basisText = basis.currency === null
+    ? "No comparable portfolio picked yet"
+    : `Return since window start (${windowLabel}), one currency (${basis.currency}), ${basis.domain === "simulated" ? "Simulated" : "Real-funded"} books; methodology as published per source (FE-006)`;
+
+  const tableColumns: CardsColumn<MetricRow>[] = [
+    { key: "metric", label: "Metric", render: (m) => m.label },
+    ...chosen.map<CardsColumn<MetricRow>>((row) => ({ key: row.portfolioId, label: row.label, numeric: false, render: (m) => m.cell(row) })),
+  ];
+
+  return (
+    <div className="exec-cmpr-v2" data-screen="compare-v2">
+      <header className="exec-pf-head">
+        <div>
+          <h1 className="exec-pf-h1">Compare</h1>
+          <p className="exec-pf-sub">2 to 4 · one currency · one domain · identity and scalars only</p>
+        </div>
+        <div className="exec-pf-ctrls">
+          {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          {envelope ? <span className="exec-pf-dim">{envelope.sourceAsOf ? `As of ${utcStamp(envelope.sourceAsOf)}` : "Source time not published"}</span> : null}
+          <Link to={withContext(backHref, params)}>{backLabel}</Link>
+        </div>
+      </header>
+
+      {read.phase === "loading" && envelope === null ? <PanelState status="loading" /> : null}
+      {read.phase === "error" ? <PanelState status={read.status} reason={read.reason} /> : null}
+
+      {envelope ? (
+        <>
+          <section className="exec-pf-panel" aria-label="Choose portfolios">
+            <div className="exec-pf-tool">
+              <span className="exec-pf-seg" role="group" aria-label="Compare">
+                <button type="button" className="exec-pf-segbtn" aria-pressed="true">Portfolios</button>
+                <button type="button" className="exec-pf-segbtn" aria-pressed="false" disabled title={npReason(PF_FE.compareSeries, "Comparing alphas needs the multi-subject read.")} aria-describedby={reasonId}>Alphas</button>
+              </span>
+              <label className="exec-pf-field">
+                <span className="exec-pf-sr">Filter portfolios</span>
+                <input className="exec-pf-input" type="search" placeholder="Filter portfolios" value={text} onChange={(event) => setText(event.target.value)} />
+              </label>
+              <span className="exec-pf-dim">Window {windowLabel}</span>
+            </div>
+            <p id={reasonId} className="exec-pf-sr">Alphas: {npText(PF_FE.compareSeries)}</p>
+            {kindWanted !== null && kindWanted !== "portfolio" && kindWanted !== "pf" ? (
+              <p className="exec-pf-banner" role="status">Comparing alphas is {npText(PF_FE.compareSeries)}. Showing portfolios.</p>
+            ) : null}
+            <div className="exec-cmpr-pick" role="group" aria-label="Portfolios to compare">
+              {chips.map((row) => {
+                const tone = toneOf(row.portfolioId);
+                const on = tone >= 0;
+                const blocked = !row.comparable || (!on && state.kind === "full");
+                const why = !row.comparable ? row.notComparableReason : !on && state.kind === "full" ? `At most ${COMPARE_MAX}` : null;
+                return (
+                  <button
+                    key={row.key}
+                    type="button"
+                    className="exec-cmpr-chip"
+                    data-tone={on ? TONES[tone] : undefined}
+                    aria-pressed={on}
+                    disabled={blocked}
+                    title={why ?? undefined}
+                    onClick={() => toggle(row.portfolioId)}
+                  >
+                    <i className="exec-cmpr-sw" data-glyph={on ? GLYPHS[tone] : undefined} aria-hidden="true" />
+                    {row.label}
+                    <small>{row.baseCurrency}{row.unallocated ? " · not comparable" : ""}</small>
+                  </button>
+                );
+              })}
+              {candidates.length > chips.length ? <span className="exec-pf-note">Showing {chips.length} of {candidates.length} portfolios. Filter to see the rest.</span> : null}
+              {envelope.truncated ? <span className="exec-pf-note">The portfolio read is the top {all.length} / {envelope.totalPortfolios}; the rest cannot be chosen yet.</span> : null}
+            </div>
+            <p className="exec-pf-note" role="status">{hint}</p>
+            {picked.dropped > 0 ? <p className="exec-pf-note">{picked.dropped} entries in the address were not used: not a clean id, a repeat, or past the fourth.</p> : null}
+          </section>
+
+          <SectionPanel title="Partitions" aside="Money is never converted or combined">
+            {chosen.length === 0 && unresolved.length === 0 ? (
+              <p className="exec-pf-note">Nothing is picked, so there is nothing to partition.</p>
+            ) : (
+              <div className="exec-cmpr-parts">
+                <p className="exec-pf-note" data-testid="basis-line">
+                  {basis.currency === null ? "No comparable portfolio picked yet." : `Basis: ${basis.currency}, ${basis.domain === "simulated" ? "Simulated" : "Real-funded"}, set by the first portfolio picked.`}
+                </p>
+                <ul className="exec-pf-list" aria-label="Partitions">
+                  {basis.partitions.map((part) => (
+                    <li key={part.key} data-testid="partition">
+                      <strong>{part.currency} · {part.domainLabel}</strong>
+                      <span className="exec-pf-dim"> · {part.ids.map((id) => chosen.find((r) => r.portfolioId === id)?.label ?? id).join(", ")}</span>
+                    </li>
+                  ))}
+                </ul>
+                {apart.length > 0 ? (
+                  <p className="exec-pf-note" data-testid="refusal">
+                    {apart.length === 1 ? "One pick is" : `${apart.length} picks are`} listed apart and left out of the basis, never converted or added to it. The reason is beside each name below.
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </SectionPanel>
+
+          <SectionPanel title="Series" aside={<Flag kind="neutral" label="Retained snapshots" size="sm" />}>
+            <CompareOverlay
+              label="Comparison"
+              series={[]}
+              notComparable={apart}
+              basis={basisText}
+              state={{ kind: "unavailable", copy: "Not available", reason: `Aligned series are ${npText(PF_FE.compareSeries)}. Nothing is rebased or worked out here.` }}
+            />
+            <p className="exec-pf-note" data-testid="basis-caption">Basis: {basisText}</p>
+          </SectionPanel>
+
+          <SectionPanel title="Metrics" aside="Identity and published scalars">
+            {chosen.length === 0 ? (
+              <p className="exec-pf-note">Pick portfolios above to see their identity and allocation side by side.</p>
+            ) : (
+              <CardsTable label="Metrics" columns={tableColumns} rows={METRICS} rowKey={(m) => m.id} />
+            )}
+          </SectionPanel>
+        </>
+      ) : null}
+    </div>
+  );
+}
