@@ -21108,6 +21108,407 @@ worktrees, HK/SGP release locations and named rollback artifacts remain exactly
 the retention set above. No operational restart/write/command/broker activation
 occurred in this qualification.
 
+**Original08 actual commissioning preparation /21:49UTC, before private writes:**
+Previous turn is PROGRESS: normal-hook commit ea620d9b and independently verified
+feature publication,7genuine-factory PASS and exact both-host source/image
+cleanup. No connected acceptance is inferred. Continue the approved objective,
+not another unchanged-source retest. Rechecked TS668e1032/nextf2229d7a,
+PMf5ee331f with three peer-owned mounted-test drafts, Core5291 with active owner
+correctness job; preserve those source/index/runtime boundaries. DL canonical
+is now /home/bobby/data_layer@5bf5cd54; old quant-data-layer-v2-authority path is
+absent, not a reason to recreate it or infer loss of its merged source.
+
+Readonly actual TS target remains live_data_executor/PG150018, system
+7674585245102796834, database OID16384, volume trading_system_pgdata. Native
+users/policy/business-heads/requests/registry stores are absent. public schema
+PUBLIC has USAGE but not CREATE; no shared PUBLIC revocation is needed. Existing
+Manager credentials/DB rows/roles are not replaced. Prepare a NEW root0600
+private commissioning declaration and minimal source closure under the named
+native-manager-read package, using genuine previously verified stable Portal
+IDs/workspaces and explicit new TS mapping IDs (NOT historical identity facts).
+Keep Bobby protected owner, Stan full-business READ plus separately governed
+subordinate membership ceiling, and Thanh no invented full-business permission.
+Record all three actual published profiles/catalogue/field-policy provenance;
+no arbitrary SQL, browser DB, command/financial or live-order activation.
+
+This preparation does not install a grant or service. Reuse existing PM native
+installer/runtime and prepared PKI; no new authority framework. Freeze exact
+source/private-reference pins and validate independently before DDL/listener.
+The TEST_ONLY8/32 golden is NOT a production budget: keep numerical admission
+and runtime promotion unqualified until explicit bounded target sizing and the
+corresponding independent reference are selected. Do not silently copy fixture
+caps into production or enable a finite commission target as an indefinite API.
+Before actual install, journal exact roles/limits/DSN refs/change window and
+rollback (disable NEW bindings/listener, retain immutable receipts; no DROP,
+restored revoked rights, broad SQL or peer service restart). Core's active
+SGP correctness job blocks its dependent deployment/tests only, not these
+HK private inputs. Original08 stays IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET;
+09connected NOT_STARTED. Record actual outputs/tests/cleanup before closure.
+
+**Actual private input reservation /21:57UTC:** root0700 commissioning directory
+now has three root0600 declarations, no credential values or DB writes. New
+TS mapping IDs are reserved for the three existing ACTIVE stable Portal users;
+six desired Bobby/Stan bindings cover all published paper/sandbox/live profiles.
+Thanh has no invented full-domain grant. Frozen native release has28files/
+333183B: exact22PM Python closure +5reviewed SQL +existing private factory,
+all27PM files byte-identicalf5ee331f. Manifest9e7d34554000e2c73df0a18bf772688d68a668b91765697e7c8f6a0af5964458;
+declarationc4827c36, identity-map96b1a929, profile-domains8bd82a11.
+Readonly independent validation checks hashes/modes/3actual IdentityPin and
+6DomainPin constructors using frozen source,0DB connections/listener/grants.
+This HOST configuration check is not a provider/runtime/product test. The
+profile seal is explicitly a NEW owner selection, not an invented upstream
+profile attestation; field seal is the exact existing serving-policy bytes
+b9fbe07d and catalogue0c71b72c. Actual three Manager mounts confirm reuse of
+these same files/DB target, not a Paper database silently called Live authority.
+
+**Before numerical reference/installation preparation:** select a bounded
+COMMISSIONING safety envelope, NOT production capacity acceptance: source and
+control pools2each, maintenance1, provider2inflight,8unresolved global native
+leases and4096retained records. Existing Manager per-profile concurrency2 is
+the compatibility starting bound, not a native throughput measurement. Full
+SQL worst-case256dependencies*2048B*4096 gives2GiB dependency text before
+indexes/other records; actual configured five-native-table closure is smaller.
+This is an explicit finite commissioning bound, not indefinite API retention;
+01/06 must still qualify production storage/occupancy/retention and connected
+capacity before release. Never purge UNKNOWN or weaken immutable history to
+make space. Quarantine/admission-full remains fail closed and visible. Pin a
+new operator-bounds artifact/configuration digest; derive a NEW independent
+PG15 schema reference with the same reviewed SQL but these exact8/4096 values.
+Keep the old8/32 golden immutable. Before any test check privileged user/root
+guards and actual jobs; reuse original cached PG15/Python images, <=1CPU768MiB
+PG +<=1CPU512MiB worker,300s lease, internal network/no ports/volumes/build/
+pull/install, exact labelled teardown/runtime+disk reconciliation. This run
+changes no operational DB or source authority. Actual install still requires
+the resulting exact reference, private manifests/credentials and separately
+journaled new-role/additive-schema window; no unrelated runtime restart.
+
+**Actual new PG15 reference21:59UTC:** terminal1c7589ec/exportc0233343,
+exit0; exact new source-input manifest380bf063/config19fa943e, unchanged
+exporter/5SQL/function bodies. New8/4096 bound digest25d2b3ef yields prepared
+catalogue1ff3681d and guarded5dfb0873. This is independent schema metadata,
+not installed authority or capacity.40operational tuples unchanged,0remaining
+owned containers/networks,ownlease removed; shared free214312583168→
+214291591168B. Original8/32reference remains unchanged. No build/pull/install,
+image/cache creation or operational DB mutation. Exact disposable teardown is
+complete; retain bounded reference until actual installation status consumes it.
+
+**Before private configuration/credential generation:** reuse the frozen28file
+release and new independent reference to generate the EXISTING PM installer/
+runtime manifests and explicit private-entrypoint references. Six genuine
+new maintenance acceptance documents use reserved mapping IDs, matching stable
+Portal IDs/workspaces, all three exact profiles and existing field-policy pin;
+their expiry is the prepared server leaf2027-04-15T22:44:54Z, not a fabricated
+perpetual or historical approval. New SQL policy uses supported max_depth8 but
+installs no entity membership/delegation; Stan's approved subordinate management
+remains separate, not silently downgraded to a read-only business role forever.
+Create exactly three new random DB role passwords/root0600 DSN files in a
+separate private source/control and maintenance namespace. Reuse (do not rotate
+or print) the existing verified DB admin credential only for explicit schema
+maintenance; never mount it or CA private key in serving runtime. No secret
+value goes to Git/chat/argv/evidence. This generation still performs0DB writes,
+starts0listeners and changes0existing service configs. Private manifest enabled
+means only that the EXPLICIT new serve action may use it after install/preflight,
+not activation by import/config generation. Validate with existing factory and
+actual pinned public dependencies before any DDL. Actual DB has max_connections
+200/14observed; the proposed5new native role slots are not a change to that
+shared limit or production capacity proof. Actual HBA host connections require
+SCRAM; no HBA alteration is needed. Bind only reviewed WireGuard10.70.0.2:28445
+after a separate exact installation/listener preflight and window record.
+
+**Actual private config/crypto preflight22:03UTC:** existing pinned installer,
+runtime and actual leaf/JWKS/terminal references validate in cached28ea worker,
+TLS1.3 +CERT_REQUIRED, six exact bindings/three identities/allthree modes.
+Network none,0DB connections/writes/listeners, admin DSN/CA private key not
+mounted. Own1CPU512MiB/30s worker and120s lease removed,40tuples unchanged;
+shared free213059575808→213048250368B. Private configd18c5557, installation
+11b311b1, runtimeabd1549e; three new role credentials created root0600 but no
+role exists yet; existing admin password is not rotated/emitted. This proves
+configuration/crypto only, not source authority or socket authentication.
+
+**Actual additive DB commissioning window / before maintenance:** original08
+approval authorizes this minimal native READ install. The guarded controller
+will seal the exact UTC start/end (<=30min) in private change-window.json,
+owner/revocation/rollback Bobby, then perform status before any write. Targets:
+live_data_executor/system7674585245102796834/OID16384/PG150018 on verified
+trading_system_pgdata; frozen28file release and configd18c5557; new roles
+ts_portal_native_read_source(connection2), control(connection2),
+maintenance(connection1), all no-superuser/no-create/no-inherit/no-replication/
+no-bypass. Only the reviewed existing installer may create new public.ts_users,
+minimal pm_membership.policy, pm_business_read and pm_core_authority stores/
+functions/guards,3new mapping rows and owner policy, then6explicit READ
+acceptances in separate maintenance action. No portfolios, order/fill/position,
+capital, Redis, broker, source-journal publication or existing role changes.
+Default ACL audit finds only existing read_only/manager SELECT in public and
+ordinary Timescale DDL hooks, no unexpected write/function grants. HBA stays
+unchanged; schema/public ACLs are not rewritten. Capture before/after existing
+non-native structural metadata hash, exact native status and immutable receipts.
+
+Sequence: readonly schema-status → exact additive schema-prepare → readonly
+same-pin status; only then set passwords/timeouts for the three NEW roles and
+verify actual authenticated source/control/maintenance targets before accept.
+Never print secret/DSN/verifier values. A lost ACK/UNKNOWN means exact readonly
+status/recovery, NOT blind retry, DROP or rollback claim. New role login can be
+disabled and new binding/listener left off on failure; retain additive schema,
+guards/history and private recovery inputs. Every bounded helper container is
+1CPU512MiB, host network ONLY to127.0.0.1:7654, no listening action, no DB volume/
+Docker socket/admin-secret serving mount/build/pull/install; <=45s execution/
+180s own lease, fresh privileged guards+physical jobs before each action and
+exact teardown/runtime/disk receipts. Existing40operational services/restarts
+must stay unchanged; no Core SGP/Edge deployment occurs in this DB window.
+Native provider serving activation is a later explicit action in this SAME08,
+not inferred from schema or maintenance success. Connected08 remains NOT_MET.
+
+**Actual first schema-status22:07UTC / failed readonly preflight:** real helper
+ended1 with bounded TimeoutError before reporting a native status;0DDL/accept/
+listener.30min private window22:07:14→22:37:14UTC was sealed (cbea824f).
+40operational tuples unchanged,helper/ownlease removed; shared free
+211884179456→211975704576B. Retain original helper7f35ffd6 and actual failure,
+do not report this as install failure/rollback or blindly increase limits.
+Add sanitized exact-stage diagnostics to distinguish TCP/auth/target/metadata/
+status timeout, inspect bounded relation counts/SSL metadata, and rerun only
+this failed readonly preflight. This is owned operational preparation, not
+external debt or reason to repeat unrelated qualified source tests. No DB
+mutation is authorized through the diagnostic path; install still awaits an
+actual verified ABSENT status and unchanged existing application structure.
+
+**Actual diagnostic22:08UTC / owned audit-query correction:** admin TCP+SCRAM
+connect41ms and verified target50ms PASS; timeout is precisely the wrapper's
+EXISTING_METADATA query, before native status. Bounded aggregate finds three
+operational schemas/715relations, six Timescale schemas/954relations, and
+2803P18-named namespaces/117765relations NOT owned by this campaign. Preserve
+them; no unrelated cleanup or DB permission/source-scope narrowing. The wrapper
+wrongly scanned every historical test namespace as business baseline. Correct
+only that audit to the actual public catalogue schema plus existing operational
+portal_command/portal_event_stream (all three operational schemas), recording
+the exact schema list/count with its structural hash. This is NOT a change to
+Manager data access, grants or native source proof. Keep3s bounds, full columns/
+constraints/index/view definitions for these actual application relations and
+all independent native metadata pins; do not raise timeout or suppress a drift
+assertion. Retain helper45d9c742/failure;40runtime tuples unchanged/helper+lease
+removed, shared free211981955072→211964448768B,0DDL/grants/listener.
+
+**Actual readonly preflight22:09:54UTC / install prerequisite met:** corrected
+wrapper6ad6efbb returns ABSENT/ABSENT on the genuine pinned target in575ms;
+full715relation structural audit completes495ms, before/after781a09f8 identical
+for public,portal_command,portal_event_stream. Exit0,40protected runtime tuples
+unchanged,own helper and lease removed; shared free211953332224→211940188160B.
+This is no schema write/accept/listener and does not close08. The exact approved
+SSEa0f02406 transfer is already terminal and cleaned at19:02–20:58 above; the
+delivered approval is not a reason to copy/test the historical packet again.
+
+Before actual schema-prepare, PM advanced to908169aa (mounted Core sessions/
+terminal recovery qualification). Its eight changed paths are tracking,
+fixtures and tests only; the frozen27PM runtime/SQL inputs remain byte-identical
+f5ee331f. Preserve PM's current plan WIP. Continue the existing additive native
+installer under the sealed22:07–22:37UTC window, then exact readonly status.
+Do not create a substitute authority, change old roles or infer acceptance
+from DDL; newly created role passwords and six explicit maintenance acceptances
+still require their own actual checks. No serving or Core deployment here.
+
+**Actual schema-prepare22:13:37UTC / UNKNOWN retained:** existing installer
+returns UNKNOWN after680ms; readonly exact-pin schema-status22:13:51 also
+UNKNOWN. No blind DDL retry or destructive rollback. Both full715old-relation
+hashes remain781a09f8,40runtime tuples unchanged,helpers/leases removed;
+free213067722752→213055610880B and212998483968→212989710336B respectively.
+The additive transaction may be committed; do not claim no DB write, completed
+installation, rights or connection acceptance. Before any password/accept/
+listener, add a readonly diagnostic of the existing installer's actual _target/
+_stage checks, exact native catalogue digest/guard count and role-presence only.
+Keep every independent expected pin and source unchanged, no raw identity,
+credential or verifier emission. A precise owned install mismatch must be fixed
+or honestly retained in08; it is not external technical debt.
+
+**Readonly diagnosis22:15:08UTC / exact native-only compatibility defect:**
+committed stage is PREPARED,0native writer guards,not authority-ready. Strict
+default-path metadata yields ba8afef3 instead of independent1ff3681d; explicit
+public,pg_catalog produces1ff3681d. Actual new ts_users.user_id default is
+public.gen_random_uuid() because existing pgcrypto shadows the PG15 builtin
+during original install SET LOCAL search_path. The empty independent reference
+has no public pgcrypto wrapper. Do NOT bless the live hash or weaken verification
+by changing search_path. Prepare one isolated PG15+pgcrypto reproduction from
+the same pinned SQL/limits, show the mismatch, then prove that qualifying ONLY
+the newly created ts_users.user_id default as pg_catalog.gen_random_uuid()
+restores both original prepared/guarded independent pins. No existing table,
+extension/function, UUID/identity row, old role or grant is changed. Only after
+that actual isolated proof, perform this exact native-owned default correction
+inside the sealed maintenance window, then same-pin status/resume installer.
+Rollback remains new bindings/listener off and history retained, never DROP.
+This is owned08 compatibility work, not permission to change peer PM source.
+
+**Actual isolated compatibility22:16:12UTC /1case PASS:** same PG150018 image
+plus actual pgcrypto reproduces exact ba8afef3; qualifying only new user_id
+default restores original prepared1ff3681d and, after original guards,
+guarded5dfb0873. No expected pin or source SQL changed. No identity/acceptance/
+runtime/capacity claim. Own PG+worker+network/lease removed,40protected tuples
+unchanged,shared free212326653952→212307030016B. Driver e3216143 uses original
+380bf063 source manifest and fixed expected pins, never observed-target blessing.
+Proceed with an exact guarded native-only default correction: verify real target,
+zero guards, exact ba8afef3 preimage and original _prepared role/row/function/
+catalogue proof under explicit render path, lock only NEW public.ts_users,
+qualify builtin default, require original1ff3681d before commit. No password,
+acceptance, service or other schema mutation. Then original same-pin status and
+resumption of the already committed PREPARED installation, not fresh creation.
+
+**Actual native schema22:17:19UTC / GUARDED:** guarded native-only UUID-default
+correction22:16:50 committed with original prepared pin; subsequent status
+reports PREPARED (wrapper initially classified this valid intermediate state
+as error; assertion corrected, no product-state change). Original installer
+resumed the existing stage and returns SCHEMA_VERIFIED/GUARDED, exact original
+native5dfb0873/functions/roles/3identity rows/protected-owner/limits proof.
+Full715old-relation hash781a09f8 and40runtime tuples unchanged,ownhelpers/leases
+removed; final install free212259995648→212248158208B. Provider/listener still
+off,acceptances not installed. This is genuine additive native installation,
+not full08/command/current-Core/network acceptance.
+
+Before exact new-role credential finalization, retain original input secrets
+and verify the same schema status again. Implement a narrow private helper:
+only the three declared NEW native roles, compare existing SCRAM verifier to
+the already reserved private password (never blind rotate), append initial
+verifier only when NULL; local logging/parameter/error-context suppression,
+no plaintext/password/verifier in argv/chat/Git/evidence. Select explicit
+source/control3s and maintenance30s statement bounds,1s/2s lock bounds,10s/30s
+idle-in-transaction caps; source defaults read-only, control/maintenance do not
+gain arbitrary SQL rights. Validate pure encoding and then actual PG SCRAM
+connections/target/ACL before six genuine maintenance acceptances. New roles
+remain2/2/1connections,no super/create/inherit/replication/bypass/member escape;
+no old role/ACL/password or shared max_connections change. Failure preserves
+same private credentials and immutable native state, no destructive rollback.
+
+**Credential helper qualification22:19:38UTC:**4pure SCRAM-format tests PASS;
+one fresh PG15 real-SCRAM case PASS for all3new role logins/default transaction/
+timeouts, wrong password denial, same-password idempotency and different-password
+overwrite refusal. Helper89ed42ed,driverc4b4335f,HBA8bb6b489. No operational
+credential/identity/schema is used. Own PG+worker/network/lease removed,
+40protected tuples unchanged,shared free211951357952→211936968704B.
+Actual same-pin readonly schema-status22:17:54 is SCHEMA_VERIFIED/GUARDED.
+Now run this unchanged helper only for the exact newly installed roles using
+reserved root0600 DSNs; keep existing-role passwords untouched. Verify actual
+SCRAM target/role/settings and no grants on old operational application
+relations before acceptance. Serving still off; no Core/Edge service change.
+
+**Actual credential action22:20:19UTC / timeout retained:** helper timed out
+inside NATIVE_ACTION, not a reported acceptance success. Credential/config
+transaction may have committed; do not rotate/recreate or assume rollback.
+40runtime tuples unchanged/helper+lease removed,free211914604544→211951144960B.
+Next readonly exact-new-role verifier-match/auth diagnostic distinguishes
+configuration completion from wrapper ACL scan. Add exact stages and materialize
+the three application-schema relation OIDs BEFORE has_*_privilege evaluation,
+avoiding the same2803unowned test namespaces. No privilege/assertion/timeout
+relaxation. Only after actual stored-credential matches, authenticated target
+and exact ACL proof may six maintenance acceptances proceed.
+
+**Actual readonly credential/auth proof22:21:09UTC:** three stored SCRAM
+verifiers match the reserved private passwords; source/control/maintenance
+actual TCP+SCRAM login, exact DB/system/session/current role and all selected
+readonly/statement/lock/idle bounds PASS. Old operational application relations
+accessible to each new role0; existing native schema/role/function proofs PASS.
+Thus earlier timeout was wrapper's nonmaterialized ACL audit after credential
+commit, not failed password setup. No rotation/reapply needed. Source defaults
+read-only;2/2/1connection caps intact. Full715old structural hash remains781a09f8,
+40runtime tuples unchanged,helper/lease removed,free212283777024→212273897472B.
+Proceed exact accept-status then six original approved maintenance manifests;
+only this short maintenance helper mounts admin DSN for before/after readonly
+structure audit. Serving never mounts admin or maintenance credential. No
+Portal account/session/role conversion or listener/command activation implied.
+
+**Actual six READ acceptances22:21:58UTC:** status first found6ABSENT; original
+maintenance importer now records6RECORDED/version1 with fixed original IDs/
+command IDs, Bobby/Stan×paper/sandbox/live. Full old715relation hash781a09f8
+unchanged,40runtime tuples unchanged,helper/lease removed,
+free212220411904→212210868224B. This is actual new native READ authority, not
+entity-membership management, financial/command privilege or Core session grant.
+Readonly same-document status follows; do not reinstall just to test replay.
+Next independent runnable item: actual existing NativeBusinessReadRuntime.qualify
+over source/control pools and genuine six installed bindings, source RR/READONLY
+observation/correct target/catalogue/function/ACL/limits. Mount only serving
+source/control DSNs and leaf/public verification materials, no admin/maintenance
+DSN or CA private key; no listener, held issue, fake Portal session or mutation.
+Use existing cached image,1CPU512MiB/30s,own120slease and exact teardown.
+Only after actual preflight consider exact private listener commission; full08
+still needs genuine current Core mount and connected revoke/cache/cursor/SSE.
+
+**Actual provider source preflight22:22:47UTC PASS:** existing runtime observes
+all6genuine bindings on source RR/READONLY and verifies source/control auth,
+catalogue/function/ACL/limits. held_authority=false,native_issue_attempts0,
+no listener/lease/operational write; no admin/maintenance credential or CA key
+mounted.40runtime tuples unchanged/helper+lease removed,
+free212669067264→212891648000B. Same-document post-install status6RECORDED/v1.
+
+**Before the original08 private provider commission:** no reason to wait for
+SGP's active peer test to commission this independent HK producer. Port28445
+is free. Add exactly one stable Compose service/project portal-native-manager-read,
+using cached immutable28ea image, frozen native release9e7d3455 and configd18c5557;
+versioned runtime config outside source checkout, restart=no while commissioning,
+1CPU512MiB/64pids/read-only/cap-drop/no-new-privileges/bounded logs/tmpfs.
+Host network only to existing loopback DB and fixed WireGuard10.70.0.2:28445;
+no public bind, port publication, old container recreation or image build/pull.
+Separate exact listener commissioning window (owner/revoke/rollback Bobby),
+never treat the earlier listener=false DB window as listener approval. This is
+the previously approved original08 producer commissioning, not a new release.
+Mount only source/control DSNs, server leaf/key and public trust/verification
+keys; admin/maintenance DSN and CA private key forbidden. Observe current
+source preflight again on start. Qualify actual TLS1.3 mutual-peer path with
+nonbusiness404 positive, missing/wrong client certificate, wrong hostname and
+malformed unauthenticated native issue denial; native lease/event/head counts
+must remain unchanged. No fabricated Portal session or positive business request.
+Failure: stop NEW ingress using graceful TERM only when original local drain
+and durable quiescence are proven; UNKNOWN is retained, never kill/drop/history
+clear. Successful producer stays explicitly ACTIVE_COMMISSIONING_ONLY pending
+real Core binding; finite8/4096 bounds are not indefinite-production capacity.
+Record new service/digest/config, old40tuple invariance and exact test cleanup;
+full08/09connected remain NOT_MET/NOT_STARTED.
+
+**Actual private producer22:25:16UTC / ACTIVE_COMMISSIONING_ONLY:** stable
+Compose service portal-native-manager-read-native-manager-read-1 now runs
+cached image28ea3958 with frozen source9e7d3455/configd18c5557. Compose bytes
+0b16f8f3,config revisionf33f19ca; runtime config outside source at
+/home/bobby/.local/share/portal-native-manager-read/runtime/v1.0.0-9e7d3455.
+Only WireGuard10.70.0.2:28445,no public ports,restart0. Actual5transport checks
+PASS: mTLS/TLS1.3 peer404positive, missing/wrong client cert, wrong hostname,
+malformed unauthenticated issue denied. No fake Portal session or positive
+business delivery; native users3/heads6/revisions6/leases0/events0 unchanged.
+No admin/maintenance credential or CA private key mounted. Old40runtime tuples
+unchanged; this single new producer is now an explicitly retained operational
+commissioning service, NOT disposable test trash. Own controller lease removed;
+shared free213090226176→213080522752B. Finite commissioning limits stay explicit,
+not production-capacity/release certification or native Event publication.
+
+**Publication/cleanup checkpoint before normal hook:** publish one bounded
+[actual native commissioning packet](integration/execution-native-read-v1/native-db-commissioning/README.md)
+with exact unchanged maintenance/test sources and sanitized receipt, plus the
+three backend/main indices. Four copied unit cases PASS again, AST/JSON and
+diff-check PASS; this reproduces the same4cases, not8newcases. No secret/raw
+business rows/dependencies/runtime configuration enter Git. Existing3peer
+untracked areas remain excluded. Exact raw receipts/controllers remain bounded
+under /tmp/epg10-08-private-commissioning-0Fvz6tUz; active private source/PKI/
+DSNs/native history/versioned runtime deliberately retained. Consume/remove only
+the now-redundant isolated nine-source reference copy after exact manifest/UID/
+no-mount/runtime/disk checks; keep the independent golden/receipt. Inventory
+images/BuildKit before/after normal hooks, remove only a new owned unreferenced
+hook image, never shared cache/volumes or peer jobs. Record actual results in
+publication-hook.json/publication-cleanup.json in that same bounded receipt root.
+
+Fresh SGP readonly probe still sees Core5291 and PM's physical test pair
+control-api-test-node/postgres-1229586, while our exact historical SSE root is
+ABSENT. Do not treat expired lease as job termination or touch those peer
+containers. Core still needs genuine reviewed schema/config/current session/
+coordinator mount and connected drills; these remain OWNED original08work,
+not externally completed by this producer. Continue its dependency-independent
+target/private configuration preparation and bind/drill when the exact peer
+source/job gate permits. Original08 IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET;
+09connected NOT_STARTED. Command07,03publisher and01/06capacity retain their
+separate owner/input/test gates; no new phase or generic approval is requested.
+Canonical Portal54c6f5f3/manager-v2, active upgrade featureea620d9b, stable HK
+a9b10385/SGPe4fd9365 release paths and named rollback set above remain retained;
+no worktree/branch/old release/image/volume deletion or SGP mutation this slice.
+
+**Actual exact reference cleanup:** validated9source hashes plus manifest,
+UID/no-symlink/no-container-mount; removed only10regular files/80035logicalB
+at the consumed reference copy. Shared free213342453760→213342560256B;
+41runtime tuples (including new producer) unchanged,0Docker mutation.
+Independent golden/receipts/private active source and credentials retained.
+SGP exact historical source remains absent; its live peer test pair is preserved.
+
 
 
 

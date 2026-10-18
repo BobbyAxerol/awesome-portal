@@ -1,5 +1,13 @@
 # Original EPG10-08 — qualified Core source publication
 
+**Actual commissioning update2026-10-18 22:25UTC:**
+[native DB and private producer packet](native-db-commissioning/README.md)
+records genuine additive schema/3identity/3role/6READ acceptance installation
+and an active WireGuard-only producer with actual TLS probes. Old40services
+are unchanged. It supersedes earlier uninstalled-provider statements below,
+not source receipts: genuine current-Core binding and connected revoke/cache/
+cursor/SSE are still unfinished; full08NOT_MET,09connected NOT_STARTED.
+
 For the latest qualified source, read the
 [current Core SSE/runtime profile](current-core-runtime-profile/README.md):
 43authored files/full1154app-source closure against5291a80f, both fresh strict

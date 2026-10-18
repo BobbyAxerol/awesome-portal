@@ -650,6 +650,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 actual native producer22:25UTC:** the
+[actual commissioning packet](integration/execution-native-read-v1/native-db-commissioning/README.md)
+now supersedes older uninstalled-native statements for the exact TS target:
+GUARDED schema/3new identity mappings/3roles and6genuine Bobby/Stan READ
+acceptances across paper/sandbox/live. Actual source/control observation and
+SCRAM/ACL checks PASS. One new stable service binds WireGuard10.70.0.2:28445,
+5actual TLS/deny probes PASS; no admin credential/CA private key in serving.
+Old715relation metadata/40services unchanged; disposable tests cleaned.
+This closes native source preparation/installation/producer mounting only:
+current Core consumer and connected revoke/cache/cursor/SSE remain unfinished
+original08work, full08NOT_MET,09connected NOT_STARTED. No positive business
+delivery, command/capital or production-capacity qualification is inferred.
+
 **2026-10-18 current original08 continuation:** Bobby approved qualified source
 publication, actual current-Core consumer/provider binding and the existing
 07/03/01/06→09connected→10→11 completion sequence. The

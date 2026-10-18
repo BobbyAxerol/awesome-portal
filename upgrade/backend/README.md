@@ -7,6 +7,18 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 actual producer commissioning (2026-10-18,22:25UTC):**
+  [native DB/runtime packet](../integration/execution-native-read-v1/native-db-commissioning/README.md)
+  records actual GUARDED install,3new identities/roles,6READ acceptances across
+  paper/sandbox/live, real SCRAM/least-privilege and6binding observation preflight.
+  One new stable private WireGuard producer ACTIVE_COMMISSIONING_ONLY;
+  5actual TLS/deny probes PASS, no fake session/positive business request.
+  Four new unit +two isolated PG15 cases PASS; original independent pins retained
+  after fixing the new-table pgcrypto UUID-default mismatch. Old715relation
+  metadata/40runtime tuples unchanged; disposable cells/networks/leases removed.
+  Actual Core consumer/connected drills remain OWNED08work; full08NOT_MET,
+  09connected NOT_STARTED. No command/financial/capacity qualification implied.
+
 - **Original08 genuine factory qualification (2026-10-18,21:34UTC):**
   [real-loader/PG/AppModule packet](../integration/execution-native-read-v1/current-core-runtime-factory/README.md)
   closes isolated factory/schema compatibility: strict compile and7cases PASS,
