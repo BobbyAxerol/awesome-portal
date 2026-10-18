@@ -428,3 +428,24 @@ UI or activation requested. No source mutation, push/dev/main/release/deploy.
   It qualifies closed codec/six-action actual TLS correlation and finite-family
   refusal only; no actual source installation/field/stream/frame authority.
   One coherent normal-hook landing remains, no repeat unchanged contract gate.
+
+### Native frame source-hold disposition — 2026-10-18T01:58UTC
+
+The v2 batch actually landed2c943e14 with852contracts/6669API PASS and scoped
+restore/runtime/cleanup checks; [immutable terminal](../ELP2-09/native-v2-codec-integration.md#normal-hook-terminal--2026-10-18t015752utc).
+Fresh read-only PM01:52UTC keeps94822b53 and exact provider/fence/held-bridge
+hashes in [owning frame packet](../ELP2-09/native-frame-integration.md).
+
+Clarification of earlier source-hold notes: the initial exact whole-domain
+notification lane needs no new PM economic/latest-financial-head freeze. The
+existing four-table accepted-business hold can compose with SAME NC01 held
+Core app/session/field/exact-stream writers. Restricted owner/linkage authority
+is not inferred. Source interfaces, snapshot double reads and valid digests
+still do not establish actual installed writer/trust/adapter qualification.
+
+The coupled Candidate/Egress/Hub/source-scope/SQL implementation is applied
+uncommitted; affected correctness PENDING, not actual provider commissioning.
+No remote writes/credentials/DB/source service change, runtime mount, consumer
+acknowledgement, push/dev/main/release/deploy. Existing05-001/06-002/07-001/
+10-002 remain owners of installation/source/budget/config/coexistence evidence;
+11NOT_ENTRY_READY. Claude intake7.3 read, UXM still owner-held.

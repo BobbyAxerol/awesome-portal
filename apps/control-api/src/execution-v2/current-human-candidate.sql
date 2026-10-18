@@ -57,9 +57,11 @@ CREATE TABLE elp210_candidate.native_read_obligations (
   expires_at_ms bigint NOT NULL CHECK (expires_at_ms>issued_at_ms AND expires_at_ms-issued_at_ms<=60000),
   CHECK (expires_at_ms=floor(extract(epoch FROM deadline::timestamptz)*1000)::bigint),
 
-  lifecycle_kind text NOT NULL DEFAULT 'CUSTODY_ONLY' CHECK(lifecycle_kind IN('CUSTODY_ONLY','MANAGER_HTTP')),
+  lifecycle_kind text NOT NULL DEFAULT 'CUSTODY_ONLY' CHECK(lifecycle_kind IN('CUSTODY_ONLY','MANAGER_HTTP','MANAGER_SSE_FRAME')),
   sender_id text CHECK(length(sender_id)=36 AND sender_id ~ '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'),
   scope_digest text CHECK(length(scope_digest)=71 AND scope_digest ~ '^sha256:[a-f0-9]{64}$'),
+  frame_domain_scope_digest text CHECK(length(frame_domain_scope_digest)=71 AND frame_domain_scope_digest ~ '^sha256:[a-f0-9]{64}$'),
+  frame_notice_scope_digest text CHECK(length(frame_notice_scope_digest)=71 AND frame_notice_scope_digest ~ '^sha256:[a-f0-9]{64}$'),
   no_send_fenced boolean NOT NULL DEFAULT false,
   native_source_digest text CHECK(length(native_source_digest)=64 AND native_source_digest ~ '^[a-f0-9]{64}$'),
   native_source_fingerprint text CHECK(length(native_source_fingerprint)=64 AND native_source_fingerprint ~ '^[a-f0-9]{64}$'),
@@ -83,7 +85,7 @@ CREATE TABLE elp210_candidate.native_read_obligations (
       AND body_digest IS NULL AND receipt_id IS NULL AND receipt_digest IS NULL AND terminal_reason IS NULL
       AND NOT source_reconciled AND source_ack_action IS NULL AND source_ack_digest IS NULL)
     OR
-    (lifecycle_kind='MANAGER_HTTP' AND sender_id IS NOT NULL AND scope_digest IS NOT NULL
+    (lifecycle_kind IN('MANAGER_HTTP','MANAGER_SSE_FRAME') AND sender_id IS NOT NULL AND scope_digest IS NOT NULL
       AND phase IN('ADMITTED','SENDING','UNKNOWN','SERVED','ABORTED','CANCELLED')
       AND (native_source_digest IS NULL AND native_source_fingerprint IS NULL AND native_valid_until_ms IS NULL
         AND issue_response_digest IS NULL AND enter_response_digest IS NULL AND status_response_digest IS NULL
@@ -115,6 +117,51 @@ CREATE TABLE elp210_candidate.native_read_obligations (
     )
   ),
   CHECK (stable_core_digest=encode(sha256(convert_to(base_body,'UTF8')),'hex')),
+  -- Lifecycle purpose is immutable, not inferred from a caller's terminal
+  -- option. A finite row can never be upgraded into frame authority.
+  CHECK ((CASE WHEN lifecycle_kind='MANAGER_SSE_FRAME' THEN
+    frame_domain_scope_digest IS NOT NULL AND frame_notice_scope_digest IS NOT NULL
+    AND scope_digest='sha256:'||encode(sha256(convert_to(
+      '{"domain_scope_digest":"'||frame_domain_scope_digest||'","notice_scope_digest":"'||frame_notice_scope_digest||'","schema":"portal.native-frame-scope.v1"}',
+      'UTF8')),'hex')
+    AND (base_body::jsonb#>>'{manager_intent,schema_version}')='pma.manager-read-intent.v2'
+    AND (base_body::jsonb#>>'{manager_intent,action}')='scoped_notice'
+    AND (base_body::jsonb#>>'{manager_intent,digest}')=request_digest
+    AND jsonb_typeof(base_body::jsonb->'manager_intent')='object'
+    AND (base_body::jsonb->'manager_intent')-ARRAY['schema_version','action','digest','stream_id','frame_ordinal',
+      'dataset_id','query_digest','field_set_digest','projection_generation','source_cursor_digest','frame_sha256','stream_scope_digest']='{}'::jsonb
+    AND jsonb_typeof(base_body::jsonb#>'{manager_intent,stream_id}')='string'
+    AND length(base_body::jsonb#>>'{manager_intent,stream_id}')=36
+    AND (base_body::jsonb#>>'{manager_intent,stream_id}') ~ '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'
+    AND jsonb_typeof(base_body::jsonb#>'{manager_intent,frame_ordinal}')='string'
+    AND (base_body::jsonb#>>'{manager_intent,frame_ordinal}') ~ '^[1-9][0-9]{0,18}$'
+    AND (length(base_body::jsonb#>>'{manager_intent,frame_ordinal}')<19
+      OR (base_body::jsonb#>>'{manager_intent,frame_ordinal}') COLLATE "C"<='9223372036854775807')
+    AND jsonb_typeof(base_body::jsonb#>'{manager_intent,dataset_id}')='string'
+    AND octet_length(base_body::jsonb#>>'{manager_intent,dataset_id}') BETWEEN 1 AND 256
+    AND jsonb_typeof(base_body::jsonb#>'{manager_intent,projection_generation}')='string'
+    AND octet_length(base_body::jsonb#>>'{manager_intent,projection_generation}') BETWEEN 1 AND 256
+    AND jsonb_typeof(base_body::jsonb#>'{manager_intent,query_digest}')='string'
+    AND length(base_body::jsonb#>>'{manager_intent,query_digest}')=64
+    AND (base_body::jsonb#>>'{manager_intent,query_digest}') ~ '^[a-f0-9]{64}$'
+    AND jsonb_typeof(base_body::jsonb#>'{manager_intent,field_set_digest}')='string'
+    AND length(base_body::jsonb#>>'{manager_intent,field_set_digest}')=64
+    AND (base_body::jsonb#>>'{manager_intent,field_set_digest}') ~ '^[a-f0-9]{64}$'
+    AND jsonb_typeof(base_body::jsonb#>'{manager_intent,source_cursor_digest}')='string'
+    AND length(base_body::jsonb#>>'{manager_intent,source_cursor_digest}')=64
+    AND (base_body::jsonb#>>'{manager_intent,source_cursor_digest}') ~ '^[a-f0-9]{64}$'
+    AND jsonb_typeof(base_body::jsonb#>'{manager_intent,frame_sha256}')='string'
+    AND length(base_body::jsonb#>>'{manager_intent,frame_sha256}')=64
+    AND (base_body::jsonb#>>'{manager_intent,frame_sha256}') ~ '^[a-f0-9]{64}$'
+    AND jsonb_typeof(base_body::jsonb#>'{manager_intent,stream_scope_digest}')='string'
+    AND length(base_body::jsonb#>>'{manager_intent,stream_scope_digest}')=64
+    AND (base_body::jsonb#>>'{manager_intent,stream_scope_digest}') ~ '^[a-f0-9]{64}$'
+    AND 'sha256:'||(base_body::jsonb#>>'{manager_intent,stream_scope_digest}')=frame_notice_scope_digest
+    AND (body_digest IS NULL OR body_digest='sha256:'||(base_body::jsonb#>>'{manager_intent,frame_sha256}'))
+  ELSE frame_domain_scope_digest IS NULL AND frame_notice_scope_digest IS NULL
+    AND (base_body::jsonb#>>'{manager_intent,schema_version}')='pma.manager-read-intent.v1'
+    AND (base_body::jsonb#>>'{manager_intent,action}') IN('catalogue','capabilities','relation_page','relation_record','projection_page')
+  END) IS TRUE),
   CHECK (((base_body::jsonb#>>'{binding,lease_id}')=lease_id
     AND (base_body::jsonb#>>'{binding,attempt_id}')=attempt_id
     AND (base_body::jsonb#>>'{binding,subject}')=subject_id
@@ -124,6 +171,12 @@ CREATE TABLE elp210_candidate.native_read_obligations (
     AND (base_body::jsonb#>>'{binding,request_digest}')=request_digest
     AND (base_body::jsonb->>'deadline')=deadline) IS TRUE)
 );
+-- One source/physical stream/ordinal has only one native obligation even when
+-- a caller chooses a fresh lease/attempt. Source identity stays in this SAME
+-- native table; reconnect does not reset retained/unresolved accounting.
+CREATE UNIQUE INDEX native_read_frame_coordinate ON elp210_candidate.native_read_obligations
+  (source_identity_digest,(base_body::jsonb#>>'{manager_intent,stream_id}'),(base_body::jsonb#>>'{manager_intent,frame_ordinal}'))
+  WHERE lifecycle_kind='MANAGER_SSE_FRAME';
 CREATE TABLE elp210_candidate.native_read_events (
   event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   lease_id text NOT NULL REFERENCES elp210_candidate.native_read_obligations(lease_id),
@@ -205,7 +258,7 @@ BEGIN
   PERFORM 1 FROM elp210_candidate.authority WHERE singleton FOR UPDATE;
   IF TG_OP='INSERT' THEN
     IF NEW.phase<>'ADMITTED'
-      OR(NEW.lifecycle_kind='MANAGER_HTTP' AND(NEW.no_send_fenced OR NEW.native_source_digest IS NOT NULL
+      OR(NEW.lifecycle_kind IN('MANAGER_HTTP','MANAGER_SSE_FRAME') AND(NEW.no_send_fenced OR NEW.native_source_digest IS NOT NULL
         OR NEW.native_source_fingerprint IS NOT NULL OR NEW.native_valid_until_ms IS NOT NULL OR NEW.issue_response_digest IS NOT NULL
         OR NEW.enter_response_digest IS NOT NULL OR NEW.status_response_digest IS NOT NULL
         OR NEW.body_digest IS NOT NULL OR NEW.receipt_id IS NOT NULL OR NEW.receipt_digest IS NOT NULL

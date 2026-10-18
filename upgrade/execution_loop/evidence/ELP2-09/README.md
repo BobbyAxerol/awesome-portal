@@ -243,3 +243,17 @@ checked, no new acknowledgement/assignment or generated browser field inferred.
   [Exact source/log/controller hashes and proof limits](native-v2-codec-integration.md#affected-terminal--2026-10-18t012602utc).
   Coherent normal-hook landing pending; this is wire compatibility and finite
   refusal, not current-source frame custody, connected09 or full10 acceptance.
+
+### SAME native physical-frame follow-through — 2026-10-18
+
+Native-v2 landed2c943e14, hook terminal01:57:52UTC:852contracts/6669API PASS,
+3existing skips; exact hashes/restore/runtime/cleanup in its owning packet.
+[Frame requirement/review/test/handoff matrix](native-frame-integration.md)
+is the next same approved09/10 dependency, applied/uncommitted/NOT_RUN at entry.
+One SAME NC01 obligation path and original Hub; genuine ROOT app/stream scope,
+actual physical SSE witness, authentic PM ACK and durable exact local settlement
+before ordinal/cursor advance. Finite behavior/public contract unchanged.
+Independent source/test reviews are not Claude consumer acceptance or installed
+source qualification. Full09 remains NOT_MET_SOURCE_PROPAGATION_BROWSER;
+10/11/source/budget/calibration/coexistence/browser and existing request IDs stay
+open. Claude owner-held/AWAITING_CONSUMER_REVIEW; no new public field or UI edit.

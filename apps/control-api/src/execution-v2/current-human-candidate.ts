@@ -16,7 +16,12 @@ import { pmHttpRequestDigest } from "./pm-http-request-binding";
 import { NativeReadEgress, type NativeReadEgressLimits, type NativeReadEgressObservation, type NativeReadEgressReservation,
   type NativeReadEgressWitness, type HeldNativeReadEgressPermit } from "./native-read-egress";
 import { nativeBusinessReadTransportRequest, nativeBusinessReadUtcMicroseconds,
-  prepareNativeBusinessReadRequest, type NativeBusinessReadAction } from "./native-business-read-codec";
+  prepareNativeBusinessReadRequest, type NativeBusinessReadAction, type NativeBusinessReadBase } from "./native-business-read-codec";
+import { nativeExecutionNoticeView, revalidateNativeExecutionNotice, assertNativeExecutionNoticeCurrent,
+  type PreparedExecutionNativeNotice } from "./read-scope";
+import { NativeFrameSettlement, type NativeFrameSettlementTarget, type NativeFrameSettlementProof } from "./native-frame-settlement";
+import type { NativeReadEgressStream, NativeReadEgressFrameReservation, NativeReadEgressFrameWitness,
+  NativeReadFrameObservation, HeldNativeReadFrameEgressPermit } from "./native-read-egress";
 
 const id = z.string().min(1).max(128).regex(/^[^\u0000-\u001f\u007f]+$/).refine(value => value === value.trim());
 const integer = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -57,31 +62,35 @@ export interface CurrentHumanNativeReadSelection {
   domain: { profile_id: string; catalogue_sha256: string; profile_sha256: string; field_policy_sha256: string };
   source_identity_digest: string;
 }
-type NativeBase={schema_version:"pma.native-business-read.request.v1";binding:{
+type NativeFiniteBase={schema_version:"pma.native-business-read.request.v1";binding:{
   lease_id:string;attempt_id:string;human_issuer:string;subject:string;workspace_id:string;
   environment:"paper"|"sandbox"|"live";workload_id:string;request_digest:string;operation:"READ"};
   domain:CurrentHumanNativeReadSelection["domain"];manager_intent:{schema_version:"pma.manager-read-intent.v1";
     action:"catalogue"|"capabilities"|"relation_page"|"relation_record"|"projection_page";digest:string};deadline:string};
+type NativeFrameBase=Omit<NativeFiniteBase,"manager_intent"> & {
+  manager_intent:Extract<NativeBusinessReadBase["manager_intent"],{schema_version:"pma.manager-read-intent.v2"}> };
+type NativeBase=NativeFiniteBase|NativeFrameBase;
 type NativeRow = Row & { attempt_id: string; authority_fingerprint: string; base_body: string;
-  stable_core_digest: string; binding_digest: string; source_identity_digest: string; phase: NativeHTTPPhase; lifecycle_kind:"CUSTODY_ONLY"|"MANAGER_HTTP" };
+  stable_core_digest: string; binding_digest: string; source_identity_digest: string; phase: NativeHTTPPhase; lifecycle_kind:"CUSTODY_ONLY"|"MANAGER_HTTP"|"MANAGER_SSE_FRAME" };
 export interface CurrentHumanNativeReadRecoveryAttempt {
   readonly family: "NATIVE_READ"; readonly lease_id: string; readonly attempt_id: string;
   readonly base_body: string; readonly stable_core_digest: string; readonly binding_digest: string;
   readonly source_identity_digest: string; readonly authority_fingerprint: string;
   readonly subject_id: string; readonly session_id: string; readonly session_revision: number;
   readonly authority_revision: number; readonly expires_at_ms: number; readonly phase: NativeHTTPPhase;
-  readonly lifecycle_kind?:"MANAGER_HTTP";
+  readonly lifecycle_kind?:"MANAGER_HTTP"|"MANAGER_SSE_FRAME";
+}
+function nativeAnyBase(input:unknown) {
+  const prepared=prepareNativeBusinessReadRequest("status",input,{request_bytes:32768,response_bytes:32768});
+  const wire=nativeBusinessReadTransportRequest(prepared);
+  return{prepared,body:wire.body,base:JSON.parse(wire.body) as NativeBase};
 }
 function nativeBase(input: unknown) {
-  const prepared = prepareNativeBusinessReadRequest("status", input, { request_bytes: 32768, response_bytes: 32768 });
-  const wire = nativeBusinessReadTransportRequest(prepared);
-  const parsed = JSON.parse(wire.body);
-  // This port owns finite HTTP/CUSTODY only. A valid v2 digest is NOT a frame
-  // permit: refuse before any durable admission, human signature or send.
-  // Original08's frame lifecycle must keep its own physical terminal family.
-  if (parsed.manager_intent.schema_version !== "pma.manager-read-intent.v1")
+  const captured=nativeAnyBase(input);
+  // Preserve finite HTTP/CUSTODY's explicit rejection BEFORE admission/sign/send.
+  if(captured.base.manager_intent.schema_version!=="pma.manager-read-intent.v1")
     throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_FRAME_LIFECYCLE_REQUIRED");
-  return { prepared, body: wire.body, base: parsed as NativeBase };
+  return {...captured,base:captured.base as NativeFiniteBase};
 }
 /** PM checks original Base deadline <= identity JWT expiry. The smallest
  * representable second must fit independent authority ceilings; the finite
@@ -151,7 +160,8 @@ type CandidateRuntimeConfig=Omit<CurrentHumanCandidateConfig,"source"|"installat
 };
 type NativeHTTPPhase="ADMITTED"|"SENDING"|"UNKNOWN"|"SERVED"|"ABORTED"|"CANCELLED";
 type NativeHTTPRow=Omit<NativeRow,"phase"> & {
-  lifecycle_kind:"MANAGER_HTTP";phase:NativeHTTPPhase;sender_id:string;scope_digest:string;no_send_fenced:boolean;
+  lifecycle_kind:"MANAGER_HTTP"|"MANAGER_SSE_FRAME";phase:NativeHTTPPhase;sender_id:string;scope_digest:string;no_send_fenced:boolean;
+  frame_domain_scope_digest:string|null;frame_notice_scope_digest:string|null;
   native_source_digest:string|null;native_source_fingerprint:string|null;native_valid_until_ms:string|null;
   issue_response_digest:string|null;enter_response_digest:string|null;status_response_digest:string|null;
   body_digest:string|null;receipt_id:string|null;receipt_digest:string|null;terminal_reason:string|null;
@@ -159,11 +169,18 @@ type NativeHTTPRow=Omit<NativeRow,"phase"> & {
 };
 declare const nativeHTTPBrand:unique symbol;
 export type PreparedCurrentHumanNativeHTTP=Readonly<{readonly[nativeHTTPBrand]:true}>;
+declare const nativeFrameBrand:unique symbol;
+export type PreparedCurrentHumanNativeFrame=Readonly<{readonly[nativeFrameBrand]:true}>;
+type NativeHandle=PreparedCurrentHumanNativeHTTP|PreparedCurrentHumanNativeFrame;
+type NativeFrameState={notice:PreparedExecutionNativeNotice;stream:NativeReadEgressStream;
+  domain_scope_digest:string;notice_scope_digest:string;payload:Buffer;
+  reservation?:NativeReadEgressFrameReservation;permit?:HeldNativeReadFrameEgressPermit;
+  target?:NativeFrameSettlementTarget};
 type NativeHTTPState={actor:AccessActor;context:NativeBase;base_body:string;binding_digest:string;stable_core_digest:string;
   scope_digest:string;valid_until_ms:number;source_digest?:string;source_fingerprint?:string;
   source_entered:boolean;sending:boolean;settled:boolean;response?:ServerResponse;
   reservation?:NativeReadEgressReservation;permit?:HeldNativeReadEgressPermit;body_digest?:string;
-  observation?:NativeReadEgressObservation};
+  observation?:NativeReadEgressObservation|NativeReadFrameObservation;frame?:NativeFrameState};
 export type NativeHTTPRecovery=
   {state:"UNKNOWN"|"UNSENT_FENCED"|"RECONCILED";context:NativeBase}|
   {state:"TERMINAL";phase:"SERVED"|"ABORTED";context:NativeBase;terminal:string};
@@ -179,6 +196,8 @@ type Row = { lease_id: string; authority_revision: string; subject_id: string; s
 export class CurrentHumanCandidate {
   private nativeHTTP?:Readonly<NativeHTTPRuntimeConfig>;
   private nativeEgress?:NativeReadEgress;
+  #nativeFrameSettlement?:NativeFrameSettlement;
+  #nativeFrameBusy=new WeakMap<object,boolean>();
   private readonly nativeSenderId=randomUUID();
   private readonly nativeHandles=new WeakMap<object,NativeHTTPState>();
   private readonly nativeById=new Map<string,NativeHTTPState>();
@@ -343,8 +362,13 @@ export class CurrentHumanCandidate {
     this.nativeHandles.set(handle,state);this.nativeById.set(row.lease_id,state);return handle;
   }
   async signNativeReadRequest(handle:PreparedCurrentHumanNativeHTTP,action:"issue"|"enter"){
+    if(this.nativeState(handle).frame)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_FINITE_PURPOSE_REQUIRED");
+    return this.signNativeRequest(handle,action);
+  }
+  private async signNativeRequest(handle:NativeHandle,action:"issue"|"enter"){
     if(action!=="issue"&&action!=="enter")throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_PURPOSE_REQUIRED");
     const s=this.nativeState(handle),c=this.nativeConfig();
+    if(s.frame)await revalidateNativeExecutionNotice(s.frame.notice); // actual adapter, never under Core lock
     const claims=await this.transaction(async(db,authority)=>{
       const {iat,exp}=await this.nativeSigningEligibility(db,authority,s,action);
       const path="/internal/elp210/business-root-read/"+action;
@@ -358,6 +382,7 @@ export class CurrentHumanCandidate {
     const token=await new SignJWT(claims).setProtectedHeader({alg:"EdDSA",kid:c.key_id,typ:"JWT"}).sign(c.private_key);
     // Real signing is asynchronous and outside locks. It cannot renew a stale
     // decision or ignore a concurrently committed no-send/drain boundary.
+    if(s.frame)await revalidateNativeExecutionNotice(s.frame.notice);
     await this.transaction((db,authority)=>this.nativeSigningEligibility(db,authority,s,action));
     this.assertNativeAcquisitionCurrent(s);
     return token;
@@ -384,7 +409,7 @@ export class CurrentHumanCandidate {
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_EXPIRED");
     return{iat,exp:expiry.seconds};
   }
-  private async bindNativeRead(handle:PreparedCurrentHumanNativeHTTP,observation:VerifiedSelectedNativeReadObservation){
+  private async bindNativeRead(handle:NativeHandle,observation:VerifiedSelectedNativeReadObservation){
     const s=this.nativeState(handle),proof=this.nativeObservation(observation),actual=proof.result;
     // Re-check registry identity at the mutation boundary; a copied carrier is
     // not sufficient even if its fields or response hash happen to match.
@@ -400,6 +425,7 @@ export class CurrentHumanCandidate {
     if(leaseUntil>requested||leaseUntil>nativeUntil)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_SOURCE_PROOF_INVALID");
     const validUntil=Math.min(s.valid_until_ms,Number(leaseUntil/1000n),Number(nativeUntil/1000n));
+    if(s.frame)await revalidateNativeExecutionNotice(s.frame.notice);
     await this.transaction(async(db,authority)=>{
       const row=(await db.query<NativeHTTPRow>("SELECT * FROM elp210_candidate.native_read_obligations WHERE lease_id=$1 FOR UPDATE",[s.context.binding.lease_id])).rows[0];
       this.assertNativeRow(row,s);
@@ -416,15 +442,22 @@ export class CurrentHumanCandidate {
     s.source_digest=actual.lease.source_digest;s.source_fingerprint=actual.lease.source_fingerprint;s.valid_until_ms=validUntil;
   }
   async acquireNativeRead(actor:AccessActor,input:unknown):Promise<PreparedCurrentHumanNativeHTTP>{
-    const handle=await this.prepareNativeRead(actor,input),s=this.nativeState(handle);
-    const issueToken=await this.signNativeReadRequest(handle,"issue");
+    const handle=await this.prepareNativeRead(actor,input);
+    await this.acquirePreparedNativeRead(handle);return handle;
+  }
+  private async acquirePreparedNativeRead(handle:NativeHandle):Promise<void>{
+    const s=this.nativeState(handle);
+    const issueToken=await this.signNativeRequest(handle,"issue");
     this.assertNativeAcquisitionCurrent(s);
     const issued=await this.nativeCall(s.base_body,"issue",issueToken);
     await this.bindNativeRead(handle,issued);
-    const enterToken=await this.signNativeReadRequest(handle,"enter");
+    // Capture an owned zero-byte reservation after authentic ISSUE, before ENTER.
+    if(s.frame)this.reserveNativeFrame(s);
+    const enterToken=await this.signNativeRequest(handle,"enter");
     this.assertNativeAcquisitionCurrent(s);
     const entered=this.nativeObservation(await this.nativeCall(s.base_body,"enter",enterToken));
     if(entered.result.state!=="ENTERED")throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_SOURCE_PROOF_INVALID");
+    if(s.frame)await revalidateNativeExecutionNotice(s.frame.notice);
     await this.transaction(async(db,authority)=>{
       const row=(await db.query<NativeHTTPRow>("SELECT * FROM elp210_candidate.native_read_obligations WHERE lease_id=$1 FOR UPDATE",[s.context.binding.lease_id])).rows[0];
       this.assertNativeRow(row,s);
@@ -435,7 +468,7 @@ export class CurrentHumanCandidate {
       await db.query("UPDATE elp210_candidate.native_read_obligations SET enter_response_digest=$2 WHERE lease_id=$1",
         [row.lease_id,entered.response_sha256]);
     });
-    s.source_entered=true;return handle;
+    s.source_entered=true;
   }
 
   /** Tightens uncertainty only. There is deliberately no terminal/release API. */
@@ -452,7 +485,9 @@ export class CurrentHumanCandidate {
   }
 
   private nativeAttempt(row: NativeRow): CurrentHumanNativeReadRecoveryAttempt {
-    const captured = nativeBase(Buffer.from(row.base_body, "utf8")), b = captured.base.binding;
+    const captured = nativeAnyBase(Buffer.from(row.base_body, "utf8")), b = captured.base.binding;
+    if((row.lifecycle_kind==="MANAGER_SSE_FRAME")!==(captured.base.manager_intent.schema_version==="pma.manager-read-intent.v2"))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_CUSTODY_INVALID");
     if (captured.body !== row.base_body || captured.prepared.stable_core_digest !== row.stable_core_digest
       || captured.prepared.binding_digest !== row.binding_digest || b.lease_id !== row.lease_id || b.attempt_id !== row.attempt_id
       || b.subject !== row.subject_id || b.workspace_id !== row.workspace_id || b.environment !== row.environment
@@ -465,7 +500,7 @@ export class CurrentHumanCandidate {
       source_identity_digest: row.source_identity_digest, authority_fingerprint: row.authority_fingerprint,
       subject_id: row.subject_id, session_id: row.session_id, session_revision: Number(row.session_revision),
       authority_revision: Number(row.authority_revision), expires_at_ms: Number(row.expires_at_ms), phase: row.phase,
-      ...(row.lifecycle_kind==="MANAGER_HTTP"?{lifecycle_kind:"MANAGER_HTTP" as const}:{}) });
+      ...(row.lifecycle_kind==="MANAGER_HTTP"||row.lifecycle_kind==="MANAGER_SSE_FRAME"?{lifecycle_kind:row.lifecycle_kind}:{}) });
   }
 
   /** One bounded combined recovery order; old recoverableAttempts is unchanged.
@@ -679,8 +714,215 @@ export class CurrentHumanCandidate {
     const candidate=new CurrentHumanCandidate(pool,{
       issuer:c.issuer,audience:c.audience,key_id:c.key_id,private_key:c.private_key,
       limits:c.limits,installation_scope:c.installation_scope,native_read_custody:c.selection},publicKey);
-    candidate.nativeHTTP=Object.freeze(c);candidate.nativeEgress=new NativeReadEgress(c.egress);return candidate;
+    candidate.nativeHTTP=Object.freeze(c);
+    candidate.#nativeFrameSettlement=new NativeFrameSettlement(pool,c.selected_source,candidate.nativeSenderId);
+    candidate.nativeEgress=new NativeReadEgress(c.egress,candidate.#nativeFrameSettlement);return candidate;
   }
+
+  /** Private owner API. Opening captures transport only, writes no SSE header or
+   * data. The trusted Hub must surrender every other writer/heartbeat and use
+   * prepareNativeNotice with this owner's exact next delivery coordinates. */
+  openNativeNoticeStream(response:ServerResponse):NativeReadEgressStream{
+    this.nativeConfig();return this.nativeEgress!.openStream(response);
+  }
+  nextNativeNoticeDelivery(stream:NativeReadEgressStream){
+    if(this.#nativeFrameBusy.get(stream))throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_STREAM_BUSY");
+    return this.nativeEgress!.nextFrameDelivery(stream);
+  }
+  closeNativeNoticeStream(stream:NativeReadEgressStream):void{this.nativeEgress!.closeStream(stream);}
+
+  async prepareNativeFrame(stream:NativeReadEgressStream,notice:PreparedExecutionNativeNotice):Promise<PreparedCurrentHumanNativeFrame>{
+    const c=this.nativeConfig(),view=nativeExecutionNoticeView(notice),
+      delivery=this.nextNativeNoticeDelivery(stream),actor=nativeActor(view.actor);
+    if(view.workspace_id!==c.selection.workspace_id||view.environment!==c.selection.environment||
+      view.profile_id!==c.selection.domain.profile_id||view.intent.stream_id!==delivery.stream_id||
+      view.intent.frame_ordinal!==delivery.frame_ordinal||view.scope_digest!=="sha256:"+view.intent.stream_scope_digest||
+      view.payload.length<1||view.payload.length>c.egress.maximum_response_bytes||
+      createHash("sha256").update(view.payload).digest("hex")!==view.intent.frame_sha256)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
+    // Per-stream acquisition lock is taken synchronously before adapter/SQL
+    // awaits. No two native admissions can acquire the same delivery ordinal.
+    this.#nativeFrameBusy.set(stream,true);
+    try{
+      if(this.nativeById.size>=c.limits.maximum_unresolved)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_CAPACITY_EXHAUSTED");
+      await revalidateNativeExecutionNotice(notice); // actual qualified adapter, no Core lock
+      const row=await this.transaction(async(db,authority)=>{
+        if(authority.drain_id)throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAINING");
+        const d=await evaluateManagerDomainRead(db,{actor,workspace_id:view.workspace_id,
+          environment:view.environment,domain:c.selection.domain});
+        const n=await assertNativeExecutionNoticeCurrent(db,notice,this.pool);
+        if(d.authority_fingerprint!==n.authority_fingerprint||n.scope_digest!==view.scope_digest||
+          d.field_policy_sha256!==c.selection.domain.field_policy_sha256)
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
+        this.checkInstallation({workspace_id:view.workspace_id,environment:view.environment},true);
+        const now=Math.max(d.now_ms,n.now_ms),ceiling=Math.min(now+c.limits.ttl_ms,
+          d.valid_until_ms,n.valid_until_ms,c.installation_scope.valid_until_ms),
+          expires=Math.floor(ceiling/1000)*1000;
+        if(expires<=now)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_DEADLINE_INVALID");
+        const binding={lease_id:randomUUID(),attempt_id:randomUUID(),human_issuer:c.issuer,
+          subject:actor.user_id,workspace_id:view.workspace_id,environment:view.environment,
+          workload_id:c.workload_id,operation:"READ" as const};
+        const deadline=new Date(expires).toISOString(),intent={...view.intent},
+          requestDigest=accessDigest({binding,domain:c.selection.domain,deadline,manager_intent:intent}).slice(7);
+        const captured=nativeAnyBase({schema_version:"pma.native-business-read.request.v1",
+          binding:{...binding,request_digest:requestDigest},domain:c.selection.domain,
+          deadline,manager_intent:{...intent,digest:requestDigest}}),
+          scopeDigest=accessDigest({schema:"portal.native-frame-scope.v1",
+            domain_scope_digest:d.scope_digest,notice_scope_digest:n.scope_digest});
+        const counts=(await db.query("SELECT count(*)::int AS retained,count(*) FILTER(WHERE unresolved)::int AS unresolved FROM elp210_candidate.obligations")).rows[0];
+        if(counts.unresolved>=c.limits.maximum_unresolved||counts.retained>=c.limits.maximum_retained)
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_CAPACITY_EXHAUSTED");
+        const inserted=(await db.query<NativeHTTPRow>(
+          "INSERT INTO elp210_candidate.native_read_obligations(lease_id,attempt_id,authority_revision,subject_id,session_id,session_revision,"+
+          "workspace_id,environment,workload_id,request_digest,authority_fingerprint,source_identity_digest,base_body,stable_core_digest,binding_digest,deadline,issued_at_ms,expires_at_ms,"+
+          "lifecycle_kind,sender_id,scope_digest,frame_domain_scope_digest,frame_notice_scope_digest) "+
+          "VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'MANAGER_SSE_FRAME',$19,$20,$21,$22) RETURNING *",
+          [binding.lease_id,binding.attempt_id,authority.revision,actor.user_id,actor.session_id,actor.session_generation,
+            view.workspace_id,view.environment,c.workload_id,requestDigest,n.authority_fingerprint,c.selection.source_identity_digest,
+            captured.body,captured.prepared.stable_core_digest,captured.prepared.binding_digest,deadline,now,expires,
+            this.nativeSenderId,scopeDigest,d.scope_digest,n.scope_digest])).rows[0];
+        const finalNow=Number((await db.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
+        this.checkInstallation({workspace_id:view.workspace_id,environment:view.environment},true);
+        if(Math.max(finalNow,Date.now())>=expires)throw new CurrentHumanLeaseError("CURRENT_HUMAN_EXPIRED");
+        return inserted;
+      });
+      const context=this.selectedNativeRow(row);
+      if(context.manager_intent.schema_version!=="pma.manager-read-intent.v2")
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
+      const {digest:_intentDigest,...intent}=context.manager_intent;
+      if(accessDigest(intent)!==accessDigest(view.intent))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
+      const handle=Object.freeze({}) as PreparedCurrentHumanNativeFrame;
+      const state:NativeHTTPState={actor,context,base_body:row.base_body,binding_digest:row.binding_digest,
+        stable_core_digest:row.stable_core_digest,scope_digest:row.scope_digest,valid_until_ms:Number(row.expires_at_ms),
+        source_entered:false,sending:false,settled:false,frame:{notice,stream,
+          domain_scope_digest:row.frame_domain_scope_digest!,notice_scope_digest:row.frame_notice_scope_digest!,
+          payload:Buffer.from(view.payload)}};
+      this.nativeHandles.set(handle,state);this.nativeById.set(row.lease_id,state);return handle;
+    }catch(error){
+      // A lost SQL ACK may already have admitted the original row. Never clear
+      // an uncertain stream/acquisition slot and mint replacement authority.
+      this.nativeEgress!.closeStream(stream);throw error;
+    }
+  }
+
+  async acquireNativeFrame(stream:NativeReadEgressStream,notice:PreparedExecutionNativeNotice):Promise<PreparedCurrentHumanNativeFrame>{
+    const handle=await this.prepareNativeFrame(stream,notice),s=this.nativeState(handle);
+    try{await this.acquirePreparedNativeRead(handle);return handle;}
+    catch(error){
+      this.nativeEgress!.closeStream(stream);
+      await this.reconcileNativeRead(s.context.binding.lease_id).catch(()=>undefined);throw error;
+    }
+  }
+  private reserveNativeFrame(s:NativeHTTPState):void{
+    const f=s.frame;
+    if(!f||f.reservation||!s.source_digest||!s.source_fingerprint)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_SEND_REFUSED");
+    const bodyDigest="sha256:"+createHash("sha256").update(f.payload).digest("hex");
+    if(s.context.manager_intent.schema_version!=="pma.manager-read-intent.v2"||
+      s.context.manager_intent.frame_sha256!==bodyDigest.slice(7))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
+    const binding=Object.freeze({lease_id:s.context.binding.lease_id,attempt_id:s.context.binding.attempt_id,
+      binding_digest:s.binding_digest,source_digest:s.source_digest,scope_digest:s.scope_digest,
+      body_digest:bodyDigest,valid_until_ms:s.valid_until_ms});
+    s.body_digest=bodyDigest;f.reservation=this.nativeEgress!.reserveFrame(f.stream,f.payload,binding);
+    const d=this.nativeEgress!.frameDelivery(f.reservation);
+    if(d.stream_id!==s.context.manager_intent.stream_id||d.frame_ordinal!==s.context.manager_intent.frame_ordinal)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
+  }
+  private observeNativeFrame(s:NativeHTTPState,witness:NativeReadEgressFrameWitness){
+    const f=s.frame;if(!f?.reservation)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_WITNESS_REFUSED");
+    const observed=this.nativeEgress!.consumeFrame(witness,f.reservation),b=observed.binding;
+    if(s.context.manager_intent.schema_version!=="pma.manager-read-intent.v2"||
+      b.lease_id!==s.context.binding.lease_id||b.attempt_id!==s.context.binding.attempt_id||
+      b.binding_digest!==s.binding_digest||b.source_digest!==s.source_digest||b.scope_digest!==s.scope_digest||
+      b.body_digest!==s.body_digest||observed.delivery.stream_id!==s.context.manager_intent.stream_id||
+      observed.delivery.frame_ordinal!==s.context.manager_intent.frame_ordinal)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_WITNESS_REFUSED");
+    s.observation=observed;f.target=this.nativeEgress!.frameSettlementTarget(f.reservation);return observed;
+  }
+  private async beginNativeFrame(handle:PreparedCurrentHumanNativeFrame){
+    const s=this.nativeState(handle),f=s.frame;
+    if(!f||s.sending||s.settled||!s.source_entered||!s.source_digest||!s.source_fingerprint||!f.reservation)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_SEND_REFUSED");
+    s.sending=true; // one shot BEFORE the real source revalidation await
+    await revalidateNativeExecutionNotice(f.notice);
+    await this.transaction(async(db,authority)=>{
+      const row=(await db.query<NativeHTTPRow>("SELECT * FROM elp210_candidate.native_read_obligations WHERE lease_id=$1 FOR UPDATE",[s.context.binding.lease_id])).rows[0];
+      this.assertNativeRow(row,s);
+      if(authority.drain_id||row.phase!=="ADMITTED"||row.no_send_fenced||row.authority_revision!==authority.revision||
+        row.native_source_digest!==s.source_digest||row.native_source_fingerprint!==s.source_fingerprint||
+        Number(row.native_valid_until_ms)!==s.valid_until_ms||!row.issue_response_digest||!row.enter_response_digest)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      const d=await this.nativeDecision(db,s);
+      this.checkInstallation(s.context.binding,true);
+      const finalNow=Number((await db.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
+      if(Math.max(d.now_ms,finalNow,Date.now())>=s.valid_until_ms)throw new CurrentHumanLeaseError("CURRENT_HUMAN_EXPIRED");
+      await db.query("UPDATE elp210_candidate.native_read_obligations SET phase='SENDING',body_digest=$2 WHERE lease_id=$1",
+        [row.lease_id,s.body_digest]);
+    });
+    // Native PM hold and NC01 app/field/exact-stream obligation are durable.
+    // No external I/O/await remains between this local guard and Egress.write.
+    const permit:HeldNativeReadFrameEgressPermit=Object.freeze({
+      binding:Object.freeze({lease_id:s.context.binding.lease_id,attempt_id:s.context.binding.attempt_id,
+        binding_digest:s.binding_digest,source_digest:s.source_digest,scope_digest:s.scope_digest,
+        body_digest:s.body_digest!,valid_until_ms:s.valid_until_ms}),
+      delivery:this.nativeEgress!.frameDelivery(f.reservation),
+      assertCurrent:()=>{
+        this.checkInstallation(s.context.binding,true);
+        if(s.settled||f.permit!==permit||!s.source_entered||Date.now()>=s.valid_until_ms)
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_EXPIRED");
+      }});
+    f.permit=permit;return permit;
+  }
+  async sendNativeFrame(handle:PreparedCurrentHumanNativeFrame):Promise<NativeHTTPRecovery>{
+    const s=this.nativeState(handle),f=s.frame;
+    if(!f||!f.reservation||s.sending||s.settled)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_FRAME_PURPOSE_REQUIRED");
+    try{
+      const permit=await this.beginNativeFrame(handle),
+        witness=await this.nativeEgress!.dispatchFrame(f.reservation,permit);
+      this.observeNativeFrame(s,witness);
+    }catch(error){
+      try{this.observeNativeFrame(s,await this.nativeEgress!.cancelUnsentFrame(f.reservation));}
+      catch{/* Genuine DISPATCHED/uncertain physical send is never replayed. */}
+      await this.reconcileNativeRead(s.context.binding.lease_id).catch(()=>undefined);throw error;
+    }
+    return this.reconcileNativeRead(s.context.binding.lease_id);
+  }
+  /** Stops this exact prepared obligation without minting a replacement frame
+   * or dispatch. A stale settled handle cannot close its live successor. */
+  async cancelNativeFrame(handle:PreparedCurrentHumanNativeFrame):Promise<NativeHTTPRecovery>{
+    const s=this.nativeState(handle);if(!s.frame)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_FRAME_PURPOSE_REQUIRED");
+    if(!s.settled)this.nativeEgress!.closeStream(s.frame.stream);
+    return this.reconcileNativeRead(s.context.binding.lease_id);
+  }
+  private async finishNativeLocal(leaseId:string,proof?:NativeFrameSettlementProof|null):Promise<void>{
+    const local=this.nativeById.get(leaseId);if(!local)return;
+    const f=local.frame;
+    if(f){
+      if(proof&&f.reservation)this.nativeEgress!.retireFrame(f.reservation,proof);
+      else if(proof===null)this.nativeEgress!.closeStream(f.stream); // actual ACK but no genuine physical target
+      else{
+        // Only lost-ACK/already-reconciled recovery needs a second durable
+        // exact-row readback. Normal ACK path already awaited COMMIT+release.
+        const row=await this.transaction(async db=>{
+          const row=(await db.query<NativeHTTPRow>("SELECT * FROM elp210_candidate.native_read_obligations WHERE lease_id=$1 FOR UPDATE",[leaseId])).rows[0];
+          this.assertNativeRow(row,local);
+          if(!row.source_reconciled||!row.source_ack_action||!row.source_ack_digest)
+            throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_SETTLEMENT_REFUSED");
+          return row;
+        });
+        if(f.reservation&&f.target&&["SERVED","ABORTED"].includes(row.phase)&&row.source_ack_action==="resolve")
+          this.nativeEgress!.retireFrame(f.reservation,await this.#nativeFrameSettlement!.readback(f.target));
+        else this.nativeEgress!.closeStream(f.stream); // no physical target => NEVER frame2
+      }
+      this.#nativeFrameBusy.delete(f.stream);
+    }
+    local.settled=true;this.nativeById.delete(leaseId);
+  }
+
   private reverseSource(){
     if(!this.config.source)throw new CurrentHumanLeaseError("CURRENT_HUMAN_REVERSE_PURPOSE_REQUIRED");
     return this.config.source;
@@ -690,15 +932,17 @@ export class CurrentHumanCandidate {
     if(!this.nativeHTTP)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_PURPOSE_REQUIRED");
     return this.nativeHTTP;
   }
-  private nativeState(handle:PreparedCurrentHumanNativeHTTP){
+  private nativeState(handle:NativeHandle){
     const s=this.nativeHandles.get(handle);
     if(!s)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_HANDLE_REQUIRED");return s;
   }
   private selectedNativeRow(row:NativeHTTPRow|undefined):NativeBase{
     const c=this.nativeConfig();
-    if(!row||row.lifecycle_kind!=="MANAGER_HTTP"||row.source_identity_digest!==c.selection.source_identity_digest)
+    if(!row||!["MANAGER_HTTP","MANAGER_SSE_FRAME"].includes(row.lifecycle_kind)||row.source_identity_digest!==c.selection.source_identity_digest)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
-    const captured=nativeBase(Buffer.from(row.base_body,"utf8")),b=captured.base.binding;
+    const captured=nativeAnyBase(Buffer.from(row.base_body,"utf8")),b=captured.base.binding;
+    if((row.lifecycle_kind==="MANAGER_SSE_FRAME")!==(captured.base.manager_intent.schema_version==="pma.manager-read-intent.v2"))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
     if(captured.body!==row.base_body||captured.prepared.binding_digest!==row.binding_digest
       ||captured.prepared.stable_core_digest!==row.stable_core_digest
       ||b.lease_id!==row.lease_id||b.attempt_id!==row.attempt_id||b.subject!==row.subject_id
@@ -708,21 +952,37 @@ export class CurrentHumanCandidate {
       ||accessDigest(captured.base.domain)!==accessDigest(c.selection.domain)
       ||nativeBusinessReadUtcMicroseconds(captured.base.deadline)/1000n!==BigInt(row.expires_at_ms))
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
+    if(row.lifecycle_kind==="MANAGER_SSE_FRAME"){
+      if(!digest.safeParse(row.frame_domain_scope_digest).success||!digest.safeParse(row.frame_notice_scope_digest).success||
+        row.scope_digest!==accessDigest({schema:"portal.native-frame-scope.v1",
+          domain_scope_digest:row.frame_domain_scope_digest,notice_scope_digest:row.frame_notice_scope_digest}))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
+    }else if(row.frame_domain_scope_digest!==null||row.frame_notice_scope_digest!==null)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
     return captured.base;
   }
   private assertNativeRow(row:NativeHTTPRow|undefined,s:NativeHTTPState):asserts row is NativeHTTPRow{
     this.selectedNativeRow(row);
     if(!row||row.sender_id!==this.nativeSenderId||row.subject_id!==s.actor.user_id||row.session_id!==s.actor.session_id
       ||Number(row.session_revision)!==s.actor.session_generation||row.scope_digest!==s.scope_digest
-      ||row.base_body!==s.base_body||row.binding_digest!==s.binding_digest||row.stable_core_digest!==s.stable_core_digest)
+      ||row.base_body!==s.base_body||row.binding_digest!==s.binding_digest||row.stable_core_digest!==s.stable_core_digest
+      ||(row.lifecycle_kind==="MANAGER_SSE_FRAME")!==Boolean(s.frame)
+      ||s.frame&&(row.frame_domain_scope_digest!==s.frame.domain_scope_digest||row.frame_notice_scope_digest!==s.frame.notice_scope_digest))
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
   }
   private async nativeDecision(db:PoolClient,s:NativeHTTPState){
     const d=await evaluateManagerDomainRead(db,{actor:s.actor,workspace_id:s.context.binding.workspace_id,
-      environment:s.context.binding.environment,domain:s.context.domain,expected_scope_digest:s.scope_digest});
+      environment:s.context.binding.environment,domain:s.context.domain,expected_scope_digest:s.frame?.domain_scope_digest??s.scope_digest});
     if(d.field_policy_sha256!==s.context.domain.field_policy_sha256||d.valid_until_ms<s.valid_until_ms)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
-    return d;
+    if(!s.frame)return d;
+    const notice=await assertNativeExecutionNoticeCurrent(db,s.frame.notice,this.pool);
+    if(notice.authority_fingerprint!==d.authority_fingerprint||notice.scope_digest!==s.frame.notice_scope_digest||
+      s.scope_digest!==accessDigest({schema:"portal.native-frame-scope.v1",
+        domain_scope_digest:d.scope_digest,notice_scope_digest:notice.scope_digest})||
+      notice.valid_until_ms<s.valid_until_ms)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
+    return{...d,now_ms:Math.max(d.now_ms,notice.now_ms),valid_until_ms:Math.min(d.valid_until_ms,notice.valid_until_ms)};
   }
   /** Source selection/authenticated result uses the peer's sole opaque wrapper.
    * No DTO/config pin or status carrier is a native held grant or egress permit. */
@@ -735,7 +995,7 @@ export class CurrentHumanCandidate {
   /** All transport calls remain outside Core transactions. Original Base bytes,
    * keys and expired deadlines are preserved for recovery. */
   private async nativeCall(baseBody:string,action:NativeBusinessReadAction,assertion?:string){
-    const c=this.nativeConfig(),captured=nativeBase(Buffer.from(baseBody,"utf8"));
+    const c=this.nativeConfig(),captured=nativeAnyBase(Buffer.from(baseBody,"utf8"));
     if(captured.body!==baseBody)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
     const{schema_version:_schema,...context}=captured.base;
     const observation=await Reflect.apply(selectedMethods[action],c.selected_source,[context,assertion]) as VerifiedSelectedNativeReadObservation;
@@ -748,6 +1008,7 @@ export class CurrentHumanCandidate {
 
   private async beginNativeSend(handle:PreparedCurrentHumanNativeHTTP,response:ServerResponse,body:Buffer){
     const s=this.nativeState(handle),c=this.nativeConfig();
+    if(s.frame)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_FINITE_PURPOSE_REQUIRED");
     if(s.sending||s.settled||!s.source_entered||!s.source_digest||!s.source_fingerprint
       ||!Buffer.isBuffer(body)||body.length>c.egress.maximum_response_bytes)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_SEND_REFUSED");
@@ -792,6 +1053,7 @@ export class CurrentHumanCandidate {
   }
   async sendNativeRead(handle:PreparedCurrentHumanNativeHTTP,response:ServerResponse,body:Buffer):Promise<NativeHTTPRecovery>{
     const s=this.nativeState(handle),c=this.nativeConfig();
+    if(s.frame)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_FINITE_PURPOSE_REQUIRED");
     if(s.sending||s.settled||!(response instanceof ServerResponse)||!(response.socket instanceof Socket)
       ||response.req.method!=="GET"||response.headersSent||response.writableEnded||response.destroyed||response.socket.destroyed
       ||!Buffer.isBuffer(body)||body.length>c.egress.maximum_response_bytes)
@@ -846,6 +1108,12 @@ export class CurrentHumanCandidate {
   async recoverNativeRead(leaseId:string):Promise<NativeHTTPRecovery>{
     const c=this.nativeConfig();z.string().uuid().refine(v=>v===v.toLowerCase()).parse(leaseId);
     const local=this.nativeById.get(leaseId);
+    if(local?.frame?.reservation&&(!local.observation||local.observation.outcome==="UNKNOWN")){
+      const closed=this.nativeEgress!.observeFrameClosed(local.frame.reservation);
+      if(closed)this.observeNativeFrame(local,closed);
+      else try{this.observeNativeFrame(local,await this.nativeEgress!.cancelUnsentFrame(local.frame.reservation));}
+      catch{/* Dispatched/unknown physical frame remains held, never resent. */}
+    }
     if(local?.reservation&&(!local.observation||local.observation.outcome==="UNKNOWN")){
       const closed=this.nativeEgress!.observeClosed(local.reservation);
       if(closed)this.observeNativeSend(local,closed);
@@ -857,6 +1125,16 @@ export class CurrentHumanCandidate {
       const context=this.selectedNativeRow(row);
       if(row.source_reconciled)return{kind:"RECONCILED" as const,row,context};
       if(["SERVED","ABORTED"].includes(row.phase))return{kind:"TERMINAL" as const,row,context};
+      // An actual pre-ENTER reservation may close while the ENTER ACK is
+      // lost. Socket closure is not evidence that PM never entered. Preserve
+      // the original no-send/UNKNOWN recovery path without minting a terminal
+      // or fabricating enter_response_digest from an authenticated status.
+      if(row.lifecycle_kind==="MANAGER_SSE_FRAME"&&row.body_digest===null&&row.enter_response_digest===null&&
+        ["ADMITTED","UNKNOWN"].includes(row.phase)){
+        if(!row.no_send_fenced)row=(await db.query<NativeHTTPRow>(
+          "UPDATE elp210_candidate.native_read_obligations SET no_send_fenced=true WHERE lease_id=$1 RETURNING *",[leaseId])).rows[0];
+        return{kind:"UNSENT_FENCED" as const,row,context};
+      }
       const observed=local&&row.sender_id===this.nativeSenderId?local.observation:undefined;
       if(observed&&observed.outcome!=="UNKNOWN"){
         this.assertNativeRow(row,local!);
@@ -896,13 +1174,22 @@ export class CurrentHumanCandidate {
       exp:now+c.terminal.ttl_seconds,jti:randomUUID(),purpose:"pma.native-business-to-core-terminal.v1",
       workload_id:row.workload_id,lease_id:row.lease_id,attempt_id:row.attempt_id,binding_digest:row.binding_digest,
       source_digest:row.native_source_digest,operation:"READ",phase,
-      evidence_kind:phase==="SERVED"?"FINAL_HTTP_SEND_COMPLETED":"FINAL_HTTP_ABORT_CONFIRMED",
+      evidence_kind:row.lifecycle_kind==="MANAGER_SSE_FRAME"
+        ?phase==="SERVED"?"FINAL_SSE_FRAME_WRITE_COMPLETED":"FINAL_SSE_FRAME_ABORT_CONFIRMED"
+        :phase==="SERVED"?"FINAL_HTTP_SEND_COMPLETED":"FINAL_HTTP_ABORT_CONFIRMED",
       receipt_id:row.receipt_id,receipt_digest:row.receipt_digest.slice(7)})
       .setProtectedHeader({alg:"EdDSA",kid:c.terminal.key_id,typ:"JWT"}).sign(c.terminal.private_key);
     return{state:"TERMINAL",phase,context:result.context,terminal};
   }
   private async recordNativeSourceACK(leaseId:string,observation:VerifiedSelectedNativeReadObservation){
-    const proof=this.nativeObservation(observation);
+    const local=this.nativeById.get(leaseId),proof=this.nativeObservation(observation);
+    // Route from actual opaque selected-source Base; helper verifies the SAME
+    // immutable SQL purpose/identity again. No extra query on finite ACK path.
+    const frame=nativeAnyBase(Buffer.from(proof.base_body,"utf8")).base.manager_intent.schema_version==="pma.manager-read-intent.v2";
+    if(frame){
+      const settled=await this.#nativeFrameSettlement!.recordACK(leaseId,observation,local?.frame?.target);
+      await this.finishNativeLocal(leaseId,settled);return;
+    }
     if(!["cancel-unentered","resolve"].includes(proof.action))
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_SOURCE_PROOF_INVALID");
     await this.transaction(async db=>{
@@ -923,7 +1210,6 @@ export class CurrentHumanCandidate {
       await db.query("UPDATE elp210_candidate.native_read_obligations SET phase=$2,source_reconciled=true,source_ack_action=$3,source_ack_digest=$4 WHERE lease_id=$1",
         [leaseId,phase,proof.action,proof.response_sha256]);
     });
-    const local=this.nativeById.get(leaseId);
     if(local)local.settled=true;
     this.nativeById.delete(leaseId);
   }
@@ -933,10 +1219,9 @@ export class CurrentHumanCandidate {
     let result=await this.recoverNativeRead(leaseId);
     if(result.state==="UNKNOWN")return result;
     if(result.state==="RECONCILED"){
-      const local=this.nativeById.get(leaseId);if(local)local.settled=true;
-      this.nativeById.delete(leaseId);return result;
+      await this.finishNativeLocal(leaseId);return result;
     }
-    const baseBody=nativeBase(result.context).body,status=this.nativeObservation(await this.nativeCall(baseBody,"status"));
+    const baseBody=nativeAnyBase(result.context).body,status=this.nativeObservation(await this.nativeCall(baseBody,"status"));
     if(status.result.state!=="OBSERVATION")throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_SOURCE_PROOF_INVALID");
     const observed=status.result.recovery;
     const cancellable=observed.state==="ABSENT"||observed.state==="RECORDED"

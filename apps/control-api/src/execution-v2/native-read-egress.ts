@@ -1,12 +1,15 @@
-/** PRIVATE UNMOUNTED finite HTTP/1 egress primitive.
- * Ported from the peer component; changed closure/accounting needs a new gate.
- * This is NOT authority,
- * a durable receipt store, terminal signer, recovery protocol or SSE lifetime.
+/** PRIVATE UNMOUNTED finite HTTP/1 + single-active-frame egress primitives.
+ * Finite path is preserved. Frame dependency proposal is NOT commissioned:
+ * physical observation cannot retire a frame or manufacture durable settlement.
+ * This is NOT authority, a receipt store, terminal signer or recovery protocol.
  */
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { IncomingMessage, ServerResponse } from "node:http";
 import { Socket } from "node:net";
 import { performance } from "node:perf_hooks";
+import { bindNativeFrameSettlementOwner, captureNativeFrameSettlementTarget, consumeNativeFrameSettlementProof,
+  type NativeFrameSettlement, type NativeFrameSettlementOwner, type NativeFrameSettlementTarget,
+  type NativeFrameSettlementProof } from "./native-frame-settlement";
 import { types } from "node:util";
 import { z } from "zod";
 
@@ -47,6 +50,43 @@ declare const witnessBrand: unique symbol;
 export type NativeReadEgressWitness = Readonly<{ readonly [witnessBrand]: true }>;
 declare const reservationBrand: unique symbol;
 export type NativeReadEgressReservation = Readonly<{ readonly [reservationBrand]: true }>;
+/** Frame transport identity is not source sequence, authorization or settlement.
+ * Canonical positive int64 decimal STRING matches the original PM v2 grammar. */
+export type NativeReadFrameDelivery = Readonly<{
+  kind: "SSE_FRAME"; stream_id: string; frame_ordinal: string;
+}>;
+export interface HeldNativeReadFrameEgressPermit {
+  readonly binding: Readonly<NativeReadEgressBinding>;
+  readonly delivery: NativeReadFrameDelivery;
+  assertCurrent(): void;
+}
+declare const streamBrand: unique symbol;
+export type NativeReadEgressStream = Readonly<{ readonly [streamBrand]: true }>;
+declare const frameReservationBrand: unique symbol;
+export type NativeReadEgressFrameReservation = Readonly<{ readonly [frameReservationBrand]: true }>;
+declare const frameWitnessBrand: unique symbol;
+export type NativeReadEgressFrameWitness = Readonly<{ readonly [frameWitnessBrand]: true }>;
+export type NativeReadFrameObservation = Readonly<{
+  binding: Readonly<NativeReadEgressBinding>; delivery: NativeReadFrameDelivery; bytes: number;
+  outcome: NativeReadEgressObservation["outcome"];
+  reason: NativeReadEgressObservation["reason"] | "FRAME_WRITE_CALLBACK_COMPLETED";
+  semantics: "LOCAL_CORE_HTTP_EGRESS_ONLY";
+}>;
+type FrameStreamState = {
+  response: ServerResponse; request: IncomingMessage; socket: Socket; id: string; ordinal: bigint;
+  active?: NativeReadEgressFrameReservation; poisoned: boolean; released: boolean; headersOwned: boolean;
+  responseClosed: boolean; socketClosed: boolean; cleanup: () => void;
+};
+type CapturedFramePermit = { binding: NativeReadEgressBinding; delivery: NativeReadFrameDelivery; check: () => void };
+type FrameReservationState = {
+  owner: FrameStreamState; payload: Buffer; binding: Readonly<NativeReadEgressBinding>; delivery: NativeReadFrameDelivery;
+  deadline: number; phase: "RESERVED" | "DISPATCHED" | "CANCELLED"; writeStarted: boolean;
+  writeReturned: boolean; callbackSeen: boolean; callbackFailed: boolean; contaminated: boolean;
+  last?: NativeReadFrameObservation; settlementTarget?: NativeFrameSettlementTarget; waiter: Promise<NativeReadEgressFrameWitness>;
+  resolve: (value: NativeReadEgressFrameWitness) => void; cleanup: () => void;
+  abort: (reason: NativeReadFrameObservation["reason"]) => void;
+  dispatch: (held: CapturedFramePermit, permit: HeldNativeReadFrameEgressPermit) => void;
+};
 type ReservationState = {
   response: ServerResponse; request: IncomingMessage; socket: Socket; payload: Buffer; binding: Readonly<NativeReadEgressBinding>;
   deadline: number; phase: "RESERVED" | "DISPATCHED" | "CANCELLED";
@@ -91,10 +131,60 @@ function permitFrom(input: unknown): { binding: NativeReadEgressBinding; check: 
     return deny("NATIVE_READ_EGRESS_PERMIT_REFUSED");
   return { binding: bindingFrom(fields.binding), check: fields.assertCurrent as () => void };
 }
+const maximumFrameOrdinal = (1n << 63n) - 1n;
+const frameDeliverySchema = z.object({
+  kind: z.literal("SSE_FRAME"), stream_id: uuid,
+  frame_ordinal: z.string().regex(/^[1-9][0-9]{0,18}$(?![\s\S])/)
+    .refine(value => /^[1-9][0-9]{0,18}$(?![\s\S])/.test(value) && BigInt(value) <= maximumFrameOrdinal),
+}).strict();
+function frameDeliveryFrom(input: unknown): NativeReadFrameDelivery {
+  const fields = plainFields(input, ["kind", "stream_id", "frame_ordinal"]);
+  if (Object.values(fields).some(value => typeof value !== "string")) return deny("NATIVE_READ_EGRESS_BINDING_REFUSED");
+  const parsed = frameDeliverySchema.safeParse(fields);
+  if (!parsed.success) return deny("NATIVE_READ_EGRESS_BINDING_REFUSED");
+  return Object.freeze(parsed.data);
+}
+function framePermitFrom(input: unknown): CapturedFramePermit {
+  if (!input || typeof input !== "object" || types.isProxy(input) || permits.has(input))
+    return deny("NATIVE_READ_EGRESS_PERMIT_REFUSED");
+  const fields = plainFields(input, ["binding", "delivery", "assertCurrent"]);
+  if (typeof fields.assertCurrent !== "function" || types.isProxy(fields.assertCurrent))
+    return deny("NATIVE_READ_EGRESS_PERMIT_REFUSED");
+  return { binding: bindingFrom(fields.binding), delivery: frameDeliveryFrom(fields.delivery),
+    check: fields.assertCurrent as () => void };
+}
+function sameFrameDelivery(left: NativeReadFrameDelivery, right: NativeReadFrameDelivery): boolean {
+  return left.kind === right.kind && left.stream_id === right.stream_id && left.frame_ordinal === right.frame_ordinal;
+}
+function sameBinding(left: NativeReadEgressBinding, right: NativeReadEgressBinding): boolean {
+  return bindingKeys.every(key => left[key] === right[key]);
+}
+function copiedFrame(body: Buffer, maximum: number): Buffer {
+  if (types.isProxy(body) || !Buffer.isBuffer(body)) return deny("NATIVE_READ_EGRESS_BINDING_REFUSED");
+  try {
+    const length = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(Uint8Array.prototype), "byteLength")!.get!.call(body) as number;
+    if (length < 1 || length > maximum) return deny("NATIVE_READ_EGRESS_BINDING_REFUSED");
+    const payload = Buffer.alloc(length); Uint8Array.prototype.set.call(payload, body); return payload;
+  } catch { return deny("NATIVE_READ_EGRESS_BINDING_REFUSED"); }
+}
+/** Check actual captured host ownership, not caller-shaped transport flags.
+ * Node's own chunked framing after the first SSE write is permitted; caller
+ * framing before ownership, finite length/compression/trailers never are. */
+function frameTransportCurrent(owner: FrameStreamState): boolean {
+  const { response, request, socket } = owner;
+  if (owner.poisoned || owner.released || response.req !== request || response.socket !== socket || request.socket !== socket ||
+    request.method !== "GET" || request.aborted || response.writableEnded || response.destroyed || socket.destroyed ||
+    response.statusCode !== 200 || response.writableLength !== 0 || socket.writableLength !== 0 ||
+    response.hasHeader("content-length") || response.hasHeader("content-encoding") || response.hasHeader("trailer")) return false;
+  if (!owner.headersOwned) return !response.headersSent && !response.hasHeader("transfer-encoding");
+  if (response.getHeader("content-type") !== "text/event-stream; charset=utf-8" ||
+    response.getHeader("cache-control") !== "private, no-store" || response.getHeader("x-content-type-options") !== "nosniff") return false;
+  return !response.hasHeader("transfer-encoding") || response.getHeader("transfer-encoding") === "chunked";
+}
 /** Destroy only the captured transport. A foreign reassignment must not make
  * this component close someone else's socket; missing response closure then
  * remains UNKNOWN with admission held. */
-function closeOwned(state: ReservationState): void {
+function closeOwned(state: Pick<ReservationState, "response" | "socket">): void {
   if (state.response.socket === state.socket || state.response.socket === null) {
     try { state.response.destroy(); } catch { /* physical close must still be observed */ }
   }
@@ -121,15 +211,270 @@ function limitsFrom(input: unknown): Readonly<NativeReadEgressLimits> {
  */
 export class NativeReadEgress {
   private inflight = 0;
+  #frameSettlementOwner?:NativeFrameSettlementOwner;
+  private readonly frameStreams = new WeakMap<object, FrameStreamState>();
+  private readonly frameReservations = new WeakMap<object, FrameReservationState>();
+  private readonly frameWitnesses = new WeakMap<object, {
+    reservation: NativeReadEgressFrameReservation; observation: NativeReadFrameObservation;
+  }>();
   private readonly reservations = new WeakMap<object, ReservationState>();
   private readonly witnesses = new WeakMap<object, { response: ServerResponse; permit?: HeldNativeReadEgressPermit;
     reservation?: NativeReadEgressReservation; observation: NativeReadEgressObservation }>();
   private readonly limits: Readonly<NativeReadEgressLimits>;
-  constructor(limits: NativeReadEgressLimits) {
+  constructor(limits: NativeReadEgressLimits,settlement?:NativeFrameSettlement) {
     this.limits = limitsFrom(limits);
+    if(settlement)this.#frameSettlementOwner=bindNativeFrameSettlementOwner(settlement,this);
   }
 
   diagnostics(): Readonly<{ inflight: number }> { return Object.freeze({ inflight: this.inflight }); }
+
+  /** PRIVATE UNMOUNTED dependency stage. Sole owner, same capacity as finite
+   * HTTP. No write/end/flushHeaders here. Controller must surrender all writers.
+   * This module alone does NOT authenticate native/source/app/stream authority. */
+  openStream(response: ServerResponse): NativeReadEgressStream {
+    if (!(response instanceof ServerResponse) || !(response.req instanceof IncomingMessage) ||
+      !(response.socket instanceof Socket) || response.req.socket !== response.socket ||
+      response.req.method !== "GET" || response.req.aborted || response.statusCode !== 200 || response.headersSent ||
+      response.writableEnded || response.destroyed || response.socket.destroyed ||
+      response.writableLength !== 0 || response.socket.writableLength !== 0 ||
+      response.hasHeader("content-length") || response.hasHeader("transfer-encoding") ||
+      response.hasHeader("content-encoding") || response.hasHeader("trailer") || responses.has(response))
+      return deny("NATIVE_READ_EGRESS_RESPONSE_REFUSED");
+    if (this.inflight >= this.limits.maximum_inflight) return deny("NATIVE_READ_EGRESS_BUSY");
+    const stream = Object.freeze({}) as NativeReadEgressStream, socket = response.socket;
+    const owner: FrameStreamState = { response, request: response.req, socket, id: randomUUID(), ordinal: 1n,
+      poisoned: false, released: false, headersOwned: false, responseClosed: false, socketClosed: false, cleanup: () => undefined };
+    const release = () => {
+      if (owner.released || !owner.responseClosed || !owner.socketClosed || !response.destroyed || !socket.destroyed) return;
+      owner.released = true; this.inflight--; owner.cleanup();
+    };
+    const responseClose = () => { owner.responseClosed = true; owner.poisoned = true; release(); };
+    const socketClose = () => { owner.socketClosed = true; owner.poisoned = true; release(); };
+    const error = () => { owner.poisoned = true; closeOwned(owner); };
+    owner.cleanup = () => {
+      response.removeListener("close", responseClose); response.removeListener("error", error);
+      socket.removeListener("close", socketClose); socket.removeListener("end", error);
+    };
+    response.on("close", responseClose); response.on("error", error);
+    socket.on("close", socketClose); socket.on("end", error);
+    responses.add(response); this.inflight++; this.frameStreams.set(stream, owner); return stream;
+  }
+
+  /** Identity only. It does not mint authority or advance the ordinal. */
+  nextFrameDelivery(stream: NativeReadEgressStream): NativeReadFrameDelivery {
+    const owner = this.frameStreams.get(stream);
+    if (!owner || owner.active || !frameTransportCurrent(owner) || owner.ordinal < 1n || owner.ordinal > maximumFrameOrdinal)
+      return deny("NATIVE_READ_EGRESS_STREAM_REFUSED");
+    return Object.freeze({ kind: "SSE_FRAME", stream_id: owner.id, frame_ordinal: owner.ordinal.toString() });
+  }
+
+  /** Capture exact encoded SSE bytes before SENDING. Reservation does not write,
+   * authorize, ACK, or settle anything. The caller must bind frame_sha256 and
+   * body_digest to these SAME bytes in the original v2 Base and NC01 row. */
+  reserveFrame(stream: NativeReadEgressStream, body: Buffer, input: NativeReadEgressBinding): NativeReadEgressFrameReservation {
+    const owner = this.frameStreams.get(stream);
+    if (!owner || owner.active || !frameTransportCurrent(owner) || owner.ordinal < 1n || owner.ordinal > maximumFrameOrdinal)
+      return deny("NATIVE_READ_EGRESS_STREAM_REFUSED");
+    const parsed = bindingFrom(input), payload = copiedFrame(body, this.limits.maximum_response_bytes);
+    if (parsed.body_digest !== digest(payload) || parsed.valid_until_ms <= Date.now())
+      return deny("NATIVE_READ_EGRESS_BINDING_REFUSED");
+    const reservation = Object.freeze({}) as NativeReadEgressFrameReservation;
+    const delivery = Object.freeze({ kind: "SSE_FRAME" as const, stream_id: owner.id, frame_ordinal: owner.ordinal.toString() });
+    let resolve!: (value: NativeReadEgressFrameWitness) => void;
+    const waiter = new Promise<NativeReadEgressFrameWitness>(done => { resolve = done; });
+    const state: FrameReservationState = { owner, payload, binding: Object.freeze(parsed), delivery,
+      deadline: performance.now() + Math.min(this.limits.send_timeout_ms, parsed.valid_until_ms - Date.now()),
+      phase: "RESERVED", writeStarted: false, writeReturned: false, callbackSeen: false, callbackFailed: false,
+      contaminated: false, waiter, resolve, cleanup: () => undefined, abort: () => undefined, dispatch: () => undefined };
+    const { response, socket } = owner;
+    let timer: ReturnType<typeof setTimeout> | undefined, quiesce: ReturnType<typeof setTimeout> | undefined;
+    let aborting = false, abortReason: NativeReadFrameObservation["reason"] = "RESPONSE_CLOSED";
+    const timeCurrent = () => Date.now() < state.binding.valid_until_ms && performance.now() < state.deadline;
+    const observe = (outcome: NativeReadFrameObservation["outcome"], reason: NativeReadFrameObservation["reason"]) => {
+      if (state.last) return;
+      state.last = Object.freeze({ binding: state.binding, delivery, bytes: payload.length, outcome, reason,
+        semantics: "LOCAL_CORE_HTTP_EGRESS_ONLY" as const });
+      clearTimeout(timer); clearTimeout(quiesce);
+      state.resolve(this.frameWitness(reservation, state));
+      if (outcome !== "UNKNOWN") state.cleanup();
+      // UNKNOWN keeps exact closure listeners; old witnesses never change.
+      // FINISHED intentionally does NOT clear owner.active or advance ordinal.
+    };
+    const closed = () => {
+      if (!owner.responseClosed || !owner.socketClosed || !response.destroyed || !socket.destroyed) return;
+      if (state.last?.outcome === "FINISHED") return;
+      state.phase = "CANCELLED";
+      const reason: NativeReadFrameObservation["reason"] = !state.writeStarted && !state.contaminated
+        ? "UNSENT_RESERVATION_QUIESCENT" : "CAPTURED_RESPONSE_SOCKET_CLOSED";
+      if (state.last?.outcome === "UNKNOWN") {
+        state.last = Object.freeze({ binding: state.binding, delivery, bytes: payload.length, outcome: "ABORTED", reason,
+          semantics: "LOCAL_CORE_HTTP_EGRESS_ONLY" as const });
+        state.cleanup(); // NEW readback only; old UNKNOWN stays immutable.
+      } else observe("ABORTED", !state.writeStarted && !state.contaminated ? reason : abortReason);
+    };
+    state.abort = reason => {
+      if (state.last?.outcome === "FINISHED") return;
+      owner.poisoned = true; state.phase = "CANCELLED";
+      if (!aborting) {
+        aborting = true; abortReason = reason; clearTimeout(timer);
+        // Changed host ownership/framing is never asserted to be unsent.
+        state.contaminated ||= !state.writeStarted && (response.req !== owner.request || owner.request.socket !== socket ||
+          (response.socket !== socket && response.socket !== null) || response.writableEnded ||
+          (!owner.headersOwned && response.headersSent));
+        quiesce = setTimeout(() => { observe("UNKNOWN", abortReason); closed(); }, this.limits.quiesce_timeout_ms);
+        closeOwned(owner);
+      }
+      closed();
+    };
+    const responseClose = () => { owner.responseClosed = true; state.abort("RESPONSE_CLOSED"); closed(); };
+    const socketClose = () => { owner.socketClosed = true; state.abort("RESPONSE_CLOSED"); closed(); };
+    const error = () => state.abort("RESPONSE_ERROR");
+    state.cleanup = () => {
+      clearTimeout(timer); clearTimeout(quiesce);
+      response.removeListener("close", responseClose); response.removeListener("error", error);
+      socket.removeListener("close", socketClose); socket.removeListener("end", error);
+    };
+    state.dispatch = (held, permit) => {
+      const current = () => {
+        if (!timeCurrent()) return false;
+        try {
+          const result: unknown = held.check.call(permit);
+          if (result !== undefined) {
+            if (types.isPromise(result)) void Promise.prototype.then.call(result, undefined, () => undefined);
+            return false;
+          }
+          const fields = plainFields(permit, ["binding", "delivery", "assertCurrent"]);
+          return fields.assertCurrent === held.check && sameBinding(state.binding, bindingFrom(fields.binding)) &&
+            sameFrameDelivery(delivery, frameDeliveryFrom(fields.delivery)) && timeCurrent();
+        } catch { return false; }
+      };
+      const checkCompletedWrite = () => {
+        if (state.last || !state.writeReturned || !state.callbackSeen || state.callbackFailed) return;
+        if (!frameTransportCurrent(owner)) { state.abort("RESPONSE_ERROR"); return; }
+        if (!current()) { state.abort("PERMIT_NOT_CURRENT"); return; }
+        // The guard itself must not have changed the actual transport.
+        if (!frameTransportCurrent(owner) || !timeCurrent()) { state.abort("PERMIT_NOT_CURRENT"); return; }
+        observe("FINISHED", "FRAME_WRITE_CALLBACK_COMPLETED");
+      };
+      if (!current()) { state.abort("PERMIT_NOT_CURRENT"); return; }
+      if (!frameTransportCurrent(owner)) { state.abort("SEND_THROW"); return; }
+      try {
+        if (!owner.headersOwned) {
+          response.setHeader("content-type", "text/event-stream; charset=utf-8");
+          response.setHeader("cache-control", "private, no-store");
+          response.setHeader("x-content-type-options", "nosniff");
+          owner.headersOwned = true;
+        }
+        if (!timeCurrent() || !frameTransportCurrent(owner)) { state.abort("PERMIT_NOT_CURRENT"); return; }
+        // No await between this final synchronous guard and the captured write.
+        state.writeStarted = true;
+        const accepted = response.write(payload, (error?: Error | null) => {
+          if (state.callbackSeen) { owner.poisoned = true; closeOwned(owner); return; }
+          state.callbackSeen = true; state.callbackFailed = Boolean(error);
+          if (error) { state.abort("RESPONSE_ERROR"); return; }
+          checkCompletedWrite();
+        });
+        if (typeof accepted !== "boolean") { state.abort("SEND_THROW"); return; }
+        // false is accepted bytes + backpressure, never a rejection/zero-write.
+        state.writeReturned = true; checkCompletedWrite();
+      } catch { state.abort("SEND_THROW"); }
+    };
+    owner.active = reservation; this.frameReservations.set(reservation, state);
+    response.on("close", responseClose); response.on("error", error);
+    socket.on("close", socketClose); socket.on("end", error);
+    timer = setTimeout(() => state.abort("DEADLINE"), Math.max(1, Math.ceil(state.deadline - performance.now())));
+    return reservation;
+  }
+
+  frameDelivery(reservation: NativeReadEgressFrameReservation): NativeReadFrameDelivery {
+    const state = this.frameReservations.get(reservation);
+    if (!state) return deny("NATIVE_READ_EGRESS_RESERVATION_REFUSED");
+    return state.delivery;
+  }
+
+  dispatchFrame(reservation: NativeReadEgressFrameReservation, permit: HeldNativeReadFrameEgressPermit): Promise<NativeReadEgressFrameWitness> {
+    const state = this.frameReservations.get(reservation);
+    if (!state || state.phase !== "RESERVED" || state.owner.active !== reservation || !frameTransportCurrent(state.owner))
+      return Promise.reject(new NativeReadEgressError("NATIVE_READ_EGRESS_RESERVATION_REFUSED"));
+    let held: CapturedFramePermit;
+    try { held = framePermitFrom(permit); } catch (error) { return Promise.reject(error); }
+    if (!sameBinding(state.binding, held.binding) || !sameFrameDelivery(state.delivery, held.delivery))
+      return Promise.reject(new NativeReadEgressError("NATIVE_READ_EGRESS_BINDING_REFUSED"));
+    state.phase = "DISPATCHED"; permits.add(permit); state.dispatch(held, permit); return state.waiter;
+  }
+
+  cancelUnsentFrame(reservation: NativeReadEgressFrameReservation): Promise<NativeReadEgressFrameWitness> {
+    const state = this.frameReservations.get(reservation);
+    if (!state) return Promise.reject(new NativeReadEgressError("NATIVE_READ_EGRESS_RESERVATION_REFUSED"));
+    if (state.phase === "DISPATCHED") return Promise.reject(new NativeReadEgressError("NATIVE_READ_EGRESS_ALREADY_DISPATCHED"));
+    state.abort("RESPONSE_CLOSED");
+    return state.last ? Promise.resolve(this.frameWitness(reservation, state)) : state.waiter;
+  }
+
+  private frameWitness(reservation: NativeReadEgressFrameReservation, state: FrameReservationState): NativeReadEgressFrameWitness {
+    if (!state.last) return deny("NATIVE_READ_EGRESS_WITNESS_REFUSED");
+    const witness = Object.freeze({}) as NativeReadEgressFrameWitness;
+    this.frameWitnesses.set(witness, { reservation, observation: state.last }); return witness;
+  }
+
+  consumeFrame(witness: NativeReadEgressFrameWitness, reservation: NativeReadEgressFrameReservation): NativeReadFrameObservation {
+    const actual = this.frameWitnesses.get(witness);
+    if (!actual || actual.reservation !== reservation || !this.frameReservations.has(reservation))
+      return deny("NATIVE_READ_EGRESS_WITNESS_REFUSED");
+    this.frameWitnesses.delete(witness);
+    // Only this actual owner has its #private target issuer. Physical facts are
+    // registered from the module's real witness, never caller-shaped DTOs.
+    const state=this.frameReservations.get(reservation)!;
+    if(this.#frameSettlementOwner)state.settlementTarget=captureNativeFrameSettlementTarget(
+      this.#frameSettlementOwner,reservation,witness,actual.observation);
+    // Physical observation is NOT PM ACK/local COMMIT; keep active occupied.
+    return actual.observation;
+  }
+
+  /** A new same-instance physical readback; not a TTL/status/receipt assertion. */
+  observeFrameClosed(reservation: NativeReadEgressFrameReservation): NativeReadEgressFrameWitness | null {
+    const state = this.frameReservations.get(reservation), owner = state?.owner;
+    if (!state || !owner) return deny("NATIVE_READ_EGRESS_RESERVATION_REFUSED");
+    if (!owner.released || !owner.responseClosed || !owner.socketClosed || !owner.response.destroyed ||
+      !owner.socket.destroyed || !state.last) return null;
+    if (state.last.outcome !== "FINISHED") state.last = Object.freeze({ binding: state.binding, delivery: state.delivery,
+      bytes: state.payload.length, outcome: "ABORTED", reason: "CAPTURED_RESPONSE_SOCKET_CLOSED", semantics: "LOCAL_CORE_HTTP_EGRESS_ONLY" });
+    return this.frameWitness(reservation, state);
+  }
+
+  closeStream(stream: NativeReadEgressStream): void {
+    const owner = this.frameStreams.get(stream);
+    if (!owner) return deny("NATIVE_READ_EGRESS_STREAM_REFUSED");
+    owner.poisoned = true; closeOwned(owner);
+  }
+
+  /** Correlation carrier only: it conveys no app/source/release authority. */
+  frameSettlementTarget(reservation:NativeReadEgressFrameReservation):NativeFrameSettlementTarget{
+    const state=this.frameReservations.get(reservation);
+    if(!state?.settlementTarget)return deny("NATIVE_READ_EGRESS_WITNESS_REFUSED");
+    return state.settlementTarget;
+  }
+
+  /** No generic release API. Exact same-helper/owner/physical-target proof must
+   * follow actual PM ACK + SAME-row local COMMIT/release/readback. Only a fully
+   * settled FINISHED frame can make ordinal+1 eligible; ABORTED closes forever. */
+  retireFrame(reservation:NativeReadEgressFrameReservation,proof:NativeFrameSettlementProof):void{
+    const state=this.frameReservations.get(reservation),issuer=this.#frameSettlementOwner;
+    if(!state||!issuer||!state.settlementTarget||state.owner.active!==reservation||
+      !state.last||state.last.outcome==="UNKNOWN")
+      return deny("NATIVE_READ_EGRESS_WITNESS_REFUSED");
+    const phase=consumeNativeFrameSettlementProof(issuer,state.settlementTarget,proof);
+    if(phase==="SERVED"&&state.last.outcome!=="FINISHED"||
+      phase!=="SERVED"&&state.last.outcome!=="ABORTED")
+      return deny("NATIVE_READ_EGRESS_WITNESS_REFUSED");
+    const owner=state.owner;
+    if(owner.id!==state.delivery.stream_id||owner.ordinal!==BigInt(state.delivery.frame_ordinal))
+      return deny("NATIVE_READ_EGRESS_WITNESS_REFUSED");
+    state.cleanup();owner.active=undefined;this.frameReservations.delete(reservation);
+    if(phase==="SERVED"&&frameTransportCurrent(owner)&&owner.ordinal<maximumFrameOrdinal)
+      owner.ordinal++;
+    else{owner.poisoned=true;closeOwned(owner);}
+  }
 
   /** Refusals before ownership produce NO witness/terminal. The actual provider
    * remains responsible for its already-durable source obligation on that path.

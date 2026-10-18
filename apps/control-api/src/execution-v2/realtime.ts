@@ -1,62 +1,27 @@
-import { createCipheriv,createDecipheriv,createHash,randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
+import type { ServerResponse } from "node:http";
 import { accessDigest } from "./access-policy";
 import { edgeScopedNoticeBatch,scopedReplayBinding,scopedRealtimeFrame,
   type ScopedReplayBinding,type EdgeScopedNoticeBatch,type ScopedRealtimeFrame } from "./realtime.contract";
 import { scopeRealtimeIdentity,ExecutionReadScopes,type AuthorizedExecutionReadScope } from "./read-scope";
-import type { AccessResource } from "./access.contract";
+import { accessResource,type AccessResource } from "./access.contract";
+import { CurrentHumanCandidate } from "./current-human-candidate";
+import type { NativeReadEgressStream } from "./native-read-egress";
+import { ScopedReplayCursorCodec,ScopedReplayError,decodeScopedReplayContinuation,
+  encodeScopedReplayContinuation } from "./scoped-replay-cursor";
+export { ScopedReplayCursorCodec,ScopedReplayError } from "./scoped-replay-cursor";
 
-export class ScopedReplayError extends Error {
-  constructor(readonly code:NonNullable<ScopedRealtimeFrame["reason_code"]>){super("Execution updates require a current authorized snapshot.");}
-}
-/** Encrypted and authenticated, not merely base64-encoded/HMAC plaintext.
- * Dedicated domain separation prevents reuse of a query/command token. Keys
- * and inner Edge cursors stay server-only. No runtime credentials are added. */
-export class ScopedReplayCursorCodec {
-  private readonly keys:Map<string,Buffer>;
-  constructor(private readonly active:string,keys:Readonly<Record<string,string>>,private readonly ttlMs:number,
-    private readonly now:()=>number=Date.now){
-    if(!/^[A-Za-z0-9_-]{1,32}$/.test(active)||!Number.isSafeInteger(ttlMs)||ttlMs<1||ttlMs>300_000||
-      !Object.hasOwn(keys,active)||Object.keys(keys).length>4||Object.entries(keys).some(([id,key])=>
-        !/^[A-Za-z0-9_-]{1,32}$/.test(id)||Buffer.byteLength(key)<32))throw new Error("REPLAY_CURSOR_CONFIG_INVALID");
-    this.keys=new Map(Object.entries(keys).map(([id,key])=>[id,createHash("sha256").update("portal-scoped-replay-v1\0").update(key).digest()]));
-  }
-  encode(binding:ScopedReplayBinding,sourceCursor:string):string{
-    scopedReplayBinding.parse(binding);
-    if(!/^[A-Za-z0-9._~-]+$/.test(sourceCursor)||Buffer.byteLength(sourceCursor)>2048)throw new ScopedReplayError("CURSOR_INVALID_OR_EXPIRED");
-    const issued=this.now(),iv=randomBytes(12),cipher=createCipheriv("aes-256-gcm",this.keys.get(this.active)!,iv);
-    cipher.setAAD(Buffer.from(`portal-scoped-replay.v1:${this.active}`));
-    if(!Number.isSafeInteger(issued)||issued<0||!Number.isSafeInteger(issued+this.ttlMs))throw new Error("REPLAY_CLOCK_INVALID");
-    const json=Buffer.from(JSON.stringify({binding:accessDigest(binding),source:sourceCursor,issued,expires:issued+this.ttlMs}));
-    // Fixed-length padding also hides changes in the private source token's
-    // length. Ciphertext randomization alone would not hide that side channel.
-    const payload=randomBytes(2816);payload.writeUInt32BE(json.length);json.copy(payload,4);
-    const data=Buffer.concat([cipher.update(payload),cipher.final()]);
-    return ["sr1",this.active,iv.toString("base64url"),data.toString("base64url"),cipher.getAuthTag().toString("base64url")].join(".");
-  }
-  decode(token:string,binding:ScopedReplayBinding):string{
-    try{
-      scopedReplayBinding.parse(binding);
-      if(token.length>4096||!/^[A-Za-z0-9_.-]+$/.test(token))throw Error();
-      const [version,id,iv,ciphertext,tag,...extra]=token.split("."),key=this.keys.get(id);
-      if(version!=="sr1"||!key||extra.length)throw Error();
-      const nonce=Buffer.from(iv,"base64url"),authTag=Buffer.from(tag,"base64url");
-      const data=Buffer.from(ciphertext,"base64url");
-      if(nonce.length!==12||authTag.length!==16||data.length!==2816||
-        nonce.toString("base64url")!==iv||authTag.toString("base64url")!==tag||data.toString("base64url")!==ciphertext)throw Error();
-      const decipher=createDecipheriv("aes-256-gcm",key,nonce);
-      decipher.setAAD(Buffer.from(`portal-scoped-replay.v1:${id}`));decipher.setAuthTag(authTag);
-      const payload=Buffer.concat([decipher.update(data),decipher.final()]),length=payload.readUInt32BE();
-      if(length>2812)throw Error();
-      const raw=JSON.parse(payload.subarray(4,4+length).toString("utf8"));
-      const now=this.now();
-      if(!Number.isSafeInteger(now)||now<0||Object.keys(raw).sort().join()!=="binding,expires,issued,source"||raw.binding!==accessDigest(binding)||
-        !Number.isSafeInteger(raw.issued)||!Number.isSafeInteger(raw.expires)||raw.issued>now||raw.expires<=now||
-        raw.expires-raw.issued<1||raw.expires-raw.issued>300_000||typeof raw.source!=="string"||!raw.source||
-        Buffer.byteLength(raw.source)>2048)throw Error();
-      return raw.source;
-    }catch{throw new ScopedReplayError("CURSOR_INVALID_OR_EXPIRED");}
-  }
-}
+// Existing import identity remains re-exported above. In the native path use
+// original intrinsic codec functions; do not call an overridden public method.
+const nativeCandidateMethods=Object.freeze({
+  open:CurrentHumanCandidate.prototype.openNativeNoticeStream,
+  next:CurrentHumanCandidate.prototype.nextNativeNoticeDelivery,
+  close:CurrentHumanCandidate.prototype.closeNativeNoticeStream,
+  acquire:CurrentHumanCandidate.prototype.acquireNativeFrame,
+  send:CurrentHumanCandidate.prototype.sendNativeFrame,
+  cancel:CurrentHumanCandidate.prototype.cancelNativeFrame,
+});
+const prepareNativeNotice=ExecutionReadScopes.prototype.prepareNativeNotice;
 
 /** Private source port. Its adapter MUST verify dense local-journal receipt
  * coverage/digests, current scope and source continuity before returning. This
@@ -94,8 +59,19 @@ function validateLimits(l:ScopedReplayLimits){
     l.maximumTotalBytes<l.maximumClientBytes||l.maximumTotalBytes>64*1048576||l.readTimeoutMs>60000)
     throw new Error("REPLAY_LIMITS_INVALID");
 }
-type Client={id:string;binding:ScopedReplayBinding;guard:ReplayDeliveryGuard;write:(frame:ScopedRealtimeFrame)=>boolean;
-  sourceCursor:string;queue:Array<{frame:ScopedRealtimeFrame;bytes:number}>;bytes:number;closed:boolean;busy:boolean;};
+type QueuedFrame={frame:ScopedRealtimeFrame;bytes:number;
+  native?:{frameJson:string;sourceCursor:string};};
+type ClientBase={id:string;binding:ScopedReplayBinding;sourceCursor:string;
+  queue:QueuedFrame[];bytes:number;closed:boolean;busy:boolean;};
+type NativeDelivery={stream:NativeReadEgressStream;resource:AccessResource;
+  current:()=>Promise<AuthorizedExecutionReadScope>;bindingJson:string;};
+type LegacyClient=ClientBase & {native?:undefined;guard:ReplayDeliveryGuard;write:(frame:ScopedRealtimeFrame)=>boolean;};
+type NativeClient=ClientBase & {native:NativeDelivery;guard?:never;write?:never;};
+type Client=LegacyClient|NativeClient;
+/** Private fixed dependencies; not a public controller DTO, arbitrary delivery
+ * callback or runtime commissioning switch. Both must be the actual instances
+ * from the SAME reviewed Candidate/Core/source installation. */
+export interface NativeScopedReplayDependencies {candidate:CurrentHumanCandidate;scopes:ExecutionReadScopes;}
 
 /** No timer/public listener/upstream setup. A commissioned server coordinator
  * calls poll once per bounded cadence, not once per browser or synchronous UI
@@ -109,9 +85,14 @@ export class ScopedReplayHub {
   private pending=0;
   private stopped=false;
   private readonly limits:Readonly<ScopedReplayLimits>;
+  private readonly native?:Readonly<NativeScopedReplayDependencies>;
+  private nativeFlights=0;
   constructor(private readonly source:ScopedNoticeSource,private readonly codec:ScopedReplayCursorCodec,
-    limits:ScopedReplayLimits){const captured={...limits};validateLimits(captured);this.limits=Object.freeze(captured);}
-  async subscribe(input:{binding:ScopedReplayBinding;guard:ReplayDeliveryGuard;write:Client["write"];
+    limits:ScopedReplayLimits,native?:NativeScopedReplayDependencies){
+    const captured={...limits};validateLimits(captured);this.limits=Object.freeze(captured);
+    this.native=native?Object.freeze({candidate:native.candidate,scopes:native.scopes}):undefined;
+  }
+  async subscribe(input:{binding:ScopedReplayBinding;guard:ReplayDeliveryGuard;write:LegacyClient["write"];
     baselineCursor:string;lastEventId?:string}):Promise<{id:string;close:()=>void}>{
     if(this.stopped)throw new ScopedReplayError("STOPPED");
     if(this.clients.size+this.pending>=this.limits.maximumClients)throw new ScopedReplayError("RECONNECT_LIMIT");
@@ -124,11 +105,44 @@ export class ScopedReplayHub {
     if(!input.baselineCursor)throw new ScopedReplayError("SNAPSHOT_REQUIRED");
     const cursor=input.lastEventId?this.codec.decode(input.lastEventId,binding):input.baselineCursor;
     this.codec.encode(binding,cursor); // Validate before retaining any session.
-    const client:Client={id:randomBytes(16).toString("hex"),binding,guard:input.guard,write:input.write,sourceCursor:cursor,
+    const client:LegacyClient={id:randomBytes(16).toString("hex"),binding,guard:input.guard,write:input.write,sourceCursor:cursor,
       queue:[],bytes:0,closed:false,busy:false};
     this.clients.set(client.id,client);
     return{id:client.id,close:()=>this.close(client)};
     }finally{this.pending--;}
+  }
+  /** Opt-in original08 physical path. No guard.write/raw write callback is
+   * accepted. HTTP transport ownership belongs exclusively to SAME Candidate.
+   * current() is a trusted mint factory; a shaped scope fails the real issuer. */
+  async subscribeNative(input:{binding:ScopedReplayBinding;resource:AccessResource;response:ServerResponse;
+    current:()=>Promise<AuthorizedExecutionReadScope>;baselineCursor:string;lastEventId?:string;
+  }):Promise<{id:string;close:()=>void}>{
+    const dependencies=this.native;
+    if(!dependencies)throw new ScopedReplayError("SOURCE_UNAVAILABLE");
+    if(this.stopped)throw new ScopedReplayError("STOPPED");
+    if(this.clients.size+this.pending>=this.limits.maximumClients)throw new ScopedReplayError("RECONNECT_LIMIT");
+    this.pending++;
+    let stream:NativeReadEgressStream|undefined,registered=false;
+    const candidate=dependencies.candidate;
+    try{
+      const binding=structuredClone(scopedReplayBinding.parse(input.binding)),resource=accessResource.parse(input.resource),
+        current=input.current,response=input.response,baseline=input.baselineCursor,last=input.lastEventId;
+      if(typeof current!=="function")throw new ScopedReplayError("SCOPE_CHANGED");
+      const scope=await current();
+      if(scopeRealtimeIdentity(scope)!==binding.principal_scope_digest)throw new ScopedReplayError("SCOPE_CHANGED");
+      if(this.stopped)throw new ScopedReplayError("STOPPED");
+      if(!baseline)throw new ScopedReplayError("SNAPSHOT_REQUIRED");
+      const cursor=last?decodeScopedReplayContinuation(this.codec,last,binding):baseline;
+      encodeScopedReplayContinuation(this.codec,binding,cursor); // genuine codec + bounded original source token
+      stream=nativeCandidateMethods.open.call(candidate,response);
+      const client:NativeClient={id:randomBytes(16).toString("hex"),binding,sourceCursor:cursor,queue:[],bytes:0,closed:false,busy:false,
+        native:{stream,resource,current,bindingJson:JSON.stringify(binding)}};
+      this.clients.set(client.id,client);registered=true;
+      return{id:client.id,close:()=>this.close(client)};
+    }finally{
+      this.pending--;
+      if(stream&&!registered)try{nativeCandidateMethods.close.call(candidate,stream);}catch{/* original owner retains any uncertain state */}
+    }
   }
   async poll():Promise<void>{
     if(this.stopped)return;
@@ -146,22 +160,66 @@ export class ScopedReplayHub {
   }
   diagnostics(){return{clients:this.clients.size,queued_bytes:this.queuedBytes,source_flights:this.flights.size,
     pending_subscriptions:this.pending,timed_out_flights:this.timedOutFlights.size,browser_source_calls:0,semantics:"NOTIFICATION_ONLY" as const};}
-  private close(c:Client){if(c.closed)return;c.closed=true;this.queuedBytes-=c.bytes;c.bytes=0;c.queue=[];this.clients.delete(c.id);}
+  private close(c:Client){
+    if(c.closed)return;c.closed=true;this.queuedBytes-=c.bytes;c.bytes=0;c.queue=[];this.clients.delete(c.id);
+    if(c.native)try{nativeCandidateMethods.close.call(this.native!.candidate,c.native.stream);}catch{/* no fake closure/settlement */}
+  }
   private terminate(c:Client,event:ScopedRealtimeFrame["event_type"],reason:NonNullable<ScopedRealtimeFrame["reason_code"]>){
     if(c.closed)return;
     const f=scopedRealtimeFrame.parse({schema_version:"portal.execution.scoped-realtime.v1",semantics:"NOTIFICATION_ONLY",
       event_type:event,terminal:true,reconnect_required:event==="resync_required",resume_cursor:null,projection_generation:null,quality:null,
       next_action:event==="access_revoked"?"SIGN_IN_OR_REQUEST_ACCESS":event==="resync_required"?"READ_NAMED_SNAPSHOT":"WAIT",reason_code:reason});
     // Terminal frames carry no target rows, scope IDs, source cursor or quality.
-    this.close(c);try{c.write(f);}catch{/* broken client cannot affect peers */}
+    this.close(c);
+    // The native owner is closed; never append an unguarded terminal write to
+    // its captured response. Legacy fixture/sync behavior remains unchanged.
+    if(!c.native)try{(c as LegacyClient).write(f);}catch{/* broken client cannot affect peers */}
   }
-  private queue(c:Client,frame:ScopedRealtimeFrame):boolean{
-    const bytes=Buffer.byteLength(JSON.stringify(frame));
-    if(bytes>this.limits.maximumFrameBytes||c.queue.length>=this.limits.maximumEntriesPerClient||
+  private queue(c:Client,frame:ScopedRealtimeFrame,sourceCursor:string):boolean{
+    const frameJson=JSON.stringify(frame),jsonBytes=Buffer.byteLength(frameJson);
+    const wireBytes=c.native?Buffer.byteLength(`id: ${frame.resume_cursor}\nevent: ${frame.event_type}\ndata: ${frameJson}\n\n`):jsonBytes;
+    // Native queue retains canonical JSON + exact continuation as well as the
+    // private frame object. Charge these additions, not merely the public JSON.
+    const bytes=c.native?wireBytes+jsonBytes+Buffer.byteLength(sourceCursor):jsonBytes;
+    if(wireBytes>this.limits.maximumFrameBytes||c.queue.length>=this.limits.maximumEntriesPerClient||
       c.bytes+bytes>this.limits.maximumClientBytes||this.queuedBytes+bytes>this.limits.maximumTotalBytes){
       this.terminate(c,"resync_required","SLOW_CLIENT");return false;
     }
-    c.queue.push({frame,bytes});c.bytes+=bytes;this.queuedBytes+=bytes;return true;
+    c.queue.push({frame,bytes,...(c.native?{native:{frameJson,sourceCursor}}:{})});
+    c.bytes+=bytes;this.queuedBytes+=bytes;return true;
+  }
+  private async currentIdentity(c:Client):Promise<string>{
+    return c.native?scopeRealtimeIdentity(await c.native.current()):(c as LegacyClient).guard.currentIdentity();
+  }
+  /** One exact original queue item. State strings alone never free a frame:
+   * SAME actual Candidate/Egress must have advanced its own opaque stream. */
+  private async deliverNative(c:NativeClient,item:QueuedFrame):Promise<boolean>{
+    if(!this.native||!item.native)throw new ScopedReplayError("SOURCE_UNAVAILABLE");
+    const candidate=this.native.candidate,stream=c.native.stream;
+    const scope=await c.native.current();
+    if(c.closed)return false;
+    if(scopeRealtimeIdentity(scope)!==c.binding.principal_scope_digest)throw new ScopedReplayError("SCOPE_CHANGED");
+    const delivery=nativeCandidateMethods.next.call(candidate,stream);
+    const notice=await prepareNativeNotice.call(this.native.scopes,scope,c.native.resource,this.codec,{
+      delivery_json:JSON.stringify(delivery),replay_binding_json:c.native.bindingJson,
+      source_cursor:item.native.sourceCursor,frame_json:item.native.frameJson});
+    if(c.closed)return false; // no native custody exists yet
+    const handle=await nativeCandidateMethods.acquire.call(candidate,stream,notice);
+    try{
+      if(c.closed){await nativeCandidateMethods.cancel.call(candidate,handle);return false;}
+      const result=await nativeCandidateMethods.send.call(candidate,handle);
+      if(c.closed){await nativeCandidateMethods.cancel.call(candidate,handle);return false;}
+      if(result.state!=="RECONCILED")throw new ScopedReplayError("SOURCE_UNAVAILABLE");
+      const next=nativeCandidateMethods.next.call(candidate,stream);
+      if(next.stream_id!==delivery.stream_id||BigInt(next.frame_ordinal)!==BigInt(delivery.frame_ordinal)+1n)
+        throw new ScopedReplayError("SOURCE_UNAVAILABLE");
+      // Only actual SERVED + source ACK + local durable settlement can move
+      // this Egress owner's ordinal. ABORTED/cancel/UNKNOWN cannot satisfy it.
+      return true;
+    }catch(error){
+      await nativeCandidateMethods.cancel.call(candidate,handle).catch(()=>undefined);
+      throw error;
+    }
   }
   private async read(c:Client){
     const key=accessDigest([c.binding,c.sourceCursor]);
@@ -192,8 +250,11 @@ export class ScopedReplayHub {
   }
   private async pollClient(c:Client):Promise<void>{
     if(c.closed||c.busy)return;c.busy=true;
+    const nativeFlight=Boolean(c.native);
+    if(nativeFlight&&this.nativeFlights>=this.limits.maximumClients){this.close(c);c.busy=false;return;}
+    if(nativeFlight)this.nativeFlights++;
     try{
-      if(await c.guard.currentIdentity()!==c.binding.principal_scope_digest)throw new ScopedReplayError("SCOPE_CHANGED");
+      if(await this.currentIdentity(c)!==c.binding.principal_scope_digest)throw new ScopedReplayError("SCOPE_CHANGED");
       if(c.closed)return;
       const batch=edgeScopedNoticeBatch.parse(await this.read(c));
       if(c.closed)return;
@@ -210,24 +271,27 @@ export class ScopedReplayHub {
           throw new ScopedReplayError("SOURCE_COVERAGE_UNPROVED");
         seen.add(notice.resume_cursor);
         const frame=scopedRealtimeFrame.parse({schema_version:"portal.execution.scoped-realtime.v1",semantics:"NOTIFICATION_ONLY",
-          event_type:"revalidate",terminal:false,reconnect_required:false,resume_cursor:this.codec.encode(c.binding,notice.resume_cursor),
+          event_type:"revalidate",terminal:false,reconnect_required:false,resume_cursor:c.native?
+            encodeScopedReplayContinuation(this.codec,c.binding,notice.resume_cursor):this.codec.encode(c.binding,notice.resume_cursor),
           projection_generation:notice.projection_generation,quality:notice.quality,next_action:"READ_NAMED_SNAPSHOT",reason_code:null});
-        if(!this.queue(c,frame))return;
+        if(!this.queue(c,frame,notice.resume_cursor))return;
       }
       // Always rotate the encrypted heartbeat token, also on a no-change poll.
       // Token equality cannot disclose hidden-only activity/scanned row counts.
       if(!batch.notices.length&&!this.queue(c,scopedRealtimeFrame.parse({schema_version:"portal.execution.scoped-realtime.v1",semantics:"NOTIFICATION_ONLY",
-        event_type:"heartbeat",terminal:false,reconnect_required:false,resume_cursor:this.codec.encode(c.binding,batch.next_cursor),
-        projection_generation:c.binding.projection_generation,quality:null,next_action:"RESUME_PORTAL_CURSOR",reason_code:null})))return;
+        event_type:"heartbeat",terminal:false,reconnect_required:false,resume_cursor:c.native?
+          encodeScopedReplayContinuation(this.codec,c.binding,batch.next_cursor):this.codec.encode(c.binding,batch.next_cursor),
+        projection_generation:c.binding.projection_generation,quality:null,next_action:"RESUME_PORTAL_CURSOR",reason_code:null}),batch.next_cursor))return;
       while(c.queue.length&&!c.closed){
         const item=c.queue[0];
-        const accepted=await c.guard.write(c.binding.principal_scope_digest,()=>{
+        const accepted=c.native?await this.deliverNative(c as NativeClient,item):await (c as LegacyClient).guard.write(c.binding.principal_scope_digest,()=>{
           if(c.closed)return false;
-          return c.write(structuredClone(item.frame));
+          return (c as LegacyClient).write(structuredClone(item.frame));
         });
         if(c.closed)return;
         if(!accepted){this.terminate(c,"resync_required","SLOW_CLIENT");return;}
         c.queue.shift();c.bytes-=item.bytes;this.queuedBytes-=item.bytes;
+        if(c.native)c.sourceCursor=item.native!.sourceCursor;
       }
       if(!c.closed)c.sourceCursor=batch.next_cursor;
     }catch(error){
@@ -238,6 +302,6 @@ export class ScopedReplayHub {
       else if(code&&["GENERATION_CHANGED","SOURCE_COVERAGE_UNPROVED","CURSOR_INVALID_OR_EXPIRED"].includes(code))
         this.terminate(c,"resync_required",code);
       else this.terminate(c,"unavailable","SOURCE_UNAVAILABLE");
-    }finally{c.busy=false;}
+    }finally{c.busy=false;if(nativeFlight)this.nativeFlights--;}
   }
 }

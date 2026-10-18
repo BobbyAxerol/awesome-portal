@@ -150,3 +150,19 @@ Post-focus capacity01:26UTC:154GiB free/10485MiB RAM available, not measured pea
 NO_ACTION_NEEDED, no pruning. One coherent normal hook is prepared under
 native-v2-land-012628; its result/commit are NOT predeclared. Claude intake7.3
 rechecked, no new consumer acknowledgement. Full09/10/11 states above unchanged.
+
+### Normal-hook terminal — 2026-10-18T01:57:52UTC
+
+Actually landed `2c943e147ae409e2c841d7313fa99142193fee9a`:11files,+713/−6.
+Controller native-v2-land-012628 exit0/PASS;69contract files852PASS;
+API387files6669PASS,3existing skipped tests in2files,1456.10s. Build/scoped
+PGrestore/fouraccess-row digests/source-index freeze/eight runtime tuples and
+exact owned teardown/lease PASS. Repeated focused cases are not new coverage.
+Controller SHA256 a0a50d3a7fa662a610143c9261cc0b9ead4cacf2bec759a6fce2de838cd8ffc0;
+log f302de32b1afab5d3cce7105c51ab0cc5638e871f4c3bc9d21eb8b35d7f240d9.
+Capacity01:58UTC154GiBfree/10340MiBavailable, not measured peak;
+NO_ACTION_NEEDED, no pruning or runtime/source/grant changes.
+
+Next same-family [physical-frame integration](native-frame-integration.md)
+changes the coupled implementation and requires its own affected gate; this
+terminal does not prequalify it. Connected09/10/browser/11 states stay open.
