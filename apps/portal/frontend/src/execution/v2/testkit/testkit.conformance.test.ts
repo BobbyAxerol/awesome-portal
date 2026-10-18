@@ -55,6 +55,31 @@ describe("schema checker", () => {
     expect(validateAgainst(SCHEMA, "", withPath(ok, ["page", "rows", 0, "deployments", 0, "net_pnl"], "1e5")).join()).toMatch(/pattern/);
   });
 
+  it("applies prefixItems, not, allOf/if/then/else and contains, which the operations schema relies on", () => {
+    const OPS = "execution-operations.v1";
+    const queue = loadCanonical<Record<string, any>>("execution-operational-queue-links-counts.synthetic").queue;
+    const check = (ptr: string, value: unknown) => validateAgainst(OPS, ptr, value).join();
+    // prefixItems + items:false (a fixed three-word tuple)
+    expect(check("/$defs/OperationalQueueV2", queue)).toBe("");
+    expect(check("/$defs/OperationalQueueV2", withPath(queue, ["supported_target_types"], ["ACCOUNT", "DEPLOYMENT", "PORTFOLIO"]))).toMatch(/supported_target_types\[1\]/);
+    expect(check("/$defs/OperationalQueueV2", withPath(queue, ["supported_target_types"], ["ACCOUNT", "PORTFOLIO", "DEPLOYMENT", "ACCOUNT"]))).toMatch(/more than 3 items/);
+    // allOf + if/then/else (a NOT_PUBLISHED panel pages nothing; has_more needs a cursor and no more means none)
+    const live = loadCanonical<Record<string, any>>("execution-live-source.synthetic").populated;
+    const cursor = `lps2.a.00000001.1234567890.${"A".repeat(43)}`;
+    expect(check("/$defs/LiveSourceOperationsReadV2", live)).toBe("");
+    expect(check("/$defs/LiveSourceOperationsReadV2", withPath(live, ["data", "orders", "has_more"], true))).toMatch(/orders\.next_cursor/);
+    expect(check("/$defs/LiveSourceOperationsReadV2", withPath(live, ["data", "orders", "next_cursor"], cursor))).toMatch(/orders\.next_cursor/);
+    expect(check("/$defs/LiveSourceOperationsReadV2", withPath(live, ["data", "broker_sync", "returned_count"], 1))).not.toBe("");
+    // not (an id may not carry a control character)
+    expect(check("/$defs/LiveSourceOperationsReadV2", withPath(live, ["workspace_id"], "a\u0007b"))).toMatch(/forbidden/);
+    // contains / minContains / maxContains (each of the seven steps exactly once)
+    const sandbox = loadCanonical<Record<string, any>>("execution-positive-parent.synthetic").sandbox;
+    expect(check("/$defs/SandboxParentReadV2", sandbox)).toBe("");
+    const doubled = withPath(sandbox, ["steps", "items", 1, "step_key"], "CONNECT");
+    // The contains rules sit inside a oneOf branch, so the checker reports the branch that matched none.
+    expect(check("/$defs/SandboxParentReadV2", doubled)).toMatch(/matched 0 oneOf branches/);
+  });
+
   it("is not fooled by planted prototype keys", () => {
     const [planted] = pollutionCases(loadCanonical(SCHEMA), [[]]);
     expect(validateAgainst(SCHEMA, "", planted!.value).join()).toMatch(/not allowed/);

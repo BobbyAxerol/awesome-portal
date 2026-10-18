@@ -1,0 +1,839 @@
+/**
+ * Reader conformance for `governanceParents.ts` (Rules 9.8.3, tiers L0 to L3).
+ *
+ * L0  the 19 parent bodies of `execution-positive-parent.synthetic.valid.json`
+ *     (R2, Paper Exit, Sandbox, Canary, Live, and the operation parents), read
+ *     verbatim from disk, schema-checked, read by their own reader and by the
+ *     generic router, and proved unchanged by the suite. The two compositions
+ *     in the same file are not parents and are never read as one.
+ * L1  state matrices; the oracle is the reader's stated contract (header of
+ *     governanceParents.ts) with the published schema beside it:
+ *       A  approval: status x decision clock x update clock x quorum x evidence
+ *       B  Paper Exit: review state x extension x sections; panel clocks
+ *       C  Sandbox: workflow state x clocks; step recording and order
+ *       D  Canary: revision x predecessor x proposed cap spelling
+ *       E  operation: family x status x applied clock x captured parent x decision
+ *     Each maps to the documented UI state: an APPROVED / EXPIRED word passes
+ *     through unchanged, an optional section is an AVAILABLE body or a typed
+ *     absence (never an empty list), a cap is exact and never zero, and
+ *     `APPLIED` exists only with its clock.
+ * L2  the reader bounds (4 panels, 4,096 findings), ~1 MiB of findings and
+ *     200-finding reads. These are single-object reads, not paged; the finding
+ *     bound is what keeps them finite.
+ * L3  generated negatives for every body: enum, integer, string, decimal, array,
+ *     required (every key path), schema swap, pollution and bad roots. Every
+ *     case is refused or accepted only where the published schema also accepts
+ *     it; what the reader accepts beyond the schema is listed and each looseness
+ *     is an `it.fails` titled DEFECT below.
+ */
+import { afterAll, describe, expect, it } from "vitest";
+
+import { canonicalDigest, loadCanonical } from "../testkit/loadCanonical";
+import { ABSENT, cartesian, coverage, describeCoverage, dimension, dimensionOf, getPath, setPath, type Draft } from "../testkit/matrix";
+import {
+  arrayCases, decimalCases, enumCases, integerCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases, stringCases,
+  type NegativeCase,
+} from "../testkit/negative";
+import { cloneRows, MIB, pad, serializedBytes, timed } from "../testkit/scale";
+import { validateAgainst } from "../testkit/schema";
+import {
+  APPROVAL_STATUSES_V2,
+  FINDING_OUTCOMES_V2,
+  FOLLOWING_PARENT_V2_SCHEMA,
+  GOVERNANCE_PARENT_OPERATION_V2_SCHEMA,
+  GOVERNANCE_PARENT_V2_SCHEMA,
+  LIVE_PARENT_V2_SCHEMA,
+  PANEL_KINDS_V2,
+  PANEL_STATES_V2,
+  PARENT_V2_SCHEMAS,
+  REVIEW_STATES_V2,
+  readCanaryParentV2,
+  readGovernanceParentV2,
+  readLiveParentV2,
+  readOperationParentV2,
+  readPaperExitParentV2,
+  readR2ParentV2,
+  readSandboxParentV2,
+} from "./governanceParents";
+
+/* ── budgets (stated, generous: the suite shares a machine with other lanes) ── */
+const BUDGET_4096_FINDINGS_MS = 400;
+const BUDGET_ALL_BODIES_MS = 200;
+const MAX_FINDINGS = 4_096;
+
+const FILE = "execution-positive-parent.synthetic";
+const SCHEMA = "execution-operations.v1";
+const digestBefore = canonicalDigest(FILE);
+afterAll(() => {
+  expect(canonicalDigest(FILE)).toBe(digestBefore);
+});
+
+const canonical = loadCanonical<Draft>(FILE);
+const clone = <T,>(value: T): T => structuredClone(value);
+const violations = (def: string, value: unknown) => validateAgainst(SCHEMA, `/$defs/${def}`, value);
+
+type Reader = (raw: unknown) => unknown;
+interface Body { key: string; def: string; read: Reader; family: string }
+const BODIES: Body[] = [
+  ...["r2", "r2_absent"].map((key) => ({ key, def: "R2ParentReadV2", read: readR2ParentV2 as Reader, family: "R2" })),
+  ...["paper_exit", "paper_exit_absent", "paper_exit_extended"].map((key) => ({ key, def: "PaperExitParentReadV2", read: readPaperExitParentV2 as Reader, family: "PAPER_EXIT" })),
+  ...["r2_operation", "r2_operation_uncaptured", "r2_operation_applied", "r2_operation_expired"].map((key) => ({ key, def: "R2ParentOperationReadV2", read: readOperationParentV2 as Reader, family: "R2" })),
+  ...["paper_exit_operation", "paper_exit_operation_applied", "paper_exit_operation_expired"].map((key) => ({ key, def: "PaperExitParentOperationReadV2", read: readOperationParentV2 as Reader, family: "PAPER_EXIT" })),
+  ...["sandbox", "sandbox_absent", "sandbox_draft"].map((key) => ({ key, def: "SandboxParentReadV2", read: readSandboxParentV2 as Reader, family: "SANDBOX" })),
+  ...["canary", "canary_absent", "canary_revision"].map((key) => ({ key, def: "CanaryParentReadV2", read: readCanaryParentV2 as Reader, family: "CANARY" })),
+  { key: "live", def: "LiveParentReadV2", read: readLiveParentV2 as Reader, family: "LIVE_GATE" },
+];
+const bodyOf = (key: string): Draft => canonical[key];
+
+/* ═════════════════════════ L0 ═════════════════════════ */
+describe("L0 · canonical, verbatim", () => {
+  it("the file is the synthetic unqualified lane with the 19 parent bodies and 2 compositions this suite covers", () => {
+    expect(canonical.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    expect(canonical.runtime_qualified).toBe(false);
+    expect(canonical.authority_installed).toBe(false);
+    expect(BODIES).toHaveLength(19);
+    for (const { key } of BODIES) expect(canonical[key], key).toBeTypeOf("object");
+  });
+
+  it.each(BODIES.map((b) => [b.key, b] as const))("%s: schema-valid, read by its own reader and by the router, family and status unchanged", (_key, b) => {
+    const body = bodyOf(b.key);
+    expect(violations(b.def, body)).toEqual([]);
+    const own = b.read(body) as Draft;
+    expect(own, b.key).not.toBeNull();
+    expect(own.family).toBe(b.family);
+    expect(readGovernanceParentV2(body)).toEqual(own);
+    // The status word of the approval passes through; the published EXPIRED is not turned into a closed or a green state.
+    if (body.approval !== undefined) {
+      expect(own.approval.status).toBe(body.approval.status);
+      expect(own.approval.approvalId).toBe(body.approval.approval_id);
+    }
+    expect(own.header.workspaceId).toBe(body.workspace_id);
+    expect(own.header.observedAt).toBe(body.observed_at_ms);
+    // Every datum the body does not carry is named with its FE request, not left blank.
+    for (const fe of Object.values(own.notPublished as Record<string, string>)) expect(fe).toMatch(/^FE-\d{3}$/);
+  });
+
+  it("the two compositions are not parents: no reader reads them, and the router answers null", () => {
+    for (const key of ["r2_composition", "paper_exit_composition", "live_composition"]) {
+      const body = canonical[key];
+      if (body === undefined) continue;
+      expect(readGovernanceParentV2(body), key).toBeNull();
+      for (const b of BODIES) expect(b.read(body), `${b.key} on ${key}`).toBeNull();
+    }
+  });
+
+  it("R2: an AVAILABLE lineage keeps its ids and currency; an absent one is a typed absence with its reason", () => {
+    const r2 = readR2ParentV2(bodyOf("r2"))!;
+    expect(r2.lineage).toEqual({ availability: "AVAILABLE", basis: "STORED_IMMUTABLE_REFERENCE", r1ApprovalId: "apr_TEST_ONLY_r1", observedRiskGrantId: "grant_TEST_ONLY_historical", currency: "TEST_ONLY:USD" });
+    const absent = readR2ParentV2(bodyOf("r2_absent"))!;
+    expect(absent.lineage).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" });
+    expect(absent.lineage).not.toHaveProperty("r1ApprovalId");
+  });
+
+  it("Paper Exit: the extended review keeps 14 days and its end; panels and findings keep their order and counts", () => {
+    const body = bodyOf("paper_exit_extended");
+    const exit = readPaperExitParentV2(body)!;
+    expect(exit.review).toMatchObject({ reviewState: "EXTENDED", extensionDays: 14, extendedUntil: 1792022400000, reviewVersion: 2 });
+    expect(exit.evaluation.availability).toBe("AVAILABLE");
+    if (exit.evaluation.availability !== "AVAILABLE") return;
+    expect(exit.evaluation.panels.map((p) => p.panelId)).toEqual(body.evaluation.panels.map((p: Draft) => p.panel_id));
+    expect(exit.evaluation.findings.map((f) => f.findingId)).toEqual(body.evaluation.findings.map((f: Draft) => f.finding_id));
+    expect(exit.evaluation.findings.map((f) => f.outcome)).toEqual(body.evaluation.findings.map((f: Draft) => f.outcome));
+    for (const absent of ["paper_exit_absent"]) {
+      const read = readPaperExitParentV2(bodyOf(absent))!;
+      expect(read.evaluation).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" });
+    }
+  });
+
+  it("Sandbox: seven steps in published order; a draft has no submit or decision clock", () => {
+    const sandbox = readSandboxParentV2(bodyOf("sandbox"))!;
+    expect(sandbox.steps.availability).toBe("AVAILABLE");
+    if (sandbox.steps.availability === "AVAILABLE") expect(sandbox.steps.items.map((s) => s.stepKey)).toEqual(["CONNECT", "SYNC", "ORDER_TYPES", "RECONCILIATION", "TIMEBOXED_RUN", "CLEANUP", "EXIT_REVIEW"]);
+    const draft = readSandboxParentV2(bodyOf("sandbox_draft"))!;
+    expect(draft.certification).toMatchObject({ workflowState: "DRAFT", submittedAt: null, decidedAt: null });
+  });
+
+  it("Canary: the proposed caps are the exact strings and proposed, never effective; a second revision names its predecessor", () => {
+    const body = bodyOf("canary");
+    const canary = readCanaryParentV2(body)!;
+    expect(canary.proposal.availability).toBe("AVAILABLE");
+    if (canary.proposal.availability === "AVAILABLE") {
+      expect(canary.proposal.basis).toBe("PROPOSED_NOT_EFFECTIVE");
+      expect(canary.proposal.capitalCap.exact).toBe(body.proposal.capital_cap);
+      expect(canary.proposal.capitalCap.decimal.full).toBe(body.proposal.capital_cap);
+      expect(canary.proposal.grossNotionalCap.exact).toBe(body.proposal.gross_notional_cap);
+    }
+    expect(canary.envelope).toMatchObject({ status: "DRAFT", productionCommandActive: false, deliveryProfile: "fixture" });
+    expect(readCanaryParentV2(bodyOf("canary_revision"))!.envelope).toMatchObject({ revision: 2, previousEnvelopeId: "env_TEST_ONLY_parent" });
+  });
+
+  it("operations: APPLIED carries its clock, PLANNED and EXPIRED do not; the captured parent is all three facts or none", () => {
+    for (const { key } of BODIES.filter((b) => b.key.includes("_operation"))) {
+      const op = readOperationParentV2(bodyOf(key))!.operation;
+      expect(op.status === "APPLIED", key).toBe(op.appliedAt !== null);
+      expect(op.status, key).toBe(bodyOf(key).status);
+    }
+    expect(readOperationParentV2(bodyOf("r2_operation"))!.operation.capturedParent).toMatchObject({ approvalId: "apr_TEST_ONLY_r1" });
+    expect(readOperationParentV2(bodyOf("r2_operation_uncaptured"))!.operation.capturedParent).toBeNull();
+    expect(readOperationParentV2(bodyOf("paper_exit_operation"))!.operation.capturedParent).toBeNull();
+  });
+
+  it("Live: the accepted manager facts are a typed absence, the environment is LIVE, and the runtime flag stays false", () => {
+    const live = readLiveParentV2(bodyOf("live"))!;
+    expect(live.acceptedManagerFacts).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION" });
+    expect(live.anchors.environment).toBe("LIVE");
+    expect(live.header.source.runtimeActivationRequested).toBe(false);
+  });
+
+  it("the router's schema list is the four families, and every body's version is on it", () => {
+    expect([...PARENT_V2_SCHEMAS]).toEqual([GOVERNANCE_PARENT_V2_SCHEMA, GOVERNANCE_PARENT_OPERATION_V2_SCHEMA, FOLLOWING_PARENT_V2_SCHEMA, LIVE_PARENT_V2_SCHEMA]);
+    for (const { key } of BODIES) expect(PARENT_V2_SCHEMAS).toContain(bodyOf(key).schema_version);
+  });
+});
+
+/* ═════════════════════════ L1 ═════════════════════════ */
+describe("L1 · matrix A · approval: status x decision clock x update clock x quorum x evidence", () => {
+  const C = bodyOf("r2").approval.created_at_ms as number;
+  const DIMS = [
+    dimension("status", ["approval", "status"], [...APPROVAL_STATUSES_V2]),
+    dimensionOf("decided_at", [
+      { label: "null", apply: (d: Draft) => { d.approval.decided_at_ms = null; } },
+      { label: "after-created", apply: (d: Draft) => { d.approval.decided_at_ms = C + 1000; } },
+      { label: "before-created", apply: (d: Draft) => { d.approval.decided_at_ms = C - 1; } },
+    ]),
+    dimensionOf("updated_at", [
+      { label: "ok", apply: (d: Draft) => { d.approval.updated_at_ms = C + 1; } },
+      { label: "before-created", apply: (d: Draft) => { d.approval.updated_at_ms = C - 1; } },
+    ]),
+    dimensionOf("quorum", [[0, 1], [0, 2], [2, 2], [3, 2], [0, 0]].map(([met, required]) => ({
+      label: `${met}/${required}`, apply: (d: Draft) => { d.approval.quorum_met = met; d.approval.quorum_required = required; },
+    }))),
+    dimension("evidence_complete", ["approval", "evidence_complete"], [true, false]),
+  ];
+  const states = cartesian(bodyOf("r2"), DIMS);
+  const accepts = (p: Record<string, string>) => p.updated_at === "ok" && p.decided_at !== "before-created";
+
+  it("prints the matrix size and where the reader and the schema differ", () => {
+    const cover = coverage(DIMS, states);
+    const looser = states.filter((s) => readR2ParentV2(s.value) !== null && violations("R2ParentReadV2", s.value).length > 0);
+    console.info(describeCoverage("governanceParents A (approval) cartesian", cover));
+    console.info(`governanceParents A: reader accepts ${states.filter((s) => readR2ParentV2(s.value) !== null).length}, schema accepts ${states.filter((s) => violations("R2ParentReadV2", s.value).length === 0).length}; ${looser.length} accepted by the reader that the schema refuses (all quorum_required=0)`);
+    expect(states).toHaveLength(6 * 3 * 2 * 5 * 2);
+    expect(looser.every((s) => s.picks.quorum.endsWith("/0"))).toBe(true);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    expect(() => readR2ParentV2(state.value)).not.toThrow();
+    const read = readR2ParentV2(state.value);
+    expect(read !== null).toBe(accepts(state.picks));
+    if (read === null) return;
+    const a = read.approval;
+    expect(a.status).toBe(state.picks.status);
+    expect(a.evidenceComplete).toBe(state.picks.evidence_complete === "true");
+    expect(a.quorumMet).toBe(state.value.approval.quorum_met);
+    expect(a.quorumRequired).toBe(state.value.approval.quorum_required);
+    expect(a.decidedAt).toBe(state.value.approval.decided_at_ms);
+    // Portal lifecycle clocks only; nothing is derived from them (no `isExpired`, `closed`, `overdue`).
+    expect(Object.keys(a).filter((k) => /expired|closed|overdue|due$/i.test(k))).toEqual([]);
+    expect(readGovernanceParentV2(state.value)).toEqual(read);
+  });
+});
+
+describe("L1 · matrix B · Paper Exit: review state x extension x sections; panel clocks", () => {
+  const base = bodyOf("paper_exit");
+  const absent = { availability: "NOT_PUBLISHED", reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" };
+  const DIMS = [
+    dimension("review_state", ["review", "review_state"], [...REVIEW_STATES_V2]),
+    dimensionOf("extension", [
+      { label: "none", apply: (d: Draft) => { d.review.extension_days = null; d.review.extended_until_ms = null; } },
+      { label: "14d", apply: (d: Draft) => { d.review.extension_days = 14; d.review.extended_until_ms = 1792022400000; } },
+      { label: "7d", apply: (d: Draft) => { d.review.extension_days = 7; d.review.extended_until_ms = 1792022400000; } },
+      { label: "14d no end", apply: (d: Draft) => { d.review.extension_days = 14; d.review.extended_until_ms = null; } },
+    ]),
+    dimensionOf("evaluation", [{ label: "available", apply: () => undefined }, { label: "absent", apply: (d: Draft) => { d.evaluation = clone(absent); } }]),
+    dimensionOf("lineage", [{ label: "available", apply: () => undefined }, { label: "absent", apply: (d: Draft) => { d.lineage = clone(absent); } }]),
+  ];
+  const states = cartesian(base, DIMS);
+  // EXTENDED needs exactly 14 days and an end; every other state needs neither.
+  const accepts = (p: Record<string, string>) => (p.review_state === "EXTENDED" ? p.extension === "14d" : p.extension === "none");
+
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("governanceParents B (exit review) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(4 * 4 * 2 * 2);
+    // (EXTENDED + 14d) + (3 other states + no extension), each over the 2 x 2 section choices.
+    expect(states.filter((s) => accepts(s.picks))).toHaveLength((1 + 3) * 2 * 2);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const read = readPaperExitParentV2(state.value);
+    expect(read !== null).toBe(accepts(state.picks));
+    if (read === null) return;
+    expect(read.review.reviewState).toBe(state.picks.review_state);
+    expect(read.review.extensionDays === 14).toBe(state.picks.review_state === "EXTENDED");
+    // An optional section is an AVAILABLE body or a typed absence, never an empty list.
+    expect(read.evaluation.availability).toBe(state.value.evaluation.availability);
+    expect(read.lineage.availability).toBe(state.value.lineage.availability);
+    if (read.evaluation.availability === "NOT_PUBLISHED") expect(read.evaluation).not.toHaveProperty("panels");
+    expect(violations("PaperExitParentReadV2", state.value)).toEqual([]);
+  });
+
+  describe("panel clocks: freshness x as_of x completeness x poll interval", () => {
+    const P = base.evaluation.panels[0];
+    const PDIMS = [
+      dimension("freshness", ["evaluation", "panels", 0, "freshness_state"], ["OK", "STALE", "UNKNOWN"]),
+      dimension("as_of", ["evaluation", "panels", 0, "as_of_ms"], [null, 1790812800000]),
+      dimension("completeness", ["evaluation", "panels", 0, "source_completeness"], ["EVENT_SOURCED", "POLL_BOUNDED", "UNKNOWN"]),
+      // 3,600,001 is read as "no interval" by the reader: DEFECT GP-3, held below, so it is not a matrix value.
+      dimension("poll", ["evaluation", "panels", 0, "poll_interval_ms"], [null, 100, 99, 3_600_000]),
+    ];
+    const pstates = cartesian({ ...base, evaluation: { ...base.evaluation, panels: [clone(P)], findings: [] } }, PDIMS);
+    const paccepts = (p: Record<string, string>) =>
+      !(p.freshness === "OK" && p.as_of === "null")
+      && (p.completeness === "POLL_BOUNDED") === (p.poll !== "null")
+      && (p.poll === "null" || (Number(p.poll) >= 100 && Number(p.poll) <= 3_600_000));
+
+    it("prints the matrix size", () => {
+      console.info(describeCoverage("governanceParents B (panel clocks) cartesian", coverage(PDIMS, pstates)));
+      expect(pstates).toHaveLength(3 * 2 * 3 * 4);
+    });
+
+    it.each(pstates.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+      const read = readPaperExitParentV2(state.value);
+      expect(read !== null).toBe(paccepts(state.picks));
+      if (read === null || read.evaluation.availability !== "AVAILABLE") return;
+      const panel = read.evaluation.panels[0]!;
+      // A fresh panel always has a clock; a panel with no clock is never "fresh".
+      if (panel.freshness === "OK") expect(panel.asOf).not.toBeNull();
+      expect(panel.pollIntervalMs).toBe(state.value.evaluation.panels[0].poll_interval_ms);
+    });
+  });
+});
+
+describe("L1 · matrix C · Sandbox: workflow state x clocks; step recording and order", () => {
+  const base = bodyOf("sandbox");
+  const C = base.certification.created_at_ms as number;
+  const DIMS = [
+    dimension("workflow_state", ["certification", "workflow_state"], ["DRAFT", "IN_REVIEW", "APPROVED", "DENIED"]),
+    dimensionOf("submitted_at", [
+      { label: "null", apply: (d: Draft) => { d.certification.submitted_at_ms = null; } },
+      { label: "after-created", apply: (d: Draft) => { d.certification.submitted_at_ms = C + 1000; } },
+      { label: "before-created", apply: (d: Draft) => { d.certification.submitted_at_ms = C - 1; } },
+    ]),
+    dimensionOf("decided_at", [
+      { label: "null", apply: (d: Draft) => { d.certification.decided_at_ms = null; } },
+      { label: "after-submitted", apply: (d: Draft) => { d.certification.decided_at_ms = C + 2000; } },
+      { label: "before-submitted", apply: (d: Draft) => { d.certification.decided_at_ms = C + 500; } },
+    ]),
+    dimensionOf("updated_at", [
+      { label: "ok", apply: (d: Draft) => { d.certification.updated_at_ms = C + 3000; } },
+      { label: "before-created", apply: (d: Draft) => { d.certification.updated_at_ms = C - 1; } },
+    ]),
+  ];
+  const states = cartesian(base, DIMS);
+  const accepts = (p: Record<string, string>) => {
+    if (p.updated_at !== "ok" || p.submitted_at === "before-created") return false;
+    if (p.decided_at === "null") return true;
+    if (p.submitted_at === "null") return false;
+    return p.decided_at === "after-submitted";
+  };
+
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("governanceParents C (sandbox clocks) cartesian", coverage(DIMS, states)));
+    const looser = states.filter((x) => readSandboxParentV2(x.value) !== null && violations("SandboxParentReadV2", x.value).length > 0);
+    console.info(`governanceParents C: reader accepts ${states.filter((x) => accepts(x.picks)).length}, ${looser.length} of them the schema refuses (state and clock disagree)`);
+    expect(states).toHaveLength(4 * 3 * 3 * 2);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const read = readSandboxParentV2(state.value);
+    expect(read !== null).toBe(accepts(state.picks));
+    if (read === null) return;
+    expect(read.certification.workflowState).toBe(state.picks.workflow_state);
+    // The state word is the server's; the reader does not derive APPROVED from a decision clock.
+    expect(read.certification.decidedAt).toBe(state.value.certification.decided_at_ms);
+    // Where the schema refuses a state the reader accepts, it is only the state/clock pairing (DEFECT GP-6).
+    if (violations("SandboxParentReadV2", state.value).length > 0) {
+      const p = state.picks;
+      const draftWithSubmit = p.workflow_state === "DRAFT" && p.submitted_at !== "null";
+      const submittedWithout = p.workflow_state !== "DRAFT" && p.submitted_at === "null";
+      const decidedMismatch = (p.workflow_state === "APPROVED" || p.workflow_state === "DENIED") !== (p.decided_at !== "null");
+      expect(draftWithSubmit || submittedWithout || decidedMismatch, state.name).toBe(true);
+    }
+  });
+
+  describe("steps", () => {
+    const NOT_RECORDED = (key: string) => ({ step_key: key, availability: "NOT_RECORDED", evidence_id: null, stored_evaluation_state: null, source_authority: null, source_verification_state: null, as_of_ms: null, expires_at_ms: null });
+    const order = base.steps.items.map((s: Draft) => s.step_key) as string[];
+    const VARIANTS: [string, (items: Draft[]) => Draft[], boolean][] = [
+      ["as published", (i) => i, true],
+      ["last NOT_RECORDED", (i) => [...i.slice(0, 6), NOT_RECORDED("EXIT_REVIEW")], true],
+      ["all NOT_RECORDED", (i) => i.map((s) => NOT_RECORDED(s.step_key)), true],
+      ["NOT_RECORDED with an evidence id", (i) => [...i.slice(0, 6), { ...NOT_RECORDED("EXIT_REVIEW"), evidence_id: "ev_x" }], false],
+      ["NOT_RECORDED with a clock", (i) => [...i.slice(0, 6), { ...NOT_RECORDED("EXIT_REVIEW"), as_of_ms: 1 }], false],
+      ["AVAILABLE with no evidence id", (i) => [{ ...i[0], evidence_id: null }, ...i.slice(1)], false],
+      ["two steps swapped", (i) => [i[1], i[0], ...i.slice(2)], false],
+      ["a step twice", (i) => [...i.slice(0, 6), { ...i[0] }], false],
+      ["six steps", (i) => i.slice(0, 6), false],
+      ["eight steps", (i) => [...i, { ...i[0] }], false],
+      ["no steps", () => [], false],
+    ];
+    it("prints the matrix size", () => {
+      console.info(`governanceParents C (steps): ${VARIANTS.length} variants over ${order.length} published steps, ${VARIANTS.filter((v) => v[2]).length} accepted`);
+      expect(order).toHaveLength(7);
+    });
+    it.each(VARIANTS.map((v) => [v[0], v] as const))("%s", (_name, [, edit, ok]) => {
+      const body = clone(base);
+      body.steps.items = edit(clone(body.steps.items));
+      const read = readSandboxParentV2(body);
+      expect(read !== null).toBe(ok);
+      if (read !== null && read.steps.availability === "AVAILABLE") {
+        // Not recorded is not failed and not "not yet": every other field is null.
+        for (const step of read.steps.items.filter((s) => !s.recorded)) expect([step.evidenceId, step.storedEvaluation, step.asOf, step.expiresAt]).toEqual([null, null, null, null]);
+      }
+    });
+  });
+});
+
+describe("L1 · matrix D · Canary: revision x predecessor x proposed cap spelling", () => {
+  const base = bodyOf("canary");
+  const CAPS: unknown[] = ["1", "0", "0.00", "-1", "1e5", "01", "12345678901234567890", "123456789012345678901", "1.123456789012345678", "1.1234567890123456789", ".5", "5.", "1,000", 5, null, "9007199254740993.123456789123456789"];
+  const REVISIONS: [number, string | null][] = [[1, null], [1, "env_prev"], [2, "env_prev"], [2, null], [0, null], [3, "env_prev"]];
+  const DIMS = [
+    dimensionOf("revision", REVISIONS.map(([rev, prev]) => ({ label: `${rev}/${prev === null ? "no-prev" : "prev"}`, apply: (d: Draft) => { d.envelope.revision = rev; d.envelope.previous_envelope_id = prev; } }))),
+    dimensionOf("capital_cap", CAPS.map((cap) => ({ label: String(JSON.stringify(cap)), apply: (d: Draft) => { d.proposal.capital_cap = cap; } }))),
+  ];
+  const states = cartesian(base, DIMS);
+  // The schema's own pattern: no leading zero, 20 integer and 18 fractional digits at most, and never zero.
+  const capOk = (cap: unknown) => typeof cap === "string" && /^(?:0|[1-9][0-9]{0,19})(?:\.[0-9]{1,18})?$/.test(cap) && !/^[0.]+$/.test(cap);
+  const accepts = (p: Record<string, string>) => {
+    const [rev, prev] = p.revision.split("/");
+    const cap = JSON.parse(p.capital_cap) as unknown;
+    return Number(rev) >= 1 && (rev === "1") === (prev === "no-prev") && capOk(cap);
+  };
+
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("governanceParents D (canary) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(REVISIONS.length * CAPS.length);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const read = readCanaryParentV2(state.value);
+    expect(read !== null).toBe(accepts(state.picks));
+    if (read === null || read.proposal.availability !== "AVAILABLE") return;
+    // A cap is the exact string, never a JS number, never zero or negative, and proposed, not effective.
+    expect(read.proposal.capitalCap.exact).toBe(state.value.proposal.capital_cap);
+    expect(read.proposal.capitalCap.decimal.zero).toBe(false);
+    expect(read.proposal.basis).toBe("PROPOSED_NOT_EFFECTIVE");
+    expect(read.envelope.status).toBe("DRAFT");
+  });
+});
+
+describe("L1 · matrix E · operation: family x status x applied clock x captured parent x decision", () => {
+  const bases: Record<string, Draft> = { R2: bodyOf("r2_operation_uncaptured"), PAPER_EXIT: bodyOf("paper_exit_operation") };
+  const DECISIONS: Record<string, string[]> = { R2: ["APPROVE", "APPROVE_WITH_CONDITION", "DENY"], PAPER_EXIT: ["PROMOTE", "EXTEND_OBSERVATION", "REJECT"] };
+  const HASH = `sha256:${"a".repeat(64)}`;
+  const DIMS = [
+    dimensionOf("family", [{ label: "R2", apply: () => undefined }, { label: "PAPER_EXIT", apply: () => undefined }]),
+    dimension("status", ["status"], ["PLANNED", "APPLIED", "EXPIRED"]),
+    dimensionOf("applied_at", [{ label: "null", apply: () => undefined }, { label: "after-created", apply: () => undefined }, { label: "before-created", apply: () => undefined }]),
+    dimensionOf("parent", [{ label: "none", apply: () => undefined }, { label: "all three", apply: () => undefined }, { label: "id and version only", apply: () => undefined }]),
+    dimensionOf("decision", [{ label: "own", apply: () => undefined }, { label: "other family's", apply: () => undefined }, { label: "unknown word", apply: () => undefined }]),
+  ];
+  const states = cartesian(bases.R2, DIMS).map((s) => {
+    const body = clone(bases[s.picks.family]!);
+    body.status = s.picks.status;
+    const created = body.created_at_ms as number;
+    body.applied_at_ms = s.picks.applied_at === "null" ? null : s.picks.applied_at === "after-created" ? created + 1000 : created - 1;
+    if (s.picks.parent === "all three") { body.parent_approval_id = "apr_x"; body.parent_approval_version = 1; body.parent_evidence_set_hash = HASH; }
+    if (s.picks.parent === "id and version only") { body.parent_approval_id = "apr_x"; body.parent_approval_version = 1; body.parent_evidence_set_hash = null; }
+    const own = DECISIONS[s.picks.family]!;
+    const other = DECISIONS[s.picks.family === "R2" ? "PAPER_EXIT" : "R2"]!;
+    body.decision = s.picks.decision === "own" ? own[0] : s.picks.decision === "other family's" ? other[0] : "MAYBE";
+    return { ...s, value: body };
+  });
+  const accepts = (p: Record<string, string>) => {
+    if ((p.status === "APPLIED") !== (p.applied_at !== "null")) return false;
+    if (p.applied_at === "before-created") return false;
+    if (p.parent === "id and version only") return false;
+    if (p.parent === "all three" && p.family !== "R2") return false;
+    return p.decision === "own";
+  };
+
+  it("prints the matrix size and where the reader and the schema differ", () => {
+    const looser = states.filter((s) => readOperationParentV2(s.value) !== null && violations(s.picks.family === "R2" ? "R2ParentOperationReadV2" : "PaperExitParentOperationReadV2", s.value).length > 0);
+    console.info(describeCoverage("governanceParents E (operation) cartesian", coverage(DIMS, states)));
+    console.info(`governanceParents E: ${states.length} states, ${states.filter((s) => accepts(s.picks)).length} accepted; ${looser.length} accepted by the reader that the schema refuses`);
+    expect(states).toHaveLength(2 * 3 * 3 * 3 * 3);
+    expect(looser).toHaveLength(0);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const read = readOperationParentV2(state.value);
+    expect(read !== null).toBe(accepts(state.picks));
+    if (read === null) return;
+    // APPLIED is the stored Portal state; the reader exposes the clock with it, and no acceptance/settlement claim.
+    expect(read.operation.status === "APPLIED").toBe(read.operation.appliedAt !== null);
+    expect(Object.keys(read.operation).filter((k) => /accept|settle|verif|broker/i.test(k))).toEqual([]);
+    expect(read.operation.commandType).toBe(state.picks.family === "R2" ? "GOVERNANCE_R2_DECISION" : "GOVERNANCE_PAPER_EXIT_DECISION");
+  });
+});
+
+/* ═════════════════════════ L2 ═════════════════════════ */
+describe("L2 · scale", () => {
+  const base = bodyOf("paper_exit_extended");
+  const withFindings = (n: number, idLength = 20): Draft => {
+    const body = clone(base);
+    const kinds = body.evaluation.panels.map((p: Draft) => p.panel_id) as string[];
+    body.evaluation.findings = cloneRows(base.evaluation.findings[0] as Draft, n, (f, i) => {
+      f.finding_id = `finding_${pad(i)}`.padEnd(idLength, "x");
+      f.panel_id = kinds[i % kinds.length]!;
+      f.ordinal = i;
+    });
+    return body;
+  };
+
+  it("all 19 published bodies are read inside the budget, repeated 50 times", () => {
+    const { ms } = timed(() => {
+      for (let n = 0; n < 50; n += 1) for (const b of BODIES) b.read(bodyOf(b.key));
+    });
+    console.info(`governanceParents 19 bodies x 50: ${ms.toFixed(0)} ms (budget ${BUDGET_ALL_BODIES_MS} ms)`);
+    expect(ms).toBeLessThan(BUDGET_ALL_BODIES_MS);
+  });
+
+  it("reads 200 findings, in order, inside the budget", () => {
+    const body = withFindings(200);
+    const { value, ms } = timed(() => readPaperExitParentV2(body));
+    expect(value).not.toBeNull();
+    if (value!.evaluation.availability === "AVAILABLE") expect(value!.evaluation.findings.map((f) => f.ordinal)).toEqual(Array.from({ length: 200 }, (_, i) => i));
+    expect(ms).toBeLessThan(BUDGET_4096_FINDINGS_MS);
+  });
+
+  it("reads the schema's bound (256 findings) inside the budget", () => {
+    const body = withFindings(256, 191);
+    const { value, ms } = timed(() => readPaperExitParentV2(body));
+    expect(violations("PaperExitParentReadV2", body)).toEqual([]);
+    expect(value).not.toBeNull();
+    expect(ms).toBeLessThan(BUDGET_4096_FINDINGS_MS);
+  });
+
+  it(`reads the reader's own bound (${MAX_FINDINGS} findings, ~1 MiB with 191 character ids) inside the budget and refuses one over it; the read is not paged`, () => {
+    const body = withFindings(MAX_FINDINGS, 191);
+    const bytes = serializedBytes(body);
+    const { value, ms } = timed(() => readPaperExitParentV2(body));
+    console.info(`governanceParents ${(bytes / MIB).toFixed(2)} MiB, ${MAX_FINDINGS} findings: ${ms.toFixed(0)} ms (budget ${BUDGET_4096_FINDINGS_MS} ms)`);
+    expect(bytes).toBeGreaterThan(0.9 * MIB);
+    expect(value).not.toBeNull();
+    expect(ms).toBeLessThan(BUDGET_4096_FINDINGS_MS);
+    expect(readPaperExitParentV2(withFindings(MAX_FINDINGS + 1))).toBeNull();
+    // The published schema allows 256 findings, so this size is outside the contract (DEFECT GP-4).
+    expect(violations("PaperExitParentReadV2", body).length).toBeGreaterThan(0);
+  });
+
+  it("a fifth panel is refused (the bound is four, one per kind)", () => {
+    const body = clone(base);
+    body.evaluation.panels.push({ ...clone(body.evaluation.panels[0]), panel_id: "panel_TEST_ONLY_5" });
+    expect(readPaperExitParentV2(body)).toBeNull();
+  });
+
+  it("a 70,000 character id, version or digit string is refused fast, not scanned", () => {
+    const cases: [Reader, string, readonly (string | number)[], string][] = [
+      [readR2ParentV2, "r2", ["approval", "approval_id"], "a".repeat(70_000)],
+      [readR2ParentV2, "r2", ["workspace_id"], "a".repeat(70_000)],
+      [readR2ParentV2, "r2", ["approval", "policy_version"], "a".repeat(70_000)],
+      [readPaperExitParentV2, "paper_exit_extended", ["lineage", "source_snapshot_hash"], `sha256:${"a".repeat(70_000)}`],
+      [readCanaryParentV2, "canary", ["proposal", "capital_cap"], "9".repeat(70_000)],
+      [readCanaryParentV2, "canary", ["proposal", "capital_cap"], `1.${"9".repeat(70_000)}`],
+    ];
+    for (const [read, key, path, text] of cases) {
+      const body = clone(bodyOf(key));
+      setPath(body, path, text);
+      const { value, ms } = timed(() => read(body));
+      expect(value, path.join(".")).toBeNull();
+      expect(ms, path.join(".")).toBeLessThan(100);
+    }
+  });
+});
+
+/* ═════════════════════════ L3 ═════════════════════════ */
+interface Case extends NegativeCase { body: string }
+
+const OBJ_KEYS = (root: unknown, prefix: (string | number)[] = [], depth = 0): (string | number)[][] => {
+  if (typeof root !== "object" || root === null || depth > 4) return [];
+  if (Array.isArray(root)) return root.length > 0 ? OBJ_KEYS(root[0], [...prefix, 0], depth + 1) : [];
+  return Object.entries(root).flatMap(([k, v]) => [[...prefix, k], ...OBJ_KEYS(v, [...prefix, k], depth + 1)]);
+};
+
+/** Per body: the enum, integer, string and decimal paths worth generating from (valid words are the published ones). */
+interface Plan { enums: [(string | number)[], readonly string[]][]; ints: (string | number)[][]; strs: (string | number)[][]; decs?: (string | number)[][]; arrays?: [(string | number)[], string | undefined][]; containers: (string | number)[][] }
+const APPROVAL_INTS = [["approval", "approval_version"], ["approval", "quorum_required"], ["approval", "quorum_met"], ["approval", "created_at_ms"], ["approval", "updated_at_ms"], ["approval", "sla_due_at_ms"], ["approval", "expires_at_ms"], ["approval", "decided_at_ms"], ["observed_at_ms"]];
+const APPROVAL_STRS = [["workspace_id"], ["approval", "approval_id"], ["approval", "policy_version"], ["anchors", "deployment_id"]];
+const PLANS: Record<string, Plan> = {
+  r2: {
+    enums: [[["approval", "status"], APPROVAL_STATUSES_V2], [["family"], ["R2"]], [["anchors", "environment"], ["PAPER"]], [["lineage", "availability"], ["AVAILABLE", "NOT_PUBLISHED"]]],
+    ints: APPROVAL_INTS, strs: [...APPROVAL_STRS, ["lineage", "r1_approval_id"], ["lineage", "observed_risk_grant_id"], ["lineage", "currency"], ["anchors", "portfolio_id"]],
+    containers: [[], ["approval"], ["anchors"], ["lineage"], ["source"]],
+  },
+  paper_exit_extended: {
+    enums: [[["approval", "status"], APPROVAL_STATUSES_V2], [["review", "review_state"], REVIEW_STATES_V2], [["evaluation", "panels", 0, "panel_kind"], PANEL_KINDS_V2],
+      [["evaluation", "panels", 0, "panel_state"], PANEL_STATES_V2], [["evaluation", "panels", 0, "source_authority"], ["RESEARCH", "EXECUTION", "BROKER", "DERIVED"]],
+      [["evaluation", "panels", 0, "freshness_state"], ["OK", "STALE", "UNKNOWN"]], [["evaluation", "panels", 0, "source_completeness"], ["EVENT_SOURCED", "POLL_BOUNDED", "UNKNOWN"]],
+      [["evaluation", "findings", 0, "outcome"], FINDING_OUTCOMES_V2], [["review", "promote_to"], ["SANDBOX_VALIDATION"]]],
+    ints: [...APPROVAL_INTS, ["review", "review_version"], ["review", "extension_days"], ["review", "extended_until_ms"], ["evaluation", "panels", 0, "ordinal"], ["evaluation", "panels", 0, "poll_interval_ms"], ["evaluation", "findings", 0, "ordinal"]],
+    strs: [...APPROVAL_STRS, ["review", "review_id"], ["evaluation", "panels", 0, "panel_id"], ["evaluation", "findings", 0, "finding_id"], ["evaluation", "findings", 0, "panel_id"], ["lineage", "source_snapshot_hash"], ["lineage", "evidence_set_hash"], ["evaluation", "evaluation_policy_version"]],
+    arrays: [[["evaluation", "panels"], "panel_id"], [["evaluation", "findings"], "finding_id"]],
+    containers: [[], ["approval"], ["review"], ["evaluation"], ["evaluation", "panels", 0], ["evaluation", "findings", 0], ["lineage"]],
+  },
+  live: {
+    enums: [[["approval", "status"], APPROVAL_STATUSES_V2], [["family"], ["LIVE_GATE"]], [["anchors", "environment"], ["LIVE"]]],
+    ints: APPROVAL_INTS, strs: [...APPROVAL_STRS, ["accepted_manager_facts", "reason_code"]], containers: [[], ["approval"], ["anchors"], ["accepted_manager_facts"], ["source"]],
+  },
+  sandbox: {
+    enums: [[["certification", "workflow_state"], ["DRAFT", "IN_REVIEW", "APPROVED", "DENIED"]], [["steps", "items", 0, "availability"], ["AVAILABLE", "NOT_RECORDED"]],
+      [["steps", "items", 0, "stored_evaluation_state"], ["PASS", "FAIL", "STALE", "UNAVAILABLE"]], [["steps", "items", 0, "source_authority"], ["PORTAL", "EXECUTION", "BROKER", "DERIVED"]],
+      [["steps", "items", 0, "source_verification_state"], ["VERIFIED", "UNAVAILABLE"]], [["certification", "source_integration_state"], ["UNAVAILABLE", "SHADOW"]], [["certification", "delivery_profile"], ["fixture", "shadow"]],
+      [["steps", "items", 0, "step_key"], ["CONNECT", "SYNC", "ORDER_TYPES", "RECONCILIATION", "TIMEBOXED_RUN", "CLEANUP", "EXIT_REVIEW"]]],
+    ints: [["certification", "workflow_version"], ["certification", "created_at_ms"], ["certification", "updated_at_ms"], ["certification", "submitted_at_ms"], ["certification", "decided_at_ms"], ["steps", "items", 0, "as_of_ms"], ["observed_at_ms"]],
+    strs: [["workspace_id"], ["certification", "certification_id"], ["certification", "policy_version"], ["steps", "items", 0, "evidence_id"], ["lineage", "promotion_grant_id"], ["anchors", "deployment_id"]],
+    arrays: [[["steps", "items"], "step_key"]],
+    containers: [[], ["certification"], ["anchors"], ["steps"], ["steps", "items", 0], ["lineage"], ["source"]],
+  },
+  canary: {
+    enums: [[["envelope", "status"], ["DRAFT"]], [["envelope", "delivery_profile"], ["fixture"]], [["envelope", "source_integration_state"], ["UNAVAILABLE"]], [["anchors", "environment"], ["LIVE"]], [["proposal", "basis"], ["PROPOSED_NOT_EFFECTIVE"]]],
+    ints: [["envelope", "revision"], ["envelope", "expected_certification_version"], ["envelope", "created_at_ms"], ["proposal", "max_open_orders"], ["proposal", "duration_days"], ["observed_at_ms"]],
+    strs: [["workspace_id"], ["envelope", "envelope_id"], ["envelope", "previous_envelope_id"], ["proposal", "currency"], ["proposal", "base_risk_profile_revision"], ["lineage", "certification_id"]],
+    decs: [["proposal", "capital_cap"], ["proposal", "gross_notional_cap"], ["proposal", "daily_loss_cap"]],
+    containers: [[], ["envelope"], ["proposal"], ["lineage"], ["anchors"], ["source"]],
+  },
+  r2_operation: {
+    enums: [[["status"], ["PLANNED", "APPLIED", "EXPIRED"]], [["decision"], ["APPROVE", "APPROVE_WITH_CONDITION", "DENY"]], [["family"], ["R2", "PAPER_EXIT"]], [["command_type"], ["GOVERNANCE_R2_DECISION"]], [["approval", "status"], APPROVAL_STATUSES_V2]],
+    ints: [...APPROVAL_INTS, ["command_version"], ["expected_version"], ["parent_approval_version"], ["created_at_ms"], ["expires_at_ms"], ["applied_at_ms"]],
+    strs: [...APPROVAL_STRS, ["operation_id"], ["parent_approval_id"], ["parent_evidence_set_hash"]],
+    containers: [[], ["approval"], ["anchors"], ["source"]],
+  },
+  paper_exit_operation: {
+    enums: [[["status"], ["PLANNED", "APPLIED", "EXPIRED"]], [["decision"], ["PROMOTE", "EXTEND_OBSERVATION", "REJECT"]], [["command_type"], ["GOVERNANCE_PAPER_EXIT_DECISION"]]],
+    ints: [["command_version"], ["expected_version"], ["created_at_ms"], ["expires_at_ms"], ["applied_at_ms"]],
+    strs: [["operation_id"], ["workspace_id"]],
+    containers: [[], ["approval"], ["anchors"], ["source"]],
+  },
+};
+const PLAN_BODY: Record<string, { key: string; def: string; read: Reader; schemaVersions: string[] }> = {
+  r2: { key: "r2", def: "R2ParentReadV2", read: readR2ParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_V2_SCHEMA] },
+  paper_exit_extended: { key: "paper_exit_extended", def: "PaperExitParentReadV2", read: readPaperExitParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_V2_SCHEMA] },
+  live: { key: "live", def: "LiveParentReadV2", read: readLiveParentV2 as Reader, schemaVersions: [LIVE_PARENT_V2_SCHEMA] },
+  sandbox: { key: "sandbox", def: "SandboxParentReadV2", read: readSandboxParentV2 as Reader, schemaVersions: [FOLLOWING_PARENT_V2_SCHEMA] },
+  canary: { key: "canary", def: "CanaryParentReadV2", read: readCanaryParentV2 as Reader, schemaVersions: [FOLLOWING_PARENT_V2_SCHEMA] },
+  r2_operation: { key: "r2_operation", def: "R2ParentOperationReadV2", read: readOperationParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_OPERATION_V2_SCHEMA] },
+  paper_exit_operation: { key: "paper_exit_operation", def: "PaperExitParentOperationReadV2", read: readOperationParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_OPERATION_V2_SCHEMA] },
+};
+
+const CASES: (Case & { def: string; read: Reader })[] = Object.entries(PLANS).flatMap(([name, plan]) => {
+  const spec = PLAN_BODY[name]!;
+  const base = bodyOf(spec.key);
+  const tag = (cases: NegativeCase[]) => cases.map((c) => ({ ...c, name: `${name} · ${c.name}`, body: name, def: spec.def, read: spec.read }));
+  const enums = plan.enums.flatMap(([path, valid]) => enumCases(base, path, valid).filter((c) => !valid.includes(getPath(c.value, path) as string)));
+  return [
+    ...tag(enums),
+    ...tag(plan.ints.flatMap((p) => integerCases(base, p))),
+    ...tag(plan.strs.flatMap((p) => stringCases(base, p))),
+    ...tag((plan.decs ?? []).flatMap((p) => decimalCases(base, p))),
+    ...tag((plan.arrays ?? []).flatMap(([p, id]) => arrayCases(base, p, id ? { idKey: id } : {}))),
+    ...tag(requiredCases(base, OBJ_KEYS(base))),
+    ...tag(schemaVersionCases(base, ["schema_version"], spec.schemaVersions[0]!, PARENT_V2_SCHEMAS.filter((v) => v !== spec.schemaVersions[0]))),
+    ...tag(pollutionCases(base, plan.containers)),
+  ];
+});
+
+/**
+ * Cases the reader accepts although the published schema refuses them. Each
+ * has a DEFECT test; an accepted schema-invalid case outside the list fails.
+ */
+const KNOWN_GAPS: ((c: Case) => boolean)[] = [
+  // DEFECT GP-3: a malformed previous_envelope_id is read as "no predecessor"
+  (c) => c.body === "canary" && c.name.includes("envelope.previous_envelope_id"),
+  // DEFECT GP-5: anchor ids and the currency are text, not the published patterns
+  (c) => /anchors\.(deployment_id|portfolio_id) <- ("   "|"‮evil")/.test(c.name),
+  (c) => /proposal\.currency <- ("   "|"‮evil")/.test(c.name),
+  // DEFECT GP-6: a Sandbox certification state is not tied to its clocks
+  (c) => c.body === "sandbox" && c.name.includes("certification.decided_at_ms <- null"),
+];
+
+describe("L3 · negative", () => {
+  it("reports the case counts", () => {
+    const by = new Map<string, number>();
+    for (const c of CASES) by.set(c.category, (by.get(c.category) ?? 0) + 1);
+    const gaps = CASES.filter((c) => c.read(c.value) !== null && violations(c.def, c.value).length > 0 && c.category !== "prototype-pollution");
+    console.info(`governanceParents L3: ${CASES.length} cases over ${Object.keys(PLANS).length} bodies (${[...by.entries()].map(([k, v]) => `${k} ${v}`).join(", ")}), ${rootCases().length} root cases; ${gaps.length} accepted although schema-invalid`);
+    expect(CASES.length).toBeGreaterThan(700);
+  });
+
+  it.each(CASES.map((c) => [c.name, c] as const))("%s", (_name, c) => {
+    expect(() => c.read(c.value)).not.toThrow();
+    expect(() => readGovernanceParentV2(c.value)).not.toThrow();
+    const read = c.read(c.value);
+    expect(leaked(read, c.probe)).toBe(false);
+    expect(prototypeIsClean()).toBe(true);
+    if (c.category === "schema-swapped") {
+      // A body of another version is never read as this family.
+      expect(read).toBeNull();
+      const routed = readGovernanceParentV2(c.value) as { family?: string } | null;
+      const swapped = (c.value as Draft)?.schema_version;
+      if (typeof swapped === "string" && !PARENT_V2_SCHEMAS.includes(swapped as never)) expect(routed).toBeNull();
+      return;
+    }
+    if (read === null) return;
+    expect(violations(c.def, c.value).length === 0 || KNOWN_GAPS.some((f) => f(c)), `accepted though schema-invalid: ${c.name}`).toBe(true);
+  });
+
+  it("an unknown word is never a status or a decision: no enum case yields a read", () => {
+    for (const c of CASES.filter((x) => x.category === "unknown-enum" && !/huge/.test(x.name))) expect(c.read(c.value), c.name).toBeNull();
+  });
+
+  it("a number where a decimal string belongs is never a cap", () => {
+    for (const c of CASES.filter((x) => x.body === "canary" && x.category === "number-as-decimal")) expect(c.read(c.value), c.name).toBeNull();
+  });
+
+  it.each(rootCases().map((c) => [c.name, c] as const))("%s is never a parent", (_name, c) => {
+    expect(() => readGovernanceParentV2(c.value)).not.toThrow();
+    expect(readGovernanceParentV2(c.value)).toBeNull();
+    for (const b of Object.values(PLAN_BODY)) expect(b.read(c.value)).toBeNull();
+  });
+
+  it("every container is closed: one extra key anywhere voids the read (additionalProperties:false)", () => {
+    for (const [name, plan] of Object.entries(PLANS)) {
+      const spec = PLAN_BODY[name]!;
+      for (const container of plan.containers) {
+        const body = clone(bodyOf(spec.key));
+        const host = container.reduce<Draft>((node, step) => node[step], body);
+        host.extra_key_from_testkit = "x";
+        expect(spec.read(body), `${name} ${container.join(".") || "root"}`).toBeNull();
+      }
+    }
+  });
+
+  it("an unreadable section is never repaired into an empty one", () => {
+    const body = clone(bodyOf("paper_exit_extended"));
+    body.evaluation = { availability: "AVAILABLE" };
+    expect(readPaperExitParentV2(body)).toBeNull();
+    body.evaluation = { availability: "NOT_PUBLISHED", reason_code: "SOMETHING_ELSE" };
+    expect(readPaperExitParentV2(body)).toBeNull();
+    body.evaluation = { availability: "NOT_PUBLISHED" };
+    expect(readPaperExitParentV2(body)).toBeNull();
+    body.evaluation = { availability: "PARTIAL", panels: [], findings: [] };
+    expect(readPaperExitParentV2(body)).toBeNull();
+    body.evaluation = ABSENT;
+    expect(readPaperExitParentV2(body)).toBeNull();
+  });
+});
+
+/* ═══════════════ documented defects (turn red when fixed) ═══════════════ */
+describe("documented defects", () => {
+  /*
+   * DEFECT GP-1 (readApproval): quorum_required accepts 0 where the schema's
+   * minimum is 1. `0 of 0 approvers` then reads as a met quorum on a request
+   * nobody has approved.
+   */
+  it.fails("DEFECT GP-1: quorum_required 0 is refused (schema minimum 1)", () => {
+    const body = clone(bodyOf("r2"));
+    body.approval.quorum_required = 0;
+    body.approval.quorum_met = 0;
+    expect(readR2ParentV2(body)).toBeNull();
+  });
+
+  /*
+   * DEFECT GP-2 (readApproval): the schema's own description says runtime also
+   * checks that expires_at and sla_due_at are not before created_at. The
+   * reader checks updated_at and decided_at only, so an approval that "expired
+   * before it existed" is read and drawn.
+   */
+  it.fails("DEFECT GP-2: expires_at_ms or sla_due_at_ms before created_at_ms is refused", () => {
+    for (const field of ["expires_at_ms", "sla_due_at_ms"]) {
+      const body = clone(bodyOf("r2"));
+      body.approval[field] = body.approval.created_at_ms - 1;
+      expect(readR2ParentV2(body), field).toBeNull();
+    }
+  });
+
+  /*
+   * DEFECT GP-3 (readExitPanel, readCanaryParentV2): the reader writes
+   * `x === null ? null : natural(x)` and then tests the result for `undefined`,
+   * but natural/id/text answer `null` for a bad value. A malformed value is
+   * therefore read as "not published": poll_interval_ms 3,600,001 as no
+   * interval, a formula_version that is a number as no formula, a
+   * previous_envelope_id that is `true` as "first revision".
+   */
+  it.fails("DEFECT GP-3: a poll_interval_ms above its bound is refused, not read as no interval", () => {
+    const body = clone(bodyOf("paper_exit_extended"));
+    body.evaluation.panels[0].source_completeness = "EVENT_SOURCED";
+    body.evaluation.panels[0].poll_interval_ms = 3_600_001;
+    expect(readPaperExitParentV2(body)).toBeNull();
+  });
+
+  it.fails("DEFECT GP-3b: a formula_version that is not text is refused, not read as no formula", () => {
+    const body = clone(bodyOf("paper_exit_extended"));
+    body.evaluation.panels[0].formula_version = 7;
+    expect(readPaperExitParentV2(body)).toBeNull();
+  });
+
+  it.fails("DEFECT GP-3c: a previous_envelope_id that is not an id is refused, not read as the first revision", () => {
+    for (const bad of [true, 0, {}, "", "a b"]) {
+      const body = clone(bodyOf("canary"));
+      body.envelope.previous_envelope_id = bad;
+      expect(readCanaryParentV2(body), JSON.stringify(bad)).toBeNull();
+    }
+  });
+
+  /*
+   * DEFECT GP-4 (readEvaluation): the reader allows 4,096 findings; the schema
+   * allows 256 (panels 4 in both).
+   */
+  it.fails("DEFECT GP-4: 257 findings (schema maxItems 256) are refused", () => {
+    const body = clone(bodyOf("paper_exit_extended"));
+    const panel = body.evaluation.panels[0].panel_id;
+    body.evaluation.findings = cloneRows(body.evaluation.findings[0] as Draft, 257, (f, i) => { f.finding_id = `f_${i}`; f.panel_id = panel; f.ordinal = i; });
+    expect(readPaperExitParentV2(body)).toBeNull();
+  });
+
+  /*
+   * DEFECT GP-5 (readParentAnchors, readHeader, canary proposal): anchor ids
+   * and the workspace are `text(…, 4096)`; the schema holds anchors to
+   * ^[A-Za-z0-9._:-]+$ (191) and the currency to ^[A-Z0-9]{2,12}$. A deployment
+   * id with a space or a right-to-left override is read and then reaches a
+   * route (`/deployments/{id}/...`).
+   */
+  it.fails("DEFECT GP-5: an anchor id outside the Identifier pattern is refused", () => {
+    for (const bad of ["a b", "a/b", "‮evil", "   ", "x".repeat(192)]) {
+      const body = clone(bodyOf("r2"));
+      body.anchors.deployment_id = bad;
+      expect(readR2ParentV2(body), JSON.stringify(bad)).toBeNull();
+    }
+  });
+
+  it.fails("DEFECT GP-5b: a canary currency outside ^[A-Z0-9]{2,12}$ is refused", () => {
+    for (const bad of ["usdt", "U", "USDT-PERP", "   ", "‮evil"]) {
+      const body = clone(bodyOf("canary"));
+      body.proposal.currency = bad;
+      expect(readCanaryParentV2(body), JSON.stringify(bad)).toBeNull();
+    }
+  });
+
+  /*
+   * DEFECT GP-6 (readSandboxParentV2): the schema ties the state to its
+   * clocks (DRAFT has no submit clock, any other state has one, APPROVED and
+   * DENIED have a decision clock and IN_REVIEW and DRAFT have none). The reader
+   * checks the clocks' order only, so an "Approved" certification with no
+   * decision time, or a "Draft" that was decided, is read.
+   */
+  it.fails("DEFECT GP-6: an APPROVED certification with no decision clock is refused", () => {
+    const body = clone(bodyOf("sandbox"));
+    body.certification.workflow_state = "APPROVED";
+    body.certification.decided_at_ms = null;
+    expect(readSandboxParentV2(body)).toBeNull();
+  });
+
+  it.fails("DEFECT GP-6b: a DRAFT certification that carries a submit or decision clock is refused", () => {
+    const body = clone(bodyOf("sandbox"));
+    body.certification.workflow_state = "DRAFT";
+    expect(readSandboxParentV2(body)).toBeNull();
+  });
+});

@@ -19,7 +19,7 @@ type Json = Record<string, unknown>;
 const IGNORED = new Set(["$schema", "$id", "$defs", "$comment", "title", "description", "default", "examples", "format"]);
 const KNOWN = new Set([
   "type", "enum", "const", "required", "properties", "additionalProperties", "items", "minItems", "maxItems", "minimum",
-  "maximum", "maxLength", "minLength", "pattern", "oneOf", "anyOf", "uniqueItems", "$ref",
+  "maximum", "maxLength", "minLength", "pattern", "oneOf", "anyOf", "uniqueItems", "$ref", "prefixItems", "not", "allOf", "if", "then", "else", "contains", "minContains", "maxContains",
 ]);
 
 const documents = new Map<string, Json>();
@@ -93,6 +93,18 @@ function check(schema: Json, value: unknown, at: string, scope: Scope, out: stri
     });
     if (!any) out.push(`${at}: matched no anyOf branch`);
   }
+  if (Array.isArray(schema.allOf)) for (const branch of schema.allOf) check(branch as Json, value, at, scope, out);
+  if (schema.if && typeof schema.if === "object") {
+    const ifOut: string[] = [];
+    check(schema.if as Json, value, at, scope, ifOut);
+    const taken = ifOut.length === 0 ? schema.then : schema.else;
+    if (taken && typeof taken === "object") check(taken as Json, value, at, scope, out);
+  }
+  if (schema.not && typeof schema.not === "object") {
+    const notOut: string[] = [];
+    check(schema.not as Json, value, at, scope, notOut);
+    if (notOut.length === 0) out.push(`${at}: matched a forbidden (not) schema`);
+  }
   if (typeof value === "string") {
     if (typeof schema.minLength === "number" && value.length < schema.minLength) out.push(`${at}: shorter than ${schema.minLength}`);
     if (typeof schema.maxLength === "number" && value.length > schema.maxLength) out.push(`${at}: longer than ${schema.maxLength}`);
@@ -106,8 +118,24 @@ function check(schema: Json, value: unknown, at: string, scope: Scope, out: stri
     if (typeof schema.minItems === "number" && value.length < schema.minItems) out.push(`${at}: fewer than ${schema.minItems} items`);
     if (typeof schema.maxItems === "number" && value.length > schema.maxItems) out.push(`${at}: more than ${schema.maxItems} items`);
     if (schema.uniqueItems === true && new Set(value.map((item) => JSON.stringify(item))).size !== value.length) out.push(`${at}: items not unique`);
+    if (schema.contains && typeof schema.contains === "object") {
+      const matching = value.filter((item) => {
+        const itemOut: string[] = [];
+        check(schema.contains as Json, item, at, scope, itemOut);
+        return itemOut.length === 0;
+      }).length;
+      const min = typeof schema.minContains === "number" ? schema.minContains : 1;
+      if (matching < min) out.push(`${at}: fewer than ${min} items match contains`);
+      if (typeof schema.maxContains === "number" && matching > schema.maxContains) out.push(`${at}: more than ${schema.maxContains} items match contains`);
+    }
+    // Tuple form: `prefixItems` pins the leading positions; `items: false` forbids anything after them.
+    const prefix = Array.isArray(schema.prefixItems) ? (schema.prefixItems as Json[]) : [];
+    prefix.forEach((branch, index) => {
+      if (index < value.length) check(branch, value[index], `${at}[${index}]`, scope, out);
+    });
+    if (schema.items === false && value.length > prefix.length) out.push(`${at}: more than ${prefix.length} items`);
     if (schema.items && typeof schema.items === "object") {
-      value.forEach((item, index) => check(schema.items as Json, item, `${at}[${index}]`, scope, out));
+      value.slice(prefix.length).forEach((item, index) => check(schema.items as Json, item, `${at}[${index + prefix.length}]`, scope, out));
     }
   }
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {

@@ -1,0 +1,509 @@
+/**
+ * Reader conformance for `accessEffective.ts` (Rules 9.8.3, tiers L0 to L3).
+ *
+ * L0  `execution-access.synthetic.valid.json`, verbatim: the one effective
+ *     body it ships (POLICY_PENDING, no grants), and the eleven other bodies in
+ *     the file, none of which may ever be read as an effective-access body.
+ *     The file has no AVAILABLE body with grants; those four grants come from
+ *     the e2e double (e2e/bffDoubleAccess.ts), which builds them on the
+ *     canonical body, and they are named as such below.
+ * L1  state matrices against an oracle written from the header contract:
+ *       A  availability x reason x policy revision x researcher field policy
+ *       B  grant: effect x selector x environments x validity x current x authority
+ *       C  grants list: size x repeated id x one bad grant (anywhere voids all)
+ *       D  selector id lists: size x repeat x control character
+ *       E  owner recovery: only the contract constant reads
+ *     Each maps to the documented UI state: a pending policy is never "no
+ *     access granted", `current` is the server's word and is not recomputed
+ *     from dates, an UNKNOWN authority never reads as ACCEPTED.
+ * L2  200 grants, the 500 grant bound and ~1 MiB of selector ids. The read is
+ *     not paged (the route answers the whole effective set); the bound
+ *     MAX_GRANTS = 500 is what keeps it finite, and one grant over it voids
+ *     the read.
+ * L3  generated negatives; every case is refused or the typed
+ *     `unsupported_shape`, never throws, never leaks its probe. The schema for
+ *     this body is not published in packages/contracts/schemas, so acceptance
+ *     of a mutated body is judged against the oracle, and what the reader
+ *     accepts beyond the header contract is listed and held as `it.fails`.
+ */
+import { afterAll, describe, expect, it } from "vitest";
+
+import { ACCESS_DOUBLE_WORKSPACES, answerAccessEffective } from "../../../../e2e/bffDoubleAccess";
+import { canonicalDigest, loadCanonical } from "../testkit/loadCanonical";
+import { cartesian, coverage, describeCoverage, dimension, dimensionOf, getPath, pairwise, setPath, type Draft } from "../testkit/matrix";
+import {
+  arrayCases, enumCases, integerCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases, stringCases,
+} from "../testkit/negative";
+import { cloneRows, MIB, pad, serializedBytes, timed } from "../testkit/scale";
+import {
+  ACCESS_AVAILABILITIES,
+  ACCESS_EFFECTIVE_SCHEMA,
+  ACCESS_EFFECTS,
+  ACCESS_ENVIRONMENTS,
+  ACCESS_RESOURCE_KINDS,
+  ACCESS_TS_AUTHORITIES,
+  MAX_GRANTS,
+  readAccessEffective,
+  type AccessEffective,
+} from "./accessEffective";
+
+/* ── budgets (stated, generous: the suite shares a machine with other lanes) ── */
+const BUDGET_200_GRANTS_MS = 300;
+const BUDGET_500_GRANTS_MS = 500;
+const BUDGET_1_MIB_MS = 800;
+
+const FILE = "execution-access.synthetic";
+const digestBefore = canonicalDigest(FILE);
+afterAll(() => {
+  expect(canonicalDigest(FILE)).toBe(digestBefore);
+});
+
+const canonical = loadCanonical<{ lane: string; cases: { type: string; value: Draft }[] }>(FILE);
+const PENDING: Draft = canonical.cases.find((entry) => entry.type === "AccessEffective")!.value;
+const clone = <T,>(value: T): T => structuredClone(value);
+
+/** The double's AVAILABLE answer: the canonical body with four synthetic grants (not an L0 file). */
+const GRANTED: Draft = clone(answerAccessEffective(
+  "GET", "/api/admin/profile-access/v2/effective", new URLSearchParams({ workspace_id: ACCESS_DOUBLE_WORKSPACES.available }),
+)!.body);
+const GRANT: Draft = clone(GRANTED.grants[0]);
+
+function effectiveOf(raw: unknown): AccessEffective | null {
+  const read = readAccessEffective(raw);
+  return read !== null && read.kind === "effective" ? read.effective : null;
+}
+
+/* ═════════════════════════ L0 ═════════════════════════ */
+describe("L0 · canonical, verbatim", () => {
+  it("the file is the synthetic lane with the cases this suite thinks it has", () => {
+    expect(canonical.lane).toMatch(/TEST_ONLY/);
+    expect(canonical.cases.map((c) => c.type)).toEqual([
+      "AccessEffective", "AccessPreviewRequest", "AccessPreview", "AccessRevokePreview", "AccessRevokePreview", "AccessReceipt", "AccessReceipt",
+      "AccessReceipt", "AccessReceipt", "AccessReceipt", "AccessReceipt", "AccessReceipt",
+    ]);
+  });
+
+  it("the effective body reads exactly as published: pending policy, no grants, owner recovery off", () => {
+    const body = effectiveOf(PENDING)!;
+    expect(body).toEqual({
+      workspaceId: PENDING.workspace_id, userId: PENDING.user_id, policyRevision: null, availability: "POLICY_PENDING", reasonCode: "POLICY_PENDING",
+      grants: [], researcherFieldPolicy: { state: "PENDING", policyRef: null },
+      ownerRecovery: { enabled: false, reasonCode: "OWNER_RECOVERY_NOT_APPROVED" },
+    });
+  });
+
+  it("no other body in the file is ever read as effective access; each is the typed unsupported_shape", () => {
+    for (const entry of canonical.cases.filter((c) => c.type !== "AccessEffective")) {
+      const read = readAccessEffective(entry.value);
+      expect(read?.kind, entry.type).toBe("unsupported_shape");
+      expect((read as { schemaVersion: string | null }).schemaVersion, entry.type).toBe(typeof entry.value.schema_version === "string" ? entry.value.schema_version : null);
+    }
+  });
+
+  it("the double's four grants keep their published words, ids and times", () => {
+    const body = effectiveOf(GRANTED)!;
+    expect(body.availability).toBe("AVAILABLE");
+    expect(body.grants.map((g) => g.grantId)).toEqual(GRANTED.grants.map((g: Draft) => g.grant_id));
+    expect(body.grants.map((g) => g.action)).toEqual(GRANTED.grants.map((g: Draft) => g.action));
+    expect(body.grants.map((g) => g.validFrom)).toEqual(GRANTED.grants.map((g: Draft) => g.valid_from_ms));
+    expect(body.grants.map((g) => g.validUntil)).toEqual(GRANTED.grants.map((g: Draft) => g.valid_until_ms));
+  });
+
+  it("the closed words the reader holds are the ones the canonical cases use", () => {
+    const receipts = canonical.cases.filter((c) => c.type === "AccessReceipt").map((c) => c.value.outcome);
+    expect(receipts.length).toBeGreaterThan(5);
+    expect([...ACCESS_AVAILABILITIES]).toEqual(["AVAILABLE", "POLICY_PENDING"]);
+    expect([...ACCESS_EFFECTS]).toEqual(["ALLOW", "DENY"]);
+    expect([...ACCESS_ENVIRONMENTS]).toEqual(["paper", "sandbox", "live"]);
+    expect([...ACCESS_TS_AUTHORITIES]).toEqual(["NOT_REQUIRED", "PENDING", "ACCEPTED", "REJECTED", "UNKNOWN"]);
+    // The access action preview in the same file names a resource kind the reader also holds.
+    const preview = canonical.cases.find((c) => c.type === "AccessPreviewRequest")!.value;
+    expect(ACCESS_RESOURCE_KINDS).toContain(preview.change.selector.resource_kind);
+  });
+});
+
+/* ═════════════════════════ L1 ═════════════════════════ */
+describe("L1 · matrix A · availability x reason x revision x researcher field policy", () => {
+  const POLICY = (state: string, ref: string | null) => ({ label: `${state}/${ref === null ? "no-ref" : "ref"}`, apply: (d: Draft) => { d.researcher_field_policy = { state, policy_ref: ref }; } });
+  const DIMS = [
+    dimension("availability", ["availability"], [...ACCESS_AVAILABILITIES]),
+    dimension("reason_code", ["reason_code"], [null, "POLICY_PENDING"]),
+    dimension("policy_revision", ["policy_revision"], [null, "p1_TEST_ONLY"]),
+    dimensionOf("field_policy", [POLICY("PENDING", null), POLICY("PENDING", "ref_1"), POLICY("QUALIFIED", "ref_1"), POLICY("QUALIFIED", null)]),
+  ];
+  const states = cartesian(PENDING, DIMS);
+  const accept = (p: Record<string, string>) =>
+    (p.availability === "POLICY_PENDING") === (p.reason_code !== "null") && p.field_policy !== "QUALIFIED/no-ref";
+
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("accessEffective A (availability) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(2 * 2 * 2 * 4);
+    expect(states.filter((s) => accept(s.picks))).toHaveLength(2 * 2 * 3);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const body = effectiveOf(state.value);
+    expect(body !== null).toBe(accept(state.picks));
+    if (body === null) return;
+    expect(body.availability).toBe(state.picks.availability);
+    // A pending policy always says why, and an available one never carries a reason.
+    expect(body.reasonCode === null).toBe(body.availability === "AVAILABLE");
+    // Pending with no grants is a pending policy, never "nothing is granted to you": the screen decides from `availability`.
+    if (body.availability === "POLICY_PENDING") expect(body.reasonCode).toBe("POLICY_PENDING");
+    expect(body.researcherFieldPolicy.state).toBe(state.picks.field_policy.split("/")[0]);
+    if (body.researcherFieldPolicy.state === "QUALIFIED") expect(body.researcherFieldPolicy.policyRef).not.toBeNull();
+  });
+});
+
+describe("L1 · matrix B · one grant", () => {
+  const T0 = 1_790_000_000_000;
+  const SELECTORS: Record<string, Draft> = {
+    EXPLICIT_RESOURCE_SET: { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "PORTFOLIO", ids: ["pf_a", "pf_b"] },
+    OWN_ALPHA: { kind: "OWN_ALPHA" },
+    PORTFOLIO_MEMBERSHIP: { kind: "PORTFOLIO_MEMBERSHIP", portfolio_ids: ["pf_a"] },
+    ROOT_SCOPE: { kind: "ROOT_SCOPE", root_id: "root_a" },
+  };
+  const ENVS: Record<string, string[]> = { paper: ["paper"], all: ["paper", "sandbox", "live"], live: ["live"], "live+paper": ["live", "paper"] };
+  const UNTIL: Record<string, number | null> = { open: null, after: T0 + 1, equal: T0, before: T0 - 1 };
+  const DIMS = [
+    dimension("effect", ["grants", 0, "effect"], [...ACCESS_EFFECTS]),
+    dimensionOf("selector", Object.entries(SELECTORS).map(([label, sel]) => ({ label, apply: (d: Draft) => { d.grants[0].selector = clone(sel); } }))),
+    dimensionOf("environments", Object.entries(ENVS).map(([label, envs]) => ({ label, apply: (d: Draft) => { d.grants[0].environments = [...envs]; } }))),
+    dimensionOf("valid_until", Object.entries(UNTIL).map(([label, ms]) => ({ label, apply: (d: Draft) => { d.grants[0].valid_from_ms = T0; d.grants[0].valid_until_ms = ms; } }))),
+    dimension("current", ["grants", 0, "current"], [true, false]),
+    dimension("ts_authority", ["grants", 0, "ts_authority"], [...ACCESS_TS_AUTHORITIES]),
+  ];
+  const base = clone(GRANTED);
+  base.grants = [clone(GRANT)];
+  const states = cartesian(base, DIMS);
+  const accept = (p: Record<string, string>) => p.valid_until === "open" || p.valid_until === "after";
+
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("accessEffective B (grant) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(2 * 4 * 4 * 4 * 2 * 5);
+    expect(states.filter((s) => accept(s.picks))).toHaveLength(2 * 4 * 4 * 2 * 2 * 5);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const body = effectiveOf(state.value);
+    expect(body !== null).toBe(accept(state.picks));
+    if (body === null) return;
+    const grant = body.grants[0]!;
+    const want = state.value.grants[0];
+    // Words pass through unchanged: an UNKNOWN authority stays UNKNOWN, a DENY stays a DENY.
+    expect(grant.effect).toBe(want.effect);
+    expect(grant.tsAuthority).toBe(want.ts_authority);
+    expect(grant.selector.kind).toBe(want.selector.kind);
+    expect(grant.environments).toEqual(want.environments);
+    // `current` is the server's evaluation; it is never recomputed from the dates beside it.
+    expect(grant.current).toBe(want.current);
+    expect(grant.validUntil).toBe(want.valid_until_ms);
+    // The interval is end-exclusive and never empty.
+    if (grant.validUntil !== null) expect(grant.validUntil).toBeGreaterThan(grant.validFrom);
+    // Only a grant that is both ALLOW and current could read as "granted"; the reader exposes both facts, not a derived verdict.
+    expect(Object.keys(grant).filter((k) => /granted|allowed|active|effective/i.test(k))).toEqual([]);
+  });
+
+  it("pairwise subset of the same axes meets every pair in fewer states", () => {
+    const pairs = pairwise(base, DIMS, { exclude: (p) => !accept(p) });
+    const cover = coverage(DIMS, pairs, { exclude: (p) => !accept(p) });
+    console.info(describeCoverage("accessEffective B (grant) pairwise over valid states", cover));
+    expect(cover.pairsCovered).toBe(cover.pairsPossible);
+    expect(pairs.length).toBeLessThan(states.filter((s) => accept(s.picks)).length);
+  });
+});
+
+describe("L1 · matrix C · the grants list (size x repeated id x one bad grant)", () => {
+  const sizes = [0, 1, 2, MAX_GRANTS, MAX_GRANTS + 1];
+  const build = (n: number): Draft[] => cloneRows(GRANT, n, (g, i) => { g.grant_id = `acg_${pad(i)}`; });
+  const DIMS = [
+    dimensionOf("size", sizes.map((n) => ({ label: String(n), apply: (d: Draft) => { d.grants = build(n); } }))),
+    dimensionOf("repeat", [
+      { label: "none", apply: () => undefined },
+      { label: "last repeats first", apply: (d: Draft) => { if (d.grants.length > 1) d.grants[d.grants.length - 1].grant_id = d.grants[0].grant_id; } },
+    ]),
+    dimensionOf("bad", [
+      { label: "none", apply: () => undefined },
+      { label: "first", apply: (d: Draft) => { if (d.grants.length > 0) d.grants[0].action = "NOT A TOKEN"; } },
+      { label: "last", apply: (d: Draft) => { if (d.grants.length > 0) d.grants[d.grants.length - 1].effect = "MAYBE"; } },
+    ]),
+  ];
+  const states = cartesian(GRANTED, DIMS);
+  const accept = (p: Record<string, string>) => {
+    const n = Number(p.size);
+    const repeats = p.repeat !== "none" && n > 1;
+    const bad = p.bad !== "none" && n > 0;
+    return n <= MAX_GRANTS && !repeats && !bad;
+  };
+
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("accessEffective C (grants list) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(5 * 2 * 3);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const body = effectiveOf(state.value);
+    expect(body !== null).toBe(accept(state.picks));
+    // One bad grant voids the whole read: no partial list is ever handed to "Granted to you".
+    if (body !== null) expect(body.grants).toHaveLength(Number(state.picks.size));
+  });
+});
+
+describe("L1 · matrix D · selector id lists", () => {
+  const kinds: Record<string, { selector: (ids: string[]) => Draft }> = {
+    EXPLICIT_RESOURCE_SET: { selector: (ids) => ({ kind: "EXPLICIT_RESOURCE_SET", resource_kind: "PORTFOLIO", ids }) },
+    PORTFOLIO_MEMBERSHIP: { selector: (ids) => ({ kind: "PORTFOLIO_MEMBERSHIP", portfolio_ids: ids }) },
+  };
+  const ids = (n: number): string[] => Array.from({ length: n }, (_, i) => `id_${pad(i)}`);
+  const DIMS = [
+    dimensionOf("kind", Object.keys(kinds).map((k) => ({ label: k, apply: () => undefined }))),
+    dimensionOf("count", [0, 1, 2, 1000, 1001].map((n) => ({ label: String(n), apply: () => undefined }))),
+    dimensionOf("repeat", ["none", "twice"].map((label) => ({ label, apply: () => undefined }))),
+    dimensionOf("text", ["plain", "control", "empty", "256", "257"].map((label) => ({ label, apply: () => undefined }))),
+  ];
+  const states = cartesian(GRANTED, DIMS).map((s) => {
+    const list = ids(Number(s.picks.count));
+    if (list.length > 0) {
+      if (s.picks.text === "control") list[0] = "a\u0007b";
+      if (s.picks.text === "empty") list[0] = "";
+      if (s.picks.text === "256") list[0] = "x".repeat(256);
+      if (s.picks.text === "257") list[0] = "x".repeat(257);
+    }
+    if (s.picks.repeat === "twice" && list.length > 1) list[list.length - 1] = list[0]!;
+    const value = clone(GRANTED);
+    value.grants = [{ ...clone(GRANT), selector: kinds[s.picks.kind]!.selector(list) }];
+    return { ...s, value, list };
+  });
+  const accept = (p: Record<string, string>) => {
+    const n = Number(p.count);
+    if (n < 1 || n > 1000) return false;
+    if (p.repeat === "twice" && n > 1) return false;
+    return p.text === "plain" || p.text === "256";
+  };
+
+  it("prints the matrix size", () => {
+    console.info(`accessEffective D (selector ids): ${states.length} states, ${states.filter((s) => accept(s.picks)).length} accepted`);
+    expect(states).toHaveLength(2 * 5 * 2 * 5);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const body = effectiveOf(state.value);
+    expect(body !== null).toBe(accept(state.picks));
+    if (body === null) return;
+    const sel = body.grants[0]!.selector;
+    const got = sel.kind === "EXPLICIT_RESOURCE_SET" ? sel.ids : sel.kind === "PORTFOLIO_MEMBERSHIP" ? sel.portfolioIds : [];
+    expect([...got]).toEqual(state.list);
+  });
+});
+
+describe("L1 · matrix E · owner recovery is the contract constant or nothing", () => {
+  const ENABLED = [false, true, "false", 0, null, "ABSENT", [] as unknown[], {}] as const;
+  const REASON = ["OWNER_RECOVERY_NOT_APPROVED", "OWNER_RECOVERY_APPROVED", "", null, "owner_recovery_not_approved", "ABSENT"] as const;
+  const cases = ENABLED.flatMap((enabled) => REASON.map((reason) => ({ enabled, reason })));
+
+  it("prints the matrix size", () => {
+    console.info(`accessEffective E (owner recovery): ${cases.length} states, 1 accepted`);
+    expect(cases).toHaveLength(8 * 6);
+  });
+
+  it.each(cases.map((c) => [`${JSON.stringify(c.enabled)} / ${JSON.stringify(c.reason)}`, c] as const))("enabled=%s", (_name, c) => {
+    const body = clone(PENDING);
+    if (c.enabled === "ABSENT") delete body.owner_recovery.enabled;
+    else body.owner_recovery.enabled = c.enabled;
+    if (c.reason === "ABSENT") delete body.owner_recovery.reason_code;
+    else body.owner_recovery.reason_code = c.reason;
+    const read = effectiveOf(body);
+    const exact = c.enabled === false && c.reason === "OWNER_RECOVERY_NOT_APPROVED";
+    expect(read !== null).toBe(exact);
+    if (read !== null) expect(read.ownerRecovery).toEqual({ enabled: false, reasonCode: "OWNER_RECOVERY_NOT_APPROVED" });
+  });
+});
+
+/* ═════════════════════════ L2 ═════════════════════════ */
+describe("L2 · scale", () => {
+  const grants = (n: number, idsEach = 2, idLength = 12): Draft[] => cloneRows(GRANT, n, (g, i) => {
+    g.grant_id = `acg_${pad(i)}`;
+    g.selector = { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "PORTFOLIO", ids: Array.from({ length: idsEach }, (_, k) => `${pad(i)}_${k}`.padEnd(idLength, "x")) };
+  });
+  const withGrants = (list: Draft[]): Draft => ({ ...clone(GRANTED), grants: list });
+
+  it("reads 200 grants inside the budget and keeps every one, in order", () => {
+    const body = withGrants(grants(200));
+    const { value, ms } = timed(() => effectiveOf(body));
+    console.info(`accessEffective 200 grants (${(serializedBytes(body) / 1024).toFixed(0)} KiB): ${ms.toFixed(0)} ms (budget ${BUDGET_200_GRANTS_MS} ms)`);
+    expect(value!.grants.map((g) => g.grantId)).toEqual(body.grants.map((g: Draft) => g.grant_id));
+    expect(ms).toBeLessThan(BUDGET_200_GRANTS_MS);
+  });
+
+  it("reads the bound itself (500) and refuses one over it; the read is not paged", () => {
+    const at = withGrants(grants(MAX_GRANTS));
+    const { value, ms } = timed(() => effectiveOf(at));
+    console.info(`accessEffective ${MAX_GRANTS} grants: ${ms.toFixed(0)} ms (budget ${BUDGET_500_GRANTS_MS} ms)`);
+    expect(value!.grants).toHaveLength(MAX_GRANTS);
+    expect(ms).toBeLessThan(BUDGET_500_GRANTS_MS);
+    expect(effectiveOf(withGrants(grants(MAX_GRANTS + 1)))).toBeNull();
+    // No cursor field is read: a body that carries one is not a paged read.
+    expect(readAccessEffective({ ...at, next_cursor: "x" })?.kind).toBe("effective");
+  });
+
+  it("reads ~1 MiB of selector ids (the widest legal ids, the id bound) inside the budget", () => {
+    const body = withGrants(grants(4, 1000, 256));
+    const bytes = serializedBytes(body);
+    const { value, ms } = timed(() => effectiveOf(body));
+    console.info(`accessEffective ${(bytes / MIB).toFixed(2)} MiB, 4 grants x 1000 ids: ${ms.toFixed(0)} ms (budget ${BUDGET_1_MIB_MS} ms)`);
+    expect(bytes).toBeGreaterThan(0.9 * MIB);
+    expect(value).not.toBeNull();
+    expect(ms).toBeLessThan(BUDGET_1_MIB_MS);
+  });
+
+  it("a 70,000 character text anywhere is refused fast, not scanned", () => {
+    for (const path of [["workspace_id"], ["user_id"], ["grants", 0, "grant_id"], ["grants", 0, "revision"], ["policy_revision"]] as const) {
+      const body = clone(GRANTED);
+      setPath(body, path, "a".repeat(70_000));
+      const { value, ms } = timed(() => effectiveOf(body));
+      expect(value, path.join(".")).toBeNull();
+      expect(ms, path.join(".")).toBeLessThan(100);
+    }
+  });
+});
+
+/* ═════════════════════════ L3 ═════════════════════════ */
+interface Case { name: string; category: string; value: unknown; probe: string | null }
+const G0 = ["grants", 0] as const;
+/** enumCases lower-cases the first valid word; where that is already the word (`paper`) the case is the base, not a negative. */
+const enumsOf = (path: readonly (string | number)[], valid: readonly string[]): Case[] =>
+  enumCases(GRANTED, path, valid).filter((c) => !valid.includes(getPath(c.value, path) as string));
+const ENUMS: Case[] = [
+  ...enumsOf(["availability"], ACCESS_AVAILABILITIES),
+  ...enumsOf([...G0, "effect"], ACCESS_EFFECTS),
+  ...enumsOf([...G0, "ts_authority"], ACCESS_TS_AUTHORITIES),
+  ...enumsOf([...G0, "environments", 0], ACCESS_ENVIRONMENTS),
+  ...enumsOf([...G0, "selector", "kind"], ["EXPLICIT_RESOURCE_SET", "OWN_ALPHA", "PORTFOLIO_MEMBERSHIP", "ROOT_SCOPE"]),
+  ...enumsOf([...G0, "selector", "resource_kind"], ACCESS_RESOURCE_KINDS),
+  ...enumsOf(["researcher_field_policy", "state"], ["PENDING", "QUALIFIED"]),
+  ...enumsOf(["owner_recovery", "reason_code"], ["OWNER_RECOVERY_NOT_APPROVED"]),
+];
+const INTEGERS: Case[] = [
+  ...integerCases(GRANTED, [...G0, "valid_from_ms"]),
+  ...integerCases(GRANTED, [...G0, "valid_until_ms"]),
+];
+const STRINGS: Case[] = [
+  ...stringCases(GRANTED, ["workspace_id"]),
+  ...stringCases(GRANTED, ["user_id"]),
+  ...stringCases(GRANTED, ["policy_revision"]),
+  ...stringCases(GRANTED, ["reason_code"]),
+  ...stringCases(GRANTED, [...G0, "grant_id"]),
+  ...stringCases(GRANTED, [...G0, "action"]),
+  ...stringCases(GRANTED, [...G0, "revision"]),
+  ...stringCases(GRANTED, [...G0, "selector", "ids", 0]),
+];
+const ACTIONS = ["Portfolio.read", "portfolio", "portfolio.", ".read", "portfolio..read", "portfolio.Read", "portfolio.read ", " portfolio.read", "portfolio.read\n", "portfolio-read", "portfolio.re ad", "1portfolio.read", "portfolio.read".padEnd(129, "x")];
+const ACTION_CASES: Case[] = ACTIONS.map((value) => ({ name: `action <- ${JSON.stringify(value)}`, category: "malformed-decimal", value: (() => { const b = clone(GRANTED); b.grants[0].action = value; return b; })(), probe: null }));
+const ARRAYS: Case[] = [
+  ...arrayCases(GRANTED, ["grants"], { idKey: "grant_id" }),
+  ...arrayCases(GRANTED, [...G0, "environments"]),
+  ...arrayCases(GRANTED, [...G0, "selector", "ids"]),
+];
+const REQUIRED: Case[] = [
+  ...requiredCases(GRANTED, [["schema_version"], ["workspace_id"], ["user_id"], ["policy_revision"], ["availability"], ["reason_code"], ["grants"], ["researcher_field_policy"], ["owner_recovery"],
+    ["researcher_field_policy", "state"], ["researcher_field_policy", "policy_ref"], ["owner_recovery", "enabled"], ["owner_recovery", "reason_code"],
+    [...G0, "grant_id"], [...G0, "action"], [...G0, "effect"], [...G0, "selector"], [...G0, "environments"], [...G0, "valid_from_ms"], [...G0, "valid_until_ms"],
+    [...G0, "revision"], [...G0, "current"], [...G0, "ts_authority"], [...G0, "selector", "kind"], [...G0, "selector", "resource_kind"], [...G0, "selector", "ids"]]),
+];
+const SCHEMA_SWAP = schemaVersionCases(GRANTED, ["schema_version"], ACCESS_EFFECTIVE_SCHEMA, ["portal.access-preview.v1", "portal.access-operation.v1", "portal.access-effective.v2"]);
+const POLLUTION = pollutionCases(GRANTED, [[], [...G0], [...G0, "selector"], ["researcher_field_policy"], ["owner_recovery"]]);
+const ALL_NEG: Case[] = [...ENUMS, ...INTEGERS, ...STRINGS, ...ACTION_CASES, ...ARRAYS, ...REQUIRED, ...SCHEMA_SWAP, ...POLLUTION];
+
+/** Cases that are legitimately accepted: a nullable field set to null / a shorter list of valid items. */
+const LEGIT: ((c: Case) => boolean)[] = [
+  (c) => /^null-vs-absent: (policy_revision|grants\.0\.valid_until_ms|researcher_field_policy\.policy_ref) <- null/.test(c.name),
+  (c) => /^null-vs-absent: reason_code <- null/.test(c.name), // AVAILABLE carries no reason
+  (c) => c.category === "truncated", // a shorter list of valid items is a valid list
+  (c) => /^missing-required: grants\.0\.(selector\.ids|environments)\.\d+ <- absent/.test(c.name),
+  (c) => c.category === "prototype-pollution",
+];
+/**
+ * Accepted although the header contract refuses it; each has a DEFECT below.
+ */
+const KNOWN_GAPS: ((c: Case) => boolean)[] = [
+  // DEFECT AE-2: opaque ids accept whitespace-only text and bidi/format characters (U+202E)
+  (c) => /(workspace_id|user_id|policy_revision|grant_id|revision|selector\.ids\.0) <- ("   "|"‮evil")/.test(c.name),
+  // DEFECT AE-1: valid_from_ms accepts a negative epoch (the contract's time is "safe-integer UTC epoch milliseconds"; every sibling reader floors it at 0)
+  (c) => c.name.includes("valid_from_ms <- -1") || c.name.includes("valid_until_ms <- -1"),
+];
+
+describe("L3 · negative", () => {
+  it("reports the case counts", () => {
+    const by = new Map<string, number>();
+    for (const c of ALL_NEG) by.set(c.category, (by.get(c.category) ?? 0) + 1);
+    console.info(`accessEffective L3: ${ALL_NEG.length} cases (${[...by.entries()].map(([k, v]) => `${k} ${v}`).join(", ")}), ${rootCases().length} root cases`);
+    expect(ALL_NEG.length).toBeGreaterThan(300);
+  });
+
+  it.each(ALL_NEG.map((c) => [c.name, c] as const))("%s", (_name, c) => {
+    expect(() => readAccessEffective(c.value)).not.toThrow();
+    const read = readAccessEffective(c.value);
+    expect(leaked(read, c.probe)).toBe(false);
+    expect(prototypeIsClean()).toBe(true);
+    if (c.category === "schema-swapped") {
+      expect(read === null || read.kind === "unsupported_shape").toBe(true);
+      return;
+    }
+    if (read === null || read.kind === "unsupported_shape") return;
+    expect(LEGIT.some((f) => f(c)) || KNOWN_GAPS.some((f) => f(c)), `accepted: ${c.name}`).toBe(true);
+    if (c.category === "prototype-pollution") expect(read).toEqual(readAccessEffective(GRANTED));
+  });
+
+  it("an unknown word never reads as a grant state: no enum case yields an effective body", () => {
+    for (const c of ENUMS) {
+      const read = readAccessEffective(c.value);
+      // `owner_recovery.reason_code` and `researcher_field_policy.state` words are enums too.
+      expect(read === null || read.kind === "unsupported_shape", c.name).toBe(true);
+    }
+  });
+
+  it.each(rootCases().map((c) => [c.name, c] as const))("%s is never an effective body", (_name, c) => {
+    expect(() => readAccessEffective(c.value)).not.toThrow();
+    const read = readAccessEffective(c.value);
+    expect(read === null || read.kind === "unsupported_shape").toBe(true);
+    if (typeof c.value !== "object" || c.value === null) expect(read).toBeNull();
+  });
+
+  it("a body for another user or workspace is a different read, never repaired", () => {
+    const other = clone(GRANTED);
+    other.user_id = "usr_someone_else";
+    expect(effectiveOf(other)!.userId).toBe("usr_someone_else");
+    expect(effectiveOf(other)!.userId).not.toBe(GRANTED.user_id);
+  });
+});
+
+/* ═══════════════ documented defects (turn red when fixed) ═══════════════ */
+describe("documented defects", () => {
+  /*
+   * DEFECT AE-2 (opaque()): an id is "bounded and printable" and nothing more,
+   * so "   " and "\u202eevil" (a right-to-left override) are accepted as a
+   * workspace, user, grant or resource id and reach "Granted to you". The
+   * Identifier pattern the sibling readers use is ^[A-Za-z0-9._:-]{1,191}$;
+   * whether access ids follow it is Codex's call, so this is raised, not fixed.
+   */
+  it.fails("DEFECT AE-2: a whitespace-only or bidi-override id is refused", () => {
+    for (const id of ["   ", "\u202eevil", "a\u200bb"]) {
+      const body = clone(GRANTED);
+      body.grants[0].grant_id = id;
+      expect(effectiveOf(body), JSON.stringify(id)).toBeNull();
+    }
+  });
+
+  /*
+   * DEFECT AE-1 (readGrant via readUtcEpochMs): valid_from_ms and valid_until_ms
+   * accept a negative epoch. The sibling readers (liveSourceOperations,
+   * governanceParents) floor every published clock at 0, and a grant that
+   * "starts before 1970" is not a grant any source can have written.
+   */
+  it.fails("DEFECT AE-1: a negative valid_from_ms is refused", () => {
+    const body = clone(GRANTED);
+    body.grants[0].valid_from_ms = -1;
+    body.grants[0].valid_until_ms = null;
+    expect(effectiveOf(body)).toBeNull();
+  });
+});
