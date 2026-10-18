@@ -43,7 +43,7 @@ describe("EventRibbon", () => {
   it("lines up with an EquityPanel through the same margins, in percent of the plot width", () => {
     const { container } = render(<EventRibbon label="Events" events={[ev("2", 6, "incident", "x")]} domain={domain} />);
     const root = container.querySelector(".exec-ribbon") as HTMLElement;
-    expect(root.style.getPropertyValue("--exec-chart-ml")).toBe("60px");
+    expect(root.style.getPropertyValue("--exec-chart-ml")).toBe("78px");
     expect(root.style.getPropertyValue("--exec-chart-mr")).toBe("78px");
     const button = screen.getByTestId("ribbon-event");
     expect(button.style.left).toContain("calc(var(--exec-chart-ml) + (100% - var(--exec-chart-ml) - var(--exec-chart-mr)) * 0.5");

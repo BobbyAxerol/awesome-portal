@@ -20,13 +20,22 @@ export const NOT_PUBLISHED = "Not published";
  * on together (the Fleet board needs both the grouping and the lifecycle read).
  */
 export const FE_REQUEST_LABEL = {
+  "FE-005": "Windowed totals and concentration",
+  "FE-006": "Return (methodology per source)",
+  "FE-011": "Score",
   "FE-012": "Group by",
+  "FE-013": "NAV and drawdown",
+  "FE-016": "Export",
+  "FE-017": "Capital statements",
+  "FE-024": "Since your last visit",
   "FE-015": "Per-row eligibility and the reason a control is off",
   "FE-020": "Command preview (the Preview only intent axis)",
   "FE-021": "Audit source: who did what",
   "FE-025": "Window",
   "FE-027": "Stage lifecycle",
+  "FE-026": "Researcher field policy",
   "FE-028": "Gate criteria",
+  "FE-029": "Evidence, baseline and run linkage",
   "FE-030": "Creator, ladder, SLA and needs-you",
   "FE-031": "Event feed",
   "FE-032": "Receipt state and amounts",

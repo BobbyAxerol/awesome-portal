@@ -263,33 +263,33 @@ export function EquityPanel(props: EquityPanelProps) {
     (envelope.reduced ? ` Drawn from ${envelope.shownCount} of ${envelope.sourceCount} points, minimum and maximum kept.` : "");
 
   return (
-    <figure className="exec-chart exec-equity" data-state={state.kind} data-reduced={envelope.reduced ? "true" : "false"}>
-      <figcaption className="exec-chart-head">
-        <span className="exec-chart-title">{label}</span>
+    <figure className="exec-chart exec-eq2" data-state={state.kind} data-reduced={envelope.reduced ? "true" : "false"}>
+      <figcaption className="exec-c2-head">
+        <span className="exec-c2-title">{label}</span>
         <ChartStateFlags state={state} />
       </figcaption>
 
-      <ul className="exec-chart-legend">
-        <li><i className="exec-chart-sw" data-s="series" />{seriesName}</li>
-        {ghost ? <li><i className="exec-chart-sw" data-s="sim" data-dash="true" />{ghost.name}</li> : null}
-        {segments.some((s) => s.kind === "simulated") ? <li><i className="exec-chart-sw" data-s="sim" data-hatch="true" />Simulated</li> : null}
-        {segments.some((s) => s.kind === "retained") ? <li><i className="exec-chart-sw" data-s="retained" data-hatch="true" />Retained</li> : null}
-        {bandOk ? <li><i className="exec-chart-sw" data-s="band" data-dash="true" />{band?.name ?? "Approved band"}</li> : null}
-        {spans.length > 0 ? <li><i className="exec-chart-sw" data-s="gap" data-hatch="true" />No published value</li> : null}
+      <ul className="exec-c2-legend">
+        <li><i className="exec-c2-sw" data-s="series" />{seriesName}</li>
+        {ghost ? <li><i className="exec-c2-sw" data-s="sim" data-dash="true" />{ghost.name}</li> : null}
+        {segments.some((s) => s.kind === "simulated") ? <li><i className="exec-c2-sw" data-s="sim" data-hatch="true" />Simulated</li> : null}
+        {segments.some((s) => s.kind === "retained") ? <li><i className="exec-c2-sw" data-s="retained" data-hatch="true" />Retained</li> : null}
+        {bandOk ? <li><i className="exec-c2-sw" data-s="band" data-dash="true" />{band?.name ?? "Approved band"}</li> : null}
+        {spans.length > 0 ? <li><i className="exec-c2-sw" data-s="gap" data-hatch="true" />No published value</li> : null}
       </ul>
 
-      <div className="exec-chart-readout" id={readoutId}>
-        <span><span className="exec-chart-ru" data-testid="readout-time">{timeOf(o.t)}</span><b className="exec-chart-rv" data-testid="readout-value">{readoutValue}</b></span>
-        {change !== null ? <span><span className="exec-chart-ru">Change in window</span><span data-testid="readout-change">{change}</span></span> : null}
-        {ddText !== null ? <span><span className="exec-chart-ru">Drawdown</span><span data-testid="readout-drawdown">{ddText}</span></span> : null}
-        {ghostText !== null ? <span><span className="exec-chart-ru">{ghost?.name}</span><span data-testid="readout-ghost">{ghostText}</span></span> : null}
+      <div className="exec-c2-readout" id={readoutId}>
+        <span><span className="exec-c2-ru" data-testid="readout-time">{timeOf(o.t)}</span><b className="exec-c2-rv" data-testid="readout-value">{readoutValue}</b></span>
+        {change !== null ? <span><span className="exec-c2-ru">Change in window</span><span data-testid="readout-change">{change}</span></span> : null}
+        {ddText !== null ? <span><span className="exec-c2-ru">Drawdown</span><span data-testid="readout-drawdown">{ddText}</span></span> : null}
+        {ghostText !== null ? <span><span className="exec-c2-ru">{ghost?.name}</span><span data-testid="readout-ghost">{ghostText}</span></span> : null}
       </div>
 
       {ribbon}
 
       <div
         ref={plotRef}
-        className="exec-chart-plot"
+        className="exec-c2-plot"
         role="group"
         tabIndex={0}
         aria-label={`${label}. Left and right arrow keys move the readout, Shift moves ten points, Home and End jump to the ends, Escape releases it.`}
@@ -301,7 +301,7 @@ export function EquityPanel(props: EquityPanelProps) {
         onTouchEnd={() => moveTo(null, false)}
       >
         <svg
-          className="exec-chart-svg"
+          className="exec-c2-svg"
           viewBox={`0 0 ${W} ${height + gap + ddH}`}
           width={W}
           height={height + gap + ddH}
@@ -312,19 +312,19 @@ export function EquityPanel(props: EquityPanelProps) {
           <defs>
             <clipPath id={`${id}-clip`}><rect x={frame.ml} y={frame.top - 12} width={iw} height={ih + 12} /></clipPath>
             <linearGradient id={`${id}-area`} x1="0" y1="0" x2="0" y2="1">
-              <stop className="exec-chart-area-top" offset="0%" />
-              <stop className="exec-chart-area-bottom" offset="100%" />
+              <stop className="exec-c2-area-top" offset="0%" />
+              <stop className="exec-c2-area-bottom" offset="100%" />
             </linearGradient>
-            <pattern id={`${id}-hsim`} className="exec-chart-pat" data-s="sim" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" /></pattern>
-            <pattern id={`${id}-hret`} className="exec-chart-pat" data-s="retained" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="7" /></pattern>
-            <pattern id={`${id}-hgap`} className="exec-chart-pat" data-s="gap" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" /></pattern>
+            <pattern id={`${id}-hsim`} className="exec-c2-pat" data-s="sim" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" /></pattern>
+            <pattern id={`${id}-hret`} className="exec-c2-pat" data-s="retained" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="7" /></pattern>
+            <pattern id={`${id}-hgap`} className="exec-c2-pat" data-s="gap" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" /></pattern>
           </defs>
 
           <YAxis frame={frame} ticks={ticks} y={y} unit={unit} />
           <XAxis frame={frame} from={x0} to={x1} />
 
           {bandOk ? (
-            <g className="exec-chart-band" data-testid="band">
+            <g className="exec-c2-band" data-testid="band">
               <rect x={frame.ml} y={y(toGeometry(bandHi))} width={iw} height={Math.max(y(toGeometry(bandLo)) - y(toGeometry(bandHi)), 1)} />
               <line x1={frame.ml} x2={frame.ml + iw} y1={y(toGeometry(bandHi))} y2={y(toGeometry(bandHi))} />
               <line x1={frame.ml} x2={frame.ml + iw} y1={y(toGeometry(bandLo))} y2={y(toGeometry(bandLo))} />
@@ -332,24 +332,24 @@ export function EquityPanel(props: EquityPanelProps) {
           ) : null}
 
           {segDraw.map((d) => (
-            <g key={`${d.s.kind}-${d.k}`} className="exec-chart-seg" data-kind={d.s.kind}>
+            <g key={`${d.s.kind}-${d.k}`} className="exec-c2-seg" data-kind={d.s.kind}>
               <rect x={d.a} y={frame.top} width={d.b - d.a} height={ih} fill={`url(#${id}-${d.s.kind === "simulated" ? "hsim" : "hret"})`} />
-              <text x={d.a + 8} y={frame.top + 14} className="exec-chart-seg-label">{d.s.label ?? (d.s.kind === "simulated" ? "Simulated" : "Retained")}</text>
+              <text x={d.a + 8} y={frame.top + 14} className="exec-c2-seg-label">{d.s.label ?? (d.s.kind === "simulated" ? "Simulated" : "Retained")}</text>
             </g>
           ))}
 
-          {spans.length > 0 ? <path className="exec-chart-gaps" d={gapRectsPath(spans, frame.top, frame.bottom)} fill={`url(#${id}-hgap)`} data-testid="gaps" /> : null}
+          {spans.length > 0 ? <path className="exec-c2-gaps" d={gapRectsPath(spans, frame.top, frame.bottom)} fill={`url(#${id}-hgap)`} data-testid="gaps" /> : null}
 
           <g clipPath={`url(#${id}-clip)`}>
-            <path className="exec-chart-area" d={areaPath(allRuns, x, y, frame.bottom)} fill={`url(#${id}-area)`} />
-            {ghostRuns.length > 0 ? <path className="exec-chart-line" data-s="sim" data-dash="true" d={linePath(ghostRuns, x, y)} data-testid="ghost-line" /> : null}
-            {retRuns.length > 0 ? <path className="exec-chart-line" data-s="retained" data-dash="true" d={linePath(retRuns, x, y)} data-testid="retained-line" /> : null}
-            {simRuns.length > 0 ? <path className="exec-chart-line" data-s="sim" data-dash="true" d={linePath(simRuns, x, y)} data-testid="simulated-line" /> : null}
-            <path className="exec-chart-line" data-s="series" data-main="true" d={linePath(actualRuns, x, y)} data-testid="series-line" />
+            <path className="exec-c2-area" d={areaPath(allRuns, x, y, frame.bottom)} fill={`url(#${id}-area)`} />
+            {ghostRuns.length > 0 ? <path className="exec-c2-line" data-s="sim" data-dash="true" d={linePath(ghostRuns, x, y)} data-testid="ghost-line" /> : null}
+            {retRuns.length > 0 ? <path className="exec-c2-line" data-s="retained" data-dash="true" d={linePath(retRuns, x, y)} data-testid="retained-line" /> : null}
+            {simRuns.length > 0 ? <path className="exec-c2-line" data-s="sim" data-dash="true" d={linePath(simRuns, x, y)} data-testid="simulated-line" /> : null}
+            <path className="exec-c2-line" data-s="series" data-main="true" d={linePath(actualRuns, x, y)} data-testid="series-line" />
           </g>
 
           {flags.map((f) => (
-            <g key={f.text} className="exec-chart-flag" data-testid={f.up ? "high-flag" : "low-flag"}>
+            <g key={f.text} className="exec-c2-flag" data-testid={f.up ? "high-flag" : "low-flag"}>
               <line x1={f.xx} x2={f.xx} y1={f.yy} y2={f.ty + (f.up ? 14 : -14)} />
               <rect x={f.gx} y={f.ty - (f.up ? 0 : 14)} width={f.w} height={14} />
               <text x={f.gx + 6} y={f.ty - (f.up ? 0 : 14) + 11}>{f.text}</text>
@@ -363,7 +363,7 @@ export function EquityPanel(props: EquityPanelProps) {
             const text = showDecimal(p.value, { unit: "money", signed: true });
             const w = text.length * charW + 12;
             return (
-              <g key={p.id} className="exec-chart-pin" data-neg={negative ? "true" : "false"} data-testid="flow-pin">
+              <g key={p.id} className="exec-c2-pin" data-neg={negative ? "true" : "false"} data-testid="flow-pin">
                 <line x1={xx} x2={xx} y1={frame.bottom - 26} y2={frame.bottom} />
                 <rect x={xx - w / 2} y={frame.bottom - 40} width={w} height={14} />
                 <text x={xx} y={frame.bottom - 29} textAnchor="middle">{text}</text>
@@ -372,36 +372,36 @@ export function EquityPanel(props: EquityPanelProps) {
           })}
 
           {drawnEvs.map((e) => (
-            <g key={e.id} className="exec-chart-evt" data-kind={e.kind} data-testid="event-mark">
+            <g key={e.id} className="exec-c2-evt" data-kind={e.kind} data-testid="event-mark">
               <line x1={x(e.t)} x2={x(e.t)} y1={frame.top - 2} y2={frame.bottom} />
               <text x={x(e.t)} y={frame.top - 8} textAnchor="middle">{EVENT_KIND_TABLE[e.kind].glyph}</text>
             </g>
           ))}
 
-          <g className="exec-chart-end" data-testid="endpoint">
-            <circle className="exec-chart-end-halo" cx={x(model.obs[last].t)} cy={endY} r={9} />
-            <circle className="exec-chart-end-dot" cx={x(model.obs[last].t)} cy={endY} r={4.5} />
-            <rect x={W - frame.mr + 8} y={endY - 11} width={endW} height={22} />
-            <text x={W - frame.mr + 16} y={endY + 4}>{endLabel}</text>
+          <g className="exec-c2-end" data-testid="endpoint">
+            <circle className="exec-c2-end-halo" cx={x(model.obs[last].t)} cy={endY} r={9} />
+            <circle className="exec-c2-end-dot" cx={x(model.obs[last].t)} cy={endY} r={4.5} />
+            <rect x={Math.min(W - frame.mr + 8, W - endW - 2)} y={endY - 11} width={endW} height={22} />
+            <text x={Math.min(W - frame.mr + 8, W - endW - 2) + 8} y={endY + 4}>{endLabel}</text>
           </g>
 
           {hasDd ? (
-            <g className="exec-chart-dd" data-testid="drawdown-pane">
-              <text className="exec-chart-pane-title" x={frame.ml} y={ddTop - 7}>Drawdown</text>
-              <line className="exec-chart-grid" x1={frame.ml} x2={frame.ml + iw} y1={ddTop} y2={ddTop} />
+            <g className="exec-c2-dd" data-testid="drawdown-pane">
+              <text className="exec-c2-pane-title" x={frame.ml} y={ddTop - 7}>Drawdown</text>
+              <line className="exec-c2-grid" x1={frame.ml} x2={frame.ml + iw} y1={ddTop} y2={ddTop} />
               {ddModel && ddModel.drawable > 0 ? (
                 <>
-                  <path className="exec-chart-dd-area" d={areaPath(ddRuns, x, ddY, ddTop)} />
-                  <path className="exec-chart-line" data-s="dd" d={linePath(ddRuns, x, ddY)} />
+                  <path className="exec-c2-dd-area" d={areaPath(ddRuns, x, ddY, ddTop)} />
+                  <path className="exec-c2-line" data-s="dd" d={linePath(ddRuns, x, ddY)} />
                   {ddModel.low ? (
-                    <g className="exec-chart-dd-min">
+                    <g className="exec-c2-dd-min">
                       <circle cx={x(ddModel.obs[ddModel.low.index].t)} cy={ddY(ddModel.obs[ddModel.low.index].n as number)} r={4} />
                       <text x={Math.min(x(ddModel.obs[ddModel.low.index].t) + 9, W - frame.mr - 34)} y={ddY(ddModel.obs[ddModel.low.index].n as number) + 4}>{showDecimal(ddModel.low.s, { unit: "pct" })}</text>
                     </g>
                   ) : null}
                 </>
               ) : (
-                <g className="exec-chart-dd-absent">
+                <g className="exec-c2-dd-absent">
                   <rect x={frame.ml} y={ddTop} width={iw} height={ddH} fill={`url(#${id}-hgap)`} />
                   <text x={frame.ml + 10} y={ddTop + ddH / 2 + 4}>
                     {drawdown?.kind === "absent" ? `${drawdown.copy}${drawdown.reason ? ` · ${drawdown.reason}` : ""}` : "Not available · no published value in this window"}
@@ -412,7 +412,7 @@ export function EquityPanel(props: EquityPanelProps) {
           ) : null}
 
           {cursorVisible ? (
-            <g className="exec-chart-cursor" data-testid="cursor">
+            <g className="exec-c2-cursor" data-testid="cursor">
               <line x1={cx} x2={cx} y1={frame.top} y2={height + gap + ddH} />
               {o.s !== null ? <circle cx={cx} cy={y(o.n as number)} r={5} /> : null}
             </g>
@@ -420,7 +420,7 @@ export function EquityPanel(props: EquityPanelProps) {
         </svg>
       </div>
 
-      <p className="exec-chart-envelope" data-testid="envelope">
+      <p className="exec-c2-envelope" data-testid="envelope">
         {caption}
         {serverEnvelope
           ? ` · Server: ${serverEnvelope.shownCount.toLocaleString("en-US")} of ${serverEnvelope.sourceCount.toLocaleString("en-US")} points, ${serverEnvelope.method}`
@@ -431,7 +431,7 @@ export function EquityPanel(props: EquityPanelProps) {
         {serverEnvelope && !serverEnvelope.keepsExtrema ? <> <ChartStateFlags state={{ kind: "partial", reason: "server reduction does not guarantee extrema" }} /></> : null}
       </p>
 
-      <div className="exec-chart-sr" id={summaryId}>
+      <div className="exec-c2-sr" id={summaryId}>
         <p>{summary}</p>
         <table>
           <caption>{`Key readings, ${label}`}</caption>
@@ -443,7 +443,7 @@ export function EquityPanel(props: EquityPanelProps) {
           </tbody>
         </table>
       </div>
-      <div className="exec-chart-sr" role="status" aria-live="polite">{announce}</div>
+      <div className="exec-c2-sr" role="status" aria-live="polite">{announce}</div>
     </figure>
   );
 }

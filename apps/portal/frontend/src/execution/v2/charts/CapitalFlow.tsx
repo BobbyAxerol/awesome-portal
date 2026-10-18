@@ -94,10 +94,10 @@ export function CapitalFlow({ label, blocks, basis, unit = "money", currency, st
   const summary = `${label}. ${nodeCount} nodes, ${edgeCount} links in ${blocks.length} ${blocks.length === 1 ? "block" : "blocks"}. Basis: ${basis}.${blocks.length > 1 ? " Blocks are never summed." : ""}`;
 
   const table = (
-    <details className="exec-chart-table" open={tooMany || undefined}>
+    <details className="exec-c2-table" open={tooMany || undefined}>
       <summary>Table view</summary>
       {blocks.map((b) => (
-        <table key={b.id} className="exec-chart-tbl">
+        <table key={b.id} className="exec-c2-tbl">
           <caption>{`${b.label} · ${b.basis === "simulated" ? "Simulated" : "Real-funded"}`}</caption>
           <thead><tr><th scope="col">Node</th><th scope="col">Column</th><th scope="col">Amount</th><th scope="col">Note</th></tr></thead>
           <tbody>
@@ -123,7 +123,7 @@ export function CapitalFlow({ label, blocks, basis, unit = "money", currency, st
           {b.edges.length > 0 ? (
             <tbody>
               {b.edges.map((e: FlowEdge) => (
-                <tr key={e.id} className="exec-chart-tbl-edge">
+                <tr key={e.id} className="exec-c2-tbl-edge">
                   <th scope="row">{`${b.nodes.find((n) => n.id === e.from)?.label ?? e.from} to ${b.nodes.find((n) => n.id === e.to)?.label ?? e.to}`}</th>
                   <td>{(e.kind ?? "flow") === "limit" ? "Limit" : "Flow"}</td>
                   <td>{(e.kind ?? "flow") === "limit" ? "Not cash" : amount(e.value)}</td>
@@ -140,9 +140,9 @@ export function CapitalFlow({ label, blocks, basis, unit = "money", currency, st
   if (tooMany || layout === null) {
     return (
       <figure className="exec-chart exec-flow" data-state={state.kind}>
-        <figcaption className="exec-chart-head"><span className="exec-chart-title">{label}</span><ChartStateFlags state={state} /></figcaption>
-        <p className="exec-chart-envelope" data-testid="too-many">{`${nodeCount} nodes are too many to draw legibly (limit ${maxNodes}). The table below holds every node and link.`}</p>
-        <p className="exec-chart-basis" data-testid="basis">{`Basis: ${basis}`}</p>
+        <figcaption className="exec-c2-head"><span className="exec-c2-title">{label}</span><ChartStateFlags state={state} /></figcaption>
+        <p className="exec-c2-envelope" data-testid="too-many">{`${nodeCount} nodes are too many to draw legibly (limit ${maxNodes}). The table below holds every node and link.`}</p>
+        <p className="exec-c2-basis" data-testid="basis">{`Basis: ${basis}`}</p>
         {table}
       </figure>
     );
@@ -157,7 +157,7 @@ export function CapitalFlow({ label, blocks, basis, unit = "money", currency, st
     return (
       <g key={pb.block.id} className="exec-flow-block" data-basis={pb.block.basis} transform={`translate(0 ${pb.top})`}>
         <text className="exec-flow-head" x={8} y={14}>{`${pb.block.label} · ${sim ? "Simulated" : "Real-funded"}`}</text>
-        <line className="exec-chart-grid" x1={0} x2={WIDTH} y1={22} y2={22} />
+        <line className="exec-c2-grid" x1={0} x2={WIDTH} y1={22} y2={22} />
         {pb.edges.map((e) => {
           if (!e.drawn) return null;
           const hi = edgeHi(pb.block.id, e.edge.id);
@@ -220,23 +220,23 @@ export function CapitalFlow({ label, blocks, basis, unit = "money", currency, st
 
   return (
     <figure className="exec-chart exec-flow" data-state={state.kind}>
-      <figcaption className="exec-chart-head"><span className="exec-chart-title">{label}</span><ChartStateFlags state={state} /></figcaption>
+      <figcaption className="exec-c2-head"><span className="exec-c2-title">{label}</span><ChartStateFlags state={state} /></figcaption>
       {structure && state.kind === "unavailable" ? (
-        <p className="exec-chart-envelope" data-testid="structure-note">{`${state.copy}${state.reason ? ` · ${state.reason}` : ""} · Structure only, no amounts`}</p>
+        <p className="exec-c2-envelope" data-testid="structure-note">{`${state.copy}${state.reason ? ` · ${state.reason}` : ""} · Structure only, no amounts`}</p>
       ) : null}
       <div className="exec-flow-scroll">
-        <svg className="exec-chart-svg exec-flow-svg" viewBox={`0 0 ${WIDTH} ${layout.height}`} role="img" aria-label={label} aria-describedby={summaryId} data-dim={dim ? "true" : "false"}>
+        <svg className="exec-c2-svg exec-flow-svg" viewBox={`0 0 ${WIDTH} ${layout.height}`} role="img" aria-label={label} aria-describedby={summaryId} data-dim={dim ? "true" : "false"}>
           <defs>
-            <pattern id={`${id}-hsim`} className="exec-chart-pat" data-s="sim" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" /></pattern>
-            <pattern id={`${id}-hna`} className="exec-chart-pat" data-s="gap" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" /></pattern>
+            <pattern id={`${id}-hsim`} className="exec-c2-pat" data-s="sim" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" /></pattern>
+            <pattern id={`${id}-hna`} className="exec-c2-pat" data-s="gap" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" /></pattern>
           </defs>
           {layout.blocks.map(renderBlock)}
         </svg>
       </div>
       <p className="exec-flow-readout" role="status" data-testid="flow-readout">{activeText}</p>
-      <p className="exec-chart-basis" data-testid="basis">{`Basis: ${basis}`}</p>
-      <p className="exec-chart-envelope">{`Band height is the amount on its own basis · Hatched outline: no amount${blocks.length > 1 ? " · Blocks are never summed" : ""}${currency ? ` · ${currency}` : ""}`}</p>
-      <div className="exec-chart-sr" id={summaryId}>{summary}</div>
+      <p className="exec-c2-basis" data-testid="basis">{`Basis: ${basis}`}</p>
+      <p className="exec-c2-envelope">{`Band height is the amount on its own basis · Hatched outline: no amount${blocks.length > 1 ? " · Blocks are never summed" : ""}${currency ? ` · ${currency}` : ""}`}</p>
+      <div className="exec-c2-sr" id={summaryId}>{summary}</div>
       {table}
     </figure>
   );

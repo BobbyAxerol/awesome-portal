@@ -115,7 +115,7 @@ export function CompareOverlay({ label, series, notComparable = [], basis, unit 
     <ul className="exec-compare-nc" aria-label="Not in the comparison">
       {excluded.map((e) => (
         <li key={e.id} className="exec-compare-nc-item" data-testid="not-comparable">
-          <i className="exec-chart-sw" data-s="gap" data-hatch="true" />
+          <i className="exec-c2-sw" data-s="gap" data-hatch="true" />
           <span className="exec-compare-nc-name">{e.label}</span>
           <Flag kind="na" label="Not comparable" size="sm" />
           <span className="exec-compare-nc-reason">{e.reason}</span>
@@ -206,32 +206,32 @@ export function CompareOverlay({ label, series, notComparable = [], basis, unit 
 
   return (
     <figure className="exec-chart exec-compare" data-state={state.kind}>
-      <figcaption className="exec-chart-head">
-        <span className="exec-chart-title">{label}</span>
+      <figcaption className="exec-c2-head">
+        <span className="exec-c2-title">{label}</span>
         <ChartStateFlags state={state} />
       </figcaption>
-      <ul className="exec-chart-legend">
+      <ul className="exec-c2-legend">
         {plotted.map((p) => (
-          <li key={p.c.id}><i className="exec-chart-sw" data-s={TONES[p.k]} data-dash-k={p.k} />{p.c.label}</li>
+          <li key={p.c.id}><i className="exec-c2-sw" data-s={TONES[p.k]} data-dash-k={p.k} />{p.c.label}</li>
         ))}
       </ul>
       {excludedList}
-      <div className="exec-chart-readout" id={readoutId}>
-        <span><span className="exec-chart-ru">{timeOf(at)}</span></span>
+      <div className="exec-c2-readout" id={readoutId}>
+        <span><span className="exec-c2-ru">{timeOf(at)}</span></span>
         {plotted.map((p) => {
           const v = valueAt(p, at);
           return (
             <span key={p.c.id}>
-              <i className="exec-chart-sw" data-s={TONES[p.k]} data-dash-k={p.k} />
-              <span className="exec-chart-ru">{p.c.label}</span>
-              <b className="exec-chart-rv" data-testid="compare-value">{v !== null ? show(v) : "No point at this time"}</b>
+              <i className="exec-c2-sw" data-s={TONES[p.k]} data-dash-k={p.k} />
+              <span className="exec-c2-ru">{p.c.label}</span>
+              <b className="exec-c2-rv" data-testid="compare-value">{v !== null ? show(v) : "No point at this time"}</b>
             </span>
           );
         })}
       </div>
       <div
         ref={plotRef}
-        className="exec-chart-plot"
+        className="exec-c2-plot"
         role="group"
         tabIndex={0}
         aria-label={`${label}. Left and right arrow keys move the readout, Shift moves ten points, Home and End jump to the ends, Escape releases it.`}
@@ -240,34 +240,34 @@ export function CompareOverlay({ label, series, notComparable = [], basis, unit 
         onMouseMove={onMove}
         onMouseLeave={() => moveTo(null, false)}
       >
-        <svg className="exec-chart-svg" viewBox={`0 0 ${W} ${height}`} width={W} height={height} role="img" aria-label={`${label}, ${plotted.map((p) => p.c.label).join(", ")}`} aria-describedby={summaryId}>
+        <svg className="exec-c2-svg" viewBox={`0 0 ${W} ${height}`} width={W} height={height} role="img" aria-label={`${label}, ${plotted.map((p) => p.c.label).join(", ")}`} aria-describedby={summaryId}>
           <defs>
             <clipPath id={`${id}-clip`}><rect x={frame.ml} y={frame.top - 4} width={iw} height={frame.bottom - frame.top + 8} /></clipPath>
-            <pattern id={`${id}-hgap`} className="exec-chart-pat" data-s="gap" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" /></pattern>
+            <pattern id={`${id}-hgap`} className="exec-c2-pat" data-s="gap" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" /></pattern>
           </defs>
           <YAxis frame={frame} ticks={ticks} y={y} unit={unit} />
           <XAxis frame={frame} from={x0} to={x1} />
-          {spans.length > 0 ? <path className="exec-chart-gaps" d={gapRectsPath(spans, frame.top, frame.bottom)} fill={`url(#${id}-hgap)`} data-testid="gaps" /> : null}
+          {spans.length > 0 ? <path className="exec-c2-gaps" d={gapRectsPath(spans, frame.top, frame.bottom)} fill={`url(#${id}-hgap)`} data-testid="gaps" /> : null}
           <g clipPath={`url(#${id}-clip)`}>
             {plotted.map((p, i) => (
-              <path key={p.c.id} className="exec-chart-line" data-s={TONES[p.k]} data-main="true" strokeDasharray={DASHES[p.k] || undefined} d={linePath(reducedRuns[i], x, y)} data-testid="compare-line" />
+              <path key={p.c.id} className="exec-c2-line" data-s={TONES[p.k]} data-main="true" strokeDasharray={DASHES[p.k] || undefined} d={linePath(reducedRuns[i], x, y)} data-testid="compare-line" />
             ))}
           </g>
           {ends.map(({ p, o, y: yy, ty }) => {
             const text = `${clip(p.c.label)}  ${show(o.s as string)}`;
             const w = text.length * 6.8 + 16;
             return (
-              <g key={p.c.id} className="exec-chart-endtag" data-s={TONES[p.k]} data-testid="end-tag">
+              <g key={p.c.id} className="exec-c2-endtag" data-s={TONES[p.k]} data-testid="end-tag">
                 <title>{`${p.c.label} ${show(o.s as string)}`}</title>
                 <line x1={x(o.t) + 5} x2={W - frame.mr + 8} y1={yy} y2={ty} />
-                <g className="exec-chart-marker">{marker(MARKERS[p.k], x(o.t), yy)}</g>
-                <rect className="exec-chart-endbox" x={W - frame.mr + 8} y={ty - 11} width={w} height={22} />
+                <g className="exec-c2-marker">{marker(MARKERS[p.k], x(o.t), yy)}</g>
+                <rect className="exec-c2-endbox" x={W - frame.mr + 8} y={ty - 11} width={w} height={22} />
                 <text x={W - frame.mr + 16} y={ty + 4}>{text}</text>
               </g>
             );
           })}
           {cursor !== null ? (
-            <g className="exec-chart-cursor" data-testid="cursor">
+            <g className="exec-c2-cursor" data-testid="cursor">
               <line x1={x(at)} x2={x(at)} y1={frame.top} y2={frame.bottom} />
               {plotted.map((p) => {
                 const v = valueAt(p, at);
@@ -278,9 +278,9 @@ export function CompareOverlay({ label, series, notComparable = [], basis, unit 
           ) : null}
         </svg>
       </div>
-      <p className="exec-chart-basis" data-testid="basis">{`Basis: ${basis}`}</p>
-      <p className="exec-chart-envelope" data-testid="envelope">{envelopeCaption(envelope, gapCount, unreadable)}</p>
-      <div className="exec-chart-sr" id={summaryId}>
+      <p className="exec-c2-basis" data-testid="basis">{`Basis: ${basis}`}</p>
+      <p className="exec-c2-envelope" data-testid="envelope">{envelopeCaption(envelope, gapCount, unreadable)}</p>
+      <div className="exec-c2-sr" id={summaryId}>
         <p>{`${label}. Basis: ${basis}. ${plotted.length} series on one axis.`}</p>
         <table>
           <caption>{`Latest values, ${label}`}</caption>
@@ -292,7 +292,7 @@ export function CompareOverlay({ label, series, notComparable = [], basis, unit 
           </tbody>
         </table>
       </div>
-      <div className="exec-chart-sr" role="status" aria-live="polite">{announce}</div>
+      <div className="exec-c2-sr" role="status" aria-live="polite">{announce}</div>
     </figure>
   );
 }

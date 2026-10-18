@@ -69,8 +69,8 @@ export function Spark({ values, label, unit = "money", tone = "series", width = 
 
   if (model.drawable === 0 || model.lo === null || model.hi === null || model.first === null || model.last === null) {
     return (
-      <span className="exec-spark exec-spark-na" role="img" aria-label={`${label}: ${unavailable}`} style={{ width, height }} title={unavailable}>
-        <span className="exec-chart-sr">{unavailable}</span>
+      <span className="exec-sp2 exec-sp2-na" role="img" aria-label={`${label}: ${unavailable}`} style={{ width, height }} title={unavailable}>
+        <span className="exec-c2-sr">{unavailable}</span>
       </span>
     );
   }
@@ -86,9 +86,9 @@ export function Spark({ values, label, unit = "money", tone = "series", width = 
     `low ${show(model.lo)}, high ${show(model.hi)}` +
     (model.gaps > 0 ? `, ${model.gaps} ${model.gaps === 1 ? "gap" : "gaps"} with no published value` : "");
   return (
-    <svg className="exec-spark" viewBox={`0 0 ${width} ${height}`} width={width} height={height} role="img" aria-label={name} data-reduced={model.reduced ? "true" : "false"}>
-      <path className="exec-chart-line" data-s={tone} data-spark="true" d={linePath(model.runs, x, flat ? () => height / 2 : y)} />
-      <circle className="exec-spark-end" data-s={tone} cx={x(lastMark.t)} cy={flat ? height / 2 : y(lastMark.n)} r={2} />
+    <svg className="exec-sp2" viewBox={`0 0 ${width} ${height}`} width={width} height={height} role="img" aria-label={name} data-reduced={model.reduced ? "true" : "false"}>
+      <path className="exec-c2-line" data-s={tone} data-spark="true" d={linePath(model.runs, x, flat ? () => height / 2 : y)} />
+      <circle className="exec-sp2-end" data-s={tone} cx={x(lastMark.t)} cy={flat ? height / 2 : y(lastMark.n)} r={2} />
     </svg>
   );
 }

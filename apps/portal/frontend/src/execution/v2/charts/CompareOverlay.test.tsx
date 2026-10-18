@@ -35,7 +35,7 @@ describe("CompareOverlay", () => {
     const tags = [...container.querySelectorAll('[data-testid="end-tag"] text')].map((t) => t.textContent);
     // Tags are listed top to bottom on the page: the larger value sits higher.
     expect(tags).toEqual(["Satellite  +9.70%", "Core  +1.60%"]);
-    expect(container.querySelectorAll(".exec-chart-marker circle, .exec-chart-marker rect, .exec-chart-marker polygon")).toHaveLength(2);
+    expect(container.querySelectorAll(".exec-c2-marker circle, .exec-c2-marker rect, .exec-c2-marker polygon")).toHaveLength(2);
   });
 
   it("states its basis and what was reduced", () => {
@@ -76,7 +76,7 @@ describe("CompareOverlay", () => {
     ]);
     expect(items[0].textContent).toContain("Other currency");
     expect(items[0].querySelector('.exec-flag[data-k="na"]')!.textContent).toContain("Not comparable");
-    expect(items[0].querySelector('.exec-chart-sw[data-hatch="true"]')).not.toBeNull();
+    expect(items[0].querySelector('.exec-c2-sw[data-hatch="true"]')).not.toBeNull();
     expect(container.querySelectorAll('[data-testid="compare-line"]')).toHaveLength(2);
   });
 
@@ -112,7 +112,7 @@ describe("CompareOverlay", () => {
     const { container } = render(
       <CompareOverlay {...base} series={[{ id: "a", label: "A", points: pts("1.00") }, { id: "b", label: "B", points: pts("1.01") }, { id: "c", label: "C", points: pts("1.02") }]} />,
     );
-    const ys = [...container.querySelectorAll('[data-testid="end-tag"] .exec-chart-endbox')].map((r) => Number(r.getAttribute("y"))).sort((a, b) => a - b);
+    const ys = [...container.querySelectorAll('[data-testid="end-tag"] .exec-c2-endbox')].map((r) => Number(r.getAttribute("y"))).sort((a, b) => a - b);
     expect(ys[1] - ys[0]).toBeGreaterThanOrEqual(24);
     expect(ys[2] - ys[1]).toBeGreaterThanOrEqual(24);
   });
@@ -148,6 +148,6 @@ describe("CompareOverlay", () => {
 
   it("honours a shared domain", () => {
     const { container } = render(<CompareOverlay {...base} series={[{ id: "core", label: "Core", points: core }]} domain={{ from: epoch(Date.parse("2026-09-01T00:00:00Z")), to: epoch(Date.parse("2026-10-04T00:00:00Z")) }} />);
-    expect(container.querySelector(".exec-chart-xaxis")).not.toBeNull();
+    expect(container.querySelector(".exec-c2-xaxis")).not.toBeNull();
   });
 });

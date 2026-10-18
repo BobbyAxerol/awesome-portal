@@ -24,9 +24,9 @@ export interface ChartUnavailableProps {
 export function ChartUnavailable({ label, copy, reason, height = 200 }: ChartUnavailableProps) {
   const name = reason ? `${label}: ${copy}. ${reason}` : `${label}: ${copy}`;
   return (
-    <div className="exec-chart-na" role="img" aria-label={name} style={{ minHeight: height }} data-testid="chart-unavailable">
-      <span className="exec-chart-na-copy">{copy}</span>
-      {reason ? <span className="exec-chart-na-reason">{reason}</span> : null}
+    <div className="exec-c2-na" role="img" aria-label={name} style={{ minHeight: height }} data-testid="chart-unavailable">
+      <span className="exec-c2-na-copy">{copy}</span>
+      {reason ? <span className="exec-c2-na-reason">{reason}</span> : null}
     </div>
   );
 }

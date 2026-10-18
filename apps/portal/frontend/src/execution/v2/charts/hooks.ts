@@ -1,7 +1,8 @@
 import { useEffect, useId, useState, type RefObject } from "react";
 
 /** Plot margins in CSS px. EventRibbon uses the same numbers (through CSS custom properties) to line up with an EquityPanel. */
-export const CHART_MARGIN = { l: 60, r: 78, t: 28, b: 26 } as const;
+// The left margin holds the widest exact tick label (e.g. 618,000.00) without clipping at phone width.
+export const CHART_MARGIN = { l: 78, r: 78, t: 28, b: 26 } as const;
 
 export const DEFAULT_CHART_WIDTH = 760;
 

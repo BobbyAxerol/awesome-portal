@@ -136,7 +136,7 @@ describe("CapitalFlow", () => {
   it("gives keyboard users the same trace and the same selection through the table", () => {
     const onSelect = vi.fn();
     const { container } = render(<CapitalFlow label="Capital flow" blocks={[REAL]} basis={BASIS} onSelect={onSelect} />);
-    const table = within(container.querySelector("details.exec-chart-table") as HTMLElement);
+    const table = within(container.querySelector("details.exec-c2-table") as HTMLElement);
     const pick = table.getByRole("button", { name: "Approved budget" });
     fireEvent.focus(pick);
     expect([...container.querySelectorAll('[data-hi="true"]')].map((e) => e.getAttribute("data-id")).sort()).toEqual(["bud", "btc", "e4", "e5", "head"].sort());

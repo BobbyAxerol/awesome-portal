@@ -105,9 +105,9 @@ export function EventRibbon({ label, events, domain, stages = [], enabled = {}, 
 
   return (
     <div className="exec-ribbon" role="group" aria-label={label} style={marginVars} data-state={state.kind}>
-      {state.kind !== "ready" ? <div className="exec-chart-head"><ChartStateFlags state={state} /></div> : null}
+      {state.kind !== "ready" ? <div className="exec-c2-head"><ChartStateFlags state={state} /></div> : null}
       {empty ? (
-        <p className="exec-chart-envelope" data-testid="ribbon-empty">No events or stages in this window.</p>
+        <p className="exec-c2-envelope" data-testid="ribbon-empty">No events or stages in this window.</p>
       ) : (
         <>
           <div className="exec-ribbon-lanes" style={{ height: EVENT_KINDS.length * 18 + 8 }}>
@@ -179,7 +179,7 @@ export function EventRibbon({ label, events, domain, stages = [], enabled = {}, 
           ) : null}
         </>
       )}
-      {outside > 0 ? <p className="exec-chart-envelope" data-testid="ribbon-outside">{`${outside} ${outside === 1 ? "event" : "events"} outside this window not drawn`}</p> : null}
+      {outside > 0 ? <p className="exec-c2-envelope" data-testid="ribbon-outside">{`${outside} ${outside === 1 ? "event" : "events"} outside this window not drawn`}</p> : null}
     </div>
   );
 }

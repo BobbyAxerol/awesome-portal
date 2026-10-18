@@ -56,8 +56,8 @@ export function DivBars({ label, rows, unit = "money", currency, state = { kind:
 
   return (
     <figure className="exec-chart exec-divbars" data-state={state.kind} role="img" aria-label={label} aria-describedby={summaryId}>
-      <figcaption className="exec-chart-head">
-        <span className="exec-chart-title">{label}</span>
+      <figcaption className="exec-c2-head">
+        <span className="exec-c2-title">{label}</span>
         <ChartStateFlags state={state} />
       </figcaption>
       <ul className="exec-div-rows" aria-hidden="true">
@@ -80,8 +80,8 @@ export function DivBars({ label, rows, unit = "money", currency, state = { kind:
           );
         })}
       </ul>
-      {hidden > 0 ? <p className="exec-chart-envelope">{`Showing ${shown.length.toLocaleString("en-US")} of ${population.toLocaleString("en-US")} rows`}</p> : null}
-      <div className="exec-chart-sr" id={summaryId}>
+      {hidden > 0 ? <p className="exec-c2-envelope">{`Showing ${shown.length.toLocaleString("en-US")} of ${population.toLocaleString("en-US")} rows`}</p> : null}
+      <div className="exec-c2-sr" id={summaryId}>
         <table>
           <caption>{label}</caption>
           <thead><tr><th scope="col">Name</th><th scope="col">Value</th></tr></thead>

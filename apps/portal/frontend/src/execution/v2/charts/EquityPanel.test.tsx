@@ -193,7 +193,7 @@ describe("EquityPanel · layers", () => {
 
   it("hatches simulated spans, words them, and splits the line at the boundary without a break", () => {
     const { container } = render(<EquityPanel label="Equity" points={BASIC} segments={[sim]} />);
-    expect(container.querySelector('.exec-chart-seg[data-kind="simulated"] text')!.textContent).toBe("Simulated");
+    expect(container.querySelector('.exec-c2-seg[data-kind="simulated"] text')!.textContent).toBe("Simulated");
     expect(container.querySelector('[data-testid="simulated-line"]')).not.toBeNull();
     // The actual run starts from the shared boundary point, so the line is one line.
     const actual = line(container);
@@ -204,14 +204,14 @@ describe("EquityPanel · layers", () => {
 
   it("draws a retained span with its own word", () => {
     const { container } = render(<EquityPanel label="Equity" points={BASIC} segments={[{ ...sim, kind: "retained" }]} />);
-    expect(container.querySelector('.exec-chart-seg[data-kind="retained"] text')!.textContent).toBe("Retained");
+    expect(container.querySelector('.exec-c2-seg[data-kind="retained"] text')!.textContent).toBe("Retained");
     expect(screen.getByText("Retained", { selector: "li" })).toBeTruthy();
   });
 
   it("draws the approved band, extends the axis to it, and refuses unreadable bounds loudly", () => {
     const { container } = render(<EquityPanel label="Equity" points={BASIC} band={{ lo: "1500.00", hi: "1600.00", name: "Approved band" }} />);
     expect(container.querySelector('[data-testid="band"]')).not.toBeNull();
-    const ticks = [...container.querySelectorAll(".exec-chart-yaxis .exec-chart-tick")].map((t) => t.textContent);
+    const ticks = [...container.querySelectorAll(".exec-c2-yaxis .exec-c2-tick")].map((t) => t.textContent);
     expect(ticks.some((t) => Number((t ?? "").replace(/,/g, "")) >= 1600)).toBe(true);
     cleanup();
     const bad = render(<EquityPanel label="Equity" points={BASIC} band={{ lo: "1600.00", hi: "1500.00" }} />);
@@ -231,7 +231,7 @@ describe("EquityPanel · layers", () => {
   it("shows the published drawdown, its worst point, and reads it at the cursor", () => {
     const dd = series(["0.00", "0.00", "-2.5000", "-1.2500"]);
     const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "series", points: dd }} />);
-    expect(container.querySelector('[data-testid="drawdown-pane"] .exec-chart-dd-min text')!.textContent).toBe("-2.50%");
+    expect(container.querySelector('[data-testid="drawdown-pane"] .exec-c2-dd-min text')!.textContent).toBe("-2.50%");
     expect(screen.getByTestId("readout-drawdown").textContent).toBe("-1.25%");
     fireEvent.keyDown(screen.getByRole("group", { name: /Equity/ }), { key: "ArrowLeft" });
     expect(screen.getByTestId("readout-drawdown").textContent).toBe("-2.50%");
@@ -239,9 +239,9 @@ describe("EquityPanel · layers", () => {
 
   it("says drawdown is not published rather than deriving or zeroing it", () => {
     const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "absent", copy: "Not published (FE-051)" }} />);
-    expect(container.querySelector('[data-testid="drawdown-pane"] .exec-chart-dd-absent text')!.textContent).toBe("Not published (FE-051)");
+    expect(container.querySelector('[data-testid="drawdown-pane"] .exec-c2-dd-absent text')!.textContent).toBe("Not published (FE-051)");
     expect(screen.getByTestId("readout-drawdown").textContent).toBe("Not published (FE-051)");
-    expect(container.querySelector(".exec-chart-dd-area")).toBeNull();
+    expect(container.querySelector(".exec-c2-dd-area")).toBeNull();
   });
 
   it("pins flows with their sign and marks events with a distinct glyph", () => {
@@ -267,18 +267,18 @@ describe("EquityPanel · layers", () => {
     const fig = container.querySelector("figure")!;
     const kids = [...fig.children];
     const rib = kids.findIndex((k) => k.classList.contains("exec-ribbon"));
-    expect(rib).toBeGreaterThan(kids.findIndex((k) => k.classList.contains("exec-chart-readout")));
-    expect(rib).toBeLessThan(kids.findIndex((k) => k.classList.contains("exec-chart-plot")));
+    expect(rib).toBeGreaterThan(kids.findIndex((k) => k.classList.contains("exec-c2-readout")));
+    expect(rib).toBeLessThan(kids.findIndex((k) => k.classList.contains("exec-c2-plot")));
   });
 });
 
 describe("EquityPanel · axes and a11y", () => {
   it("labels the time axis in UTC house style and the value axis through formatExact", () => {
     const { container } = render(<EquityPanel label="Equity" points={series(["1000.00", "1010.00", "990.00"], "2026-10-17T08:00:00Z", 3_600_000)} />);
-    const xs = [...container.querySelectorAll(".exec-chart-xaxis .exec-chart-tick")].map((t) => t.textContent ?? "");
+    const xs = [...container.querySelectorAll(".exec-c2-xaxis .exec-c2-tick")].map((t) => t.textContent ?? "");
     expect(xs.length).toBeGreaterThanOrEqual(2);
     for (const t of xs) expect(t).toMatch(/^\d{1,2} [A-Z][a-z]{2} \d{2}:\d{2}Z$/);
-    const yv = [...container.querySelectorAll(".exec-chart-yaxis .exec-chart-tick")].map((t) => t.textContent ?? "");
+    const yv = [...container.querySelectorAll(".exec-c2-yaxis .exec-c2-tick")].map((t) => t.textContent ?? "");
     for (const t of yv) expect(t).toMatch(/^-?[\d,]+\.\d{2}$/);
   });
 

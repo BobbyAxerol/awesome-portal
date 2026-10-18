@@ -91,11 +91,11 @@ export function gapRectsPath(spans: readonly [number, number][], top: number, bo
 
 export function YAxis({ frame, ticks, y, unit }: { frame: Frame; ticks: ValueTicks; y: (v: number) => number; unit: ExactUnit }) {
   return (
-    <g className="exec-chart-yaxis">
+    <g className="exec-c2-yaxis">
       {ticks.values.map((v, i) => (
         <g key={ticks.labels[i]}>
-          <line className="exec-chart-grid" data-zero={v === 0 ? "true" : undefined} x1={frame.ml} x2={frame.W - frame.mr} y1={y(v)} y2={y(v)} />
-          <text className="exec-chart-tick" x={frame.ml - 8} y={y(v) + 4} textAnchor="end">
+          <line className="exec-c2-grid" data-zero={v === 0 ? "true" : undefined} x1={frame.ml} x2={frame.W - frame.mr} y1={y(v)} y2={y(v)} />
+          <text className="exec-c2-tick" x={frame.ml - 8} y={y(v) + 4} textAnchor="end">
             {showDecimal(ticks.labels[i], { unit })}
           </text>
         </g>
@@ -106,16 +106,17 @@ export function YAxis({ frame, ticks, y, unit }: { frame: Frame; ticks: ValueTic
 
 export function XAxis({ frame, from, to }: { frame: Frame; from: number; to: number }) {
   const iw = plotWidth(frame);
-  const max = Math.max(2, Math.min(6, Math.floor(iw / 120) + 1));
+  // One label when the plot is narrower than two 'dd Mon hh:mmZ' labels (phone width), never two that touch.
+  const max = Math.max(iw < 150 ? 1 : 2, Math.min(6, Math.floor(iw / 120) + 1));
   const ticks = timeTicks(from, to, max);
   const span = to - from;
   const x = (t: number) => frame.ml + (span === 0 ? iw / 2 : ((t - from) / span) * iw);
   return (
-    <g className="exec-chart-xaxis">
+    <g className="exec-c2-xaxis">
       {ticks.map((tick) => (
         <g key={tick.t}>
-          <line className="exec-chart-tickmark" x1={x(tick.t)} x2={x(tick.t)} y1={frame.bottom} y2={frame.bottom + 4} />
-          <text className="exec-chart-tick" x={x(tick.t)} y={frame.bottom + 18} textAnchor="middle">
+          <line className="exec-c2-tickmark" x1={x(tick.t)} x2={x(tick.t)} y1={frame.bottom} y2={frame.bottom + 4} />
+          <text className="exec-c2-tick" x={x(tick.t)} y={frame.bottom + 18} textAnchor="middle">
             {tick.label}
           </text>
         </g>

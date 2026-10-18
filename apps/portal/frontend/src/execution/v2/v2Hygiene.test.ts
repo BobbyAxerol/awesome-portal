@@ -4,7 +4,7 @@
  * `tokens.test.ts` and `typeRoles.test.ts` read only execution.css, so V2
  * stylesheets would otherwise ship with no contrast, colour or type-role check.
  */
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -93,5 +93,26 @@ describe("v2 stylesheets", () => {
       if (ratio < 4.5) failures.push(`${selector} · ${fg} on ${bg} is ${ratio.toFixed(2)}:1`);
     }
     expect(failures).toEqual([]);
+  });
+
+  it("no V2 class name is also a V1 class (a shared name would restyle V1 charts and tables when the flag is on)", () => {
+    const SRC = resolve(__dirname, "../..");
+    const strip = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, "");
+    const v2 = new Set<string>();
+    for (const { source } of sheets) for (const m of source.matchAll(/\.(exec-[A-Za-z0-9_-]+)/g)) v2.add(m[1]);
+    const v1 = new Set<string>();
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (path.includes(`${join("execution", "v2")}`) || name === "node_modules") continue;
+        if (statSync(path).isDirectory()) walk(path);
+        else if (/\.css$/.test(name)) for (const m of strip(readFileSync(path, "utf8")).matchAll(/\.(exec-[A-Za-z0-9_-]+)/g)) v1.add(m[1]);
+        else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)) for (const m of readFileSync(path, "utf8").matchAll(/\b(exec-[A-Za-z0-9_-]+)/g)) v1.add(m[1]);
+      }
+    };
+    walk(SRC);
+    // exec-surface is the one shared frame on purpose (ExecutionSurface paints the Carbon scope).
+    const shared = [...v2].filter((name) => v1.has(name) && name !== "exec-surface").sort();
+    expect(shared).toEqual([]);
   });
 });

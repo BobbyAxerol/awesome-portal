@@ -37,9 +37,11 @@ export type StateBoundaryProps = StateBoundaryBase &
 export function StateBoundary(props: StateBoundaryProps) {
   if (props.status === "ok") return <>{props.children}</>;
   const { status, actions, title, children } = props;
-  const reason = "reason" in props ? props.reason : undefined;
   const lastGood = "lastGood" in props ? props.lastGood : undefined;
   const keepsBody = status === "partial" || status === "stale";
+  // A state that keeps the body still owes the reader a sentence: a bare "Stale" says nothing.
+  const given = "reason" in props ? props.reason : undefined;
+  const reason = given === undefined && keepsBody ? "The source gave no reason." : given;
   return (
     <div className="exec-blk-boundary" data-status={status}>
       <PanelState status={status} reason={reason} lastGood={lastGood} actions={actions} title={title} />
