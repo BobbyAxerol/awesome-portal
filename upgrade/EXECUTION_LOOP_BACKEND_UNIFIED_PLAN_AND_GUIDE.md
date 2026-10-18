@@ -19479,6 +19479,48 @@ SCORE proposal; do not publish them as the current Core egress implementation.
 Normal commit hook remains mandatory; no skip/bypass or dev/main merge. Runtime,
 real identities/grants/schema and current or rollback services remain unchanged.
 
+**Actual commit/normal-hook observation, before compatibility repair:**
+Source publication landed locally as d0aed38b,27files/+10205/-3, correct
+BobbyAxerol identity. No push yet. Inspection finds this checkout has no configured
+core.hooksPath, so the plain commit did not automatically execute .githooks.
+Do not report automatic-hook PASS: root explicitly started .githooks/pre-commit,
+original handle85451, under the finite own HK correctness lease. Use per-command
+`git -c core.hooksPath=.githooks` on subsequent commits/pushes; do not change the
+shared Git config or bypass hooks. The standard hook builds the named
+portal-source-proxy-d4-offline:test syntax image and runs isolated npm/PG cells;
+this supersedes the initial no-build expectation. Record its real terminal and
+scope-clean the image/cells/cache ownership after all jobs finish, not while active.
+
+The live standard gate already exposes one legacy profile-projection fixture
+failure: its fixed2026-09-03 row has aged out of the production hot window while
+the assertion still expects it in the current snapshot. Current Coreff83f176
+already contains the exact relative-recentTs fixture correction. Adopt that
+same committed test-only hunk after the original job terminates, preserving
+full-depth history, ghost-parent rejection, current-window and dedup assertions.
+No production retention/query/authority change, weakened assertion or invented
+debt; keep the original failed run. New patch26 source and its213qualification
+are unchanged. Four later Core overlap merges also compute cleanly with zero
+conflict markers, but are not yet landed/tested/mounted current-Core source.
+
+**Original standard gate terminal14:51UTC / retained failure:** direct normal
+hook85451 exits1:130contracts PASS, production TS build PASS; actual API
+716PASS/1FAIL/0SKIP across72files. Exactly one assertion fails: expected current
+snapshot id102, actual[], at profile-projection.spec.ts:1560. Full-depth history
+and ghost-parent assertions had already passed. Restore is NOT_RUN because the
+normal script correctly stops on the test failure. The717case working-tree run
+includes57 tests of the preserved older untracked egress draft; do not claim
+those57 are published current-Core tests. Own control-api worker/PG/network
+have terminated and traps removed them; test image cleanup remains pending
+until the corrected normal-hook run is terminal.
+
+Adopted byte-identically the existing committedff83f176 profile-projection
+test correction (+5/-3); no production code or unchanged qualified26-file
+handoff bytes modified. Next commit explicitly enables repository hooks via
+per-command core.hooksPath, no shared config mutation. Reuse of existing Core
+fix avoids a second implementation and aligns the parallel sources. The final
+normal-hook result must be inspected before feature publication or any acceptance
+claim. Full08 and complete connected goal remain OPEN throughout.
+
 
 
 
