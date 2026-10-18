@@ -1,0 +1,16 @@
+# UXM-07 · yêu cầu gửi Codex (S0)
+
+Chủ: Claude · 2026-10-18 · Lane: FIXTURE_LAB. Cách đọc: mỗi dòng có locator (file hoặc chỗ trong code), thực trạng, mong muốn nhỏ nhất, và việc FE đang làm trong lúc chờ. Ledger gốc: [FRONTEND_BACKEND_SYNC.md](../../FRONTEND_BACKEND_SYNC.md) §3b (FE-023..036); số mới bắt đầu từ FE-037. Codex trả lời trong ledger của gói, không trả lời ở chat.
+
+| ID | Pri | Yêu cầu | Locator / thực trạng | Mong muốn nhỏ nhất | FE làm trong lúc chờ | Trạng thái |
+| --- | --- | --- | --- | --- | --- | --- |
+| FE-037 | P1 | Capability `execution.*` cho nav V2 | `control-api` `PORTAL_CAPABILITIES` hiện chỉ có `administration.*` và `governance.{r1,r2,canary,live}.{read,decide}`. `roleNav.ts` (V2_CAPABILITY) phải đặt tạm 4 tên: `execution.portfolios.read`, `execution.accounts.read`, `execution.operations.read`, `portal.execution.blotter.read` (tên cuối V1 đã in trong câu từ chối). | Codex chốt tên và phát hành vào session `access.capabilities`, hoặc nói tên khác để FE đổi một hằng số. | Nav fail-closed: Portfolios, Accounts, Operations, Blotter không hiện cho ai (cả owner) tới khi session có capability. Không bật cờ `shell` ở môi trường thật trước đó. | OPEN |
+| FE-038 | P2 | Mục "Profile & Access" cho mọi người dùng (xem của chính mình) | `sidebarGroups` ẩn mục này nếu không có `administration.profile_access.manage`; V2 cần màn tự xem (D9 "My access"). | Registry rev 7: mục tự xem không cần quyền quản trị, hoặc route riêng. | `DockAction` có slot "My access" nhận `accessHref`; chưa nối. | OPEN |
+| FE-039 | P2 | Registry rev 7 ẩn `APPROVALS` cũ (`/backtests/approvals`) | `applyV2Nav` để mục cũ đi qua nên có hai mục "Approvals". | Cờ ẩn hoặc xoá mục cũ khỏi nav ở rev 7 (additive). | Không tự ẩn ở FE (registry là của Codex). | OPEN |
+| FE-040 | P2 | `ARG EXECUTION_V2_SCREENS` trong `deploy/images/portal-web.Dockerfile` | Dockerfile chỉ truyền `EXECUTION_PREVIEW_ENABLED` (dòng 25-31). Cờ manifest chỉ có tác dụng khi build nhận được nó. | Thêm `ARG EXECUTION_V2_SCREENS=` và `ENV VITE_EXECUTION_V2_SCREENS=` (mặc định rỗng = tắt). Một manifest cho dev và stable (đừng lặp lại lệch 8 cờ). | Mặc định tắt; không ảnh hưởng gì tới build hiện tại. | OPEN |
+| FE-041 | P3 | Quyết định tham số `window` (7D/30D/90D/ALL) | `ContextBar` ghi `window` vào URL nhưng server chưa có tham số này (xem FE-025). | Trả lời FE-025; khi có thì FE gỡ `windowLock`. | `windowLock` mặc định bật, hiện lý do "Window applies when the server supports it." | OPEN (gắn FE-025) |
+
+Ghi chú không phải yêu cầu: `--f-attention` chọn hue cam (#ffa51f); đây là quyết định thiết kế chờ Bobby xác nhận, không cần Codex.
+
+## Nợ liên quan, không thuộc Codex
+DEBT-UXM07-001 (V1 `.exec-gov .exec-btn-apply` tương phản 2.35:1) — xem [debt-register.json](debt-register.json); sửa một dòng nhưng đổi pixel V1 nên cần Bobby/Codex quyết baseline.

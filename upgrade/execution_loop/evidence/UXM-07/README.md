@@ -1,6 +1,6 @@
 # UXM-07 — Frontend implementation, slices S0 + S1 (fixture-browser lane)
 
-Chủ: Claude · 2026-10-18 (Asia/Saigon) · Trạng thái: **ASSIGNED, chưa bắt đầu code** (assignment xem §1). Khớp [Rules §7](../../AGENT_WORKING_RULES.md), [PHASE_PACKET_TEMPLATE](../../PHASE_PACKET_TEMPLATE.md), checklist [design/impl/UXM07-RULES-CHECKLIST.md](../../design/impl/UXM07-RULES-CHECKLIST.md).
+Chủ: Claude · 2026-10-18 (Asia/Saigon) · Trạng thái: **S0 DELIVERED (fixture lane) @ `d891b2a5`, chưa push; S1 chưa bắt đầu** — hồ sơ: [receipt](frontend-receipt.md), [backend-requests](backend-requests.md), [test-results](test-results.json), [debt](debt-register.json), [rollback](rollback.md). Khớp [Rules §7](../../AGENT_WORKING_RULES.md), [PHASE_PACKET_TEMPLATE](../../PHASE_PACKET_TEMPLATE.md), checklist [design/impl/UXM07-RULES-CHECKLIST.md](../../design/impl/UXM07-RULES-CHECKLIST.md).
 Lane mọi receipt: **FIXTURE_LAB / BFF_DOUBLE** (Rules 9.5.5). Fixture thành công không phải real-API acceptance; đọc dữ liệu thật thuộc UXM-08.
 
 ## 1. Entry gate
@@ -39,7 +39,7 @@ UX-F áp dụng (fixture lane, tập con): F01/02/03 (vai, deny), F04/05/06 (ng�
 ## 4. Hồ sơ, request, nợ
 - **Receipt (V2; CLAUDE.md §7.10 chỉ đặt tên Research):** `frontend-receipt.md`, `backend-requests.md`, `test-results.json`, `debt-register.json`, `rollback.md` trong thư mục này (Bobby sửa nếu muốn tên khác).
 - **Request:** FE-001…036 ở [sổ đồng bộ](../../FRONTEND_BACKEND_SYNC.md); P1 chặn S1/S2: FE-025, 027, 028, 030. Tin nhắn cho Codex: [PROMPT_FOR_CODEX](../../design/sync/PROMPT_FOR_CODEX.md) (AWAITING_CONSUMER_REVIEW).
-- **Nợ mở:** hue `attention`; PM pin; bảng ràng buộc chéo (RV-1).
+- **Nợ mở:** hue `attention` (chọn cam, chờ Bobby xác nhận); PM pin; bảng ràng buộc chéo (RV-1); DEBT-UXM07-001/002 (lỗi có sẵn trên tip Codex, xem debt-register); FE-037…041 ở [backend-requests](backend-requests.md).
 
 ## 5. Rollback
 Tắt cờ `VITE_EXECUTION_V2_SCREENS` (mặc định đã tắt) rồi xoá `src/execution/v2/**` và các test mới; token chỉ append trong khối carbon nên gỡ không ảnh hưởng; không đụng backend/registry/contracts.

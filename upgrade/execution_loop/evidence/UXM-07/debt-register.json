@@ -1,0 +1,28 @@
+{
+  "phase": "UXM-07",
+  "updated": "2026-10-18",
+  "open": [
+    {
+      "id": "DEBT-UXM07-001",
+      "title": "V1 governance primary button fails the carbon contrast gate",
+      "where": "apps/portal/frontend/src/execution/execution.css:7278 (.exec-gov .exec-btn-apply: background var(--accent) + color var(--accent-contrast))",
+      "measured": "--accent-contrast (#ffffff) on --accent (#78a9ff) = 2.35:1; src/styles/tokens.test.ts 'keeps every declared foreground/background pair legible on operations-carbon' fails on docs/research-loop-plan tip 0d5ceaba without any UXM-07 change",
+      "origin": "c67a0b1d 2026-10-12 feat(governance-ux) (Codex line)",
+      "not_fixed_because": "UXM-07 is flag-off pixel-neutral and may not edit V1 CSS or accepted baselines. A one-line fix (color: var(--paper), as execution.css:5981 already does) changes V1 governance button pixels and needs a baseline decision.",
+      "pre_commit_hook_blocks": false,
+      "proposed": "Codex or Bobby approves color: var(--paper) on line 7278 and a re-recorded governance baseline; V2 buttons never use --accent-contrast on --accent.",
+      "owner": "Codex / Bobby decision"
+    },
+    {
+      "id": "DEBT-UXM07-002",
+      "title": "R2 persistence ledger lacks the V2 operations queue table",
+      "where": "apps/portal/frontend/src/execution/r2Ledger.test.ts:117 ('covers every execution/governance table the control-api names in SQL')",
+      "measured": "missing: execution_operation_queue_v2 (added by Codex with executionF0BlockedOperationsListV2); fails on docs/research-loop-plan tip 0d5ceaba without any UXM-07 change",
+      "not_fixed_because": "The ledger names persistence ownership for Codex tables; adding a row is Codex's ownership decision, not a frontend appearance change.",
+      "pre_commit_hook_blocks": false,
+      "proposed": "Codex adds the table to the R2 ledger (or states it is out of scope) in the next landing turn.",
+      "owner": "Codex"
+    }
+  ],
+  "closed": []
+}

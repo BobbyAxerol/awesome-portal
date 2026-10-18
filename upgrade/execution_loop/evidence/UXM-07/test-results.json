@@ -1,0 +1,78 @@
+{
+  "phase": "UXM-07",
+  "slice": "S0",
+  "lane": "FIXTURE_LAB",
+  "commit": "d891b2a5",
+  "tree": "claude/fe-parity",
+  "date": "2026-10-18",
+  "gates": [
+    {
+      "cmd": "npx tsc --noEmit -p tsconfig.json",
+      "exit": 0
+    },
+    {
+      "cmd": "npx vitest run src/execution src/styles src/app src/portal",
+      "exit": 1,
+      "files": "147 passed / 2 failed (149)",
+      "tests": "2569 passed / 2 failed / 1 skipped",
+      "failures": [
+        {
+          "test": "tokens.test.ts \u00b7 keeps every declared foreground/background pair legible on operations-carbon",
+          "debt": "DEBT-UXM07-001",
+          "pre_existing": true
+        },
+        {
+          "test": "r2Ledger.test.ts \u00b7 covers every execution/governance table the control-api names in SQL",
+          "debt": "DEBT-UXM07-002",
+          "pre_existing": true
+        }
+      ]
+    },
+    {
+      "cmd": "npx vite build (flag unset); grep exec-flag|exec-ctxbar|exec-cmdbar in assets",
+      "exit": 0,
+      "hits": 0
+    },
+    {
+      "cmd": "VITE_EXECUTION_PREVIEW_ENABLED=true VITE_EXECUTION_V2_SCREENS=shell npx vite build",
+      "exit": 0,
+      "ctxbar_files": 2
+    },
+    {
+      "cmd": "pre-commit hook (verify-workspace.sh)",
+      "exit": 0
+    }
+  ],
+  "new_tests": {
+    "flags": 12,
+    "urlState": 48,
+    "tabAliases": 43,
+    "boundary": 82,
+    "Flag": 28,
+    "tokens(new)": 7,
+    "Drawer+cards": 28,
+    "shell": 49,
+    "v2Hygiene": 21,
+    "flagOff": 2,
+    "flagOn": 1
+  },
+  "not_run": [
+    {
+      "gate": "app/bundle.test.ts",
+      "reason": "needs dist/ in the worktree; entry size not compared"
+    },
+    {
+      "gate": "./scripts/portal-web-visual.sh (pinned image, verify mode)",
+      "reason": "milestone only; run at end of S1"
+    },
+    {
+      "gate": "Playwright journeys/lab",
+      "reason": "S0 adds no lab group or route; milestone only"
+    },
+    {
+      "gate": "full npm test",
+      "reason": "milestone only"
+    }
+  ],
+  "artifact_hashes": "build outputs and logs kept in the session scratchpad, not committed"
+}

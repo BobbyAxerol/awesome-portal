@@ -11,7 +11,7 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 | Nguồn | Pin đã đọc | Ngày đọc | Ghi chú |
 | --- | --- | --- | --- |
-| Portal `docs/research-loop-plan` | **`ac056d46`** (đọc 2026-10-18, 19 commit trên `0aad2697`; xem [digest](design/sync/2026-10-18-codex-digest.md)); trước đó `0aad2697` ("complete scoped score history and exact PM candidate codecs"); đã đọc kỹ đến `f1f5fc7d`, commit cuối đọc ELP2-06 scoped-score-history + README 06/07 | 2026-10-17 | `claude/fe-parity` đã rebase lên `0aad2697` (docs-only, chưa có code FE V2) |
+| Portal `docs/research-loop-plan` | **tip `0d5ceaba`** (2026-10-18; `claude/fe-parity` đã rebase lên đây, code S0 `d891b2a5`); digest đọc ở **`ac056d46`** (đọc 2026-10-18, 19 commit trên `0aad2697`; xem [digest](design/sync/2026-10-18-codex-digest.md)); trước đó `0aad2697` ("complete scoped score history and exact PM candidate codecs"); đã đọc kỹ đến `f1f5fc7d`, commit cuối đọc ELP2-06 scoped-score-history + README 06/07 | 2026-10-17 | `claude/fe-parity` đã rebase lên `0aad2697` (docs-only, chưa có code FE V2) |
 | TS execution (HK) | `c4819bc0` (`feat/v2-rust-first-okx-demo`) | 2026-10-17 ~11:15Z | Tôi đọc qua SSH chỉ-đọc; không kiểm runtime |
 | PM (HK) | tôi đọc `673ce7cf`; **Codex ghi `e62b6825…` (10:29–10:31Z)** | 2026-10-17 | **CHƯA ĐỐI CHIẾU**: hai pin khác nhau (khác worktree hoặc PM đã tiến). Phải đọc lại trước khi dùng bất kỳ ngữ nghĩa PM nào |
 | Edge EPG10 (HK) | `8560ac10…` | 2026-10-17 | Hai bên cùng pin; code chỉ có ở HK, không trong repo local |
@@ -170,6 +170,12 @@ Tất cả `OPEN`; chưa gửi cho Codex ngoài việc ghi ở đây (Codex đ�
 | FE-034 | P2 | Archive read + commands: archived-alpha list with archive disposition, paper-monitor return after archive, request/approve/reactivate commands (D3, D8) | M08, M09, M05 request-archive | Portal + PM + Research | Route list + fixture; cf. FE-016 (archived read now required), FE-022 |
 | FE-035 | P3 | Fleet-map projection `view=MAP`: row_key, name, allocation, windowed return/net PnL, health, stage_presence only, ≤1000 rows, own byte cap | C1 heat map at fleet scale | Portal | Spec + 1000-row fixture; cf. FE-009/012 |
 | FE-036 | P3 | Point-in-time read: `as_of_ms` on dataset/360 (retained snapshots) or explicit decision that it does not exist | C1 "As of", C2 retained snapshots | Portal | Operation or recorded "no" |
+| FE-037 | P1 | Phát hành capability `execution.*` (portfolios/accounts/operations read, blotter read) vào session, hoặc chốt tên khác | `V2_CAPABILITY` trong `v2/shell/roleNav.ts` đặt tạm; nav fail-closed | Portal | Tên + phát hành |
+| FE-038 | P2 | Mục Profile & Access tự xem cho mọi người dùng | D9 "My access" | Portal registry rev 7 | Registry |
+| FE-039 | P2 | Registry rev 7 ẩn mục `APPROVALS` cũ `/backtests/approvals` | nav V2 chỉ một Approvals | Portal registry rev 7 | Registry |
+| FE-040 | P2 | `ARG EXECUTION_V2_SCREENS` trong `portal-web.Dockerfile` | cờ manifest chưa tới được build | Ops/Codex | Dockerfile |
+| FE-041 | P3 | Tham số `window` (gắn FE-025) | `ContextBar` `windowLock` | Portal | Trả lời FE-025 |
+(Chi tiết, locator, fallback FE: [evidence/UXM-07/backend-requests.md](evidence/UXM-07/backend-requests.md).)
 
 **Amendments to existing requests (no new ID):** FE-007 add `attention_reasons[]`, `balance_free`, `balance_locked` to guaranteed row keys (V1 had them, V2 row dropped them) | FE-012 add `current_stage`/`days_in_stage` sort+group (see FE-027) | FE-015 reason payload must carry `reason_class`, `grant_ref` (link to M10), `step_up_required` and distinguish "not turned on" vs "no permission" vs "source not qualified" | FE-016 split: archived read -> FE-034; export and saved views stay P3; Report pack/Export need a route before the button is enabled | FE-010 decision needed: filtered statements for heat map/compare | Blotter query (V1 `BlotterQuery`) add stage/deployment/account/alpha filters (small, Portal) | V1 writes with no `ExecutionApi` method (incident ack/assign/resolve, activation plans): FE-001 handoff must list them.
 
