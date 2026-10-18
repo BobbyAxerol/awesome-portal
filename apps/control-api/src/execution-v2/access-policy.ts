@@ -106,6 +106,8 @@ export interface AccessEvaluationContext {
   allow_test_only?: boolean;
   /** Internal read-snapshot proof, never a browser-supplied entitlement. */
   authority_fingerprint?: string;
+  /** Genuine Core min(idle, absolute) session ceiling, never a public field. */
+  actor_lease_until_ms?: number;
   actor_role?: "ADMIN"|"USER";
 }
 export function policyReady(context: AccessEvaluationContext): boolean {

@@ -2,6 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import { Pool } from "pg";
 import { CONTROL_API_POOL } from "../tokens";
 import { TypedCondition } from "./contracts";
+import type { AccessResource } from "../execution-v2/access.contract";
+import type { AccessEnvironment } from "../execution-v2/access-current-relations";
 
 export interface ExecutionCommandPlanRecord {
   operationId: string;
@@ -93,6 +95,45 @@ function plan(row: PlanRow): ExecutionCommandPlanRecord {
 @Injectable()
 export class ExecutionOperationsRepository {
   constructor(@Inject(CONTROL_API_POOL) readonly pool: Pool) {}
+
+  /** Predicates precede the finite census. Hidden creators/targets/environments
+   * never affect page hashes, overflow or corruption. Original plans remain
+   * immutable; planning expiry is not historical-read expiry. */
+  async listF0ReadCandidates(workspace: string, actor: string, resource: AccessResource,
+    environment: AccessEnvironment): Promise<F0ReadCandidate[]> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      await client.query("SET LOCAL statement_timeout = '5s'");
+      const result = await client.query<F0ReadCandidate>(
+        `SELECT CASE WHEN octet_length(operation_id) BETWEEN 1 AND 191
+                     THEN operation_id ELSE NULL END AS operation_id,
+                workspace_id, actor_user_id, target_type,
+                CASE WHEN octet_length(target_id) BETWEEN 1 AND 191
+                     THEN target_id ELSE NULL END AS target_id,
+                environment,
+                CASE WHEN octet_length(command_key) BETWEEN 3 AND 128
+                     THEN command_key ELSE NULL END AS command_key,
+                status,
+                CASE WHEN cardinality(blocker_codes) BETWEEN 1 AND 3
+                          AND octet_length(blocker_codes::text) <= 512
+                     THEN blocker_codes ELSE NULL END AS blocker_codes,
+                CASE WHEN cardinality(warning_codes) = 0
+                     THEN warning_codes ELSE NULL END AS warning_codes,
+                created_at, updated_at
+         FROM execution_command_plans_f0
+         WHERE workspace_id = $1 AND actor_user_id = $2 AND target_type = $3
+           AND target_id = $4 AND environment = $5
+         ORDER BY created_at DESC, execution_command_plans_f0.operation_id COLLATE "C" ASC LIMIT 1025`,
+        [workspace, actor, resource.kind, resource.id, environment.toUpperCase()],
+      );
+      await client.query("COMMIT");
+      return result.rows;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally { client.release(); }
+  }
 
   async findF0ReadCandidate(workspace: string, actor: string, id: string): Promise<F0ReadCandidate | null> {
     const client = await this.pool.connect();

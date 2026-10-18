@@ -6,6 +6,57 @@ import {fileURLToPath} from "node:url";
 const root=resolve(dirname(fileURLToPath(import.meta.url)),"..");
 const route="/api/v1/execution/operations/{operation_id}";
 export const f0ReadRoute="/api/v1/execution/operations/f0/{operation_id}";
+export const f0CollectionRoute="/api/v1/execution/operations/f0";
+
+export function f0CollectionSchema(){
+  return {type:"object",additionalProperties:false,
+    description:"Finite current-actor F0 intent history for one exact resource/environment. At most1024 matching own intents are censused;1025 refuses explicitly. Pages sort created_at descending then operation_id ASCII ascending. Runtime additionally enforces returned_count===items.length, items.length<=limit, unique ids and has_more iff next_cursor is nonnull. No global count, source status, relay or dispatch. Portal timestamps are not source freshness.",
+    required:["schema_version","family","coverage","resource","environment","items","page"],properties:{
+      schema_version:{const:"portal.execution.f0-command-collection.v1"},family:{const:"F0_BLOCKED_INTENTS_ONLY"},
+      coverage:{const:"CURRENT_ACTOR_EXACT_RESOURCE_ONLY"},
+      resource:{type:"object",additionalProperties:false,required:["kind","id"],properties:{
+        kind:{type:"string",enum:["ACCOUNT","PORTFOLIO","DEPLOYMENT"]},id:{type:"string",pattern:"^[A-Za-z0-9._:-]{1,191}$"}}},
+      environment:{type:"string",enum:["paper","sandbox","live"]},
+      items:{type:"array",maxItems:100,items:{$ref:"#/$defs/F0BlockedOperationRead"}},
+      page:{type:"object",additionalProperties:false,required:["limit","returned_count","has_more","next_cursor"],properties:{
+        limit:{type:"integer",minimum:1,maximum:100},returned_count:{type:"integer",minimum:0,maximum:100},
+        has_more:{type:"boolean"},next_cursor:{type:["string","null"],minLength:1,maxLength:4096}}},
+    }};
+}
+
+function f0CollectionPath(){
+  const headers={"Cache-Control":{schema:{const:"private, no-store"}}};
+  const responses={"200":{description:"Exact current audit authority and creator ceiling; complete bounded F0-only cohort.",headers,
+    content:{"application/json":{schema:{$ref:"#/components/schemas/F0CommandCollection"}}}}};
+  for(const status of [400,401,403,404,409,503])responses[status]={headers,
+    content:{"application/json":{schema:{$ref:"execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"}}},
+    description:status===400?"COMMAND_INPUT_INVALID or COMMAND_COLLECTION_CURSOR_INVALID; strict scalar query or invalid/expired cursor.":
+      status===401?"Current authenticated Portal session required.":
+      status===403?"CURRENT_ACTOR_AUTHORITY_REQUIRED; no page or cursor disclosed after current session expiry.":
+      status===404?"COMMAND_RESOURCE_NOT_FOUND; unauthorized and unknown scopes have one safe envelope.":
+      status===409?"ACCESS_RETRY_REQUIRED or COMMAND_COLLECTION_CURSOR_CHANGED; refresh instead of falling back.":
+      "Fixed COMMAND_COLLECTION_OVERFLOW/RESPONSE_BOUND/NOT_CONFIGURED, COMMAND_STATUS_UNVERIFIED or COMMAND_UNAVAILABLE. No false empty, silent truncation or raw provider text."};
+  return {get:{operationId:"executionF0BlockedOperationsListV2",
+    description:"Explicit F0 blocked intents ONLY, not the mixed operation queue. Current exact TS-accepted audit.read is required BEFORE the five-predicate SQL census and again after the last await for success and contextual errors. Full DENY and delegation graph remains effective. Creator is an additional disclosure ceiling, not permission; no ADMIN/read_all bypass, source call, mutation or historical planning-expiry filter. Cursor binds actor/session, exact query/current authority and visible own intents; hidden other-creator/target/environment rows never influence it. Keyset tokens are signed, not encrypted; no private actor/session bytes are embedded in their boundary.",
+    "x-strict-query-keys":["workspace_id","resource_kind","resource_id","environment","limit","after"],
+    parameters:[
+      {name:"workspace_id",in:"query",required:true,schema:{type:"string",minLength:3,maxLength:96}},
+      {name:"resource_kind",in:"query",required:true,schema:{type:"string",enum:["ACCOUNT","PORTFOLIO","DEPLOYMENT"]}},
+      {name:"resource_id",in:"query",required:true,schema:{type:"string",pattern:"^[A-Za-z0-9._:-]{1,191}$"}},
+      {name:"environment",in:"query",required:true,schema:{type:"string",enum:["paper","sandbox","live"]}},
+      {name:"limit",in:"query",required:false,schema:{type:"integer",minimum:1,maximum:100,default:25}},
+      {name:"after",in:"query",required:false,schema:{type:"string",minLength:1,maxLength:4096}},
+    ],responses}};
+}
+
+function f0CollectionFixture(){
+  const item=JSON.parse(readFileSync(resolve(root,"fixtures/execution-command-operation.valid.json"),"utf8"));
+  const query={workspace_id:"ws_TEST_ONLY_f0",resource_kind:"ACCOUNT",resource_id:"acc_TEST_ONLY_f0",environment:"paper",limit:25};
+  return {lane:"TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",runtime_qualified:false,query,
+    response:{schema_version:"portal.execution.f0-command-collection.v1",family:"F0_BLOCKED_INTENTS_ONLY",
+      coverage:"CURRENT_ACTOR_EXACT_RESOURCE_ONLY",resource:{kind:query.resource_kind,id:query.resource_id},
+      environment:query.environment,items:[item],page:{limit:25,returned_count:1,has_more:false,next_cursor:null}}};
+}
 
 // Update only a finite member, preserving unrelated historical formatting.
 // Scan JSON strings/escapes rather than matching nested braces. Absent members
@@ -79,7 +130,8 @@ function f0Path(){
 
 export function synchronizeOperationReaders(check=false) {
   const schemaPath=resolve(root,"schemas/execution-operations.v1.schema.json"),schemaBefore=readFileSync(schemaPath,"utf8");
-  const schemaAfter=member(schemaBefore,"F0BlockedOperationRead",f0BlockedReaderSchema(),"$defs",4);
+  let schemaAfter=member(schemaBefore,"F0BlockedOperationRead",f0BlockedReaderSchema(),"$defs",4);
+  schemaAfter=member(schemaAfter,"F0CommandCollection",f0CollectionSchema(),"$defs",4);
   if(check){if(schemaBefore!==schemaAfter)throw new Error("Finite F0 reader schema drift");}
   else writeFileSync(schemaPath,schemaAfter);
   for(const name of ["execution-operations","execution-governance"]) {
@@ -94,14 +146,20 @@ export function synchronizeOperationReaders(check=false) {
     let after=member(before,route,api.paths[route],"paths",4);
     if(name==="execution-operations"){
       after=member(after,f0ReadRoute,f0Path(),"paths",4);
+      after=member(after,f0CollectionRoute,f0CollectionPath(),"paths",4);
       const components=JSON.parse(after).components;
       components.schemas??={};
       components.schemas.F0BlockedOperationRead={$ref:"../schemas/execution-operations.v1.schema.json#/$defs/F0BlockedOperationRead"};
+      components.schemas.F0CommandCollection={$ref:"../schemas/execution-operations.v1.schema.json#/$defs/F0CommandCollection"};
       after=member(after,"components",components,null,2);
     }
     if(check){if(before!==after)throw new Error("Operation reader contract drift: "+name);}
     else writeFileSync(path,after);
   }
+  const fixture=resolve(root,"fixtures/execution-f0-command-collection.synthetic.valid.json");
+  const bytes=JSON.stringify(f0CollectionFixture(),null,2)+"\n";
+  if(check){if(readFileSync(fixture,"utf8")!==bytes)throw new Error("F0 collection fixture drift");}
+  else writeFileSync(fixture,bytes);
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))
   synchronizeOperationReaders(process.argv.includes("--check"));

@@ -181,3 +181,148 @@ gate.log f03ae313f33cb3d1830f422e202b783d3238f058280553b3ff6aeea83d04f436.
 Diff25files+1664/−52 includes generated/test/docs, not all application code.
 No runtime/source/UI/push activation or consumer acceptance. This supersedes
 only pending local landing above; wider04-008/009 and04-010 statuses stay open.
+
+## Exact-own collection and internal session ceiling —2026-10-18
+
+**IN_PROGRESS / APPLIED_UNCOMMITTED / tests NOT_RUN at entry.** Same approved
+04-008/009 scope, clean entry1b6df86e8ca8dc8ecee9141045588eb8a0ce35e5 after
+the actual frame hook85899 reached terminal and released its freeze/resources.
+Branch/worktree remain unchanged. No source/PM/Edge/UI/runtime modification,
+SQL migration, commands, new grant, shared preview, push or release authority.
+
+Main owns operations/F0, shared access helper/DI, contracts/generation/census,
+tests, Unified and integration. The existing capital_workflow_review agent
+owns only a private source-review report; capital_workflow_tests drafted the
+standalone new actual-PG/HTTP spec in private state, SOURCE_ONLY/NOT_RUN.
+No agent writes shared canonical files or runs heavy tests. One affected cell
+then one normal hook; same4CPU/4GiB/8GiB ceiling, one worker, no operating data,
+public ports or concurrent engine/load/browser/DR retakes.
+
+### Accepted review, requirement and affected-test matrix
+
+| Finding / requirement | Disposition and implementation | Actual evidence at entry |
+| --- | --- | --- |
+| Exact current authority before enumeration | ACCEPTED_FOR_IMPLEMENTATION: current TS-accepted audit.read, whole DENY/delegation graph, exact workspace/resource/environment; creator is an extra ceiling, never permission | NOT_RUN; nine target/environment HTTP positives, delegated negatives and unauthorized-empty cases prepared |
+| Hidden rows must not alter a cursor, page or overflow | ACCEPTED_FOR_IMPLEMENTATION: all five SQL predicates precede finite1025 census; bounded public columns only; no COUNT/SELECT*/payload/hash/expiry filter | NOT_RUN; real transaction observer,1025 hidden corrupt rows and own1024/1025 prepared |
+| Public identity has no original DB bound | ACCEPTED_FOR_IMPLEMENTATION: CASE operation_id1..191 bytes→NULL; invalid visible id gives fixed503 after final fence, never truncate/omit | NOT_RUN; actual constraint-valid512byte immutable row and after-SELECT revoke prepared |
+| Finite complete cohort and honest overflow | Complete through1024, explicit503 at1025; validate all visible rows before paging; created_at DESC/id ASCII ASC,1..100 items/page,1MiB response ceiling | NOT_RUN; timestamp ties, off-page corrupt rows, query/cursor/config/driver and overflow authority precedence prepared |
+| Cursor correctness/privacy | Existing signed kc1 codec in a separate F0 domain; actor/session/query/current authority plus ONLY own canonical public-row hashes; validate numeric epoch and opaque id boundary independently | NOT_RUN; current binding, hidden-insert privacy, signed malformed semantic/expired/wrong-family cases prepared |
+| Contextual errors must not bypass final authority | Body OR fixed refusal held through LAST genuine Core confirmation and synchronous full audit check; no await after delivery check | NOT_RUN; valid/bad cursor/overflow/dependency/missing-config revoke/session/receipt/expiry tests prepared |
+| Actual Core session deadline was dropped | ACCEPTED_FOR_IMPLEMENTATION: carry existing min(idle,absolute) as internal actor_lease_until_ms in both real captures; shared audit rejects missing/invalid/expired ceiling on snapshot-shaped contexts and evaluates whole graph at max(Core,host) | NOT_RUN; real DB deadline armed BEFORE capture, unchanged result delayed beyond it, capital status, current renewed ceiling and pure boundary vectors prepared |
+| No duplicate permission or native protocol | Pure contexts lacking BOTH internal witnesses keep explicit-clock compatibility. No TEST_ONLY/ADMIN bypass for malformed snapshots; global evaluateAccess, native wire/custody and browser schemas unchanged | NOT_RUN; original detail, capital collection/workflow, scope and current-relation suites are affected regression |
+| Contract/route advertisement | Additive operations/f0 collection with existing CommandProblem on all refusals; shared canonical fixture/generated type/census, generic operation union/barriers unchanged | NOT_RUN; generation/drift/schema and whole AppModule literal-route tests prepared |
+
+Private independent source intake `native-frame-next04-intake.md` SHA256
+d21a5978bb007b58f566824128240c4510d6437b4fb898223cb6591eada6727f
+accepts the final whole-graph conservative clock design, superseding its
+earlier lease-only alternative. Private test draft SHA256
+1771dc28f6ac1800d8cf7d6f8b8e9ea84fe099485825751925ca4dfae5cb782a;
+notes a780b786a667f04a5d92d1acbb7d49323a69c5047c6d0f7228918c07351213c9.
+Main inspected the full reports and integrated only owned paths. Neither
+review is Claude acceptance or an execution receipt.
+
+Independent integrated source review `f0-collection-integrated-review.md`
+SHA25612c85a3f2d104de4de5cedd7a5c11971a6e226c2ad2731ab582a6998ab179fa9
+is ACCEPT_FOR_FOCUSED_VALIDATION, not PASS/commissioning. Main accepted both
+test refinements: the actual census outlives its original session capture,
+with genuine session renewal before expiry, and every HTTP refusal validates
+against existing canonical CommandProblem. Applied tests remain NOT_RUN before
+the focused gate. No implementation or authority relaxation was requested.
+
+### Additive consumer handoff
+
+- `GET /api/v1/execution/operations/f0`, operation
+  **executionF0BlockedOperationsListV2**, generated **F0CommandCollection** in
+  execution-operations.d.ts. Required workspace_id/resource_kind/resource_id/
+  environment; kinds ACCOUNT/PORTFOLIO/DEPLOYMENT; lowercase paper/sandbox/live.
+  limit defaults25, range1..100; opaque after cursor. No other query fields.
+- Response version portal.execution.f0-command-collection.v1, family
+  F0_BLOCKED_INTENTS_ONLY, coverage CURRENT_ACTOR_EXACT_RESOURCE_ONLY, exact
+  resource/environment, same12field BLOCKED items and page limit/returned_count/
+  has_more/next_cursor. No global total, source outcome/freshness or peer intents.
+  Source-side effect is always false. Known item detail remains the prior F0
+  route. Never infer a family from op_ or retry generic/legacy on a refusal.
+- Empty means current-authorized empty own history only.503 overflow is not
+  the end of history,403/404 not empty,409 requires a fresh list. No-store all
+  responses. Internal session lease is NEVER published in response or cursor.
+- Generate `npm --prefix packages/contracts run generate:execution-operation-reader`.
+  Canonical execution-f0-command-collection.synthetic.valid.json explicitly
+  says TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT/runtime_qualified:false; it is
+  not a product/source receipt. New schema/client remains additive.
+- Claude task, only when assigned: use this explicit collection for known F0
+  history, preserve workspace/resource/environment and typed states; distinguish
+  F0 from capital commands and source operations. FE remains
+  NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW. No new actual review
+  or acknowledgement found at this entry; recurring campaign7.3 intake applies.
+
+### Exit / next / rollback at entry
+
+One bounded real-PG/HTTP affected lane including original helper/detail/capital/
+workflow/parent regressions and affected contract tests, then normal-hook commit.
+No PASS or source SLO predeclared. Retain final receipts/resources and source/
+index/eight-runtime freeze. Source revert may remove only the additive route/
+advertisement; preserve current revoke, data and deny-default, never restore
+stale authority. No DB schema/data rollback is necessary.
+
+Backend next under the same approved goal: finish this gate/landing, remaining
+04 named parent/technical purposes and original09/10 source/trust integration.
+04-008/009 are PARTIALLY_DELIVERED for local F0 only, still OPEN_SOURCE_CONTRACT
+for their full done-when;04-010 consumer remains owner-held. Approved real
+budgets/calibration/coexistence/P184G2/browser and11entry stay unchanged.
+
+### Focus attempt1 —2026-10-18T03:40:26UTC
+
+Actual `f0-collection-focus-033711` is BUILD_FAIL/exit2, not a test result:
+TS2345 at f0-read.service.ts94 used transport COMMAND_UNAVAILABLE as a member
+of the intentionally closed business CommandReason enum. Tests and scoped
+restore NOT_RUN. Source/index/eight runtime tuples unchanged; exact owned
+Node/PG/network absent, lease released. No gate bypass or weakened schema.
+Main replaced only that fallback with a fixed private Error marker, held
+through the same final authority fence; existing commandHttpCall translates
+it to the existing sanitized503 COMMAND_UNAVAILABLE envelope. It never holds
+or emits raw driver/schema diagnostics. Affected lane retake is required
+because no test executed, not a repeat of a passing suite.
+
+Preserved attempt1 gate.log SHA256
+b170eb55282d679ec2743f880d244d841e92389aafb74a33fc119500607e15ba;
+controller.json697ef1fd4c77b6cb519c4068cc8d5a13f925142701410b3e83b6213c32003e92.
+
+### Affected terminal —2026-10-18T03:46:03UTC
+
+Actual PTY10505 / `f0-collection-focus-034103` exited0/PASS. Build PASS;
+**7 API suites/454 tests PASS**,0fail/skip,104.97s. Per-suite:
+Access transaction128, existing F0 detail69, new F0 collection44, capital
+workflow65, capital collection/status39, current-grant relations93 and operation
+parent16. These are actual disposable PostgreSQL/Auth/mounted HTTP plus pure
+vectors where the suite says so; membership/provider authority is explicitly
+TEST_ONLY, not current installed PM authority.
+
+All new collection cases pass, including complete bounded1024/overflow1025,
+hidden1025 malformed rows having no cursor effect, released-SELECT revoke,
+whole delegation/DENY, safe driver/oversized/cursor/config failures, actual
+session/grant/receipt expiry and two real-session-renewal races. Canonical
+CommandProblem validates every collection refusal. The changed capital status
+case proves the shared helper without relying on a caller host-clock clamp.
+Following disposal, **45/45 operations-contract tests PASS**,1file,1.04s;
+canonical JSON Schema/runtime/generated/client/query/fixture remain coherent.
+No unchanged engine, load, browser, upstream or broad DR retake was performed.
+
+Existing script's real scoped PostgreSQL restore, including four access-row
+digests, PASS. Source/index/head freeze and all eight protected runtime tuples
+unchanged. Exact owned Node/PG/network absent and own lease released. Controller
+SHA256d71053e4ac70370abc24608f44e1225848fc5f868bb81ea3331da1baabfe6280;
+gate.log7e83281f27a99a94e53aaaa0d24077cdbbf1d96651421578245191059c9d026d.
+Full per-file source pins and actual container IDs are in controller.json.
+
+Capacity after terminal:11891MiB available,154GiB disk free/76% used;
+NO_ACTION_NEEDED, no cache/image/volume prune.4CPU/4GiB/8GiB is the approved
+ceiling, not measured peak; no source/coexistence/SLO claim follows. One earlier
+compile-attempt sample Node1.018GiB/PG71MiB is not a peak or current run metric.
+
+Source-review findings are ACCEPTED/APPLIED and affected tests verified locally;
+producer remains UNCOMMITTED until one coherent normal-hook landing. The hook
+is not bypassed or counted as new unique cases. F0 collection is a partial
+delivery of original04-008/009, not generic parent/source alias commissioning.
+Consumer04-010 remains NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW.
+Backend next: land this batch, then remaining named parent/technical/source
+purposes and original09/10 trust/source integration.11remains NOT_ENTRY_READY.

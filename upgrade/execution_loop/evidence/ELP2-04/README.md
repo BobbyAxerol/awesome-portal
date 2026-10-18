@@ -1,5 +1,18 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+**Latest affected terminal2026-10-18T03:46:03UTC:** exact-own F0 collection and
+current-session boundary:7API suites/454PASS,45contract PASS, build/scoped PG
+restore/four access-row digests/source-index/eight runtimes/owned cleanup PASS.
+[Exact receipt, failed compile preserved and consumer limits](f0-current-audit-read.md#affected-terminal--2026-10-18t034603utc).
+One coherent normal-hook landing remains; no full04/runtime/consumer PASS.
+
+**Current2026-10-18:** F0 detail landed880a3d66 and original frame landed1b6df86e
+after actual hook terminal02:46UTC. The next approved local04-008/009 subset is
+[exact-own F0 collection/session ceiling](f0-current-audit-read.md#exact-own-collection-and-internal-session-ceiling--2026-10-18),
+APPLIED_UNCOMMITTED/NOT_RUN at entry. One additive current-authorized list,
+not generic queue/source parent commissioning; internal lease never a public
+field. Full04 source/consumer gates stay OPEN; earlier pending text is history.
+
 **Current continuation2026-10-18:** [Portfolio actual normal-hook terminal](explicit-resource-and-portfolio.md#portfolio-normal-hook-terminal-20261018-003634)
 landed67e5ea66,829contracts/6530API PASS plus3 existing skipped tests,
 build/scopedPGrestore/access digests/eight runtimes/owned cleanup PASS.

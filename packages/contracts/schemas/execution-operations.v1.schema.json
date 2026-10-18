@@ -3,6 +3,101 @@
   "$id": "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json",
   "title": "Portal execution operations contracts v1",
   "$defs": {
+    "F0CommandCollection": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Finite current-actor F0 intent history for one exact resource/environment. At most1024 matching own intents are censused;1025 refuses explicitly. Pages sort created_at descending then operation_id ASCII ascending. Runtime additionally enforces returned_count===items.length, items.length<=limit, unique ids and has_more iff next_cursor is nonnull. No global count, source status, relay or dispatch. Portal timestamps are not source freshness.",
+      "required": [
+        "schema_version",
+        "family",
+        "coverage",
+        "resource",
+        "environment",
+        "items",
+        "page"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.f0-command-collection.v1"
+        },
+        "family": {
+          "const": "F0_BLOCKED_INTENTS_ONLY"
+        },
+        "coverage": {
+          "const": "CURRENT_ACTOR_EXACT_RESOURCE_ONLY"
+        },
+        "resource": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ACCOUNT",
+                "PORTFOLIO",
+                "DEPLOYMENT"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+            }
+          }
+        },
+        "environment": {
+          "type": "string",
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/F0BlockedOperationRead"
+          }
+        },
+        "page": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "limit",
+            "returned_count",
+            "has_more",
+            "next_cursor"
+          ],
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "returned_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "has_more": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        }
+      }
+    },
     "F0BlockedOperationRead": {
       "title": "Finite current-authorized F0 blocked intent",
       "description": "Same twelve-field execution.command-operation.v1 body, no source status or dispatch. Stored target is requested intent, not TS attestation. created_at and updated_at are Portal timestamps, not source freshness. Runtime additionally enforces nonnegative finite epochs and updated_at >= created_at.",

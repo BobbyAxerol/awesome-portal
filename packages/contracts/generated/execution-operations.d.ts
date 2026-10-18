@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/execution/operations/f0": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Explicit F0 blocked intents ONLY, not the mixed operation queue. Current exact TS-accepted audit.read is required BEFORE the five-predicate SQL census and again after the last await for success and contextual errors. Full DENY and delegation graph remains effective. Creator is an additional disclosure ceiling, not permission; no ADMIN/read_all bypass, source call, mutation or historical planning-expiry filter. Cursor binds actor/session, exact query/current authority and visible own intents; hidden other-creator/target/environment rows never influence it. Keyset tokens are signed, not encrypted; no private actor/session bytes are embedded in their boundary. */
+        get: operations["executionF0BlockedOperationsListV2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/operations/f0/{operation_id}": {
         parameters: {
             query?: never;
@@ -355,6 +372,29 @@ export interface components {
             command_key?: "account/policy" | "account/reconcile-open-orders" | "account/reconcile-positions" | "account/seed-paper" | "account/state" | "account/sync" | "allocation/<root>" | "alpha/inspect" | "alpha/register" | "authority/create" | "authority/list" | "bracket-audit/<root>" | "broker/bindings" | "broker/exposure" | "broker/reconcile-open-orders" | "broker/reconcile-positions" | "broker/state" | "capital/history" | "config/apply" | "config/plan" | "copy/policies" | "copy/policy" | "deployment/state" | "health/<root>" | "ops/alerts" | "ops/alpha-activity" | "ops/command-journal" | "ops/dead-letters" | "ops/emergency-close" | "ops/emergency-close-verify" | "ops/findings" | "ops/redis-retention" | "ops/streams" | "ops/trace-order" | "order-group/list" | "order-group/show" | "performance/account" | "performance/account-history" | "performance/dashboard" | "performance/instrument" | "performance/portfolio" | "performance/portfolio-history" | "portfolio/create" | "portfolio/list" | "portfolio/state" | "redis/alpha-auth" | "redis/get" | "redis/scan" | "redis/stream" | "redis/trading-state" | "replay/compare" | "replay/create" | "replay/events" | "replay/export" | "replay/jobs" | "replay/lifecycle" | "replay/quantbt-diff" | "replay/run" | "replay/show" | "risk/profile" | "risk/state" | "sizing/decision" | "sizing/history" | "sizing/summary";
             blockers?: ("COMMAND_RELAY_DISABLED" | "GENERIC_REDIS_ACCESS_PROHIBITED" | "N16B_CURRENT_PRIMITIVE_PLAN_INVALID" | "N16B_RUNTIME_ACTIVATION_PENDING" | "N16B_TARGET_SCOPE_UNSUPPORTED" | "OWNER_REVIEW_REQUIRED" | "SOURCE_ROUTE_MAPPING_AMBIGUOUS" | "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED" | "TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED")[];
             warnings?: unknown[];
+        };
+        /** @description Finite current-actor F0 intent history for one exact resource/environment. At most1024 matching own intents are censused;1025 refuses explicitly. Pages sort created_at descending then operation_id ASCII ascending. Runtime additionally enforces returned_count===items.length, items.length<=limit, unique ids and has_more iff next_cursor is nonnull. No global count, source status, relay or dispatch. Portal timestamps are not source freshness. */
+        F0CommandCollection: {
+            /** @constant */
+            schema_version: "portal.execution.f0-command-collection.v1";
+            /** @constant */
+            family: "F0_BLOCKED_INTENTS_ONLY";
+            /** @constant */
+            coverage: "CURRENT_ACTOR_EXACT_RESOURCE_ONLY";
+            resource: {
+                /** @enum {string} */
+                kind: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            items: components["schemas"]["F0BlockedOperationRead"][];
+            page: {
+                limit: number;
+                returned_count: number;
+                has_more: boolean;
+                next_cursor: string | null;
+            };
         };
         Identifier: string;
         /** Format: date-time */
@@ -1361,6 +1401,94 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    executionF0BlockedOperationsListV2: {
+        parameters: {
+            query: {
+                workspace_id: string;
+                resource_kind: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                resource_id: string;
+                environment: "paper" | "sandbox" | "live";
+                limit?: number;
+                after?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Exact current audit authority and creator ceiling; complete bounded F0-only cohort. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["F0CommandCollection"];
+                };
+            };
+            /** @description COMMAND_INPUT_INVALID or COMMAND_COLLECTION_CURSOR_INVALID; strict scalar query or invalid/expired cursor. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authenticated Portal session required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description CURRENT_ACTOR_AUTHORITY_REQUIRED; no page or cursor disclosed after current session expiry. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_RESOURCE_NOT_FOUND; unauthorized and unknown scopes have one safe envelope. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ACCESS_RETRY_REQUIRED or COMMAND_COLLECTION_CURSOR_CHANGED; refresh instead of falling back. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed COMMAND_COLLECTION_OVERFLOW/RESPONSE_BOUND/NOT_CONFIGURED, COMMAND_STATUS_UNVERIFIED or COMMAND_UNAVAILABLE. No false empty, silent truncation or raw provider text. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+        };
+    };
     executionF0BlockedOperationGetV2: {
         parameters: {
             query: {

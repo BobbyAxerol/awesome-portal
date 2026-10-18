@@ -1,5 +1,21 @@
 # ELP2-04 — Scoped reader handoff to Claude
 
+**Exact-own collection local validation2026-10-18T03:46:03UTC:**7API suites/
+454PASS and45contract PASS, build/scoped restore/current source freeze/owned
+cleanup PASS. Producer is UNCOMMITTED pending one normal hook; exact per-file
+working pins are in `f0-collection-focus-034103/controller.json` and
+[owning receipt](f0-current-audit-read.md#affected-terminal--2026-10-18t034603utc).
+No shared preview/source or consumer acceptance follows from this test lane.
+
+**Current exact-own collection continuation:** additive
+executionF0BlockedOperationsListV2/F0CommandCollection requires explicit
+workspace/resource kind/id/lowercase environment and optional limit/after;
+[owning schema/state/cursor/fixture handoff](f0-current-audit-read.md#additive-consumer-handoff).
+Same12field BLOCKED items, no global totals/source dispatch or historical plan-
+expiry filtering. Internal current session ceiling is not a browser contract.
+APPLIED_UNCOMMITTED/validation NOT_RUN at entry; no shared preview available.
+FE remains owner-held/AWAITING_CONSUMER_REVIEW, not consumer-accepted.
+
 **2026-10-18 finite F0 continuation:** Portfolio producer landed67e5ea66;
 [actual normal-hook terminal](explicit-resource-and-portfolio.md#portfolio-normal-hook-terminal-20261018-003634)
 supersedes the prior pending landing, not source/runtime/consumer qualification.

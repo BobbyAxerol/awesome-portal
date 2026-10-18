@@ -166,6 +166,32 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
     expect(response.json()).toMatchObject({ error: { code } });
   }
 
+  it("plain capital status refuses a genuine session lease that expires after its final actual Core capture", async () => {
+    const f = await fixture(), record = await seed(f);
+    const session = await auth.login({ assertion: viewer.username, username: viewer.username, credential: password });
+    const actor = { ...viewer.actor, session_id: session.sessionId };
+    expect(await f.commands.status(actor, f.workspace, record.id)).toEqual(record.status);
+    const original = f.access.confirmReadContext.bind(f.access); let captured = false;
+    const delay = vi.spyOn(f.access, "confirmReadContext").mockImplementation(async (...args) => {
+      const row = (await ctx.pool.query(`UPDATE auth_sessions SET idle_expires_at=clock_timestamp()+interval '1500 milliseconds'
+        WHERE session_id=$1 AND state='ACTIVE'
+        RETURNING floor(extract(epoch FROM least(idle_expires_at,absolute_expires_at))*1000)::bigint AS ms`,
+      [session.sessionId])).rows[0];
+      const current = await original(...args), until = Number(row.ms);
+      expect(current.actor_lease_until_ms).toBe(until); expect(current.now_ms).toBeLessThan(until);
+      const wait = until-Date.now()+10; expect(wait).toBeGreaterThan(0); expect(wait).toBeLessThan(2600);
+      await new Promise(resolve => setTimeout(resolve, wait)); captured = true; return current;
+    });
+    try {
+      await expect(f.commands.status(actor, f.workspace, record.id))
+        .rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403 });
+      expect(captured).toBe(true);
+    } finally { delay.mockRestore(); }
+    expect(await f.commands.status(viewer.actor, f.workspace, record.id)).toEqual(record.status);
+    expect(f.commandTrust.prepare).not.toHaveBeenCalled(); expect(f.commandTrust.lookup).not.toHaveBeenCalled();
+    expect(f.commandTrust.send).not.toHaveBeenCalled();
+  }, 10_000);
+
   it.each(["ROOT", "PORTFOLIO", "DEPLOYMENT"] as const)("serves only exact %s status tuples, without private authorization bodies", async kind => {
     const f = await fixture(kind), record = await seed(f);
     await seed(f, { kind, id: next() }); await seed(f, f.resource, "sandbox");

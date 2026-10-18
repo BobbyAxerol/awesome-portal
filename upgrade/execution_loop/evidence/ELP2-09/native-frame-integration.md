@@ -176,3 +176,30 @@ source/installation/budget/calibration/P184G2/browser debts remain OPEN.
 Final reason-layer source review: private native-frame-egress-test-notes.md,
 SHA2560cfd4a3e51ef86555121ff5a15cc6cc0807a1104f99f2a226cd47d0fc04bf375;
 no public contract change.
+
+## Normal-hook terminal — 2026-10-18T02:46:03UTC
+
+Landed **1b6df86e8ca8dc8ecee9141045588eb8a0ce35e5** on the original research
+branch. Actual handle85899/controller native-frame-land-021416 terminated0/PASS;
+no restart or second heavy lane. Contracts69files/852tests and API390files/
+6710tests PASS; two existing skipped API files/three existing skipped tests.
+API1493.41s. Actual coupled12, physical24 and coordinator5 all PASS on these
+final bytes. Full-suite counts overlap focused receipts, not extra coverage.
+Build/scoped PostgreSQL restore including four access-row digests PASS.
+
+Controller SHA256fe9a41de4b40f041dc770131928c0650711c60ceaa303a2095bd0e40bc61062b;
+logcc0154f51c6f9935a3ae4f86a1568e83f224d1b53e2f0f8a8bdb06675c70e03d,
+under `/home/bobby/.local/state/portal-execution-elp210/20261017/native-frame-land-021416/`.
+Frozen source/index and eight protected runtime tuples unchanged; exact owned
+Node/PG/network absent, own measurement lease released.15files+2756/−119,
+including tests/docs; not2756 lines of application code.02:46UTC capacity:
+154GiB disk free/10197MiB memory available, NO_ACTION_NEEDED; no prune/data
+deletion. Configured4CPU/4GiB/8GiB bounds are not measured peaks or source SLO.
+
+This closes the **local** frame implementation/landing gate only. PM transport
+and publication in the coupled test are SYNTHETIC/TEST_ONLY. No actual Edge
+source mount/publication/independent stream grant/installed authority, approved
+budget/calibration, coexistence/P184 performance G2 or consumer/browser proof
+follows.09/10 remain OPEN and11NOT_ENTRY_READY; no runtime/push/deploy/UI change.
+Next independent approved work is the owning04 exact-own F0 collection and
+session-ceiling follow-through, not repetition of unchanged frame tests.

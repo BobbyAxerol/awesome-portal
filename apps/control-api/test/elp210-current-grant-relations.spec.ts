@@ -1,6 +1,6 @@
 /** TEST_ONLY synthetic Core compatibility vectors. No users/grants/receipts
  * inserted, no actual source, held native fence or production acceptance. */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { requireCurrentTsAuditRead } from "../src/execution-v2/current-audit-read";
 import type { AccessResource, ScopedAccessGrant, TsMembershipAcceptance, TsRootMembershipAcceptance } from "../src/execution-v2/access.contract";
 import { tsRootMembershipAcceptance } from "../src/execution-v2/access.contract";
@@ -304,5 +304,38 @@ describe("current exact audit-read helper — preserves the shared policy graph"
     const {c}=legacyAudit();c.grants=[{...c.grants[0],requires_ts_acceptance:false,ts_receipt:null}];
     expect(()=>requireCurrentTsAuditRead(c,P,"paper"))
       .toThrowError(expect.objectContaining({code:"ACCESS_RESOURCE_NOT_FOUND",status:404}));
+  });
+  it("snapshot-shaped contexts require a genuine positive finite session ceiling, without TEST_ONLY bypass",()=>{
+    for(const fingerprint of ["TEST_ONLY:current","",undefined])for(const lease of [undefined,null,NaN,Infinity,0,-1,1.25,Number.MAX_SAFE_INTEGER+1]){
+      const {c}=legacyAudit();c.authority_fingerprint=fingerprint;
+      (c as unknown as Record<string,unknown>).actor_lease_until_ms=lease;
+      expect(()=>requireCurrentTsAuditRead(c,P,"paper"))
+        .toThrowError(expect.objectContaining({code:"CURRENT_ACTOR_AUTHORITY_REQUIRED",status:403}));
+    }
+    const {c}=legacyAudit();c.authority_fingerprint="TEST_ONLY:missing-ceiling";
+    expect(()=>requireCurrentTsAuditRead(c,P,"paper"))
+      .toThrowError(expect.objectContaining({code:"CURRENT_ACTOR_AUTHORITY_REQUIRED",status:403}));
+  });
+  it("pure vectors without both witnesses retain explicit time; a supplied lease is always enforced",()=>{
+    const {c}=legacyAudit();expect(requireCurrentTsAuditRead(c,P,"paper").allowed).toBe(true);
+    c.actor_lease_until_ms=NOW;expect(()=>requireCurrentTsAuditRead(c,P,"paper"))
+      .toThrowError(expect.objectContaining({code:"CURRENT_ACTOR_AUTHORITY_REQUIRED",status:403}));
+    c.actor_lease_until_ms=NOW+1;expect(requireCurrentTsAuditRead(c,P,"paper").allowed).toBe(true);
+  });
+  it("uses one conservative clock for session AND entire grant/receipt/native graph, without mutating context",()=>{
+    const {c}=legacyAudit();c.authority_fingerprint="TEST_ONLY:clock";c.actor_lease_until_ms=NOW+20_000;
+    const clock=vi.spyOn(Date,"now").mockReturnValue(NOW+9_999);
+    try {
+      expect(requireCurrentTsAuditRead(c,P,"paper").allowed).toBe(true);
+      clock.mockReturnValue(NOW+10_000);expect(()=>requireCurrentTsAuditRead(c,P,"paper"))
+        .toThrowError(expect.objectContaining({code:"ACCESS_RESOURCE_NOT_FOUND",status:404}));
+      expect(c.now_ms).toBe(NOW);
+      clock.mockReturnValue(NOW+20_000);expect(()=>requireCurrentTsAuditRead(c,P,"paper"))
+        .toThrowError(expect.objectContaining({code:"CURRENT_ACTOR_AUTHORITY_REQUIRED",status:403}));
+      const gs=[grant(undefined,{action:"audit.read"})],native=context(gs,source(gs));
+      native.actor_lease_until_ms=NOW+20_000;native.authority_fingerprint="TEST_ONLY:native-clock";
+      clock.mockReturnValue(NOW+5_000);expect(()=>requireCurrentTsAuditRead(native,P,"paper"))
+        .toThrowError(expect.objectContaining({code:"ACCESS_RESOURCE_NOT_FOUND",status:404}));
+    } finally { clock.mockRestore(); }
   });
 });

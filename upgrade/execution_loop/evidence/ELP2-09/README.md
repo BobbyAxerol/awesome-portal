@@ -1,5 +1,11 @@
 # ELP2-09 — Realtime revocation và replay
 
+**Current2026-10-18T02:46UTC:** original frame implementation landed1b6df86e;
+[actual normal-hook terminal](native-frame-integration.md#normal-hook-terminal--2026-10-18t024603utc)
+records852contracts/6710API PASS,3existing skips, build/scopedPGrestore and
+owned cleanup. Synthetic-PM local correctness is not installed source/trust
+or full09 acceptance. Earlier PENDING entries below remain historical.
+
 ## Entry / approved scope
 
 Bobby assigned ELP2-09 on2026-10-16. Repo `/home/bobby/portal-research`,

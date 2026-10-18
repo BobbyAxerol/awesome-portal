@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-10-18",
- "route_count": 242,
+ "route_count": 243,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -12,6 +12,7 @@
  "taxonomy_gap": "The R2-0 enum has no class for a route that is published, healthy and has no consumer. Six such routes are recorded as INTERACTION_READ with unused_capability=true. Codex to decide whether to add PUBLISHED_UNCONSUMED.",
  "edge_command_activation_note": "ELP2-07 adds one named EDGE_COMMAND dispatch route, default source-dark. No verified source adapter is mounted or activated; TEST_ONLY component receipts are not runtime financial authority. route_count counts this ledger, not the separate repository-wide live route census.",
  "routes": [
+  {"route":"GET /api/v1/execution/operations/f0","controller":"operations/f0-read.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-04 f0-current-audit-read collection: current exact TS-accepted audit before five-predicate own-intent census; whole delegation/DENY graph, signed current-bound cursor, finite rows and final session/grant fence for success and refusal. No mixed queue, source call, relay, grant or business write. TEST_ONLY PG/HTTP correctness is not source commissioning or owner-held consumer acceptance."},
   {"route":"GET /api/v1/execution/operations/f0/:operation_id","controller":"operations/f0-read.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-04 f0-current-audit-read: finite retained BLOCKED intent; creator/workspace ceiling plus current exact TS-accepted audit.read and final authority fence. No generic family fallback, relay, source refresh or business/audit write. Synthetic/disposable correctness is not source commissioning or owner-held consumer acceptance."},
   {"route":"GET /api/v1/execution/manager/score-view","controller":"execution-v2/manager-score-revision.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-06 explicit authorized ORIGINAL/RESTATED historical view; current resource/field and exact retained-source binding, no GET calculation/ACK or operational-current relabel. Consumer owner-held; synthetic/disposable correctness is not source commissioning."},
   {"route":"GET /api/v1/execution/technical/service-heartbeats","controller":"execution/service-heartbeats.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-04 exact retained heartbeat technical DTO; current maintenance ROOT and exact dataset publication, independent Core/storage eligibility, bounded opaque paging and safe source-clock absence. Synthetic-source actual-PG HTTP proof is separate from source/runtime commissioning. Consumer not assigned."},

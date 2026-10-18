@@ -8,6 +8,209 @@
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
   "paths": {
+    "/api/v1/execution/operations/f0": {
+      "get": {
+        "operationId": "executionF0BlockedOperationsListV2",
+        "description": "Explicit F0 blocked intents ONLY, not the mixed operation queue. Current exact TS-accepted audit.read is required BEFORE the five-predicate SQL census and again after the last await for success and contextual errors. Full DENY and delegation graph remains effective. Creator is an additional disclosure ceiling, not permission; no ADMIN/read_all bypass, source call, mutation or historical planning-expiry filter. Cursor binds actor/session, exact query/current authority and visible own intents; hidden other-creator/target/environment rows never influence it. Keyset tokens are signed, not encrypted; no private actor/session bytes are embedded in their boundary.",
+        "x-strict-query-keys": [
+          "workspace_id",
+          "resource_kind",
+          "resource_id",
+          "environment",
+          "limit",
+          "after"
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 96
+            }
+          },
+          {
+            "name": "resource_kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACCOUNT",
+                "PORTFOLIO",
+                "DEPLOYMENT"
+              ]
+            }
+          },
+          {
+            "name": "resource_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exact current audit authority and creator ceiling; complete bounded F0-only cohort.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/F0CommandCollection"
+                }
+              }
+            }
+          },
+          "400": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "COMMAND_INPUT_INVALID or COMMAND_COLLECTION_CURSOR_INVALID; strict scalar query or invalid/expired cursor."
+          },
+          "401": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "Current authenticated Portal session required."
+          },
+          "403": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "CURRENT_ACTOR_AUTHORITY_REQUIRED; no page or cursor disclosed after current session expiry."
+          },
+          "404": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "COMMAND_RESOURCE_NOT_FOUND; unauthorized and unknown scopes have one safe envelope."
+          },
+          "409": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "ACCESS_RETRY_REQUIRED or COMMAND_COLLECTION_CURSOR_CHANGED; refresh instead of falling back."
+          },
+          "503": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "description": "Fixed COMMAND_COLLECTION_OVERFLOW/RESPONSE_BOUND/NOT_CONFIGURED, COMMAND_STATUS_UNVERIFIED or COMMAND_UNAVAILABLE. No false empty, silent truncation or raw provider text."
+          }
+        }
+      }
+    },
     "/api/v1/execution/operations/f0/{operation_id}": {
       "get": {
         "operationId": "executionF0BlockedOperationGetV2",
@@ -479,6 +682,9 @@
     "schemas": {
       "F0BlockedOperationRead": {
         "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/F0BlockedOperationRead"
+      },
+      "F0CommandCollection": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/F0CommandCollection"
       }
     }
   }

@@ -484,7 +484,11 @@ export class AppModule {
         CommandCenterService,
         ExecutionOperationsRepository,
         ExecutionOperationsService,
-        ExecutionF0ReadService,
+        {provide:ExecutionF0ReadService,useFactory:(repo:ExecutionOperationsRepository,access:ExecutionAccessService,cfg:ControlApiConfig)=>{
+          const keys=querySigningKeys(cfg);
+          return new ExecutionF0ReadService(repo,access,Object.keys(keys).length?{
+            activeKeyId:cfg.QUERY_CURSOR_ACTIVE_KEY_ID,keys,ttlSeconds:cfg.QUERY_CURSOR_TTL_SECONDS}:undefined);
+        },inject:[ExecutionOperationsRepository,ExecutionAccessService,CONTROL_API_CONFIG]},
         OperationsWorkflowRepository,
         OperationsWorkflowService,
         IncidentRepository,

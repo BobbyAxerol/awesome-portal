@@ -3,8 +3,8 @@ import {resolve} from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import addFormats from "ajv-formats";
 import {describe,expect,it} from "vitest";
-import {operationReaderSchema,f0BlockedReaderSchema,f0ReadRoute} from "../tooling/execution-operation-reader.mjs";
-import {f0BlockedOperation,f0ReadQuery} from "../../../apps/control-api/src/operations/f0-read.contract";
+import {operationReaderSchema,f0BlockedReaderSchema,f0ReadRoute,f0CollectionRoute,f0CollectionSchema} from "../tooling/execution-operation-reader.mjs";
+import {f0BlockedOperation,f0ReadQuery,f0CollectionQuery,f0Collection} from "../../../apps/control-api/src/operations/f0-read.contract";
 const root=resolve(__dirname,".."),load=(name:string)=>JSON.parse(readFileSync(resolve(root,name),"utf8"));
 const names=["execution-operations","execution-governance"];
 const base="https://schemas.primusspark.com/portal/";
@@ -124,5 +124,56 @@ describe("ELP2-04 explicit current-authorized F0 blocked-intent contract",()=>{
   it("runtime additionally rejects reversed finite Portal timestamps as documented",()=>{
     expect(f0BlockedOperation.safeParse({...old,updated_at:"2026-08-21T12:00:00Z"}).success).toBe(false);
     expect(f0BlockedReaderSchema().description).toContain("updated_at >= created_at");
+  });
+});
+
+describe("ELP2-04 separate exact-own F0 collection contract",()=>{
+  const fixture=load("fixtures/execution-f0-command-collection.synthetic.valid.json");
+  const path=documents[0].paths[f0CollectionRoute];
+  const validate=ajv.compile({$ref:base+"openapi/execution-operations.openapi.json#/components/schemas/F0CommandCollection"});
+  it("publishes a separate family with exact strict query and canonical synthetic fixture",()=>{
+    expect(path.get.operationId).toBe("executionF0BlockedOperationsListV2");
+    expect(documents[1].paths[f0CollectionRoute]).toBeUndefined();
+    expect(path.get["x-strict-query-keys"]).toEqual(["workspace_id","resource_kind","resource_id","environment","limit","after"]);
+    expect(path.get.parameters.map((p:{name:string;required:boolean})=>[p.name,p.required])).toEqual([
+      ["workspace_id",true],["resource_kind",true],["resource_id",true],["environment",true],["limit",false],["after",false]]);
+    expect(load("schemas/execution-operations.v1.schema.json").$defs.F0CommandCollection).toEqual(f0CollectionSchema());
+    expect(fixture.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");expect(fixture.runtime_qualified).toBe(false);
+    expect(f0CollectionQuery.parse(fixture.query)).toEqual(fixture.query);
+    expect(f0Collection.safeParse(fixture.response).success).toBe(true);
+    expect(validate(fixture.response),JSON.stringify(validate.errors)).toBe(true);
+    expect(operationReaderSchema().oneOf).toHaveLength(6);
+  });
+  it.each([200,400,401,403,404,409,503])("has a no-store typed response for %s",status=>{
+    const response=path.get.responses[status];expect(response.headers["Cache-Control"].schema.const).toBe("private, no-store");
+    expect(response.content["application/json"].schema).toEqual(status===200?{$ref:"#/components/schemas/F0CommandCollection"}:
+      {$ref:"execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"});
+  });
+  it.each([
+    ["mixed family",{family:"TRUSTED_CAPITAL_COMMANDS_ONLY"}],
+    ["full coverage",{coverage:"GLOBAL_COMPLETE"}],
+    ["global total",{total:500}],
+    ["unsupported root",{resource:{kind:"ROOT",id:"TEST_ONLY:root"}}],
+    ["source environment",{environment:"PAPER"}],
+    ["extra page fields",{page:{...fixture.response.page,hidden_count:100}}],
+    ["private item",{items:[{...old,payload_hash:"TEST_ONLY"}]}],
+    ["too many items",{items:Array(101).fill(old)}],
+  ])("rejects %s in both served schema and runtime",(_name,patch)=>{
+    const value={...fixture.response,...patch};expect(validate(value)).toBe(false);expect(f0Collection.safeParse(value).success).toBe(false);
+  });
+  it("keeps cross-field page invariants explicit rather than pretending generated types enforce them",()=>{
+    expect(f0CollectionSchema().description).toContain("returned_count===items.length");
+    for(const page of [{...fixture.response.page,returned_count:0},{...fixture.response.page,has_more:true},
+      {...fixture.response.page,next_cursor:"TEST_ONLY"}])
+      expect(f0Collection.safeParse({...fixture.response,page}).success).toBe(false);
+    expect(f0Collection.safeParse({...fixture.response,items:[old,old],page:{...fixture.response.page,returned_count:2}}).success).toBe(false);
+    expect(f0Collection.safeParse({...fixture.response,items:[],page:{...fixture.response.page,returned_count:0}}).success).toBe(true);
+  });
+  it("refuses extra/duplicate/nonexact query fields and preserves the existing detail query",()=>{
+    for(const value of [{...fixture.query,from_source:true},{...fixture.query,limit:["1","1"]},
+      {...fixture.query,resource_kind:"ORDER"},{...fixture.query,environment:"all"},{...fixture.query,limit:101}])
+      expect(f0CollectionQuery.safeParse(value).success).toBe(false);
+    expect(f0ReadQuery.safeParse({workspace_id:fixture.query.workspace_id}).success).toBe(true);
+    expect(f0ReadQuery.safeParse(fixture.query).success).toBe(false);
   });
 });

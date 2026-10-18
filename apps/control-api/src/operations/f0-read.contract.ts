@@ -26,6 +26,29 @@ export const f0BlockedOperation = z.object({
 }).strict().refine(value => Date.parse(value.created_at) >= 0
   && Date.parse(value.updated_at) >= Date.parse(value.created_at));
 export type F0BlockedOperation = z.infer<typeof f0BlockedOperation>;
+const f0Resource = z.object({ kind: z.enum(["ACCOUNT", "PORTFOLIO", "DEPLOYMENT"]), id: IdentifierSchema }).strict();
+const f0Environment = z.enum(["paper", "sandbox", "live"]);
+/** Explicit exact-own history, never a mixed queue or a source-status feed. */
+export const f0CollectionQuery = z.object({
+  workspace_id: f0ReadQuery.shape.workspace_id, resource_kind: f0Resource.shape.kind,
+  resource_id: IdentifierSchema, environment: f0Environment,
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  after: z.string().min(1).max(4096).optional(),
+}).strict();
+export type F0CollectionQuery = z.infer<typeof f0CollectionQuery>;
+export const f0Collection = z.object({
+  schema_version: z.literal("portal.execution.f0-command-collection.v1"),
+  family: z.literal("F0_BLOCKED_INTENTS_ONLY"), coverage: z.literal("CURRENT_ACTOR_EXACT_RESOURCE_ONLY"),
+  resource: f0Resource, environment: f0Environment, items: z.array(f0BlockedOperation).max(100),
+  page: z.object({ limit: z.number().int().min(1).max(100), returned_count: z.number().int().min(0).max(100),
+    has_more: z.boolean(), next_cursor: z.string().min(1).max(4096).nullable() }).strict(),
+}).strict().superRefine((value, context) => {
+  if (value.page.returned_count !== value.items.length || value.items.length > value.page.limit ||
+    value.page.has_more !== (value.page.next_cursor !== null) || value.page.has_more && value.items.length === 0 ||
+    new Set(value.items.map(item => item.operation_id)).size !== value.items.length)
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "F0_COLLECTION_PAGE_INVALID" });
+});
+export type F0Collection = z.infer<typeof f0Collection>;
 export type F0ReadTarget = { resource: AccessResource; environment: AccessEnvironment };
 
 /** Stored target is a requested label, never an original TS attestation.

@@ -449,3 +449,59 @@ No remote writes/credentials/DB/source service change, runtime mount, consumer
 acknowledgement, push/dev/main/release/deploy. Existing05-001/06-002/07-001/
 10-002 remain owners of installation/source/budget/config/coexistence evidence;
 11NOT_ENTRY_READY. Claude intake7.3 read, UXM still owner-held.
+
+## Actual frame landing and precise Edge next dependency —2026-10-18
+
+Actual native-frame hook85899 terminated02:46:03UTC/PASS; landed1b6df86e,
+852contracts/6710API PASS with3existing skipped tests, build/scopedPGrestore/
+four access digests, frozen source/eight runtime tuples/owned cleanup PASS.
+[Owning immutable terminal/hashes/limits](../ELP2-09/native-frame-integration.md#normal-hook-terminal--2026-10-18t024603utc).
+This supersedes pending local frame landing above, not source commissioning.
+
+Latest read-only source intake is private native-frame-edge-current-intake.md,
+SHA256fbe5fcc1ab61cc0444451817fd4532bd922bfa9d3e85cf1233be0a0f9058afac.
+Main directly re-read its exact journal section and source hashes02:35UTC:
+HK worktree `/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`, branch
+feat/execution-edge-upgrade-v1_2, HEAD20a1d27fa4d03ef7162a7980fda3fe3602995a8b,
+with original owner dirty/untracked WIP preserved. Exact journal is
+**upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md**, SHA256
+7058dfe7fc41b2e2b615ce0d5a78e9feb10b55cecb5ba5f3b3e49c2f98bb2372;
+native-owner current section18024–18039. Do not substitute a guessed Unified
+filename or call these dirty source bytes a deployed artifact.
+
+**Important correction to a broad “missing adapter” shorthand:** genuine
+PgScopedReplaySource ALREADY exists at projection-store-pg/src/scoped_read.rs
+(replay1049/notices906; page605, same barrier809–842), SHA256
+32aa5b8073ad988b038e136b2c069782a51edb2c70ef6845a98ffce0734ebeaa.
+Do not rewrite or duplicate it. The current Edge entrypoint main.rs1136–1175
+does not construct/mount ScopedReadService/PgScopedReplaySource/ScopedRealtimeHub;
+its SHA256a50fa6a5ee0ab5a2a1fca45feb5923c8d97328432c364cffaa0443ee33049124.
+Exact alpha_fleet_overview publication/census and independent current stream
+authority are still missing. Manager PORTAL_OBSERVATION is not that dataset
+barrier or coverage. Finite per-relation consumer is not a stream grant.
+
+Original owner is implementing the private native guard/install/mount; respect
+its WIP instead of introducing a competing protocol/consumer or copying stale
+Candidate SQL. Latest reported strict240 gate failed to compile; isolated
+installer15PASS is NOT full acceptance, and historical206/235/242 counts overlap.
+No new remote build/SQL/business request, write, credential, runtime, source
+factory or trust activation was performed for this intake. Actual installed
+writer coverage/schema/grants remain unverified, not silently accepted.
+
+Next independent Portal04 work is exact-own F0 collection and internal actual
+session deadline follow-through in [the owning04 packet](../ELP2-04/f0-current-audit-read.md#exact-own-collection-and-internal-session-ceiling--2026-10-18).
+Existing05-001/06-002/07-001/09-001/10-002 remain their original source/config/
+consumer/budget gates; calibration/coexistence/P184G2/browser still OPEN and
+11NOT_ENTRY_READY. No new Claude receipt;7.3 intake remains mandatory.
+
+Read-only recheck2026-10-18T03:44UTC: actual Edge HEAD remains20a1d27f;
+the exact owner journal and actual tracked entrypoint
+`services/portal-execution-edge-rs/crates/edge-service/src/main.rs` retain the
+same two hashes above. Journal still reports owned type/guard repairs and no
+mounted positive SSE/publication. Remote rg is absent; fallback grep of this
+resolved tracked entrypoint found no ScopedReadService/PgScopedReplaySource/
+ScopedRealtimeHub construction. This is compatible source observation, no
+new PASS/runtime evidence, remote write, build, command, DB or source change.
+Local04 collection affected terminal03:46UTC is454API/45contract PASS plus
+build/scoped restore/frozen runtimes/exact cleanup; [owning limits](../ELP2-04/f0-current-audit-read.md#affected-terminal--2026-10-18t034603utc).
+It does not close source05/07/09/10 or turn typed absence into availability.

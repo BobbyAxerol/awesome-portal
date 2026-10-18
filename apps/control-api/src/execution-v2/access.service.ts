@@ -64,7 +64,7 @@ export class ExecutionAccessService {
     if(current.authority_fingerprint!==captured.authority_fingerprint)
       throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
     return {principal_id:actor.user_id,workspace_id:workspace,now_ms:current.now,actor_current:true,
-      authority_fingerprint:current.authority_fingerprint,actor_role:current.actor_role,
+      authority_fingerprint:current.authority_fingerprint,actor_lease_until_ms:current.lease_until_ms,actor_role:current.actor_role,
       policy:current.policy,grants:current.grants,active_principals:new Set(current.active),
       allow_test_only:this.allowTestOnly,relationsFor:id=>relationMap.get(id)??{
         qualified:false,revision:"UNQUALIFIED",own_alpha_ids:[],member_portfolio_ids:[],roots:{},membership:null}};
@@ -79,7 +79,7 @@ export class ExecutionAccessService {
     const current=await this.captureReadContext(actor,workspace);
     if(current.authority_fingerprint!==expected.authority_fingerprint)
       throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
-    return {...expected,now_ms:current.now,actor_role:current.actor_role,actor_current:true};
+    return {...expected,now_ms:current.now,actor_lease_until_ms:current.lease_until_ms,actor_role:current.actor_role,actor_current:true};
   }
 
   /** Internal producer port; no HTTP endpoint or fallback authority. */

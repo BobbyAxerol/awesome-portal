@@ -320,6 +320,7 @@ TRACKED = (
     "fixtures/execution-command-tasks.valid.json",
     "fixtures/execution-command-plan.valid.json",
     "fixtures/execution-command-operation.valid.json",
+    "fixtures/execution-f0-command-collection.synthetic.valid.json",
     "fixtures/execution-command-relay-denied.valid.json",
     "fixtures/execution-operations-queue.valid.json",
     "fixtures/execution-operation-workflow.valid.json",
