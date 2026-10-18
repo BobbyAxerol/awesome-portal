@@ -39,6 +39,7 @@ import type { ScreenContract } from "../screenContracts";
 import type { CommandCatalogue } from "../adminCatalog";
 import type { CommandPlan, CommandPlanRequestInput } from "../commandPlan";
 import type { IncidentDetail, OperationsQueue, WorkflowResult } from "../operations";
+import type { IncidentRootReadV2, OperationalQueueQueryV2, OperationalQueueReadV2 } from "../v2/readers/operationalQueue";
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
 import type { TypedCondition } from "../components/conditions";
@@ -108,6 +109,12 @@ export interface InboxResult {
   /** The workflow contract's actor object (hi-fi header: "you are Lan · roles"). */
   actor?: { username: string; roles: readonly string[] } | null;
   policyVersion?: string | null;
+  /**
+   * The page rows as the server sent them. `readApprovalRow` drops creator,
+   * requester and status; the V2 cockpit reads them from here and never
+   * invents them when this is absent.
+   */
+  rawRows?: readonly unknown[];
 }
 
 /** What apply returned. A 202 and nothing more (master plan §7.3). */
@@ -452,6 +459,22 @@ export interface ExecutionApi {
   }): Promise<Result<WorkflowResult>>;
   /** `GET /api/v1/execution/operations/incidents/{id}` */
   getIncident(incidentId: string, workspaceId?: string): Promise<Result<IncidentDetail>>;
+  /**
+   * `GET /api/v1/execution/operations`, read as the V2 current operational
+   * queue (`portal.execution.operational-queue.v2`).
+   *
+   * The path answers either the legacy queue or V2; this method discriminates
+   * on `schema_version` and answers `unsupported_shape` for anything else
+   * rather than mis-reading it. `assigned_to` is deliberately not a parameter:
+   * the server answers 400 for it.
+   */
+  listOperationalQueueV2(query: OperationalQueueQueryV2): Promise<Result<OperationalQueueReadV2>>;
+  /**
+   * `GET /api/v1/execution/operations/incidents/{id}`, read as the V2 current
+   * root (`portal.execution.incident-current-root.v2`). Same discrimination
+   * as `listOperationalQueueV2`.
+   */
+  getIncidentRootV2(incidentId: string, workspaceId?: string): Promise<Result<IncidentRootReadV2>>;
   /**
    * `POST /api/v1/execution/commands/plans` with the EXECUTION_COMMAND body.
    *

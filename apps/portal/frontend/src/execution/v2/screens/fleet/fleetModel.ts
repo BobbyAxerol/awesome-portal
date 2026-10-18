@@ -1,0 +1,266 @@
+/**
+ * Fleet identity model (UXM-07 S1a): what `GET /alphas` (execution.alpha-fleet-list.v2)
+ * publishes about WHO an alpha is, turned into what the table prints.
+ *
+ * Identity only. The money columns of the same row (allocations, balances,
+ * position PnL, exposure) and the metric availability map are never read here:
+ * they are not part of this slice, and a number that is not drawn cannot be
+ * drawn wrong.
+ *
+ * Pure functions, no React. The three facts a reader must be able to trust:
+ * - a stage word comes from the published stage, never from the label;
+ * - a lens is a set of stages, and the server filters one stage at a time, so
+ *   a lens spanning two stages is narrowed here and says so (see
+ *   `serverStageParam`);
+ * - nothing the read did not publish is invented: a missing owner is absent,
+ *   the readiness x/7 and the archive list are named as not published.
+ */
+import type { AlphaFleetQuery } from "../../../api/ports";
+import type { AlphaFleetItem, AlphaFleetSummary } from "../../../api/profileRead";
+import type { FlagKind } from "../../flagKinds";
+import { EXEC_STAGES, type ExecStage } from "../../urlState";
+
+/* ── what the backend has not published (FRONTEND_BACKEND_SYNC.md) ─────── */
+
+export const NOT_PUBLISHED = "Not published";
+export interface UnpublishedFact { fe: string; what: string }
+export const FE = {
+  group: { fe: "FE-012", what: "Group by" },
+  board: { fe: "FE-012, FE-027", what: "Board" },
+  map: { fe: "FE-035", what: "Map" },
+  readiness: { fe: "FE-027, FE-028", what: "Readiness" },
+  window: { fe: "FE-025", what: "Window" },
+  compare: { fe: "FE-033", what: "Compare" },
+  archived: { fe: "FE-034", what: "Archived list" },
+} as const satisfies Record<string, UnpublishedFact>;
+
+export const notPublished = (fact: UnpublishedFact): string => `${NOT_PUBLISHED} (${fact.fe})`;
+
+/* ── lenses ────────────────────────────────────────────────────────────── */
+
+export type FleetLens = "all" | "real" | "sandbox" | "paper" | "archived";
+
+export interface LensSpec { id: FleetLens; label: string; stages: readonly ExecStage[] }
+
+/**
+ * Real-funded is the one domain that holds the Canary and Live stages
+ * (design D2); Sandbox and Paper are simulated. The URL keeps the stage words
+ * (`stage=canary,live`), so a lens is a named set of them, not a new param.
+ */
+export const FLEET_LENSES: readonly LensSpec[] = [
+  { id: "all", label: "All", stages: [] },
+  { id: "real", label: "Real-funded", stages: ["canary", "live"] },
+  { id: "sandbox", label: "Sandbox", stages: ["sandbox"] },
+  { id: "paper", label: "Paper", stages: ["paper"] },
+  { id: "archived", label: "Archived", stages: [] },
+];
+
+export const ARCHIVED_TAB = "archived";
+
+export function lensForStages(stages: readonly ExecStage[]): FleetLens | null {
+  if (stages.length === 0) return "all";
+  const key = EXEC_STAGES.filter((s) => stages.includes(s)).join(",");
+  return FLEET_LENSES.find((l) => l.id !== "all" && l.id !== "archived" && l.stages.join(",") === key)?.id ?? null;
+}
+
+export function stagesForLens(lens: FleetLens): readonly ExecStage[] {
+  return FLEET_LENSES.find((l) => l.id === lens)?.stages ?? [];
+}
+
+export const lensLabel = (lens: FleetLens): string => FLEET_LENSES.find((l) => l.id === lens)?.label ?? lens;
+
+/* ── words ─────────────────────────────────────────────────────────────── */
+
+const STAGE_LABEL: Readonly<Record<string, string>> = {
+  RESEARCH: "Research", PAPER: "Paper", SANDBOX: "Sandbox", CANARY: "Canary", LIVE: "Live",
+};
+
+/** `SOURCE_LATEST_WINDOW` becomes `Source latest window`; the code stays on the title. */
+export function humanize(code: string): string {
+  const words = code.trim().toLowerCase().replace(/[_\s]+/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+export const stageLabel = (code: string): string => STAGE_LABEL[code.toUpperCase()] ?? humanize(code);
+
+export interface HealthView { kind: FlagKind; label: string }
+
+/**
+ * Alpha health is READY / ATTENTION / RESEARCH_ONLY; a deployment adds FINDING.
+ * An unknown word is `unknown` with its own text, never `ok`.
+ */
+export function healthView(health: string): HealthView {
+  switch (health.toUpperCase()) {
+    case "READY": return { kind: "ok", label: "Ready" };
+    case "ATTENTION": return { kind: "attention", label: "Needs attention" };
+    case "FINDING": return { kind: "attention", label: "Finding open" };
+    case "RESEARCH_ONLY": return { kind: "neutral", label: "Research only" };
+    default: return { kind: "unknown", label: humanize(health) };
+  }
+}
+
+const HEALTH_RANK: Readonly<Record<string, number>> = { READY: 0, FINDING: 1, ATTENTION: 2 };
+/** Unknown words rank with FINDING: worse than ready, and not hidden under it. */
+const healthRank = (health: string): number => HEALTH_RANK[health.toUpperCase()] ?? 1;
+
+/* ── rows ──────────────────────────────────────────────────────────────── */
+
+export interface FleetDeploymentView {
+  id: string;
+  stage: string;
+  venue: string;
+  state: string;
+  health: HealthView;
+  portfolio: string | null;
+}
+
+export interface FleetRow {
+  key: string;
+  alphaId: string;
+  label: string;
+  version: string;
+  owner: string | null;
+  portfolios: readonly string[];
+  /** The highest stage the alpha is in, as published. */
+  stageCode: string;
+  stage: string;
+  /** Every stage word the alpha is in, highest first; includes `stage`. */
+  stageCodes: readonly string[];
+  otherStages: readonly string[];
+  health: HealthView;
+  healthCode: string;
+  attention: readonly { code: string; label: string }[];
+  deployments: { count: number; worst: HealthView | null; items: readonly FleetDeploymentView[] };
+  updatedAt: string;
+}
+
+/** The V1 route, kept: the Alpha 360 of this alpha. */
+export const alphaHref = (alphaId: string): string => `/deployments/alphas/${encodeURIComponent(alphaId)}`;
+
+export function toFleetRow(item: AlphaFleetItem): FleetRow {
+  const stageCodes = item.stages.map((s) => s.toUpperCase());
+  const stageCode = item.stage.toUpperCase();
+  const worst = item.deployments.reduce<string | null>(
+    (acc, d) => (acc === null || healthRank(d.health) > healthRank(acc) ? d.health : acc), null);
+  return {
+    key: item.alphaId,
+    alphaId: item.alphaId,
+    label: item.alphaLabel,
+    version: item.version,
+    owner: item.owner,
+    portfolios: item.portfolios.map((p) => p.name),
+    stageCode,
+    stage: stageLabel(stageCode),
+    stageCodes,
+    otherStages: stageCodes.filter((s) => s !== stageCode).map(stageLabel),
+    health: healthView(item.health),
+    healthCode: item.health,
+    attention: item.attentionReasons.map((code) => ({ code, label: humanize(code) })),
+    deployments: {
+      count: item.deployments.length,
+      worst: worst === null ? null : healthView(worst),
+      items: item.deployments.map((d) => ({
+        id: d.deploymentId, stage: stageLabel(d.stage), venue: d.venue, state: humanize(d.state),
+        health: healthView(d.health), portfolio: d.portfolioName,
+      })),
+    },
+    updatedAt: item.updatedAt,
+  };
+}
+
+/** True when the alpha is in any of the selected stages (empty selection keeps all). */
+export function inStages(row: Pick<FleetRow, "stageCodes">, stages: readonly ExecStage[]): boolean {
+  return stages.length === 0 || stages.some((s) => row.stageCodes.includes(s.toUpperCase()));
+}
+
+/* ── query ─────────────────────────────────────────────────────────────── */
+
+export interface SortOption { id: string; label: string; value: string | null }
+
+/** Fields `GET /alphas` sorts on; `null` is the server default and stays out of the URL. */
+export const SORT_OPTIONS: readonly SortOption[] = [
+  { id: "default", label: "Highest stage first", value: null },
+  { id: "name", label: "Name, A to Z", value: "alpha_label:asc" },
+  { id: "updated", label: "Recently updated", value: "updated_at:desc" },
+  { id: "health", label: "Needs attention first", value: "health:asc" },
+  { id: "stage-asc", label: "Lowest stage first", value: "stage_rank:asc" },
+];
+
+export const sortValueOf = (sort: string | null): string | null =>
+  SORT_OPTIONS.find((o) => o.value !== null && o.value === sort)?.value ?? null;
+
+/**
+ * The server filters ONE stage (`stage_filter contains |X|`). A lens spanning
+ * two stages therefore sends none and is narrowed on the loaded rows by
+ * `inStages`; the screen prints that, it does not pretend the count is exact.
+ */
+export function serverStageParam(stages: readonly ExecStage[]): string | undefined {
+  return stages.length === 1 ? stages[0]!.toUpperCase() : undefined;
+}
+
+export const PAGE_LIMIT = 50;
+/** DOM budget for one screen (UXM-07 S1 scale card). */
+export const ROW_CAP = 200;
+
+export interface FleetFilters {
+  q: string | null;
+  stages: readonly ExecStage[];
+  owner: string | null;
+  health: string | null;
+  sort: string | null;
+}
+
+export function fleetQuery(filters: FleetFilters, after?: string | null): AlphaFleetQuery {
+  const query: AlphaFleetQuery = { limit: PAGE_LIMIT };
+  if (filters.q) query.search = filters.q;
+  const stage = serverStageParam(filters.stages);
+  if (stage) query.stage = stage;
+  if (filters.owner) query.owner = filters.owner;
+  if (filters.health) query.health = filters.health;
+  const sort = sortValueOf(filters.sort);
+  if (sort) query.sort = sort;
+  if (after) query.after = after;
+  return query;
+}
+
+/** Stable identity of a query without its cursor: when it changes, the loaded pages are dropped. */
+export const queryKey = (filters: FleetFilters): string => JSON.stringify(fleetQuery(filters));
+
+/* ── summary: counts only ──────────────────────────────────────────────── */
+
+export interface Kpi { id: string; label: string; value: number | null; note: string }
+
+export function fleetKpis(summary: AlphaFleetSummary | null): readonly Kpi[] {
+  const v = (n: number | undefined): number | null => (summary ? n ?? null : null);
+  return [
+    { id: "alphas", label: "Alphas", value: v(summary?.alphaCount), note: "In your scope" },
+    { id: "deployments", label: "Deployments", value: v(summary?.deploymentCount), note: "Across all stages" },
+    { id: "portfolios", label: "Portfolios", value: v(summary?.portfolioCount), note: "Holding deployments" },
+    { id: "attention", label: "Need attention", value: v(summary?.needsAttentionCount), note: "Health flag" },
+    { id: "research", label: "Research only", value: v(summary?.researchOnlyCount), note: "No deployment" },
+  ];
+}
+
+export interface LensCount { text: string | null; approximate: boolean }
+
+/**
+ * Tab counts from the summary, which covers every authorized alpha whatever
+ * the filters. `stage_counts` counts alphas per stage they are in, so the
+ * Real-funded sum can count an alpha in both Canary and Live twice: it is an
+ * upper bound and printed with `~`. Archived has no count: it is not published.
+ */
+export function lensCounts(summary: AlphaFleetSummary | null): Readonly<Record<FleetLens, LensCount>> {
+  const none: LensCount = { text: null, approximate: false };
+  if (!summary) return { all: none, real: none, sandbox: none, paper: none, archived: none };
+  const n = (stage: string): number => summary.stageCounts[stage] ?? 0;
+  const canary = n("CANARY");
+  const live = n("LIVE");
+  const both = canary > 0 && live > 0;
+  return {
+    all: { text: String(summary.alphaCount), approximate: false },
+    real: { text: String(canary + live), approximate: both },
+    sandbox: { text: String(n("SANDBOX")), approximate: false },
+    paper: { text: String(n("PAPER")), approximate: false },
+    archived: none,
+  };
+}

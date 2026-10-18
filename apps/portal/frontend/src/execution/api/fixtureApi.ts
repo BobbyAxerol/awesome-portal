@@ -794,6 +794,14 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         : unavailable("The triage response could not be read.");
     },
 
+    // The V2 reads are served by the e2e BFF double through the HTTP client; the lab port has no V2 fixture.
+    async listOperationalQueueV2() {
+      return unavailable("The V2 operations queue is not served by the fixture port.");
+    },
+    async getIncidentRootV2() {
+      return unavailable("The V2 incident root is not served by the fixture port.");
+    },
+
     async getIncident() {
       const blocked = gate<never>("getIncident");
       if (blocked) return blocked as Result<never>;

@@ -142,6 +142,7 @@ export function readApprovalRow(raw: Record<string, unknown>): ApprovalRowRead {
   return {
     row: {
       id,
+      ...(readId(raw.approval_id) ? { approvalId: readId(raw.approval_id) as ApprovalId } : {}),
       gate: gateParsed.value,
       subject: str(raw.subject) ?? id,
       target: str(raw.target) ?? "target not published",

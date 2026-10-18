@@ -72,6 +72,8 @@ export interface ApprovalRow {
  */
 export interface DecidedRow {
   id: ApprovalId;
+  /** The approval this decision closed, when the wire names it apart from the decision id. */
+  approvalId?: ApprovalId | null;
   gate: ApprovalGate;
   subject: string;
   outcome: "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED";

@@ -40,6 +40,7 @@ import {
 import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProblem";
 import { readCommandCatalogue } from "../adminCatalog";
 import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../operations";
+import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } from "../v2/readers/operationalQueue";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { readLiveFullOperations } from "../liveFull";
 import type { WorkflowResult } from "../operations";
@@ -712,6 +713,9 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
               : null,
           // Its own query when the endpoint offers one; absent is not empty.
           decided: null,
+          rawRows: Array.isArray((body.page as Record<string, unknown> | undefined)?.rows)
+            ? ((body.page as Record<string, unknown>).rows as unknown[])
+            : undefined,
         },
         warnings: gaps,
       };
@@ -869,6 +873,24 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       return incident
         ? { ok: true as const, value: incident }
         : unavailable("The incident response could not be read.");
+    },
+
+    async listOperationalQueueV2(query) {
+      if (query.after && query.before) {
+        // One direction per request, as the legacy queue: the page position is the caller's to place.
+        return unavailable("A page cannot be requested in both directions at once.");
+      }
+      const qs = operationalQueueSearch(query).toString();
+      return readGet(`/operations${qs ? `?${qs}` : ""}`, readOperationalQueueV2, "The operations queue");
+    },
+
+    async getIncidentRootV2(incidentId, workspaceId) {
+      const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+      return readGet(
+        `/operations/incidents/${encodeURIComponent(incidentId)}${qs}`,
+        readIncidentRootV2,
+        "The incident root",
+      );
     },
 
     async planCommand(input) {

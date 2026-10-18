@@ -1,0 +1,246 @@
+/**
+ * Operations V2 reads for the e2e BFF double (UXM-07 S1c, S1d).
+ *
+ * Serves `GET /operations` as `portal.execution.operational-queue.v2` and
+ * `GET /operations/incidents/{id}` as `portal.execution.incident-current-root.v2`,
+ * built from the canonical contract fixture
+ * (`packages/contracts/fixtures/execution-operational-current.synthetic.valid.json`)
+ * plus a few synthetic rows so keyset paging has a second page to fetch.
+ *
+ * Wiring (the primary owns `answerExecutionBff`): call this first, for GET
+ * requests, when the V2 operations stub is on, and fall through when it
+ * answers `null`:
+ *
+ *   const v2 = answerOperationsV2(method, path, search);   // path has /api/v1/execution stripped
+ *   if (v2 !== null) return v2;
+ *
+ * The browser clock matters: the screen's default window is 24H, so a run
+ * should fix the page clock near `OPERATIONS_V2_DOUBLE_NOW_ISO`
+ * (`page.clock.setFixedTime(new Date(OPERATIONS_V2_DOUBLE_NOW_ISO))`), or the
+ * fixed rows read as older than the window.
+ *
+ * The refusals are the server's (`current-operational-read.ts`): `assigned_to`
+ * is 400 `OPERATIONAL_READ_FILTER_NOT_SUPPORTED`, a bad filter value 400
+ * `OPERATIONAL_READ_INPUT_INVALID`, a cursor the double cannot read 400
+ * `OPERATIONAL_READ_CURSOR_INVALID`, a cursor from a different filter 409
+ * `OPERATIONAL_READ_CHANGED`, an unknown incident 404
+ * `OPERATIONAL_READ_NOT_FOUND`. Incident ids with a fixed meaning:
+ * `inc_TEST_ONLY_mitigated`, `inc_TEST_ONLY_resolved`, `inc_LEGACY_SHAPE` (a
+ * legacy body, to prove the screen refuses to mis-read it) and `inc_NOT_FOUND`.
+ */
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+export interface BffAnswerV2 {
+  status: number;
+  body: unknown;
+  contentType?: string;
+}
+
+/** The instant to fix the page clock at: an hour after the newest fixed row. */
+export const OPERATIONS_V2_DOUBLE_NOW_ISO = "2026-08-22T13:00:00Z";
+
+const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
+const FIXTURE = JSON.parse(
+  readFileSync(join(CONTRACTS, "execution-operational-current.synthetic.valid.json"), "utf8"),
+) as { queue: Record<string, unknown>; incident: Record<string, unknown> };
+
+type Row = Record<string, unknown> & { operation_id: string; created_at: string };
+const FIXTURE_PAGE = FIXTURE.queue.page as { rows: Row[] };
+const FIXTURE_ROW = FIXTURE_PAGE.rows[0];
+
+interface Synthetic {
+  id: string;
+  at: string;
+  command: string;
+  target: [string, string];
+  env: "PAPER" | "SANDBOX" | "LIVE";
+  risk: string;
+  severity: string;
+  source: string;
+  verify: string;
+  triage: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
+}
+
+// Microsecond instants on purpose: the SQL keyset boundary is six digits wide.
+const SYNTHETIC: readonly Synthetic[] = [
+  { id: "op_TEST_ONLY_s01", at: "2026-08-22T11:58:00.123456Z", command: "portfolio/adjust-target-budget", target: ["PORTFOLIO", "pf_TEST_ONLY_canary"], env: "LIVE", risk: "R4_LIVE_RISK_INCREASING", severity: "CRITICAL", source: "UNCERTAIN", verify: "UNCERTAIN", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s02", at: "2026-08-22T11:40:00.500000Z", command: "portfolio/recall", target: ["PORTFOLIO", "pf_TEST_ONLY_satellite"], env: "LIVE", risk: "R3_LIVE_PROTECTIVE", severity: "WARNING", source: "SUCCEEDED", verify: "PARTIAL", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s03", at: "2026-08-22T11:20:00.000001Z", command: "account/sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance02"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "INFO", source: "SUCCEEDED", verify: "SUCCEEDED", triage: "RESOLVED" },
+  { id: "op_TEST_ONLY_s04", at: "2026-08-22T10:55:00.250000Z", command: "deployment/archive", target: ["DEPLOYMENT", "dep_TEST_ONLY_btc"], env: "SANDBOX", risk: "R2_SANDBOX", severity: "WARNING", source: "PENDING", verify: "PENDING", triage: "ACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s05", at: "2026-08-22T10:30:00.000000Z", command: "portfolio/adjust-target-budget", target: ["PORTFOLIO", "pf_TEST_ONLY_core"], env: "LIVE", risk: "R4_LIVE_RISK_INCREASING", severity: "ERROR", source: "FAILED", verify: "FAILED", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s06", at: "2026-08-22T10:05:00.000000Z", command: "account/sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance01"], env: "SANDBOX", risk: "R2_SANDBOX", severity: "INFO", source: "SUCCEEDED", verify: "NOT_STARTED", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s07", at: "2026-08-22T09:40:00.000000Z", command: "account/top-up", target: ["ACCOUNT", "acc_TEST_ONLY_binance02"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "WARNING", source: "RUNNING", verify: "PENDING", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s08", at: "2026-08-22T09:10:00.000000Z", command: "portfolio/return-capital", target: ["PORTFOLIO", "pf_TEST_ONLY_core"], env: "LIVE", risk: "R3_LIVE_PROTECTIVE", severity: "ERROR", source: "EXPIRED", verify: "EXPIRED", triage: "ACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s09", at: "2026-08-22T08:45:00.000000Z", command: "deployment/resume", target: ["DEPLOYMENT", "dep_TEST_ONLY_eth"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "INFO", source: "BLOCKED", verify: "NOT_STARTED", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s10", at: "2026-08-22T08:15:00.000000Z", command: "account/sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance01"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "WARNING", source: "SUCCEEDED", verify: "DENIED", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s11", at: "2026-08-22T07:30:00.000000Z", command: "portfolio/recall", target: ["PORTFOLIO", "pf_TEST_ONLY_satellite"], env: "SANDBOX", risk: "R2_SANDBOX", severity: "INFO", source: "SUCCEEDED", verify: "SUCCEEDED", triage: "RESOLVED" },
+];
+
+function dataset(): Row[] {
+  const synthetic: Row[] = SYNTHETIC.map((s) => ({
+    ...FIXTURE_ROW,
+    operation_id: s.id,
+    command_key: s.command,
+    target: { type: s.target[0], id: s.target[1] },
+    environment: s.env,
+    risk_tier: s.risk,
+    severity: s.severity,
+    source_status: s.source,
+    verification_result: s.verify,
+    triage_state: s.triage,
+    workflow_version: s.triage === "UNACKNOWLEDGED" ? 1 : 2,
+    acknowledged_at: s.triage === "UNACKNOWLEDGED" ? null : s.at,
+    resolved_at: s.triage === "RESOLVED" ? s.at : null,
+    created_at: s.at,
+    updated_at: s.at,
+  }));
+  return [FIXTURE_ROW, ...synthetic];
+}
+
+const ROWS = dataset();
+
+function problem(status: number, code: string, message: string): BffAnswerV2 {
+  return { status, body: { error: { code, message }, request_id: "req_double_operations_v2" } };
+}
+
+const TRIAGE = ["UNACKNOWLEDGED", "ACKNOWLEDGED", "RESOLVED"];
+const ENVIRONMENT = ["PAPER", "SANDBOX", "LIVE"];
+const SOURCE = ["BLOCKED", "PENDING", "RUNNING", "SUCCEEDED", "FAILED", "EXPIRED", "UNCERTAIN"];
+const VERIFY = ["NOT_STARTED", "PENDING", "SUCCEEDED", "FAILED", "PARTIAL", "UNCERTAIN", "DENIED", "EXPIRED"];
+const SEVERITY = ["INFO", "WARNING", "ERROR", "CRITICAL"];
+const TARGET_TYPE = ["ACCOUNT", "BROKER_BINDING", "DEPLOYMENT", "ORDER", "PORTFOLIO", "SYSTEM"];
+
+interface FilterSpec {
+  param: string;
+  field: (row: Row) => unknown;
+  allowed?: readonly string[];
+}
+const FILTERS: readonly FilterSpec[] = [
+  { param: "triage_state", field: (r) => r.triage_state, allowed: TRIAGE },
+  { param: "environment", field: (r) => r.environment, allowed: ENVIRONMENT },
+  { param: "source_status", field: (r) => r.source_status, allowed: SOURCE },
+  { param: "verification_result", field: (r) => r.verification_result, allowed: VERIFY },
+  { param: "severity", field: (r) => r.severity, allowed: SEVERITY },
+  { param: "target_type", field: (r) => (r.target as { type: string }).type, allowed: TARGET_TYPE },
+  { param: "command_key", field: (r) => r.command_key },
+  { param: "target_id", field: (r) => (r.target as { id: string }).id },
+];
+const KNOWN = new Set(["workspace_id", "after", "before", "limit", "sort", ...FILTERS.map((f) => f.param)]);
+
+/** `...:00Z` and `...:00.000000Z` are the same instant and must sort as one. */
+function instantKey(iso: string): string {
+  const [whole, fraction = ""] = iso.replace(/Z$/, "").split(".");
+  return `${whole}.${fraction.padEnd(6, "0")}`;
+}
+const sortKey = (row: Row) => `${instantKey(row.created_at)}|${row.operation_id}`;
+
+/** Opaque, and bound to the filters and direction it was issued under. */
+function encodeCursor(row: Row, signature: string): string {
+  return Buffer.from(JSON.stringify({ k: sortKey(row), s: signature }), "utf8").toString("base64url");
+}
+function decodeCursor(raw: string): { k: string; s: string } | null {
+  try {
+    const value = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as { k?: unknown; s?: unknown };
+    return typeof value.k === "string" && typeof value.s === "string" ? { k: value.k, s: value.s } : null;
+  } catch {
+    return null;
+  }
+}
+
+function queue(search: URLSearchParams): BffAnswerV2 {
+  if (search.has("assigned_to")) {
+    return problem(400, "OPERATIONAL_READ_FILTER_NOT_SUPPORTED", "assigned_to is not supported by the current operational queue.");
+  }
+  for (const key of search.keys()) {
+    if (!KNOWN.has(key)) return problem(400, "OPERATIONAL_READ_INPUT_INVALID", `Unknown query parameter ${key}.`);
+  }
+  const applied: { field: string; op: "eq"; value: string }[] = [];
+  let rows = ROWS;
+  for (const spec of FILTERS) {
+    const value = search.get(spec.param);
+    if (value === null) continue;
+    if (spec.allowed && !spec.allowed.includes(value)) return problem(400, "OPERATIONAL_READ_INPUT_INVALID", `${spec.param} is not a valid value.`);
+    applied.push({ field: spec.param, op: "eq", value });
+    rows = rows.filter((row) => spec.field(row) === value);
+  }
+  const sort = search.get("sort") ?? "created_at:desc";
+  if (sort !== "created_at:desc" && sort !== "created_at:asc") return problem(400, "OPERATIONAL_READ_INPUT_INVALID", "sort is not a valid value.");
+  const direction = sort === "created_at:asc" ? "asc" : "desc";
+  const limitText = search.get("limit");
+  const limit = limitText === null ? 50 : Number(limitText);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 250) return problem(400, "OPERATIONAL_READ_INPUT_INVALID", "limit must be 1 to 250.");
+  if (search.has("after") && search.has("before")) return problem(400, "OPERATIONAL_READ_INPUT_INVALID", "after and before are exclusive.");
+
+  const ordered = [...rows].sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : 1) * (direction === "asc" ? 1 : -1));
+  const signature = JSON.stringify([applied, direction]);
+
+  let start = 0;
+  let end = Math.min(limit, ordered.length);
+  const cursorText = search.get("after") ?? search.get("before");
+  if (cursorText !== null) {
+    const cursor = decodeCursor(cursorText);
+    if (cursor === null) return problem(400, "OPERATIONAL_READ_CURSOR_INVALID", "The cursor could not be read.");
+    if (cursor.s !== signature) return problem(409, "OPERATIONAL_READ_CHANGED", "The read changed; start from the first page.");
+    // Position strictly after (or before) the cursor row in the requested order.
+    const beyond = (row: Row) => (direction === "desc" ? sortKey(row) < cursor.k : sortKey(row) > cursor.k);
+    if (search.has("after")) {
+      start = Math.max(0, ordered.findIndex(beyond));
+      if (!ordered.some(beyond)) start = ordered.length;
+      end = Math.min(ordered.length, start + limit);
+    } else {
+      const before = ordered.filter((row) => !beyond(row) && sortKey(row) !== cursor.k);
+      end = before.length;
+      start = Math.max(0, end - limit);
+    }
+  }
+  const page = ordered.slice(start, end);
+  const body = {
+    ...FIXTURE.queue,
+    observed_at_ms: Date.parse(OPERATIONS_V2_DOUBLE_NOW_ISO),
+    read_truth: { state: ordered.length === 0 ? "EMPTY" : "AVAILABLE", reason_code: null, scope: "REQUEST" },
+    page: {
+      rows: page,
+      total_count: ROWS.length,
+      filtered_count: ordered.length,
+      next_cursor: end < ordered.length && page.length > 0 ? encodeCursor(page[page.length - 1], signature) : null,
+      prev_cursor: start > 0 && page.length > 0 ? encodeCursor(page[0], signature) : null,
+      has_more: end < ordered.length && page.length > 0,
+      has_previous: start > 0 && page.length > 0,
+      applied_filters: applied,
+      applied_sort: [
+        { field: "created_at", direction },
+        { field: "operation_id", direction },
+      ],
+    },
+  };
+  return { status: 200, body };
+}
+
+function incident(id: string): BffAnswerV2 {
+  if (id === "inc_NOT_FOUND") return problem(404, "OPERATIONAL_READ_NOT_FOUND", "The incident was not found.");
+  if (id === "inc_LEGACY_SHAPE") {
+    return { status: 200, body: { schema_version: "execution.incident-detail.v1", incident: { incident_id: id, state: "OPEN" } } };
+  }
+  const root = { ...FIXTURE.incident, incident_id: id, observed_at_ms: Date.parse(OPERATIONS_V2_DOUBLE_NOW_ISO) } as Record<string, unknown>;
+  if (id === "inc_TEST_ONLY_mitigated") {
+    return { status: 200, body: { ...root, workflow_state: "MITIGATED", workflow_version: 3, acknowledged_at: "2026-08-22T12:10:00Z", mitigated_at: "2026-08-22T12:30:00.654321Z", updated_at: "2026-08-22T12:30:00.654321Z" } };
+  }
+  if (id === "inc_TEST_ONLY_resolved") {
+    return { status: 200, body: { ...root, workflow_state: "RESOLVED", workflow_version: 4, acknowledged_at: "2026-08-22T12:10:00Z", mitigated_at: "2026-08-22T12:30:00Z", resolved_at: "2026-08-22T12:45:00Z", updated_at: "2026-08-22T12:45:00Z" } };
+  }
+  return { status: 200, body: root };
+}
+
+/**
+ * `path` is the request path with `/api/v1/execution` removed. Answers `null`
+ * for anything that is not a V2 operations read, so the caller falls through.
+ */
+export function answerOperationsV2(method: string, path: string, search: URLSearchParams): BffAnswerV2 | null {
+  if (method !== "GET") return null;
+  if (path === "/operations") return queue(search);
+  const seg = path.split("/").filter(Boolean);
+  if (seg[0] === "operations" && seg[1] === "incidents" && seg.length === 3) return incident(decodeURIComponent(seg[2]));
+  return null;
+}

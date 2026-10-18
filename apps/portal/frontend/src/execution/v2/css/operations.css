@@ -1,0 +1,352 @@
+/* Operations queue V2 and the incident root drawer (hi-fi v2 operations,
+ * incident). Layout and type only: colour through carbon tokens, one
+ * foreground and one background per rule so the pair gate can read it, type
+ * only through the --exec-font-* roles, no uppercase. */
+
+.exec-ops {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  color: var(--ink);
+}
+
+.exec-ops-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-ops-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-ops-subtitle {
+  margin: 0;
+  font: var(--exec-font-subtitle);
+  color: var(--ink-soft);
+}
+.exec-ops-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.exec-ops-chip {
+  padding: 0 var(--space-2);
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+
+/* ---- KPI strip ---------------------------------------------------------- */
+
+.exec-ops-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.exec-ops-kpi {
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+}
+.exec-ops-kpi dt {
+  font: var(--exec-font-th);
+  color: var(--ink-soft);
+}
+.exec-ops-kpi dd {
+  margin: 0;
+}
+.exec-ops-kpi-value {
+  font: var(--exec-font-kpi);
+  font-variant-numeric: tabular-nums;
+}
+.exec-ops-kpi-note {
+  font: var(--exec-font-caption);
+  color: var(--ink-soft);
+}
+
+/* ---- panels and Not published ------------------------------------------ */
+
+.exec-ops-panel {
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+.exec-ops-panel > summary {
+  cursor: pointer;
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-ops-panel-title {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-section);
+  color: var(--ink);
+}
+.exec-ops-np-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-ops-np {
+  margin: 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-ops-np-word {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-ops-np-reason {
+  display: block;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+
+.exec-ops-banner {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn);
+}
+.exec-ops-banner[data-tone="unknown"] {
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px dashed var(--warn);
+}
+
+/* ---- toolbar ------------------------------------------------------------ */
+
+.exec-ops-tool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-4);
+}
+.exec-ops-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font: var(--exec-font-th);
+  color: var(--ink-soft);
+}
+.exec-ops-field select,
+.exec-ops-field input {
+  min-width: 120px;
+  padding: 4px 8px;
+  font: var(--exec-font-data);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-ops-field select:focus-visible,
+.exec-ops-field input:focus-visible,
+.exec-ops-seg button:focus-visible,
+.exec-ops-tab:focus-visible,
+.exec-ops-more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-ops-seg {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+}
+.exec-ops-seg button {
+  padding: 4px 12px;
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ops-seg button:last-child {
+  border-right: 0;
+}
+.exec-ops-seg button[aria-pressed="true"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+/* Disabled keeps its contrast: the colour changes, the opacity does not. */
+.exec-ops-seg button:disabled {
+  color: var(--ink-faint);
+  background: var(--paper);
+  cursor: not-allowed;
+}
+.exec-ops-reason {
+  margin: 0;
+  font: var(--exec-font-caption);
+  color: var(--ink-soft);
+}
+.exec-ops-apply {
+  padding: 4px 12px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+
+/* ---- tabs --------------------------------------------------------------- */
+
+.exec-ops-tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-ops-tab {
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px solid transparent;
+  border-bottom: 0;
+  cursor: pointer;
+}
+.exec-ops-tab[aria-selected="true"] {
+  color: var(--ink);
+  background: var(--paper-raised);
+  border-color: var(--line-strong);
+}
+
+/* ---- queue layout ------------------------------------------------------- */
+
+.exec-ops-lay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.exec-ops-lay[data-dock="true"] {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.exec-ops-table {
+  min-width: 0;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+}
+.exec-ops-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-ops-more {
+  padding: 4px 16px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ops-more:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  cursor: not-allowed;
+}
+
+.exec-ops-target {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal;
+}
+.exec-ops-id {
+  font: var(--exec-font-id);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-ops-meta {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-ops-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  white-space: normal;
+}
+
+/* ---- dock and drawer bodies -------------------------------------------- */
+
+.exec-ops-facts {
+  display: grid;
+  grid-template-columns: minmax(96px, 120px) minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-4);
+  font: var(--exec-font-body);
+}
+.exec-ops-facts dt {
+  color: var(--ink-soft);
+}
+.exec-ops-facts dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-ops-mono {
+  font: var(--exec-font-id);
+}
+.exec-ops-section {
+  margin: var(--space-4) 0 var(--space-2);
+  font: var(--exec-font-section);
+  color: var(--ink);
+}
+
+.exec-ops-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-control);
+}
+.exec-ops-rail li {
+  padding: var(--space-1) var(--space-3);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-ops-rail li[data-step="done"] {
+  color: var(--ink);
+  background: var(--paper-raised);
+  border-color: var(--ink-soft);
+}
+.exec-ops-rail li[data-step="current"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.exec-ops-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+@media (max-width: 660px) {
+  .exec-ops-lay[data-dock="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .exec-ops-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -17,6 +17,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Page } from "@playwright/test";
+import { answerOperationsV2 } from "./bffDoubleV2";
 
 const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
 const canonical = (name: string): unknown => JSON.parse(readFileSync(join(CONTRACTS, name), "utf8"));
@@ -162,16 +163,148 @@ const COMMAND_OPERATION_ID = String(
     "",
 );
 
-function alphaFleet(search: URLSearchParams): Answer {
-  const requested = search.get("search");
-  if (!requested) return ok(ALPHA_FLEET);
+/**
+ * `GET /alphas` over five distinct rows (UXM-07 S1a): different owners, every
+ * stage, a row that needs attention, a row with several deployments and one
+ * that is research only. The first row is the canonical fixture row, byte for
+ * byte, so the V1 journeys that assert it do not change. Filters, sort and the
+ * keyset cursor follow the real read: `search` contains on the label, `stage`
+ * matches any stage the alpha is in, `owner` and `health` are exact, `after`
+ * and `before` are alpha ids of the page edge.
+ */
+export function alphaFleet(search: URLSearchParams): Answer {
   const page = ALPHA_FLEET.page as Record<string, unknown>;
-  const rows = Array.isArray(page.rows) ? page.rows as Record<string, unknown>[] : [];
+  const base = (Array.isArray(page.rows) ? page.rows as Record<string, unknown>[] : [])[0] ?? {};
+  const dep = (id: string, stage: string, venue: string, account: string, portfolio: [string, string], health: string, state: string, active: boolean, updated: string) => ({
+    deployment_id: id, stage, venue, account_id: account, portfolio_id: portfolio[0], portfolio_name: portfolio[1], currency: "USDT",
+    allocation: "10000", balance_total: "10000", balance_free: "10000", balance_locked: "0", position_fact_count: 0,
+    realized_pnl: "0", unrealized_pnl: "0", net_pnl: "0", exposure: "0",
+    state, active, health, updated_at: updated,
+  });
+  const PF_MAIN: [string, string] = ["pf_main", "Main"];
+  const PF_SAT: [string, string] = ["pf_sat", "Satellite"];
+  const row = (
+    id: string, label: string, version: string, owner: string | null, stages: string[], health: string,
+    attention: string[], deployments: Record<string, unknown>[], updated: string,
+  ) => ({
+    ...base,
+    alpha_id: id, alpha_label: label, version, stage: stages[0], stages, owner,
+    portfolios: [...new Map(deployments.map((d) => [d.portfolio_id as string, { portfolio_id: d.portfolio_id, name: d.portfolio_name, base_currency: "USDT" }])).values()],
+    deployments,
+    allocations: deployments.length > 0 ? [{ currency: "USDT", value: String(deployments.length * 10000) }] : [],
+    balances: deployments.length > 0 ? [{ currency: "USDT", total: String(deployments.length * 10000), free: String(deployments.length * 10000), locked: "0" }] : [],
+    position_pnl: [], exposure: deployments.length > 0 ? [{ currency: "USDT", value: "0" }] : [],
+    health, attention_reasons: attention, updated_at: updated,
+  });
+  const all: Record<string, unknown>[] = [
+    base,
+    row("alpha_b", "Basis B", "1.4", "Lan-002", ["LIVE", "CANARY"], "READY", [], [
+      dep("dep_b1", "LIVE", "BINANCE", "acc_b1", PF_MAIN, "READY", "ACTIVE", true, "2026-09-01T15:10:00Z"),
+      dep("dep_b2", "LIVE", "OKX", "acc_b2", PF_SAT, "READY", "ACTIVE", true, "2026-09-01T15:09:00Z"),
+      dep("dep_b3", "CANARY", "BINANCE", "acc_b3", PF_MAIN, "READY", "ACTIVE", true, "2026-09-01T15:08:00Z"),
+    ], "2026-09-01T15:10:00Z"),
+    row("alpha_c", "Momentum C", "2.0", "Minh-003", ["CANARY"], "ATTENTION", ["DEPLOYMENT_ATTENTION", "RECONCILIATION_OPEN"], [
+      dep("dep_c1", "CANARY", "OKX", "acc_c1", PF_SAT, "ATTENTION", "HALTED", false, "2026-09-01T14:00:00Z"),
+    ], "2026-09-01T14:00:00Z"),
+    row("alpha_d", "Grid D", "0.9", "Bobby-001", ["SANDBOX", "PAPER"], "READY", [], [
+      dep("dep_d1", "SANDBOX", "OKX", "acc_d1", PF_SAT, "READY", "ACTIVE", true, "2026-09-01T13:00:00Z"),
+      dep("dep_d2", "PAPER", "BINANCE", "acc_d2", PF_SAT, "FINDING", "ACTIVE", true, "2026-09-01T12:59:00Z"),
+    ], "2026-09-01T13:00:00Z"),
+    row("alpha_e", "Idea E", "0.1", null, ["RESEARCH"], "RESEARCH_ONLY", [], [], "2026-09-01T12:00:00Z"),
+  ];
+
+  const text = (key: string) => (search.get(key) ?? "").trim();
+  const needle = text("search").toLowerCase();
+  const stageFilter = text("stage").toUpperCase();
+  const owner = text("owner");
+  const health = text("health");
+  let rows = all.filter((item) =>
+    (!needle || String(item.alpha_label).toLowerCase().includes(needle))
+    && (!stageFilter || (item.stages as string[]).includes(stageFilter))
+    && (!owner || item.owner === owner)
+    && (!health || item.health === health));
+
+  const rank: Record<string, number> = { RESEARCH: 0, PAPER: 1, SANDBOX: 2, CANARY: 3, LIVE: 4 };
+  const keyOf = (item: Record<string, unknown>, field: string): string | number | null => {
+    switch (field) {
+      case "alpha_id": case "alpha_label": case "stage": case "health": case "updated_at": return String(item[field]);
+      case "stage_rank": return rank[String(item.stage)] ?? -1;
+      default: return null;
+    }
+  };
+  const sortRaw = text("sort");
+  const sorts = sortRaw === "" ? [] : sortRaw.split(",").map((token) => {
+    const t = token.trim();
+    const [field, dir = "asc"] = t.startsWith("-") ? [t.slice(1), "desc"] : t.startsWith("+") ? [t.slice(1), "asc"] : t.split(":");
+    return { field, direction: dir };
+  });
+  if (sorts.some((s) => keyOf(base, s.field) === null || (s.direction !== "asc" && s.direction !== "desc"))) {
+    return problem(400, "INVALID_SORT", "sort must name a published field with asc or desc.");
+  }
+  if (sorts.length > 0) {
+    rows = [...rows].sort((left, right) => {
+      for (const { field, direction } of [...sorts, { field: "alpha_id", direction: "asc" }]) {
+        const a = keyOf(left, field)!; const b = keyOf(right, field)!;
+        if (a !== b) return (a < b ? -1 : 1) * (direction === "desc" ? -1 : 1);
+      }
+      return 0;
+    });
+  }
+
+  const requestedLimit = text("limit") === "" ? 50 : Number(text("limit"));
+  if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 200) {
+    return problem(400, "INVALID_PAGE_LIMIT", "limit must be between 1 and 200.");
+  }
+  const after = text("after");
+  const before = text("before");
+  const edge = (cursor: string) => rows.findIndex((item) => item.alpha_id === cursor);
+  let start = 0;
+  let end = Math.min(rows.length, requestedLimit);
+  if (after) {
+    const at = edge(after);
+    if (at < 0) return problem(400, "INVALID_CURSOR", "after is not a cursor of this query.");
+    start = at + 1; end = Math.min(rows.length, start + requestedLimit);
+  } else if (before) {
+    const at = edge(before);
+    if (at < 0) return problem(400, "INVALID_CURSOR", "before is not a cursor of this query.");
+    end = at; start = Math.max(0, end - requestedLimit);
+  }
+  const window = rows.slice(start, end);
+
+  const sum = (items: Record<string, unknown>[], key: string) => {
+    const total = items.flatMap((item) => item[key] as Record<string, string>[]).reduce((acc, value) => acc + Number(value.value), 0);
+    return [{ currency: "USDT", value: String(total) }];
+  };
+  const stageCounts = Object.fromEntries([...new Set(all.flatMap((item) => item.stages as string[]))].sort()
+    .map((stage) => [stage, all.filter((item) => (item.stages as string[]).includes(stage)).length]));
+  const summary = {
+    ...(ALPHA_FLEET.summary as Record<string, unknown>),
+    alpha_count: all.length,
+    deployment_count: all.reduce((n, item) => n + (item.deployments as unknown[]).length, 0),
+    portfolio_count: new Set(all.flatMap((item) => (item.portfolios as { portfolio_id: string }[]).map((p) => p.portfolio_id))).size,
+    needs_attention_count: all.filter((item) => item.health === "ATTENTION").length,
+    research_only_count: all.filter((item) => item.health === "RESEARCH_ONLY").length,
+    stage_counts: stageCounts,
+    allocation_by_currency: sum(all, "allocations"),
+    exposure_by_currency: sum(all, "exposure"),
+  };
+  const applied = [
+    ["alpha_label", "contains", needle], ["stage", "contains", stageFilter], ["owner", "eq", owner], ["health", "eq", health],
+  ].filter(([, , value]) => value).map(([field, op, value]) => ({ field, op, value }));
   return ok({
     ...ALPHA_FLEET,
+    summary,
     page: {
       ...page,
-      rows: rows.map((row) => ({ ...row, alpha_id: requested, alpha_label: requested })),
+      rows: window,
+      total_count: all.length,
+      filtered_count: rows.length,
+      next_cursor: end < rows.length ? String(window[window.length - 1]?.alpha_id ?? "") || null : null,
+      prev_cursor: start > 0 ? String(window[0]?.alpha_id ?? "") || null : null,
+      has_more: end < rows.length,
+      has_previous: start > 0,
+      applied_filters: applied,
+      ...(sorts.length > 0 ? { applied_sort: sorts } : {}),
     },
   });
 }
@@ -651,7 +784,7 @@ function resourceEnvelope(kind: "alpha" | "portfolio" | "account" | "binding", i
     account_id: accountId,
     mode: typeof row.mode === "string" ? row.mode : "paper",
   }));
-  const deployment = deployments[0] ?? {
+  const deployment: Record<string, unknown> = deployments[0] ?? {
     deployment_id: "dep_a", strategy_id: alphaId, account_id: accountId,
     mode: "paper", venue: "BINANCE", currency: "USDT",
   };
@@ -898,9 +1031,19 @@ function mirrorIntegrityEnvelope(environment: "paper" | "sandbox" | "live"): Rec
   };
 }
 
-export function answerExecutionBff(method: string, pathname: string, search: URLSearchParams): Answer {
+export interface BffDoubleOptions {
+  /** UXM-07 S1c/S1d: answer the V2 operations queue and incident root. Off keeps the V1 shapes the existing journeys assert. */
+  operationsV2?: boolean;
+}
+
+export function answerExecutionBff(method: string, pathname: string, search: URLSearchParams, options: BffDoubleOptions = {}): Answer {
   const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";
   const seg = path.split("/").filter(Boolean);
+
+  if (options.operationsV2 && method === "GET") {
+    const v2 = answerOperationsV2(method, path, search);
+    if (v2 !== null) return v2;
+  }
 
   if (method === "GET") {
     /*
@@ -1089,11 +1232,11 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
 }
 
 /** Register the double on a page. Same-origin only — nothing else is stubbed here. */
-export async function stubExecutionBff(page: Page): Promise<void> {
+export async function stubExecutionBff(page: Page, options: BffDoubleOptions = {}): Promise<void> {
   await page.route("**/api/v1/execution/**", (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    const { status, body, contentType = "application/json" } = answerExecutionBff(request.method(), url.pathname, url.searchParams);
+    const { status, body, contentType = "application/json" } = answerExecutionBff(request.method(), url.pathname, url.searchParams, options);
     return route.fulfill({
       status,
       contentType,
