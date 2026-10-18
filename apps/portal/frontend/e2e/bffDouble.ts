@@ -1215,7 +1215,8 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     if (path === "/views/observed-timeline") return ok(observedTimelineEnvelope(search));
     if (path === "/market/venue-candles") return ok(unavailableMarketCandles(search));
     // The Trading System market-context candles: the canonical L0 body (source-bounded, AGING), not an invented series.
-    if (path === "/market/candles") return ok(canonical("execution-market-context.candles.valid.json"));
+    // Only for the V2 screens: the V1 journeys record the 501 refusal in their baselines.
+    if (options.screensV2 && path === "/market/candles") return ok(canonical("execution-market-context.candles.valid.json"));
     if (seg[0] === "manager" && seg[1] === "current" && seg.length === 3) {
       const environment = search.get("environment");
       if (!validEnvironment(environment)) return problem(400, "invalid_environment", "A profile environment is required.");
