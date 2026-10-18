@@ -70,8 +70,17 @@ const binding = z.object({ lease_id: uuid, attempt_id: uuid, human_issuer: ident
   request_digest: raw, operation: z.literal("READ") }).strict();
 const domain = z.object({ profile_id: identifier(128), catalogue_sha256: raw,
   profile_sha256: raw, field_policy_sha256: raw }).strict();
-const managerIntent = z.object({ schema_version: z.literal("pma.manager-read-intent.v1"),
+const finiteManagerIntent = z.object({ schema_version: z.literal("pma.manager-read-intent.v1"),
   action: z.enum(["catalogue", "capabilities", "relation_page", "relation_record", "projection_page"]), digest: raw }).strict();
+// Source-pinned CLOSED v2, not an alternative stream protocol. Binding the
+// original exact frame/continuation does not supply current stream authority,
+// native held custody, a physical frame witness or a terminal signer.
+const noticeManagerIntent = z.object({ schema_version: z.literal("pma.manager-read-intent.v2"),
+  action: z.literal("scoped_notice"), digest: raw, stream_id: uuid, frame_ordinal: positive,
+  dataset_id: identifier(256), query_digest: raw, field_set_digest: raw,
+  projection_generation: identifier(256), source_cursor_digest: raw, frame_sha256: raw,
+  stream_scope_digest: raw }).strict();
+const managerIntent = z.discriminatedUnion("schema_version", [finiteManagerIntent, noticeManagerIntent]);
 const base = z.object({ schema_version: z.literal("pma.native-business-read.request.v1"),
   binding, domain, manager_intent: managerIntent, deadline: utc }).strict();
 export type NativeBusinessReadBase = z.infer<typeof base>;
@@ -212,6 +221,20 @@ function canonical(value: Data): string {
   // All schema-approved keys are fixed ASCII; UTF8 values are not normalized.
   return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
 }
+/** Exact PM original-Base correlation. Keep deadline spelling/microseconds;
+ * never recompute against today's source or downshift a recovering v2 intent.
+ * v1 keeps its original opaque Manager digest semantics. */
+function assertManagerIntent(request: NativeBusinessReadBase): void {
+  const intent = request.manager_intent;
+  if (intent.digest !== request.binding.request_digest) return fail();
+  if (intent.schema_version === "pma.manager-read-intent.v2") {
+    const { digest: _digest, ...unsignedIntent } = intent;
+    const { request_digest: _requestDigest, ...unsignedBinding } = request.binding;
+    const expected = sha256(canonical({ binding: unsignedBinding, domain: request.domain,
+      deadline: request.deadline, manager_intent: unsignedIntent } as Data));
+    if (expected !== intent.digest) return fail();
+  }
+}
 function freeze<T>(value: T): T {
   if (value !== null && typeof value === "object") {
     for (const item of Object.values(value)) freeze(item);
@@ -262,8 +285,8 @@ export function captureNativeBusinessReadBase(input: unknown,
   try {
     const cap = bounds(limits);
     const parsed = base.parse(types.isUint8Array(input) ? decode(input as Uint8Array, cap.request_bytes) : ownData(input));
-    if (parsed.manager_intent.digest !== parsed.binding.request_digest ||
-        Buffer.byteLength(canonical(parsed as Data), "utf8") > cap.request_bytes) return fail();
+    assertManagerIntent(parsed);
+    if (Buffer.byteLength(canonical(parsed as Data), "utf8") > cap.request_bytes) return fail();
     return freeze(parsed);
   } catch { return fail(); }
 }
@@ -326,7 +349,7 @@ export function prepareNativeBusinessReadRequest(action: NativeBusinessReadActio
     const data = types.isUint8Array(input) ? decode(input as Uint8Array, cap.request_bytes) : ownData(input);
     const schema = action === "issue" || action === "enter" ? humanRequest : action === "resolve" ? terminalRequest : base;
     const request = schema.parse(data);
-    if (request.manager_intent.digest !== request.binding.request_digest) return fail();
+    assertManagerIntent(request);
     const body = canonical(request as Data);
     if (Buffer.byteLength(body, "utf8") > cap.request_bytes) return fail();
     const unsigned = Object.fromEntries(Object.entries(request).filter(([key]) => key !== "human_token")) as Data;

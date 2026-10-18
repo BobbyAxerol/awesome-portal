@@ -399,3 +399,32 @@ not commission current-human/workload/app/field provider, v2 final-egress/native
 trust installation, approved budgets/calibration/coexistence/P184G2/browser.
 Those original09/10 records remain OPEN;11NOT_ENTRY_READY. No remote build,
 tests/SQL/migration/credential/listener/runtime change or new resource.
+
+### Exact v2 dependency / source-hold review — 2026-10-18T01:21UTC
+
+F0 actually landed880a3d66, normal-hook terminal01:20:36UTC,852contracts/
+6617API PASS with3existing skipped tests; protected runtime/source/owned cleanup
+checks passed. [Owning04 terminal](../ELP2-04/f0-current-audit-read.md#normal-hook-terminal--2026-10-18t012036utc).
+No new SSH/source acceptance is inferred from that local proof.
+
+[Owning09 integration packet](../ELP2-09/native-v2-codec-integration.md) accepts
+the existing exact PM scoped_notice-v2 digest and preserves v1 finite purpose.
+Code/test/source-only reviews applied; actual focused result still NOT_RUN.
+Cached provider0134b84 and fenceec7016 match the last fresh PM94822b53 read.
+Main read complete provider299lines and held bridge269lines: bridge
+da9c5a62778c2af82339f5f52b9ae17b97aa440a2cde04d51e3f63cec296fd4c
+holds business policy/owner/subject/acceptance-head only, not full projection/
+field/stream authority. Its explicit independent-Core-authority requirement is
+preserved. A valid hash, status or double-read cannot replace through-send hold.
+
+Original08 same-ledger physical frame/source+local settlement, writer/trust
+installation, approved budgets/calibration/coexistence/original P184G2/browser
+remain OPEN. Claude UXM owner-held/AWAITING_CONSUMER_REVIEW; no new public type,
+UI or activation requested. No source mutation, push/dev/main/release/deploy.
+
+- Actual native-v2 local affected gate01:26:02UTC:297/297PASS/build/scoped
+  PG restore/four access digests/frozen source/eight runtime tuples/owned cleanup.
+  [Exact proof levels/hashes](../ELP2-09/native-v2-codec-integration.md#affected-terminal--2026-10-18t012602utc).
+  It qualifies closed codec/six-action actual TLS correlation and finite-family
+  refusal only; no actual source installation/field/stream/frame authority.
+  One coherent normal-hook landing remains, no repeat unchanged contract gate.

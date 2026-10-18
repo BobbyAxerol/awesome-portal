@@ -75,7 +75,13 @@ export interface CurrentHumanNativeReadRecoveryAttempt {
 function nativeBase(input: unknown) {
   const prepared = prepareNativeBusinessReadRequest("status", input, { request_bytes: 32768, response_bytes: 32768 });
   const wire = nativeBusinessReadTransportRequest(prepared);
-  return { prepared, body: wire.body, base: JSON.parse(wire.body) as NativeBase };
+  const parsed = JSON.parse(wire.body);
+  // This port owns finite HTTP/CUSTODY only. A valid v2 digest is NOT a frame
+  // permit: refuse before any durable admission, human signature or send.
+  // Original08's frame lifecycle must keep its own physical terminal family.
+  if (parsed.manager_intent.schema_version !== "pma.manager-read-intent.v1")
+    throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_FRAME_LIFECYCLE_REQUIRED");
+  return { prepared, body: wire.body, base: parsed as NativeBase };
 }
 /** PM checks original Base deadline <= identity JWT expiry. The smallest
  * representable second must fit independent authority ceilings; the finite

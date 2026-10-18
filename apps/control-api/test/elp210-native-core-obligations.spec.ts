@@ -1,6 +1,6 @@
 /** Real disposable PostgreSQL regressions; actual results live in the phase packet.
  * TEST_ONLY identity/keys, no native source, signer, egress or business permit. */
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { generateKeyPair, SignJWT } from "jose";
@@ -126,6 +126,26 @@ describe.skipIf(!database)("NC-01 native custody and shared Core drain, real iso
     expect((await rows())[0].deadline).toBe(offset.deadline);
     const restarted = await CurrentHumanCandidate.create(pool, config);
     expect(await restarted.recoverableObligations()).toEqual([{ family: "NATIVE_READ", attempt: admitted }]);
+  });
+  it("does not admit valid v2 correlation into custody-only native family", async () => {
+    const finite=base(),{request_digest:_requestDigest,...unsignedBinding}=finite.binding;
+    const intent={schema_version:"pma.manager-read-intent.v2",action:"scoped_notice",
+      stream_id:randomUUID(),frame_ordinal:"1",dataset_id:"TEST_ONLY-dataset",query_digest:"1".repeat(64),
+      field_set_digest:"2".repeat(64),projection_generation:"TEST_ONLY-generation",source_cursor_digest:"3".repeat(64),
+      frame_sha256:"4".repeat(64),stream_scope_digest:"5".repeat(64)};
+    const canonical=(value:unknown):string=>value&&typeof value==="object"
+      ?"{"+Object.keys(value).sort().map(key=>JSON.stringify(key)+":"+canonical((value as Record<string,unknown>)[key])).join(",")+"}"
+      :JSON.stringify(value);
+    const raw=createHash("sha256").update(canonical({binding:unsignedBinding,domain:finite.domain,
+      deadline:finite.deadline,manager_intent:intent})).digest("hex");
+    const input={...finite,binding:{...finite.binding,request_digest:raw},manager_intent:{...intent,digest:raw}};
+    expect(JSON.parse(prepareNativeBusinessReadRequest("status",input,{request_bytes:32768,response_bytes:32768}).base_body)
+      .manager_intent.schema_version).toBe("pma.manager-read-intent.v2");
+    const before=await authority();
+    await expect(candidate.admitNativeRead(actor,input)).rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_FRAME_LIFECYCLE_REQUIRED"});
+    expect(await rows()).toEqual([]);expect(await authority()).toEqual(before);
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.native_read_events")).rows[0].n).toBe(0);
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.leases")).rows[0].n).toBe(0);
   });
   it("detaches actor and exact Base synchronously before the first await", async () => {
     const input = base(), original = structuredClone(input), caller = { ...actor }, originalActor = { ...actor };

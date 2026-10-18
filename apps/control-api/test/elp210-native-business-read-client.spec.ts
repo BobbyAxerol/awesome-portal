@@ -28,6 +28,20 @@ function nativeRequest(action:NativeBusinessReadAction="unknown"){
   return action==="issue"||action==="enter"?{...base,human_token:TOKEN}:action==="resolve"?{...base,signed_terminal:TOKEN}:base;
 }
 const prepared=(action:NativeBusinessReadAction="unknown")=>prepareNativeBusinessReadRequest(action,nativeRequest(action),LIMITS);
+// Independent synthetic PM preimage; opaque correlation, never a stream grant.
+function nativeNoticeRequest(action:NativeBusinessReadAction){
+  const finite=nativeRequest(action),{request_digest:_requestDigest,...binding}=finite.binding;
+  const intent={schema_version:"pma.manager-read-intent.v2",action:"scoped_notice",
+    stream_id:"00000000-0000-0000-0000-000000000101",frame_ordinal:"9223372036854775807",
+    dataset_id:"TEST_ONLY-dataset-研究",query_digest:"1".repeat(64),field_set_digest:"2".repeat(64),
+    projection_generation:"TEST_ONLY-generation",source_cursor_digest:"3".repeat(64),
+    frame_sha256:"4".repeat(64),stream_scope_digest:"5".repeat(64)};
+  const canonical=(value:unknown):string=>value&&typeof value==="object"
+    ?"{"+Object.keys(value).sort().map(key=>JSON.stringify(key)+":"+canonical((value as Record<string,unknown>)[key])).join(",")+"}"
+    :JSON.stringify(value);
+  const raw=createHash("sha256").update(canonical({binding,domain:finite.domain,deadline:finite.deadline,manager_intent:intent})).digest("hex");
+  return{...finite,binding:{...finite.binding,request_digest:raw},manager_intent:{...intent,digest:raw}};
+}
 function nativeReply(action:NativeBusinessReadAction="unknown") {
   const common={schema_version:"pma.native-business-read.result.v1",binding:nativeBinding(),component:"NATIVE_BUSINESS_READ_ONLY"};
   if(action==="issue")return {...common,state:"ISSUED",human:{issuer:nativeBinding().human_issuer,subject:nativeBinding().subject,
@@ -121,6 +135,30 @@ describe("ELP2-10 real native business READ TLS transport — synthetic wire, no
       expect(()=>nativeBusinessReadAuthenticatedResult(client,value)).toThrowError(expect.objectContaining({code:"NATIVE_BUSINESS_READ_RESULT_UNVERIFIED"}));
     expect(traps).toBe(0);expect(lane.received).toHaveLength(1);expect(other.snapshot()).toEqual({in_flight:0});
     expect(nativeBusinessReadAuthenticatedResult(client,result).result).toBe(result);
+  });
+  it.each(["issue","enter","unknown","status","cancel-unentered","resolve"] as const)(
+    "keeps exact scoped-notice v2 Base through actual %s TLS without manufacturing a frame receipt",async action=>{
+      const input=nativeNoticeRequest(action),reply=nativeReply(action);
+      reply.binding={...input.binding};
+      const lane=await endpoint((_req,res)=>json(res,reply)),client=new NativeBusinessReadClient(config(lane.origin));
+      const context=prepareNativeBusinessReadRequest(action,input,LIMITS),result=await client.call(context);
+      await drained(client);expect(lane.received).toHaveLength(1);
+      expect(lane.received[0].body.equals(Buffer.from(context.body))).toBe(true);
+      expect(result).toEqual(reply);
+      const proof=nativeBusinessReadAuthenticatedResult(client,result),base=JSON.parse(proof.base_body);
+      expect(proof.base_body).toBe(context.base_body);
+      expect(proof.response_sha256).toBe(digest(JSON.stringify(reply)));
+      expect(proof).toMatchObject({action,binding_digest:context.binding_digest,stable_core_digest:context.stable_core_digest});
+      expect(base.manager_intent).toEqual(input.manager_intent);expect(base.deadline).toBe(deadline);
+      expect(base).not.toHaveProperty("human_token");expect(base).not.toHaveProperty("signed_terminal");
+      expect(proof).not.toHaveProperty("frame_witness");expect(proof).not.toHaveProperty("release_permitted");
+    });
+  it("refuses a changed scoped frame before HTTP rather than silently becoming a finite request",async()=>{
+    const lane=await endpoint(),client=new NativeBusinessReadClient(config(lane.origin)),input=nativeNoticeRequest("issue");
+    input.manager_intent.frame_sha256="9".repeat(64);
+    expect(()=>prepareNativeBusinessReadRequest("issue",input,LIMITS)).toThrowError(
+      expect.objectContaining({code:"NATIVE_BUSINESS_READ_WIRE_INVALID"}));
+    expect(lane.received).toEqual([]);expect(client.snapshot().in_flight).toBe(0);
   });
   it.each(["pin","ca","hostname","tls-version"] as const)("sends zero HTTP application bytes on %s trust failure",async kind=>{
     const selected=kind==="ca"?foreignPm:kind==="hostname"?wrongHost:pm;

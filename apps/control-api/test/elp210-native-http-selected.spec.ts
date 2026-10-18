@@ -287,6 +287,44 @@ describe.skipIf(!pgUrl)("TEST_ONLY NC03 native-family finite HTTP actual-PG inte
    });
   })as any);return remaining;
  }
+ it.each(["prepareNativeRead","acquireNativeRead"] as const)(
+  "refuses valid frame v2 at %s before finite custody/sign/send",async method=>{
+   const {request_digest:_requestDigest,...binding}=ctx.binding;
+   const intent={schema_version:"pma.manager-read-intent.v2",action:"scoped_notice",
+    stream_id:randomUUID(),frame_ordinal:"1",dataset_id:"TEST_ONLY-dataset",
+    query_digest:raw("1"),field_set_digest:raw("2"),
+    projection_generation:"TEST_ONLY-generation",source_cursor_digest:raw("3"),
+    frame_sha256:raw("4"),stream_scope_digest:raw("5")};
+   const canonical=(value:unknown):string=>value&&typeof value==="object"
+    ?"{"+Object.keys(value).sort().map(key=>JSON.stringify(key)+":"+
+      canonical((value as Record<string,unknown>)[key])).join(",")+"}"
+    :JSON.stringify(value);
+   const digest=createHash("sha256").update(canonical({binding,domain:ctx.domain,
+    deadline:ctx.deadline,manager_intent:intent})).digest("hex");
+   const input={...ctx,binding:{...ctx.binding,request_digest:digest},
+    manager_intent:{...intent,digest}};
+   const cap={request_bytes:32768,response_bytes:32768};
+   expect(JSON.parse(prepareNativeBusinessReadRequest("status",input,cap).base_body)
+    .manager_intent.schema_version).toBe("pma.manager-read-intent.v2");
+   const snapshot=async()=>({
+    authority:(await pool.query("SELECT * FROM elp210_candidate.authority ORDER BY singleton")).rows,
+    obligations:(await pool.query("SELECT * FROM elp210_candidate.native_read_obligations ORDER BY lease_id")).rows,
+    events:(await pool.query("SELECT * FROM elp210_candidate.native_read_events ORDER BY event_id")).rows,
+    leases:(await pool.query("SELECT * FROM elp210_candidate.leases ORDER BY lease_id")).rows,
+   });
+   const before=await snapshot();
+   const connect=vi.spyOn(pool,"connect"),sign=vi.spyOn(SignJWT.prototype,"sign");
+   const signRequest=vi.spyOn(candidate,"signNativeReadRequest");
+   try{
+    await expect(candidate[method](actor,input)).rejects.toMatchObject({
+     code:"CURRENT_HUMAN_NATIVE_FRAME_LIFECYCLE_REQUIRED"});
+    expect(connect).not.toHaveBeenCalled();
+    expect(signRequest).not.toHaveBeenCalled();expect(sign).not.toHaveBeenCalled();
+   }finally{connect.mockRestore();signRequest.mockRestore();sign.mockRestore();}
+   expect(await snapshot()).toEqual(before);
+   expect(await pending()).toBe(0);expect(calls).toEqual([]);
+   expect(humanAssertions).toEqual([]);expect(receipts.size).toBe(0);
+  });
  it("admits once in NC01 native family; no reverse row or HTTP authority from returned carrier",async()=>{
   const h=await candidate.prepareNativeRead(actor,ctx),r=await row();
   expect(r).toMatchObject({lifecycle_kind:"MANAGER_HTTP",phase:"ADMITTED",subject_id:actor.user_id,no_send_fenced:false,source_reconciled:false});

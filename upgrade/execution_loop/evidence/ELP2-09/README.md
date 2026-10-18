@@ -225,3 +225,21 @@ No source factory/wire or propagation-SLA/browser commissioning was executed.
 Source/foreign index and eight protected runtimes unchanged; owned resources
 and lease removed. Final normal-hook landing remains PENDING; full09exit stays
 NOT_MET_SOURCE_PROPAGATION_BROWSER. No Claude change/assignment is implied.
+
+### Original08/09 native scoped-notice dependency — 2026-10-18
+
+[Owning exact v2 integration packet](native-v2-codec-integration.md) records
+clean entry880a3d66, exact PM94822b53 source pins, closed wire/preimage adoption
+and the finite-family refusal boundary. Applied/uncommitted, affected gate
+NOT_RUN at entry. Public notice DTO/schema/cursor stay unchanged; parser/client
+compatibility cannot supply current stream/field/source holds or frame custody.
+Original EPG10-08 still owns SAME NC01 physical-frame/immutable-terminal/PM-ACK
+integration. Genuine external through-send authority, connected continuity and
+full09/10 acceptance remain OPEN;11NOT_ENTRY_READY. Recurring Claude intake7.3
+checked, no new acknowledgement/assignment or generated browser field inferred.
+
+- Actual affected terminal01:26:02UTC:7files/297PASS,0fail/skip, build/scoped
+  PG restore/four access digests/source-index/eight runtimes/owned cleanup PASS.
+  [Exact source/log/controller hashes and proof limits](native-v2-codec-integration.md#affected-terminal--2026-10-18t012602utc).
+  Coherent normal-hook landing pending; this is wire compatibility and finite
+  refusal, not current-source frame custody, connected09 or full10 acceptance.

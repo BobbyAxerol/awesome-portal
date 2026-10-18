@@ -164,3 +164,20 @@ under the already approved goal. Existing008/009 remain OPEN for their wider
 done-when. Installed current-human/workload/app/field trust, applied schema,
 budget/calibration/coexistence/P184 performance G2/browser remain separate;
 ELP2-11 is NOT_ENTRY_READY. No full04/10/goal or consumer PASS is inferred.
+
+### Normal-hook terminal — 2026-10-18T01:20:36UTC
+
+Landed880a3d667f96e14e6de51456033cc005ae425134 on the original research
+branch; actual controller f0-reader-land-004907 exited0/PASS. Contracts69files/
+852tests and API386files/6617tests PASS;2existing skipped API files/3existing
+skipped tests. API duration1445.68s. Build/scoped PostgreSQL restore/four
+access-row digests PASS. Frozen source/index and eight protected runtime tuples
+unchanged, owned containers/network absent and own lease released. These full
+suite cases overlap focused receipts, not additional unique coverage.
+
+Terminal controller SHA256
+90045d9042452ad889c5d3d6c660d230730102a0fc5f0b5a43bbede7474bf0d7;
+gate.log f03ae313f33cb3d1830f422e202b783d3238f058280553b3ff6aeea83d04f436.
+Diff25files+1664/−52 includes generated/test/docs, not all application code.
+No runtime/source/UI/push activation or consumer acceptance. This supersedes
+only pending local landing above; wider04-008/009 and04-010 statuses stay open.
