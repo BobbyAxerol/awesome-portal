@@ -11,7 +11,7 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 | Nguồn | Pin đã đọc | Ngày đọc | Ghi chú |
 | --- | --- | --- | --- |
-| Portal `docs/research-loop-plan` | `0aad2697` ("complete scoped score history and exact PM candidate codecs"); đã đọc kỹ đến `f1f5fc7d`, commit cuối đọc ELP2-06 scoped-score-history + README 06/07 | 2026-10-17 | `claude/fe-parity` đã rebase lên `0aad2697` (docs-only, chưa có code FE V2) |
+| Portal `docs/research-loop-plan` | **`ac056d46`** (đọc 2026-10-18, 19 commit trên `0aad2697`; xem [digest](design/sync/2026-10-18-codex-digest.md)); trước đó `0aad2697` ("complete scoped score history and exact PM candidate codecs"); đã đọc kỹ đến `f1f5fc7d`, commit cuối đọc ELP2-06 scoped-score-history + README 06/07 | 2026-10-17 | `claude/fe-parity` đã rebase lên `0aad2697` (docs-only, chưa có code FE V2) |
 | TS execution (HK) | `c4819bc0` (`feat/v2-rust-first-okx-demo`) | 2026-10-17 ~11:15Z | Tôi đọc qua SSH chỉ-đọc; không kiểm runtime |
 | PM (HK) | tôi đọc `673ce7cf`; **Codex ghi `e62b6825…` (10:29–10:31Z)** | 2026-10-17 | **CHƯA ĐỐI CHIẾU**: hai pin khác nhau (khác worktree hoặc PM đã tiến). Phải đọc lại trước khi dùng bất kỳ ngữ nghĩa PM nào |
 | Edge EPG10 (HK) | `8560ac10…` | 2026-10-17 | Hai bên cùng pin; code chỉ có ở HK, không trong repo local |
@@ -40,6 +40,26 @@ Ghi chú: hai ID PM/Edge chưa được ghi lại trong phiên này; lần giao 
 | Hub realtime lifecycle (09) — vẫn NOTIFICATION_ONLY | Thấp | Không biến notification thành event replay tài chính |
 | PM control candidate (lock/unlock) — **module riêng, không mount** | Thấp | Không có hành động lock/unlock qua Portal |
 | Retained business aliases, finite retained pages (04) | Trung bình | Alias/route retained có thể đổi; không hard-code |
+
+### 0b. Đối chiếu FE-001…036 với giao hàng mới của Codex (2026-10-18, từ [digest](design/sync/2026-10-18-codex-digest.md) §4)
+
+PM hiện `b9fae791` (vượt `673ce7cf` và `e62b6825`, FE-019 coi là hết hiệu lực; ghi pin mới, chưa dùng ngữ nghĩa PM ở S0/S1). Edge `20a1d27f` (vẫn chỉ ở HK, FE-018 giữ). TS: chưa repin (`c4819bc0`).
+**Phát hiện cấu trúc:** nhánh Codex chưa chứa Rules §9–§10, sổ này hay `evidence/UXM-00`, nên **FE-001…036 chưa vào ledger packet của họ**; tin nhắn đề nghị gửi: [PROMPT_FOR_CODEX](design/sync/PROMPT_FOR_CODEX.md) (Bobby chuyển, chưa gửi).
+
+| ID | Trạng thái | Ghi chú |
+| --- | --- | --- |
+| FE-001 | PARTLY | Packet nay có operationId, type, fixture, lỗi `CommandProblem`, lệnh regenerate; thiếu `producer_sha`, manifest fixture, bảng bất biến chéo |
+| FE-002 | CHƯA GIAO, thêm dữ kiện | `stage_filter` PAPER\|SANDBOX\|CANARY\|LIVE; Regime dùng ResearchIS…Live; `environment` hoa/thường lẫn |
+| FE-009 | PARTLY | Command collection trần 1 MiB (1025 → 503); dataset chưa nêu |
+| FE-015 | PARTLY | `CommandProblem.public_copy_key/safe_next_action` tùy chọn; chưa có `reason_class/grant_ref/step_up_required` |
+| FE-020 | PARTLY | Có `executionCapitalCommandPreviewV1` (vốn); chưa có "what changes" cho quyết định governance |
+| FE-021 | MÂU THUẪN MỘT PHẦN | Journal nguồn UNAVAILABLE; queue V2 cố ý bỏ actor/prose → không có audit "ai làm gì" |
+| FE-030 | MÂU THUẪN NGUỒN | Queue V2 không có creator/ladder/SLA/needs_you; F0 chỉ là intent của chính actor; chưa có decision call hợp nhất |
+| FE-031 | MÂU THUẪN MỘT PHẦN | Incident V2 `historical_children` NOT_PUBLISHED |
+| FE-032 | PARTLY | Có `CommandStatus` theo resource + receipt `WorkflowCapital` (non-amount OK); chưa có edge/seq/ledger page |
+| Còn lại | không đổi | |
+
+**Tác động lên thiết kế (đã chấp nhận):** hàng đợi Operations V2 grain `operation_id` (xác nhận R3) nhưng không có assignee/actor ack-resolve/SLA; `assigned_to=me` trả 400 → lens "Mine", Acknowledge, Resolve hiện bị tắt kèm lý do (D9). Incident chỉ có root hiện tại → timeline/evidence là "Not available". Source health, journal, canary twin đều UNAVAILABLE.
 
 ## 1. Hộp thư đến — request Codex → Claude còn mở (tất cả `AWAITING_CONSUMER_REVIEW`)
 
