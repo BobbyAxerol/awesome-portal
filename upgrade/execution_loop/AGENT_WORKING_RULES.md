@@ -642,3 +642,26 @@ Bối cảnh: Codex đã làm phần lớn nền backend (ELP2-02…10); Bobby g
 **6. Hai chiều:** mỗi lát B1/B2 giao cho Codex theo §7.2 (contract, fixture canonical, test âm tính, giới hạn); Codex ghi ACCEPTED hoặc CHANGES_REQUESTED trong packet phase 04 và phase 10. Backend request FE khác vẫn đi qua sổ FE-xxx, không sửa thẳng file của Codex.
 
 Duyệt: **Bobby 2026-10-18** ("Claude làm chính FE và cả backend phần liên quan contract với FE"); chia chi tiết ở trên do Claude đề xuất, Codex cập nhật cột của mình khi đọc.
+
+### 10.12 Check chéo để không sinh gap, và cách đọc HK/Edge (Bobby, 2026-10-18)
+
+**1. Chuỗi hợp đồng và chủ từng mắt xích**
+`Nguồn HK (TS execution, PM, DL)` → `Edge (Rust, HK + contract pack trong repo)` → `control-api (BFF)` → `OpenAPI / generated types / fixture canonical` → `FE reader (v2/boundary)` → `màn`.
+Codex giữ HK → Edge → control-api → OpenAPI/fixture. Claude giữ reader → màn → nghiệm thu trình duyệt, cộng B1/B2 (§10.11). Mắt xích chung duy nhất là **hợp đồng đã publish trong repo**: FE chỉ code theo thứ nằm ở đó, không theo lời kể, không theo chat.
+
+**2. Ba kênh giao tiếp, tách bạch**
+- **(a) Đọc nguồn:** SSH chỉ-đọc `bobby@16.163.212.33` vào đúng worktree trong [SOURCE_ALIGNMENT](evidence/SOURCE_ALIGNMENT_2026-10-15.md): repin SHA đầy đủ, digest thay đổi chưa commit, guide/journal mới (§2). Không Docker/DB/ghi/build/credential. **Codex là người đọc chính** (contract, catalogue dữ liệu, API nguồn, kết quả ghi thành locator `file@SHA:dòng`). **Claude chỉ đọc mẫu khi gói giao** (Bobby duyệt 2026-10-18): mỗi family một field, đối chiếu locator của Codex với nguồn, ghi vào bảng ở mục 3.
+- **(b) Hợp đồng trong repo:** OpenAPI + generated types + fixture canonical + `services/portal-execution-edge-rs/contract-pack.lock.json`, ledger. Đây là thứ FE đọc. Mỗi thay đổi đi kèm SHA và ví dụ.
+- **(c) API runtime qua Edge relay (trust/TLS/profile):** hôm nay **source-dark**; chỉ trở thành "thật" khi dòng tương ứng của Source Truth Board là `EXISTS_MOUNTED` kèm receipt nguồn thật và Bobby giao UXM-08. Một HTTP 200 hay một migration không chứng minh runtime (§2).
+
+**3. Source Truth Board** — [evidence/SOURCE_TRUTH_BOARD.md](evidence/SOURCE_TRUTH_BOARD.md): một bảng sống, mỗi hàng một family đọc. Codex điền cột nguồn/Edge/trạng thái; Claude điền cột FE (route, reader, màn, fixture, mọi ô "Not published" kèm FE-id) và kết quả đọc mẫu. Quy tắc: mọi ô "Not published (FE-xxx)" trong UI phải trỏ về một hàng `SOURCE_DARK`/`MISSING` còn mở; không có hàng đó thì ô đó là lời nói dối.
+
+**4. Gate check chéo cho mỗi giao hàng**
+- **Codex giao contract** → trong vòng gần nhất Claude ra **consumer receipt** ACCEPTED/CHANGES_REQUESTED, gồm: nạp fixture L0 qua reader; số field published / consumed; field bị bỏ có chủ ý; ô "Not published" nào đóng được; đọc mẫu nguồn nếu gói cho phép. Không có receipt thì không DELIVERED→VERIFIED.
+- **Claude giao lát (B1/B2 hoặc FE)** → Codex ra **producer receipt**: kiểm quyền/ủy quyền (hai đầu), snapshot, predicate, bảng giới hạn; ACCEPTED/CHANGES_REQUESTED trong packet phase.
+- **Báo cáo gap mỗi vòng (một lệnh, không bằng trí nhớ):** (i) fixture canonical chưa có reader/màn nào dùng; (ii) ô "Not published" không có hàng board mở; (iii) endpoint mà FE gọi nhưng không có trong OpenAPI; (iv) hàng board `EXISTS_MOUNTED` chưa có consumer receipt. Ghi kết quả vào sổ đồng bộ §0.
+- Không bên nào sửa file của bên kia (§10.3); bất đồng đi qua request/review có bằng chứng, `BLOCKER` phải trả lời vòng sau.
+
+**5. Cadence:** round-start (§10.1) và round-end (§10.2) như cũ; khi một bên dừng, bên đó để lại một **handoff note** trong packet (đang dở gì, file nào chưa commit, đợi gì). Ghi hai SHA nhánh và thời điểm đọc.
+
+Duyệt: **APPROVED 2026-10-18** (Bobby: check chéo; Claude được SSH đọc mẫu khi gói giao).

@@ -78,7 +78,8 @@ Codex đọc ledger này tại `3b6dad16`, xếp mọi yêu cầu `ACCEPTED_FOR_
 | DEBT-UXM07-003 | cần trạng thái non-retained trung thực, không giấu lỗi console | Claude làm (FE double) |
 | DEBT-UXM07-001 | cần việc FE/baseline được duyệt | Bobby quyết (xem báo cáo) |
 Thứ tự Codex: queue-view ownership + self/nav an toàn → Manager P1 (query/metric/window) → lifecycle/criteria/cockpit → phần còn lại. Gói pending-recall vẫn `AWAITING_CONSUMER_REVIEW` và đang dở (4 suite migration lỗi `syntax error at end of input`, chưa commit); Claude sẽ review khi Codex commit và giao theo §7.2.
-Chia việc, nhánh/worktree và hạ cánh: **AGENT_WORKING_RULES §10.11**.
+Bobby đã quyết 2026-10-18: FE-036 chỉ hiện tại; FE-026 Codex đề xuất ma trận hữu hạn rồi Bobby duyệt; DEBT-UXM07-001 Claude sửa ở mốc R2; Claude được SSH chỉ-đọc lấy mẫu khi gói giao.
+Chia việc, nhánh/worktree và hạ cánh: **AGENT_WORKING_RULES §10.11**; check chéo và ba kênh đọc nguồn: **§10.12**; bảng sống: [SOURCE_TRUTH_BOARD](evidence/SOURCE_TRUTH_BOARD.md); kế hoạch phase gửi Codex: [PROMPT_FOR_CODEX](design/sync/PROMPT_FOR_CODEX.md) (chờ Bobby duyệt).
 
 ## 1. Hộp thư đến — request Codex → Claude còn mở (tất cả `AWAITING_CONSUMER_REVIEW`)
 
