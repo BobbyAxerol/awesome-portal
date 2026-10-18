@@ -1,6 +1,6 @@
 # UXM-07 — Frontend implementation, slices S0 + S1 (fixture-browser lane)
 
-Chủ: Claude · 2026-10-18 (Asia/Saigon) · Trạng thái: **S0 DELIVERED (fixture lane) @ `d891b2a5`, chưa push; S1 chưa bắt đầu (thẻ tinh chỉnh §2b); S0 mới R1, R2 mốc chờ cuối S1 (Rules §10.10)** — hồ sơ: [receipt](frontend-receipt.md), [backend-requests](backend-requests.md), [test-results](test-results.json), [debt](debt-register.json), [rollback](rollback.md). Khớp [Rules §7](../../AGENT_WORKING_RULES.md), [PHASE_PACKET_TEMPLATE](../../PHASE_PACKET_TEMPLATE.md), checklist [design/impl/UXM07-RULES-CHECKLIST.md](../../design/impl/UXM07-RULES-CHECKLIST.md).
+Chủ: Claude · 2026-10-18 (Asia/Saigon) · Trạng thái: **S0 @ `d891b2a5`; S1a–d (Fleet, Cockpit preview, Operations V2, Incident root) @ `50994a6b` + `f0b17ec4`, tier R1, chưa push; S1e Access chưa làm (chờ FE-037/038); R2 mốc chờ (Rules §10.10)** — hồ sơ: [receipt](frontend-receipt.md), [backend-requests](backend-requests.md), [test-results](test-results.json), [debt](debt-register.json), [rollback](rollback.md). Khớp [Rules §7](../../AGENT_WORKING_RULES.md), [PHASE_PACKET_TEMPLATE](../../PHASE_PACKET_TEMPLATE.md), checklist [design/impl/UXM07-RULES-CHECKLIST.md](../../design/impl/UXM07-RULES-CHECKLIST.md).
 Lane mọi receipt: **FIXTURE_LAB / BFF_DOUBLE** (Rules 9.5.5). Fixture thành công không phải real-API acceptance; đọc dữ liệu thật thuộc UXM-08.
 
 ## 1. Entry gate

@@ -37,3 +37,34 @@ Dùng lại: `useParamState` (không sửa), `readExactDecimal/formatExact/readU
 
 ## Số liệu commit `d891b2a5`
 37 file, +4101/−11 (gồm 4 file ledger toàn vẹn do `refresh-release-integrity-ledgers.sh --write`). Code tay: 33 file dưới `apps/portal/frontend/src`; chi tiết `git show --numstat d891b2a5`.
+
+---
+
+# S1 · Fleet identity, Approvals cockpit (preview), Operations queue V2, Incident root
+
+Lane: **FIXTURE_LAB / BFF_DOUBLE**. Commit code `50994a6b` (màn hình + plumbing) và `f0b17ec4` (nối route, theme, project Playwright thứ ba); tier **R1** (Rules §10.10), R2 chờ cuối S1. Chưa push.
+
+## Giao gì
+| Màn | Khoá cờ | File chính (`src/execution/v2/`) | Dữ liệu |
+| --- | --- | --- | --- |
+| Fleet identity (không tiền) | `fleet` | `screens/fleet/*`, `css/fleet.css` | `/alphas` v2; `e2e/bffDouble.ts` `alphaFleet()` 5 hàng có lọc + keyset |
+| Approvals cockpit (preview) | `cockpit` | `screens/cockpit/*`, `css/cockpit.css` | inbox, R1/R2/Live/Exit, waivers, history; nút quyết định luôn tắt "Preview · not recorded"; không gọi POST |
+| Operations queue V2 | `ops` | `screens/operations/*`, `readers/operationalQueue.ts`, `css/operations.css`; `ports.ts`/`httpApi.ts` hai phương thức mới; `e2e/bffDoubleV2.ts` | `portal.execution.operational-queue.v2`; phân biệt `schema_version`, body V1 → "unsupported shape" |
+| Incident root drawer | `ops` | `screens/operations/IncidentRootDrawer.tsx` | `portal.execution.incident-current-root.v2`; chỉ gốc |
+
+Nối: `ExecutionPreviewRoute.tsx` (mount lazy theo `isV2Screen`, gate `import()` bằng chuỗi env thô), `app/presentation.tsx` (route cockpit sang Carbon khi cờ bật — quyết định A2), `ConnectedContextBar` khoá window mặc định (FE-025), `playwright.config.ts` project `chromium-v2` cổng 4176, `e2e/execution-v2-s1.spec.ts`.
+
+## Cell "Not published" (mã FE theo sổ đồng bộ)
+Fleet: readiness FE-027/028, Compare FE-033, Archived FE-034, Group FE-012, Board FE-012/027, Map FE-035, Window FE-025. Cockpit: criteria FE-028, chart FE-029, ladder/call/receipt FE-030, làn Archive/Reactivation/Capital FE-034, step-up FE-015. Operations/Incident: Intent FE-020, Display/amounts FE-032, Audit/source health/ack actor FE-021, Mine/assignee FE-030, Exceptions/evidence/timeline FE-031, hành động ghi FE-015. Yêu cầu mới: FE-042, FE-043.
+
+## Evidence (thật)
+- Trình duyệt thật (bản build cờ bật, BFF double): 10/10 (5 route × rộng/hẹp), không lỗi console, không request ra ngoài origin, không tràn ngang. Ảnh được xem bằng mắt, **không** thay cho baseline.
+- Trình duyệt bắt được 4 lỗi mà test đơn vị xanh vẫn lọt: (1) cockpit còn theme sáng trong shell sáng → cùng một theme Carbon; (2) nút window mở dù server chưa có tham số; (3) double trả `observed_at_ms: 0` hiện "Observed 1 Jan 00:00Z"; (4) tôi gắn cockpit vào nhầm `case` làm hỏng Command Center, bị bắt vì route R1 vẫn hiện V1.
+- Vitest rộng `src/execution src/styles src/app src/portal e2e`: 3355 pass, 2 fail đã biết (DEBT-001/002). `tsc --noEmit` sạch. Build cờ tắt: 0 file chứa class V2.
+- Đổi tên gốc Fleet V2 thành `exec-fleet-v2` vì V1 đã dùng `exec-fleet` làm marker.
+
+## Chưa làm (NOT_RUN)
+Baseline ảnh pinned-image, Playwright V1 ở 4174/4175 (spec `execution-preview` đã đỏ sẵn, DEBT-003), bundle-size test (không có `dist/`), hook đầy đủ (R2). Access (S1e) chưa làm: chờ FE-037/038.
+
+## Khác thiết kế/brief
+Cockpit: hàng đợi dạng danh sách nút (thẻ <660px), không phải `CardsTable`; "All" ở chip làn không gồm waiver; `rawRows` thêm vào `InboxResult` vì reader V1 bỏ creator/requester; `DecidedRow.approvalId` thêm (additive). Operations: cửa sổ 24H là state cục bộ (codec URL chỉ biết 7D/30D/90D/ALL); không mở incident từ hàng (FE-042).

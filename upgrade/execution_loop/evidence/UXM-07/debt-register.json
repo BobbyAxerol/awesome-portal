@@ -22,6 +22,16 @@
       "pre_commit_hook_blocks": false,
       "proposed": "Codex adds the table to the R2 ledger (or states it is out of scope) in the next landing turn.",
       "owner": "Codex"
+    },
+    {
+      "id": "DEBT-UXM07-003",
+      "title": "e2e BFF double does not answer the UDB-03 retained-review read",
+      "where": "apps/portal/frontend/e2e/bffDouble.ts (no /retained-review branch) vs src/execution/retainedReview.ts:158",
+      "measured": "e2e/execution-preview.spec.ts 'every product route consumes the same-origin BFF' fails on docs/research-loop-plan tip: 501 on GET /api/v1/execution/retained-review for every route (29 console errors). Reproduced on a flag-off preview build, so it predates UXM-07.",
+      "not_fixed_because": "Serving a 200 body would flip every screen into retained (read-only) mode and a 404 still logs a console error; which stub the double should serve is a test-contract decision for the owner of the V1 spec. The V2 spec tolerates exactly this one URL and its console line (execution-v2-s1.spec.ts).",
+      "pre_commit_hook_blocks": false,
+      "proposed": "Codex/Bobby decide the stub (e.g. canonical execution-retained-review.valid.json with a non-retained scope) and re-green execution-preview.spec.",
+      "owner": "Codex / Bobby decision"
     }
   ],
   "closed": []

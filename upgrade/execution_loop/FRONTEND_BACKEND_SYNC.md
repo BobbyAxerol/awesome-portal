@@ -175,6 +175,8 @@ Tất cả `OPEN`; chưa gửi cho Codex ngoài việc ghi ở đây (Codex đ�
 | FE-039 | P2 | Registry rev 7 ẩn mục `APPROVALS` cũ `/backtests/approvals` | nav V2 chỉ một Approvals | Portal registry rev 7 | Registry |
 | FE-040 | P2 | `ARG EXECUTION_V2_SCREENS` trong `portal-web.Dockerfile` | cờ manifest chưa tới được build | Ops/Codex | Dockerfile |
 | FE-041 | P3 | Tham số `window` (gắn FE-025) | `ContextBar` `windowLock` | Portal | Trả lời FE-025 |
+| FE-042 | P2 | Operations queue item V2 có `incident_id` (nullable) hoặc quan hệ operation→incident | Incident drawer mở từ hàng hàng đợi | Portal | Contract |
+| FE-043 | P3 | `status_counts` cho KPI Operations (server-counted) hoặc quyết định không có | 4 ô KPI theo trạng thái trong hi-fi | Portal | Contract hoặc "no" |
 (Chi tiết, locator, fallback FE: [evidence/UXM-07/backend-requests.md](evidence/UXM-07/backend-requests.md).)
 
 **Amendments to existing requests (no new ID):** FE-007 add `attention_reasons[]`, `balance_free`, `balance_locked` to guaranteed row keys (V1 had them, V2 row dropped them) | FE-012 add `current_stage`/`days_in_stage` sort+group (see FE-027) | FE-015 reason payload must carry `reason_class`, `grant_ref` (link to M10), `step_up_required` and distinguish "not turned on" vs "no permission" vs "source not qualified" | FE-016 split: archived read -> FE-034; export and saved views stay P3; Report pack/Export need a route before the button is enabled | FE-010 decision needed: filtered statements for heat map/compare | Blotter query (V1 `BlotterQuery`) add stage/deployment/account/alpha filters (small, Portal) | V1 writes with no `ExecutionApi` method (incident ack/assign/resolve, activation plans): FE-001 handoff must list them.
