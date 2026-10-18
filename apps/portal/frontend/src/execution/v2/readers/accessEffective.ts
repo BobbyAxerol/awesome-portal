@@ -100,6 +100,11 @@ function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | nul
   return typeof value === "string" && (allowed as readonly string[]).includes(value) ? value as T : null;
 }
 
+/** `valid_from_ms` / `valid_until_ms`: schema integer, minimum 0 (execution-access.openapi AccessEffective.grants). */
+function clockMs(value: unknown): UtcEpochMs | null {
+  return typeof value === "number" && value >= 0 ? readUtcEpochMs(value) : null;
+}
+
 function token(value: unknown): string | null {
   return typeof value === "string" && TOKEN.test(value) ? value : null;
 }
@@ -163,8 +168,8 @@ function readGrant(raw: unknown): AccessGrant | null {
   const effect = oneOf(grant.effect, ACCESS_EFFECTS);
   const selector = readSelector(grant.selector);
   const environments = readEnvironments(grant.environments);
-  const validFrom = readUtcEpochMs(grant.valid_from_ms);
-  const validUntil = grant.valid_until_ms === null ? null : readUtcEpochMs(grant.valid_until_ms);
+  const validFrom = clockMs(grant.valid_from_ms);
+  const validUntil = grant.valid_until_ms === null ? null : clockMs(grant.valid_until_ms);
   const revision = opaque(grant.revision);
   const tsAuthority = oneOf(grant.ts_authority, ACCESS_TS_AUTHORITIES);
   if (

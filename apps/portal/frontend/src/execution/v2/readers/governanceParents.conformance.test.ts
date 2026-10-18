@@ -17,14 +17,12 @@
  *     through unchanged, an optional section is an AVAILABLE body or a typed
  *     absence (never an empty list), a cap is exact and never zero, and
  *     `APPLIED` exists only with its clock.
- * L2  the reader bounds (4 panels, 4,096 findings), ~1 MiB of findings and
- *     200-finding reads. These are single-object reads, not paged; the finding
+ * L2  the schema bounds (4 panels, 256 findings) and 200-finding reads. These are single-object reads, not paged; the finding
  *     bound is what keeps them finite.
  * L3  generated negatives for every body: enum, integer, string, decimal, array,
  *     required (every key path), schema swap, pollution and bad roots. Every
  *     case is refused or accepted only where the published schema also accepts
- *     it; what the reader accepts beyond the schema is listed and each looseness
- *     is an `it.fails` titled DEFECT below.
+ *     it; F5c closed every recorded looseness (the FIXED tests below).
  */
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -34,7 +32,7 @@ import {
   arrayCases, decimalCases, enumCases, integerCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases, stringCases,
   type NegativeCase,
 } from "../testkit/negative";
-import { cloneRows, MIB, pad, serializedBytes, timed } from "../testkit/scale";
+import { cloneRows, pad, timed } from "../testkit/scale";
 import { validateAgainst } from "../testkit/schema";
 import {
   APPROVAL_STATUSES_V2,
@@ -59,7 +57,8 @@ import {
 /* ── budgets (stated, generous: the suite shares a machine with other lanes) ── */
 const BUDGET_4096_FINDINGS_MS = 400;
 const BUDGET_ALL_BODIES_MS = 200;
-const MAX_FINDINGS = 4_096;
+/** The schema bound on findings (PaperExitParentReadV2 evaluation.findings maxItems), fixed by F5c from 4,096. */
+const MAX_FINDINGS = 256;
 
 const FILE = "execution-positive-parent.synthetic";
 const SCHEMA = "execution-operations.v1";
@@ -211,15 +210,15 @@ describe("L1 · matrix A · approval: status x decision clock x update clock x q
     dimension("evidence_complete", ["approval", "evidence_complete"], [true, false]),
   ];
   const states = cartesian(bodyOf("r2"), DIMS);
-  const accepts = (p: Record<string, string>) => p.updated_at === "ok" && p.decided_at !== "before-created";
+  const accepts = (p: Record<string, string>) => p.updated_at === "ok" && p.decided_at !== "before-created" && !p.quorum.endsWith("/0"); // quorum_required minimum 1 (GP-1)
 
   it("prints the matrix size and where the reader and the schema differ", () => {
     const cover = coverage(DIMS, states);
     const looser = states.filter((s) => readR2ParentV2(s.value) !== null && violations("R2ParentReadV2", s.value).length > 0);
     console.info(describeCoverage("governanceParents A (approval) cartesian", cover));
-    console.info(`governanceParents A: reader accepts ${states.filter((s) => readR2ParentV2(s.value) !== null).length}, schema accepts ${states.filter((s) => violations("R2ParentReadV2", s.value).length === 0).length}; ${looser.length} accepted by the reader that the schema refuses (all quorum_required=0)`);
+    console.info(`governanceParents A: reader accepts ${states.filter((s) => readR2ParentV2(s.value) !== null).length}, schema accepts ${states.filter((s) => violations("R2ParentReadV2", s.value).length === 0).length}; ${looser.length} accepted by the reader that the schema refuses`);
     expect(states).toHaveLength(6 * 3 * 2 * 5 * 2);
-    expect(looser.every((s) => s.picks.quorum.endsWith("/0"))).toBe(true);
+    expect(looser).toEqual([]);
   });
 
   it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
@@ -332,6 +331,9 @@ describe("L1 · matrix C · Sandbox: workflow state x clocks; step recording and
   const states = cartesian(base, DIMS);
   const accepts = (p: Record<string, string>) => {
     if (p.updated_at !== "ok" || p.submitted_at === "before-created") return false;
+    // The schema's if/then (GP-6): only DRAFT has no submit clock; only APPROVED / DENIED has a decision clock.
+    if ((p.workflow_state === "DRAFT") !== (p.submitted_at === "null")) return false;
+    if ((p.workflow_state === "APPROVED" || p.workflow_state === "DENIED") !== (p.decided_at !== "null")) return false;
     if (p.decided_at === "null") return true;
     if (p.submitted_at === "null") return false;
     return p.decided_at === "after-submitted";
@@ -340,7 +342,8 @@ describe("L1 · matrix C · Sandbox: workflow state x clocks; step recording and
   it("prints the matrix size", () => {
     console.info(describeCoverage("governanceParents C (sandbox clocks) cartesian", coverage(DIMS, states)));
     const looser = states.filter((x) => readSandboxParentV2(x.value) !== null && violations("SandboxParentReadV2", x.value).length > 0);
-    console.info(`governanceParents C: reader accepts ${states.filter((x) => accepts(x.picks)).length}, ${looser.length} of them the schema refuses (state and clock disagree)`);
+    console.info(`governanceParents C: reader accepts ${states.filter((x) => accepts(x.picks)).length}, ${looser.length} of them the schema refuses`);
+    expect(looser).toEqual([]);
     expect(states).toHaveLength(4 * 3 * 3 * 2);
   });
 
@@ -351,14 +354,8 @@ describe("L1 · matrix C · Sandbox: workflow state x clocks; step recording and
     expect(read.certification.workflowState).toBe(state.picks.workflow_state);
     // The state word is the server's; the reader does not derive APPROVED from a decision clock.
     expect(read.certification.decidedAt).toBe(state.value.certification.decided_at_ms);
-    // Where the schema refuses a state the reader accepts, it is only the state/clock pairing (DEFECT GP-6).
-    if (violations("SandboxParentReadV2", state.value).length > 0) {
-      const p = state.picks;
-      const draftWithSubmit = p.workflow_state === "DRAFT" && p.submitted_at !== "null";
-      const submittedWithout = p.workflow_state !== "DRAFT" && p.submitted_at === "null";
-      const decidedMismatch = (p.workflow_state === "APPROVED" || p.workflow_state === "DENIED") !== (p.decided_at !== "null");
-      expect(draftWithSubmit || submittedWithout || decidedMismatch, state.name).toBe(true);
-    }
+    // The reader is never looser than the schema's state/clock pairing (GP-6).
+    expect(violations("SandboxParentReadV2", state.value), state.name).toEqual([]);
   });
 
   describe("steps", () => {
@@ -516,17 +513,13 @@ describe("L2 · scale", () => {
     expect(ms).toBeLessThan(BUDGET_4096_FINDINGS_MS);
   });
 
-  it(`reads the reader's own bound (${MAX_FINDINGS} findings, ~1 MiB with 191 character ids) inside the budget and refuses one over it; the read is not paged`, () => {
-    const body = withFindings(MAX_FINDINGS, 191);
-    const bytes = serializedBytes(body);
-    const { value, ms } = timed(() => readPaperExitParentV2(body));
-    console.info(`governanceParents ${(bytes / MIB).toFixed(2)} MiB, ${MAX_FINDINGS} findings: ${ms.toFixed(0)} ms (budget ${BUDGET_4096_FINDINGS_MS} ms)`);
-    expect(bytes).toBeGreaterThan(0.9 * MIB);
-    expect(value).not.toBeNull();
+  it("refuses a body one finding over the schema bound, and a 4,096 finding body, fast; the read is not paged", () => {
+    const over = withFindings(MAX_FINDINGS + 1, 191);
+    const { value, ms } = timed(() => readPaperExitParentV2(over));
+    expect(value).toBeNull();
     expect(ms).toBeLessThan(BUDGET_4096_FINDINGS_MS);
-    expect(readPaperExitParentV2(withFindings(MAX_FINDINGS + 1))).toBeNull();
-    // The published schema allows 256 findings, so this size is outside the contract (DEFECT GP-4).
-    expect(violations("PaperExitParentReadV2", body).length).toBeGreaterThan(0);
+    expect(readPaperExitParentV2(withFindings(4_096, 191))).toBeNull();
+    expect(violations("PaperExitParentReadV2", over).length).toBeGreaterThan(0);
   });
 
   it("a fifth panel is refused (the bound is four, one per kind)", () => {
@@ -648,15 +641,7 @@ const CASES: (Case & { def: string; read: Reader })[] = Object.entries(PLANS).fl
  * Cases the reader accepts although the published schema refuses them. Each
  * has a DEFECT test; an accepted schema-invalid case outside the list fails.
  */
-const KNOWN_GAPS: ((c: Case) => boolean)[] = [
-  // DEFECT GP-3: a malformed previous_envelope_id is read as "no predecessor"
-  (c) => c.body === "canary" && c.name.includes("envelope.previous_envelope_id"),
-  // DEFECT GP-5: anchor ids and the currency are text, not the published patterns
-  (c) => /anchors\.(deployment_id|portfolio_id) <- ("   "|"‮evil")/.test(c.name),
-  (c) => /proposal\.currency <- ("   "|"‮evil")/.test(c.name),
-  // DEFECT GP-6: a Sandbox certification state is not tied to its clocks
-  (c) => c.body === "sandbox" && c.name.includes("certification.decided_at_ms <- null"),
-];
+const KNOWN_GAPS: ((c: Case) => boolean)[] = [];
 
 describe("L3 · negative", () => {
   it("reports the case counts", () => {
@@ -726,14 +711,14 @@ describe("L3 · negative", () => {
   });
 });
 
-/* ═══════════════ documented defects (turn red when fixed) ═══════════════ */
-describe("documented defects", () => {
+/* ═══════════════ fixed defects (F5c), now ordinary tests ═══════════════ */
+describe("fixed defects (F5c)", () => {
   /*
    * DEFECT GP-1 (readApproval): quorum_required accepts 0 where the schema's
    * minimum is 1. `0 of 0 approvers` then reads as a met quorum on a request
    * nobody has approved.
    */
-  it.fails("DEFECT GP-1: quorum_required 0 is refused (schema minimum 1)", () => {
+  it("FIXED GP-1: quorum_required 0 is refused (schema minimum 1)", () => {
     const body = clone(bodyOf("r2"));
     body.approval.quorum_required = 0;
     body.approval.quorum_met = 0;
@@ -746,7 +731,7 @@ describe("documented defects", () => {
    * reader checks updated_at and decided_at only, so an approval that "expired
    * before it existed" is read and drawn.
    */
-  it.fails("DEFECT GP-2: expires_at_ms or sla_due_at_ms before created_at_ms is refused", () => {
+  it("FIXED GP-2: expires_at_ms or sla_due_at_ms before created_at_ms is refused", () => {
     for (const field of ["expires_at_ms", "sla_due_at_ms"]) {
       const body = clone(bodyOf("r2"));
       body.approval[field] = body.approval.created_at_ms - 1;
@@ -762,20 +747,20 @@ describe("documented defects", () => {
    * interval, a formula_version that is a number as no formula, a
    * previous_envelope_id that is `true` as "first revision".
    */
-  it.fails("DEFECT GP-3: a poll_interval_ms above its bound is refused, not read as no interval", () => {
+  it("FIXED GP-3: a poll_interval_ms above its bound is refused, not read as no interval", () => {
     const body = clone(bodyOf("paper_exit_extended"));
     body.evaluation.panels[0].source_completeness = "EVENT_SOURCED";
     body.evaluation.panels[0].poll_interval_ms = 3_600_001;
     expect(readPaperExitParentV2(body)).toBeNull();
   });
 
-  it.fails("DEFECT GP-3b: a formula_version that is not text is refused, not read as no formula", () => {
+  it("FIXED GP-3b: a formula_version that is not text is refused, not read as no formula", () => {
     const body = clone(bodyOf("paper_exit_extended"));
     body.evaluation.panels[0].formula_version = 7;
     expect(readPaperExitParentV2(body)).toBeNull();
   });
 
-  it.fails("DEFECT GP-3c: a previous_envelope_id that is not an id is refused, not read as the first revision", () => {
+  it("FIXED GP-3c: a previous_envelope_id that is not an id is refused, not read as the first revision", () => {
     for (const bad of [true, 0, {}, "", "a b"]) {
       const body = clone(bodyOf("canary"));
       body.envelope.previous_envelope_id = bad;
@@ -787,7 +772,7 @@ describe("documented defects", () => {
    * DEFECT GP-4 (readEvaluation): the reader allows 4,096 findings; the schema
    * allows 256 (panels 4 in both).
    */
-  it.fails("DEFECT GP-4: 257 findings (schema maxItems 256) are refused", () => {
+  it("FIXED GP-4: 257 findings (schema maxItems 256) are refused", () => {
     const body = clone(bodyOf("paper_exit_extended"));
     const panel = body.evaluation.panels[0].panel_id;
     body.evaluation.findings = cloneRows(body.evaluation.findings[0] as Draft, 257, (f, i) => { f.finding_id = `f_${i}`; f.panel_id = panel; f.ordinal = i; });
@@ -801,7 +786,7 @@ describe("documented defects", () => {
    * id with a space or a right-to-left override is read and then reaches a
    * route (`/deployments/{id}/...`).
    */
-  it.fails("DEFECT GP-5: an anchor id outside the Identifier pattern is refused", () => {
+  it("FIXED GP-5: an anchor id outside the Identifier pattern is refused", () => {
     for (const bad of ["a b", "a/b", "‮evil", "   ", "x".repeat(192)]) {
       const body = clone(bodyOf("r2"));
       body.anchors.deployment_id = bad;
@@ -809,11 +794,19 @@ describe("documented defects", () => {
     }
   });
 
-  it.fails("DEFECT GP-5b: a canary currency outside ^[A-Z0-9]{2,12}$ is refused", () => {
+  it("FIXED GP-5b: a canary currency outside ^[A-Z0-9]{2,12}$ is refused", () => {
     for (const bad of ["usdt", "U", "USDT-PERP", "   ", "‮evil"]) {
       const body = clone(bodyOf("canary"));
       body.proposal.currency = bad;
       expect(readCanaryParentV2(body), JSON.stringify(bad)).toBeNull();
+    }
+  });
+
+  it("FIXED GP-5c: workspace_id is 3 to 96 characters (schema minLength 3, maxLength 96)", () => {
+    for (const [len, ok] of [[2, false], [3, true], [96, true], [97, false]] as const) {
+      const body = clone(bodyOf("r2"));
+      body.workspace_id = "w".repeat(len);
+      expect(readR2ParentV2(body) !== null, String(len)).toBe(ok);
     }
   });
 
@@ -824,14 +817,14 @@ describe("documented defects", () => {
    * checks the clocks' order only, so an "Approved" certification with no
    * decision time, or a "Draft" that was decided, is read.
    */
-  it.fails("DEFECT GP-6: an APPROVED certification with no decision clock is refused", () => {
+  it("FIXED GP-6: an APPROVED certification with no decision clock is refused", () => {
     const body = clone(bodyOf("sandbox"));
     body.certification.workflow_state = "APPROVED";
     body.certification.decided_at_ms = null;
     expect(readSandboxParentV2(body)).toBeNull();
   });
 
-  it.fails("DEFECT GP-6b: a DRAFT certification that carries a submit or decision clock is refused", () => {
+  it("FIXED GP-6b: a DRAFT certification that carries a submit or decision clock is refused", () => {
     const body = clone(bodyOf("sandbox"));
     body.certification.workflow_state = "DRAFT";
     expect(readSandboxParentV2(body)).toBeNull();

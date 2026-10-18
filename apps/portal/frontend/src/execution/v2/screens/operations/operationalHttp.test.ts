@@ -143,11 +143,19 @@ describe("listOperationalQueueV2", () => {
 describe("getIncidentRootV2", () => {
   it("GETs the encoded incident route with the workspace and reads the root", async () => {
     const calls = serveDouble();
-    const result = await api().getIncidentRootV2("inc 1/2", "ws_1");
+    const result = await api().getIncidentRootV2("inc_1", "ws_1");
     if (!result.ok || result.value.kind !== "incident") throw new Error("expected an incident");
-    expect(calls[0]).toBe("/api/v1/execution/operations/incidents/inc%201%2F2?workspace_id=ws_1");
-    expect(result.value.incident.incidentId).toBe("inc 1/2");
+    expect(calls[0]).toBe("/api/v1/execution/operations/incidents/inc_1?workspace_id=ws_1");
+    expect(result.value.incident.incidentId).toBe("inc_1");
     expect(result.value.incident.historicalChildren.reasonCode).toBe("ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED");
+  });
+
+  it("encodes the id in the path, and a root whose id is outside the schema's Identifier pattern is not read (F5c OQ-2)", async () => {
+    const calls = serveDouble();
+    const result = await api().getIncidentRootV2("inc 1/2", "ws_1");
+    expect(calls[0]).toBe("/api/v1/execution/operations/incidents/inc%201%2F2?workspace_id=ws_1");
+    // The double echoes the requested id; `inc 1/2` is not ^[A-Za-z0-9._:-]{1,191}$, so the body is refused whole.
+    expect(result.ok && result.value.kind === "incident").toBe(false);
   });
 
   it("answers unsupported_shape for the legacy incident detail", async () => {

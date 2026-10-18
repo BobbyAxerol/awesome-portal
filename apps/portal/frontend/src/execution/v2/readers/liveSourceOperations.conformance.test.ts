@@ -22,7 +22,7 @@
  * L3  generated negatives; every case is refused or the typed
  *     `unsupported_shape` (via the dispatcher), never throws, never leaks its
  *     probe, and an unknown word is never a state. Acceptance of a
- *     schema-invalid payload is listed and held as `it.fails` below.
+ *     schema-invalid payload is fixed by F5c (FIXED tests below).
  */
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -164,7 +164,10 @@ describe("L1 · matrix A · one panel: state x reason x records x has_more x cur
   const readerAccepts = (p: Record<string, string>) =>
     p.returned_count === "matches"
     && !(p.state === "NOT_PUBLISHED" && (p.records !== "0" || p.has_more === "true"))
-    && !(p.has_more === "true" && p.next_cursor === "null");
+    && !(p.has_more === "true" && p.next_cursor === "null")
+    // LS-1 / LS-1b: has_more=false carries no next_cursor, and a NOT_PUBLISHED panel carries neither cursor.
+    && !(p.has_more === "false" && p.next_cursor !== "null")
+    && !(p.state === "NOT_PUBLISHED" && (p.next_cursor !== "null" || p.previous_cursor !== "null"));
 
   it("prints the matrix size and how the reader and the schema differ", () => {
     const cover = coverage(DIMS, states);
@@ -190,13 +193,8 @@ describe("L1 · matrix A · one panel: state x reason x records x has_more x cur
     if (panel.state === "NOT_PUBLISHED") expect(panel.records).toHaveLength(0);
     if (panel.hasMore) expect(panel.nextCursor).not.toBeNull();
     expect(Object.keys(panel)).not.toContain("exactTotal");
-    // Only a schema-valid state may be accepted; the one exception is the looseness raised as DEFECT LS-1 below
-    // (a cursor beside has_more=false, or any cursor on a NOT_PUBLISHED panel).
-    if (violations(state.value).length > 0) {
-      const strayNext = state.picks.has_more === "false" && state.picks.next_cursor !== "null";
-      const strayOnUnpublished = state.picks.state === "NOT_PUBLISHED" && (state.picks.next_cursor !== "null" || state.picks.previous_cursor !== "null");
-      expect(strayNext || strayOnUnpublished, state.name).toBe(true);
-    }
+    // The reader is never looser than the schema: whatever it reads is schema-valid.
+    expect(violations(state.value), state.name).toEqual([]);
   });
 });
 
@@ -363,8 +361,8 @@ describe("L1 · matrix E · cursors: spelling x has_more", () => {
   });
 
   it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
-    // has_more=false beside a valid next_cursor is schema-invalid yet read (DEFECT LS-1); everything else follows the grammar.
-    expect(liveOf(state.value) !== null).toBe(grammar(state.label));
+    // has_more=false beside a next_cursor is refused (LS-1); everything else follows the grammar.
+    expect(liveOf(state.value) !== null).toBe(grammar(state.label) && !(state.field === "next_cursor" && !state.hasMore));
   });
 });
 
@@ -643,8 +641,8 @@ describe("L3 · negative", () => {
   });
 });
 
-/* ═══════════════ documented defects (turn red when fixed) ═══════════════ */
-describe("documented defects", () => {
+/* ═══════════════ fixed defects (F5c), now ordinary tests ═══════════════ */
+describe("fixed defects (F5c)", () => {
   /*
    * DEFECT LS-1 (readPanel): the schema's allOf says `has_more: false` means
    * `next_cursor: null`. The reader checks only the other direction (has_more
@@ -652,7 +650,7 @@ describe("documented defects", () => {
    * carries a next cursor is read, and a screen that follows `nextCursor`
    * rather than `hasMore` would page past the end.
    */
-  it.fails("DEFECT LS-1: a panel with has_more=false and a next_cursor is refused", () => {
+  it("FIXED LS-1: a panel with has_more=false and a next_cursor is refused", () => {
     const body = clone(POPULATED);
     body.data.orders.has_more = false;
     body.data.orders.next_cursor = CURSOR();
@@ -666,7 +664,7 @@ describe("documented defects", () => {
    * has_more but reads a cursor on it, so a panel that published nothing can
    * still hand a screen somewhere to page to.
    */
-  it.fails("DEFECT LS-1b: a NOT_PUBLISHED panel that carries a cursor is refused", () => {
+  it("FIXED LS-1b: a NOT_PUBLISHED panel that carries a cursor is refused", () => {
     for (const field of ["next_cursor", "previous_cursor"]) {
       const body = clone(POPULATED);
       body.data.broker_sync[field] = CURSOR("broker", 1);

@@ -180,6 +180,8 @@ export interface QueuePageV2 {
   prevCursor: string | null;
   hasMore: boolean;
   hasPrevious: boolean;
+  /** Rows dropped because their `operation_id` repeated an earlier row of the same page (first wins). */
+  droppedDuplicateRows: number;
   appliedFilters: readonly { field: string; value: string }[];
   appliedSort: readonly { field: "created_at" | "operation_id"; direction: "asc" | "desc" }[];
   /** FE-043. `undefined` = the server did not publish counts (render "Not published (FE-043)"); never derive them from `rows`. */
@@ -264,6 +266,46 @@ function count(value: unknown): number | null {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
+/** `workflow_version`: schema `integer`, minimum 1 (execution-operations.v1 OperationalQueueRowV2 / OperationalIncidentCurrentV2). */
+function positiveCount(value: unknown): number | null {
+  const n = count(value);
+  return n === null || n < 1 ? null : n;
+}
+
+/** `observed_at_ms`: schema `integer`, minimum 0 (OperationalQueueV2 / OperationalIncidentCurrentV2). */
+function nonNegativeEpochMs(value: unknown): UtcEpochMs | null {
+  return typeof value === "number" && value >= 0 ? readUtcEpochMs(value) : null;
+}
+
+/** The schema's `Identifier` pattern, used by operation_id, target.id and incident_id. */
+const IDENTIFIER = /^[A-Za-z0-9._:-]{1,191}$/;
+function identifier(value: unknown): string | null {
+  return typeof value === "string" && IDENTIFIER.test(value) ? value : null;
+}
+
+/** `OperationalQueueRowV2.command_key`: maxLength 128 and `^[a-z0-9-]+/(?:[a-z0-9-]+|<root>)$`. */
+const COMMAND_KEY = /^[a-z0-9-]+\/(?:[a-z0-9-]+|<root>)$/;
+function commandKeyOf(value: unknown): string | null {
+  return typeof value === "string" && value.length <= 128 && COMMAND_KEY.test(value) ? value : null;
+}
+
+/** `workspace_id`: schema string, minLength 3, maxLength 96. */
+function workspaceIdOf(value: unknown): string | null {
+  return typeof value === "string" && value.length >= 3 && value.length <= 96 ? value : null;
+}
+
+/** Typed-absence constants the schema pins (`link_history`, `historical_children`, NOT_ATTESTED slot). */
+const HISTORY_NOT_ATTESTED = "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED";
+const LINK_IDENTITY_NOT_REPRESENTABLE = "INCIDENT_LINK_IDENTITY_NOT_REPRESENTABLE";
+
+/** Largest page, applied-filter list and sort list the schema allows. */
+const MAX_PAGE_ROWS = 250;
+const MAX_APPLIED_FILTERS = 10;
+const MAX_APPLIED_SORT = 2;
+
+/** `supported_target_types` is fixed by the schema (prefixItems, minItems = maxItems = 3). */
+const PUBLISHED_TARGET_TYPES = TARGET_TYPES_V2;
+
 const ISO = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?(?:Z|\+00:00)$/;
 
 /** Strict ISO instant. The fraction is cut to milliseconds for `ms` only. */
@@ -272,7 +314,12 @@ export function readInstant(value: unknown): InstantV2 | null {
   const m = ISO.exec(value);
   if (m === null) return null;
   const millis = (m[7] ?? "").slice(0, 3).padEnd(3, "0");
-  const ms = readUtcEpochMs(Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}.${millis}Z`));
+  const parsed = Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}.${millis}Z`);
+  // Date.parse rolls 2026-02-30 over to 2 March. Keeping the original text beside a
+  // different day would be two answers for one instant, so a date that does not
+  // survive the round trip is refused.
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 19) !== value.slice(0, 19)) return null;
+  const ms = readUtcEpochMs(parsed);
   return ms === null ? null : { iso: value, ms };
 }
 
@@ -291,7 +338,7 @@ function targetOf(value: unknown): { type: TargetTypeV2; id: string } | null {
   const target = record(value);
   if (target === null) return null;
   const type = oneOf(target.type, TARGET_TYPES_V2);
-  const id = text(target.id);
+  const id = identifier(target.id);
   return type === null || id === null ? null : { type, id };
 }
 
@@ -300,15 +347,15 @@ function readLink(raw: unknown): IncidentLinkV2 | null {
   if (link === null) return null;
   const history = record(link.link_history);
   if (history === null || history.availability !== "NOT_PUBLISHED") return null;
-  const historyReasonCode = text(history.reason_code);
-  if (historyReasonCode === null) return null;
+  if (history.reason_code !== HISTORY_NOT_ATTESTED) return null;
+  const historyReasonCode = HISTORY_NOT_ATTESTED;
   if (link.state === "NOT_ATTESTED") {
-    const reasonCode = text(link.reason_code);
+    const reasonCode = link.reason_code === LINK_IDENTITY_NOT_REPRESENTABLE ? LINK_IDENTITY_NOT_REPRESENTABLE : null;
     // A slot with no identity must not carry one: that would be a guessed incident.
     return reasonCode === null || "incident_id" in link ? null : { state: "NOT_ATTESTED", reasonCode, historyReasonCode };
   }
   if (link.state !== "LINKED") return null;
-  const incidentId = text(link.incident_id);
+  const incidentId = identifier(link.incident_id);
   const relationship = oneOf(link.relationship, INCIDENT_LINK_RELATIONSHIPS_V2);
   const linkedAt = readInstant(link.linked_at);
   const summary = record(link.incident);
@@ -353,8 +400,8 @@ function readIncidentLinks(raw: unknown): IncidentLinksV2 | null {
 function readOperation(raw: unknown): OperationV2 | null {
   const row = record(raw);
   if (row === null) return null;
-  const operationId = text(row.operation_id);
-  const commandKey = text(row.command_key);
+  const operationId = identifier(row.operation_id);
+  const commandKey = commandKeyOf(row.command_key);
   const target = targetOf(row.target);
   const env = environmentOf(row.environment);
   const riskTier = oneOf(row.risk_tier, RISK_TIERS_V2);
@@ -363,7 +410,7 @@ function readOperation(raw: unknown): OperationV2 | null {
   const sourceStatus = oneOf(row.source_status, SOURCE_STATUSES_V2);
   const verificationResult = oneOf(row.verification_result, VERIFICATION_RESULTS_V2);
   const triageState = oneOf(row.triage_state, TRIAGE_STATES_V2);
-  const workflowVersion = count(row.workflow_version);
+  const workflowVersion = positiveCount(row.workflow_version);
   const acknowledgedAt = nullableInstant(row.acknowledged_at);
   const resolvedAt = nullableInstant(row.resolved_at);
   const createdAt = readInstant(row.created_at);
@@ -481,11 +528,19 @@ function readAppliedSort(raw: unknown): QueuePageV2["appliedSort"] | null {
 
 function readPage(raw: unknown): QueuePageV2 | null {
   const page = record(raw);
-  if (page === null || !Array.isArray(page.rows)) return null;
+  if (page === null || !Array.isArray(page.rows) || page.rows.length > MAX_PAGE_ROWS) return null;
   const rows: OperationV2[] = [];
+  const seen = new Set<string>();
+  let droppedDuplicateRows = 0;
   for (const entry of page.rows) {
     const row = readOperation(entry);
     if (row === null) return null;
+    // One operation is one table key. A repeat inside a page keeps the first row and is counted.
+    if (seen.has(row.operationId)) {
+      droppedDuplicateRows += 1;
+      continue;
+    }
+    seen.add(row.operationId);
     rows.push(row);
   }
   const totalCount = count(page.total_count);
@@ -501,7 +556,8 @@ function readPage(raw: unknown): QueuePageV2 | null {
   ) return null;
   // The server's own invariants: total >= filtered >= page rows, and a
   // continuation flag exists exactly when its cursor does.
-  if (totalCount < filteredCount || filteredCount < rows.length) return null;
+  if (totalCount < filteredCount || filteredCount < rows.length + droppedDuplicateRows) return null;
+  if (appliedFilters.length > MAX_APPLIED_FILTERS || appliedSort.length > MAX_APPLIED_SORT) return null;
   if (page.has_more !== (nextCursor !== null) || page.has_previous !== (prevCursor !== null)) return null;
   // Optional additive FE-043. Absent -> undefined; present-but-bad voids the page.
   let statusCounts: StatusCountsV2 | undefined;
@@ -512,7 +568,7 @@ function readPage(raw: unknown): QueuePageV2 | null {
   }
   return {
     rows, totalCount, filteredCount, nextCursor, prevCursor,
-    hasMore: page.has_more, hasPrevious: page.has_previous, appliedFilters, appliedSort,
+    hasMore: page.has_more, hasPrevious: page.has_previous, droppedDuplicateRows, appliedFilters, appliedSort,
     ...(statusCounts === undefined ? {} : { statusCounts }),
   };
 }
@@ -534,21 +590,26 @@ export function readOperationalQueueV2(raw: unknown): OperationalQueueReadV2 | n
   const version = schemaOf(root);
   if (version !== OPERATIONAL_QUEUE_V2_SCHEMA) return { kind: "unsupported_shape", schemaVersion: version };
 
-  const workspaceId = text(root.workspace_id);
-  const observedAtMs = readUtcEpochMs(root.observed_at_ms);
+  const workspaceId = workspaceIdOf(root.workspace_id);
+  const observedAtMs = nonNegativeEpochMs(root.observed_at_ms);
   const sourceAsOfMs = root.source_as_of_ms === null ? null : readUtcEpochMs(root.source_as_of_ms);
   const truth = record(root.read_truth);
   const truthState = oneOf(truth?.state, ["AVAILABLE", "EMPTY"] as const);
   const reasonCode = truth?.reason_code === null ? null : text(truth?.reason_code);
+  // Fixed by the schema: exactly ACCOUNT, PORTFOLIO, DEPLOYMENT, in that order.
   const supported = Array.isArray(root.supported_target_types)
-    ? root.supported_target_types.map((t) => oneOf(t, TARGET_TYPES_V2))
+    && root.supported_target_types.length === PUBLISHED_TARGET_TYPES.length
+    && PUBLISHED_TARGET_TYPES.every((t, i) => (root.supported_target_types as unknown[])[i] === t)
+    ? [...PUBLISHED_TARGET_TYPES]
     : null;
   const page = readPage(root.page);
   if (
     workspaceId === null || observedAtMs === null || (root.source_as_of_ms !== null && sourceAsOfMs === null)
     || truth === null || truthState === null || (truth.reason_code !== null && reasonCode === null)
-    || truth.scope !== "REQUEST" || supported === null || supported.some((t) => t === null) || page === null
+    || truth.scope !== "REQUEST" || supported === null || page === null
     || root.record_authority !== "PORTAL" || root.source_integration_state !== "UNAVAILABLE"
+    // Constants in the schema: what the queue is (a Portal workflow record) and what it covers.
+    || root.record_basis !== "PORTAL_CURRENT_OPERATIONAL_WORKFLOW" || root.coverage !== "AUTHORIZED_SUPPORTED_TARGETS_ONLY"
     // Absent or malformed must read as "a request may have been made".
     || root.source_side_effect_requested !== false
   ) return null;
@@ -561,7 +622,7 @@ export function readOperationalQueueV2(raw: unknown): OperationalQueueReadV2 | n
       workspaceId, sourceAsOfMs, observedAtMs,
       readTruth: { state: truthState, reasonCode },
       sourceIntegrationState: "UNAVAILABLE",
-      supportedTargetTypes: supported as TargetTypeV2[],
+      supportedTargetTypes: supported,
       page,
     },
   };
@@ -574,21 +635,21 @@ export function readIncidentRootV2(raw: unknown): IncidentRootReadV2 | null {
   const version = schemaOf(root);
   if (version !== INCIDENT_ROOT_V2_SCHEMA) return { kind: "unsupported_shape", schemaVersion: version };
 
-  const incidentId = text(root.incident_id);
-  const workspaceId = text(root.workspace_id);
+  const incidentId = identifier(root.incident_id);
+  const workspaceId = workspaceIdOf(root.workspace_id);
   const target = targetOf(root.target);
   const env = environmentOf(root.environment);
   const severity = oneOf(root.severity, SEVERITIES_V2);
   const workflowState = oneOf(root.workflow_state, INCIDENT_STATES_V2);
-  const workflowVersion = count(root.workflow_version);
+  const workflowVersion = positiveCount(root.workflow_version);
   const acknowledgedAt = nullableInstant(root.acknowledged_at);
   const mitigatedAt = nullableInstant(root.mitigated_at);
   const resolvedAt = nullableInstant(root.resolved_at);
   const createdAt = readInstant(root.created_at);
   const updatedAt = readInstant(root.updated_at);
-  const observedAtMs = readUtcEpochMs(root.observed_at_ms);
+  const observedAtMs = nonNegativeEpochMs(root.observed_at_ms);
   const children = record(root.historical_children);
-  const reasonCode = text(children?.reason_code);
+  const reasonCode = children?.reason_code === HISTORY_NOT_ATTESTED ? HISTORY_NOT_ATTESTED : null;
   if (
     incidentId === null || workspaceId === null || target === null || env === null || severity === null
     || workflowState === null || workflowVersion === null || acknowledgedAt === undefined

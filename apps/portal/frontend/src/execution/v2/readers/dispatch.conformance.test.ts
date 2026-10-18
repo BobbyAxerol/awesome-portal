@@ -22,8 +22,8 @@
  *     unknown version is refused without being read; 5,000 deep nesting. The
  *     routes answer one body per call (no paging).
  * L3  generated negatives through every route: no throw, no leak, never `v1`
- *     for a V2 body, `v2` only for an intact owned body. A defect found is an
- *     `it.fails` below.
+ *     for a V2 body, `v2` only for an intact owned body. A defect found is a
+ *     FIXED test below (F5c closed DP-1 and DP-2).
  */
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -46,6 +46,7 @@ import {
   readPaperExitByVersion,
   readR2ByVersion,
   readSandboxByVersion,
+  SCHEMA_VERSION_QUOTE_LIMIT,
   unsupportedText,
   type UnsupportedReason,
   type VersionRead,
@@ -189,7 +190,8 @@ describe("L1 · matrix A · every V2 body x every route", () => {
 });
 
 /** V1 bodies a V1 reader of ANOTHER route accepts (DEFECT DP-2). */
-const CROSS_READ = new Set(["live-review -> r2", "canary-control-room -> liveFull", "live-full-operations -> canary"]);
+/** F5c (DP-2): no route's V1 reader reads another route's V1 body any more, so the set is empty. */
+const CROSS_READ = new Set<string>();
 
 describe("L1 · matrix B · every V1 body x every route", () => {
   const states = V1_BODIES.flatMap((b) => ROUTES.map((r) => ({ name: `${b.key} -> ${r.id}`, b, r })));
@@ -207,6 +209,10 @@ describe("L1 · matrix B · every V1 body x every route", () => {
     expect(read.kind === "v1").toBe(b.owner === r.id || CROSS_READ.has(`${b.key} -> ${r.id}`));
     expect(read.kind).not.toBe("v2");
     if (read.kind === "unsupported") expect(["V1_MALFORMED", "V1_READER_NOT_BUILT", "UNKNOWN_SCHEMA_VERSION"]).toContain(read.reason);
+    // Another route's V1 body is refused with a reason that names the version it carried (DP-2).
+    if (b.owner !== r.id && r.id !== "operation") {
+      expect(read).toEqual({ kind: "unsupported", schemaVersion: b.body.schema_version, reason: "UNKNOWN_SCHEMA_VERSION" });
+    }
   });
 });
 
@@ -220,7 +226,8 @@ describe("L1 · matrix C · schema_version spelling x route (one V2 body per rou
     ["padded", (v) => ` ${v}`, () => ({ kind: "unsupported", reason: "UNKNOWN_SCHEMA_VERSION" })],
     ["trailing newline", (v) => `${v}\n`, () => ({ kind: "unsupported", reason: "UNKNOWN_SCHEMA_VERSION" })],
     ["next version", (v) => v.replace(/\.v2$/, ".v3"), () => ({ kind: "unsupported", reason: "UNKNOWN_SCHEMA_VERSION" })],
-    ["V1 label on a V2 body", (v) => v.replace(/\.v2$/, ".v1"), (_v, m) => NO_V1(m)],
+    // A V1 label this route's V1 reader does not read: markers say V2 under V1; without markers the version is simply not this route's (DP-2).
+    ["V1 label on a V2 body", (v) => v.replace(/\.v2$/, ".v1"), (_v, m) => (m ? NO_V1(m) : { kind: "unsupported", reason: "UNKNOWN_SCHEMA_VERSION" })],
     ["empty", () => "", () => ({ kind: "unsupported", reason: "UNKNOWN_SCHEMA_VERSION" })],
     ["absent", () => undefined, (_v, m) => NO_V1(m)],
     ["null", () => null, () => ({ kind: "unsupported", reason: "UNKNOWN_SCHEMA_VERSION" })],
@@ -375,8 +382,8 @@ describe("L3 · negative", () => {
   });
 });
 
-/* ═══════════════ documented defects (turn red when fixed) ═══════════════ */
-describe("documented defects", () => {
+/* ═══════════════ fixed defects (F5c), now ordinary tests ═══════════════ */
+describe("fixed defects (F5c)", () => {
   /*
    * DEFECT DP-2 (readByVersion, V1 branch): a body with a `.v1` version (or
    * none) and no V2 markers is handed to the route's V1 reader, whatever its
@@ -387,7 +394,7 @@ describe("documented defects", () => {
    * but not its V1 ones, so it cannot tell. The V1 shape that comes back is
    * wrong for the screen that asked.
    */
-  it.fails("DEFECT DP-2: a V1 body of another route's schema is refused, not read by this route's V1 reader", () => {
+  it("FIXED DP-2: a V1 body of another route's schema is refused, not read by this route's V1 reader", () => {
     for (const key of CROSS_READ) {
       const [bodyKey, routeId] = key.split(" -> ") as [string, string];
       const body = V1_BODIES.find((b) => b.key === bodyKey)!.body;
@@ -402,9 +409,19 @@ describe("documented defects", () => {
    * character sentence in the unsupported banner. The reader of the sentence
    * wants the version a person can compare (a short token), not the payload.
    */
-  it.fails("DEFECT DP-1: the sentence for an unsupported body bounds the version it quotes", () => {
+  it("FIXED DP-1: the sentence for an unsupported body bounds the version it quotes", () => {
     const read = readR2ByVersion({ schema_version: "v".repeat(70_000) });
     expect(read.kind).toBe("unsupported");
     if (read.kind === "unsupported") expect(unsupportedText(read).length).toBeLessThan(400);
+  });
+
+  it("DP-1: the quoted version is cut at the stated limit and carries no control characters", () => {
+    const long = readR2ByVersion({ schema_version: `portal.${"v".repeat(SCHEMA_VERSION_QUOTE_LIMIT)}\u0000\n` });
+    if (long.kind !== "unsupported") throw new Error("expected unsupported");
+    const sentence = unsupportedText(long);
+    expect(sentence).toContain(`${"portal.".concat("v".repeat(SCHEMA_VERSION_QUOTE_LIMIT - 7))}…`);
+    expect(sentence).not.toMatch(/[\u0000-\u001f]/);
+    const short = readR2ByVersion({ schema_version: "portal.other.v2" });
+    if (short.kind === "unsupported") expect(unsupportedText(short)).toContain('schema_version "portal.other.v2"');
   });
 });

@@ -201,8 +201,10 @@ function readPanel(name: LiveSourcePanelName, value: unknown): LiveSourcePanelV2
     || typeof p.returned_count !== "number" || !Number.isSafeInteger(p.returned_count) || p.returned_count !== p.records.length
   ) return null;
   // A panel the source never captured has nothing to page; a page that has more has somewhere to go.
-  if (state === "NOT_PUBLISHED" && (p.records.length !== 0 || p.has_more)) return null;
-  if (p.has_more && next === null) return null;
+  // Schema allOf (execution-operations.v1 LiveSourceOperationsReadV2 panels): NOT_PUBLISHED has no records, no more
+  // page and both cursors null; and has_more is true exactly when next_cursor is a string.
+  if (state === "NOT_PUBLISHED" && (p.records.length !== 0 || p.has_more || next !== null || previous !== null)) return null;
+  if (p.has_more !== (next !== null)) return null;
   const records: LiveSourceRecordV2[] = [];
   for (const entry of p.records) {
     const read = readRecord(entry);

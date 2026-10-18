@@ -73,6 +73,23 @@ export interface VersionReaders<A, B> {
   v2?: (raw: unknown) => B | null;
   /** Every V2 `schema_version` this route can answer. */
   v2Schemas: readonly string[];
+  /**
+   * The exact V1 `schema_version`(s) this route's V1 reader reads. A body that
+   * names another `.v1` schema (another route's review) is refused with
+   * `UNKNOWN_SCHEMA_VERSION`, because the V1 readers are tolerant (`data ?? body`,
+   * defaults) and would otherwise answer a V1-shaped object that is wrong for the
+   * screen that asked (DP-2). A body with NO `schema_version` is still the V1
+   * reader's to read, as several V1 bodies carry none.
+   */
+  v1Schemas?: readonly string[];
+}
+
+/** A `data` envelope's own `schema_version`, when it has one (the V1 readers unwrap `data ?? body`). */
+function innerVersionOf(raw: unknown): string | null {
+  const data = (raw as Record<string, unknown>).data;
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return null;
+  const v = (data as Record<string, unknown>).schema_version;
+  return typeof v === "string" ? v : null;
 }
 
 function versionOf(raw: unknown): { object: boolean; schemaVersion: string | null } {
@@ -102,15 +119,30 @@ export function readByVersion<A, B>(raw: unknown, readers: VersionReaders<A, B>)
     };
   }
   if (readers.v1 === undefined) return { kind: "unsupported", schemaVersion, reason: "V1_READER_NOT_BUILT" };
+  if (readers.v1Schemas !== undefined) {
+    const named = schemaVersion ?? innerVersionOf(raw);
+    if (named !== null && !readers.v1Schemas.includes(named)) {
+      return { kind: "unsupported", schemaVersion: named, reason: "UNKNOWN_SCHEMA_VERSION" };
+    }
+  }
   const value = readers.v1(raw);
   return value === null
     ? { kind: "unsupported", schemaVersion, reason: "V1_MALFORMED" }
     : { kind: "v1", schemaVersion, value };
 }
 
-/** The sentence for an `unsupported` answer; names the version it saw. */
+/** Most characters of a body's `schema_version` that `unsupportedText` quotes; the rest is cut and marked. */
+export const SCHEMA_VERSION_QUOTE_LIMIT = 80;
+
+/** The version as a person can compare it: control characters removed, at most `SCHEMA_VERSION_QUOTE_LIMIT` characters. */
+function quoteVersion(version: string): string {
+  const clean = version.replace(/[\u0000-\u001f\u007f]/g, "");
+  return clean.length <= SCHEMA_VERSION_QUOTE_LIMIT ? clean : `${clean.slice(0, SCHEMA_VERSION_QUOTE_LIMIT)}…`;
+}
+
+/** The sentence for an `unsupported` answer; names the version it saw (cut at `SCHEMA_VERSION_QUOTE_LIMIT`). */
 export function unsupportedText(read: Extract<VersionRead<unknown, unknown>, { kind: "unsupported" }>): string {
-  const seen = read.schemaVersion === null ? "no schema_version" : `schema_version "${read.schemaVersion}"`;
+  const seen = read.schemaVersion === null ? "no schema_version" : `schema_version "${quoteVersion(read.schemaVersion)}"`;
   switch (read.reason) {
     case "NOT_AN_OBJECT":
       return "The response is not a document this screen can read.";
@@ -135,22 +167,28 @@ const GOVERNANCE = [GOVERNANCE_PARENT_V2_SCHEMA];
 
 /** `GET /governance/approvals/{id}/r2` */
 export const readR2ByVersion = (raw: unknown) =>
-  readByVersion(raw, { v1: readGateR2Detail, v2: readR2ParentV2, v2Schemas: GOVERNANCE });
+  readByVersion(raw, { v1: readGateR2Detail, v2: readR2ParentV2, v2Schemas: GOVERNANCE, v1Schemas: ["governance.r2-review.v1"] });
 /** `GET /governance/exit-reviews/{id}` */
 export const readPaperExitByVersion = (raw: unknown) =>
-  readByVersion(raw, { v1: readPaperExitDetail, v2: readPaperExitParentV2, v2Schemas: GOVERNANCE });
+  readByVersion(raw, { v1: readPaperExitDetail, v2: readPaperExitParentV2, v2Schemas: GOVERNANCE, v1Schemas: ["governance.paper-exit-review.v1"] });
 /** `GET /governance/approvals/{id}/live` */
 export const readLiveReviewByVersion = (raw: unknown) =>
-  readByVersion(raw, { v1: readLiveReview, v2: readLiveParentV2, v2Schemas: [LIVE_PARENT_V2_SCHEMA] });
+  readByVersion(raw, { v1: readLiveReview, v2: readLiveParentV2, v2Schemas: [LIVE_PARENT_V2_SCHEMA], v1Schemas: ["governance.live-review.v1"] });
 /** `GET /deployments/{id}/certification` */
 export const readSandboxByVersion = (raw: unknown) =>
-  readByVersion(raw, { v1: readSandboxCertification, v2: readSandboxParentV2, v2Schemas: [FOLLOWING_PARENT_V2_SCHEMA] });
+  readByVersion(raw, {
+    v1: readSandboxCertification, v2: readSandboxParentV2, v2Schemas: [FOLLOWING_PARENT_V2_SCHEMA], v1Schemas: ["governance.sandbox-certification.v1"],
+  });
 /** `GET /deployments/{id}/canary` */
 export const readCanaryByVersion = (raw: unknown) =>
-  readByVersion(raw, { v1: readCanaryControlRoom, v2: readCanaryParentV2, v2Schemas: [FOLLOWING_PARENT_V2_SCHEMA] });
+  readByVersion(raw, {
+    v1: readCanaryControlRoom, v2: readCanaryParentV2, v2Schemas: [FOLLOWING_PARENT_V2_SCHEMA], v1Schemas: ["execution.canary-control-room.v1"],
+  });
 /** `GET /deployments/{id}/live` */
 export const readLiveFullByVersion = (raw: unknown) =>
-  readByVersion(raw, { v1: readLiveFullOperations, v2: readLiveSourceOperationsV2, v2Schemas: [LIVE_SOURCE_V2_SCHEMA] });
+  readByVersion(raw, {
+    v1: readLiveFullOperations, v2: readLiveSourceOperationsV2, v2Schemas: [LIVE_SOURCE_V2_SCHEMA], v1Schemas: ["execution.live-full-operations.v1"],
+  });
 /** `GET /operations/{id}` for an R2 or Paper Exit decision (no V1 reader on this route; the legacy union is read elsewhere). */
 export const readOperationParentByVersion = (raw: unknown) =>
   readByVersion(raw, { v2: readOperationParentV2, v2Schemas: [GOVERNANCE_PARENT_OPERATION_V2_SCHEMA] });
@@ -158,6 +196,7 @@ export const readOperationParentByVersion = (raw: unknown) =>
 export const readActivationByVersion = (raw: unknown) =>
   readByVersion(raw, {
     v1: readStagedActivation,
+    v1Schemas: ["execution.staged-activation-capabilities.v1", "execution.staged-activation-plan.v1"],
     v2Schemas: ["portal.execution.activation-capabilities-read.v2", "portal.execution.activation-plan-read.v2"],
   });
 

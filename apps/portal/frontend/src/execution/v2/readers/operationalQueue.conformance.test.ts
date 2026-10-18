@@ -20,8 +20,8 @@
  *     swap, pollution, bad roots): every case is refused or is the typed
  *     `unsupported_shape`, never throws, never leaks its probe, and an
  *     unknown word never becomes a row. What the reader accepts that the
- *     published schema forbids is printed, and each such looseness is an
- *     `it.fails` titled DEFECT below.
+ *     published schema forbids is printed; F5c fixed every recorded looseness
+ *     (the FIXED tests below), so a new one fails the suite.
  */
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -533,12 +533,12 @@ describe("L2 · scale", () => {
     expect(ms).toBeLessThan(BUDGET_200_ROWS_MS);
   });
 
-  it("reads ~1 MiB of 200 rows (every text field at the reader's 512 char cap) inside the budget", () => {
-    const body = fat(200, 512);
+  it("reads 200 rows with every identifier at the schema's 191 character cap inside the budget", () => {
+    const body = fat(200, 191);
     const bytes = serializedBytes(body);
     const { value, ms } = timed(() => queueOf(body));
     console.info(`operationalQueue ${(bytes / MIB).toFixed(2)} MiB, 200 rows: ${ms.toFixed(0)} ms (budget ${BUDGET_1_MIB_MS} ms)`);
-    expect(bytes).toBeGreaterThan(0.9 * MIB);
+    expect(bytes).toBeGreaterThan(0.4 * MIB);
     expect(bytes).toBeLessThan(1.6 * MIB);
     expect(value).not.toBeNull();
     expect(ms).toBeLessThan(BUDGET_1_MIB_MS);
@@ -669,23 +669,11 @@ const ALL_NEG: Case[] = [...ENUMS, ...INTEGERS, ...STRINGS, ...INSTANT_CASES, ..
 
 /**
  * What the reader accepts although the published schema forbids it. Each entry
- * has a DEFECT test below; an accepted schema-invalid case outside this list
- * fails the suite, so a new looseness cannot slip in unseen.
+ * needs a DEFECT test; an accepted schema-invalid case outside this list fails
+ * the suite, so a new looseness cannot slip in unseen. F5c closed OQ-1..OQ-7,
+ * so the list is empty.
  */
-const KNOWN_GAPS: ((c: Case) => boolean)[] = [
-  // DEFECT OQ-1: duplicate operation_id in one page
-  (c) => c.category === "duplicate-id" && c.name.includes("page.rows"),
-  // DEFECT OQ-2: identifier and command_key patterns are not enforced (control characters, markup, spaces)
-  (c) => /(operation_id|target\.id|command_key|incident_id|workspace_id|reason_code) <- ("\\u0000"|"‮evil"|"   ")/.test(c.name),
-  // DEFECT OQ-3: workflow_version 0 and a negative observed_at_ms (schema minimum 1 / 0)
-  (c) => c.name.includes("workflow_version <- 0") || c.name.includes("observed_at_ms <- -1"),
-  // DEFECT OQ-5: supported_target_types is not pinned to the three published words in order
-  (c) => c.name.includes("supported_target_types"),
-  // DEFECT OQ-6: a calendar-impossible date is shifted by Date.parse instead of refused
-  (c) => c.name.includes("2026-02-30"),
-  // DEFECT OQ-7: record_basis and coverage are constants in the schema and are not read
-  (c) => /(record_basis|coverage) <- (absent|null)/.test(c.name),
-];
+const KNOWN_GAPS: ((c: Case) => boolean)[] = [];
 const acceptedBySchemaGap = (c: Case): boolean => c.category === "prototype-pollution" || KNOWN_GAPS.some((gap) => gap(c));
 
 describe("L3 · negative", () => {
@@ -728,8 +716,8 @@ describe("L3 · negative", () => {
     if (typeof c.value !== "object" || c.value === null) expect(queue).toBeNull();
   });
 
-  it("instants: every malformed spelling is refused (the impossible calendar date is OQ-6)", () => {
-    for (const c of INSTANT_CASES.filter((x) => !x.name.includes("2026-02-30"))) expect(readOperationalQueueV2(c.value), c.name).toBeNull();
+  it("instants: every malformed spelling is refused ", () => {
+    for (const c of INSTANT_CASES) expect(readOperationalQueueV2(c.value), c.name).toBeNull();
   });
 
   it("prints how much looser the reader is than the published schema, by category", () => {
@@ -758,7 +746,6 @@ describe("L3 · negative", () => {
     it.each(cases.map((c) => [c.name, c] as const))("%s", (_name, c) => {
       expect(() => readIncidentRootV2(c.value)).not.toThrow();
       const read = readIncidentRootV2(c.value);
-      if (c.name.includes("observed_at_ms <- -1")) return; // OQ-3
       expect(read === null || read.kind === "unsupported_shape", c.name).toBe(true);
     });
     it("lifecycle: state and timestamps must agree", () => {
@@ -782,15 +769,15 @@ describe("L3 · negative", () => {
   });
 });
 
-/* ═══════════════ documented defects (turn red when fixed) ═══════════════ */
-describe("documented defects", () => {
+/* ═══════════════ fixed defects, now ordinary tests ═══════════════ */
+describe("fixed defects (F5c)", () => {
   /*
    * DEFECT OQ-1 (readPage): two rows with one operation_id in a page are both
    * kept. A queue table keys rows by operation_id, so React draws two rows with
    * one key. The cockpit inbox reader counts such repeats as dropped (D6); this
    * one neither collapses nor counts them.
    */
-  it.fails("DEFECT OQ-1: a page with a repeated operation_id is refused or collapsed to unique rows", () => {
+  it("FIXED OQ-1: a page with a repeated operation_id is refused or collapsed to unique rows", () => {
     const body = clone(links.queue);
     body.page.rows = [body.page.rows[0], clone(body.page.rows[0])];
     body.page.total_count = 2;
@@ -799,7 +786,8 @@ describe("documented defects", () => {
     delete body.page.status_counts;
     const read = queueOf(body);
     const ids = read === null ? [] : read.page.rows.map((r) => r.operationId);
-    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual([body.page.rows[0].operation_id]);
+    expect(read!.page.droppedDuplicateRows).toBe(1);
   });
 
   /*
@@ -808,7 +796,7 @@ describe("documented defects", () => {
    * a space or markup is accepted. The schema's Identifier pattern is
    * ^[A-Za-z0-9._:-]{1,191}$ and command_key is ^[a-z0-9-]+/(?:[a-z0-9-]+|<root>)$.
    */
-  it.fails("DEFECT OQ-2: an operation_id outside the Identifier pattern is refused", () => {
+  it("FIXED OQ-2: an operation_id outside the Identifier pattern is refused", () => {
     for (const id of ["a b", "a/b", "<b>x</b>", "x".repeat(192), "\u0000", "‮evil"]) {
       const body = clone(links.queue);
       body.page.rows[0].operation_id = id;
@@ -816,7 +804,7 @@ describe("documented defects", () => {
     }
   });
 
-  it.fails("DEFECT OQ-2b: a command_key outside the published pattern is refused", () => {
+  it("FIXED OQ-2b: a command_key outside the published pattern is refused", () => {
     for (const key of ["Account Sync", "account", "account/sync/x", "ACCOUNT/SYNC", "a b/c"]) {
       const body = clone(links.queue);
       body.page.rows[0].command_key = key;
@@ -829,13 +817,13 @@ describe("documented defects", () => {
    * non-negative integer where the schema's minimum is 1, and observed_at_ms
    * accepts a negative epoch where the schema's minimum is 0.
    */
-  it.fails("DEFECT OQ-3: workflow_version 0 is refused (schema minimum 1)", () => {
+  it("FIXED OQ-3: workflow_version 0 is refused (schema minimum 1)", () => {
     const body = clone(links.queue);
     body.page.rows[0].workflow_version = 0;
     expect(queueOf(body)).toBeNull();
   });
 
-  it.fails("DEFECT OQ-3b: a negative observed_at_ms is refused (schema minimum 0)", () => {
+  it("FIXED OQ-3b: a negative observed_at_ms is refused (schema minimum 0)", () => {
     const body = clone(links.queue);
     body.observed_at_ms = -1;
     expect(queueOf(body)).toBeNull();
@@ -846,7 +834,7 @@ describe("documented defects", () => {
    * Date.parse, which rolls 2026-02-30 over to 2 March. The reader then keeps
    * the original text in `iso` and a different day in `ms`.
    */
-  it.fails("DEFECT OQ-6: a calendar-impossible date is refused, not shifted", () => {
+  it("FIXED OQ-6: a calendar-impossible date is refused, not shifted", () => {
     expect(readInstant("2026-02-30T00:00:00Z")).toBeNull();
     expect(readInstant("2026-04-31T00:00:00Z")).toBeNull();
   });
@@ -858,7 +846,7 @@ describe("documented defects", () => {
    * workflow record over authorized targets only. A body that says otherwise
    * (or says nothing) is read as a queue all the same.
    */
-  it.fails("DEFECT OQ-7: a queue whose record_basis or coverage is not the published constant is refused", () => {
+  it("FIXED OQ-7: a queue whose record_basis or coverage is not the published constant is refused", () => {
     for (const [key, value] of [["record_basis", "SOURCE_BROKER_FACTS"], ["coverage", "ALL_TARGETS"], ["record_basis", undefined], ["coverage", undefined]] as const) {
       const body = clone(links.queue);
       if (value === undefined) delete body[key];
@@ -871,7 +859,7 @@ describe("documented defects", () => {
    * DEFECT OQ-4 (readPage): the page is not bounded. The schema allows 250
    * rows, 10 applied filters and 2 sort keys; the reader reads any number.
    */
-  it.fails("DEFECT OQ-4: a page of 251 rows (schema maxItems 250) is refused", () => {
+  it("FIXED OQ-4: a page of 251 rows (schema maxItems 250) is refused", () => {
     const body = clone(links.queue);
     body.page.rows = cloneRows(body.page.rows[2] as Draft, 251, (row, i) => { row.operation_id = `op_${pad(i)}`; });
     body.page.total_count = 251;
@@ -887,7 +875,7 @@ describe("documented defects", () => {
    * in that order. A list of one (or a repeat) would tell the screen that only
    * that type is supported.
    */
-  it.fails("DEFECT OQ-5: supported_target_types other than the three published, in order, is refused", () => {
+  it("FIXED OQ-5: supported_target_types other than the three published, in order, is refused", () => {
     for (const list of [["ACCOUNT"], ["ACCOUNT", "ACCOUNT", "ACCOUNT"], ["DEPLOYMENT", "PORTFOLIO", "ACCOUNT"], []]) {
       const body = clone(links.queue);
       body.supported_target_types = list;

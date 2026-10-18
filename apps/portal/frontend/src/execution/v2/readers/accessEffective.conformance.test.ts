@@ -24,7 +24,7 @@
  *     `unsupported_shape`, never throws, never leaks its probe. The schema for
  *     this body is not published in packages/contracts/schemas, so acceptance
  *     of a mutated body is judged against the oracle, and what the reader
- *     accepts beyond the header contract is listed and held as `it.fails`.
+ *     accepts beyond the header contract is fixed by F5c, except AE-2 which stays `it.fails`, blocked on a Codex answer.
  */
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -424,12 +424,11 @@ const LEGIT: ((c: Case) => boolean)[] = [
 ];
 /**
  * Accepted although the header contract refuses it; each has a DEFECT below.
+ * AE-1 (negative clocks) was fixed by F5c; only AE-2 remains, blocked on Codex.
  */
 const KNOWN_GAPS: ((c: Case) => boolean)[] = [
   // DEFECT AE-2: opaque ids accept whitespace-only text and bidi/format characters (U+202E)
   (c) => /(workspace_id|user_id|policy_revision|grant_id|revision|selector\.ids\.0) <- ("   "|"‮evil")/.test(c.name),
-  // DEFECT AE-1: valid_from_ms accepts a negative epoch (the contract's time is "safe-integer UTC epoch milliseconds"; every sibling reader floors it at 0)
-  (c) => c.name.includes("valid_from_ms <- -1") || c.name.includes("valid_until_ms <- -1"),
 ];
 
 describe("L3 · negative", () => {
@@ -477,14 +476,20 @@ describe("L3 · negative", () => {
   });
 });
 
-/* ═══════════════ documented defects (turn red when fixed) ═══════════════ */
-describe("documented defects", () => {
+/* ═══════════════ defects: AE-1 fixed (F5c), AE-2 blocked on Codex ═══════════════ */
+describe("defects", () => {
   /*
    * DEFECT AE-2 (opaque()): an id is "bounded and printable" and nothing more,
    * so "   " and "\u202eevil" (a right-to-left override) are accepted as a
    * workspace, user, grant or resource id and reach "Granted to you". The
    * Identifier pattern the sibling readers use is ^[A-Za-z0-9._:-]{1,191}$;
    * whether access ids follow it is Codex's call, so this is raised, not fixed.
+   *
+   * BLOCKED on Codex answer (F5c): the published schema (execution-access.openapi.json,
+   * AccessEffective.workspace_id / user_id / grants[].grant_id) pins these ids to
+   * ^[^\u0000-\u001f\u007f]+$, 1..256 characters, NOT to the Identifier pattern. That pattern
+   * already allows "   " and U+202E, so the reader is exactly as strict as the schema
+   * and tightening it would be a policy decision, not a schema guarantee.
    */
   it.fails("DEFECT AE-2: a whitespace-only or bidi-override id is refused", () => {
     for (const id of ["   ", "\u202eevil", "a\u200bb"]) {
@@ -500,10 +505,15 @@ describe("documented defects", () => {
    * governanceParents) floor every published clock at 0, and a grant that
    * "starts before 1970" is not a grant any source can have written.
    */
-  it.fails("DEFECT AE-1: a negative valid_from_ms is refused", () => {
+  it("FIXED AE-1: a negative valid_from_ms is refused", () => {
     const body = clone(GRANTED);
     body.grants[0].valid_from_ms = -1;
     body.grants[0].valid_until_ms = null;
     expect(effectiveOf(body)).toBeNull();
+    // schema: valid_until_ms is an integer with minimum 0 as well.
+    const until = clone(GRANTED);
+    until.grants[0].valid_from_ms = 0;
+    until.grants[0].valid_until_ms = -5;
+    expect(effectiveOf(until)).toBeNull();
   });
 });

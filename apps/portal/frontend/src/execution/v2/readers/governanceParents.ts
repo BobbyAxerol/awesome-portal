@@ -448,6 +448,23 @@ function ms(value: unknown): UtcEpochMs | null {
 function msOrNull(value: unknown): UtcEpochMs | null | undefined {
   return value === null ? null : ms(value) ?? undefined;
 }
+/**
+ * A nullable field: `null` is the published "not set", a good value is itself,
+ * and a PRESENT BAD value is `undefined`, which every caller refuses. Writing
+ * `x === null ? null : read(x)` and testing the result for `undefined` reads a
+ * wrong-typed value as absent, because `read` answers `null` for a bad value (GP-3).
+ */
+function nullable<T>(value: unknown, read: (v: unknown) => T | null): T | null | undefined {
+  return value === null ? null : read(value) ?? undefined;
+}
+/** `workspace_id`: schema string, minLength 3, maxLength 96 (every parent schema); control characters stay refused. */
+function workspace(value: unknown): string | null {
+  return typeof value === "string" && value.length >= 3 ? text(value, 96) : null;
+}
+/** Canary `proposal.currency`: schema pattern ^[A-Z0-9]{2,12}$. */
+function currencyCode(value: unknown): string | null {
+  return typeof value === "string" && /^[A-Z0-9]{2,12}$/.test(value) ? value : null;
+}
 
 /* ── shared sections ──────────────────────────────────────────────────────── */
 
@@ -468,7 +485,7 @@ function readSource(value: unknown, flags: readonly SourceFlags[]): ParentSource
 }
 
 function readHeader(r: Rec, flags: readonly SourceFlags[]): ParentHeaderV2 | null {
-  const workspaceId = text(r.workspace_id, 4096);
+  const workspaceId = workspace(r.workspace_id);
   const observedAt = ms(r.observed_at_ms);
   const source = readSource(r.source, flags);
   if (
@@ -491,7 +508,7 @@ function readApproval<G extends "R2" | "PAPER_EXIT" | "LIVE_GATE">(value: unknow
   const status = oneOf(a.status, APPROVAL_STATUSES_V2);
   const approvalVersion = version(a.approval_version);
   const policyVersion = text(a.policy_version);
-  const quorumRequired = natural(a.quorum_required);
+  const quorumRequired = version(a.quorum_required); // schema minimum 1
   const quorumMet = natural(a.quorum_met);
   const evidenceComplete = bool(a.evidence_complete);
   const createdAt = ms(a.created_at_ms);
@@ -504,8 +521,9 @@ function readApproval<G extends "R2" | "PAPER_EXIT" | "LIVE_GATE">(value: unknow
     || quorumMet === null || evidenceComplete === null || createdAt === null || updatedAt === null || slaDueAt === null
     || expiresAt === null || decidedAt === undefined
   ) return null;
-  // The schema's runtime relations: an approval never updates before it was created or is decided before it exists.
-  if (updatedAt < createdAt || (decidedAt !== null && decidedAt < createdAt)) return null;
+  // The schema's runtime relations ("updated/expires/SLA/nonnull decided >= created"): an approval
+  // never updates, is due, expires or is decided before it was created.
+  if (updatedAt < createdAt || expiresAt < createdAt || slaDueAt < createdAt || (decidedAt !== null && decidedAt < createdAt)) return null;
   return {
     approvalId, gate, status, approvalVersion, policyVersion, quorumRequired, quorumMet, evidenceComplete,
     createdAt, updatedAt, slaDueAt, expiresAt, decidedAt,
@@ -549,8 +567,8 @@ const R2_KEYS = [
 function readParentAnchors(value: unknown): { deploymentId: string; portfolioId: string; environment: "PAPER" } | null {
   const a = closed(value, ["deployment_id", "portfolio_id", "environment"]);
   if (a === null || a.environment !== "PAPER") return null;
-  const deploymentId = text(a.deployment_id, 4096);
-  const portfolioId = text(a.portfolio_id, 4096);
+  const deploymentId = id(a.deployment_id); // schema pattern ^[A-Za-z0-9._:-]+$, maxLength 191
+  const portfolioId = id(a.portfolio_id);
   return deploymentId === null || portfolioId === null ? null : { deploymentId, portfolioId, environment: "PAPER" };
 }
 
@@ -591,8 +609,8 @@ function readExitPanel(value: unknown): ExitPanelV2 | null {
   const asOf = msOrNull(p.as_of_ms);
   const freshness = oneOf(p.freshness_state, FRESHNESS);
   const sourceCompleteness = oneOf(p.source_completeness, COMPLETENESS);
-  const poll = p.poll_interval_ms === null ? null : natural(p.poll_interval_ms, 3_600_000);
-  const formulaVersion = p.formula_version === null ? null : text(p.formula_version);
+  const poll = nullable(p.poll_interval_ms, (v) => natural(v, 3_600_000));
+  const formulaVersion = nullable(p.formula_version, (v) => text(v));
   if (
     panelId === null || ordinal === null || panelKind === null || sourceAuthority === null || panelState === null
     || asOf === undefined || freshness === null || sourceCompleteness === null || poll === undefined
@@ -623,7 +641,7 @@ function readEvaluation(r: Rec): ExitEvaluationV2 | null {
   const evaluationPolicyVersion = text(r.evaluation_policy_version);
   const evaluationFormulaVersion = text(r.evaluation_formula_version);
   if (evaluationPolicyVersion === null || evaluationFormulaVersion === null) return null;
-  if (!Array.isArray(r.panels) || r.panels.length > 4 || !Array.isArray(r.findings) || r.findings.length > 4_096) return null;
+  if (!Array.isArray(r.panels) || r.panels.length > 4 || !Array.isArray(r.findings) || r.findings.length > 256) return null;
   const panels: ExitPanelV2[] = [];
   for (const entry of r.panels) {
     const panel = readExitPanel(entry);
@@ -714,7 +732,7 @@ export function readLiveParentV2(raw: unknown): LiveParentV2 | null {
   const anchors = closed(r.anchors, ["deployment_id", "environment"]);
   const approval = readApproval(r.approval, "LIVE_GATE");
   const acceptedManagerFacts = readManagerFacts(r.accepted_manager_facts);
-  const deploymentId = text(anchors?.deployment_id, 4096);
+  const deploymentId = id(anchors?.deployment_id);
   if (header === null || anchors === null || anchors.environment !== "LIVE" || deploymentId === null || approval === null || acceptedManagerFacts === null) return null;
   return {
     family: "LIVE_GATE", header, anchors: { deploymentId, environment: "LIVE" }, approval, acceptedManagerFacts,
@@ -790,8 +808,8 @@ export function readSandboxParentV2(raw: unknown): SandboxParentV2 | null {
   }, ["availability", "basis", "promotion_grant_id", "paper_exit_review_id", "r1_approval_id", "r2_approval_id"]);
   if (header === null || acceptedManagerFacts === null || a === null || c === null || steps === null || lineage === null) return null;
 
-  const deploymentId = text(a.deployment_id, 4096);
-  const portfolioId = text(a.portfolio_id, 4096);
+  const deploymentId = id(a.deployment_id);
+  const portfolioId = id(a.portfolio_id);
   if (
     deploymentId === null || portfolioId === null || a.environment !== "SANDBOX"
     || a.association_basis !== "CURRENT_NATIVE_TARGET_CORRESPONDENCE" || a.captured_environment_attested !== false
@@ -814,6 +832,9 @@ export function readSandboxParentV2(raw: unknown): SandboxParentV2 | null {
   ) return null;
   // The schema's relations: updated >= created, submitted >= created, decided >= submitted.
   if (updatedAt < createdAt || (submittedAt !== null && submittedAt < createdAt) || (decidedAt !== null && (submittedAt === null || decidedAt < submittedAt))) return null;
+  // The schema's if/then rules: only DRAFT has no submit clock, and only APPROVED / DENIED carry a decision clock.
+  if ((workflowState === "DRAFT") !== (submittedAt === null)) return null;
+  if ((workflowState === "APPROVED" || workflowState === "DENIED") !== (decidedAt !== null)) return null;
 
   return {
     family: "SANDBOX", header, acceptedManagerFacts,
@@ -849,7 +870,7 @@ export function readCanaryParentV2(raw: unknown): CanaryParentV2 | null {
   ]);
   const proposal = section(r.proposal, (p) => {
     const baseRiskProfileRevision = text(p.base_risk_profile_revision);
-    const currency = text(p.currency, 64);
+    const currency = currencyCode(p.currency);
     const capitalCap = amount(p.capital_cap);
     const grossNotionalCap = amount(p.gross_notional_cap);
     const dailyLossCap = amount(p.daily_loss_cap);
@@ -873,15 +894,15 @@ export function readCanaryParentV2(raw: unknown): CanaryParentV2 | null {
   }, ["availability", "basis", "certification_id", "promotion_plan_id", "paper_exit_review_id", "r1_approval_id", "r2_approval_id"]);
   if (header === null || acceptedManagerFacts === null || a === null || e === null || proposal === null || lineage === null) return null;
 
-  const deploymentId = text(a.deployment_id, 4096);
-  const portfolioId = text(a.portfolio_id, 4096);
+  const deploymentId = id(a.deployment_id);
+  const portfolioId = id(a.portfolio_id);
   if (
     deploymentId === null || portfolioId === null || a.environment !== "LIVE"
     || a.association_basis !== "CURRENT_NATIVE_TARGET_CORRESPONDENCE" || a.captured_environment_attested !== false
   ) return null;
   const envelopeId = id(e.envelope_id);
   const revision = version(e.revision);
-  const previousEnvelopeId = e.previous_envelope_id === null ? null : id(e.previous_envelope_id);
+  const previousEnvelopeId = nullable(e.previous_envelope_id, id);
   const expectedCertificationVersion = version(e.expected_certification_version);
   const createdAt = ms(e.created_at_ms);
   if (
