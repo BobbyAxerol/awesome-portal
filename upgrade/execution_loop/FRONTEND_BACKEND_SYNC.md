@@ -61,6 +61,25 @@ PM hiện `b9fae791` (vượt `673ce7cf` và `e62b6825`, FE-019 coi là hết hi
 
 **Tác động lên thiết kế (đã chấp nhận):** hàng đợi Operations V2 grain `operation_id` (xác nhận R3) nhưng không có assignee/actor ack-resolve/SLA; `assigned_to=me` trả 400 → lens "Mine", Acknowledge, Resolve hiện bị tắt kèm lý do (D9). Incident chỉ có root hiện tại → timeline/evidence là "Not available". Source health, journal, canary twin đều UNAVAILABLE.
 
+### 0c. Codex đã tiếp nhận FE-001…043 và chia lại việc (2026-10-18, từ `evidence/ELP2-10/claude-review-intake-2026-10-18.md`, file chưa commit trong cây Codex)
+Codex đọc ledger này tại `3b6dad16`, xếp mọi yêu cầu `ACCEPTED_FOR_IMPLEMENTATION` vào packet phase (**chưa DELIVERED**), trừ các điều chỉnh sau (tôi đã đọc, chưa phản hồi chính thức):
+| Mục | Ý kiến Codex | Hệ quả cho FE |
+| --- | --- | --- |
+| FE-005, FE-009 | đã có implementation (`manager-model.ts`, tổng null + lý do; giới hạn 1 MiB / 200 nhóm) | chỉ cần fixture/doc mẫu; FE không đợi gì thêm |
+| FE-006 | CHANGES_REQUESTED: `methodology_ref` theo nguồn, không phải mọi nơi TWR/Modified Dietz | FE đọc methodology theo nguồn, không hiển thị chung một công thức |
+| FE-011 | CHANGES_REQUESTED: giữ Score số tính sẵn để sort/scalar | FE không bỏ cột Score số |
+| FE-018 | CHANGES_REQUESTED: pin/compat có version, không vendor cả Edge | không ảnh hưởng FE |
+| FE-030 | CHANGES_REQUESTED: dùng lại plan/apply/gate fence hiện có, không executor tổng quát | cockpit giữ dạng nhiều đường, không một "decide" chung |
+| FE-026, FE-036 | NEEDS_OWNER_DECISION (ma trận trường researcher; `as_of_ms` current-only hay có as-of) | Bobby quyết; FE giữ "Not published" |
+| FE-037 | không thêm tên vào catalogue owner-all; cần projection eligibility/navigation theo hiện hành | FE giữ nav fail-closed; tên `execution.*` tạm trong `V2_CAPABILITY` sẽ đổi |
+| FE-042, FE-043 | many-to-many, hai đầu được ủy quyền; status counts cùng snapshot, không N call | **Claude làm (B1)**; xem Rules §10.11 |
+| FE-040 | bảng phase 10: chỉ bật manifest sau khi code FE vào | **Claude làm (B2)** |
+| DEBT-UXM07-002 | đã sửa phân loại queue_v2 (VIEW_DERIVED), chưa commit | Codex giữ; đóng khi commit |
+| DEBT-UXM07-003 | cần trạng thái non-retained trung thực, không giấu lỗi console | Claude làm (FE double) |
+| DEBT-UXM07-001 | cần việc FE/baseline được duyệt | Bobby quyết (xem báo cáo) |
+Thứ tự Codex: queue-view ownership + self/nav an toàn → Manager P1 (query/metric/window) → lifecycle/criteria/cockpit → phần còn lại. Gói pending-recall vẫn `AWAITING_CONSUMER_REVIEW` và đang dở (4 suite migration lỗi `syntax error at end of input`, chưa commit); Claude sẽ review khi Codex commit và giao theo §7.2.
+Chia việc, nhánh/worktree và hạ cánh: **AGENT_WORKING_RULES §10.11**.
+
 ## 1. Hộp thư đến — request Codex → Claude còn mở (tất cả `AWAITING_CONSUMER_REVIEW`)
 
 | ID | Nội dung ngắn | Cần làm ngay? |

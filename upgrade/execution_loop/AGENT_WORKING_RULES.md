@@ -616,3 +616,29 @@ Vấn đề: hook pre-commit chạy toàn bộ `verify-workspace.sh` (~20–25 p
 7. Điều này **thay** câu "gom normal hook/gates một lần cho coherent commit" ở §6 bằng quy tắc cụ thể trên, vẫn giữ "không lặp full build/engine/load/DR chỉ vì thay docs" và "không bypass hook" cho mọi trường hợp ngoài R0/R1 nêu ở khoản 4.
 
 Duyệt: **APPROVED (Bobby, 2026-10-18)**, phương án A của câu hỏi "Hook theo tầng".
+
+### 10.11 Chia việc Codex / Claude sau khi backend đã đi trước (Bobby, 2026-10-18)
+
+Bối cảnh: Codex đã làm phần lớn nền backend (ELP2-02…10); Bobby giao Claude **làm chính FE và làm cả backend ở phần contract mà FE cần** để rút ngắn workflow, thay vì chờ từng request. Đây là một **giao việc có phạm vi** theo CLAUDE.md (Research override: "either may work both sides within an explicit assignment"); nó không bỏ quy tắc "backend authority thuộc Codex" cho phần còn lại.
+
+**1. Ai giữ gì**
+| Bên | Giữ | Không đụng |
+| --- | --- | --- |
+| **Codex** (backend lead) | Phần dở của Codex (gói pending-recall: sửa migration 144, đóng gate); identity/quyền/delegation (ELP2-02/03: FE-015/026/037/038, capability catalogue, self-nav); Manager/PM/Score/Regime (05/06: FE-002…013, 017…019, 022, 025, 029, 032, 033, 035, 036, 041); command/workflow và lifecycle/criteria cockpit (07/08: FE-020, 027, 028, 030, 031, 034, 039); realtime (09: FE-024); qualification/provider/HK/infra (10/11); registry rev 7; ledger R2 (gồm DEBT-UXM07-002) | `apps/portal/frontend/**`, thiết kế V2, ledger FE-xxx của Claude |
+| **Claude, frontend** | Toàn bộ `apps/portal/frontend/**`, thiết kế/HIFI V2, double e2e và fixtures phía FE, recorder baseline, DEBT-UXM07-001/003, nghiệm thu trình duyệt, ledger FE-xxx và receipt UXM-07 | file backend của Codex |
+| **Claude, backend (mới)** | Chỉ các lát **cộng thêm, phía đọc, hình dạng do FE cần**, nằm ngoài vùng Codex đang sửa: **B1** FE-042 + FE-043 (operations queue V2: liên kết incident nhiều-nhiều và `status_counts` cùng một snapshot truy vấn); **B2** FE-040 (`ARG EXECUTION_V2_SCREENS` trong `deploy/images/portal-web.Dockerfile`, mặc định rỗng) | quyền/grant/delegation, PM/Manager/Score, command, realtime, migration của Codex, bất kỳ file Codex đang có thay đổi chưa commit |
+
+**2. Ràng buộc Codex đã đặt cho B1/B2 (đọc `evidence/ELP2-10/claude-review-intake-2026-10-18.md`, giữ nguyên):** FE-042 dùng bảng nhiều-nhiều `execution_incident_operation_links`, cả hai đầu phải được ủy quyền, kết quả có giới hạn, lịch sử không xác nhận được trả về dạng typed absence, **không** chọn incident đầu tiên hay suy quyền incident từ quyền operation; FE-043 dùng lại boundary aggregate repeatable-read của `query/postgres`, định nghĩa rõ predicate KPI được hỗ trợ, đếm trên **cùng** snapshot đã lọc và ủy quyền (không đếm theo trang, không gọi N lần), và "SUCCEEDED trong queue" không phải APPLIED tài chính hay thành công trên sàn. Không thêm tên vào danh mục `PORTAL_CAPABILITIES` (owner-all) cho FE-037.
+
+**3. Nhánh và worktree (không ghi nhầm chỗ)**
+- Codex: `docs/research-loop-plan` tại `/home/bobby/portal-research` (cây có thay đổi chưa commit). **Claude không bao giờ ghi vào checkout này** và không `git stash`.
+- Claude: `claude/fe-parity` tại `/home/bobby/portal-research-fe` (cả FE lẫn B1/B2, commit tách theo đường dẫn). Bản sao lưu trước lần ghép này: `backup/fe-parity-pre-rebase-2026-10-18` = `3b6dad16`.
+- Mỗi vòng, Claude `git rebase` lên tip Codex **chỉ khi cây sạch**. File sinh tự động (`services/portal-execution-edge-rs/contracts/{eds12,n29}*`, `packages/contracts/contracts-snapshot.json`, `generated/*`, ledger R2) **không ghép tay**: lấy bản của Codex rồi chạy lại script sinh. File chung còn lại (`UNIFIED_IMPLEMENTATION_PLAN.md`) ghép tay, mỗi bên chỉ sửa dòng của mình.
+
+**4. Hạ cánh vào `docs/research-loop-plan`** (không có việc Claude tự ghi): khi Codex đã commit gói đang dở và cây của Codex sạch, Codex (hoặc Bobby) chạy `git merge --ff-only claude/fe-parity` trong checkout của Codex, sau khi Claude vừa rebase lên đúng tip đó và **R2 xanh trên đúng SHA** (§10.10). Nếu tip Codex đã đổi sau lần rebase của Claude thì Claude rebase lại trước. Không push, không merge dev/main khi chưa có Bobby.
+
+**5. Tài nguyên dùng chung:** hook R2/R3 và Docker/PostgreSQL chạy một job nặng mỗi lần giữa hai agent. Claude bọc lệnh nặng bằng `flock /tmp/portal-heavy.lock`; Codex được đề nghị làm cùng (không bắt buộc, không chặn Codex).
+
+**6. Hai chiều:** mỗi lát B1/B2 giao cho Codex theo §7.2 (contract, fixture canonical, test âm tính, giới hạn); Codex ghi ACCEPTED hoặc CHANGES_REQUESTED trong packet phase 04 và phase 10. Backend request FE khác vẫn đi qua sổ FE-xxx, không sửa thẳng file của Codex.
+
+Duyệt: **Bobby 2026-10-18** ("Claude làm chính FE và cả backend phần liên quan contract với FE"); chia chi tiết ở trên do Claude đề xuất, Codex cập nhật cột của mình khi đọc.
