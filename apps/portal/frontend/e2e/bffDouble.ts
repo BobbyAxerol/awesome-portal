@@ -18,6 +18,10 @@ import { fileURLToPath } from "node:url";
 
 import type { Page } from "@playwright/test";
 import { answerOperationsV2 } from "./bffDoubleV2";
+import { answerAccount } from "./bffDoubleAccount";
+import { answerAlpha } from "./bffDoubleAlpha";
+import { answerOverview } from "./bffDoubleOverview";
+import { answerPortfolios } from "./bffDoublePortfolios";
 
 const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
 const canonical = (name: string): unknown => JSON.parse(readFileSync(join(CONTRACTS, name), "utf8"));
@@ -1034,11 +1038,23 @@ function mirrorIntegrityEnvelope(environment: "paper" | "sandbox" | "live"): Rec
 export interface BffDoubleOptions {
   /** UXM-07 S1c/S1d: answer the V2 operations queue and incident root. Off keeps the V1 shapes the existing journeys assert. */
   operationsV2?: boolean;
+  /** UXM-07 S2: sparse-realistic answers for the V2 overview/blotter/admin/alpha/account/portfolio screens (they override the canonical ones the V1 journeys read). */
+  screensV2?: boolean;
 }
 
 export function answerExecutionBff(method: string, pathname: string, search: URLSearchParams, options: BffDoubleOptions = {}): Answer {
   const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";
   const seg = path.split("/").filter(Boolean);
+
+  if (options.screensV2) {
+    const search2 = search;
+    const sparse =
+      answerAlpha(method, path, search2) ??
+      answerAccount(method, path, search2) ??
+      answerPortfolios(method, path, search2) ??
+      answerOverview(method, pathname, search2);
+    if (sparse !== null) return sparse as Answer;
+  }
 
   if (options.operationsV2 && method === "GET") {
     const v2 = answerOperationsV2(method, path, search);
@@ -1179,6 +1195,8 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     if (path === "/views/equity-chart") return ok(financialChartEnvelope(search));
     if (path === "/views/observed-timeline") return ok(observedTimelineEnvelope(search));
     if (path === "/market/venue-candles") return ok(unavailableMarketCandles(search));
+    // The Trading System market-context candles: the canonical L0 body (source-bounded, AGING), not an invented series.
+    if (path === "/market/candles") return ok(canonical("execution-market-context.candles.valid.json"));
     if (seg[0] === "manager" && seg[1] === "current" && seg.length === 3) {
       const environment = search.get("environment");
       if (!validEnvironment(environment)) return problem(400, "invalid_environment", "A profile environment is required.");

@@ -53,6 +53,14 @@ const V2ContextBar = import.meta.env.VITE_EXECUTION_V2_SCREENS
 const V2Fleet = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/fleet")) : null;
 const V2Cockpit = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/cockpit")) : null;
 const V2Operations = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/operations")) : null;
+const V2Overview = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/overview")) : null;
+const V2Blotter = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/blotter")) : null;
+const V2Admin = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/admin")) : null;
+const V2Alpha = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/alpha")) : null;
+const V2PortfolioList = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/portfolios")) : null;
+const V2Portfolio = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/portfolios/portfolio")) : null;
+const V2Compare = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/compare")) : null;
+const V2Account = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/account")) : null;
 import {
   AdminCatalogueContainer,
   ApprovalInboxContainer,
@@ -324,7 +332,9 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
   let content: ReactNode;
   switch (screenId) {
     case "EXECUTION_COMMAND_CENTER_SCREEN":
-      content = <CommandCenterSnapshotContainer api={api} />;
+      content = V2Overview && isV2Screen("overview")
+        ? <Suspense fallback={null}><V2Overview api={api} workspaceId={routeWorkspaceId} /></Suspense>
+        : <CommandCenterSnapshotContainer api={api} />;
       break;
     case "EXECUTION_OPERATIONS_QUEUE_SCREEN":
       // The clock belongs to the screen, not to this render. `new Date()` here
@@ -389,7 +399,9 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : <LiveOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
-      content = <FullBlotterRichContainer api={api} />;
+      content = V2Blotter && isV2Screen("blotter")
+        ? <Suspense fallback={null}><V2Blotter api={api} /></Suspense>
+        : <FullBlotterRichContainer api={api} />;
       break;
     case "EXECUTION_ALPHA_FLEET_LIST_SCREEN":
       content = V2Fleet && isV2Screen("fleet") ? <Suspense fallback={null}><V2Fleet api={api} /></Suspense> : <AlphaFleetRichContainer api={api} />;
@@ -398,19 +410,30 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       // The feature's canonical route (/deployments/alphas, no alphaId) is the
       // fleet list — the entry screen of WF 2a; a row opens the alpha's 360.
       content = params.alphaId
-        ? <AlphaThreeSixtyRichContainer api={api} alphaId={params.alphaId} />
+        ? V2Alpha && isV2Screen("alpha")
+          ? <Suspense fallback={null}><V2Alpha api={api} alphaId={params.alphaId} workspaceId={routeWorkspaceId} /></Suspense>
+          : <AlphaThreeSixtyRichContainer api={api} alphaId={params.alphaId} />
         : V2Fleet && isV2Screen("fleet") ? <Suspense fallback={null}><V2Fleet api={api} /></Suspense> : <AlphaFleetRichContainer api={api} />;
       break;
     case "EXECUTION_PORTFOLIO_360_SCREEN":
       // Feature canonical route (/deployments/portfolios) = the real portfolio
       // register; /:portfolioId opens that portfolio's 360. The default derives
       // from data, never from a canonical-cast constant (P4-A / BR-EX-76).
-      content = params.portfolioId
-        ? <PortfolioThreeSixtyRichContainer api={api} portfolioId={params.portfolioId} />
-        : <PortfolioListRichContainer api={api} />;
+      // UXM-07: Compare has no registry row yet (rev 7 is Codex's), so it rides the portfolios route as ?view=compare.
+      content = V2Compare && isV2Screen("compare") && search.get("view") === "compare"
+        ? <Suspense fallback={null}><V2Compare api={api} portfolioId={params.portfolioId} /></Suspense>
+        : params.portfolioId
+          ? V2Portfolio && isV2Screen("portfolios")
+            ? <Suspense fallback={null}><V2Portfolio api={api} portfolioId={params.portfolioId} /></Suspense>
+            : <PortfolioThreeSixtyRichContainer api={api} portfolioId={params.portfolioId} />
+          : V2PortfolioList && isV2Screen("portfolios")
+            ? <Suspense fallback={null}><V2PortfolioList api={api} /></Suspense>
+            : <PortfolioListRichContainer api={api} />;
       break;
     case "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN":
-      content = search.get("binding")
+      content = V2Account && isV2Screen("account")
+        ? <Suspense fallback={null}><V2Account api={api} binding={search.get("binding")} /></Suspense>
+        : search.get("binding")
         ? <AccountsBindingsRichContainer api={api} bindingId={search.get("binding")} />
         : <AccountsBindingsRichContainer api={api} />;
       break;
@@ -418,14 +441,18 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       // Feature canonical route (/deployments/accounts) = the bindings list,
       // entry screen of WF 1g; ?binding= opens a binding; /:accountId opens
       // the account's 360.
-      content = params.accountId
+      content = V2Account && isV2Screen("account")
+        ? <Suspense fallback={null}><V2Account api={api} accountId={params.accountId} binding={search.get("binding")} /></Suspense>
+        : params.accountId
         ? <AccountBroker360RichContainer api={api} accountId={params.accountId} />
         : search.get("binding")
           ? <AccountsBindingsRichContainer api={api} bindingId={search.get("binding")} />
           : <AccountsBindingsRichContainer api={api} />;
       break;
     case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
-      content = <AdminCatalogueContainer api={api} />;
+      content = V2Admin && isV2Screen("admin")
+        ? <Suspense fallback={null}><V2Admin api={api} workspaceId={routeWorkspaceId} /></Suspense>
+        : <AdminCatalogueContainer api={api} />;
       break;
     default:
       content = null;

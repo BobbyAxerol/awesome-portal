@@ -10,7 +10,7 @@
  * not-found, and the legacy compatibility redirects.
  */
 import { Suspense, lazy, type ComponentType } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 
 import { ResultsSkeleton, StateView } from "../components/ui";
 import { CommandCenter } from "../features/command-center/CommandCenter";
@@ -56,6 +56,10 @@ const ProfileAccess = lazy(() =>
 const V2Access = import.meta.env.VITE_EXECUTION_V2_SCREENS
   ? lazy(() => import("../execution/v2/screens/access"))
   : null;
+// UXM-07 S2: the V2 roster. Same raw-env gate; `?view=legacy` keeps the V1 screen reachable.
+const V2Users = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/screens/users"))
+  : null;
 const ExecutionFixtures = lazy(() => import("../execution/Fixtures"));
 const ResearchFixtures = lazy(() => import("../research/ResearchFixtures"));
 const ExecutionPreviewRoute = lazy(() =>
@@ -69,6 +73,12 @@ const ExecutionPreviewRoute = lazy(() =>
  * on a second tab. Off (or the key absent from the manifest): the V1 screen,
  * unchanged, including its typed denial for a non-owner.
  */
+function UsersEntry() {
+  const [search] = useSearchParams();
+  if (V2Users === null || !isV2Screen("users") || search.get("view") === "legacy") return <UsersAccess />;
+  return <V2Users legacyHref={`${ADMIN_USERS_ROUTE}?view=legacy`} />;
+}
+
 function ProfileAccessEntry() {
   return V2Access !== null && isV2Screen("profile") ? <V2Access manage={<ProfileAccess />} /> : <ProfileAccess />;
 }
@@ -237,7 +247,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
         {/* Account administration: session-scoped, not a registry feature. The
             screen itself renders `denied` for a non-ADMIN, so a guessed URL does
             not leak the table. */}
-        <Route path={ADMIN_USERS_ROUTE} element={<UsersAccess />} />
+        <Route path={ADMIN_USERS_ROUTE} element={<UsersEntry />} />
 
         {/* Execution Loop Phase 0 fixtures: components, not a screen. */}
         <Route path={EXECUTION_FIXTURES_ROUTE} element={<ExecutionFixtures />} />

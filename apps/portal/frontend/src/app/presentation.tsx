@@ -72,6 +72,7 @@ export function presentationModeFor(
   if (isV2Screen("cockpit") && COCKPIT_ROUTES.some((route) => route.test(pathname))) return "execution-carbon";
   // S1e: the Access self-view uses the V2 flag palette, which exists only in Carbon.
   if (isV2Screen("profile") && /^\/administration\/profile-access\/?$/.test(pathname)) return "execution-carbon";
+  if (isV2Screen("users") && /^\/administration\/users\/?$/.test(pathname)) return "execution-carbon";
   if (pathname === "/governance" || pathname.startsWith("/governance/")) return "governance-light";
   if (pathname === "/execution" || pathname.startsWith("/execution/")) return "execution-carbon";
   if (!registry) return "research-light";
