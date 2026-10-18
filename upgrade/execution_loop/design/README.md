@@ -107,3 +107,15 @@ Phát hiện khi đọc chuẩn chart (cần làm khi được giao code, không
 | S7 | Mặc định theo khuyến nghị (chưa hỏi): Canary⇄Live chung header, một blotter toàn cục theo URL, Admin Actions giữ route rút gọn, Binding qua toggle, Trade Replay chỉ log đến khi có nến |
 
 Phản hồi: khuyến nghị cần **sáng tạo hơn** → bốn concept ở `hifi/concepts/` (c1 command bar + context rail + digest + heat map; c2 capital flow + compare; c3 journey spine + fleet board + event ribbon; c4 decision cockpit). Rà soát mọi route/màn sâu của V1: `sweep/*.md` và `V1_DEEP_INVENTORY.md`.
+
+## Quyết định concept (Bobby, 2026-10-18) — đưa **tất cả** vào V2
+
+| Mã | Quyết định |
+| --- | --- |
+| C1 | Command bar ⌘K; context bar đi theo qua mọi màn; digest "since your last visit"; Fleet heat map |
+| C2 | Capital flow (Sankey) ở Portfolio 360; Compare 2–4 portfolio/alpha |
+| C3 | Journey spine R1→Live (đầu Alpha/Gate); Fleet board (Table \| Board); Event ribbon trên chart |
+| C4 | Decision cockpit là **trải nghiệm duyệt chính** (hàng chờ SLA + evidence diff + verdict + receipt preview); trang Gate/Exit riêng thành deep-link vào cùng khung |
+| D9 | Điều khiển chưa bật: hiện **bị tắt + 1 dòng lý do + link M10** (không ẩn) |
+
+Cần từ backend để thành thật (đã ghi trong sổ đồng bộ khi vào round tới): tìm kiếm entity + mốc last-visit theo user; budget/capital theo deployment + ledger có receipt; manager time-series (FE-013); nguồn tiêu chí gate + lịch sử stage + feed sự kiện; evidence-diff + quyết định một lần gọi trả `receipt_ref`/quorum + SLA/creator id; `group` ở endpoint fleet (FE-012).
