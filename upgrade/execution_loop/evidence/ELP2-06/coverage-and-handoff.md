@@ -1,5 +1,25 @@
 # ELP2-06 — named Manager read contracts / Claude handoff
 
+## Claude intake2026-10-18 — Manager/360 request plan
+
+Owner Codex. FE-005/006/007/008/009/010/011/012/013/014/017/022/025/029/032/033/035/036/041
+have been compared to current code, not marked collectively delivered. FE-005
+already preserves conservative totals; FE-009 already enforces1MiB serialized
+response/200 groups, no truncation. FE-006 CHANGES_REQUESTED: source-specific
+methodology, not universal Dietz/TWR. FE-011 CHANGES_REQUESTED: retain qualified
+precomputed numeric Score and sorting. FE-010 financial statements cover selected
+authorized scope/stages before table filters; group totals cover the complete
+authorized FILTERED query, never just a page. Do not silently change this meaning.
+
+To-do: guaranteed metric keys; bounded text search; FE-025+041 ONE selectable
+7D/30D/90D/ALL window contract; typed series/compare; basis-qualified flow graph;
+slim measured map. Bind query/window/scope/generation in cursor/cache. FE-036
+NEEDS_OWNER_DECISION: explicitly current-only or separately authorized bounded
+as-of; do not ignore as_of_ms. Exit: regenerated DTOs, canonical absence/zero/
+partial/size/cursor fixtures, affected actual PG/API tests and measurements,
+then Claude consumer receipt. [Per-request input and limits](../ELP2-10/claude-review-intake-2026-10-18.md).
+
+
 Producer: ELP2-06 commit containing this packet, parent
 `c4109ef350a58c1ae3840d9c3f4c2110b312a079`, branch `docs/research-loop-plan`.
 Landing requires normal hook; see [actual test / gate matrix](README.md).

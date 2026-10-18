@@ -1,5 +1,24 @@
 # ELP2-10 — Performance, quality và coexistence
 
+## Current2026-10-18 — Claude review intake and registration terminal
+
+[FE-001…043 source review and owning-phase plan](claude-review-intake-2026-10-18.md)
+records actual clean peer3b6dad16, UXM-00 design and UXM-07 S0/S1 fixture/BFF-double
+(R1 only; R2/Access pending), preserved request IDs, accepted changes and
+corrections/owner decisions. Older blanket FE-unassigned labels are historical.
+The single original FE ledger remains on the pinned peer; this report is an
+impact/disposition record, not a second request queue or consumer ACK.
+
+Owner Codex: FE-019/035/040 need source-pin qualification, measured bounded map
+and an explicit default-empty build screen manifest only after FE code lands.
+Exit retains actual providers/approved budget and calibration/matched coexistence/
+P184 G2/browser gates. This intake does not activate a build or runtime.
+Registration normal-hook30009 is terminalPASS at ff83f176:7427API/3oldskips,
+contracts/build/scopedrestore/fouraccessdigests, source/index/eight protected
+runtimes and exact cleanup PASS. [Registration packet](../ELP2-07/instance-registration.md).
+Whole10 remains NOT_MET and11 NOT_ENTRY_READY.
+
+
 **Authority continuation2026-10-17 Asia/Saigon, latest:**
 [private genuine-human wire, revoke-through-COMMIT, actual validation and remaining operational inputs](authority-continuation.md).
 Candidate Portal issue/ENTER/drain/terminal recovery and PM source transaction
@@ -253,3 +272,12 @@ destructive down migration or self-activation; placement/DR detail in runbook.
   scoped restore/four access digests, frozen source/index/eight runtime tuples
   and owned teardown PASS. Normal-hook landing pending; cold ENTER without
   HTTP proof stays pending, not falsely released. Actual commissioning open.
+
+## Delivery accounting — 2026-10-18, report-only
+
+[48-hour work report and full450-file inventory](work-summary-2026-10-18.md):
+40commits baseline630eafc5→ff83f176, net+137910/-2624, separately classified
+backend/generated/tests/docs. HEAD's actual969contract/7427API PASS is distinct
+from pending-control WIP's failed migration focus. Claude FE-001…043 intake is
+triage/owning-plan work, not43delivered requests or consumer acceptance.
+No new phase/heavy test, push, merge, deploy or runtime activation in packaging.

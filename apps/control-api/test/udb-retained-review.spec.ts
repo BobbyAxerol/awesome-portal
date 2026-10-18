@@ -33,7 +33,8 @@ describe("UDB03 retained reader and Core-only read delegation",()=>{
   beforeAll(async()=>{
     const admin=new Pool({connectionString:url("postgres")});
     try{await admin.query(`CREATE DATABASE ${coreName}`);await admin.query(`CREATE DATABASE ${domainName}`);}finally{await admin.end();}
-    core=new Pool({connectionString:url(coreName),max:2});domain=new Pool({connectionString:url(domainName),max:2});
+    // Match the finite production Core checkout bound, also while source-dark.
+    core=new Pool({connectionString:url(coreName),max:2,connectionTimeoutMillis:5_000});domain=new Pool({connectionString:url(domainName),max:2});
     await runControlApiMigrations(url(coreName),undefined,()=>{});await migrateExecutionStore(domain);
     await core.query(`INSERT INTO portal_users(user_id,username,display_name,role,status,must_change_password) VALUES
       ('usr_owner','owner','Owner','ADMIN','ACTIVE',false),('usr_review','reviewer','Viewer','ADMIN','ACTIVE',false);

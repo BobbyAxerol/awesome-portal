@@ -2,7 +2,7 @@ import { z } from "zod";
 import { assertAmountPartition, pmCounter, pmText, unsignedDecimal } from "./foundation.contract";
 import { pmHttpRequestDigest, type PmHttpRequestBounds, type PmHttpRequestBytes } from "./pm-http-request-binding";
 
-/** PM operator_adapters 5f0c5545 / recall_repository 8c62e730: candidate
+/** PM39aaa9c6, operator_adapters ab57b9d5 / recall_repository 8c62e730: candidate
  * bytes and descriptive source summaries only. No sender, grant or Outcome. */
 export type PmaPendingControlOperation = "APPLY_PENDING" | "CANCEL_REMAINING";
 export interface PmaPendingControlWire {

@@ -1,5 +1,24 @@
 # Original ELP2-07/08 — named instance-registration family
 
+## Actual normal-hook terminal —2026-10-18T13:28:43UTC
+
+Gate30009 terminated exit0/PASS and landed
+`ff83f1766b513c18d3fb0102cfc5c6889ffb6343` on the approved Research branch:
+39files,+5683/-6. Registration focus279API/17affectedcontracts and Node22build
+had already passed. Normal hook additionally ran the complete contracts and
+API suites (7427PASS,3existing skips), scoped PostgreSQL restore and four
+access rowdigests. Exact controller/log under local state
+`20261018/registration-family/instance-registration-land-124722/`;
+logSHA256 `0f1580c03abd5edf15709c1d048512e27fc208d16a43ec7e9d1268a56196c178`.
+Frozen source/index and eight protected runtime tuples unchanged;
+remaining_owned_resources=[] and gate reservation released. No push/deploy,
+runtime migration, source/provider installation, financial action or consumer
+ACK. Earlier preparation/NOT_RUN/pending-hook notes below remain history.
+
+The pending-recall batch also corrects this OpenAPI's stale session cookie
+metadata to the actual canonical __Host-portal_session constant; its focused
+contract regression must pass separately. This is metadata, not a login change.
+
 ## Scope and entry pins
 
 Original `ELP2-REQ-07-002` is the owning request; this implements only its registration

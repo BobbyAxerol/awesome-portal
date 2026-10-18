@@ -75,7 +75,9 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 mounted history read authorization, TEST
     try {
       for (const database of [coreName, domainName]) { await adminPool.query(`CREATE DATABASE ${database}`); created.push(database); }
     } finally { await adminPool.end(); }
-    core = new Pool({ connectionString: url(coreName), max: 2 });
+    // App injection preserves the production Core checkout bound, even when
+    // the pending-recall provider is source-dark.
+    core = new Pool({ connectionString: url(coreName), max: 2, connectionTimeoutMillis: 5_000 });
     domain = new Pool({ connectionString: url(domainName), max: 2 });
     await runControlApiMigrations(url(coreName), undefined, () => {});
     await migrateExecutionStore(domain);

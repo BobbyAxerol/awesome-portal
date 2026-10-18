@@ -1,5 +1,18 @@
 # ELP2-07 — coverage, command recovery và Claude handoff
 
+## Current2026-10-18 — original07-002 continuation and Claude review
+
+Registration is landedff83f176, normal-hookPASS; [exact packet](instance-registration.md).
+The [separate pending-recall family](pending-control.md) is applied/uncommitted
+and actual tests NOT_RUN at entry. Claude FE-015/020/021 accepted to-do:
+family-specific eligibility/closed safe copy and independent audit purpose;
+source rollback PREVIEW is non-durable/non-reserving, unlike Governance plan.
+Exit: generated exact-operation DTO/fixtures, both recipient/operation PG+HTTP
+positives, current action/audit/DENY/revoke/CSRF/attempt-recovery negatives,
+then qualified provider and consumer receipt separately. No blanket authority
+or reused capital executor. [Pinned intake](../ELP2-10/claude-review-intake-2026-10-18.md).
+
+
 ## 1. Authority / exact delivered scope
 
 Baseline `42c390796f4bd2a7de151313944b41f1245bdbc2`, same integration branch.

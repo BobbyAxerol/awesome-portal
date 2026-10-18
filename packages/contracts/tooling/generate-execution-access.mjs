@@ -18,7 +18,8 @@ const actions=['administration.users.manage','administration.profile_access.mana
   'alpha.owner.propose','business.read_all','portfolio.discover_linked','portfolio.read_restricted','portfolio.read',
   'portfolio.manage','membership.propose','account.read','binding.read','binding.change.propose','capital.preview',
   'capital.fund','capital.return_capital','capital.initial_grant','capital.top_up','capital.immediate_decrease',
-  'capital.recall_partial','capital.recall_full','capital.adjust_target_budget','capital.set_root_limit','deployment.register',
+  'capital.recall_partial','capital.recall_full','capital.adjust_target_budget','capital.set_root_limit',
+  'capital.apply_pending','capital.cancel_remaining','deployment.register',
   'deployment.activate','deployment.assignment.propose','safety.halt','safety.reducing','safety.resume','audit.read',
   'report.export','stream.subscribe','maintenance.read','maintenance.execute','development.read','development.execute','owner.recovery'];
 const environment={enum:['paper','sandbox','live']},environments=list(environment,3,1);

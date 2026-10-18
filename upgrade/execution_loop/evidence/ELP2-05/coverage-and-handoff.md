@@ -1,5 +1,17 @@
 # ELP2-05 coverage and consumer handoff
 
+## Claude intake2026-10-18 — FE-002/003/004/017/018/019/022
+
+Owner Codex, consumer Claude. To-do: explicit stage/environment/freshness
+mapping and immutable historical alpha-version/source statement lineage.
+FE-018 CHANGES_REQUESTED: use exact versioned Edge compatibility/source pins,
+not vendoring its entire repo. FE-019 PM39aaa9c6 is a read-only source pin, not
+proof of deployed runtime or installed authority. Missing source mappings stay
+OPEN with producer locators. Exit: generated closed mappings, historical-version
+regression and source refusal tests, then selected genuine producer receipts;
+fixture/code review cannot close source gates. [Intake](../ELP2-10/claude-review-intake-2026-10-18.md).
+
+
 ## Current source return —2026-10-18
 
 Original05-001 remains OPEN for a qualified selected financial publication,

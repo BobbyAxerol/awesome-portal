@@ -1,5 +1,22 @@
 # ELP2-03 — Scoped policy, delegation and TS membership proposals
 
+## Claude intake2026-10-18 — FE-015/026/037
+
+Owner Codex, consumer Claude. Exact current action × target × environment
+eligibility and self navigation are ACCEPTED_FOR_IMPLEMENTATION, not delivered.
+FE-037's provisional menu capability names must not be appended to the legacy
+owner-all catalogue. To-do: project reviewed Portal policy plus genuine current
+native correspondence, retaining DENY/delegation/expiry and independent audit
+and account purposes. Exit: generated closed DTO/fixtures, non-admin own-positive,
+wrong target/workspace, missing source, revoke and ancestor negatives, then
+consumer receipt. FE-026 NEEDS_OWNER_DECISION: finite researcher disclosure
+field matrix; no allow-all fallback. [Pinned triage and dependencies](../ELP2-10/claude-review-intake-2026-10-18.md).
+
+Status correction: legacy qualification repair was included in25218372's
+actual04 normal hook; the following0d5ceaba APPLIED_UNCOMMITTED note is history,
+not current. Genuine provider/policy installation is still OPEN.
+
+
 **Current2026-10-18:** [Legacy qualification intake/use repair](legacy-qualification.md)
 is APPLIED_UNCOMMITTED/VALIDATION_NOT_RUN on0d5ceaba. Three narrow guards and
 existing regressions share the original04 coherent normal hook, not a second

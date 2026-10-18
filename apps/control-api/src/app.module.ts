@@ -15,6 +15,9 @@ import type { CommandTrust } from "./execution-v2/command-trust";
 import { InstanceRegistrationController } from "./execution-v2/instance-registration.controller";
 import { InstanceRegistrationService } from "./execution-v2/instance-registration.service";
 import type { InstanceRegistrationTrust } from "./execution-v2/instance-registration.trust";
+import { PendingControlController } from "./execution-v2/pending-control.controller";
+import { PendingControlService } from "./execution-v2/pending-control.service";
+import type { PendingControlTrust } from "./execution-v2/pending-control.trust";
 import type { AccessTrustProvider } from "./execution-v2/access-trust";
 import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "./execution-v2/manager-runtime";
 import type { CurrentHumanMutations } from "./execution-v2/current-human-mutations";
@@ -236,6 +239,7 @@ import { CurrentHumanWorkspaceProvisioner } from "./execution-v2/current-human-w
 export interface ControlApiDependencies {
   executionCommandTrust?: CommandTrust;
   executionInstanceRegistrationTrust?: InstanceRegistrationTrust;
+  executionPendingControlTrust?: PendingControlTrust;
   executionAccessTrust?: AccessTrustProvider;
   allowTestOnlyExecutionAccess?: boolean;
   executionManagerRuntime?: ManagerRuntimeInstallation;
@@ -270,6 +274,7 @@ export class AppModule {
         ExecutionAccessController,
         ExecutionCommandController,
         InstanceRegistrationController,
+        PendingControlController,
         ExecutionF0ReadController,
         // A4-2 retired the six /api/admin/users* routes. They mutated
         // accounts with no expected revision, no idempotency, no step-up and
@@ -412,6 +417,12 @@ export class AppModule {
           provide: InstanceRegistrationService,
           useFactory: (db:Pool,access:ExecutionAccessService)=>new InstanceRegistrationService(db,access,
             dependencies.executionInstanceRegistrationTrust,dependencies.allowTestOnlyExecutionAccess===true),
+          inject:[CONTROL_API_POOL,ExecutionAccessService],
+        },
+        {
+          provide: PendingControlService,
+          useFactory: (db:Pool,access:ExecutionAccessService)=>new PendingControlService(db,access,
+            dependencies.executionPendingControlTrust,dependencies.allowTestOnlyExecutionAccess===true),
           inject:[CONTROL_API_POOL,ExecutionAccessService],
         },
         {

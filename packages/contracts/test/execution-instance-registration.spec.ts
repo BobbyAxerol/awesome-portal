@@ -14,6 +14,7 @@ const compile = (name: string) => ajv.compile({ $ref: "#/components/schemas/" + 
   components: { schemas: api.components.schemas } });
 describe("ELP2-07 separate registration family contract", () => {
   it("publishes four guarded named operations, no generic command proxy", () => {
+    expect(api.components.securitySchemes.PortalSession).toEqual({ type: "apiKey", in: "cookie", name: "__Host-portal_session" });
     expect(Object.keys(api.paths)).toHaveLength(4);
     const operations = Object.values(api.paths).flatMap(path => Object.values(path as Record<string, any>));
     expect(operations.map((op: any) => op.operationId).sort()).toEqual([

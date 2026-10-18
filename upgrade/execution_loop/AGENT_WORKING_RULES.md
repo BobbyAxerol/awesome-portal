@@ -267,6 +267,12 @@ chỉ vì đã viết file. Backend chủ động yêu cầu FE nối field mớ
 
 **Recurring Claude review intake — Bobby,2026-10-17:**
 
+- Bobby nhắc lại2026-10-18: review, đóng góp code và request của Claude là
+  input bắt buộc, không chỉ ý kiến trong chat. Nếu đang ở worktree khác, pin
+  branch/full SHA/dirty state và ledger/receipt thực đọc; không mặc định đã
+  merge vào nhánh chính. Triage phải cập nhật đúng phase sở hữu trước freeze;
+  handoff/fixture không tự trở thành consumer ACK hay real-source PASS.
+
 - Trước entry một gói backend, freeze contract, landing và báo cáo exit, đọc
   lại review, consumer receipt và request liên quan mới nhất của Claude. Ghi
   path/revision cùng source/schema mà review đã xét; dependency đổi phải có

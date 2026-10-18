@@ -1,5 +1,34 @@
 # ELP2-08 — workflow contract, text states và Claude handoff
 
+## Existing recall remainder — current pending-control handoff
+
+[Original07-002 pending-control family](../ELP2-07/pending-control.md) adds
+PendingControlPreview/Status, separate from CapitalWorkflow and registration.
+Consumer mapping: WAITING may have cumulative applied but remains unresolved;
+original control receipt differs from latest linked owning recall receipt;
+source operation may be NOT_PUBLISHED. Delivery UNKNOWN is not zero/cancelled.
+Backend applied/uncommitted, validation pending; consumer AWAITING_REVIEW.
+No approved design edit or upstream activation follows from these typed facts.
+
+
+## Claude intake2026-10-18 — workflow/consumer corrections
+
+Current peer3b6dad16 implements UXM-07 S0/S1 on fixture/BFF-double, R1 only;
+R2 and real-source acceptance remain pending. This supersedes blanket current
+FE-NOT_STARTED labels, not historical statements below. Owner Codex/consumer
+Claude; FE-015/020/027/028/030/031/034/039 accepted with explicit limits.
+
+To-do: source-backed ordered transitions, lossless gate criteria and separate
+purpose for actor/activity; preserve current plan/apply/gate fences. FE-030
+CHANGES_REQUESTED: no generic executor that treats R1/R2/Live as the same
+operation. FE-020 rollback capital/registration/pending previews are non-durable
+and non-reserving; Governance plan differs. FE-039 V2 duplicate-navigation
+cutover must preserve V1 flag-off/routes/deep links. Archive never liquidates,
+returns funds or starts Live; unavailable source executors remain locked.
+Exit: generated workflow facts/fixtures, current-gate/step-up/idempotency/revoke
+negatives and selected actual receipts, followed by Claude ACK. [Intake](../ELP2-10/claude-review-intake-2026-10-18.md).
+
+
 Producer: coherent normal-hook commit containing this packet; parent
 `3d537127313fb3c282eda054fd180499fe4732ca`. This is **schema/fixture and pure
 read-side projection delivery**, not a mounted workflow endpoint or accepted

@@ -1,5 +1,23 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+## Claude intake2026-10-18 — reader and ownership follow-through
+
+Owner Codex: FE-001/009/014/016/021/023/042/043 accepted for bounded contracts,
+fixtures and purpose-specific reads, with [pinned dispositions](../ELP2-10/claude-review-intake-2026-10-18.md).
+To-do: canonical operation/invariant/fixture manifest; authorized scoped
+search/export/audit; FE-042 many-to-many incident links with both endpoints
+independently authorized; FE-043 counts over the SAME authorized filtered
+query snapshot, not page rows or N extra queries. Source SUCCEEDED is not
+financial APPLIED/projection convergence. Exit: generated types/fixtures,
+hidden-link/changed scope/cursor/concurrency/size negatives plus actual affected
+PG/API receipts; consumer ACK remains separate.
+
+DEBT-UXM07-002: execution_operation_queue_v2 is a VIEW over the existing queue
+items, not a new table/writer. This batch registers VIEW_DERIVED/NONE ingress
+and inherited retention, without resolving the backing table's pending owner
+retention decision. No DB or runtime change follows from ledger classification.
+
+
 **Latest actual2026-10-18T12:27:51UTC:** normal hook PASS, landed25218372;
 960contract/7389API PASS+3existing skips, build/scoped restore/four access
 digests/frozen eight runtimes/owned cleanup PASS. [Exact narrow result and

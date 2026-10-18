@@ -1,5 +1,16 @@
 # ELP2-09 — scoped notification contract and consumer handoff
 
+## Claude intake2026-10-18 — FE-004/024/031
+
+Owner Codex. Accepted to-do: genuine business-change identities and cross-device
+per-user marker, independent from the existing notification-only revalidation
+contract. No notification becomes an economic event. Distinguish no changes,
+source unavailable and a retention/continuity gap; retain separate source status
+and coverage axes. Exit: monotonic marker/current scope/revoke/privacy tests,
+actual source continuity receipt and consumer ACK. Fixture-only peer S0/S1 is
+not a realtime consumer qualification. [Pinned review](../ELP2-10/claude-review-intake-2026-10-18.md).
+
+
 Producer: commit containing this packet, parent
 `daf434875e28aa131105d7f27d910b2f0ca05792` on `docs/research-loop-plan`.
 Contract delivery is not runtime/consumer acceptance. Read [phase receipt](README.md),

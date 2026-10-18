@@ -1036,6 +1036,8 @@
           "capital.recall_full",
           "capital.adjust_target_budget",
           "capital.set_root_limit",
+          "capital.apply_pending",
+          "capital.cancel_remaining",
           "deployment.register",
           "deployment.activate",
           "deployment.assignment.propose",
@@ -1226,7 +1228,7 @@
               "$ref": "#/components/schemas/AccessAction"
             },
             "minItems": 0,
-            "maxItems": 57,
+            "maxItems": 59,
             "uniqueItems": true
           },
           "ceiling_grant_id": {

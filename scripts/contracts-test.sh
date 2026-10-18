@@ -76,6 +76,7 @@ mkdir -p \
   "${WORKSPACE_DIR}/apps/control-api/src/governance" \
   "${WORKSPACE_DIR}/apps/control-api/src/research" \
   "${WORKSPACE_DIR}/apps/control-api/src/repos" \
+  "${WORKSPACE_DIR}/apps/control-api/src/auth" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2" \
   "${WORKSPACE_DIR}/apps/control-api/src/manager-lists" \
   "${WORKSPACE_DIR}/apps/control-api/src/resource-read" \
@@ -131,12 +132,16 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"
 cp -a "${ROOT_DIR}/apps/control-api/src/research/exact-decimal.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/research/"
+cp -a "${ROOT_DIR}/apps/control-api/src/auth/cookies.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/auth/"
 # ELP2-04 parser parity stays pure; no Nest services or application runtime
 # dependencies are copied into the networkless contract verification cell.
 cp -a "${ROOT_DIR}/apps/control-api/src/manager-lists/scoped-manager.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/manager-lists/"
 cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/command.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/instance-registration.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/pending-control.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/pm-pending-control-adapter.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/pm-instance-registration-adapter.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/pm-http-request-binding.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/command-collection.contract.ts" \

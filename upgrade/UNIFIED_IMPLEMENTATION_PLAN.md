@@ -10023,6 +10023,15 @@ full10PASS. No FE/public fields, HK writes, push/deploy or11 start.
 
 ## 14.4 Chỉ mục frontend giao Claude — không chờ full backend
 
+**Current intake2026-10-18:** Claude peer `claude/fe-parity` tại
+`3b6dad1671e0a8ef2e479b3110dea9fddc2d0689` đã có UXM-00 audit/design và
+UXM-07 S0/S1 implementation trên fixture/BFF-double; S1 mới R1, R2 còn chờ,
+Access S1e chờ FE-037/038. Chưa merge peer hay nghiệm thu nguồn thật. Các
+to-do/exit backend theo FE-001…043 và debt UXM-07 đã vào packet02…10, xem
+[review intake](execution_loop/evidence/ELP2-10/claude-review-intake-2026-10-18.md).
+Nhãn PLANNED/NOT_RUN bên dưới là index gốc, không phủ nhận delivery fixture
+đã quan sát; từng màn/contract vẫn cần receipt và acknowledgement riêng.
+
 Chi tiết mỗi phase (inputs/tasks/deliverables/tests/rollback) ở
 [UX guide §18](./execution_loop/EXECUTION_LOOP_MANAGER_UX_DESIGN_GUIDE_v1.1_VI.md#18-kế-hoạch-11-phase-ux-và-frontend-handoff).
 Tất cả **PLANNED / NOT RUN**; dưới đây là index, không thay yêu cầu trong guide.
@@ -12202,4 +12211,94 @@ Actual corrected qualification21:06:16.131619–21:07:29.428425UTC:348PASS (278u
   Complete local family is UNCOMMITTED; coherent normal-hook landing next.
   Default provider dark, source commissioning/Claude consumer OPEN; original
   07-002 retains all remaining families,11NOT_ENTRY_READY. No FE/runtime/push.
+
+### Original ELP2 continuation —2026-10-18 registration and Claude intake
+
+- Registration gate30009 is actually TERMINAL/PASS, landed
+  `ff83f1766b513c18d3fb0102cfc5c6889ffb6343`:39files,+5683/-6;
+  969contracts/7427API PASS,3existing API skips; Node22build, scopedPGrestore,
+  four access rowdigests, frozen source/index/eight runtimes and exact owned
+  cleanup PASS. [Terminal and loghash](execution_loop/evidence/ELP2-07/instance-registration.md#actual-normal-hook-terminal-2026-10-18t132843utc).
+  Earlier uncommitted/pending-hook records are history. Still no real selected
+  provider, source authority installation, consumer ACK, push or runtime change.
+- [Claude FE-001…043 review intake](execution_loop/evidence/ELP2-10/claude-review-intake-2026-10-18.md)
+  pins clean peer `claude/fe-parity` at3b6dad1671e0a8ef2e479b3110dea9fddc2d0689.
+  Main read its ledger/design/review2/UXM-07 receipts, reviewed contributions
+  against current backend and entered to-do/exit in owning packets02…10. The
+  pinned peer's original FE ledger stays canonical; intake is not a duplicate
+  request queue. Current FE is UXM-00 audit/design + UXM-07 S0/S1 fixture/
+  BFF-double R1; R2/Access/native browser gates remain open. No implicit peer
+  merge, FE edit or independent recertification of its reported tests.
+- Main accepts bounded scope/query/window/lineage/criteria/nav refinements;
+  FE-005 conservative totals/FE-009 caps already exist. FE-006 universal TWR,
+  FE-011 dropping numeric Score, FE-018 full Edge vendoring and FE-030 generic
+  decision executor get CHANGES_REQUESTED with source reasons. FE-026 finite
+  own-researcher disclosure/FE-036 as-of semantics remain explicit owner
+  decisions. DEBT-UXM07-002 view ownership is corrected without changing the
+  queue backing table's undecided retention. See owning phase exits, not a
+  blanket ACCEPTED=DELIVERED interpretation.
+- Original07-002 [pending-recall control family](execution_loop/evidence/ELP2-07/pending-control.md)
+  is APPLIED_UNCOMMITTED/NOT_RUN at entry: exact existing recall remainder,
+  separate V2 actions, rollback prediction, durable original-key/attempt/event/
+  product audit before one send, distinct original/latest owning receipts,
+  source-derived partition/5CAS and service-only lookup. Additive Core144,
+  runtime-derived OpenAPI/client/canonical TEST_ONLY fixtures and four guarded
+  named APIs; no new amount/recall/source ledger/authority. New family rejects
+  historical singleton membership, preserves current independent audit and
+  final body/error fences. Both source-review SQL defense findings have code
+  and PG test definitions, not a passing receipt. One bounded affected focus,
+  then coherent normal-hook landing; no heavy per-doc/repeated unchanged gate.
+- Backend next: pending family qualification, current self/nav and Manager
+  query/window contracts, genuine source→Composition/Regime/realtime/provider
+  commissioning. Claude can continue assigned fixture consumers from the exact
+  pinned published schemas; new pending consumer AWAITING_CONSUMER_REVIEW.
+  Full original02…10 gates remain separate;11 NOT_ENTRY_READY. No runtime,
+  source command, dev/main merge, signing/release/deploy/Live or remote push.
+
+### ELP2 packaging/report-only — 2026-10-18T13:42UTC
+
+- Bobby requested a two-day delivery/accounting report, not another new batch.
+  [48-hour report, actual40commits and450-file net diff](execution_loop/evidence/ELP2-10/work-summary-2026-10-18.md)
+  separates implementation/generated/tests/docs, Claude triage from delivery,
+  committed HEAD ff83f176 from47-file pending WIP and operational gates.
+- The already-started pending-control focus is terminal FAIL_OR_INCOMPLETE:
+  Node22build PASS,279tests PASS/79skipped;4suite setup failures at PG migration
+  syntax error. No pending-control commit/restore/source qualification claimed.
+  [Exact result and cleanup](execution_loop/evidence/ELP2-07/pending-control.md#actual-focused-terminal--2026-10-18t134245utc).
+  Report packaging runs no new heavy suite; no push/merge/deploy/activation.
+  Existing original mandatory gaps remain OPEN; ELP2-11 NOT_ENTRY_READY.
+
+### Approved Codex C1→C7 execution — 2026-10-18 (Asia/Saigon)
+
+- Bobby assigns the ordered peer PROMPT_FOR_CODEX.md read at clean
+  claude/fe-parity488b245738cd49a320aa948350e679f5d2092697: C1 migration144 +
+  actual pending-control gate/commit, C2 VIEW_DERIVED queue ownership, C3 safe
+  self/nav/eligibility, C4 Manager P1, C5 lifecycle/criteria/cockpit, C6 twelve
+  Source Truth Board source columns and C7 operational qualification. Preserve
+  original request IDs/phase owners; this is not ELP2-11 entry/activation.
+- New decisions supersede prior pending note: FE-036 CURRENT_ONLY; reject any
+  supplied as_of_ms with a typed error. FE-026 finite researcher-field matrix
+  is proposed for Bobby approval, not an inferred allow. Claude owns frontend,
+  B1 operations/**/operational-current generator (FE-042/043) and B2 web build
+  ARG (FE-040). Codex does not edit those files in C1–C5. Review peer deliveries
+  by actual SHA/fixture/test receipt before any allowed clean-tree landing.
+- C1/C2 local one-cell scope/validation/rollback stays in
+  [pending-control](execution_loop/evidence/ELP2-07/pending-control.md).
+  Main integrates shared schemas/ledgers, independent agents only audit next
+  C3/C4/C5/source rows privately; no concurrent heavy work. Every package gets
+  generated contract/fixture/type, source-qualified vs source-dark status and
+  owning handoff/exit; no blanket DELIVERED or consumer ACK.
+
+- C1 first normal R3 terminal15:12:31UTC failed two older isolated app fixtures
+  because their injected Core pools omitted the production5000ms checkout
+  timeout. Pending34/34, trust42/42 and access130/130 passed; full result was
+  not PASS. Corrected only those two disposable fixture pools; production
+  fail-closed check retained. [Failed receipt and retake disposition](execution_loop/evidence/ELP2-07/pending-control.md#first-normal-r3-terminal--2026-10-18t151231utc).
+
+- C6 [twelve-row Source Truth Board](execution_loop/evidence/SOURCE_TRUTH_BOARD.md)
+  now preserves Claude's latest FE cells and proposed F8 review while recording
+  exact [fresh HK source/dirty-byte pins](execution_loop/evidence/ELP2-10/source-truth-2026-10-18.md).
+  Edge8b7eb0c1 publishes guarded source; PM91ca9dfa adds approved follow-through
+  metadata. Neither is mounted-runtime proof. No consumer ACK/source activation
+  is inferred from these source-only changes; original failed receipts retained.
 

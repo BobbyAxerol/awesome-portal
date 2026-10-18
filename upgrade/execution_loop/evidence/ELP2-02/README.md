@@ -1,5 +1,18 @@
 # ELP2-02 — Identity, current sessions and safe profile lifecycle
 
+## Claude intake2026-10-18 — FE-038
+
+Owner Codex, consumer Claude. Reuse the guarded current self-profile/effective
+self-access reader and give non-admins an explicit self entry; never expose
+users/grants administration or infer TS scope from a role. To-do: publish the
+navigation/self contract, fixture and generated client without changing the
+privileged management guard. Exit: own-positive, other-user/workspace-negative,
+expiry/revoke, URL/reload and source-dark states; Claude records consumer ACK.
+[Full pinned intake/limits](../ELP2-10/claude-review-intake-2026-10-18.md).
+Original older global FE-NOT_STARTED entries below are history, not current
+S0/S1 fixture status. Source installation remains independently OPEN.
+
+
 **Current continuation2026-10-17:** approved remaining-backend batch02–11,
 entry `8ba33de3`. [OwnProfile mapping follow-through](current-mapping.md)
 now owns the additive current workspace-scoped mapping delivery and its test/

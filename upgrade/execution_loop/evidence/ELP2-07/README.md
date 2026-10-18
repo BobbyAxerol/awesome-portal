@@ -1,5 +1,17 @@
 # ELP2-07 — Trusted command và status bridge
 
+**Current2026-10-18:** registration normal-hook30009 is terminalPASS and
+landedff83f176 (39files,+5683/-6;7427API/3existing skips, build/contracts/
+scopedrestore/four access digests, frozen8runtimes/ownedcleanup PASS).
+[Exact terminal](instance-registration.md#actual-normal-hook-terminal-2026-10-18t132843utc).
+Original07-002 next named [pending-recall controls](pending-control.md) are
+APPLIED_UNCOMMITTED/NOT_RUN at entry, source-dark, no new recall/amount or
+physical transfer. Complete exact per-action correspondence and independent
+audit are mandatory, never the old singleton bridge. Claude's actual S0/S1
+fixture progress and FE-015/020/021 to-do/exit dispositions are recorded in
+[current intake](../ELP2-10/claude-review-intake-2026-10-18.md); command consumer
+remains AWAITING_CONSUMER_REVIEW. No broad07/runtime/full-source PASS.
+
 **Current2026-10-18T12:44UTC:** original07-002's complete named
 [instance-registration family](instance-registration.md) is
 APPLIED_UNCOMMITTED/FOCUSED_PASS/NORMAL_HOOK_PENDING on25218372. Actual

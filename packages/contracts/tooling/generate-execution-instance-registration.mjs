@@ -19,6 +19,7 @@ function load(path) {
 }
 const contract = load(resolve(root, '../../apps/control-api/src/execution-v2/instance-registration.contract.ts'));
 const command = load(resolve(root, '../../apps/control-api/src/execution-v2/command.contract.ts'));
+const { SESSION_COOKIE } = load(resolve(root, '../../apps/control-api/src/auth/cookies.ts'));
 // JSON Schema has no numeric maximum for decimal STRING counters. Publish the
 // exact lexical int64 bound too, not merely the Zod runtime BigInt refinement.
 const maximumCounter = '9223372036854775807';
@@ -173,7 +174,7 @@ const fixture = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', runtime_quali
 const outputs = {
   'openapi/execution-instance-registration.openapi.json': { openapi: '3.1.0',
     info: { title: 'Exact instance registration preview, durable submit and same-key status', version: '1.0.0' },
-    paths, components: { securitySchemes: { PortalSession: { type: 'apiKey', in: 'cookie', name: 'portal_session' } }, schemas } },
+    paths, components: { securitySchemes: { PortalSession: { type: 'apiKey', in: 'cookie', name: SESSION_COOKIE } }, schemas } },
   'fixtures/execution-instance-registration.synthetic.valid.json': fixture,
 };
 for (const [name, value] of Object.entries(outputs)) {
