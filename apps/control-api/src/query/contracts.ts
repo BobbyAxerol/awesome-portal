@@ -122,6 +122,37 @@ export interface PostgresRowScope {
   fingerprint: string;
 }
 
+/**
+ * One closed-domain COUNT(*) ... GROUP BY over the SAME workspace, visibility,
+ * minted row scope and normalized filters as the page, in the page's own
+ * transaction. `excludeFilterFields` names resource filter FIELDS (not columns)
+ * that are left out of this count only (faceting over a dimension's own filter);
+ * every other applied filter, and the row scope, still apply.
+ */
+export interface GroupedCountSpec {
+  /** Must be the column of a declared resource filter, so it is a supported predicate. */
+  column: string;
+  excludeFilterFields: readonly string[];
+  /** Hard bound on distinct groups; one more is a fail-closed error, never a silent cut. */
+  maxGroups: number;
+}
+
+/**
+ * The page transaction, lent for read-only work against the identical snapshot
+ * (REPEATABLE READ, READ ONLY, same statement timeout). `rows` are the raw,
+ * canonically ordered page rows BEFORE `mapRow`. The reader runs before COMMIT
+ * and must not retain the handle; it is invalid after it returns.
+ */
+export interface PostgresSnapshotReader<TRow extends Record<string, unknown>> {
+  readonly rows: readonly TRow[];
+  /** Server-authored SQL with bound values only; never request-derived text. */
+  query<R extends Record<string, unknown> = Record<string, unknown>>(
+    sql: string, values: readonly unknown[]): Promise<readonly R[]>;
+  groupedCounts(spec: GroupedCountSpec): Promise<ReadonlyMap<string, number>>;
+}
+export type PostgresSnapshotRead<TRow extends Record<string, unknown>, TExtra> =
+  (snapshot: PostgresSnapshotReader<TRow>) => Promise<TExtra>;
+
 export interface PostgresListResource<TRow extends Record<string, unknown>, TItem> {
   resourceId: string;
   table: string;

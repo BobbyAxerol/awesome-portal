@@ -6,7 +6,10 @@ import {
   KeysetPage,
   NormalizedFilter,
   NormalizedKeysetQuery,
+  GroupedCountSpec,
   PostgresListResource,
+  PostgresSnapshotRead,
+  PostgresSnapshotReader,
   PostgresRowScope,
   QueryActorContext,
   QueryContractError,
@@ -293,6 +296,31 @@ function countQuery<TRow extends Record<string, unknown>, TItem>(
   };
 }
 
+function groupedCountQuery<TRow extends Record<string, unknown>, TItem>(
+  resource: PostgresListResource<TRow, TItem>,
+  workspaceId: string,
+  filters: readonly NormalizedFilter[],
+  spec: GroupedCountSpec,
+): SqlPart {
+  const declared = Object.values(resource.filters).some((definition) => definition.column === spec.column);
+  if (!declared || !Number.isSafeInteger(spec.maxGroups) || spec.maxGroups < 1 || spec.maxGroups > 64 ||
+      spec.excludeFilterFields.some((field) => !(field in resource.filters))) {
+    throw new Error("grouped count must name a declared filter column, declared filters and a small group bound");
+  }
+  const bindings = new Bindings();
+  const where = [`${identifier(resource.workspaceColumn)} = ${bindings.add(workspaceId)}`];
+  const visibility = rowVisibilitySql(resource, bindings);
+  if (visibility) where.push(visibility);
+  const scope = rowScopeSql(resource, bindings);
+  if (scope) where.push(scope);
+  where.push(...filterSql(resource, filters.filter((filter) => !spec.excludeFilterFields.includes(filter.field)), bindings));
+  const column = identifier(spec.column);
+  return {
+    sql: `SELECT ${column}::text AS value, COUNT(*)::text AS count FROM ${tableIdentifier(resource.table)} WHERE ${where.join(" AND ")} GROUP BY ${column} ORDER BY ${column} LIMIT ${bindings.add(spec.maxGroups + 1)}`,
+    values: bindings.values,
+  };
+}
+
 function pageQuery<TRow extends Record<string, unknown>, TItem>(input: {
   resource: PostgresListResource<TRow, TItem>;
   workspaceId: string;
@@ -380,6 +408,29 @@ export class ControlPlaneQueryService {
     actor: QueryActorContext,
     raw: RawKeysetQuery,
   ): Promise<KeysetPage<TItem>> {
+    return (await this.execute(resource, actor, raw)).page;
+  }
+
+  /**
+   * `list` plus read-only work in the page's OWN repeatable-read snapshot, so
+   * counts, links or other aggregates cannot disagree with total/filtered/page.
+   */
+  async listWithSnapshot<TRow extends QueryResultRow, TItem, TExtra>(
+    resource: PostgresListResource<TRow, TItem>,
+    actor: QueryActorContext,
+    raw: RawKeysetQuery,
+    read: PostgresSnapshotRead<TRow, TExtra>,
+  ): Promise<{ page: KeysetPage<TItem>; snapshot: TExtra }> {
+    const result = await this.execute(resource, actor, raw, read);
+    return { page: result.page, snapshot: result.snapshot as TExtra };
+  }
+
+  private async execute<TRow extends QueryResultRow, TItem, TExtra>(
+    resource: PostgresListResource<TRow, TItem>,
+    actor: QueryActorContext,
+    raw: RawKeysetQuery,
+    read?: PostgresSnapshotRead<TRow, TExtra>,
+  ): Promise<{ page: KeysetPage<TItem>; snapshot: TExtra | undefined }> {
     // Clone only this new optional server-owned policy field. Existing callers
     // without rowScope retain their previous request and cursor semantics.
     if (resource.rowScope !== undefined) {
@@ -471,6 +522,34 @@ export class ControlPlaneQueryService {
             lastBoundary,
           )
         : hasExtra;
+      let snapshot: TExtra | undefined;
+      if (read) {
+        let open = true;
+        const lent: PostgresSnapshotReader<TRow> = {
+          rows: Object.freeze([...canonicalRows]),
+          query: async <R extends Record<string, unknown>>(sql: string, values: readonly unknown[]) => {
+            if (!open) throw new Error("snapshot reader used after its transaction");
+            return (await client.query<R & QueryResultRow>(sql, [...values])).rows as readonly R[];
+          },
+          groupedCounts: async (spec) => {
+            if (!open) throw new Error("snapshot reader used after its transaction");
+            const grouped = groupedCountQuery(resource, actor.workspaceId, query.filters, spec);
+            const result = await client.query<{ value: string | null; count: string }>(grouped.sql, grouped.values);
+            if (result.rows.length > spec.maxGroups) {
+              throw new QueryContractError("QUERY_GROUP_BOUND", "Grouped count exceeds its bound.", 503);
+            }
+            const groups = new Map<string, number>();
+            for (const row of result.rows) {
+              if (row.value === null) {
+                throw new QueryContractError("QUERY_GROUP_VALUE_UNAVAILABLE", "A grouped value is unavailable.", 503);
+              }
+              groups.set(row.value, countValue(row.count));
+            }
+            return groups;
+          },
+        };
+        try { snapshot = await read(lent); } finally { open = false; }
+      }
       await client.query("COMMIT");
       inTransaction = false;
 
@@ -515,15 +594,18 @@ export class ControlPlaneQueryService {
         page_limit: query.limit,
       });
       return {
-        rows,
-        total_count: totalCount,
-        filtered_count: filteredCount,
-        next_cursor: nextCursor,
-        prev_cursor: previousCursor,
-        has_more: hasMore,
-        has_previous: hasPrevious,
-        applied_filters: query.filters.map(({ field, op, value }) => ({ field, op, value })),
-        applied_sort: query.sort,
+        snapshot,
+        page: {
+          rows,
+          total_count: totalCount,
+          filtered_count: filteredCount,
+          next_cursor: nextCursor,
+          prev_cursor: previousCursor,
+          has_more: hasMore,
+          has_previous: hasPrevious,
+          applied_filters: query.filters.map(({ field, op, value }) => ({ field, op, value })),
+          applied_sort: query.sort,
+        },
       };
     } catch (error) {
       if (inTransaction) await this.rollback(client);

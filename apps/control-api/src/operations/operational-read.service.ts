@@ -9,8 +9,10 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { f0ReadRecord } from "./f0-read.contract";
 import { IdentifierSchema } from "./contracts";
 import { CurrentOperationalReads, OperationalReadError, operationalHttpCall, type PreparedOperationalRead } from "./current-operational-read";
-import { operationalQueue, operationalQueueItem, operationalQueueQuery, operationalWorkflow, operationalIncident,
-  type OperationalQueue, type OperationalQueueItem, type OperationalWorkflow, type OperationalIncident } from "./operational-read.contract";
+import { OPERATIONAL_INCIDENT_LINK_BOUND, operationalQueue, operationalQueueItem, operationalQueueQuery, operationalStatusCountDimensions,
+  operationalWorkflow, operationalIncident, type OperationalIncidentLink, type OperationalIncidentLinks, type OperationalQueue,
+  type OperationalQueueItem, type OperationalStatusCountDimension, type OperationalStatusCounts, type OperationalWorkflow,
+  type OperationalIncident } from "./operational-read.contract";
 import { OperationalReadRepository } from "./operational-read.repository";
 
 const columns = ["operation_id", "operation_kind", "command_key", "target_type", "target_id", "environment",
@@ -33,6 +35,30 @@ const resource: PostgresListResource<QueryResultRow, OperationalQueueItem> = {
   defaultSort: [{ field: "created_at", direction: "desc" }], allowedRoles: ["ADMIN", "USER"],
   statementTimeoutMs: 2000, mapRow: item,
 };
+type LinkRow = QueryResultRow & { operation_id: string };
+type QueueSnapshot = { links: ReadonlyMap<string, OperationalIncidentLinks>; counts: OperationalStatusCounts };
+const noLinks = (): OperationalIncidentLinks => ({ basis: "CURRENT_LINK_ROWS_AUTHORIZED_INCIDENTS_ONLY",
+  bound: OPERATIONAL_INCIDENT_LINK_BOUND, authorized_link_count: 0, truncated: false, items: [] });
+/** A link whose incident identity or time cannot be represented exactly is a typed NOT_ATTESTED item that
+ * still occupies its slot and count; it is never dropped and never replaced by a guessed value. */
+function linkItem(row: QueryResultRow): OperationalIncidentLink {
+  const history = { availability: "NOT_PUBLISHED", reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED" } as const;
+  if (!IdentifierSchema.safeParse(row.incident_id).success || typeof row.linked_at !== "string")
+    return { state: "NOT_ATTESTED", reason_code: "INCIDENT_LINK_IDENTITY_NOT_REPRESENTABLE", link_history: history };
+  return { state: "LINKED", incident_id: row.incident_id, relationship: row.relationship, linked_at: row.linked_at,
+    incident: { target: { type: row.target_type, id: row.target_id }, environment: row.environment,
+      severity: row.severity, workflow_state: row.workflow_state }, link_history: history };
+}
+function groupLinks(rows: readonly QueryResultRow[]): Map<string, OperationalIncidentLinks> {
+  const grouped = new Map<string, QueryResultRow[]>();
+  for (const row of rows as readonly LinkRow[]) grouped.set(row.operation_id, [...grouped.get(row.operation_id) ?? [], row]);
+  return new Map([...grouped].map(([operation, list]) => {
+    const authorized = Number(list[0].authorized_total);
+    if (!Number.isSafeInteger(authorized) || authorized < list.length) throw new OperationalReadError("OPERATIONAL_READ_UNAVAILABLE");
+    return [operation, { basis: "CURRENT_LINK_ROWS_AUTHORIZED_INCIDENTS_ONLY" as const, bound: OPERATIONAL_INCIDENT_LINK_BOUND,
+      authorized_link_count: authorized, truncated: authorized > list.length, items: list.map(linkItem) }];
+  }));
+}
 function bounded<T>(body: T): T {
   if (Buffer.byteLength(JSON.stringify(body), "utf8") > 1_048_576) throw new OperationalReadError("OPERATIONAL_READ_RESPONSE_BOUND");
   return body;
@@ -72,15 +98,35 @@ export class OperationalReadService {
         activeKeyId: this.config.QUERY_CURSOR_ACTIVE_KEY_ID, keys, ttlSeconds: this.config.QUERY_CURSOR_TTL_SECONDS }));
       const selected: RawFilterInput[] = filters.filter(field => query[field] !== undefined)
         .map(field => ({ field, op: "eq", value: query[field] }));
-      const page = await engine.list({ ...resource, rowScope: cohort.scope },
+      // One repeatable-read snapshot: total, filtered, page rows, incident links and every status count
+      // below are read in the SAME transaction under the SAME minted scope, never page rows or extra calls.
+      const { page, snapshot } = await engine.listWithSnapshot<QueryResultRow, OperationalQueueItem, QueueSnapshot>(
+        { ...resource, rowScope: cohort.scope },
         { actorId: principal.user.userId, workspaceId: principal.workspaceId, role: principal.user.role },
-        { after: query.after, before: query.before, limit: query.limit ?? defaultLimit, sort: query.sort, filters: selected });
+        { after: query.after, before: query.before, limit: query.limit ?? defaultLimit, sort: query.sort, filters: selected },
+        async lent => {
+          const ids = lent.rows.map(row => row.operation_id).filter((id): id is string => typeof id === "string");
+          const links = groupLinks(await this.repository.incidentLinks(lent, principal.workspaceId, ids, cohort.scope));
+          const dimensions: Record<string, unknown> = {};
+          for (const field of Object.keys(operationalStatusCountDimensions) as OperationalStatusCountDimension[]) {
+            const domain: readonly string[] = operationalStatusCountDimensions[field];
+            const groups = await lent.groupedCounts({ column: field, excludeFilterFields: [field], maxGroups: domain.length });
+            for (const value of groups.keys()) if (!domain.includes(value)) throw new OperationalReadError("OPERATIONAL_READ_UNAVAILABLE");
+            const counts = Object.fromEntries(domain.map(value => [value, groups.get(value) ?? 0]));
+            dimensions[field] = { own_filter_applied: selected.some(filter => filter.field === field),
+              total: Object.values(counts).reduce((sum, value) => sum + value, 0), counts };
+          }
+          return { links, counts: { basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS_EXCLUDING_OWN_DIMENSION",
+            succeeded_means: "PORTAL_QUEUE_RECORD_STATE_ONLY", dimensions } as OperationalStatusCounts };
+        });
+      const rows = page.rows.map(row => ({ ...row, incident_links: snapshot.links.get(row.operation_id) ?? noLinks() }));
       const result = bounded(operationalQueue.parse({ schema_version: "portal.execution.operational-queue.v2",
         workspace_id: principal.workspaceId, record_authority: "PORTAL", record_basis: "PORTAL_CURRENT_OPERATIONAL_WORKFLOW",
         coverage: "AUTHORIZED_SUPPORTED_TARGETS_ONLY", supported_target_types: ["ACCOUNT", "PORTFOLIO", "DEPLOYMENT"],
         source_integration_state: "UNAVAILABLE", source_side_effect_requested: false, source_as_of_ms: null,
         observed_at_ms: Math.max(cohort.context.now_ms, Date.now()),
-        read_truth: exactPageReadTruth(page, "NO_MATCHING_AUTHORIZED_PORTAL_OPERATIONS"), page }));
+        read_truth: exactPageReadTruth(page, "NO_MATCHING_AUTHORIZED_PORTAL_OPERATIONS"),
+        page: { ...page, rows, status_counts: snapshot.counts } }));
       return { result };
     }));
   }

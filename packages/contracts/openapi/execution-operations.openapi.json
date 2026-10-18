@@ -459,7 +459,7 @@
     "/api/v1/execution/operations": {
       "get": {
         "operationId": "listExecutionOperationsQueue",
-        "description": "Sticky current Core mode is selected before strict parsing. Legacy v1 remains separate. V2 requires complete current TS-accepted audit tuples ACCOUNT/PORTFOLIO/DEPLOYMENT per environment BEFORE SQL counts/page; USER/ADMIN are not grants. Source journal unavailable, no mutation. assigned_to is unsupported in V2 (400), not ignored. Existing limit1..250 and both cursor directions preserved; optional target_id narrows the query.",
+        "description": "Sticky current Core mode is selected before strict parsing. Legacy v1 remains separate. V2 requires complete current TS-accepted audit tuples ACCOUNT/PORTFOLIO/DEPLOYMENT per environment BEFORE SQL counts/page; USER/ADMIN are not grants. Source journal unavailable, no mutation. assigned_to is unsupported in V2 (400), not ignored. Existing limit1..250 and both cursor directions preserved; optional target_id narrows the query. Additive and optional in the V2 body: rows[].incident_links (FE-042, at most 3 authorized links per operation, both ends independently authorized) and page.status_counts (FE-043, triage_state/verification_result/source_status/severity counted over the same snapshot, scope and filters as the page, each dimension ignoring its own filter). SUCCEEDED in the queue is not financial APPLIED, projection convergence or venue success.",
         "parameters": [
           {
             "name": "workspace_id",
@@ -1210,6 +1210,18 @@
       },
       "OperationalIncidentCompositionV2": {
         "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalIncidentCompositionV2"
+      },
+      "OperationalIncidentLinkV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalIncidentLinkV2"
+      },
+      "OperationalIncidentLinksV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalIncidentLinksV2"
+      },
+      "OperationalStatusCountsV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalStatusCountsV2"
+      },
+      "OperationalQueueRowV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalQueueRowV2"
       }
     }
   }

@@ -130,7 +130,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Sticky current Core mode is selected before strict parsing. Legacy v1 remains separate. V2 requires complete current TS-accepted audit tuples ACCOUNT/PORTFOLIO/DEPLOYMENT per environment BEFORE SQL counts/page; USER/ADMIN are not grants. Source journal unavailable, no mutation. assigned_to is unsupported in V2 (400), not ignored. Existing limit1..250 and both cursor directions preserved; optional target_id narrows the query. */
+        /** @description Sticky current Core mode is selected before strict parsing. Legacy v1 remains separate. V2 requires complete current TS-accepted audit tuples ACCOUNT/PORTFOLIO/DEPLOYMENT per environment BEFORE SQL counts/page; USER/ADMIN are not grants. Source journal unavailable, no mutation. assigned_to is unsupported in V2 (400), not ignored. Existing limit1..250 and both cursor directions preserved; optional target_id narrows the query. Additive and optional in the V2 body: rows[].incident_links (FE-042, at most 3 authorized links per operation, both ends independently authorized) and page.status_counts (FE-043, triage_state/verification_result/source_status/severity counted over the same snapshot, scope and filters as the page, each dimension ignoring its own filter). SUCCEEDED in the queue is not financial APPLIED, projection convergence or venue success. */
         get: operations["listExecutionOperationsQueue"];
         put?: never;
         post?: never;
@@ -429,7 +429,7 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
-        /** @description Counts are scoped BEFORE filters/page/sort/edge probes to current supported audit tuples. Nonzero authority with zero rows is EMPTY; no authority is404. Runtime additionally enforces total>=filtered>=page rows, exact read_truth, and has_more/previous iff their opaque cursor is nonnull. Bound1MiB. No ADMIN/read_all/creator bypass or actor/prose/incident/source journal disclosure. */
+        /** @description Counts are scoped BEFORE filters/page/sort/edge probes to current supported audit tuples. Nonzero authority with zero rows is EMPTY; no authority is404. Runtime additionally enforces total>=filtered>=page rows, exact read_truth, and has_more/previous iff their opaque cursor is nonnull. Bound1MiB. No ADMIN/read_all/creator bypass or actor/prose/source journal disclosure. Optional additive amendment (FE-042/FE-043): rows may carry incident_links and page may carry status_counts, both read in the same repeatable-read snapshot; see OperationalIncidentLinksV2 and OperationalStatusCountsV2. Queue SUCCEEDED is a Portal queue-record state, not financial APPLIED, projection convergence or venue success. */
         OperationalQueueV2: {
             /** @constant */
             schema_version: "portal.execution.operational-queue.v2";
@@ -459,7 +459,7 @@ export interface components {
                 scope: "REQUEST";
             };
             page: {
-                rows: components["schemas"]["OperationalQueueItemV2"][];
+                rows: components["schemas"]["OperationalQueueRowV2"][];
                 total_count: number;
                 filtered_count: number;
                 next_cursor: string | null;
@@ -478,6 +478,7 @@ export interface components {
                     /** @enum {string} */
                     direction: "asc" | "desc";
                 }[];
+                status_counts?: components["schemas"]["OperationalStatusCountsV2"];
             };
         };
         /** @description Actual immutable workspace/id/key/target/environment/source queue-F0 join, not inferred family. provenance_basis distinguishes exact SQL timestamp copy from the existing writer's historical JS Date millisecond truncation (not arbitrary tolerance); historical bytes are not rewritten. Different author with full exact current audit is allowed; explicit F0 routes retain their own-author ceiling. Runtime additionally enforces operation ids equal; original planning expiry is not read expiry. */
@@ -652,6 +653,145 @@ export interface components {
             data: {
                 incident: components["schemas"]["OperationalIncidentCurrentV2"];
             };
+        };
+        /** @description One current many-to-many link row (execution_incident_operation_links) to an incident whose OWN target tuple the caller is independently authorized for. LINKED publishes only incident id, relationship, link time and a minimal current-root summary (target, environment, severity, workflow_state); never title, prose, actors, evidence or counts. link_history is always the typed NOT_PUBLISHED / ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED absence: the link is a current pointer and does NOT attest the incident's target when the link was written. NOT_ATTESTED keeps the slot and the count for an authorized link whose id or time cannot be represented exactly; it is never dropped. */
+        OperationalIncidentLinkV2: {
+            /** @constant */
+            state: "LINKED";
+            incident_id: string;
+            /** @enum {string} */
+            relationship: "TRIGGERED_BY" | "MITIGATES" | "RELATED";
+            /** Format: date-time */
+            linked_at: string;
+            incident: {
+                target: {
+                    /** @enum {string} */
+                    type: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                    id: string;
+                };
+                /** @enum {string} */
+                environment: "PAPER" | "SANDBOX" | "LIVE";
+                /** @enum {string} */
+                severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+                /** @enum {string} */
+                workflow_state: "OPEN" | "MITIGATED" | "RESOLVED";
+            };
+            link_history: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED";
+            };
+        } | {
+            /** @constant */
+            state: "NOT_ATTESTED";
+            /** @constant */
+            reason_code: "INCIDENT_LINK_IDENTITY_NOT_REPRESENTABLE";
+            link_history: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED";
+            };
+        };
+        /** @description FE-042. Per operation, at most 3 links, newest link first (link time descending, then incident id descending in byte order). BOTH ends must be authorized for the caller: the operation row is inside the minted audit scope AND the incident's own target/environment tuple is inside the SAME minted scope; operation access never implies incident access and no incident is picked as 'the' incident. Links to incidents outside the scope are omitted AND not counted, so an empty or short list never proves that no other incident exists; authorized_link_count counts only authorized links and truncated is true exactly when it exceeds items.length. Incident target types outside ACCOUNT/PORTFOLIO/DEPLOYMENT are never authorizable here. Read in the same repeatable-read snapshot as the page. Runtime additionally enforces items.length==min(authorized_link_count,3), truncated, and unique incident ids. */
+        OperationalIncidentLinksV2: {
+            /** @constant */
+            basis: "CURRENT_LINK_ROWS_AUTHORIZED_INCIDENTS_ONLY";
+            /** @constant */
+            bound: 3;
+            authorized_link_count: number;
+            truncated: boolean;
+            items: components["schemas"]["OperationalIncidentLinkV2"][];
+        };
+        /** @description FE-043. Server-counted status distribution over the SAME repeatable-read snapshot, minted audit scope and applied filters as total_count, filtered_count and the page rows; not page rows and not separate status calls. Supported dimensions are exactly triage_state, verification_result, source_status and severity, each zero-filled over its closed domain. Each dimension counts the authorized set under every applied filter EXCEPT its own (own filter ignored so a selected KPI tile still shows its siblings); own_filter_applied says whether such a filter was dropped. Therefore: with no own filter, total equals filtered_count; with one, counts[selected value] (zero for a value outside the closed domain) equals filtered_count and total>=filtered_count; always total<=total_count and sum(counts)==total. Counts ignore cursor, limit and sort. 'SUCCEEDED' (source_status or verification_result) is the Portal queue record's state only (succeeded_means): it is NOT financial APPLIED, NOT projection convergence and NOT venue success; no source, projection or venue claim is made. environment, target_type, target_id and command_key are filters but not count dimensions. Runtime additionally enforces these arithmetic invariants. */
+        OperationalStatusCountsV2: {
+            /** @constant */
+            basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS_EXCLUDING_OWN_DIMENSION";
+            /** @constant */
+            succeeded_means: "PORTAL_QUEUE_RECORD_STATE_ONLY";
+            dimensions: {
+                triage_state: {
+                    own_filter_applied: boolean;
+                    total: number;
+                    counts: {
+                        UNACKNOWLEDGED: number;
+                        ACKNOWLEDGED: number;
+                        RESOLVED: number;
+                    };
+                };
+                verification_result: {
+                    own_filter_applied: boolean;
+                    total: number;
+                    counts: {
+                        NOT_STARTED: number;
+                        PENDING: number;
+                        SUCCEEDED: number;
+                        FAILED: number;
+                        PARTIAL: number;
+                        UNCERTAIN: number;
+                        DENIED: number;
+                        EXPIRED: number;
+                    };
+                };
+                source_status: {
+                    own_filter_applied: boolean;
+                    total: number;
+                    counts: {
+                        BLOCKED: number;
+                        PENDING: number;
+                        RUNNING: number;
+                        SUCCEEDED: number;
+                        FAILED: number;
+                        EXPIRED: number;
+                        UNCERTAIN: number;
+                    };
+                };
+                severity: {
+                    own_filter_applied: boolean;
+                    total: number;
+                    counts: {
+                        INFO: number;
+                        WARNING: number;
+                        ERROR: number;
+                        CRITICAL: number;
+                    };
+                };
+            };
+        };
+        /** @description OperationalQueueItemV2 plus the OPTIONAL additive FE-042 incident_links; absent on a server that predates it. A current server always sends it (possibly with zero authorized links). The workflow detail keeps the unextended item. */
+        OperationalQueueRowV2: {
+            operation_id: string;
+            /** @constant */
+            operation_kind: "EXECUTION_COMMAND";
+            command_key: string;
+            target: {
+                /** @enum {string} */
+                type: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            /** @enum {string} */
+            risk_tier: "R0_READ" | "R1_PAPER_MUTATION" | "R2_SANDBOX" | "R3_LIVE_PROTECTIVE" | "R4_LIVE_RISK_INCREASING" | "UNCLASSIFIED" | "BLOCKED";
+            /** @enum {string} */
+            severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+            /** @enum {string} */
+            source_authority: "PORTAL" | "EXECUTION" | "BROKER";
+            /** @enum {string} */
+            source_status: "BLOCKED" | "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "EXPIRED" | "UNCERTAIN";
+            /** @enum {string} */
+            verification_result: "NOT_STARTED" | "PENDING" | "SUCCEEDED" | "FAILED" | "PARTIAL" | "UNCERTAIN" | "DENIED" | "EXPIRED";
+            /** @enum {string} */
+            triage_state: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
+            workflow_version: number;
+            acknowledged_at: string | null;
+            resolved_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            incident_links?: components["schemas"]["OperationalIncidentLinksV2"];
         };
         Identifier: string;
         /** Format: date-time */

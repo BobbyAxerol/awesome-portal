@@ -20,7 +20,17 @@
  *   display and filters only; the wire value is kept beside it;
  * - times are ISO instants with up to nine fractional digits. Seconds and
  *   below are kept in `iso`; `ms` is for ordering and `formatAsOf`;
- * - MITIGATED and RESOLVED are local triage records, never broker safety.
+ * - MITIGATED and RESOLVED are local triage records, never broker safety;
+ * - `incident_links` (FE-042) and `status_counts` (FE-043) are OPTIONAL and
+ *   additive. Absent means the server predates them and is exposed as
+ *   `undefined` ("Not published"), never as zero links or zero counts. Present
+ *   and malformed voids the page like any other bad row. Links are at most 3
+ *   per operation and list ONLY incidents the caller may read; a short list
+ *   never proves no other incident exists. Counts come from the same server
+ *   snapshot, scope and filters as `filtered_count`, each dimension ignoring
+ *   its own filter, and are never recomputed from the loaded page. A queue
+ *   SUCCEEDED is the Portal queue record's state only: not financial APPLIED,
+ *   not projection convergence, not venue success.
  */
 import { readUtcEpochMs, type UtcEpochMs } from "../../screenDataContract";
 import { type ExecEnv } from "../urlState";
@@ -72,10 +82,69 @@ export type IncidentStateV2 = (typeof INCIDENT_STATES_V2)[number];
 const WIRE_ENVIRONMENTS = ["PAPER", "SANDBOX", "LIVE"] as const;
 type WireEnvironment = (typeof WIRE_ENVIRONMENTS)[number];
 
+export const INCIDENT_LINK_RELATIONSHIPS_V2 = ["TRIGGERED_BY", "MITIGATES", "RELATED"] as const;
+export type IncidentLinkRelationshipV2 = (typeof INCIDENT_LINK_RELATIONSHIPS_V2)[number];
+/** Most links the server returns per operation (FE-042). */
+export const INCIDENT_LINK_BOUND_V2 = 3;
+
 /** An ISO instant: sortable `ms` for display and ordering, the original text kept for the record. */
 export interface InstantV2 {
   iso: string;
   ms: UtcEpochMs;
+}
+
+/**
+ * One authorized operation-to-incident link. `NOT_ATTESTED` keeps its slot and
+ * count but names no incident: its identity could not be represented exactly.
+ * `historyReasonCode` is the typed absence: a link is a current pointer, not
+ * proof of the incident's target when the link was written.
+ */
+export type IncidentLinkV2 =
+  | {
+    state: "LINKED";
+    incidentId: string;
+    relationship: IncidentLinkRelationshipV2;
+    linkedAt: InstantV2;
+    incident: {
+      targetType: TargetTypeV2;
+      targetId: string;
+      environment: ExecEnv;
+      environmentWire: WireEnvironment;
+      severity: SeverityV2;
+      workflowState: IncidentStateV2;
+    };
+    historyReasonCode: string;
+  }
+  | { state: "NOT_ATTESTED"; reasonCode: string; historyReasonCode: string };
+
+export interface IncidentLinksV2 {
+  /** Authorized links only, newest first. Never more than `INCIDENT_LINK_BOUND_V2`. */
+  items: readonly IncidentLinkV2[];
+  /** Links to incidents the caller may read; unauthorized links are neither listed nor counted. */
+  authorizedLinkCount: number;
+  /** True exactly when `authorizedLinkCount` exceeds `items.length`. */
+  truncated: boolean;
+}
+
+export interface StatusCountDimensionV2<K extends string> {
+  /** True when this dimension's own filter was dropped to count it. */
+  ownFilterApplied: boolean;
+  /** The authorized set under every OTHER applied filter (sum of `counts`). */
+  total: number;
+  /** Zero-filled over the closed domain. */
+  counts: Readonly<Record<K, number>>;
+}
+
+/**
+ * Server-counted over the same snapshot, scope and filters as the page. With
+ * no own filter a dimension's `total` equals `filteredCount`; with one, the
+ * selected bucket equals `filteredCount`.
+ */
+export interface StatusCountsV2 {
+  triageState: StatusCountDimensionV2<TriageStateV2>;
+  verificationResult: StatusCountDimensionV2<VerificationResultV2>;
+  sourceStatus: StatusCountDimensionV2<SourceStatusV2>;
+  severity: StatusCountDimensionV2<SeverityV2>;
 }
 
 export interface OperationV2 {
@@ -98,6 +167,8 @@ export interface OperationV2 {
   resolvedAt: InstantV2 | null;
   createdAt: InstantV2;
   updatedAt: InstantV2;
+  /** FE-042. `undefined` = the server did not publish links (render "Not published (FE-042)"). */
+  incidentLinks?: IncidentLinksV2;
 }
 
 export interface QueuePageV2 {
@@ -111,6 +182,8 @@ export interface QueuePageV2 {
   hasPrevious: boolean;
   appliedFilters: readonly { field: string; value: string }[];
   appliedSort: readonly { field: "created_at" | "operation_id"; direction: "asc" | "desc" }[];
+  /** FE-043. `undefined` = the server did not publish counts (render "Not published (FE-043)"); never derive them from `rows`. */
+  statusCounts?: StatusCountsV2;
 }
 
 export interface OperationalQueueV2 {
@@ -222,6 +295,61 @@ function targetOf(value: unknown): { type: TargetTypeV2; id: string } | null {
   return type === null || id === null ? null : { type, id };
 }
 
+function readLink(raw: unknown): IncidentLinkV2 | null {
+  const link = record(raw);
+  if (link === null) return null;
+  const history = record(link.link_history);
+  if (history === null || history.availability !== "NOT_PUBLISHED") return null;
+  const historyReasonCode = text(history.reason_code);
+  if (historyReasonCode === null) return null;
+  if (link.state === "NOT_ATTESTED") {
+    const reasonCode = text(link.reason_code);
+    // A slot with no identity must not carry one: that would be a guessed incident.
+    return reasonCode === null || "incident_id" in link ? null : { state: "NOT_ATTESTED", reasonCode, historyReasonCode };
+  }
+  if (link.state !== "LINKED") return null;
+  const incidentId = text(link.incident_id);
+  const relationship = oneOf(link.relationship, INCIDENT_LINK_RELATIONSHIPS_V2);
+  const linkedAt = readInstant(link.linked_at);
+  const summary = record(link.incident);
+  const target = targetOf(summary?.target);
+  const env = environmentOf(summary?.environment);
+  const severity = oneOf(summary?.severity, SEVERITIES_V2);
+  const workflowState = oneOf(summary?.workflow_state, INCIDENT_STATES_V2);
+  if (
+    incidentId === null || relationship === null || linkedAt === null || target === null || env === null
+    || severity === null || workflowState === null
+  ) return null;
+  return {
+    state: "LINKED", incidentId, relationship, linkedAt, historyReasonCode,
+    incident: {
+      targetType: target.type, targetId: target.id, environment: env.env, environmentWire: env.wire,
+      severity, workflowState,
+    },
+  };
+}
+
+function readIncidentLinks(raw: unknown): IncidentLinksV2 | null {
+  const links = record(raw);
+  if (links === null || !Array.isArray(links.items)) return null;
+  if (links.basis !== "CURRENT_LINK_ROWS_AUTHORIZED_INCIDENTS_ONLY" || links.bound !== INCIDENT_LINK_BOUND_V2) return null;
+  const authorizedLinkCount = count(links.authorized_link_count);
+  if (authorizedLinkCount === null || typeof links.truncated !== "boolean" || links.items.length > INCIDENT_LINK_BOUND_V2) return null;
+  const items: IncidentLinkV2[] = [];
+  for (const entry of links.items) {
+    const item = readLink(entry);
+    if (item === null) return null;
+    items.push(item);
+  }
+  const ids = items.flatMap((item) => (item.state === "LINKED" ? [item.incidentId] : []));
+  // The server's own arithmetic: a short list is only legitimate when it is the whole authorized set.
+  if (
+    items.length !== Math.min(authorizedLinkCount, INCIDENT_LINK_BOUND_V2)
+    || links.truncated !== authorizedLinkCount > items.length || new Set(ids).size !== ids.length
+  ) return null;
+  return { items, authorizedLinkCount, truncated: links.truncated };
+}
+
 function readOperation(raw: unknown): OperationV2 | null {
   const row = record(raw);
   if (row === null) return null;
@@ -253,11 +381,75 @@ function readOperation(raw: unknown): OperationV2 | null {
   if (triageState === "UNACKNOWLEDGED" && (acknowledgedAt !== null || resolvedAt !== null)) return null;
   if (triageState === "ACKNOWLEDGED" && resolvedAt !== null) return null;
   if (triageState === "RESOLVED" && resolvedAt === null) return null;
+  // Optional additive FE-042. Absent -> undefined; present-but-bad voids the page.
+  let incidentLinks: IncidentLinksV2 | undefined;
+  if (row.incident_links !== undefined) {
+    const links = readIncidentLinks(row.incident_links);
+    if (links === null) return null;
+    incidentLinks = links;
+  }
   return {
     operationId, commandKey, targetType: target.type, targetId: target.id,
     environment: env.env, environmentWire: env.wire,
     riskTier, severity, sourceAuthority, sourceStatus, verificationResult, triageState, workflowVersion,
     acknowledgedAt, resolvedAt, createdAt, updatedAt,
+    ...(incidentLinks === undefined ? {} : { incidentLinks }),
+  };
+}
+
+function readDimension<K extends string>(
+  raw: unknown, domain: readonly K[],
+): StatusCountDimensionV2<K> | null {
+  const dimension = record(raw);
+  const counts = record(dimension?.counts);
+  const total = count(dimension?.total);
+  if (dimension === null || counts === null || total === null || typeof dimension.own_filter_applied !== "boolean") return null;
+  // Closed and zero-filled: a missing or extra bucket is a malformed distribution, not a smaller one.
+  if (Object.keys(counts).length !== domain.length) return null;
+  const out = {} as Record<K, number>;
+  let sum = 0;
+  for (const key of domain) {
+    const value = count(counts[key]);
+    if (value === null) return null;
+    out[key] = value;
+    sum += value;
+  }
+  return sum === total ? { ownFilterApplied: dimension.own_filter_applied, total, counts: out } : null;
+}
+
+function readStatusCounts(
+  raw: unknown, totalCount: number, filteredCount: number, appliedFilters: QueuePageV2["appliedFilters"],
+): StatusCountsV2 | null {
+  const counts = record(raw);
+  const dimensions = record(counts?.dimensions);
+  if (
+    counts === null || dimensions === null
+    || counts.basis !== "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS_EXCLUDING_OWN_DIMENSION"
+    // SUCCEEDED here is a Portal queue record state; any other meaning is refused.
+    || counts.succeeded_means !== "PORTAL_QUEUE_RECORD_STATE_ONLY"
+    || Object.keys(dimensions).length !== 4
+  ) return null;
+  const read = {
+    triage_state: readDimension(dimensions.triage_state, TRIAGE_STATES_V2),
+    verification_result: readDimension(dimensions.verification_result, VERIFICATION_RESULTS_V2),
+    source_status: readDimension(dimensions.source_status, SOURCE_STATUSES_V2),
+    severity: readDimension(dimensions.severity, SEVERITIES_V2),
+  };
+  for (const [field, dimension] of Object.entries(read)) {
+    if (dimension === null) return null;
+    const own = appliedFilters.find((filter) => filter.field === field);
+    // A filter value outside the closed domain selects nothing: its bucket is exactly zero.
+    const selected = own === undefined ? undefined : (dimension.counts as Record<string, number | undefined>)[own.value] ?? 0;
+    // Facet arithmetic (server-enforced too): no own filter -> the dimension is the filtered set;
+    // an own filter -> the bucket it selects is the filtered set.
+    if (
+      dimension.total > totalCount || dimension.total < filteredCount || dimension.ownFilterApplied !== (own !== undefined)
+      || (own === undefined ? dimension.total !== filteredCount : selected !== filteredCount)
+    ) return null;
+  }
+  return {
+    triageState: read.triage_state!, verificationResult: read.verification_result!,
+    sourceStatus: read.source_status!, severity: read.severity!,
   };
 }
 
@@ -311,9 +503,17 @@ function readPage(raw: unknown): QueuePageV2 | null {
   // continuation flag exists exactly when its cursor does.
   if (totalCount < filteredCount || filteredCount < rows.length) return null;
   if (page.has_more !== (nextCursor !== null) || page.has_previous !== (prevCursor !== null)) return null;
+  // Optional additive FE-043. Absent -> undefined; present-but-bad voids the page.
+  let statusCounts: StatusCountsV2 | undefined;
+  if (page.status_counts !== undefined) {
+    const counts = readStatusCounts(page.status_counts, totalCount, filteredCount, appliedFilters);
+    if (counts === null) return null;
+    statusCounts = counts;
+  }
   return {
     rows, totalCount, filteredCount, nextCursor, prevCursor,
     hasMore: page.has_more, hasPrevious: page.has_previous, appliedFilters, appliedSort,
+    ...(statusCounts === undefined ? {} : { statusCounts }),
   };
 }
 

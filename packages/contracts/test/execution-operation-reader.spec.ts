@@ -111,8 +111,8 @@ describe("ELP2-04 finite current operational variants and canonical runtime pari
     ["workflow","OperationalWorkflowV2",operationalWorkflow],
     ["incident","OperationalIncidentCurrentV2",operationalIncident],
   ] as const;
-  it("publishes six finite additive component types without replacing legacy bodies",()=>{
-    expect(Object.keys(definitions)).toHaveLength(6);
+  it("publishes ten finite additive component types without replacing legacy bodies",()=>{
+    expect(Object.keys(definitions)).toHaveLength(10);
     for(const [name,schema] of Object.entries(definitions)){
       expect(load("schemas/execution-operations.v1.schema.json").$defs[name]).toEqual(schema);
       expect(documents[0].components.schemas[name]).toEqual({$ref:"../schemas/execution-operations.v1.schema.json#/$defs/"+name});
@@ -166,6 +166,81 @@ describe("ELP2-04 finite current operational variants and canonical runtime pari
     expect(operationalQueueQuery.safeParse(query).success).toBe(true);
     for(const patch of [{limit:"251"},{limit:["1","2"]},{target_type:"ORDER"},{after:"a",before:"b"},{private_actor:"TEST_ONLY"}])
       expect(operationalQueueQuery.safeParse({...query,...patch}).success).toBe(false);
+  });
+});
+
+describe("FE-042/FE-043 optional additive incident links and same-snapshot status counts",()=>{
+  const linked=load("fixtures/execution-operational-queue-links-counts.synthetic.valid.json");
+  const queue=linked.queue,legacy=load("fixtures/execution-operational-current.synthetic.valid.json").queue;
+  const definitions=operationalCurrentSchemas();
+  const validate=(name:string)=>ajv.compile({$ref:base+"openapi/execution-operations.openapi.json#/components/schemas/"+name});
+  const rowsWith=(edit:(rows:any[])=>void)=>{const next=structuredClone(queue);edit(next.page.rows);return next;};
+  const countsWith=(edit:(c:any)=>void)=>{const next=structuredClone(queue);edit(next.page.status_counts);return next;};
+  it("the new named fixture validates in schema and runtime; the L0 fixture keeps its meaning and stays valid without the fields",()=>{
+    const check=validate("OperationalQueueV2");
+    expect(linked.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");expect(linked.runtime_qualified).toBe(false);
+    expect(check(queue),JSON.stringify(check.errors)).toBe(true);expect(operationalQueue.safeParse(queue).success).toBe(true);
+    expect(check(legacy)).toBe(true);expect(operationalQueue.safeParse(legacy).success).toBe(true);
+    expect("incident_links" in legacy.page.rows[0]).toBe(false);expect("status_counts" in legacy.page).toBe(false);
+    expect(legacy.page.rows).toHaveLength(1);expect(legacy.page.rows[0].operation_id).toBe("op_01K3COMMANDPLAN000000000000");
+  });
+  it("the workflow detail keeps the unextended item and still rejects incident_links",()=>{
+    const detail=load("fixtures/execution-operational-current.synthetic.valid.json").workflow;
+    const body={...detail,operation:{...detail.operation,incident_links:queue.page.rows[0].incident_links}};
+    expect(validate("OperationalWorkflowV2")(body)).toBe(false);expect(operationalWorkflow.safeParse(body).success).toBe(false);
+  });
+  it("states bound 3, both-ends authorization, omission without counting and typed unattested absence in the contract text",()=>{
+    const text=definitions.OperationalIncidentLinksV2.description;
+    for(const phrase of ["at most 3","BOTH ends","operation access never implies incident access","omitted AND not counted","repeatable-read snapshot","no incident is picked"])expect(text).toContain(phrase);
+    const link=definitions.OperationalIncidentLinkV2.description;
+    expect(link).toContain("ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED");expect(link).toContain("never dropped");
+    expect(JSON.stringify(definitions.OperationalIncidentLinksV2.properties.items)).toContain('"maxItems":3');
+  });
+  it("defines the supported predicates and the own-dimension rule, and says SUCCEEDED is not APPLIED/convergence/venue success",()=>{
+    const text=definitions.OperationalStatusCountsV2.description;
+    for(const phrase of ["triage_state, verification_result, source_status and severity","EXCEPT its own","same","NOT financial APPLIED","NOT projection convergence","NOT venue success","not page rows"])
+      expect(text.toLowerCase()).toContain(phrase.toLowerCase());
+    expect(Object.keys(definitions.OperationalStatusCountsV2.properties.dimensions.properties)).toEqual(["triage_state","verification_result","source_status","severity"]);
+    expect(definitions.OperationalQueueV2.description).toContain("not financial APPLIED, projection convergence or venue success");
+    expect(definitions.OperationalStatusCountsV2.properties.succeeded_means.const).toBe("PORTAL_QUEUE_RECORD_STATE_ONLY");
+    expect(JSON.stringify(load("openapi/execution-operations.openapi.json").paths["/api/v1/execution/operations"].get.description)).toContain("not financial APPLIED");
+  });
+  it.each([
+    ["a fifth link item",(rows:any[])=>{rows[0].incident_links.items.push(structuredClone(rows[0].incident_links.items[0]));}],
+    ["a larger bound",(rows:any[])=>{rows[0].incident_links.bound=4;}],
+    ["truncated not matching the authorized count",(rows:any[])=>{rows[0].incident_links.truncated=false;}],
+    ["an authorized count below the returned items",(rows:any[])=>{rows[0].incident_links.authorized_link_count=2;}],
+    ["a duplicated incident",(rows:any[])=>{rows[0].incident_links.items[1].incident_id=rows[0].incident_links.items[0].incident_id;}],
+    ["an unknown relationship",(rows:any[])=>{rows[0].incident_links.items[0].relationship="BLOCKS";}],
+    ["a link carrying incident prose",(rows:any[])=>{rows[0].incident_links.items[0].title="TEST_ONLY";}],
+    ["a link without its typed history absence",(rows:any[])=>{delete rows[0].incident_links.items[0].link_history;}],
+    ["an attested history claim",(rows:any[])=>{rows[0].incident_links.items[0].link_history.availability="AVAILABLE";}],
+    ["a NOT_ATTESTED link that carries an identity",(rows:any[])=>{rows[1].incident_links.items[1].incident_id="inc_TEST_ONLY_leak";}],
+    ["an unsupported incident target type",(rows:any[])=>{rows[0].incident_links.items[0].incident.target.type="ORDER";}],
+    ["a single guessed incident_id on the row",(rows:any[])=>{rows[0].incident_id="inc_TEST_ONLY_links_4";}],
+  ])("rejects %s in schema and runtime",(_label,edit)=>{
+    const body=rowsWith(edit);
+    // Count arithmetic and uniqueness are runtime-only by design (documented in the schema text).
+    const runtimeOnly=["truncated not matching the authorized count","an authorized count below the returned items","a duplicated incident"];
+    if(!runtimeOnly.includes(_label))expect(validate("OperationalQueueV2")(body)).toBe(false);
+    expect(operationalQueue.safeParse(body).success).toBe(false);
+  });
+  it.each([
+    ["a sum that is not its total",(c:any)=>{c.dimensions.triage_state.total=4;}],
+    ["a dimension total above the unfiltered total",(c:any)=>{c.dimensions.severity.total=7;c.dimensions.severity.counts.INFO=2;}],
+    ["an unfiltered dimension that disagrees with filtered_count",(c:any)=>{c.dimensions.source_status.counts.PENDING=0;c.dimensions.source_status.total=2;}],
+    ["an own-filter flag that contradicts applied_filters",(c:any)=>{c.dimensions.severity.own_filter_applied=false;}],
+    ["the selected bucket disagreeing with filtered_count",(c:any)=>{c.dimensions.severity.counts.WARNING=2;c.dimensions.severity.counts.INFO=2;}],
+    ["a missing zero-filled bucket",(c:any)=>{delete c.dimensions.verification_result.counts.DENIED;}],
+    ["an unsupported dimension",(c:any)=>{c.dimensions.environment={own_filter_applied:false,total:3,counts:{PAPER:3}};}],
+    ["an unknown bucket value",(c:any)=>{c.dimensions.triage_state.counts.CLOSED=0;}],
+    ["a financial claim for SUCCEEDED",(c:any)=>{c.succeeded_means="FINANCIAL_APPLIED";}],
+  ])("rejects status_counts with %s in schema and runtime",(_label,edit)=>{
+    const body=countsWith(edit);
+    const schema=validate("OperationalQueueV2")(body);
+    expect(operationalQueue.safeParse(body).success).toBe(false);
+    // Arithmetic invariants are runtime-only by design (documented); structural defects fail both.
+    if(["a missing zero-filled bucket","an unsupported dimension","an unknown bucket value","a financial claim for SUCCEEDED"].includes(_label))expect(schema).toBe(false);
   });
 });
 

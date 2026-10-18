@@ -144,17 +144,23 @@ describe.skipIf(!URL)("ELP2-04 current operational parents / actual PG+HTTP / TE
   /** Legal immutable fixture INSERT, not rewriting existing business identity.
    * A bare queue root intentionally does not claim an F0 provenance family. */
   async function queue(f: Fixture, q: { id?: string; target?: AccessResource; environment?: Environment;
-    key?: string; time?: string; source?: "PORTAL" | "EXECUTION" | "BROKER" } = {}) {
-    const id = q.id ?? next(), target = q.target ?? f.target, time = q.time ?? "2026-01-02T03:04:05.000000Z";
+    key?: string; time?: string; source?: "PORTAL" | "EXECUTION" | "BROKER"; status?: string; verification?: string;
+    severity?: string; triage?: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED" } = {}) {
+    const id = q.id ?? next(), target = q.target ?? f.target, time = q.time ?? "2026-01-02T03:04:05.000000Z", triage = q.triage ?? "UNACKNOWLEDGED";
     await ctx.pool.query(`INSERT INTO execution_operation_queue_items(operation_id,workspace_id,operation_kind,
       command_key,environment,target_type,target_id,risk_tier,severity,source_authority,source_status,
-      verification_result,triage_state,workflow_version,created_at,updated_at)
-      VALUES($1,$2,'EXECUTION_COMMAND',$3,$4,$5,$6,'R2_SANDBOX','WARNING',$7,'BLOCKED','NOT_STARTED','UNACKNOWLEDGED',1,$8,$8)`,
-    [id, f.workspace, q.key ?? "account/sync", (q.environment ?? f.environment).toUpperCase(), target.kind, target.id, q.source ?? "PORTAL", time]);
+      verification_result,triage_state,workflow_version,created_at,updated_at,acknowledged_at,acknowledged_by_user_id,
+      resolved_at,resolved_by_user_id,resolution_reason,resolution_evidence_hash)
+      VALUES($1,$2,'EXECUTION_COMMAND',$3,$4,$5,$6,'R2_SANDBOX',$9,$7,$10,$11,$12,1,$8,$8,
+      CASE WHEN $12<>'UNACKNOWLEDGED' THEN $8::timestamptz END, CASE WHEN $12<>'UNACKNOWLEDGED' THEN $13 END,
+      CASE WHEN $12='RESOLVED' THEN $8::timestamptz END, CASE WHEN $12='RESOLVED' THEN $13 END,
+      CASE WHEN $12='RESOLVED' THEN 'TEST_ONLY resolution reason' END, CASE WHEN $12='RESOLVED' THEN $14 END)`,
+    [id, f.workspace, q.key ?? "account/sync", (q.environment ?? f.environment).toUpperCase(), target.kind, target.id, q.source ?? "PORTAL", time,
+      q.severity ?? "WARNING", q.status ?? "BLOCKED", q.verification ?? "NOT_STARTED", triage, other.user.userId, accessDigest("TEST_ONLY resolution")]);
     return id;
   }
-  async function incident(f: Fixture, target: AccessResource = f.target, env: Environment = f.environment) {
-    const id = next();
+  async function incident(f: Fixture, target: { kind: string; id: string } = f.target, env: Environment = f.environment, fixedId?: string) {
+    const id = fixedId ?? next();
     await ctx.pool.query(`INSERT INTO execution_incidents(incident_id,workspace_id,title,summary,severity,environment,
       target_type,target_id,workflow_state,workflow_version,opened_by_user_id,created_at,updated_at)
       VALUES($1,$2,$3,$3,'WARNING',$4,$5,$6,'OPEN',1,$7,clock_timestamp(),clock_timestamp())`,
@@ -166,6 +172,11 @@ describe.skipIf(!URL)("ELP2-04 current operational parents / actual PG+HTTP / TE
       VALUES($1,$2,$3,'OTHER',$4,'TEST_ONLY','PORTAL','UNAVAILABLE',$5,clock_timestamp(),$6)`,
     [next(), id, f.workspace, accessDigest(secret), secret, other.user.userId]);
     return id;
+  }
+  async function link(f: Fixture, incidentId: string, operationId: string, at?: string,
+    relationship: "TRIGGERED_BY" | "MITIGATES" | "RELATED" = "TRIGGERED_BY", workspaceId = f.workspace) {
+    await ctx.pool.query(`INSERT INTO execution_incident_operation_links(incident_id,workspace_id,operation_id,relationship,linked_by_user_id,created_at)
+      VALUES($1,$2,$3,$4,$5,COALESCE($6::timestamptz,clock_timestamp()))`, [incidentId, workspaceId, operationId, relationship, other.user.userId, at ?? null]);
   }
   const query = (f: Fixture, q: Record<string, unknown> = {}) => ({ workspace_id: f.workspace, ...q });
   async function read(f: Fixture, q: Record<string, unknown> = {}): Promise<OperationalQueue> {
@@ -186,7 +197,8 @@ describe.skipIf(!URL)("ELP2-04 current operational parents / actual PG+HTTP / TE
         source_integration_state: "UNAVAILABLE", source_side_effect_requested: false,
         page: { total_count: 1, filtered_count: 1 }, read_truth: { state: "AVAILABLE", scope: "REQUEST" } }); finite(page);
       const detail = operationalWorkflow.parse(await f.service.workflow(f.principal, record.operationId));
-      expect(detail.intent.operation_id).toBe(record.operationId); expect(detail.operation).toEqual(page.page.rows[0]);
+      expect(detail.intent.operation_id).toBe(record.operationId); { const { incident_links, ...row } = page.page.rows[0]; // FE-042 extends the queue ROW only; the detail item is unextended
+        expect(detail.operation).toEqual(row); expect(incident_links).toMatchObject({ authorized_link_count: 0, items: [] }); }
       expect(detail.provenance_basis).toBe("SQL_EXACT_SOURCE_TIMESTAMP");
       expect(detail.intent).toMatchObject({ status: "BLOCKED", warnings: [], relay_receipt: null, source_side_effect_requested: false });
       expect(f.forbidden).not.toHaveBeenCalled(); finite(detail);
@@ -402,6 +414,211 @@ describe.skipIf(!URL)("ELP2-04 current operational parents / actual PG+HTTP / TE
     await ctx.pool.query("UPDATE execution_incidents SET workflow_version=workflow_version+1,updated_at=clock_timestamp() WHERE incident_id=$1", [id]);
     await refusal(f.service.finish(prepared), 409, "OPERATIONAL_READ_CHANGED");
   });
+  // ---- FE-042 incident links / FE-043 status counts -------------------------------------------
+  const linksOf = (page: OperationalQueue, id: string) => page.page.rows.find(row => row.operation_id === id)!.incident_links!;
+  const linkedIds = (links: { items: Array<{ state: string; incident_id?: string }> }) => links.items.map(item => item.incident_id);
+  it("FE-042 lists only incidents whose OWN target is authorized: operation access never implies incident access", async () => {
+    const f = await fixture("ACCOUNT", "paper"), second = { kind: "PORTFOLIO" as const, id: next() }, hiddenTarget = { kind: "PORTFOLIO" as const, id: next() };
+    await additional(f, second);
+    const op = await queue(f), shown = await incident(f), alsoShown = await incident(f, second), hidden = await incident(f, hiddenTarget);
+    const wrongEnv = await incident(f, f.target, "live"), unsupported = await incident(f, { kind: "SYSTEM", id: f.target.id });
+    for (const [index, id] of [shown, alsoShown, hidden, wrongEnv, unsupported].entries())
+      await link(f, id, op, `2026-01-02T03:04:0${index}.000000Z`);
+    const page = await read(f), links = linksOf(page, op);
+    // Newest authorized first; the three unauthorized incidents are neither listed nor counted.
+    expect(linkedIds(links)).toEqual([alsoShown, shown]); expect(links).toMatchObject({ authorized_link_count: 2, truncated: false, bound: 3,
+      basis: "CURRENT_LINK_ROWS_AUTHORIZED_INCIDENTS_ONLY" });
+    expect(links.items[0]).toMatchObject({ state: "LINKED", relationship: "TRIGGERED_BY", incident: { target: { type: "PORTFOLIO", id: second.id },
+      environment: "PAPER", severity: "WARNING", workflow_state: "OPEN" }, link_history: { availability: "NOT_PUBLISHED", reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED" } });
+    const text = JSON.stringify(page);
+    for (const absent of [hidden, wrongEnv, unsupported, hiddenTarget.id, secret]) expect(text).not.toContain(absent);
+    expect(page.page.rows[0]).not.toHaveProperty("incident_id"); // no single guessed "the" incident
+  });
+  it("FE-042 operation authorized but incident NOT authorized yields an explicit empty set that discloses nothing", async () => {
+    const f = await fixture(), op = await queue(f), foreign = await incident(f, { kind: "ACCOUNT", id: next() });
+    await link(f, foreign, op);
+    const page = await read(f), links = linksOf(page, op);
+    expect(links).toEqual({ basis: "CURRENT_LINK_ROWS_AUTHORIZED_INCIDENTS_ONLY", bound: 3, authorized_link_count: 0, truncated: false, items: [] });
+    expect(JSON.stringify(page)).not.toContain(foreign);
+  });
+  it("FE-042 incident authorized but operation NOT authorized: the operation (and so its links) is never returned", async () => {
+    const f = await fixture(), hiddenTarget = { kind: "ACCOUNT" as const, id: next() };
+    const op = await queue(f, { target: hiddenTarget }), visible = await incident(f); await link(f, visible, op);
+    const page = await read(f); expect(page.page.rows).toEqual([]); expect(JSON.stringify(page)).not.toContain(visible);
+  });
+  it("FE-042 bound of 3 is applied AFTER authorization, newest first with a byte-order tie-break, and states truncation", async () => {
+    const f = await fixture(), op = await queue(f), hiddenTarget = { kind: "ACCOUNT" as const, id: next() };
+    const ids: string[] = [];
+    for (let index = 0; index < 5; index += 1) ids.push(await incident(f, f.target, f.environment, `TEST_ONLY:tie-${index}`));
+    // Two share a timestamp: incident id DESC in byte order decides. Unauthorized newer links do not use up slots.
+    const times = ["2026-01-02T03:04:01.000001Z", "2026-01-02T03:04:02.000002Z", "2026-01-02T03:04:02.000002Z", "2026-01-02T03:04:00.000009Z", "2026-01-02T03:04:03.000001Z"];
+    for (const [index, id] of ids.entries()) await link(f, id, op, times[index]);
+    for (let index = 0; index < 4; index += 1) await link(f, await incident(f, hiddenTarget), op, "2026-01-02T03:05:00.000000Z");
+    const links = linksOf(await read(f), op);
+    expect(linkedIds(links)).toEqual(["TEST_ONLY:tie-4", "TEST_ONLY:tie-2", "TEST_ONLY:tie-1"]);
+    expect(links).toMatchObject({ authorized_link_count: 5, truncated: true }); expect(links.items).toHaveLength(3);
+  });
+  it("FE-042 an authorized link whose incident id cannot be represented is a typed NOT_ATTESTED slot, never dropped", async () => {
+    const f = await fixture(), op = await queue(f), good = await incident(f), odd = await incident(f, f.target, f.environment, "x".repeat(200));
+    await link(f, good, op, "2026-01-02T03:04:01.000000Z"); await link(f, odd, op, "2026-01-02T03:04:02.000000Z");
+    const links = linksOf(await read(f), op);
+    expect(links).toMatchObject({ authorized_link_count: 2, truncated: false });
+    expect(links.items[0]).toEqual({ state: "NOT_ATTESTED", reason_code: "INCIDENT_LINK_IDENTITY_NOT_REPRESENTABLE",
+      link_history: { availability: "NOT_PUBLISHED", reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED" } });
+    expect(links.items[1]).toMatchObject({ state: "LINKED", incident_id: good }); expect(JSON.stringify(links)).not.toContain("xxxxxxxxxx");
+  });
+  it("FE-042 another workspace's incident, link or same-named target never appears and a foreign workspace_id is refused", async () => {
+    const f = await fixture(), op = await queue(f), other_ws = await workspace();
+    const foreignOp = await queue({ ...f, workspace: other_ws } as Fixture), foreignIncident = await incident({ ...f, workspace: other_ws } as Fixture);
+    await link({ ...f, workspace: other_ws } as Fixture, foreignIncident, foreignOp, undefined, "TRIGGERED_BY", other_ws);
+    const page = await read(f);
+    expect(page.page.rows.map(row => row.operation_id)).toEqual([op]); expect(linksOf(page, op).items).toEqual([]);
+    expect(JSON.stringify(page)).not.toContain(foreignIncident); expect(JSON.stringify(page)).not.toContain(foreignOp);
+    await refusal(f.service.queue(f.principal, { workspace_id: other_ws }), 400, "OPERATIONAL_READ_INPUT_INVALID");
+  });
+  it("FE-042 revoking the INCIDENT end's grant while a page is held refuses the held body", async () => {
+    const f = await fixture("ACCOUNT", "paper"), second = { kind: "PORTFOLIO" as const, id: next() }, op = await queue(f);
+    const grant = await additional(f, second); await link(f, await incident(f, second), op);
+    const prepared = await f.service.prepareQueue(f.principal, query(f));
+    await f.grants.saveGrant({ ...grant, revision: next(), revoked_at_ms: Date.now() });
+    await refusal(f.service.finish(prepared), 409, "OPERATIONAL_READ_CHANGED");
+    expect(linksOf(await read(f), op).items).toEqual([]);
+  });
+  it("FE-042 revoking the OPERATION end's grant while a page is held refuses the held body", async () => {
+    const f = await fixture("ACCOUNT", "paper"), second = { kind: "PORTFOLIO" as const, id: next() }, op = await queue(f);
+    await additional(f, second); await link(f, await incident(f, second), op);
+    const prepared = await f.service.prepareQueue(f.principal, query(f));
+    await change(f, { revoked_at_ms: Date.now() });
+    await refusal(f.service.finish(prepared), 409, "OPERATIONAL_READ_CHANGED");
+  });
+  /** Deterministic population: every status dimension, a hidden peer, and two environments. */
+  async function population(f: Fixture) {
+    const rows = [
+      { severity: "WARNING", status: "SUCCEEDED", verification: "SUCCEEDED", triage: "RESOLVED" },
+      { severity: "WARNING", status: "UNCERTAIN", verification: "UNCERTAIN", triage: "ACKNOWLEDGED" },
+      { severity: "ERROR", status: "PENDING", verification: "PENDING", triage: "UNACKNOWLEDGED" },
+      { severity: "ERROR", status: "SUCCEEDED", verification: "PENDING", triage: "UNACKNOWLEDGED" },
+      { severity: "CRITICAL", status: "FAILED", verification: "FAILED", triage: "UNACKNOWLEDGED" },
+      { severity: "INFO", status: "BLOCKED", verification: "NOT_STARTED", triage: "UNACKNOWLEDGED" },
+    ] as const;
+    for (const [index, row] of rows.entries()) await queue(f, { ...row, time: `2026-01-02T03:04:0${index}.000000Z` });
+    // Hidden peers must not alter ANY dimension: other target, other environment.
+    await queue(f, { target: { ...f.target, id: next() }, status: "FAILED", severity: "CRITICAL" });
+    await queue(f, { environment: "live", status: "FAILED", severity: "CRITICAL" });
+    return rows;
+  }
+  const tally = (rows: ReadonlyArray<Record<string, string>>, field: string) => {
+    const out: Record<string, number> = {}; for (const row of rows) out[row[field]] = (out[row[field]] ?? 0) + 1; return out;
+  };
+  const dim = (page: OperationalQueue, field: "triage_state" | "verification_result" | "source_status" | "severity") =>
+    page.page.status_counts!.dimensions[field] as { own_filter_applied: boolean; total: number; counts: Record<string, number> };
+  const nonZero = (counts: Record<string, number>) => Object.fromEntries(Object.entries(counts).filter(([, value]) => value > 0));
+  it("FE-043 unfiltered counts equal the authorized total on every dimension; hidden peers are not counted", async () => {
+    const f = await fixture(), rows = await population(f), page = await read(f);
+    expect(page.page).toMatchObject({ total_count: 6, filtered_count: 6 });
+    for (const [field, key] of [["triage_state", "triage"], ["verification_result", "verification"], ["source_status", "status"], ["severity", "severity"]] as const) {
+      expect(dim(page, field)).toMatchObject({ own_filter_applied: false, total: 6 });
+      expect(nonZero(dim(page, field).counts)).toEqual(tally(rows as never, key));
+    }
+    expect(page.page.status_counts).toMatchObject({ basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS_EXCLUDING_OWN_DIMENSION", succeeded_means: "PORTAL_QUEUE_RECORD_STATE_ONLY" });
+    expect(Object.keys(dim(page, "verification_result").counts)).toHaveLength(8); // zero-filled closed domain
+  });
+  it.each([
+    ["one filter", { severity: "ERROR" }],
+    ["two filters on different dimensions", { severity: "ERROR", verification_result: "PENDING" }],
+    ["a filter plus a non-dimension filter", { source_status: "SUCCEEDED", environment: "PAPER" }],
+    ["every supported predicate", { triage_state: "UNACKNOWLEDGED", verification_result: "PENDING", source_status: "PENDING", severity: "ERROR" }],
+  ])("FE-043 %s: each dimension ignores ONLY its own filter, over the same snapshot as filtered_count", async (_label, filters) => {
+    const f = await fixture(), rows = await population(f), page = await read(f, filters);
+    const keys = { triage_state: "triage", verification_result: "verification", source_status: "status", severity: "severity" } as const;
+    const match = (row: Record<string, string>, ignore?: string) => Object.entries(filters).every(([field, value]) =>
+      field === ignore || field === "environment" || row[keys[field as keyof typeof keys]] === value);
+    expect(page.page.filtered_count).toBe(rows.filter(row => match(row as never)).length);
+    for (const field of Object.keys(keys) as Array<keyof typeof keys>) {
+      const expected = rows.filter(row => match(row as never, field)), own = field in filters;
+      expect(dim(page, field).own_filter_applied).toBe(own); expect(dim(page, field).total).toBe(expected.length);
+      expect(nonZero(dim(page, field).counts)).toEqual(tally(expected as never, keys[field]));
+      if (!own) expect(dim(page, field).total).toBe(page.page.filtered_count);
+      else expect(dim(page, field).counts[(filters as Record<string, string>)[field]] ?? 0).toBe(page.page.filtered_count);
+    }
+  });
+  it("FE-043 counts are for the whole filtered query, not the page: limit, cursor and sort do not change them", async () => {
+    const f = await fixture(); await population(f);
+    const whole = await read(f, { severity: "ERROR" }), first = await read(f, { severity: "ERROR", limit: "1" });
+    const second = await read(f, { severity: "ERROR", limit: "1", after: first.page.next_cursor! }), ascending = await read(f, { severity: "ERROR", limit: "1", sort: "created_at:asc" });
+    expect(first.page.rows).toHaveLength(1);
+    for (const page of [first, second, ascending]) expect(page.page.status_counts).toEqual(whole.page.status_counts);
+    expect(dim(first, "triage_state").total).toBe(2);
+  });
+  it("FE-043 a write committed after the page statement is invisible to counts and links: ONE repeatable-read snapshot", async () => {
+    const f = await fixture(), op = await queue(f), good = await incident(f); await link(f, good, op);
+    const seen: Array<{ isolation: string; snapshot: string }> = []; let injected = false;
+    const pool = { connect: async () => {
+      const db = await ctx.pool.connect();
+      return { query: async (sql: string, params: unknown[] = []) => {
+        const result = await db.query(sql, params);
+        if (/execution_operation_queue_v2|execution_incident_operation_links/.test(sql)) {
+          seen.push({ isolation: (await db.query("SHOW transaction_isolation")).rows[0].transaction_isolation,
+            snapshot: (await db.query("SELECT txid_current_snapshot()::text AS s")).rows[0].s });
+          if (!injected && /LIMIT/.test(sql) && /ORDER BY/.test(sql) && /execution_operation_queue_v2/.test(sql)) {
+            injected = true; // committed from ANOTHER connection between the page statement and every later statement
+            const id = await queue(f, { status: "FAILED", severity: "CRITICAL" });
+            await link(f, await incident(f), id);
+          }
+        }
+        return result;
+      }, release: () => db.release() } as unknown as PoolClient;
+    } } as unknown as Pool;
+    const service = new OperationalReadService(new OperationalReadRepository(pool), f.access, f.scopes, f.config);
+    const page = operationalQueue.parse(await service.queue(f.principal, query(f)));
+    expect(injected).toBe(true); expect(page.page).toMatchObject({ total_count: 1, filtered_count: 1 });
+    expect(dim(page, "source_status").total).toBe(1); expect(dim(page, "severity").counts.CRITICAL).toBe(0);
+    expect(new Set(seen.map(row => row.snapshot)).size).toBe(1); expect(seen.every(row => row.isolation === "repeatable read")).toBe(true);
+    expect(seen.length).toBeGreaterThanOrEqual(7); // total, page, 4 dimensions, links (no filter, so no separate filtered count)
+    expect(page.page.rows.map(row => row.operation_id)).toEqual([op]);
+    const fresh = await read(f); expect(fresh.page.total_count).toBe(2); expect(dim(fresh, "severity").counts.CRITICAL).toBe(1);
+  });
+  it("FE-043 SUCCEEDED is a Portal queue record state, never financial APPLIED, projection convergence or venue success", async () => {
+    const f = await fixture(); await queue(f, { status: "SUCCEEDED", verification: "SUCCEEDED", triage: "RESOLVED" });
+    const page = await read(f), text = JSON.stringify(page);
+    expect(page.page.status_counts!.succeeded_means).toBe("PORTAL_QUEUE_RECORD_STATE_ONLY");
+    expect(dim(page, "source_status").counts.SUCCEEDED).toBe(1); expect(dim(page, "verification_result").counts.SUCCEEDED).toBe(1);
+    expect(text).not.toMatch(/APPLIED|CONVERG|VENUE|FILLED/);
+    expect(operationalQueue.safeParse({ ...page, page: { ...page.page, status_counts: { ...page.page.status_counts, succeeded_means: "FINANCIAL_APPLIED" } } }).success).toBe(false);
+  });
+  it("FE-042/043 unsupported or unknown predicates stay refused, and an empty authorized scope is EMPTY with zero counts", async () => {
+    const f = await fixture(); await refusal(read(f, { assigned_to: "me" }), 400, "OPERATIONAL_READ_FILTER_NOT_SUPPORTED");
+    await refusal(read(f, { status_counts: "off" }), 400, "OPERATIONAL_READ_INPUT_INVALID");
+    const empty = await read(f); expect(empty.read_truth.state).toBe("EMPTY");
+    expect(dim(empty, "severity")).toMatchObject({ own_filter_applied: false, total: 0 });
+    expect(Object.values(dim(empty, "triage_state").counts).every(value => value === 0)).toBe(true);
+  });
+  it("FE-042/043 the full 250-row page with maximum-length identifiers and 3 links each stays inside the 1 MiB bound", () => {
+    const long = "a".repeat(191), history = { availability: "NOT_PUBLISHED", reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED" } as const;
+    const link = { state: "LINKED", incident_id: long, relationship: "RELATED", linked_at: "2026-01-02T03:04:05.123456Z",
+      incident: { target: { type: "DEPLOYMENT", id: long }, environment: "SANDBOX", severity: "CRITICAL", workflow_state: "MITIGATED" }, link_history: history } as const;
+    const row = { operation_id: long, operation_kind: "EXECUTION_COMMAND", command_key: `${"a".repeat(60)}/${"b".repeat(60)}`, target: { type: "DEPLOYMENT", id: long },
+      environment: "SANDBOX", risk_tier: "R4_LIVE_RISK_INCREASING", severity: "CRITICAL", source_authority: "BROKER", source_status: "UNCERTAIN",
+      verification_result: "NOT_STARTED", triage_state: "UNACKNOWLEDGED", workflow_version: Number.MAX_SAFE_INTEGER, acknowledged_at: null, resolved_at: null,
+      created_at: "2026-01-02T03:04:05.123456Z", updated_at: "2026-01-02T03:04:05.123456Z",
+      incident_links: { basis: "CURRENT_LINK_ROWS_AUTHORIZED_INCIDENTS_ONLY", bound: 3, authorized_link_count: 9, truncated: true, items: [link, { ...link, incident_id: "b" }, { ...link, incident_id: "c" }] } };
+    const dimensionOf = (counts: Record<string, number>) => ({ own_filter_applied: false, total: 250, counts });
+    const body = { schema_version: "portal.execution.operational-queue.v2", workspace_id: "ws_TEST_ONLY_bound", record_authority: "PORTAL",
+      record_basis: "PORTAL_CURRENT_OPERATIONAL_WORKFLOW", coverage: "AUTHORIZED_SUPPORTED_TARGETS_ONLY", supported_target_types: ["ACCOUNT", "PORTFOLIO", "DEPLOYMENT"],
+      source_integration_state: "UNAVAILABLE", source_side_effect_requested: false, source_as_of_ms: null, observed_at_ms: 0,
+      read_truth: { state: "AVAILABLE", reason_code: null, scope: "REQUEST" },
+      page: { rows: Array(250).fill(row), total_count: 250, filtered_count: 250, next_cursor: null, prev_cursor: null, has_more: false, has_previous: false,
+        applied_filters: [], applied_sort: [{ field: "created_at", direction: "desc" }, { field: "operation_id", direction: "desc" }],
+        status_counts: { basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS_EXCLUDING_OWN_DIMENSION", succeeded_means: "PORTAL_QUEUE_RECORD_STATE_ONLY", dimensions: {
+          triage_state: dimensionOf({ UNACKNOWLEDGED: 250, ACKNOWLEDGED: 0, RESOLVED: 0 }),
+          verification_result: dimensionOf({ NOT_STARTED: 250, PENDING: 0, SUCCEEDED: 0, FAILED: 0, PARTIAL: 0, UNCERTAIN: 0, DENIED: 0, EXPIRED: 0 }),
+          source_status: dimensionOf({ BLOCKED: 0, PENDING: 0, RUNNING: 0, SUCCEEDED: 0, FAILED: 0, EXPIRED: 0, UNCERTAIN: 250 }),
+          severity: dimensionOf({ INFO: 0, WARNING: 0, ERROR: 0, CRITICAL: 250 }) } } } };
+    expect(operationalQueue.safeParse(body).success).toBe(true);
+    const bytes = Buffer.byteLength(JSON.stringify(body), "utf8");
+    expect(bytes).toBeLessThan(1_048_576); expect(bytes).toBeGreaterThan(500_000);
+  });
+
   it("private issuer-bound prepared bodies cannot be reconstructed or consumed twice", async () => {
     const f = await fixture(), sibling = await fixture(); await queue(f);
     const handle = await f.service.prepareQueue(f.principal, query(f));
