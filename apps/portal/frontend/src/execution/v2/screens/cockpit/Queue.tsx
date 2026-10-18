@@ -17,6 +17,7 @@ import type { InboxRowV2 } from "./inboxRowV2";
 import {
   instantText,
   isClosedRow,
+  statusClassOf,
   isYours,
   KIND_TAG,
   kindOfGate,
@@ -73,10 +74,13 @@ function GateFlags({ row, principal }: { row: InboxRowV2; principal: Principal }
   const required = row.quorumRequired;
   const met = row.quorumMet;
   const closed = isClosedRow(row);
+  const unknownStatus = statusClassOf(row) === "unknown";
   return (
     <>
       {closed ? (
         <Flag kind="neutral" label={row.status ?? "Closed"} size="sm" />
+      ) : unknownStatus ? (
+        <Flag kind="unknown" label={`Status ${row.status}`} size="sm" />
       ) : sla?.overdue ? (
         <Flag kind="rejected" label="Overdue" size="sm" />
       ) : (

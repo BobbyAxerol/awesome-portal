@@ -87,10 +87,11 @@ export interface HealthView { kind: FlagKind; label: string }
 
 /**
  * Alpha health is READY / ATTENTION / RESEARCH_ONLY; a deployment adds FINDING.
- * An unknown word is `unknown` with its own text, never `ok`.
+ * An unknown word is `unknown` with its own text, never `ok`; the enum is
+ * matched exactly, so `ready` is not `READY`.
  */
 export function healthView(health: string): HealthView {
-  switch (health.toUpperCase()) {
+  switch (health) {
     case "READY": return { kind: "ok", label: "Ready" };
     case "ATTENTION": return { kind: "attention", label: "Needs attention" };
     case "FINDING": return { kind: "attention", label: "Finding open" };
@@ -101,7 +102,7 @@ export function healthView(health: string): HealthView {
 
 const HEALTH_RANK: Readonly<Record<string, number>> = { READY: 0, FINDING: 1, ATTENTION: 2 };
 /** Unknown words rank with FINDING: worse than ready, and not hidden under it. */
-const healthRank = (health: string): number => HEALTH_RANK[health.toUpperCase()] ?? 1;
+const healthRank = (health: string): number => HEALTH_RANK[health] ?? 1;
 
 /* ── rows ──────────────────────────────────────────────────────────────── */
 

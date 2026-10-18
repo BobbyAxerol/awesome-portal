@@ -15,7 +15,8 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 
-import { formatAsOf, readAsOf, readDecimal, readMetric, type Metric } from "./boundary";
+import { MAX_DECIMAL_LENGTH, formatAsOf, readAsOf, readDecimal, readMetric, type Metric } from "./boundary";
+import { formatExact } from "../formatExact";
 import { loadCanonical, canonicalDigest, schemaEnum } from "./testkit/loadCanonical";
 import { ABSENT, cartesian, coverage, describeCoverage, dimension, dimensionOf, pairwise, type Draft } from "./testkit/matrix";
 import {
@@ -227,17 +228,25 @@ describe("L2 · scale", () => {
   });
 
   /*
-   * DEFECT (formatExact.ts `group`, reached from boundary.readDecimal): the
-   * thousands-grouping regex is quadratic. The published Decimal pattern has no
-   * maxLength, so a 70,000 digit string is schema-valid and froze the reader
-   * for 6.2 s (10k digits 130 ms, 40k digits 2.3 s). Either the reader refuses
-   * a decimal longer than a stated bound or `group` goes linear. This test
-   * documents the defect: it turns red when the defect is fixed, and then the
-   * `.fails` must be removed.
+   * Was DEFECT D0 (formatExact.ts `group`): the thousands-grouping regex was
+   * quadratic (a 70,000 digit string took 6.2 s). `group` is now one linear
+   * pass, and the reader refuses any decimal longer than MAX_DECIMAL_LENGTH
+   * (128 characters) as a whole, so a screen sees an absence, not a partial.
    */
-  it.fails("DEFECT: a 30,000 digit decimal is answered inside the budget", () => {
-    const { ms } = timed(() => readDecimal("9".repeat(30_000), MONEY));
+  it("D0: formatExact groups a 70,000 digit integer in linear time", () => {
+    const { ms } = timed(() => formatExact("9".repeat(70_000), "money"));
+    console.info(`formatExact 70,000 digits: ${ms.toFixed(0)} ms`);
     expect(ms).toBeLessThan(500);
+  });
+
+  it("D0: the reader refuses a decimal longer than MAX_DECIMAL_LENGTH and keeps one of exactly that length", () => {
+    const edge = "1".repeat(MAX_DECIMAL_LENGTH);
+    expect(MAX_DECIMAL_LENGTH).toBe(128);
+    expect(readDecimal(edge, MONEY)).not.toBeNull();
+    expect(readDecimal(`${edge}0`, MONEY)).toBeNull();
+    const { value, ms } = timed(() => readDecimal("9".repeat(70_000), MONEY));
+    expect(value).toBeNull();
+    expect(ms).toBeLessThan(50);
   });
 });
 

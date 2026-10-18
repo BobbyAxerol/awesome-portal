@@ -14,7 +14,8 @@
  *     time budget for the reader and the model, and the DOM-row cap on screen.
  * L3  negative payloads: never a throw, never a leak, unknown words never `ok`.
  *     Where the reader is looser than the published schema the gap is counted
- *     and printed, and the defects it implies are `it.fails` below.
+ *     and printed. D1 to D3 were fixed in F5b and are ordinary tests; D4 (a stage missing from
+ *     stage_counts) is blocked on a Codex answer and stays an `it.fails`.
  */
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -603,45 +604,50 @@ describe("L3 · negative", () => {
 /* ═══════════════════ documented defects (turn red when fixed) ═══════════════════ */
 describe("documented defects", () => {
   /*
-   * DEFECT D1 (profileRead.ts readFleetDeployment, `str(item.net_pnl)` and the
-   * three siblings, plus readCurrencyValue/Balance/Pnl): a money field is
-   * accepted as any non-empty string, so "1e5", "NaN", "-0" and "0x1F" pass the
-   * reader that Rules 9.8.2 says checks decimals. V2 Fleet draws no money, but
-   * the V1 screens that share this reader do, and formatExact prints a
-   * non-decimal string as received.
+   * Was DEFECT D1 (profileRead.ts readFleetDeployment and the readCurrency*
+   * readers): a money field was any non-empty string. They now go through the
+   * exact-decimal grammar (money() in profileRead.ts), bounded at 128 chars.
    */
-  it.fails("DEFECT D1: a non-decimal string in net_pnl is refused by readAlphaFleet", () => {
-    for (const bad of ["1e5", "NaN", "-0", "0x1F", "1,000", "01"]) {
+  it("D1: a non-decimal string in any money field is refused by readAlphaFleet", () => {
+    for (const bad of ["1e5", "NaN", "-0", "0x1F", "1,000", "01", " 1", "1.", ".5", "+1", "1".repeat(129)]) {
+      for (const field of ["realized_pnl", "unrealized_pnl", "net_pnl", "exposure", "allocation", "balance_total", "balance_free", "balance_locked"]) {
+        const env = structuredClone(canonical);
+        env.page.rows[0].deployments[0][field] = bad;
+        expect(readAlphaFleet(env), `${field} ${bad}`).toBeNull();
+      }
       const env = structuredClone(canonical);
-      env.page.rows[0].deployments[0].net_pnl = bad;
-      expect(readAlphaFleet(env), bad).toBeNull();
+      env.page.rows[0].allocations[0] ??= { currency: "USDT", value: "1" };
+      env.page.rows[0].allocations[0].value = bad;
+      expect(readAlphaFleet(env), `allocations ${bad}`).toBeNull();
     }
   });
 
   /*
-   * DEFECT D2 (profileRead.ts readManagerPage): two rows with the same
-   * alpha_id in one page are accepted. The screen keys rows by alpha_id, so the
-   * table draws two rows with one React key; useFleetRead de-duplicates only
-   * across later pages, not within the first.
+   * Was DEFECT D2 (profileRead.ts readManagerPage): two rows with one alpha_id
+   * in a page were both kept. The first is kept now and the rest are counted
+   * in page.repeatedRowCount.
    */
-  it.fails("DEFECT D2: a page with a repeated alpha_id is refused or collapsed to unique rows", () => {
+  it("D2: a page with a repeated alpha_id keeps the first row and counts the repeat", () => {
     const env = structuredClone(canonical);
     env.page.rows = [env.page.rows[0], structuredClone(env.page.rows[0])];
+    env.page.rows[1].alpha_label = "second";
     env.page.total_count = 2;
     env.page.filtered_count = 2;
-    const read = readAlphaFleet(env);
-    const ids = read === null ? [] : read.page.rows.map((r) => r.alphaId);
-    expect(new Set(ids).size).toBe(ids.length);
+    const read = readAlphaFleet(env)!;
+    expect(read.page.rows.map((r) => r.alphaId)).toEqual([canonical.page.rows[0].alpha_id]);
+    expect(read.page.rows[0]!.alphaLabel).not.toBe("second");
+    expect(read.page.repeatedRowCount).toBe(1);
+    expect(readAlphaFleet(canonical)!.page.repeatedRowCount).toBe(0);
   });
 
   /*
-   * DEFECT D3 (fleetModel.ts healthView and index.tsx freshnessFlag): both
-   * upper-case the word before matching, so the unpublished spellings `ready`
-   * and `fresh` are drawn as the success state. The enum is upper case; a
-   * reader that does not repair decimals should not repair enums.
+   * Was DEFECT D3 (fleetModel.ts healthView, index.tsx freshnessFlag): both
+   * upper-cased the word before matching, so `ready` and `fresh` drew as ok.
+   * The enum is matched exactly now.
    */
-  it.fails("DEFECT D3: a lower-case health word is not drawn as ok", () => {
-    expect(healthView("ready").kind).not.toBe("ok");
+  it("D3: a lower-case or padded health word is not drawn as ok", () => {
+    for (const word of ["ready", "Ready", " READY", "READY "]) expect(healthView(word).kind, word).toBe("unknown");
+    expect(healthView("READY").kind).toBe("ok");
   });
 
   /*
@@ -649,6 +655,7 @@ describe("documented defects", () => {
    * stage absent from stage_counts prints as `0`. Whether the source omits
    * zero stages or omits unpublished ones is not stated in the schema; until it
    * is, `0` may be an invented zero (Rules 3.3). Raised to Codex as a question.
+   * Blocked on Codex answer; not fixable in the reader.
    */
   it.fails("DEFECT D4: a stage missing from stage_counts is not counted as 0", () => {
     const env = structuredClone(canonical);

@@ -12,7 +12,9 @@
  *     C2: SLA age x budget x state grid; separation-of-duty grid; access grid.
  * L2  200 rows over 4 keyset pages, 250 rows and above 1 MiB in one page,
  *     12 creators, 30 subjects; time budgets; Queue DOM cap.
- * L3  negative payloads; defects are `it.fails`.
+ * L3  negative payloads. D5 to D8 were reader defects found here; F5b fixed them and they
+ *     are ordinary tests now (counts via Number.isSafeInteger, repeats counted as dropped,
+ *     unknown status stays Open, ids held to the Identifier pattern).
  */
 import { cleanup, render, within } from "@testing-library/react";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
@@ -28,8 +30,8 @@ import { cloneRows, cursorFilter, fillToBytes, MIB, pad, serializedBytes, splitI
 import { validateAgainst } from "../../testkit/schema";
 import { inboxRowFromV1, readInboxPageV2, readInboxRowV2, readInboxSla, } from "./inboxRowV2";
 import {
-  deriveAccess, formatMinutes, gateItems, instantText, isClosedRow, isYours, LANES, lensCounts, NO_PRINCIPAL, principalOf, quorumCells,
-  quorumText, sameActor, separationOfDuty, slaView, stepSelection, summarizeEvidence, type Lane, type Lens, type Principal,
+  CLOSED_STATUSES, deriveAccess, formatMinutes, gateItems, instantText, isClosedRow, isYours, LANES, lensCounts, NO_PRINCIPAL, principalOf, quorumCells,
+  quorumText, sameActor, separationOfDuty, slaView, statusClassOf, stepSelection, summarizeEvidence, type Lane, type Lens, type Principal,
 } from "./laneModel";
 import { MAX_QUEUE_DOM, Queue } from "./Queue";
 
@@ -585,58 +587,70 @@ describe("L3 · negative", () => {
 /* ═══════════════════ documented defects (turn red when fixed) ═══════════════════ */
 describe("documented defects", () => {
   /*
-   * DEFECT D5 (inboxRowV2.ts `whole`, line 75): a count is any integer, so a
-   * value past 2^53 (`9007199254740994`, `1e21`, `1e308`) is read as a count.
-   * Number.isInteger is true for all of them; Number.isSafeInteger is not. The
-   * fleet reader (readManagerPage) already uses isSafeInteger. Such a figure
-   * then reaches slaView/formatMinutes and prints as "1.0e+21d"-style text.
+   * Was DEFECT D5/D5b (inboxRowV2.ts `whole`): Number.isInteger let 2^53+2, 1e21
+   * and 1e308 through as counts. `whole` is Number.isSafeInteger now.
    */
-  it.fails("DEFECT D5: a count beyond 2^53 is an absence, not a count", () => {
+  it("D5: a count beyond 2^53 is an absence, not a count", () => {
     for (const huge of [2 ** 53 + 2, 1e21, 1e308]) {
       const row = readInboxRowV2({ ...structuredClone(baseRow), quorum_met: huge, blocker_count: huge });
       expect(row?.quorumMet, String(huge)).toBeNull();
       expect(row?.blockerCount, String(huge)).toBeNull();
     }
+    expect(readInboxRowV2({ ...structuredClone(baseRow), quorum_met: Number.MAX_SAFE_INTEGER })?.quorumMet).toBe(Number.MAX_SAFE_INTEGER);
   });
 
-  it.fails("DEFECT D5b: an SLA whose minutes are beyond 2^53 is no SLA", () => {
+  it("D5b: an SLA whose minutes are beyond 2^53 is no SLA", () => {
     expect(readInboxSla({ age_minutes: 1e21, budget_minutes: 1e21 })).toBeNull();
+    expect(readInboxSla({ age_minutes: 2 ** 53 + 2, budget_minutes: 60 })).toBeNull();
+    expect(readInboxSla({ age_minutes: 5, budget_minutes: 60 })).not.toBeNull();
   });
 
   /*
-   * DEFECT D6 (inboxRowV2.ts readInboxPageV2): two rows with one id in a page
-   * are both kept. gateItems keys them by id, and the Queue renders
-   * `key={kind:id}`, so React sees a duplicate key and draws the request twice.
+   * Was DEFECT D6 (inboxRowV2.ts readInboxPageV2): two rows with one id were
+   * both kept. The first stays, the repeat is counted in `dropped`.
    */
-  it.fails("DEFECT D6: a page with a repeated id is collapsed or the repeat is counted as dropped", () => {
-    const env = envelopeOf([structuredClone(baseRow), structuredClone(baseRow)]);
-    const page = readInboxPageV2(env)!;
-    const ids = page.rows.map((r) => r.id);
-    expect(new Set(ids).size).toBe(ids.length);
+  it("D6: a page with a repeated id keeps the first row and counts the repeat as dropped", () => {
+    const second = { ...structuredClone(baseRow), subject: "second" };
+    const page = readInboxPageV2(envelopeOf([structuredClone(baseRow), second]))!;
+    expect(page.rows.map((r) => r.id)).toEqual([baseRow.id]);
+    expect(page.rows[0]!.subject).not.toBe("second");
+    expect(page.dropped).toBe(1);
   });
 
   /*
-   * DEFECT D7 (laneModel.ts isClosedRow): any status word other than the exact
-   * `PENDING` is a closed request, so `pending`, `PENDING ` and a status this
-   * build has never seen leave the Open and Needs-you lenses and are listed as
-   * closed. A request that might still need a decision disappears from the
-   * working view instead of being shown as unknown.
+   * Was DEFECT D7 (laneModel.ts isClosedRow): any status other than PENDING was
+   * closed. Only the published closing statuses are closed; an unknown word is
+   * `unknown` and the request stays in Open.
    */
-  it.fails("DEFECT D7: an unpublished status word is not classed as closed", () => {
-    for (const status of ["pending", "PENDING ", "WAITING"]) {
+  it("D7: an unpublished status word is not closed, and stays in the Open lens", () => {
+    for (const status of ["pending", "PENDING ", "WAITING", "approved", "CLOSED"]) {
       const row = readInboxRowV2({ ...structuredClone(baseRow), status })!;
       expect(isClosedRow(row), status).toBe(false);
+      expect(statusClassOf(row), status).toBe("unknown");
+      const open = gateItems({ rows: [row], decided: [], lane: "all", lens: "open", principal: NO_PRINCIPAL });
+      expect(open.map((i) => i.key), status).toEqual([row.id]);
+      expect(gateItems({ rows: [row], decided: [], lane: "all", lens: "closed", principal: NO_PRINCIPAL }), status).toEqual([]);
     }
+    for (const status of CLOSED_STATUSES) {
+      const row = readInboxRowV2({ ...structuredClone(baseRow), status })!;
+      expect(statusClassOf(row), status).toBe("closed");
+    }
+    expect(statusClassOf(readInboxRowV2({ ...structuredClone(baseRow), status: "PENDING" })!)).toBe("open");
   });
 
   /*
-   * DEFECT D8 (inboxRowV2.ts `text`): a row id is any non-empty string, so an id
-   * with a space, a slash or markup is accepted although the schema's
-   * Identifier pattern is ^[A-Za-z0-9._:-]{1,191}$. Ids reach URLs and keys.
+   * Was DEFECT D8 (inboxRowV2.ts `text`): a row id was any non-empty string.
+   * It must match the published Identifier pattern ^[A-Za-z0-9._:-]{1,191}$,
+   * else the row is dropped (and counted by the page reader).
    */
-  it.fails("DEFECT D8: an id outside the Identifier pattern is refused", () => {
-    for (const id of ["a b", "a/b", "<b>x</b>", "x".repeat(192)]) {
+  it("D8: an id outside the Identifier pattern is refused and counted as dropped", () => {
+    for (const id of ["a b", "a/b", "<b>x</b>", "x".repeat(192), "a\nb", "é"]) {
       expect(readInboxRowV2({ ...structuredClone(baseRow), id }), id).toBeNull();
+      expect(readInboxRowV2({ ...structuredClone(baseRow), subject_id: id }), `subject_id ${id}`).toBeNull();
+      expect(readInboxPageV2(envelopeOf([{ ...structuredClone(baseRow), id }]))!.dropped, id).toBe(1);
     }
+    expect(readInboxRowV2({ ...structuredClone(baseRow), id: "x".repeat(191) })).not.toBeNull();
+    // A present id that breaks the pattern is not rescued by approval_id.
+    expect(readInboxRowV2({ ...structuredClone(baseRow), id: "a b", approval_id: "ok" })).toBeNull();
   });
 });

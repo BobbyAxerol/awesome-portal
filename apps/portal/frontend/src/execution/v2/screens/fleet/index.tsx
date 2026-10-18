@@ -44,7 +44,7 @@ export interface FleetScreenProps {
 const SEARCH_DEBOUNCE_MS = 300;
 
 function freshnessFlag(freshness: string): { kind: FlagKind; label: string } {
-  switch (freshness.toUpperCase()) {
+  switch (freshness) {
     case "FRESH": return { kind: "ok", label: "Fresh" };
     case "STALE": return { kind: "stale", label: "Stale" };
     default: return { kind: "unknown", label: humanize(freshness) };

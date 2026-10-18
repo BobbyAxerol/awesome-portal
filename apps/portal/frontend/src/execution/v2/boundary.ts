@@ -69,6 +69,14 @@ const ABSENT_WORD: Readonly<Record<AbsentState, string>> = {
 
 // Same grammar as the server's decimal strings, plus the refusal of `-0`: a
 // negative zero has no meaning to a reader and would print as a signed nothing.
+/**
+ * Longest decimal string (sign, digits and point) the reader accepts. The
+ * published Decimal schema has no maxLength, so this is a reader-side bound:
+ * the widest real value (a 38-digit ledger amount with a scale of 18) is under
+ * 60 characters, and 128 leaves headroom. A longer string is refused whole
+ * (null, which a screen draws as unavailable), never truncated.
+ */
+export const MAX_DECIMAL_LENGTH = 128;
 const NEGATIVE_ZERO = /^-0+(\.0+)?$/;
 const ZERO = /^-?0+(\.0+)?$/;
 const REASON_CODE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
@@ -88,7 +96,7 @@ function toneOf(decimal: { display: string; full: string }): SignTone {
 
 /** Exact decimal string -> display pair. Numbers, exponents, `-0`, `01` are refused. */
 export function readDecimal(value: unknown, options: ReadDecimalOptions): BoundaryDecimal | null {
-  if (typeof value !== "string" || NEGATIVE_ZERO.test(value)) return null;
+  if (typeof value !== "string" || value.length > MAX_DECIMAL_LENGTH || NEGATIVE_ZERO.test(value)) return null;
   // screenDataContract owns the grammar and the scale check; the scale is the
   // string's own, and the currency slot is a placeholder because a metric's
   // unit is not always money.

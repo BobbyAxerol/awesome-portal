@@ -10,6 +10,7 @@
  * there. Absent is absent — the states system does the talking.
  */
 import {
+  readExactDecimal,
   readGeneratedPanelEnvelope,
   readUtcEpochMs,
   type GeneratedPanelEnvelope,
@@ -58,6 +59,23 @@ function obj(raw: unknown): Record<string, unknown> | null {
 }
 
 const str = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : null);
+
+/** Same bound as v2/boundary.ts MAX_DECIMAL_LENGTH: the published Decimal has no maxLength. */
+const MAX_MONEY_LENGTH = 128;
+const NEGATIVE_ZERO = /^-0+(\.0+)?$/;
+/**
+ * A money field is an exact decimal string (screenDataContract grammar: no
+ * exponent, no `NaN`, no hex, no thousands comma, no leading zero) and not
+ * `-0`. Anything else answers null, the same shape as a missing field.
+ */
+const money = (v: unknown): string | null => {
+  if (typeof v !== "string" || v.length === 0 || v.length > MAX_MONEY_LENGTH || NEGATIVE_ZERO.test(v)) return null;
+  const places = v.includes(".") ? v.length - v.indexOf(".") - 1 : 0;
+  return readExactDecimal(v, "XXX", places);
+};
+/** An optional money field: absent stays absent, a present value must be a decimal. */
+const optionalMoney = (v: unknown): { ok: boolean; value: string | null } =>
+  v === undefined || v === null ? { ok: true, value: null } : { ok: money(v) !== null, value: money(v) };
 
 export function readProfileEnvelope(raw: unknown): ProfileEnvelope | null {
   const root = obj(raw);
@@ -458,6 +476,12 @@ export interface ManagerListPage<T> {
   prevCursor: string | null;
   hasMore: boolean;
   hasPrevious: boolean;
+  /**
+   * Rows that repeated an id already in this page. The first is kept, the
+   * rest are counted here and never drawn, so a table never holds two rows
+   * with one key and the count of what was set aside stays readable.
+   */
+  repeatedRowCount: number;
 }
 
 export interface AlphaFleetItem {
@@ -565,17 +589,29 @@ export interface ManagerListEnvelope<T> {
   summary?: AlphaFleetSummary;
 }
 
-function readManagerPage<T>(raw: unknown, row: (value: unknown) => T | null): ManagerListPage<T> | null {
+function readManagerPage<T>(
+  raw: unknown,
+  row: (value: unknown) => T | null,
+  keyOf: (item: T) => string,
+): ManagerListPage<T> | null {
   const root = obj(raw);
   if (!root || !Array.isArray(root.rows)) return null;
-  const rows = root.rows.map(row);
-  if (rows.some((item) => item === null)) return null;
+  const parsed = root.rows.map(row);
+  if (parsed.some((item) => item === null)) return null;
+  const seen = new Set<string>();
+  const rows: T[] = [];
+  for (const item of parsed as T[]) {
+    const key = keyOf(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push(item);
+  }
   const count = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
   const totalCount = count(root.total_count);
   const filteredCount = count(root.filtered_count);
   if (totalCount === null || filteredCount === null) return null;
   return {
-    rows: rows as T[], totalCount, filteredCount,
+    rows, totalCount, filteredCount, repeatedRowCount: parsed.length - rows.length,
     nextCursor: str(root.next_cursor), prevCursor: str(root.prev_cursor),
     hasMore: root.has_more === true, hasPrevious: root.has_previous === true,
   };
@@ -585,11 +621,12 @@ function readManagerEnvelope<T>(
   raw: unknown,
   schemaVersion: string,
   row: (value: unknown) => T | null,
+  keyOf: (item: T) => string,
   summary?: (value: unknown) => AlphaFleetSummary | null,
 ): ManagerListEnvelope<T> | null {
   const root = obj(raw);
   if (!root || root.schema_version !== schemaVersion || root.record_authority !== "PORTAL_PROJECTION") return null;
-  const page = readManagerPage(root.page, row);
+  const page = readManagerPage(root.page, row, keyOf);
   const environment = str(root.environment);
   const freshness = str(root.freshness);
   const completeness = str(root.completeness);
@@ -653,35 +690,38 @@ function readFleetDeployment(value: unknown): AlphaFleetDeployment | null {
   const deploymentId = str(item.deployment_id); const stage = str(item.stage); const venue = str(item.venue);
   const accountId = str(item.account_id); const currency = str(item.currency); const state = str(item.state);
   const health = str(item.health); const updatedAt = str(item.updated_at);
-  const realizedPnl = str(item.realized_pnl); const unrealizedPnl = str(item.unrealized_pnl);
-  const netPnl = str(item.net_pnl); const exposure = str(item.exposure);
+  const realizedPnl = money(item.realized_pnl); const unrealizedPnl = money(item.unrealized_pnl);
+  const netPnl = money(item.net_pnl); const exposure = money(item.exposure);
+  const allocation = optionalMoney(item.allocation); const balanceTotal = optionalMoney(item.balance_total);
+  const balanceFree = optionalMoney(item.balance_free); const balanceLocked = optionalMoney(item.balance_locked);
   const positionFactCount = typeof item.position_fact_count === "number"
     && Number.isSafeInteger(item.position_fact_count) && item.position_fact_count >= 0
     ? item.position_fact_count : null;
   if (!deploymentId || !stage || !venue || !accountId || !currency || !state || !health || !updatedAt
     || !realizedPnl || !unrealizedPnl || !netPnl || !exposure || positionFactCount === null
+    || !allocation.ok || !balanceTotal.ok || !balanceFree.ok || !balanceLocked.ok
     || typeof item.active !== "boolean") return null;
   return {
     deploymentId, stage, venue, accountId, portfolioId: str(item.portfolio_id),
-    portfolioName: str(item.portfolio_name), currency, allocation: str(item.allocation),
-    balanceTotal: str(item.balance_total), balanceFree: str(item.balance_free),
-    balanceLocked: str(item.balance_locked), positionFactCount,
+    portfolioName: str(item.portfolio_name), currency, allocation: allocation.value,
+    balanceTotal: balanceTotal.value, balanceFree: balanceFree.value,
+    balanceLocked: balanceLocked.value, positionFactCount,
     realizedPnl, unrealizedPnl, netPnl, exposure, state, active: item.active, health, updatedAt,
   };
 }
 
 function readCurrencyValue(value: unknown): CurrencyValue | null {
-  const item = obj(value); const currency = str(item?.currency); const exactValue = str(item?.value);
+  const item = obj(value); const currency = str(item?.currency); const exactValue = money(item?.value);
   return item && currency && exactValue ? { currency, value: exactValue } : null;
 }
 function readCurrencyBalance(value: unknown): CurrencyBalance | null {
-  const item = obj(value); const currency = str(item?.currency); const total = str(item?.total);
-  const free = str(item?.free); const locked = str(item?.locked);
+  const item = obj(value); const currency = str(item?.currency); const total = money(item?.total);
+  const free = money(item?.free); const locked = money(item?.locked);
   return item && currency && total && free && locked ? { currency, total, free, locked } : null;
 }
 function readCurrencyPnl(value: unknown): CurrencyPnl | null {
-  const item = obj(value); const currency = str(item?.currency); const realized = str(item?.realized);
-  const unrealized = str(item?.unrealized); const net = str(item?.net);
+  const item = obj(value); const currency = str(item?.currency); const realized = money(item?.realized);
+  const unrealized = money(item?.unrealized); const net = money(item?.net);
   return item && currency && realized && unrealized && net ? { currency, realized, unrealized, net } : null;
 }
 
@@ -794,10 +834,10 @@ export function readPortfolioList(raw: unknown): PortfolioListEnvelope | null {
 }
 
 export const readAlphaFleet = (raw: unknown) =>
-  readManagerEnvelope(raw, "execution.alpha-fleet-list.v2", readAlphaFleetItem, readFleetSummary);
+  readManagerEnvelope(raw, "execution.alpha-fleet-list.v2", readAlphaFleetItem, (item) => item.alphaId, readFleetSummary);
 
 export const readBindings = (raw: unknown) =>
-  readManagerEnvelope(raw, "execution.bindings-list.v1", readBindingItem);
+  readManagerEnvelope(raw, "execution.bindings-list.v1", readBindingItem, (item) => item.bindingId);
 
 /**
  * R3-3 · `execution.binding-detail.v1` is nine required fields, not one.

@@ -414,8 +414,11 @@ describe("L3 · negative payloads", () => {
       if (!accepted && leaked(view.container.textContent, raw.length < 40 && raw.trim() !== "" ? raw : null) && !shown.includes("unreadable value")) leaks.push(`${c.name}: probe in DOM`);
       view.unmount();
     }
-    console.info(`portfolios L3: ${tried.length} decimal payloads reached the screen; ${leaks.length} leaks`);
-    expect(tried.length).toBeGreaterThan(20);
+    // The shared V1 money reader (profileRead.ts `money`) now refuses every non-decimal at the reader (F5b D1),
+    // so what reaches the screen is only a string the boundary also reads; the rest never gets that far.
+    const refusedAtReader = decimals.filter((c) => readPortfolioList(c.value) === null).length;
+    console.info(`portfolios L3: ${refusedAtReader} of ${decimals.length} decimal payloads refused by the reader, ${tried.length} reached the screen; ${leaks.length} leaks`);
+    expect(refusedAtReader).toBeGreaterThan(20);
     expect(leaks).toEqual([]);
   }, 60_000);
 

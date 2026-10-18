@@ -143,8 +143,14 @@ describe("current facts per currency", () => {
     expect(row!.netPositionPnl).toMatchObject({ display: "0.00001234", full: "0.00001234" });
   });
   it("a string longer than any real amount is refused before it reaches BigInt arithmetic", () => {
-    const [row] = currencyFacts(summary({ allocation_by_currency: [{ currency: "USDT", value: "9".repeat(70_000) }], exposure_by_currency: [], current_position_pnl_by_currency: [] }));
+    // 100 digits passes the reader's 128 character bound and is over the model's 64: the model still refuses it.
+    const [row] = currencyFacts(summary({ allocation_by_currency: [{ currency: "USDT", value: "9".repeat(100) }], exposure_by_currency: [], current_position_pnl_by_currency: [] }));
     expect(row!.allocation).toBeNull();
+  });
+  it("the fleet reader refuses a 70,000 digit amount outright (128 character bound), so it never reaches the model", () => {
+    const raw = loadCanonical<Draft>(FLEET);
+    raw.summary = { ...raw.summary, allocation_by_currency: [{ currency: "USDT", value: "9".repeat(70_000) }] };
+    expect(readAlphaFleet(raw)).toBeNull();
   });
   it("no summary, no rows", () => {
     expect(currencyFacts(null)).toEqual([]);

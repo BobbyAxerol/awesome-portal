@@ -71,8 +71,15 @@ function text(raw: unknown): string | null {
   return typeof raw === "string" && raw.length > 0 ? raw : null;
 }
 
+/** The published Identifier pattern (`^[A-Za-z0-9._:-]{1,191}$`): an id reaches URLs and React keys. */
+const IDENTIFIER = /^[A-Za-z0-9._:-]{1,191}$/;
+function identifier(raw: unknown): string | null {
+  return typeof raw === "string" && IDENTIFIER.test(raw) ? raw : null;
+}
+
+/** A count is a non-negative safe integer; a figure past 2^53 has no exact value to print. */
 function whole(raw: unknown): number | null {
-  return typeof raw === "number" && Number.isInteger(raw) && raw >= 0 ? raw : null;
+  return typeof raw === "number" && Number.isSafeInteger(raw) && raw >= 0 ? raw : null;
 }
 
 /** A person, published as `{user_id, username}` or as a bare name. Anything else is no actor. */
@@ -81,6 +88,8 @@ export function readInboxActor(raw: unknown): InboxActor | null {
   const o = record(raw);
   if (o === null) return null;
   const userId = text(o.user_id);
+  // A user id outside the Identifier pattern is no id: the actor is then unknown, never half-known.
+  if (o.user_id !== undefined && o.user_id !== null && identifier(o.user_id) === null) return null;
   const username = text(o.username);
   return userId === null && username === null ? null : { userId, username };
 }
@@ -105,7 +114,10 @@ export function readInboxSla(raw: unknown): InboxSlaV2 | null {
 export function readInboxRowV2(raw: unknown): InboxRowV2 | null {
   const o = record(raw);
   if (o === null) return null;
-  const id = text(o.id) ?? text(o.approval_id);
+  // A present id that breaks the pattern is not replaced by the other spelling.
+  const id = o.id !== undefined ? identifier(o.id) : identifier(o.approval_id);
+  const subjectId = o.subject_id === undefined || o.subject_id === null ? null : identifier(o.subject_id);
+  if (o.subject_id !== undefined && o.subject_id !== null && subjectId === null) return null;
   const gate = typeof o.gate === "string" ? GATES.find((candidate) => candidate === o.gate) : undefined;
   if (id === null || gate === undefined) return null;
   const inert = typeof o.inert === "string" ? INERT.find((candidate) => candidate === o.inert) : undefined;
@@ -113,7 +125,7 @@ export function readInboxRowV2(raw: unknown): InboxRowV2 | null {
     id,
     gate,
     subject: text(o.subject) ?? id,
-    subjectId: text(o.subject_id),
+    subjectId,
     target: text(o.target),
     environment: text(o.environment),
     releaseCandidate: text(o.release_candidate),
@@ -134,7 +146,7 @@ export function readInboxRowV2(raw: unknown): InboxRowV2 | null {
 
 export interface InboxPageV2 {
   rows: readonly InboxRowV2[];
-  /** Rows that arrived and could not be read; the footer says so rather than hiding them. */
+  /** Rows that arrived and could not be read, or repeated an id already in the page; the footer says so rather than hiding them. */
   dropped: number;
   totalCount: number | null;
   filteredCount: number | null;
@@ -149,11 +161,16 @@ export function readInboxPageV2(raw: unknown): InboxPageV2 | null {
   const page = record(root.page) ?? root;
   if (!Array.isArray(page.rows)) return null;
   const rows: InboxRowV2[] = [];
+  const seen = new Set<string>();
   let dropped = 0;
   for (const entry of page.rows) {
     const row = readInboxRowV2(entry);
-    if (row === null) dropped += 1;
-    else rows.push(row);
+    // A repeat of an id already in the page is set aside and counted: the queue keys rows by id.
+    if (row === null || seen.has(row.id)) dropped += 1;
+    else {
+      seen.add(row.id);
+      rows.push(row);
+    }
   }
   return {
     rows,

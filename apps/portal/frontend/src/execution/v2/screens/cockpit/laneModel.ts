@@ -162,8 +162,24 @@ export function isYours(row: InboxRowV2, principal: Principal): boolean {
   return row.inert === "SELF" || sameActor(row.creator, principal) === true || sameActor(row.requester, principal) === true;
 }
 
+/** The statuses the published `status` enum closes a request with. */
+export const CLOSED_STATUSES: readonly string[] = ["APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"];
+
+/**
+ * `open` is PENDING or a row that carries no status; `closed` is one of the
+ * published closing statuses; anything else is `unknown`. The enum is matched
+ * exactly (no case folding, no trimming): a word this build has never seen is
+ * not a decision, so the request stays in Open where someone can see it.
+ */
+export type RowStatusClass = "open" | "closed" | "unknown";
+
+export function statusClassOf(row: InboxRowV2): RowStatusClass {
+  if (row.status === null || row.status === "PENDING") return "open";
+  return CLOSED_STATUSES.includes(row.status) ? "closed" : "unknown";
+}
+
 export function isClosedRow(row: InboxRowV2): boolean {
-  return row.status !== null && row.status !== "PENDING";
+  return statusClassOf(row) === "closed";
 }
 
 /* ── access ───────────────────────────────────────────────────────────────── */
