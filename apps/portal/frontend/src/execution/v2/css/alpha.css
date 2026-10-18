@@ -1,0 +1,394 @@
+/* Alpha 360 and Trade Replay (UXM-07 S2). Tokens and type roles only; no raw
+ * colour, no uppercase outside the reviewed selectors. Measured against
+ * design/hifi/v2/alpha.html and kit.css: page stack gap 24, tab buttons
+ * 8px 16px with a 1px line under the row, segmented buttons 6px 12px, captions
+ * 6px 14px apart over a 1px rule, two-column grids 24 apart. Every rule that
+ * sets both a text and a fill colour uses a pair already proven by fleet.css,
+ * blocks.css or dock.css. */
+.exec-alp2-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  color: var(--ink);
+}
+
+/* masthead */
+.exec-alp2-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+.exec-alp2-back {
+  display: inline-block;
+  margin-bottom: var(--space-1);
+  font: var(--exec-font-meta);
+  color: var(--accent);
+}
+.exec-alp2-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-alp2-version {
+  padding: 0 var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+}
+.exec-alp2-scorechip {
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-alp2-scorechip:focus-visible,
+.exec-alp2-tab:focus-visible,
+.exec-alp2-segbtn:focus-visible,
+.exec-alp2-menuitem:focus-visible,
+.exec-alp2-chip:focus-visible,
+.exec-alp2-stack [tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-alp2-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-alp2-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-2) 0 0;
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+.exec-alp2-meta b {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.exec-alp2-fresh,
+.exec-alp2-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-alp2-chip {
+  padding: 2px var(--space-2);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  text-decoration: none;
+}
+.exec-alp2-state {
+  min-width: 0;
+}
+
+/* body and the docked Score drawer */
+.exec-alp2-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.exec-alp2-main[data-docked="true"] {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.exec-alp2-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* current facts */
+.exec-alp2-kpis {
+  --exec-kpi-n: 4;
+}
+.exec-alp2-fig {
+  display: block;
+}
+
+/* tabs */
+.exec-alp2-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-alp2-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.exec-alp2-tab {
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-control);
+  color: var(--ink-faint);
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.exec-alp2-tab:hover {
+  color: var(--ink);
+}
+.exec-alp2-tab[aria-selected="true"],
+.exec-alp2-tab[data-active="true"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-bottom-color: var(--accent);
+}
+.exec-alp2-more-wrap {
+  position: relative;
+}
+.exec-alp2-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 6;
+  min-width: 200px;
+  margin: 0;
+  padding: var(--space-1) 0;
+  list-style: none;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-alp2-menuitem {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  text-align: left;
+  background: var(--surface-2);
+  border: 0;
+  cursor: pointer;
+}
+.exec-alp2-menuitem:hover {
+  background: var(--accent-soft);
+}
+.exec-alp2-seg {
+  display: inline-flex;
+  margin-left: auto;
+  margin-bottom: var(--space-1);
+}
+.exec-alp2-segbtn {
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-alp2-segbtn[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-alp2-filter {
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+.exec-alp2-panel {
+  min-width: 0;
+}
+
+/* stacks and grids */
+.exec-alp2-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.exec-alp2-grid2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-5);
+}
+@media (max-width: 900px) {
+  .exec-alp2-grid2,
+  .exec-alp2-main[data-docked="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.exec-alp2-equity-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.exec-alp2-contrib {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* captions and small text */
+.exec-alp2-cap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: var(--space-2) 0 0;
+  padding-top: var(--space-2);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+  border-top: 1px solid var(--line);
+}
+.exec-alp2-line {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-alp2-dim {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-alp2-why {
+  display: block;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-alp2-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.exec-alp2-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+.exec-alp2-more .exec-alp2-cap {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* key and value tables */
+.exec-alp2-kv {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-body);
+}
+.exec-alp2-kv th,
+.exec-alp2-kv td {
+  padding: var(--space-2) 0;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.exec-alp2-kv th {
+  font: var(--exec-font-body);
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.exec-alp2-kv td {
+  text-align: right;
+}
+.exec-alp2-details {
+  margin-top: var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-alp2-drawer-h {
+  margin: var(--space-4) 0 var(--space-2);
+  font: var(--exec-font-section);
+  color: var(--ink);
+}
+
+/* lifecycle detail under the spine */
+.exec-alp2-stage-wrap {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.exec-alp2-stage-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-section);
+  color: var(--ink);
+}
+.exec-alp2-stage-deps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-alp2-stage-deps li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font: var(--exec-font-body);
+}
+
+/* stage word with a shape that is not colour alone: hatch, outline, solid */
+.exec-alp2-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink);
+}
+.exec-alp2-stage i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--ink-faint);
+}
+.exec-alp2-stage[data-stage="paper"] i {
+  background: repeating-linear-gradient(45deg, var(--env-paper) 0 2px, transparent 2px 4px);
+  box-shadow: inset 0 0 0 1px var(--env-paper);
+}
+.exec-alp2-stage[data-stage="sandbox"] i {
+  background: repeating-linear-gradient(45deg, var(--env-sandbox) 0 2px, transparent 2px 4px);
+  box-shadow: inset 0 0 0 1px var(--env-sandbox);
+}
+.exec-alp2-stage[data-stage="canary"] i {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--env-canary);
+}
+.exec-alp2-stage[data-stage="live"] i {
+  background: var(--env-live);
+}
+
+/* replay page */
+.exec-alp2-replay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+@media (max-width: 660px) {
+  .exec-alp2-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .exec-alp2-seg {
+    margin-left: 0;
+  }
+}
