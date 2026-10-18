@@ -38,6 +38,15 @@ Chúng không thay thế phase hoặc exit gate trong
   original08 remains IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET;09connected
   NOT_STARTED. The older "no owned runnable work" statements below describe
   historical independent slices, not the current mounting/commissioning work.
+  Source commit9d9d0950 is now pushed/ls-remote verified on the feature branch,
+  normal hook PASS(717worktree API cases plus restore, separate from393).
+  The unstarted narrow SGP retake is terminal by intentional supersession;
+  all five obsolete HK copies and exact SGP source/public copy are removed,
+  plus the redundant141824000B HK tar and own unused hook-test image index.
+  Bounded receipts/pins and active commissioning inputs remain;40HK/51SGP
+  runtime tuples unchanged,428shared BuildKit records retained/new own IDs0.
+  Main journal records exact disk/hashes/retention. This is source/cleanup
+  completion, NOT commissioned authority or connected08 acceptance.
 
 - [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
   — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…10 approved/in progress;11 independent COMPLETE; original10/11 connected round2 approved, NOT_MET**. Six offline

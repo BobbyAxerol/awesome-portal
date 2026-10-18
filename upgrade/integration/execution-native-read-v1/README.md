@@ -8,6 +8,15 @@ the finite HTTP consumer plus observation SSE and conditional runtime loader;
 the historical profiles below remain immutable. It is source qualification,
 not commissioned provider/identity, actual factory or connected08 acceptance.
 
+Published source commit: `9d9d0950d1a0892f4cedff8f6439c1391b45339e` on
+`BobbyAxerol/awesome-portal:feat/execution-edge-upgrade-v1_2`, verified by
+ls-remote. Pull/fetch that feature into your isolated integration checkout;
+do not apply to a dirty peer checkout or operational release. Read the latest
+profile's exact preflight/application instructions and qualification before
+mounting. The [main journal](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23207-original08--actual-provider-owning-boundary-and-connected-acceptance)
+records normal-hook717/restore and both-host cleanup separately from393source
+cases; none of those receipts installs authority or closes connected08.
+
 Use the additive [complete profile](complete-profile/manifest.json) for a
 reproducible historical qualification. It repairs an owned publication omission:
 four qualified READ/STREAM prerequisites were not in the original authored patch.

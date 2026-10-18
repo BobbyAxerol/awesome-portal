@@ -688,6 +688,19 @@ cursor/SSE remain owned08work, not a new phase. See the
 for current source/runtime/cleanup and scoped next actions; historical tracking
 below does not supersede this continuation.
 
+**Publication/cleanup verified21:07UTC:** source commit9d9d0950 is pushed and
+ls-remote verified on awesome-portal/feat/execution-edge-upgrade-v1_2.
+Normal hook PASS includes this worktree's717Control API cases and restore,
+not another393-case run. Five obsolete HK copies121659211logicalB, exact SGP
+source/public copy293925322B and redundant HK public tar141824000B removed;
+bounded receipts/pins retained. Own unreferenced hook-test image index removed,
+428shared BuildKit records retained/new own IDs0, no broad prune.40HK/51SGP
+runtime tuples unchanged. Original SGP retake was deliberately retired before
+starting, never reported as a test PASS/failure. Full08 remains NOT_MET;
+actual provider/schema/identities/factory and connected drills are unfinished
+owned work. Main journal records exact targets, hashes, disk and current
+parallel-source/release/runtime pins; no operational activation occurred.
+
 - **Execution Edge v1.2 / EPG10-00 (2026-10-15):**
   [EPG10-00…11 in the Execution Loop unified plan §23](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
   is `EPG10-00_COMPLETED_INVENTORY_ONLY`, on

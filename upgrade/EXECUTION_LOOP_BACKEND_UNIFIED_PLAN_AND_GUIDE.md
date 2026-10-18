@@ -20910,6 +20910,97 @@ images/BuildKit before/after the real hook; do not prune peer/operational data.
 Only after hook PASS commit/push this approved feature, then finish actual
 provider/Core commission and the still-required exact test-source cleanup.
 
+**Actual publication / normal hook21:02UTC:** commit
+`9d9d0950d1a0892f4cedff8f6439c1391b45339e`, Bobby identity, exact12reviewed
+paths/+7165/-15, on feat/execution-edge-upgrade-v1_2. Normal .githooks enabled:
+Portal verification PASS, this worktree's Control API72suites/717tests PASS
+and actual disposable PostgreSQL restore drill PASS. These717are NOT the
+current-Core393cases or the peer's1087contracts. Receipt5409fb03/logf051b8cf;
+40protected tuples unchanged, own hook lease removed. Explicit approved SSH
+push to BobbyAxerol/awesome-portal completed normally; independent ls-remote
+confirms exact9d9d0950 on the SAME feature branch. No merge/force/dev/main or
+runtime activation. Parent/backend indices point to the full43file packet;
+historical packets remain immutable. Source publication is now AVAILABLE,
+not a claimed actual provider or connected08 acceptance.
+
+**Intentional supersession, not test failure/restart:** actual handles26889
+and90324 terminated143 after exact PID/UID/cmdline/starttime verification,
+SIGSTOP of only our waiter, then remote proof of no second test/no owned
+container and exactly the original191942receipt. They had never started the
+retake; full393HK qualification superseded it. No peer job was stopped and no
+timeout/retest PASS fabricated. Retained raw191942remains TAINTED/unaccepted.
+The sole cleanup controller92272 waited read-only for actual foreign SGP jobs
+to end, then ended0at21:05:29UTC after the bounded cleanup below.
+
+**Actual scoped cleanup21:02–21:07UTC / both servers:** original bounded
+failure/success logs, JUnit, exact source pins and controller receipts retained
+under `/tmp/epg10-08-core-publication-1YUPvjLM/mount-evidence/`; public evidence
+is sanitized counts/hashes/provenance, not secrets, DB rows or dependency dumps.
+
+| Exact owned target | Verified removal | Shared free bytes before → after | Runtime proof |
+|---|---|---|---|
+| Five HK extracted copies: fixed1-hk-2ibyripo, fixed2-hk-3XQp7bxr, diagnostic3-hk-oJ8fnGKy, diagnostic4-hk-uLhuVOdI, fixed5-hk-Dbz3Dhcs | 5819regular files +5exact links;121659211logicalB | 214933794816 →215063142400 | 40tuples unchanged;0Docker mutation |
+| SGP `/tmp/epg10-08-realtime-core-5291-fixed5-sgp-1umg5x8C` | 9674regular files +16declared links;293925322logicalB | 161943859200 →162268811264 | 51tuples unchanged;0Docker mutation |
+| HK exact fixed5-public-dependencies.tar, SHA04f60f20 | 141824000logicalB;active pinned dependency directory retained | 214616485888 →214757560320 | 40tuples unchanged;0Docker mutation |
+| Own hook offline-test image index fdcfbf29 / portal-source-proxy-d4-offline:test | Exact unreferenced index removed;old f771index already absent | 214973423616 →214973140992 | 40tuples unchanged;own cleanup lease removed |
+
+Disk deltas are SHARED-HOST observations, not claimed exclusive reclaimed
+physical bytes. Exact receipts: hk-superseded-source-cleanup.json SHA
+`d5780522740355ac61364bbee1d161ec9dc7ba0cd87a533f44e77e6b8e7b40f3`;
+fixed5-sgp-source-cleanup.json
+`9ec56bdd9fecb99601d71135deada34fac5596159833aa021e9d20723df6291e`;
+public-transfer-archive-cleanup.json
+`83d71c9f0c0602c698213451dc1b7677e4a8dada1d3a58a1f74ea1da2580fa73`;
+publication-image-cleanup.json
+`865c9112e72729e0f48bda420000db432eece1236b39b46c17bf2aee4f28e8c2`.
+BuildKit sanitized inventory428→428records/new owned IDs0: retain shared/
+unproven records, no broad prune. Exact source hashes, regular-file ownership,
+declared symlinks, terminal receipts and no-process/no-mount guards preceded
+each source deletion; remote archived input hashes also match. Current fuller
+runtime source, necessary preimage/provider/installer drafts, PG15reference,
+active public dependencies and private PKI remain explicit original08 inputs.
+No key/credential, operational volume/network/container, source checkout,
+peer artifact, active image or named rollback release was removed. Cleanup
+is recoverable by re-extracting source/dependencies from their pinned inputs;
+original bounded failed results remain, not relabelled green.
+
+**Parallel/actual-target reconciliation21:00–21:05UTC:** Core unchanged5291;
+latest owner manager-intake-land-202651 ended20:58:15UTC FAIL_OR_INCOMPLETE/1,
+raw gateb078fb29.1087contracts PASS does not qualify its full gate, provider
+or our current runtime. PM advanced9aac77a9→2d166ec6, final provenance/monitor/
+RETURN migration/restore rehearsal, not installed native provider. All seven
+PM-owned PG15reference source inputs still match current bytes; no reason to
+retest unchanged inputs or adopt another owner's PASS. TS canonical668e1032
+and TS-nextf2229d7a unchanged. No peer source/index changes by this session.
+Actual readonly DB probe confirms live_data_executor/PG150018 on volume
+trading_system_pgdata; ts_users, membership.policy, native requests/business
+heads and registry.portfolios still absent. PKI17root0600files are prepared,
+private28445has no listener; neither fact commissions authority. Native
+provider/schema/identities, genuine configured Core factory and connected
+revoke/cache/cursor/SSE are still OWNED UNFINISHED08work, not external debt.
+No command/financial/broker activation;09connected NOT_STARTED/full08NOT_MET.
+
+**Source/release/runtime / retained scope:** canonical Portal checkout remains
+/home/bobby/.worktrees/portal-execution-manager-v2,
+feat/manager-v2-paper-read@54c6f5f3. Active upgrade checkout remains
+/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2 on its published
+feature branch. Preserve six other documented active Portal worktrees/branches
+(canonical manager, eds-current-bff, eds09-owner-return-handoff,
+elp210-edge-provider-candidate, execution-data-activation, r4r5-activation),
+and all three peer-untracked areas. No worktree/branch cleanup authorized here.
+HK Paper/Sandbox/Live Edge+worker image remains
+sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e;
+Source Proxy sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b;
+projection PG sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685.
+Existing service/config/start/restart tuples are unchanged, not inferred from
+feature HEAD. Stable release locations remain HK
+/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy
+and SGP /srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose;
+retain named TS rollbackr59@9150385e/r49@b4e7a6c0 and existing active/rollback
+Portal artifacts. Next permitted action: original08 exact private commissioning
+on the verified DB and genuine current Core mount, then actual connected
+drills. Scope available inputs immediately; no new phase or generic reapproval.
+
 
 
 
