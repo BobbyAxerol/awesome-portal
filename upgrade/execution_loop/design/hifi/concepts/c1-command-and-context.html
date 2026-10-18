@@ -1,0 +1,71 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>C1 Command bar and context — concept</title><link rel="stylesheet" href="../hifi.css">
+<style>
+.ctxrail{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:8px 24px;background:var(--sunken);border-bottom:1px solid var(--line-strong);position:sticky;top:29px;z-index:9}
+.ctxrail .l{font:500 10.5px/16px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-right:6px}
+.kbd{font:500 11px/16px var(--font-mono);border:1px solid var(--line-strong);padding:0 6px;background:var(--paper);color:var(--ink-soft)}
+.cmdbtn{display:flex;gap:10px;align-items:center;margin-left:auto;background:var(--paper);border:1px solid var(--line-strong);padding:5px 12px;min-width:300px;color:var(--ink-faint);cursor:pointer;font:400 13px/18px var(--font-sans)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.66);display:none;z-index:50}.ov.on{display:block}
+.pal{width:640px;max-width:calc(100vw - 32px);margin:90px auto 0;background:var(--panel);border:1px solid var(--line-strong);box-shadow:0 0 0 1px #000}
+.pal input{width:100%;background:var(--paper);border:0;border-bottom:1px solid var(--line-strong);color:var(--ink);padding:14px 16px;font:400 15px/22px var(--font-sans);outline:none}
+.pal .grp{padding:8px 16px 2px;font:500 10.5px/16px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+.pal .it{display:flex;gap:12px;align-items:center;padding:7px 16px;cursor:pointer;border-left:3px solid transparent}.pal .it .ty{width:70px;color:var(--ink-faint);font:500 10.5px/16px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+.pal .it.sel{background:var(--accent-soft);border-left-color:var(--accent)}.pal .it .r{margin-left:auto;color:var(--ink-faint);font:400 12px/16px var(--font-mono)}
+.pal .ft{display:flex;gap:16px;padding:8px 16px;border-top:1px solid var(--line);color:var(--ink-faint);font:400 11px/16px var(--font-mono)}
+.feed .it{display:grid;grid-template-columns:62px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}.feed .it:last-child{border:0}.feed .t{font:400 11px/16px var(--font-mono);color:var(--ink-faint)}.feed .d{font-size:12px;color:var(--ink-faint)}
+.tmw{position:relative;background:var(--sunken);border:1px solid var(--line-strong)}.tmw svg{display:block;width:100%;height:auto}
+.leg2{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font:400 11px/16px var(--font-mono);color:var(--ink-soft)}.leg2 i{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--cell);border:1px solid var(--line-strong);padding:8px 14px;display:none;z-index:60;font:400 12px/16px var(--font-mono)}
+.g31{display:grid;grid-template-columns:340px minmax(0,1fr);gap:24px}@media(max-width:1000px){.g31{grid-template-columns:1fr}.cmdbtn{min-width:0;flex:1}}
+</style></head><body data-state="healthy">
+<div class="strip"><span>Concept C1 · command bar + context rail + digest + fleet heat map</span><span class="grp" data-ctl="state"><button data-v="healthy" aria-pressed="true">Manager</button><button data-v="sparse" aria-pressed="false">Source not ready</button><button data-v="researcher" aria-pressed="false">Researcher</button></span><span>Press ⌘K / Ctrl+K</span></div>
+<div class="app" style="grid-template-rows:52px auto 1fr">
+<header class="top"><span class="brand">Quant Ecosystem Portal</span><span class="crumb">Execution / <b>Overview</b></span>
+ <button class="cmdbtn" id="open" aria-label="Open command bar"><span>Search or jump to…</span><span style="margin-left:auto"><span class="kbd">⌘K</span></span></button></header>
+<div class="ctxrail" style="grid-column:1/3"><span class="l">Context</span>
+ <span class="seg" data-local="env"><button aria-pressed="true">Live</button><button aria-pressed="false">Paper</button><button aria-pressed="false">Sandbox</button></span>
+ <span class="seg" data-local="win"><button aria-pressed="false">7D</button><button aria-pressed="false">30D</button><button aria-pressed="true">90D</button><button aria-pressed="false">ALL</button></span>
+ <span class="chipx">USDT · real-funded</span><span class="chipx">Scope: All portfolios ▾</span><span class="chipx">As of: now ▾</span><span class="mono" style="margin-left:auto;color:var(--ink-faint);font-size:11px">Context follows you across screens</span></div>
+<nav class="side"><h6>Execution</h6><a aria-current="page" href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Administration</h6><a href="#">Profile &amp; Access</a></nav>
+<main><div class="stack"><div class="g31">
+ <div class="panel feed"><div class="ph">Since your last visit <span class="r">Oct 17 · 18:20Z</span></div>
+  <div class="it"><span class="t">09:14</span><div><span class="tagu" data-k-x>INCIDENT</span> Broker sync diverged<div class="d">Binance-02 · now resolved</div></div></div>
+  <div class="it"><span class="t">08:40</span><div><span class="tagu">APPROVAL</span> Archive request decided<div class="d">SOL-Break v1 · approved by Bobby</div></div></div>
+  <div class="it"><span class="t">07:55</span><div><span class="tagu">OPERATION</span> Recall applied<div class="d">Core · budget −40,000 USDT</div></div></div>
+  <div class="it"><span class="t">06:30</span><div><span class="tagu">PARTIAL</span> LINK-Carry source<div class="d">Not published since Oct 16</div></div></div>
+  <div class="it"><span class="t">Net</span><div>NAV <b class="mono pos">+1.4%</b> <span class="mono" style="color:var(--ink-faint)">+16,980 USDT</span><div class="d">3 alphas moved stage · 1 new alpha</div></div></div>
+  <div style="margin-top:10px"><a href="#">Mark all seen</a></div></div>
+ <div class="panel"><div class="ph">Fleet map <span class="r">size · color</span></div>
+  <div class="ctrls" style="margin-bottom:10px"><span class="seg" data-local="sz"><button data-v="alloc" aria-pressed="true">Size: Allocation</button><button data-v="pnl" aria-pressed="false">Size: Net PnL</button></span><span class="seg" data-local="cl"><button data-v="health" aria-pressed="true">Color: Health</button><button data-v="ret" aria-pressed="false">Color: Return</button><button data-v="stage" aria-pressed="false">Color: Stage</button></span></div>
+  <div class="tmw" id="tm"></div><div class="leg2" id="lg"></div></div></div>
+</div></main></div>
+<div class="ov" id="ov"><div class="pal" role="dialog" aria-label="Command bar"><input id="q" placeholder="Search alphas, portfolios, accounts, operations, approvals…" autocomplete="off"><div id="res"></div><div class="ft"><span><span class="kbd">↑↓</span> move</span><span><span class="kbd">↵</span> open</span><span><span class="kbd">esc</span> close</span><span style="margin-left:auto">Context kept: Live · 90D · USDT</span></div></div></div>
+<div class="toast" id="toast"></div>
+<script src="../hifi.js"></script>
+<script>
+var DATA=[["Core",[["BTC-Trend",120,"ok",.071,"live"],["AVAX-Rev",54,"stale",-.02,"live"],["ETH-Mean",76,"bad",.05,"canary"],["SOL-Break",30,"ok",.03,"paper"]]],["Satellite",[["DOGE-Mom",18,"ok",-.06,"sandbox"],["LINK-Carry",25,"na",0,"canary"],["ARB-Skew",42,"ok",.09,"live"]]],["Edge",[["XRP-Fade",33,"stale",.01,"paper"],["OP-Grid",21,"ok",.02,"sandbox"]]]];
+var COL={ok:"#42a365",stale:"#f1c21b",bad:"#fa4d56",na:"#6f6f6f"},STG={live:"#fa4d56",canary:"#ff832b",sandbox:"#f1c21b",paper:"#be95ff"};
+function squar(items,x,y,w,h,out){var tot=items.reduce(function(a,b){return a+b.v},0);if(items.length===1){out.push({it:items[0],x:x,y:y,w:w,h:h});return}
+ var horiz=w>=h,acc=0,half=tot/2,i=0;while(i<items.length-1&&acc+items[i].v<=half)acc+=items[i++].v;if(i===0)i=1,acc=items[0].v;var a=items.slice(0,i),b=items.slice(i),fa=acc/tot;
+ if(horiz){squar(a,x,y,w*fa,h,out);squar(b,x+w*fa,y,w*(1-fa),h,out)}else{squar(a,x,y,w,h*fa,out);squar(b,x,y+h*fa,w,h*(1-fa),out)}}
+function tm(){var host=document.getElementById("tm"),W=host.clientWidth||760,H=Math.round(W*.52),sz=document.querySelector('[data-local="sz"] [aria-pressed=true]').getAttribute("data-v"),cl=document.querySelector('[data-local="cl"] [aria-pressed=true]').getAttribute("data-v");
+ var groups=DATA.map(function(g){return{n:g[0],v:g[1].reduce(function(a,b){return a+(sz==="pnl"?Math.abs(b[1]*b[3])+4:b[1])},0),kids:g[1].map(function(k){return{n:k[0],v:sz==="pnl"?Math.abs(k[1]*k[3])+4:k[1],h:k[2],r:k[3],s:k[4],a:k[1]}})}});
+ var top=[];squar(groups.map(function(g){return{v:g.v,g:g}}),0,0,W,H,top);var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Fleet map"><defs><pattern id="hh" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="#be95ff" stroke-width="1.4" opacity=".7"/></pattern></defs>';
+ top.forEach(function(t){var g=t.it.g,out=[];squar(g.kids.map(function(k){return{v:k.v,k:k}}),t.x+2,t.y+20,t.w-4,t.h-22,out);
+  s+='<rect x="'+t.x+'" y="'+t.y+'" width="'+t.w+'" height="'+t.h+'" fill="none" stroke="#4c4c4c"/><text x="'+(t.x+8)+'" y="'+(t.y+14)+'" fill="#c6c6c6" font-size="11" font-family="IBM Plex Mono" letter-spacing="1.2">'+g.n.toUpperCase()+'</text>';
+  out.forEach(function(o){var k=o.it.k,c=cl==="health"?COL[k.h]:cl==="stage"?STG[k.s]:(k.r>=0?"#78a9ff":"#ff832b");var sim=(k.s==="paper"||k.s==="sandbox");
+   s+='<g class="cell" tabindex="0" data-n="'+k.n+'"><rect x="'+(o.x+1)+'" y="'+(o.y+1)+'" width="'+(o.w-2)+'" height="'+(o.h-2)+'" fill="'+c+'" fill-opacity="'+(cl==="ret"?(.25+Math.min(.6,Math.abs(k.r)*7)):.3)+'" stroke="'+c+'" stroke-width="1.5"/>'+(sim?'<rect x="'+(o.x+1)+'" y="'+(o.y+1)+'" width="'+(o.w-2)+'" height="'+(o.h-2)+'" fill="url(#hh)" opacity=".5"/>':"")+
+   (o.w>70&&o.h>34?'<text x="'+(o.x+8)+'" y="'+(o.y+18)+'" fill="#f4f4f4" font-size="12" font-family="IBM Plex Sans" font-weight="500">'+k.n+'</text><text x="'+(o.x+8)+'" y="'+(o.y+33)+'" fill="#c6c6c6" font-size="11" font-family="IBM Plex Mono">'+(k.h==="na"?"Not available":(k.r>=0?"+":"\u2212")+Math.abs(k.r*100).toFixed(1)+"%")+'</text>':"")+'</g>'})});
+ host.innerHTML=s+"</svg>";
+ var lg=cl==="health"?[["#42a365","OK"],["#f1c21b","Stale"],["#fa4d56","Needs attention"],["#6f6f6f","Not published"]]:cl==="stage"?[["#fa4d56","Live"],["#ff832b","Canary"],["#f1c21b","Sandbox"],["#be95ff","Paper"]]:[["#78a9ff","Gain"],["#ff832b","Loss"]];
+ document.getElementById("lg").innerHTML=lg.map(function(l){return'<span><i style="background:'+l[0]+'"></i>'+l[1]+'</span>'}).join("")+'<span><i style="background:repeating-linear-gradient(135deg,#be95ff 0 2px,transparent 2px 4px)"></i>Simulated</span><span style="margin-left:auto">Real-funded and simulated are never summed</span>'}
+window.onseg=function(k){if(k==="sz"||k==="cl")tm()};tm();window.addEventListener("resize",tm);
+// command bar
+var ov=document.getElementById("ov"),q=document.getElementById("q"),res=document.getElementById("res"),sel=0,items=[];
+var ALL=[["Alpha","BTC-Trend v3","Live · Core"],["Alpha","ETH-Mean v2","Canary · Core"],["Alpha","BTC-Momentum v2","Archived"],["Portfolio","Core","612,040 USDT"],["Portfolio","Satellite","380,120 USDT"],["Account","Binance-02","live-0192"],["Operation","Portfolio Canary · ADJUST_TARGET_BUDGET","Unknown"],["Approval","Archive request · BTC-Trend v3","Needs me"],["Go to","Alpha Fleet · Live","filter"],["Go to","Operations · Exceptions","tab"],["Action","Request archive…","needs a selected alpha"]];
+function draw(){var t=q.value.trim().toLowerCase();items=ALL.filter(function(a){return!t||(a[0]+" "+a[1]+" "+a[2]).toLowerCase().indexOf(t)>=0});if(sel>=items.length)sel=0;var h="",last="";items.forEach(function(a,i){if(a[0]!==last){h+='<div class="grp">'+(t?"":"")+a[0]+(a[0]==="Go to"?" · jump":"")+'</div>';last=a[0]}h+='<div class="it'+(i===sel?" sel":"")+'" data-i="'+i+'"><span class="ty">'+a[0]+'</span><span>'+a[1]+'</span><span class="r">'+a[2]+'</span></div>'});res.innerHTML=h||'<div class="grp">No result</div>'}
+function open(){ov.classList.add("on");q.value="";sel=0;draw();setTimeout(function(){q.focus()},0)}function close(){ov.classList.remove("on")}
+document.getElementById("open").addEventListener("click",open);ov.addEventListener("click",function(e){if(e.target===ov)close()});
+document.addEventListener("keydown",function(e){if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();ov.classList.contains("on")?close():open()}else if(ov.classList.contains("on")){if(e.key==="Escape")close();else if(e.key==="ArrowDown"){sel=Math.min(items.length-1,sel+1);draw();e.preventDefault()}else if(e.key==="ArrowUp"){sel=Math.max(0,sel-1);draw();e.preventDefault()}else if(e.key==="Enter"&&items[sel]){pick(items[sel])}}});
+q.addEventListener("input",function(){sel=0;draw()});res.addEventListener("click",function(e){var it=e.target.closest(".it");if(it)pick(items[+it.getAttribute("data-i")])});
+function pick(a){close();var t=document.getElementById("toast");t.textContent="Open: "+a[1]+" — context kept (Live · 90D · USDT)";t.style.display="block";setTimeout(function(){t.style.display="none"},2200)}
+</script></body></html>

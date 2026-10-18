@@ -90,3 +90,20 @@ Phát hiện khi đọc chuẩn chart (cần làm khi được giao code, không
 - Chart ECharts của Execution đang dùng bảng màu navy thay vì Carbon (`activeTheme()` gộp `execution-carbon` thành `operations`); `EquityChart` (uPlot) thì đúng.
 - Font trong chart ECharts bị gắn cứng JetBrains Mono; Carbon dùng IBM Plex Mono.
 - Role bands (`--role-is/oos/holdout`) và `--viz-*` chưa được khai báo lại cho Carbon.
+
+## Quyết định bổ sung (Bobby, 2026-10-18)
+
+| Mã | Quyết định |
+| --- | --- |
+| UI1 | Ô vuông, viền cứng, chart có sức nặng như V1; chart equity không nhất thiết xanh/đỏ (kit: series xanh dương, drawdown cam, dòng tiền teal, mô phỏng tím) |
+| UI2 | Nhãn trạng thái (pending, recall, partial, unknown, applied…) có ký hiệu + màu riêng, viền cứng; không chỉ dựa màu |
+| UI3 | Khung thời gian mặc định **90D**, có **7D / 30D / 90D / ALL** ở mọi ô dữ liệu; riêng danh sách Operations mặc định 24H nhưng có đủ 7D/30D/90D/ALL |
+| S1 | Danh sách Paper/Sandbox/Live: gộp vào Fleet (lọc stage), URL cũ redirect |
+| S2 | Giữ giao diện Governance sáng cho **màn duyệt đầy đủ** (Gate R1/R2/Live, Exit review, Waivers); danh sách Decisions trong M09 dùng Carbon tối |
+| S3 | M09 có hai tab Operations \| Decisions; Incident giữ route, mở dạng drawer từ M09 |
+| S4 | Alpha 360: tan Insight Charts vào tab chứa nó; gộp Risk/Sessions/Accounting/Audit/Reconciliation; chỉ vẽ chart khi có dữ liệu |
+| S5 | Paper Workbench: thanh tab lên đầu, Overview + 4 tab thật (Orders, Fills, Positions, Sessions); URL cũ cuộn tới đúng mục |
+| S6 | Sổ cái vốn: trong Allocations, hai khối Real-funded / Simulated, mỗi khối có ledger |
+| S7 | Mặc định theo khuyến nghị (chưa hỏi): Canary⇄Live chung header, một blotter toàn cục theo URL, Admin Actions giữ route rút gọn, Binding qua toggle, Trade Replay chỉ log đến khi có nến |
+
+Phản hồi: khuyến nghị cần **sáng tạo hơn** → bốn concept ở `hifi/concepts/` (c1 command bar + context rail + digest + heat map; c2 capital flow + compare; c3 journey spine + fleet board + event ribbon; c4 decision cockpit). Rà soát mọi route/màn sâu của V1: `sweep/*.md` và `V1_DEEP_INVENTORY.md`.
