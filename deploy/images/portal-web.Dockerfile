@@ -23,12 +23,16 @@ ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=false
 ARG ROADMAP_TASK_BOARD_PERSISTENCE=v1
 ARG ROADMAP_TASK_BOARD_API_BASE=/roadmap-task-board/api
 ARG EXECUTION_PREVIEW_ENABLED=false
+# UXM-07 / FE-040: comma list of Execution V2 screen keys (shell,fleet,cockpit,ops,...).
+# Empty (the default) keeps every screen on V1 and emits none of the V2 chunks.
+ARG EXECUTION_V2_SCREENS=
 # The embedded Planning views address the gateway prefix absolutely, because
 # they render under /planning/* rather than under /roadmap-task-board/.
 ENV VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY=${ROADMAP_TASK_BOARD_LOCAL_ONLY} \
     VITE_ROADMAP_TASK_BOARD_PERSISTENCE=${ROADMAP_TASK_BOARD_PERSISTENCE} \
     VITE_ROADMAP_TASK_BOARD_API_BASE=${ROADMAP_TASK_BOARD_API_BASE} \
-    VITE_EXECUTION_PREVIEW_ENABLED=${EXECUTION_PREVIEW_ENABLED}
+    VITE_EXECUTION_PREVIEW_ENABLED=${EXECUTION_PREVIEW_ENABLED} \
+    VITE_EXECUTION_V2_SCREENS=${EXECUTION_V2_SCREENS}
 RUN cd apps/portal/frontend && npm run build
 
 FROM node:22-alpine AS roadmap-task-board-build
