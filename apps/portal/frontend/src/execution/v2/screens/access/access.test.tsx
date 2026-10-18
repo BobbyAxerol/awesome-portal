@@ -1,0 +1,470 @@
+/**
+ * Access self-view V2: every state, the capability-derived rows for the four
+ * presets, the owner tab, the user-mismatch refusal, honest absences and the
+ * a11y roles. The read is the e2e double's answer through the real strict
+ * reader, so the screen is tested against what HTTP would hand it.
+ */
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ACCESS_DOUBLE_WORKSPACES, answerAccessEffective } from "../../../../../e2e/bffDoubleAccess";
+import { V2_CAPABILITY, V2_ROLE_PRESETS } from "../../shell/roleNav";
+import AccessSelfView, { ACCESS_PATH, type AccessSelfViewProps } from "./index";
+import { ADMIN_CAPABILITY } from "./model";
+
+const session = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
+
+const ME = "usr_me";
+const NOW = Date.UTC(2026, 9, 18, 12, 4);
+
+function signIn(options: { capabilities?: Iterable<string>; owner?: boolean; ownerState?: string; userId?: string } = {}) {
+  session.current = {
+    principal: { principalId: "p_me", username: "stan", role: "x", sessionId: "s", mustChangePassword: false, authnMethods: [], issuedAt: "", exp: 0 },
+    access: {
+      kind: "ready",
+      access: {
+        userId: options.userId ?? ME,
+        isOwner: options.owner ?? false,
+        ownerState: options.ownerState ?? (options.owner ? "OWNER" : "NOT_OWNER"),
+        capabilities: [...(options.capabilities ?? [])],
+      },
+    },
+  };
+}
+
+beforeEach(() => signIn());
+afterEach(() => {
+  cleanup();
+  session.current = null;
+});
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+
+/** The double as a fetch: same routing and same refusals as the e2e stub. */
+function doubleFetch(userId = ME) {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = new URL(String(input), "http://portal.test");
+    const answer = answerAccessEffective("GET", url.pathname, url.searchParams, { userId });
+    if (answer === null) return json({ error: { code: "NOT_FOUND" } }, 404);
+    return json(answer.body, answer.status);
+  });
+}
+
+function Where() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="where">{pathname + search}</output>;
+}
+
+function mount(props: Partial<AccessSelfViewProps> = {}, entry = `${ACCESS_PATH}?workspace_id=${ACCESS_DOUBLE_WORKSPACES.pending}`) {
+  const fetchImpl = props.fetchImpl ?? (doubleFetch() as unknown as typeof fetch);
+  const view = render(
+    <MemoryRouter initialEntries={[entry]}>
+      <AccessSelfView now={() => NOW} {...props} fetchImpl={fetchImpl} />
+      <Where />
+    </MemoryRouter>,
+  );
+  return { ...view, fetchImpl: fetchImpl as unknown as ReturnType<typeof vi.fn> };
+}
+
+const workspace = (key: keyof typeof ACCESS_DOUBLE_WORKSPACES) => `${ACCESS_PATH}?workspace_id=${ACCESS_DOUBLE_WORKSPACES[key]}`;
+const granted = () => screen.findByRole("table", { name: "Granted to you" });
+const rowsOf = (table: HTMLElement) => within(table).getAllByRole("row").slice(1);
+const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l="${label}"]`) as HTMLElement;
+
+describe("identity strip", () => {
+  it("names the signed-in user and the owner state from the session, with no preset name", async () => {
+    signIn({ capabilities: ["governance.r1.read"] });
+    mount();
+    await granted();
+    const strip = document.querySelector('[aria-label="Who you are signed in as"]') as HTMLElement;
+    expect(within(strip).getByText("Signed in as").nextElementSibling?.textContent).toBe("stan");
+    expect(within(strip).getByText("usr_me")).toBeTruthy();
+    expect(within(strip).getByText("Owner").nextElementSibling?.textContent).toBe("Not an owner");
+    expect(within(strip).getByText("Capabilities held").nextElementSibling?.textContent).toBe("1");
+    expect(within(strip).getByText("Role preset").nextElementSibling?.textContent).toBe("Not published (FE-015)");
+    // "Researcher field policy" is a published policy field, not a preset name.
+    const text = (document.body.textContent ?? "").replace("Researcher field policy", "");
+    for (const preset of ["Manager", "Researcher", "Operator", "Reviewer", "Viewer"]) {
+      expect(text).not.toContain(preset);
+    }
+  });
+
+  it("says Owner for an owner and keeps an unclaimed anchor distinct", async () => {
+    signIn({ owner: true });
+    mount();
+    await granted();
+    expect(screen.getByText("Owner", { selector: ".exec-acc-kpi-value" })).toBeTruthy();
+    cleanup();
+    signIn({ ownerState: "OWNER_ANCHOR_UNCLAIMED" });
+    mount();
+    await granted();
+    expect(screen.getByText("Owner anchor unclaimed")).toBeTruthy();
+  });
+});
+
+describe("POLICY_PENDING", () => {
+  it("shows the banner with its reason, an honest empty table and the policy facts", async () => {
+    mount();
+    await granted();
+    const banner = screen.getByText("Access policy pending.").closest("p") as HTMLElement;
+    expect(banner.textContent).toContain("No access policy has been published as effective for this workspace yet.");
+    expect(within(banner).getByText("POLICY_PENDING")).toBeTruthy();
+    expect(screen.getByText("No grants are listed while the access policy is pending.")).toBeTruthy();
+    expect(screen.getByText("Access policy").nextElementSibling?.textContent).toBe("Pending");
+    expect(screen.getByText("No revision published")).toBeTruthy();
+    const facts = screen.getByText("Researcher field policy").closest("dl") as HTMLElement;
+    expect(within(facts).getByText(/Not published/).closest("dd")?.textContent).toContain("(FE-026)");
+    expect(within(facts).getByText("OWNER_RECOVERY_NOT_APPROVED")).toBeTruthy();
+    expect(within(facts).getByText("Off")).toBeTruthy();
+  });
+
+  it("never invents who granted anything", async () => {
+    mount();
+    await granted();
+    expect(screen.queryByRole("columnheader", { name: /granted by/i })).toBeNull();
+    expect(document.body.textContent).not.toMatch(/Granted by\b(?! each)/);
+    expect(screen.getByText(/Who granted each item is not published \(FE-015\)/)).toBeTruthy();
+  });
+});
+
+describe("AVAILABLE with grants", () => {
+  it("lists each grant with scope, environments, UTC validity, revision and its flags", async () => {
+    mount({}, workspace("available"));
+    const table = await granted();
+    const rows = rowsOf(table);
+    expect(rows).toHaveLength(4);
+    const first = rows[0];
+    expect(cell(first, "Access").textContent).toContain("portfolio.read");
+    expect(cell(first, "Access").textContent).toContain("Allow");
+    expect(cell(first, "Scope").textContent).toBe("Portfolio: pf_TEST_ONLY_core, pf_TEST_ONLY_satellite");
+    expect(cell(first, "Environments").textContent).toBe("Paper, Sandbox");
+    expect(cell(first, "Since").textContent).toBe("1 Sep 09:14Z");
+    expect(cell(first, "Expires").textContent).toBe("No end date");
+    expect(cell(first, "Revision").textContent).toBe("r3_TEST_ONLY");
+    expect(cell(first, "State").querySelector(".exec-flag")?.getAttribute("data-k")).toBe("ok");
+    expect(cell(first, "State").textContent).toContain("Current");
+    expect(cell(first, "Trading system").textContent).toContain("Not required");
+
+    const third = rows[2];
+    expect(cell(third, "Expires").textContent).toBe("31 Jan 00:00Z");
+    expect(cell(third, "State").textContent).toContain("Not current");
+    expect(cell(third, "State").querySelector(".exec-flag")?.getAttribute("data-k")).toBe("paused");
+    expect(cell(third, "Trading system").querySelector(".exec-flag")?.getAttribute("data-k")).toBe("pending");
+    expect(cell(rows[3], "Access").textContent).toContain("Deny");
+
+    expect(screen.queryByText("Access policy pending.")).toBeNull();
+    expect(screen.getByText("Access policy").nextElementSibling?.textContent).toBe("Available");
+    expect(screen.getByText("Revision p1_TEST_ONLY")).toBeTruthy();
+  });
+
+  it("asks for exactly this workspace, same-origin and uncached", async () => {
+    const { fetchImpl } = mount({}, workspace("available"));
+    await granted();
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/admin/profile-access/v2/effective?workspace_id=ws_TEST_GRANTS");
+    expect(init).toMatchObject({ credentials: "same-origin", cache: "no-store" });
+  });
+
+  it("states a read time from the browser clock and offers Refresh", async () => {
+    mount({}, workspace("available"));
+    await granted();
+    expect(screen.getByText("Read 18 Oct 12:04Z")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
+  });
+
+  it("an AVAILABLE read with no grants says nothing is published, not that policy is pending", async () => {
+    mount({}, workspace("empty"));
+    await granted();
+    expect(screen.getByText("No grants are published for you in this workspace.")).toBeTruthy();
+    expect(screen.queryByText("Access policy pending.")).toBeNull();
+  });
+});
+
+describe("refusals and failures are distinct states", () => {
+  it("denied (403) names the refusal and the request id and does not blank the capability tables", async () => {
+    signIn({ capabilities: ["governance.r1.read"] });
+    mount({}, workspace("denied"));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Not permitted.");
+    expect(alert.textContent).toContain("403");
+    expect(alert.textContent).toContain("ACCESS_DENIED");
+    expect(alert.textContent).toContain("req_double_access_effective");
+    expect(screen.queryByRole("table", { name: "Granted to you" })).toBeNull();
+    expect(screen.getByRole("table", { name: "What you can see" })).toBeTruthy();
+  });
+
+  it("unavailable (503) is a different sentence from denied", async () => {
+    mount({}, workspace("unavailable"));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Not available.");
+    expect(alert.textContent).toContain("The Portal answered 503.");
+    expect(alert.textContent).not.toContain("Not permitted");
+  });
+
+  it("a network failure is unavailable", async () => {
+    mount({ fetchImpl: (async () => { throw new TypeError("offline"); }) as unknown as typeof fetch });
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("The Portal could not be reached.");
+  });
+
+  it("a body the strict reader refuses is unavailable, and no grant of it is shown", async () => {
+    mount({}, workspace("malformed"));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("did not match the published access contract");
+    expect(screen.queryByText("NOT A TOKEN")).toBeNull();
+    expect(screen.queryByRole("table", { name: "Granted to you" })).toBeNull();
+  });
+
+  it("another schema version is unavailable and named", async () => {
+    mount({ fetchImpl: (async () => json({ schema_version: "portal.access-effective.v9" })) as unknown as typeof fetch });
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("portal.access-effective.v9");
+  });
+
+  it("an answer for another user is never shown as yours", async () => {
+    mount({}, workspace("otherUser"));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("different user than the one signed in");
+    expect(screen.queryByRole("table", { name: "Granted to you" })).toBeNull();
+  });
+
+  it("an answer for another workspace is refused", async () => {
+    mount({
+      fetchImpl: (async () => {
+        const answer = answerAccessEffective("GET", "/api/admin/profile-access/v2/effective", new URLSearchParams({ workspace_id: "ws_elsewhere" }), { userId: ME });
+        return json(answer!.body);
+      }) as unknown as typeof fetch,
+    });
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("different workspace");
+  });
+
+  it("without a workspace in the address nothing is requested and the card says why", async () => {
+    const { fetchImpl } = mount({}, ACCESS_PATH);
+    const note = await screen.findByText(/No workspace is named in the address/);
+    expect(note.closest("p")?.textContent).toContain("Not available.");
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /Refresh/ })).toBeNull();
+  });
+
+  it("while the read is in flight the card says loading, not empty", async () => {
+    mount({ fetchImpl: (() => new Promise(() => undefined)) as unknown as typeof fetch });
+    expect((await screen.findAllByRole("status")).some((el) => el.textContent === "Loading your grants.")).toBe(true);
+    expect(screen.queryByText(/No grants/)).toBeNull();
+  });
+
+  it("a refresh that fails keeps the last good grants and flags them stale", async () => {
+    let calls = 0;
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      calls += 1;
+      if (calls > 1) return json({ error: { code: "ACCESS_UNAVAILABLE", request_id: "req_stale_1" } }, 503);
+      const url = new URL(String(input), "http://portal.test");
+      return json(answerAccessEffective("GET", url.pathname, url.searchParams, { userId: ME })!.body);
+    }) as unknown as typeof fetch;
+    mount({ fetchImpl }, workspace("available"));
+    await granted();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    const banner = await screen.findByText(/The refresh failed/);
+    expect(banner.closest("p")?.textContent).toContain("Stale");
+    expect(banner.closest("p")?.textContent).toContain("Showing the last good read from 18 Oct 12:04Z");
+    expect(banner.closest("p")?.textContent).toContain("req_stale_1");
+    expect(rowsOf(screen.getByRole("table", { name: "Granted to you" }))).toHaveLength(4);
+  });
+
+  it("while the session is still loading the identity and the tables say loading", async () => {
+    session.current = { principal: null, access: { kind: "loading" } };
+    mount();
+    expect((await screen.findAllByText("Loading your permissions.")).length).toBe(2);
+    expect(screen.queryByRole("table", { name: "What you can do" })).toBeNull();
+  });
+
+  it("a session that could not be read shows no row as allowed or blocked", async () => {
+    session.current = { principal: null, access: { kind: "unavailable", requestId: "req_sess_9" } };
+    mount();
+    const alerts = await screen.findAllByRole("alert");
+    expect(alerts.some((a) => a.textContent?.includes("no area is shown as allowed or blocked"))).toBe(true);
+    expect(alerts.some((a) => a.textContent?.includes("req_sess_9"))).toBe(true);
+    expect(screen.queryByRole("table", { name: "What you can see" })).toBeNull();
+    expect(screen.queryByRole("table", { name: "What you can do" })).toBeNull();
+  });
+});
+
+describe("what you can see and do come from capabilities alone", () => {
+  const statusOf = (table: HTMLElement, label: string) => {
+    const row = rowsOf(table).find((r) => cell(r, "Area")?.textContent === label || cell(r, "Action")?.textContent === label);
+    expect(row, label).toBeTruthy();
+    return cell(row as HTMLElement, "Status").textContent ?? "";
+  };
+
+  it.each([
+    ["manager", ["Decide at R1 gate", "Decide at R2 gate", "Decide at Canary gate", "Decide at Live gate"], ["Manage grants", "Manage users"]],
+    ["researcher", [], ["Decide at R1 gate", "Manage grants"]],
+    ["operator", [], ["Decide at R1 gate", "Decide at Live gate"]],
+    ["reviewer", ["Decide at R1 gate", "Decide at Live gate"], ["Manage grants"]],
+  ] as const)("%s preset rows", async (preset, allowed, blocked) => {
+    signIn({ capabilities: V2_ROLE_PRESETS[preset] });
+    mount();
+    const doTable = await screen.findByRole("table", { name: "What you can do" });
+    for (const label of allowed) expect(statusOf(doTable, label), label).toContain("Allowed");
+    for (const label of blocked) expect(statusOf(doTable, label), label).toContain("Not allowed");
+  });
+
+  it("the see table follows the preset: operator sees Operations and no gate, researcher the reverse of Portfolios", async () => {
+    signIn({ capabilities: V2_ROLE_PRESETS.operator });
+    mount();
+    const see = await screen.findByRole("table", { name: "What you can see" });
+    expect(statusOf(see, "Operations")).toContain("Can see");
+    expect(statusOf(see, "R1 gate")).toContain("Not shown");
+    cleanup();
+    signIn({ capabilities: V2_ROLE_PRESETS.researcher });
+    mount();
+    const see2 = await screen.findByRole("table", { name: "What you can see" });
+    expect(statusOf(see2, "Portfolios")).toContain("Not shown");
+    expect(statusOf(see2, "R1 gate")).toContain("Can see");
+  });
+
+  it("a blocked action carries its reason and a My access link that keeps the workspace", async () => {
+    signIn({ capabilities: V2_ROLE_PRESETS.operator });
+    mount();
+    const doTable = await screen.findByRole("table", { name: "What you can do" });
+    const row = rowsOf(doTable).find((r) => cell(r, "Action").textContent === "Decide at R1 gate") as HTMLElement;
+    expect(cell(row, "Why").textContent).toContain("Needs governance.r1.decide");
+    const link = within(cell(row, "Why")).getByRole("link", { name: "My access" });
+    expect(link.getAttribute("href")).toBe(`${ACCESS_PATH}?workspace_id=ws_TEST_ONLY`);
+    // An allowed row has no link.
+    signIn({ capabilities: V2_ROLE_PRESETS.manager });
+    cleanup();
+    mount();
+    const again = await screen.findByRole("table", { name: "What you can do" });
+    const allowedRow = rowsOf(again).find((r) => cell(r, "Action").textContent === "Decide at R1 gate") as HTMLElement;
+    expect(within(allowedRow).queryByRole("link")).toBeNull();
+    expect(cell(allowedRow, "Why").textContent).toBe("Held: governance.r1.decide");
+  });
+
+  it("says once that the execution capability names are provisional, and what is not published", async () => {
+    mount();
+    await granted();
+    expect(screen.getAllByText(/are provisional \(FE-037\)/)).toHaveLength(1);
+    expect(screen.getByText(/Per-action eligibility and the reason a control is off are not published/).closest("p")?.textContent).toContain("(FE-015)");
+  });
+
+  it("lists a session capability no row names instead of dropping it", async () => {
+    signIn({ capabilities: ["future.thing.read"] });
+    mount();
+    await granted();
+    expect(screen.getByText("future.thing.read")).toBeTruthy();
+  });
+});
+
+describe("owner and non-owner", () => {
+  const ownerCaps = [ADMIN_CAPABILITY.profileAccessManage, V2_CAPABILITY.governanceR1Read];
+  const Manage = () => <div data-testid="v1-matrix">V1 grant matrix</div>;
+
+  it("a non-owner gets the self-view and no tabs, even when a manage surface exists", async () => {
+    mount({ manage: <Manage /> });
+    await granted();
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.queryByTestId("v1-matrix")).toBeNull();
+  });
+
+  it("a non-owner cannot reach the V1 surface by writing view=manage", async () => {
+    mount({ manage: <Manage /> }, `${workspace("pending")}&view=manage`);
+    await granted();
+    expect(screen.queryByTestId("v1-matrix")).toBeNull();
+  });
+
+  it("an owner sees two tabs, opens the V1 matrix on the second and comes back", async () => {
+    signIn({ owner: true, capabilities: ownerCaps });
+    mount({ manage: <Manage /> });
+    await granted();
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((t) => t.textContent)).toEqual(["My access", "Manage grants"]);
+    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe("exec-acc-tab-self");
+
+    fireEvent.click(tabs[1]);
+    await screen.findByTestId("v1-matrix");
+    expect(screen.getByTestId("where").textContent).toContain("view=manage");
+    expect(screen.getByTestId("where").textContent).toContain("workspace_id=ws_TEST_ONLY");
+    expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe("exec-acc-tab-manage");
+    expect(screen.queryByRole("table", { name: "Granted to you" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: "My access" }));
+    await granted();
+    expect(screen.queryByTestId("v1-matrix")).toBeNull();
+    expect(screen.getByTestId("where").textContent).not.toContain("view=");
+  });
+
+  it("arrow keys move between the tabs", async () => {
+    signIn({ owner: true, capabilities: ownerCaps });
+    mount({ manage: <Manage /> });
+    await granted();
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowRight" });
+    await screen.findByTestId("v1-matrix");
+  });
+
+  it("an owner with no manage surface has no tabs", async () => {
+    signIn({ owner: true, capabilities: ownerCaps });
+    mount();
+    await granted();
+    expect(screen.queryByRole("tablist")).toBeNull();
+  });
+});
+
+describe("structure and absences", () => {
+  it("one h1, named sections and a table for each list", async () => {
+    mount({}, workspace("available"));
+    await granted();
+    expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual(["Profile & Access"]);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "What you can see", "What you can do", "Granted to you", "Policy",
+    ]);
+    for (const name of ["What you can see", "What you can do", "Granted to you"]) {
+      expect(screen.getByRole("region", { name })).toBeTruthy();
+      expect(screen.getByRole("table", { name })).toBeTruthy();
+    }
+  });
+
+  it("every cell carries its column label for the 660px cards", async () => {
+    mount({}, workspace("available"));
+    await granted();
+    for (const td of document.querySelectorAll(".exec-cards tbody td")) {
+      expect(td.getAttribute("data-l"), td.textContent ?? "").toBeTruthy();
+    }
+  });
+
+  it("the reason dictionary lists only the reasons the contract names", async () => {
+    mount();
+    await granted();
+    const dict = screen.getByRole("table", { name: "Reasons this screen can show", hidden: true });
+    expect(rowsOf(dict).map((r) => r.querySelector("td")?.textContent)).toEqual(["POLICY_PENDING", "OWNER_RECOVERY_NOT_APPROVED"]);
+  });
+
+  it("an unknown reason code is printed as sent with a line saying it is unknown", async () => {
+    const body = answerAccessEffective("GET", "/api/admin/profile-access/v2/effective", new URLSearchParams({ workspace_id: "ws_x" }), { userId: ME })!.body as Record<string, unknown>;
+    mount({ fetchImpl: (async () => json({ ...body, workspace_id: "ws_x", reason_code: "POLICY_REVIEW_OVERDUE" })) as unknown as typeof fetch }, `${ACCESS_PATH}?workspace_id=ws_x`);
+    const banner = (await screen.findByText("Access policy pending.")).closest("p") as HTMLElement;
+    expect(banner.textContent).toContain("This reason is not in this build's dictionary.");
+    expect(within(banner).getByText("POLICY_REVIEW_OVERDUE")).toBeTruthy();
+  });
+
+  it.each(["pending", "available", "empty", "denied", "unavailable", "malformed", "otherUser"] as const)(
+    "no dash, en dash or bare placeholder cell in the %s state",
+    async (state) => {
+      signIn({ capabilities: V2_ROLE_PRESETS.reviewer });
+      mount({}, workspace(state));
+      await waitFor(() => expect(document.querySelectorAll('[role="status"]').length + document.querySelectorAll('[role="alert"]').length + document.querySelectorAll("table").length).toBeGreaterThan(0));
+      await act(async () => { await Promise.resolve(); });
+      await waitFor(() => expect(screen.queryByText("Loading your grants.")).toBeNull());
+      const text = document.body.textContent ?? "";
+      expect(text).not.toMatch(/[‒-―−]/);
+      for (const td of document.querySelectorAll("td, dd")) {
+        expect((td.textContent ?? "").trim(), td.outerHTML).not.toMatch(/^(-|0|N\/A)?$/);
+      }
+    },
+  );
+});

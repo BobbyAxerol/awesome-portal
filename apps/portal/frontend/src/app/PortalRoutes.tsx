@@ -25,6 +25,7 @@ import {
   EXECUTION_PREVIEW_EXTRA_ROUTES,
 } from "../execution/previewRegistry";
 import { screenDeliveryProfile, screenDeliveryPolicy } from "../execution/profile";
+import { isV2Screen } from "../execution/v2/flags";
 
 /**
  * Heavy modules are loaded when their route is entered, not before.
@@ -50,6 +51,11 @@ const UsersAccess = lazy(() =>
 const ProfileAccess = lazy(() =>
   import("../features/admin/ProfileAccess").then((m) => ({ default: m.ProfileAccess })),
 );
+// UXM-07 S1e: the V2 access self-view. The raw env string gates the import(), so
+// a flag-off build emits no V2 chunk and PROFILE_ACCESS stays the V1 matrix.
+const V2Access = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/screens/access"))
+  : null;
 const ExecutionFixtures = lazy(() => import("../execution/Fixtures"));
 const ResearchFixtures = lazy(() => import("../research/ResearchFixtures"));
 const ExecutionPreviewRoute = lazy(() =>
@@ -57,6 +63,15 @@ const ExecutionPreviewRoute = lazy(() =>
     default: m.ExecutionPreviewRoute,
   })),
 );
+
+/**
+ * `profile` flag on: everyone gets the self-view and owners keep the V1 matrix
+ * on a second tab. Off (or the key absent from the manifest): the V1 screen,
+ * unchanged, including its typed denial for a non-owner.
+ */
+function ProfileAccessEntry() {
+  return V2Access !== null && isV2Screen("profile") ? <V2Access manage={<ProfileAccess />} /> : <ProfileAccess />;
+}
 
 /**
  * Registry feature id -> implemented module.
@@ -76,7 +91,7 @@ const MODULES: Record<string, { component: ComponentType; wildcard?: boolean }> 
    * and, more importantly, it keeps ONE feature model (§3.2) instead of a
    * screen that exists in the router and not in the product's own map.
    */
-  PROFILE_ACCESS: { component: ProfileAccess },
+  PROFILE_ACCESS: { component: V2Access !== null ? ProfileAccessEntry : ProfileAccess },
   PORTAL_MAP: { component: PortalMap },
   QUANTBT_RESEARCH: { component: QuantBTModule, wildcard: true },
   PLANNING: { component: PlanningModule, wildcard: true },

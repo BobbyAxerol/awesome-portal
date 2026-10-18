@@ -16,6 +16,19 @@ describe("presentationModeFor with the cockpit", () => {
     }
   });
 
+  describe("profile flag", () => {
+    it("moves the Access self-view to Carbon only when `profile` is on", async () => {
+      let mode = await load();
+      expect(mode(null, "/administration/profile-access")).toBe("research-light");
+      vi.stubEnv("VITE_EXECUTION_PREVIEW_ENABLED", "true");
+      vi.stubEnv("VITE_EXECUTION_V2_SCREENS", "profile");
+      vi.resetModules();
+      mode = await load();
+      expect(mode(null, "/administration/profile-access")).toBe("execution-carbon");
+      expect(mode(null, "/administration/users")).toBe("research-light");
+    });
+  });
+
   describe("flag on", () => {
     beforeEach(() => {
       vi.stubEnv("VITE_EXECUTION_PREVIEW_ENABLED", "true");
