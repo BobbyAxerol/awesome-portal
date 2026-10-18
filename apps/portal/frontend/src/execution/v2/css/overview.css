@@ -1,0 +1,202 @@
+/* Overview, the Command Center (UXM-07 S2). The KPI strip reuses blocks.css.
+ * Tokens and type roles only; no uppercase, no raw colour. Text/fill pairs
+ * repeat ones proven by fleet.css and blocks.css. */
+.exec-ov-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-ov-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-ov-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-ov-subhead {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-ov-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-ov-meta,
+.exec-ov-stream {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-ov-btn {
+  padding: 5px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ov-btn:focus-visible,
+.exec-ov-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-ov-link {
+  font: var(--exec-font-control);
+  color: var(--accent);
+}
+.exec-ov-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-ov-warnings {
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-5);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+
+/* kpis */
+.exec-ov-kpi {
+  font: var(--exec-font-kpi);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.exec-ov-kpis .exec-blk-kpi-value {
+  font: var(--exec-font-body);
+}
+.exec-ov-na {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-ov-num {
+  font: var(--exec-font-num);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.exec-ov-num[data-tone="positive"] {
+  color: var(--good);
+}
+.exec-ov-num[data-tone="negative"] {
+  color: var(--bad);
+}
+
+/* grids */
+.exec-ov-grid2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
+}
+.exec-ov-grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+@media (max-width: 1100px) {
+  .exec-ov-grid2,
+  .exec-ov-grid3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* capital block */
+.exec-ov-cap {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-ov-cap th {
+  padding: 6px 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-ov-cap td {
+  padding: 6px 0;
+  text-align: right;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* triage */
+.exec-ov-what {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal;
+}
+.exec-ov-what-title {
+  margin: 0;
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-ov-sub {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-ov-quiet {
+  padding: var(--space-3);
+}
+.exec-ov-quiet p {
+  margin: 0;
+}
+.exec-ov-note {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-ov-lines {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+/* lists, fleet cells */
+.exec-ov-list,
+.exec-ov-cells {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-ov-cells {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  padding-bottom: var(--space-3);
+}
+.exec-ov-cells li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.exec-ov-cell-label {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}

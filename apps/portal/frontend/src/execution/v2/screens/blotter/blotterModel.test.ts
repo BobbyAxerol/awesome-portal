@@ -1,0 +1,284 @@
+/**
+ * Blotter reader and model, conformance levels L0 to L3 (Rules 9.8.3):
+ *
+ * L0  the canonical `execution-full-blotter.partial` read verbatim;
+ * L1  a matrix over freshness x completeness x totals x cursors x counts;
+ * L2  a 300-row page: the reader caps at 200 and says how many it skipped;
+ * L3  hostile decimals, enums, ids, roots and prototype pollution never throw,
+ *     never leak and never turn into a success.
+ */
+import { describe, expect, it } from "vitest";
+
+import { readProfileEnvelope } from "../../../api/profileRead";
+import { canonicalDigest, loadCanonical } from "../../testkit/loadCanonical";
+import { ABSENT, cartesian, coverage, describeCoverage, dimension, pairwise, type Draft } from "../../testkit/matrix";
+import { decimalCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, stringCases, type NegativeCase } from "../../testkit/negative";
+import { cloneRows, pad, timed } from "../../testkit/scale";
+import {
+  COLUMNS, DEFAULT_COLUMNS, NO_FILTERS, NO_SCOPE, ROW_CAP, applyScope, blotterQuery, chipCounts, fillsFor, filtersKey, groupExact, humanize,
+  isBucket, legsFor, readBlotter, readExact, scopeActive, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder,
+} from "./blotterModel";
+
+const NAME = "execution-full-blotter.partial";
+const digestBefore = canonicalDigest(NAME);
+const canonical = loadCanonical<Draft>(NAME);
+const read = (raw: unknown) => {
+  const profile = readProfileEnvelope(raw);
+  return profile === null ? null : readBlotter(profile);
+};
+
+describe("L0 canonical", () => {
+  it("reads the published page", () => {
+    const page = read(canonical)!;
+    expect(page.orders).toHaveLength(1);
+    expect(page.orders[0]).toMatchObject({ orderId: "ord_1", status: "FILLED", quantity: { kind: "value", text: "1.25" } });
+    expect(page.exactTotal).toBe(12);
+    expect(page.filteredTotal).toBe(1);
+    expect(page.nextCursor).toBeNull();
+    expect(page.prevCursor).toBe("kc1.previous");
+    expect(page.statusCounts).toEqual({ FILLED: 1, REJECTED: 3 });
+    expect(page.countScope).toBe("COMMITTED_HOT_PROJECTION");
+  });
+
+  it("leaves the file on disk as it found it", () => {
+    expect(canonicalDigest(NAME)).toBe(digestBefore);
+  });
+});
+
+describe("readExact", () => {
+  it.each(["0", "1.25", "0.0400", "60890.00", "-12.5", "1250", "0.00001234"])("keeps %s", (text) => {
+    expect(readExact(text)).toEqual({ kind: "value", text });
+  });
+  it.each([1.25, 0, NaN, true, {}, [], ["1"], "1e3", "01", "-0", "-0.00", ".5", "5.", "+5", "1,000", " 1", "NaN", "٣"])("refuses %s as unreadable", (value) => {
+    expect(readExact(value)).toEqual({ kind: "unreadable" });
+  });
+  it("refuses a string longer than any real quantity instead of printing 70,000 digits", () => {
+    expect(readExact("9".repeat(64))).toEqual({ kind: "value", text: "9".repeat(64) });
+    expect(readExact("9".repeat(65))).toEqual({ kind: "unreadable" });
+  });
+  it.each([null, undefined, ""])("%s is absent, not zero", (value) => {
+    expect(readExact(value)).toEqual({ kind: "absent" });
+  });
+});
+
+describe("groupExact", () => {
+  it("groups thousands and keeps every decimal", () => {
+    expect(groupExact("60890.00")).toBe("60,890.00");
+    expect(groupExact("0.0400")).toBe("0.0400");
+    expect(groupExact("1234567")).toBe("1,234,567");
+    expect(groupExact("-1234.50")).toBe("-1,234.50");
+    expect(groupExact("123456789012345678.123456789")).toBe("123,456,789,012,345,678.123456789");
+  });
+});
+
+describe("statusView", () => {
+  it("places every published status in its server bucket", () => {
+    expect(statusView("FILLED")).toMatchObject({ kind: "ok", bucket: "FILLED" });
+    expect(statusView("PARTIALLY_FILLED")).toMatchObject({ kind: "partial", bucket: "PARTIAL" });
+    for (const s of ["REJECTED", "DENIED"]) expect(statusView(s)).toMatchObject({ kind: "rejected", bucket: "REJECTED" });
+    for (const s of ["INITIALIZED", "SUBMITTED", "ACCEPTED", "PENDING_UPDATE", "PENDING_CANCEL", "TRIGGERED"]) expect(statusView(s)).toMatchObject({ kind: "pending", bucket: "OPEN" });
+    for (const s of ["CANCELED", "EXPIRED"]) expect(statusView(s)).toMatchObject({ kind: "paused", bucket: null });
+  });
+  it("an unknown or missing status is unknown, never a success", () => {
+    for (const s of ["WIZARD", "filled", "FILLED ", "", null]) expect(statusView(s as string | null).kind).toBe("unknown");
+  });
+  it("no two kinds that mean different things share a kind", () => {
+    expect(new Set(["FILLED", "PARTIALLY_FILLED", "REJECTED", "CANCELED", "ACCEPTED"].map((s) => statusView(s).kind)).size).toBe(5);
+  });
+});
+
+describe("L1 matrix", () => {
+  const dims = [
+    dimension("freshness", ["freshness"], ["FRESH", "AGING", "STALE", "UNKNOWN", ABSENT]),
+    dimension("completeness", ["completeness"], ["COMPLETE", "PARTIAL", ABSENT]),
+    dimension("exact_total", ["data", "exact_total"], [12, "12", 0, null, ABSENT, -1, "x", 1.5]),
+    dimension("filtered_total", ["data", "filtered_total"], [1, null, ABSENT]),
+    dimension("next", ["data", "page", "next_cursor"], ["kc1.next", null, ABSENT, 7]),
+    dimension("status_counts", ["data", "aggregates", "status"], [{ FILLED: 12 }, { FILLED: 1, REJECTED: 3 }, {}, null, ABSENT, { FILLED: "x" }]),
+  ];
+  const states = pairwise(canonical, dims);
+  it(describeCoverage("blotter envelope", coverage(dims, states)), () => {
+    expect(states.length).toBeGreaterThan(10);
+  });
+  it("every state reads without throwing and keeps counts honest", () => {
+    for (const state of states) {
+      const page = read(state.value);
+      expect(page, state.name).not.toBeNull();
+      const raw = state.value.data.exact_total;
+      const expected = typeof raw === "number" && Number.isSafeInteger(raw) && raw >= 0 ? raw : typeof raw === "string" && /^\d{1,15}$/.test(raw) ? Number(raw) : null;
+      expect(page!.exactTotal, state.name).toBe(expected);
+      const chips = chipCounts(page!);
+      expect(chips.ALL.count, state.name).toBe(page!.exactTotal);
+      for (const bucket of ["FILLED", "PARTIAL", "REJECTED", "OPEN"] as const) {
+        const c = chips[bucket];
+        // null is never 0: a bucket with no number is "no number".
+        if (c.count === null) expect(c.exact, state.name).toBe(false);
+        if (c.count === 0) expect(c.exact, state.name).toBe(true);
+      }
+    }
+  });
+
+  it("an aggregate that covers the population makes a missing bucket a true zero", () => {
+    const covered = read(cartesian(canonical, [dimension("s", ["data", "aggregates", "status"], [{ FILLED: 12 }]), dimension("t", ["data", "exact_total"], [12])])[0]!.value)!;
+    expect(chipCounts(covered).REJECTED).toEqual({ count: 0, exact: true });
+    expect(chipCounts(covered).FILLED).toEqual({ count: 12, exact: true });
+  });
+
+  it("an aggregate that does not cover it leaves unlisted buckets without a number", () => {
+    const sparse = read(canonical)!;
+    expect(chipCounts(sparse).OPEN).toEqual({ count: null, exact: false });
+    expect(chipCounts(sparse).PARTIAL).toEqual({ count: null, exact: false });
+    expect(chipCounts(sparse).REJECTED).toEqual({ count: 3, exact: false });
+  });
+});
+
+describe("L2 scale", () => {
+  const rowsOf = (n: number) =>
+    cloneRows(canonical.data.orders[0], n, (row, i) => {
+      row.order_id = `ord_${pad(i)}`;
+      row.client_order_id = `cl_${pad(i)}`;
+    });
+  const big = (n: number) => {
+    const copy = structuredClone(canonical);
+    copy.data.orders = rowsOf(n);
+    return copy;
+  };
+
+  it("caps a 300 row page at the DOM budget and counts nothing as dropped silently", () => {
+    const { value, ms } = timed(() => read(big(300))!);
+    expect(value.orders).toHaveLength(ROW_CAP);
+    expect(value.orders[0]!.orderId).toBe("ord_00000");
+    expect(ms).toBeLessThan(500);
+  });
+
+  it("counts rows it could not place instead of dropping them", () => {
+    const copy = big(60);
+    delete copy.data.orders[3].order_id;
+    copy.data.orders[4].order_id = null;
+    const page = read(copy)!;
+    expect(page.orders).toHaveLength(58);
+    expect(page.skippedOrders).toBe(2);
+  });
+
+  it("joins 200 orders to 100 fills and 200 legs without a quadratic stall", () => {
+    const orders = Array.from({ length: 200 }, (_, i): BlotterOrder => ({ ...read(canonical)!.orders[0]!, orderId: `o${i}`, clientOrderId: `c${i}`, venueOrderId: `v${i}` }));
+    const fills = Array.from({ length: 100 }, (_, i): BlotterFill => ({ fillId: `f${i}`, tradeId: null, clientOrderId: `c${i}`, venueOrderId: null, symbol: null, side: null, price: { kind: "absent" }, quantity: { kind: "absent" }, commission: { kind: "absent" }, commissionCurrency: null, liquiditySide: null, tradeTime: null }));
+    const { ms } = timed(() => orders.forEach((o) => fillsFor(o, fills)));
+    expect(ms).toBeLessThan(200);
+  });
+});
+
+describe("joins", () => {
+  const order = (over: Partial<BlotterOrder>): BlotterOrder => ({ ...read(canonical)!.orders[0]!, clientOrderId: "c1", venueOrderId: "v1", ...over });
+  const fill = (id: string, over: Partial<BlotterFill>): BlotterFill => ({ fillId: id, tradeId: null, clientOrderId: null, venueOrderId: null, symbol: null, side: null, price: { kind: "absent" }, quantity: { kind: "absent" }, commission: { kind: "absent" }, commissionCurrency: null, liquiditySide: null, tradeTime: null, ...over });
+  const leg = (group: string, id: string, seq: string, over: Partial<BlotterLeg> = {}): BlotterLeg => ({ groupId: group, legId: id, role: null, sequence: seq, clientOrderId: null, venueOrderId: null, side: null, orderType: null, quantity: { kind: "absent" }, filledQuantity: { kind: "absent" }, price: { kind: "absent" }, triggerPrice: { kind: "absent" }, triggerReference: null, state: null, averageFillPrice: { kind: "absent" }, ...over });
+
+  it("matches fills by client or venue order id and never by absence", () => {
+    const fills = [fill("a", { clientOrderId: "c1" }), fill("b", { venueOrderId: "v1" }), fill("c", { clientOrderId: "other" }), fill("d", {})];
+    expect(fillsFor(order({}), fills).map((f) => f.fillId)).toEqual(["a", "b"]);
+    expect(fillsFor(order({ clientOrderId: null, venueOrderId: null }), fills)).toEqual([]);
+  });
+
+  it("takes every leg of the group an order is a leg of, in sequence order", () => {
+    const legs = [leg("g1", "l3", "3"), leg("g1", "l1", "1", { clientOrderId: "c1" }), leg("g2", "x", "1", { clientOrderId: "zzz" }), leg("g1", "l2", "2")];
+    expect(legsFor(order({}), legs).map((l) => l.legId)).toEqual(["l1", "l2", "l3"]);
+    expect(legsFor(order({ clientOrderId: null, venueOrderId: null }), legs)).toEqual([]);
+  });
+});
+
+describe("scope", () => {
+  const orders = read(canonical)!.orders;
+  const two: BlotterOrder[] = [{ ...orders[0]!, orderId: "o1", accountId: "a1", alphaId: "x" }, { ...orders[0]!, orderId: "o2", accountId: "a2", alphaId: "y" }];
+  it("narrows by account and alpha on the loaded rows", () => {
+    expect(applyScope(two, [], { ...NO_SCOPE, account: "a2" }).rows.map((o) => o.orderId)).toEqual(["o2"]);
+    expect(applyScope(two, [], { ...NO_SCOPE, alpha: "x", account: "a2" }).rows).toEqual([]);
+  });
+  it("does not pretend to apply a deployment scope the rows cannot answer", () => {
+    const result = applyScope(two, [], { ...NO_SCOPE, deployment: "dep_1" });
+    expect(result.deploymentNotApplied).toBe(true);
+    expect(result.rows).toHaveLength(2);
+  });
+  it("applies it when a row carries a deployment id", () => {
+    const withId = [{ ...two[0]!, deploymentId: "dep_1" }, { ...two[1]!, deploymentId: "dep_2" }];
+    expect(applyScope(withId, [], { ...NO_SCOPE, deployment: "dep_1" }).rows.map((o) => o.orderId)).toEqual(["o1"]);
+  });
+  it("finds the order that holds a focused fill, or says it is missing", () => {
+    const f = (id: string, client: string | null): BlotterFill => ({ fillId: id, tradeId: null, clientOrderId: client, venueOrderId: null, symbol: null, side: null, price: { kind: "absent" }, quantity: { kind: "absent" }, commission: { kind: "absent" }, commissionCurrency: null, liquiditySide: null, tradeTime: null });
+    const orderWithClient = { ...two[0]!, clientOrderId: "c9" };
+    expect(applyScope([orderWithClient], [f("f1", "c9")], { ...NO_SCOPE, fill: "f1" })).toMatchObject({ focusOrderId: "o1", focusMissing: false });
+    expect(applyScope([orderWithClient], [f("f2", "c0")], { ...NO_SCOPE, fill: "f2" })).toMatchObject({ focusOrderId: null, focusMissing: true });
+    expect(applyScope([orderWithClient], [], { ...NO_SCOPE, order: "nope" })).toMatchObject({ focusMissing: true });
+  });
+  it("scopeActive ignores order and fill focus", () => {
+    expect(scopeActive({ ...NO_SCOPE, order: "o", fill: "f" })).toBe(false);
+    expect(scopeActive({ ...NO_SCOPE, alpha: "x" })).toBe(true);
+  });
+});
+
+describe("query", () => {
+  it("sends only what the server filters on, and the cursor in its direction", () => {
+    expect(blotterQuery(NO_FILTERS, null)).toEqual({ limit: 50 });
+    expect(blotterQuery({ bucket: "REJECTED", symbol: " BTCUSDT ", venue: "OKX", side: "SELL" }, { dir: "after", value: "c1" })).toEqual({ limit: 50, status_bucket: "REJECTED", symbol: "BTCUSDT", venue: "OKX", side: "SELL", after: "c1" });
+    expect(blotterQuery(NO_FILTERS, { dir: "before", value: "c2" })).toEqual({ limit: 50, before: "c2" });
+  });
+  it("a filter key changes with every server filter and no other", () => {
+    expect(new Set([filtersKey(NO_FILTERS), filtersKey({ ...NO_FILTERS, bucket: "OPEN" }), filtersKey({ ...NO_FILTERS, symbol: "X" }), filtersKey({ ...NO_FILTERS, venue: "V" }), filtersKey({ ...NO_FILTERS, side: "BUY" })]).size).toBe(5);
+  });
+  it("accepts only the four buckets", () => {
+    for (const ok of ["FILLED", "PARTIAL", "REJECTED", "OPEN"]) expect(isBucket(ok)).toBe(true);
+    for (const bad of ["ALL", "filled", "", null, "CANCELED"]) expect(isBucket(bad)).toBe(false);
+  });
+});
+
+describe("columns", () => {
+  it("keeps Order and Status fixed and on by default", () => {
+    expect(COLUMNS.filter((c) => c.fixed).map((c) => c.id)).toEqual(["order", "status"]);
+    expect(DEFAULT_COLUMNS.has("order") && DEFAULT_COLUMNS.has("status")).toBe(true);
+    expect(new Set(COLUMNS.map((c) => c.id)).size).toBe(COLUMNS.length);
+  });
+  it("humanize keeps a word it cannot improve", () => {
+    expect(humanize("PARTIALLY_FILLED")).toBe("Partially filled");
+    expect(humanize("")).toBe("");
+  });
+});
+
+describe("L3 negative", () => {
+  const cases: NegativeCase[] = [
+    ...decimalCases(canonical, ["data", "orders", 0, "quantity"]),
+    ...decimalCases(canonical, ["data", "orders", 0, "price"]),
+    ...stringCases(canonical, ["data", "orders", 0, "order_id"]),
+    ...stringCases(canonical, ["data", "orders", 0, "status"]),
+    ...requiredCases(canonical, [["data", "orders"], ["data", "page"], ["data", "aggregates"], ["data", "exact_total"], ["schema_version"], ["state"]]),
+    ...pollutionCases(canonical, [[], ["data"], ["data", "page"], ["data", "orders", 0]]),
+    ...rootCases(),
+  ];
+
+  it("never throws, never leaks the probe and never invents a number", () => {
+    for (const c of cases) {
+      const holder: { page: ReturnType<typeof read> } = { page: null };
+      expect(() => { holder.page = read(c.value); }, c.name).not.toThrow();
+      expect(leaked(holder.page, c.probe), c.name).toBe(false);
+      if (holder.page !== null && c.name.includes("orders.0.quantity")) {
+        const quantity = holder.page.orders[0]?.quantity;
+        const original = (c.value as Draft)?.data?.orders?.[0]?.quantity;
+        // A refused decimal is unreadable or absent; only a string in the grammar is ever a value.
+        if (quantity?.kind === "value") expect(quantity.text, c.name).toBe(original);
+        if (typeof original !== "string" || !/^-?(0|[1-9]\d*)(\.\d+)?$/.test(original) || /^-0+(\.0+)?$/.test(original)) {
+          expect(quantity?.kind === "value", c.name).toBe(false);
+        }
+      }
+    }
+    expect(prototypeIsClean()).toBe(true);
+  });
+
+  it("a status outside the vocabulary is never a success", () => {
+    const hostile = ["filled", "OK", "SUCCESS", "__proto__", 1, true, {}, []];
+    for (const status of hostile) {
+      const copy = structuredClone(canonical);
+      copy.data.orders[0].status = status;
+      const page = read(copy)!;
+      const view = statusView(page.orders[0]!.status);
+      expect(view.kind, String(status)).not.toBe("ok");
+    }
+  });
+});
