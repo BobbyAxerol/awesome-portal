@@ -9,11 +9,22 @@ Chúng không thay thế phase hoặc exit gate trong
 
 - **Original08 current source publication (2026-10-18):**
   [guarded actual Core source](../integration/execution-native-read-v1/README.md)
-  publishes26 exact authored/prerequisite files and three bounded original
-  receipts for the213-case source qualification. Current Coreff83f176 overlaps
-  four files and must be reconciled, not overwritten or relabelled qualified.
-  Eight publication-guard units PASS; no provider/consumer mounting or connected
+  retains the original26-file authored patch and three original213-case receipts.
+  Its additive complete-profile repairs four omitted qualified dependencies:
+  30changed files plus667unchanged exact0d5files reproduce all697qualified hashes.
+  Apply/hash/no-op/reverse/preimage round-trip and14publication-guard units PASS.
+  Current Coreff83f176 changes must be reconciled, not overwritten or relabelled
+  qualified; retain its later legacy membership qualification guard. The32-file
+  current-Core HTTP mount's priorff83strict gates PASS, but227/229cases passed.
+  Latest5291pending-recall changes survive three-way reconciliation; the
+  [32-file current source profile](../integration/execution-native-read-v1/current-core-profile/README.md)
+  has fresh production/seven-spec strict and233unique cases PASS,0FAIL/ERROR/SKIP
+  after typed-refusal/completion-join fixes; old failures remain. No provider commissioning or connected
   acceptance follows from source publication. Latest main journal governs:
+  disjoint current-Core SSE preparation has12files/8production/4test with42pure
+  plus7mounted-PG cases prepared but NOT_RUN. It reuses the shared coordinator/
+  Hub and joins actual preparation/source/repository completion on shutdown; it is not a new poller,
+  STREAM grant, runtime source or extension of historical213PASS.
   original08 remains IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET;09connected
   NOT_STARTED. The older "no owned runnable work" statements below describe
   historical independent slices, not the current mounting/commissioning work.

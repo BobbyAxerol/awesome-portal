@@ -90,6 +90,65 @@ class PublicationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "PATCH_CHECK_FAILED"):
                 publication.verify(self.packet, self.target)
 
+    def complete_profile(self):
+        relative = "apps/control-api/src/unchanged.ts"
+        dependency = self.target / relative
+        dependency.parent.mkdir(parents=True, exist_ok=True)
+        dependency.write_bytes(b"TEST_ONLY dependency\n")
+        closure = {name: value["after_sha256"] for name, value in self.files.items()}
+        closure[relative] = hashlib.sha256(dependency.read_bytes()).hexdigest()
+        raw = json.dumps(closure).encode()
+        (self.packet / "qualified-source-pins.json").write_bytes(raw)
+        manifest = json.loads((self.packet / "manifest.json").read_text())
+        manifest.update(schema_version="portal.epg10-08.qualified-source-handoff.v2",
+                        source_file_count=len(self.files),
+                        qualified_source_manifest_sha256=hashlib.sha256(raw).hexdigest())
+        (self.packet / "manifest.json").write_text(json.dumps(manifest))
+        return dependency, manifest
+
+    def test_complete_profile_checks_untouched_dependencies(self):
+        self.complete_profile()
+        with patch.object(publication.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            self.assertEqual(publication.verify(self.packet, self.target)["status"], "EXACT_PREIMAGE_PATCH_CHECK_PASS")
+
+    def test_complete_profile_changed_or_missing_dependency_refused(self):
+        for mode in ("changed", "missing"):
+            with self.subTest(mode=mode):
+                dependency, _ = self.complete_profile()
+                dependency.write_bytes(b"peer work") if mode == "changed" else dependency.unlink()
+                with self.assertRaisesRegex(ValueError, "QUALIFIED_DEPENDENCY_CONFLICT"):
+                    publication.verify(self.packet, self.target)
+
+    def test_complete_profile_manifest_tampering_refused(self):
+        self.complete_profile()
+        (self.packet / "qualified-source-pins.json").write_bytes(b"{}")
+        with self.assertRaisesRegex(ValueError, "QUALIFIED_MANIFEST_DIGEST_MISMATCH"):
+            publication.verify(self.packet, self.target)
+
+    def test_complete_profile_output_outside_qualified_source_refused(self):
+        _, manifest = self.complete_profile()
+        manifest["files"][next(iter(self.files))]["after_sha256"] = "0" * 64
+        (self.packet / "manifest.json").write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(ValueError, "QUALIFIED_OUTPUT_DIGEST_MISMATCH"):
+            publication.verify(self.packet, self.target)
+
+    def test_complete_profile_declared_count_is_bounded_and_exact(self):
+        _, manifest = self.complete_profile()
+        for count in (0, 25, 65, True):
+            with self.subTest(count=count):
+                manifest["source_file_count"] = count
+                (self.packet / "manifest.json").write_text(json.dumps(manifest))
+                with self.assertRaisesRegex(ValueError, "SOURCE_SET_MISMATCH"):
+                    publication.verify(self.packet, self.target)
+
+    def test_complete_profile_dependency_cannot_escape_to_hidden_or_private_files(self):
+        self.complete_profile()
+        for name in ("apps/control-api/.private/key.json", "apps/control-api/key.pem", "apps/control-api/../private.ts"):
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(ValueError, "SOURCE_PATH_REFUSED"):
+                    publication.safe_path(self.target, name, dependency=True)
+
 
 if __name__ == "__main__":
     unittest.main()

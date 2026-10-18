@@ -653,12 +653,26 @@ deep-dive → ADR → slice → evidence discipline documented above.
 **2026-10-18 current original08 continuation:** Bobby approved qualified source
 publication, actual current-Core consumer/provider binding and the existing
 07/03/01/06→09connected→10→11 completion sequence. The
-[26-file exact qualified source handoff](integration/execution-native-read-v1/README.md)
-is source-only:213 original cases/strict gates are pinned,8 new publication guard
-units PASS. Current Coreff83f176 has four overlapping later changes; they must
-survive reconciliation and affected verification. Original08 remains owned
+[complete qualified source handoff](integration/execution-native-read-v1/README.md)
+is source-only: original26delta/213receipts preserved; additive30-file complete
+profile repairs four missing prerequisites and reproduces all697qualified hashes
+against667unchanged0d5dependencies. Full apply/hash/no-op/reverse round-trip and
+14publication-guard units PASS. Historicalff83production/seven-spec strict PASS
+does not qualify the latest current-Core5291a80f integration. Its three overlaps
+are reconciled, preserving pending-recall and the legacy qualification guard;
+the32-file [current source profile](integration/execution-native-read-v1/current-core-profile/README.md)
+now has fresh production/seven-spec strict gates and233unique cases PASS,
+0FAIL/ERROR/SKIP on5291. Prior229's227PASS/2FAIL remain recorded; no historical
+PASS inherited. Source preflight remains a separate mandatory check, not
+connected/provider acceptance. Original08 remains owned
 implementation IN_PROGRESS/NOT_MET, not an external blanket wait or connected
-release. See the [campaign main journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
+release. Separate SSE mounting preparation now changes12files (8production,
+4test), preserving the finite JSON and using the existing local timer/Hub with
+current independent STREAM. Shutdown joins actual source completion, not only
+abort/timeout, accepted preparation/operations and actual late repository reads.
+42pure and7actual-PG/mounted cases are prepared, ALL NOT_RUN;
+source/whitespace inventory is not qualification. Current32finite profile stays
+frozen. See the [campaign main journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
 for current source/runtime/cleanup and scoped next actions; historical tracking
 below does not supersede this continuation.
 

@@ -16,11 +16,13 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def safe_path(root: Path, relative: str) -> Path:
+def safe_path(root: Path, relative: str, *, dependency: bool = False) -> Path:
     name = PurePosixPath(relative)
+    suffixes = {".ts", ".sql", ".json", ".mts", ".yaml"} if dependency else {".ts"}
     if (name.is_absolute() or ".." in name.parts
             or str(name) != relative or not relative.startswith("apps/control-api/")
-            or name.suffix != ".ts"):
+            or any(part.startswith(".") for part in name.parts)
+            or name.suffix not in suffixes):
         raise ValueError("SOURCE_PATH_REFUSED")
     path = root
     for part in name.parts:
@@ -34,13 +36,33 @@ def verify(packet: Path, target: Path) -> dict:
     packet, target = packet.resolve(strict=True), target.resolve(strict=True)
     manifest = json.loads((packet / "manifest.json").read_text())
     patch = packet / "qualified.patch"
-    if manifest["schema_version"] != "portal.epg10-08.qualified-source-handoff.v1":
+    version = manifest["schema_version"]
+    if version not in ("portal.epg10-08.qualified-source-handoff.v1",
+                       "portal.epg10-08.qualified-source-handoff.v2"):
         raise ValueError("MANIFEST_SCHEMA_REFUSED")
     if sha(patch.read_bytes()) != manifest["patch_sha256"]:
         raise ValueError("PATCH_DIGEST_MISMATCH")
     files = manifest["files"]
-    if len(files) != 26:
+    if not isinstance(files, dict) or (len(files) != 26 if version.endswith(".v1") else
+            type(manifest.get("source_file_count")) is not int or
+            manifest["source_file_count"] != len(files) or not 1 <= len(files) <= 64):
         raise ValueError("SOURCE_SET_MISMATCH")
+    if version.endswith(".v2"):
+        raw = (packet / "qualified-source-pins.json").read_bytes()
+        if len(raw) > 2 * 1024 * 1024 or sha(raw) != manifest["qualified_source_manifest_sha256"]:
+            raise ValueError("QUALIFIED_MANIFEST_DIGEST_MISMATCH")
+        closure = json.loads(raw)
+        if not isinstance(closure, dict) or not 1 <= len(closure) <= 4096 or not files.keys() <= closure.keys():
+            raise ValueError("QUALIFIED_SOURCE_SET_MISMATCH")
+        for relative, digest in closure.items():
+            if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+                raise ValueError("QUALIFIED_SOURCE_DIGEST_REFUSED")
+            path = safe_path(target, relative, dependency=True)
+            if relative in files:
+                if files[relative]["after_sha256"] != digest:
+                    raise ValueError("QUALIFIED_OUTPUT_DIGEST_MISMATCH")
+            elif not path.is_file() or sha(path.read_bytes()) != digest:
+                raise ValueError("QUALIFIED_DEPENDENCY_CONFLICT: " + relative)
     before = after = 0
     for relative, pins in files.items():
         path = safe_path(target, relative)

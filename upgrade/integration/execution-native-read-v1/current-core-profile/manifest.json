@@ -1,0 +1,174 @@
+{
+  "files": {
+    "apps/control-api/src/app.module.ts": {
+      "after_sha256": "f695b5e08916d61f3f73e74c8af2a7a038b8ef43be4689ecd8333bf3ed986f96",
+      "before_sha256": "8526993d49de5aceb341b2a1f1831404ae9dc80865a09103d2e965c356ee4de1"
+    },
+    "apps/control-api/src/execution-v2/access-policy.ts": {
+      "after_sha256": "a944492553b9eddbc6144bc0c722cffd0d126f776890b0a211dac765e4615fc2",
+      "before_sha256": "6f33c2e843a0df0bd38fe716a4870ad3379e17402818376a8368f8a4f3ce2352"
+    },
+    "apps/control-api/src/execution-v2/access-trust.ts": {
+      "after_sha256": "dd9ff410ed4e001995cbbf9f521d258812a342eb50c16f045bf114c10c0461b7",
+      "before_sha256": "996c7f1ba60fae998b3c85d11d005d707b8b638d6920c0d5c8d814735c4ad0eb"
+    },
+    "apps/control-api/src/execution-v2/access.contract.ts": {
+      "after_sha256": "fc11e0705365f8acdf4e6367254924b9d37bc17d321bd4cb8dd0961e7c46a1f2",
+      "before_sha256": "38dff5d160c16538e8f52a80f56b8c9d6a2d78d36a3b3b41a9ef88438c269325"
+    },
+    "apps/control-api/src/execution-v2/access.service.ts": {
+      "after_sha256": "0da3984e83c05b626947ea0ed6ea6d68bb2eb5cbfd24ada42e5e2565b9a2d40b",
+      "before_sha256": "3871073b663145597320af3f19c7b8bd43acb2581a7283e7a43158a4b7ef1f82"
+    },
+    "apps/control-api/src/execution-v2/core-owner-commissioning.ts": {
+      "after_sha256": "f24d041708c793b3b8d73e3ec9760b9b4f7549da2f68c0dcf49824003f225206",
+      "before_sha256": null
+    },
+    "apps/control-api/src/execution-v2/current-human-candidate.ts": {
+      "after_sha256": "12c2cf3e1b4084f2e1074359b531712789ed78777d2f74835df96cdf96a5290e",
+      "before_sha256": "642a98d6fd137a0a4cd91c09f3586970684ee7d85913ba3eba5765ca951fa458"
+    },
+    "apps/control-api/src/execution-v2/current-human-snapshot.ts": {
+      "after_sha256": "5238093f65a164d50d21bca2ee2759c19fa7a8e0d5658a24beffa6813d1cf51d",
+      "before_sha256": "cece7955df57ced17dd60407b4a8718d361e48418e873fcb71ad7ec75cd73feb"
+    },
+    "apps/control-api/src/execution-v2/manager-observation-coordinate.ts": {
+      "after_sha256": "2e93261b6864cd732e631653971461f4b60b36133b2041a8a21fb70af8ccb2f2",
+      "before_sha256": null
+    },
+    "apps/control-api/src/execution-v2/manager-observation-source.ts": {
+      "after_sha256": "390cf853dfc13273c8d1b6ddc5461566e5ae554dd62c1581e5c75492a4ca07f0",
+      "before_sha256": null
+    },
+    "apps/control-api/src/execution-v2/native-core-composition.ts": {
+      "after_sha256": "c1c1828156e9c4dc418ea9e0c8609512201ce0bc2ea4ce91768781929a52646e",
+      "before_sha256": null
+    },
+    "apps/control-api/src/execution-v2/native-manager-consumer.ts": {
+      "after_sha256": "288bb26756155f0c6129a471a5e766f92abfa2ea4571e34a807ad8fb2b2183a7",
+      "before_sha256": null
+    },
+    "apps/control-api/src/execution-v2/read-scope.ts": {
+      "after_sha256": "c040f6622f126314465a81feb64f8ed64b1419918cc2c14a7afc84e4ffe7857e",
+      "before_sha256": "aa244624df8bc6791fe89b343ed80c0602a4a931a56bf8d8a53bb288de6b2a71"
+    },
+    "apps/control-api/src/execution-v2/realtime.contract.ts": {
+      "after_sha256": "656eaeaf933749d29fd5d0d411eb89a224d4a6126dd3f0e4a344d2707acffa63",
+      "before_sha256": "79be182f33a01134a000cf5fa4413ddd355faca09fb8be0ea33316af745562f4"
+    },
+    "apps/control-api/src/execution-v2/realtime.ts": {
+      "after_sha256": "40ca9194122e00be450c1398ee73014f0e8a441cd283f90a18631a9cc526a969",
+      "before_sha256": "eab3850cc5ae17b201e36c87cc2b53198d9b9e471d46f1df6132a59bf5bed04e"
+    },
+    "apps/control-api/src/execution-v2/scoped-replay-cursor.ts": {
+      "after_sha256": "d7feed027508c7e987c73e6410ca6e9c57fc3b08175353f01093d0cf02ec4cea",
+      "before_sha256": "007492848abced0991da69404e1b883252069d88d8dc7ae8092fe3b38505ca98"
+    },
+    "apps/control-api/src/execution/current-source.proxy.ts": {
+      "after_sha256": "fa0d8a6d4fe18b35c10ffd5f63d64d3bf08c4eaa293039fbb109c2c12b287e7c",
+      "before_sha256": "f1209d76d1da52d7523a9e60bd4855cd1e3f22238d74fdaffff139e1813b8f79"
+    },
+    "apps/control-api/src/execution/maximum-data-continuation.repository.ts": {
+      "after_sha256": "00eec0aea1aadbca9f5bfdb72dae4af4dc64ee2bddba0ac9ebfe84c3f3bcc4ca",
+      "before_sha256": "a89b052023069f53c5710edb5e2a0c536fce82b5a2c9a6f4ec3642a4580c5cfe"
+    },
+    "apps/control-api/src/execution/maximum-data-operation.controller.ts": {
+      "after_sha256": "0084d54a00a53f6b0018673455d0a1ba1aeaadc5da1e5e80641a3be780e04426",
+      "before_sha256": "b57f70ce5ab345d25fde20c2f6d10a7985d9ace7e21cac68496df723f59ef28c"
+    },
+    "apps/control-api/src/execution/maximum-data-operation.service.ts": {
+      "after_sha256": "e43f8ab058b14175c2bdf66e9e4c4aa3b179e85f4e1f605ccce8d3ae4f2801c8",
+      "before_sha256": "c60aa55f6005db28e0f33a0fd6bbf3718aae6a5927183eb2c03386bf6a942062"
+    },
+    "apps/control-api/src/execution/profile-projection.repository.ts": {
+      "after_sha256": "f2680679bf34dac2cea5b0a78a303b1dd89f2f7d6ebb1dc6bcb7ba0716b207a6",
+      "before_sha256": "fc370dc2e3188cddcb2be98d685fd4221d33f2b8329f697530174c2d922c623c"
+    },
+    "apps/control-api/src/execution/profile-realtime.service.ts": {
+      "after_sha256": "5c7116ed271f5fda1710c39c0600a186e5ef512decd9baf67a0ebe32ada21d67",
+      "before_sha256": "b3d9502cfed351f7a924d4b007e8a10d421a5643a4400a0e9fd3546303c23958"
+    },
+    "apps/control-api/src/execution/service-heartbeats.service.ts": {
+      "after_sha256": "72b1b07486d45b98ba754d61fb776dc84047a06262c4b34848670018a2c6e162",
+      "before_sha256": "86db4abd70cd5647375fe4b9acc87e6eb4dc15db01505d034cf8abee22949116"
+    },
+    "apps/control-api/src/execution/shared-read.repository.ts": {
+      "after_sha256": "9dcfadb6fea125b0ac76acbb05e0bc54bd61d8d5a9f4ba8c64c7754af949d321",
+      "before_sha256": "0689ac26b0a05900899a50a19d9817a408152a4b886f4c06877c95e437600a23"
+    },
+    "apps/control-api/test/elp210-manager-domain-access.spec.ts": {
+      "after_sha256": "c1d0a13da8a4c2fcd4da0792c7317c5157c0afb9f5b4da2c57e2d8df2f540607",
+      "before_sha256": "4410899edc9827e33e1283995e019e7cdc15585581478150c646208269c2e4ae"
+    },
+    "apps/control-api/test/elp210-native-frame-coupled.spec.ts": {
+      "after_sha256": "a24536d23d6b042b13e287be9c96d41f3b69293c680e9a0881cb74a0d38aea49",
+      "before_sha256": "100d5540cbde6e4e5e8a4ce92d031ab3a3552613dc64f62e8ded0d38fc239578"
+    },
+    "apps/control-api/test/harness.ts": {
+      "after_sha256": "58cc7ab36e89c543f4dac9c4b29cf9df3c2fc766ebfbc6c9660a8b36d862933a",
+      "before_sha256": "33cff24349e300b79e21265eb6ed362b6480678185ad13c030eef98aa844ae1d"
+    },
+    "apps/control-api/test/manager-observation-resume.spec.ts": {
+      "after_sha256": "4b0e05d146a6a7fd513b9cd423404c025f4365f2bbaca47802fa8eadd642b399",
+      "before_sha256": null
+    },
+    "apps/control-api/test/manager-observation-source.spec.ts": {
+      "after_sha256": "7b18c9f4f3bcf66bd194f3da4ada7854261c12ad1682759ae7e1f5be5d6150fd",
+      "before_sha256": null
+    },
+    "apps/control-api/test/native-manager-epoch.spec.ts": {
+      "after_sha256": "ce3400c15ae11d632b6709bdeb32ddb02d99d607e24403acb8247805aa6eebef",
+      "before_sha256": null
+    },
+    "apps/control-api/test/native-manager-install-ack.spec.ts": {
+      "after_sha256": "4dd4b10228653c1a8bb3ce86c42ff07337355ca7df5ccfd1c884d21db5d02915",
+      "before_sha256": null
+    },
+    "apps/control-api/test/native-manager-preparation.spec.ts": {
+      "after_sha256": "cf47cdcf4624237067b07ed4a20d6d4130e6d305ece8ac865e773e88bd5e076d",
+      "before_sha256": null
+    }
+  },
+  "full_connected_acceptance": "NOT_MET",
+  "patch_bytes": 216794,
+  "patch_format": "git unified zero-context; exact whole-file preimages mandatory",
+  "patch_sha256": "7638de85f4ce8602aa493c461e3c290a8efad5da4f0a66f002ef312f5d8ee679",
+  "phase": "EPG10-08",
+  "qualification": {
+    "current_core_5291_qualification_not_inferred": true,
+    "executed_gates": [
+      "production strict",
+      "seven-spec strict",
+      "all affected cases"
+    ],
+    "historical_213_receipt_not_current_acceptance": true,
+    "latest_focused_cases": {
+      "failed": 2,
+      "passed": 0,
+      "skipped_unselected": 43
+    },
+    "prior_229_cases": {
+      "errors": 0,
+      "failed": 2,
+      "passed": 227,
+      "skipped": 0
+    },
+    "prior_strict_results_not_inherited": true,
+    "receipt": "qualification.json",
+    "status": "SOURCE_QUALIFIED_233_CASES_BOTH_STRICT_GATES_PASS_NOT_INSTALLED"
+  },
+  "qualified_source_files": 1148,
+  "qualified_source_manifest_sha256": "f64cf0b0bc54ed7f6f5b5b92f0043b04f1de6309b369d379dd8de5cc1ed4cc0f",
+  "runtime_mutations": 0,
+  "schema_version": "portal.epg10-08.qualified-source-handoff.v2",
+  "source_base": "5291a80f68a11cbccad879d1e99bb6282634f636",
+  "source_contains_secrets_or_runtime_state": false,
+  "source_file_count": 32,
+  "source_profile": "current-core-5291-native-manager-http-v1",
+  "test_layout": {
+    "bootstrap": "deploy/control-api/bootstrap-users.yaml from same immutable source_base",
+    "layout_copy": "qualification app root expects deploy/control-api/bootstrap-users.yaml under apps/control-api",
+    "public_dependencies": "exact apps/control-api/package-lock.json; never publish node_modules"
+  },
+  "warning": "Qualified isolated current integration source, not commissioned identity/provider or runtime acceptance. Do not apply to operational/dirty peer checkout; exact preimages and dependencies remain mandatory."
+}

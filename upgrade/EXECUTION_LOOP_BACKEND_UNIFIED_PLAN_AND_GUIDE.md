@@ -19521,6 +19521,724 @@ fix avoids a second implementation and aligns the parallel sources. The final
 normal-hook result must be inspected before feature publication or any acceptance
 claim. Full08 and complete connected goal remain OPEN throughout.
 
+**Actual normal gate and feature publication / 2026-10-18 15:10UTC:** original
+handle68124 is terminal exit0. The configured repository hook completed130
+contract tests and717API tests across72files,0FAIL/skip, production build and
+PostgreSQL restore drill PASS. This working-tree regression includes57 preserved
+older untracked egress-draft tests; it is not qualification of the new Core
+consumer. Commit8b7eb0c1 contains only the existing Core test correction and this
+journal,2files/+47/-3. The213-case source receipt remains separately pinned.
+Both worker/PG/network cells are absent and the exact own HK lease was removed
+after the job ended. Own syntax image aef23dae has no container references;
+cleanup is deferred only while a foreign DL test container remains active.
+BuildKit inventory412records contains no newly created18/10 cache record;
+reused shared caches and active/rollback artifacts are retained, never broadly
+pruned. Active source comparison copy is retained for the reconciliation below,
+not as a completed test archive.
+
+The first named-origin push failed before publication because origin's explicit
+pushurl remained HTTPS and no interactive credential was available. The normal
+pre-push hook was retained; explicit canonical SSH URL push completed successfully
+under handle91977: origin now contains feat/execution-edge-upgrade-v1_2 at
+8b7eb0c1b5a1a4f4b717cd96799df658e1981a42. No force, PR, dev/main merge or runtime
+change. Next publication must verify the remote ref, not infer success from a
+local branch. Current Core stillff83f176 with49peer-owned WIP paths and its own
+actual live test cell; no SGP checkout/index/schema/config/service write.
+
+**Original08 current-Core HTTP consumer mounting — entry before source edits:**
+Goal is the actual existing Manager deployments/current-operation BFF routes,
+not a parallel API. Reconcile four qualified overlapping files with committed
+Coreff83f176 in an isolated source copy; preserve later Core changes and leave
+the original26-file/213-case packet immutable. Reuse NativeManagerReadConsumer,
+MaximumDataOperationService, SessionGuard/workspace checks and the SAME genuine
+composeNativeCore/current-human recovery coordinator. Add only conditional
+private DI and exact composition/pool/trust/coordinator identity validation.
+Selected native users must never fall back to legacy on deny/unknown/expired
+scope. Unselected users and absent private composition preserve existing V1
+behavior. No new issuer, grant, transport, SQL/table/URL route or public flag.
+
+Guides: EDGE08/XLC01,05 and BE3–5/9.2/14.2, detailed original08 entry23.17 and
+23.20.7; current source/manifest and PM current native wire are authoritative.
+Tests: existing exact consumer/epoch/notice/physical-frame cases plus affected
+current-Core compilation, genuine DI acceptance, fake/mismatched composition
+denial, both existing authenticated BFF routes and no-fallback/no-double-writer
+negatives. Synthetic PM fixtures remain TEST_ONLY. Do not start a heavy job
+while either host's foreign reservation/job is active. Genuine provider/identity
+commissioning and actual revoke/cache/cursor/SSE remain required after mounting;
+do not replace them with the isolated result or declare08/09connected closed.
+Rollback is removal of the optional private binding/new additive source patch,
+preserving legacy routes and durable original custody/receipts. No live deploy,
+DB/identity/grant mutation, financial effect or peer WIP overwrite in this slice.
+
+**Progress/report reconciliation and terminal observation /2026-10-18 15:32UTC:**
+The120h Git window2026-10-13T15:29Z to2026-10-18T15:29Z contains37commits
+(12feat/6test/1fix/1chore/17docs),257distinct changed paths and net+110710/-82
+against533162635f56584d630e3d971d77d50860595f15. Of these,147paths are under
+upgrade/evidence and23under scripts; do not present all lines as production
+business code. Canonical origin independently confirms the published feature
+ref at8b7eb0c1. The current-Core mounting preparation remains private/incomplete,
+not part of that published26-file qualified packet or an activated release.
+
+Original bounded local qualification handle43920 is terminal exit134. The
+first production TypeScript compilation exhausted the Node JavaScript heap
+after approximately169s; log SHA256ba09afbf9cbd62910c865a1349dca9966bccffeb9a4d28f63e1ae7273837d690.
+No production-strict PASS marker, spec compilation, Vitest or new HTTP/DI
+test result exists for this attempted profile. Frozen source manifest was
+1892994076a03cd9e3ab4c1ecd39a8c675ad2482d10e50d4c324839670cdddfe
+(1147files/19971067B). This is owned compiler/source/harness investigation,
+NOT external TS debt and NOT a reason to inherit the historical213-case PASS
+for changed source. Preserve the failure and diagnose before another bounded
+profile; do not increase resource limits or mark the unrun cases accepted.
+
+Actual cleanup: the trap removed the exact owned node/deps/PG containers and
+internal network; independent label queries found zero remaining resources.
+No persistent volume or host listener was created. After physical terminal and
+a fresh quiet-HK check, removed only the unreferenced syntax-test image
+aef23daea5d0498fc72ae62eea53f60302defe3d609eaf82c07d513669abafde
+(portal-source-proxy-d4-offline:test), and the exact test-deps and test-source
+directories under /tmp/epg10-08-core-publication-1YUPvjLM,146422534logicalB.
+These are disposable public dependencies and mechanically reproducible test
+copies; authored reconciled source, untouched preimages and bounded failure
+receipt remain active development inputs. The image is rebuildable from source;
+no operational/rollback image or shared BuildKit record was removed. Available
+disk219911225344→220083765248B is a shared-host observation, not exclusive
+attribution. Image count104→103; BuildKit412 unchanged; volumes41 unchanged.
+Removed only matching own lease after the job ended. A NEW foreign PM lease
+codex-pma11-research-monitor-hk-pma11-research-monitor-final-hk-20261018
+started15:32:09 and expires15:37:09UTC; preserve it and the owner's actual jobs.
+
+Read-only SGP audit found zero resources of this local namespace; no copy/job/
+deploy/schema/identity/grant/secret/runtime write was made there by this slice.
+Core remains docs/research-loop-plan@ff83f176 with53peer-owned dirty paths.
+Actual API8400439b/config963a3d84 and webc2fb7a8c/confige0e3c404 retain their
+19/09starts/restart0; stable APId2c23ad6/config26c0d954 and webe237aabb/config
+4326852f retain18/09starts/restart0. HK Edge/worker d6aa7a51 and Proxy aa14e21c
+Paper/Sandbox/Live tuples retain15/09starts/restart0; post-cleanup edge/proxy
+image/config/start/restart comparisons match. Stable SGP release remains
+/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose;
+HK /srv/primus/portal/releases and named TSr59@9150385e/r49@b4e7a6c0 remain.
+Canonical Portal checkout stays portal-execution-manager-v2,
+feat/manager-v2-paper-read@54c6f5f3; active upgrade feature@8b7eb0c1 and all
+other six documented active Portal worktrees/branches are preserved. No merge.
+
+Parallel PM91ca9dfa source matrix now identifies17typed datasets/12PM logical
+families mapped to42Edge families; these are not96physical Manager relations
+or proof that every runtime route is mounted. Its current03/04/13–16 gates
+remain OPEN,17NOT_STARTED; new05/06research association and Archive-origin
+Paper-monitor work is peer-owned, currently under qualification. Inspect the
+current approved-followthrough matrix and original58.65RG register, not stale
+pending-approval statements. TSnext current docs advance8e2849dd does not itself
+qualify a publisher fence. Full original08 remains IN_PROGRESS_OWNED_IMPLEMENTATION/
+NOT_MET;09connected NOT_STARTED,10/11connected NOT_MET. Next owned work is
+current-Core compile/DI/HTTP mounting qualification and exact source dependency
+publication, then genuine provider/identity installation and revoke/cache/cursor/
+SSE drills in08; commands07 and capture03/capacity01/06 remain separately owned.
+Unfinished mounting code/test preparation is runnable implementation, not an
+external gate or a request for another generic approval.
+
+**Original08 continuation / entry2026-10-18 15:36UTC, before diagnosis:**
+Previous goal turn is PROGRESS: inspected the actual terminal134, preserved the
+unaccepted result and completed exact disposable/image cleanup; no scope was
+declared complete. Continue the full published-source→current-Core→genuine
+provider→connected08 objective, not a smaller source-only substitute. Parent
+8b7eb0c1; existing plan WIP and three older untracked paths are preserved.
+Canonical/project rules, original08/23.20.7, EDGE08/XLC and final-delivery/revoke
+runbooks reread. SGP Core stillff83f176/53peer WIP and a live peer hook; do not
+test or modify SGP. HK has no user/root lease or actual test job at entry.
+
+Owned immediate work: diagnose identical committedff83 production compilation
+versus the reconciled mounting source under the SAME2CPU/2GiB bound, with
+separate bounded compile/spec/test profiles and original errors retained.
+Do not guess OOM means business-source failure or raise limits. Use cached
+Node/PostgreSQL images, public lockfile-only dependencies, isolated read-only
+source and no operational mounts/listeners/credentials. If changed source is
+responsible, fix owned typing/composition without weakening authority, tests
+or compatibility. Then qualify both real authenticated HTTP routes and all
+affected native frame/recovery cases. Exact original source dependencies must
+be reproducible in the publication; hashes alone cannot replace missing blobs.
+No live schema/grant/identity/deploy change or peer source/index overwrite.
+
+Shared-host reservation applies to the host executing the job. A foreign SGP
+job forbids starting work THERE, not a wholly independent HK fixture without
+SGP calls; refresh both host observations and protect each owner's resources.
+Acquire a finite own HK lease only after fresh HK user/root/job checks. Always
+collect bounded results, stop only own labelled cells, clean exact source/deps/
+lease after terminal, keep authored source and active/rollback resources.
+Exit for this slice requires actual current-source compile/HTTP/DI results,
+source/dependency manifests, journal/index updates and coherent normal-hook
+commit/publication. Full08 still requires commissioned provider/identity and
+connected revoke/cache/cursor/SSE;07/03/01/06 and09→10→11 are not waived.
+
+**Diagnostic configuration evidence before retry:** the original successful
+213-case qualification's retained run_compiler_diagnostic.py explicitly sets
+NODE_OPTIONS=--max-old-space-size=1536 within the SAME2GiB container limit.
+The new43920 harness omitted that setting; Node's observed default exhausted
+approximately1GiB. Restore this existing qualified heap configuration for BOTH
+baseline and reconciled comparison, retaining2CPU/2GiB/250s and separate
+profiles; this is not a resource-budget increase or proof the new code passes.
+The first retry preflight refused a newly acquired foreign PM HK reservation
+before creating any own lease/container/dependency install. Source/harness
+preparation continues, original134 remains NOT_PASS, actual tests stillNOT_RUN.
+
+**Baseline terminal / source-closure correction before edits:** original73630
+exits0: unchanged committedff83 production strict compilation PASS166.18s,
+1333899KiB compiler memory,202418TypeScript lines. This directly establishes
+that the omitted default-heap setting was insufficient even for unchanged
+current Core; it does not qualify the reconciled source. No product cases ran.
+Original-qualified prerequisite recovery19391 also exits0:18exact published
+hashes/331699B recovered read-only,14from immutable0d5Git and4from the retained
+reviewed draft/unique-context transplant. No SGP source/runtime/authority write.
+
+Audit identifies a real OWNED publication/assembly omission: access.contract.ts,
+access-policy.ts,current-human-snapshot.ts and elp210-manager-domain-access.spec.ts
+were qualified dependencies but absent from the26-file authored patch. Publish
+their exact historical source as an additive complete-profile companion; do not
+rewrite the original26patch/213receipt. Verify complete697closure against its
+original hashes before claiming reproducibility; no repeat of unchanged tests.
+The current-Core profile also needs these four dependencies. Reconcile their
+additive independent domain STREAM action/read-intersection with currentff83:
+preserve its later mandatory relations.qualified guard in legacy grantCurrent,
+never copy the historical policy wholesale over that safety check. Reuse all
+original READ and STREAM tests and add the current mounting cases. This grows
+the current profile28→32files; exact-current compile and affected PG/native
+cases are required, not inherited from213. No broader grant or native/runtime
+activation. Original08 remains unfinished owned integration/NOT_MET.
+
+**Complete-profile publication guard / before changes:** read-only source audit
+92847 verifies all667untouched files against immutable0d5,11742811B,667MATCH,
+zero differences/writes. Therefore original qualification is reproducible as
+0d5 + original26delta +4exact missing prerequisites, not by applying26alone.
+Add a versioned complete-profile packet/manifest and extend the EXISTING
+read-only publication verifier to bound the declared changed set, validate its
+output hashes against the exact qualification manifest, and check every
+untouched dependency before git apply --check. Keep v1's26-file behavior and
+original source/receipts immutable. Tests cover matching full closure, changed/
+missing dependency, manifest tamper, undeclared changed source, unsafe paths,
+partial/already applied and original guard regressions. No service/API/provider
+contract changes; this repairs an owned source-delivery defect.
+
+**Current production compile terminal /2026-10-18 15:47UTC:** original30679
+exits0, currentff83 plus reconciled32files production strict PASS163.29s,
+1360728KiB compiler memory (same2CPU/2GiB/1536MiBheap). No runtime/SLO inference.
+Frozen1147-file test-layout manifestb49beb020514ebd0af22e2200e6d2270feea0f5c3ff88b530e6f6e317b3686e9,
+19980122B; no mounted source edit during either compile. Both exact worker
+cells terminated and traps removed them. Fourteen publication guard cases
+PASS/0FAIL/ERROR/SKIP, including six new complete-closure cases; original v1
+behavior retained. Continue strict seven-spec CLI and real isolatedPG/HTTP
+profiles on these same source bytes; no213-case/new-HTTP acceptance inherited.
+
+**Strict specs / apparatus result15:52UTC:** original49201 exits0, seven owned
+strict specs PASS159.91s/1359714KiB, source unchanged since production gate.
+Original34191 exits2 before Node/Vitest startup: PostgreSQL readiness not
+reached within the harness's10s polling allowance; quiet readiness output was
+not retained, so no database-cause or product FAIL/PASS is inferred. Exact cells
+and network were removed by trap. Correct the owned harness to allow at most40s
+startup within the original overall300s envelope and retain only30owned PG-log
+lines on refusal BEFORE cleanup. Same source, no relaxed assertions, no resource
+increase, no deployment. Next direct test profile is a fresh owned fixture.
+
+**Complete historical publication verified:** additive complete-profile has
+30changed files,199716B patch9d0988f859c1a1e021e8bc8526b457116d20381b19537bcf142a428316436a51;
+original26patch/213receipts/ed93f56f source manifest remain byte-identical.
+Real source round-trip PASS: exact687base-view files→read-only v2 preflight→
+apply→all697qualified hashes→already-applied no-op→reverse→same687preimages→
+preflight again. Disposable round-trip copy removed by finally. Five inherited
+EOF notices are printed by git's warning bound (the original source already
+records six); none suppressed or business source changed. This closes the
+owned historical source-delivery omission, not actual current-Core/provider/
+runtime acceptance. Both backend indexes and the primary handoff instructions
+now point to the complete profile and warn against overwriting current Core.
+
+**Actual current-source PG terminal15:54UTC, failure retained:** original45251
+exits1 after229unique cases/227PASS/2FAIL/0ERROR/SKIP,89.36s. All existing
+native/domain/frame/component cases and14new DI/controller units pass; the two
+new mounted HTTP cases stop in their fixture before HTTP because it inserts
+an already-created grant_id. Correct that exact fixture to use the existing
+saveManagerDomainGrant UPDATE default, not INSERT. No authority/route/production
+change, no assertion removed. Preserve attempt4JUnit/log before fresh focused
+HTTP diagnosis, then rerun all affected cases;227prefix passes do not make the
+failed profile accepted. Exact previous cells/network are terminal/removed.
+
+**Focused HTTP diagnostic7603 terminal1, preserved:** selected2cases FAIL,
+43unselected cases SKIP (not a full suite result). Genuine finite HTTP reaches
+the authenticated fixture PM, whose old SSE-only expectation rejects valid
+pma.manager-read-intent.v1/relation_page before any response bytes; afterEach
+correctly retains the peer assertion. Extend ONLY that TEST_ONLY expectation
+to the two existing exact protocol pairs (v1/relation_page or v2/scoped_notice),
+keeping shared request/JWT/terminal verification and all original v2 checks.
+No production codec/provider/permission relaxation. Original focused JUnit/log
+retained before rerun; source production bytes and prior strict gates unchanged.
+
+**Original08 continuation / entry2026-10-18 16:08UTC:** preceding turn was a
+read-only progress report, not implementation closure. Canonical/source refs
+remain Edge8b7eb0c1 (remote independently verified), Coreff83f176/53peer WIP,
+PM91ca9dfa and TS668e1032/next8e2849dd. Full objective remains source publication,
+actual current-Core/provider binding and connected08, separate07/03/01/06, then
+09connected→10→11; no narrower source-only completion. No operational write.
+
+Focused49448 is terminal1:2selected FAIL/43unselected SKIP. Preserve its exact
+JUnit/log before another run. Two owned findings: genuine revoke raises an
+AccessPolicyError from the private Manager preparation transaction, but the
+HTTP filter handles only its existing public operation/read-scope wrappers;
+thus denial becomes500. Translate only this known policy error at the private
+operation boundary to a sanitized MaximumDataOperationError, preserving denial,
+404/retry409/unavailable503 semantics and no fallback or source/native admission.
+Keep unexpected errors unchanged. Add explicit boundary regression cases.
+The HTTP test's DB-polling loop itself borrows the Core pool while native
+settlement is still running, invalidating the fixture's no-Core-client-held
+assertion. Join the actual consumer.serve returned promise after reading real
+HTTP bytes, then inspect the ledger; retain that independent fixture assertion.
+This is a stronger actual-completion witness, not sleep/retry or relaxed safety.
+
+HK foreign reservation claude-dl-rustls-0.23.46 lasts16:06→18:06UTC; SGP has
+two live peer test cells and its own reservation. Do not start heavy jobs on
+either host now. Source fixes, exact manifests, publication and SSE mount
+preparation remain runnable immediately; source preparation is not external
+debt. Fresh test/hook execution requires the executing host's clear lock AND
+actual job check, then finite own lease. Preserve current failed receipts and
+test copies until their consuming qualification ends; cleanup own labelled
+cells/networks is already confirmed0 on both hosts. Full08 remains
+IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET;09connected NOT_STARTED.
+
+**Current-Core publication preparation / before mechanical assembly:** preserve
+the authored32-file currentff83 integration (including the just-fixed policy
+translation/test join) as a SEPARATE guarded current-core-profile packet, never
+overwrite historical qualification. Pin all safe tracked Core app dependencies,
+exact preimages/outputs and closed patch hash; extend neither authority nor
+runtime config. Its qualification MUST remain PENDING_CURRENT_FIXED_SOURCE:
+earlier production/spec PASS preceded this production fix, and229 profile still
+failed. Tests/hook/commit/push await an actually clear executing host, not a
+waiver. Existing public lockfile dependencies and test-layout bootstrap are
+qualification apparatus, not copied app state or secrets. This preserves owned
+code durably in the active feature without mislabelling it qualified or mounted.
+
+**Parallel-source drift /16:13UTC, before reconciliation:** SGP Core advanced
+ff83f176→5291a80f (source-dark pending recall),53committed changed paths and122
+peer WIP paths. Three exact authored overlaps: AppModule, access.contract and
+test/harness; all later peer intent must survive. Preserve the ff83 failed
+profile/evidence. Read new Execution Loop working rules and the three diffs,
+copy only the16committed changed API files from immutable5291 (no WIP/ENV/
+secret/data/dependency), mechanically assemble a separate private current base,
+and three-way merge those three authored paths with exactff83preimages. Any
+conflict is reviewed, never forced. Regenerate pending current packet only after
+source hashes/merge scope match; qualify affected current source, not a stale
+baseline. No peer checkout/index or runtime write; source preparation remains
+independent of the foreign host reservations.
+
+Real TS catalog probe is READ ONLY with2s local statement timeout on
+live_data_executor: public.ts_users, pm_membership.policy, pm_business_read.heads
+and pm_native_read.leases are absent. Initial postgres username refused because
+that role does not exist; retry uses existing configured POSTGRES_USER=bobby,
+no credential output. This is current schema inventory, not provider acceptance
+or permission to apply the whole PM migration chain. Private trust inventory
+still17files/root0600, PREPARED_NOT_INSTALLED; no new keys/grants created.
+
+**5291assembly result / structural guard,16:15UTC:** exact16committed API files
+exported369160B; all3three-way merges clean and reviewed as exactly14additions/
+1deletion relative to prior authored profile. Current pending packet32files,
+1148safe app dependencies; disposable full test layout1155files/20189548B,
+manifestbf6e0fe7bcd0260c7fe96dc95d251d2e22942af3400b81416e266a5b6d1212cd.
+No product cases run. Read-only preflight correctly refuses PATCH_CHECK_FAILED:
+mechanical new-file diffs omitted Git's new-file-mode metadata (10/dev/null
+errors), despite exact source/preimage pins. Correct the generator, not git's
+path/safety checks; regenerate and recheck. Original historical packet remains
+immutable. This is an owned publication-tooling defect caught before apply.
+
+**Owned source result /16:17UTC:** generated32-file current5291 packet now has
+correct new-file-mode headers; existing read-only verifier reports
+EXACT_PREIMAGE_PATCH_CHECK_PASS/32files/0writes. Patch216794B,
+SHA7638de85f4ce8602aa493c461e3c290a8efad5da4f0a66f002ef312f5d8ee679.
+Known policy errors now map to sanitized403/404/409/503 before source/native
+admission, with4new focused cases prepared; unexpected errors unchanged.
+Mounted HTTP tests join the actual consumer completion instead of borrowing
+Core pool during native settlement. Expected affected suite233cases; all current
+5291compiler/behavioral/hook gates remain NOT_RUN, not inherited from prior
+ff83or213source. No phase completion, commit or push is claimed.
+
+Runnable source/target preparation for this coherent current-HTTP slice is now
+complete. Its next compiler/PG/HTTP/hook job genuinely waits for a clear host;
+HK foreign reservation remains to18:06UTC and SGP still has a live peer Node
+cell plus PM reservation to16:17:32. No job started or peer stopped. Preserve
+current authored32source and needed public deps; clean only the obsolete
+ff83diagnostic-source after confirming own exact namespace has0live cells.
+Current test layout5291is the active target, not an archive. Original08 SSE
+mount/provider installation are still owned follow-through (not external debt);
+their semantic/source review found existing ScopedReplayHub and both Portal
+projection and Manager-runtime coordinators, so do not add another poller or
+infer scope from notification/epoch. Their next source slice follows the
+current finite-reader qualification, preserving the existing versioned BFF
+contract and separate current READ/STREAM/native proof.
+
+**Cleanup/actual-state closeout,16:17:39UTC:** removed ONLY the superseded
+/tmp/epg10-08-core-publication-1YUPvjLM/diagnostic-source,19982040logicalB;
+new5291test layout/authored source/public dependencies remain active inputs.
+Exact old path absent; recreatable from source, no business/runtime data lost.
+Available disk217436196864→217574752256B is shared-host observation, not exclusive
+attribution. Own namespace containers/networks0; no image/build/cache created
+this slice, inventory103images/412BuildKit records/41volumes unchanged. Shared
+cache prune is intentionally deferred during foreign jobs; no operational,
+rollback, volume/network or stopped evidence container removed. No new remote
+test copy/resource created: SGP received only readonly Git/catalogue inquiries;
+its exact own namespace also0. Peer control-api-test-node-3659704 and its PG
+remain actually live at16:17:39 despite no current user lock; do not treat lock
+absence/expiry as quiet or stop that peer. HK foreign lock lasts18:06:06.
+
+HK Paper/Sandbox/Live Edge/worker remain d6aa7a51, Proxy aa14e21c; checked three
+Edge and Paper Proxy starts15/09/restarts0. SGP API8400439b and stable APId2c23ad6
+retain19/09and18/09starts/restarts0; config revisions963a3d84/26c0d954 unchanged
+from same-turn read-only report. Canonical Portal manager-v2/feat/manager-v2-paper-read
+54c6f5f3, active upgrade/feat/execution-edge-upgrade-v1_2@8b7eb0c1 and all six other
+active worktrees preserved; PM91ca9dfa/canonicalTS668e1032/next8e2849dd unchanged.
+Stable release locations /srv/primus/portal/releases and SGP
+/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose retained,
+named TSr59@9150385e/r49@b4e7a6c0 untouched. No new commit/push/merge/deploy:
+normal-hook publication genuinely awaits host availability, not a bypass.
+Full08 NOT_MET; next permitted action is exact5291compile/spec/233PG/HTTP plus
+normal-hook commit/push once the executing host's lease AND live jobs clear,
+then original08 genuine provider/SSE/revoke/cache/cursor commissioning. Separate
+07/03/01/06 and connected09→10→11 remain the full approved objective.
+
+**Original08 next source slice /16:23UTC, before SSE edits:** prior turn is
+PROGRESS (owned typed-denial/completion fixes, current5291three-way merge,
+guarded pending source packet and scoped cleanup), not completion. Full goal
+unchanged; current finite32profile stays frozen for qualification/publication.
+SGP peer3659704 is directly confirmed live with active Node worker, not merely
+a stale container/lease; HK foreign reservation to18:06. No heavy jobs started.
+
+Prepare the still-owned Manager observation SSE mount in a disjoint private
+draft, based on exact current5291plus32source. Scope: existing profile snapshot/
+stream controller, existing local realtime coordinator and shared Hub, private
+consumer/composition/AppModule, existing Manager observation adapter, focused
+tests and existing private READ preparation. No new listener, poller, upstream,
+ROOT/entity census, issuer, grant, publication or financial/mutation behavior.
+One writer(root) for shared files; no peer source/index/config changes.
+
+Compatibility freeze: preserve the existing finite profile JSON body. For an
+explicitly native-selected reader only, additive X-Portal-Realtime-State and
+X-Portal-Realtime-Cursor headers negotiate native scoped notices. The cursor
+is an encrypted READ-baseline coordinate from the SAME captured projection
+snapshot; it is not STREAM authority. Opening the existing profile stream
+requires a new actual current READ∩STREAM scope and rewraps that authenticated
+original baseline into STREAM purpose. Reconnect Last-Event-ID is already
+STREAM-bound. Never relabel a baseline without current STREAM, reread a latest
+snapshot as its original barrier, expose a raw TS cursor, or use the legacy
+writer/heartbeat for a selected native person. Only Candidate writes headers/
+physical frames; the current scope/source identity is checked per frame.
+
+Reuse the configured private cursor key-ring with domain-separated existing
+codec. Replay limits are explicit private DI from existing connected budget
+input, never invented production defaults; absent limits leaves new SSE
+unavailable without blocking finite Manager read or widening legacy behavior.
+One SAME local250ms timer polls the Hub only with native clients, with a single
+in-flight poll; shutdown marks stopped, aborts Hub and joins actual work before
+resource disposal. No per-browser source timer or bulk table synchronization.
+
+Expected verification: compile/strict affected source; baseline snapshot/read
+without STREAM, missing STREAM deny, accepted stream/reconnect, cross-person/
+workspace/source/model/cursor rejection, scope revoke between frames, cache/
+source loss/slow client and zero legacy/double writer, shared timer/no-client/
+shutdown tests, actual mounted SessionGuard/PG/native terminal and unchanged
+legacy regressions. Tests remain NOT_RUN until direct source-pinned receipts;
+TEST_ONLY PM protocol is not commissioned authority. Preserve32finite profile
+and failed history; integrate/publish this slice only after its affected gates.
+Rollback removes only optional native realtime binding, retaining durable
+receipts/current rights, unchanged routes and operational volumes.
+
+**Continuation /2026-10-18 16:34UTC:** preceding user-requested read-only progress
+report is not implementation closure or another product test. It newly verified
+PM699c70d2 (research provenance/separate Paper monitor), Core5291a80f and remote
+Edge8b7eb0c1; preserve the new PM semantics and all peer WIP. Original full goal
+and08 approval remain unchanged. Resume the disjoint SSE draft recorded above;
+the large initial consumer patch is present but NOT compiled/tested and still
+needs coordinator/controller/private-DI and focused fixtures. Inspect and finish
+those owned connections rather than recording them as external debt. Keep the
+32-file finite source profile frozen until its own affected gates complete.
+
+The known finite HTTP fixes, complete30 publication and current32 packet are
+still uncommitted. Fresh compiler/PG/HTTP/normal-hook work requires actual quiet
+host/finite lease; HK foreign reservation remains to18:06UTC. SGP's newer PM
+six-Manager reservation is not itself PASS or proof that a test finished; use
+actual job/terminal evidence before any competing job. No operational DB DDL,
+grant/identity install, peer checkout write, deploy or runtime restart in this
+source-preparation slice. Real provider installation and connected acceptance
+remain owned follow-through in08, not satisfied by TEST_ONLY source receipts.
+
+**Owned SSE source review /16:47UTC, NOT_RUN:** snapshot/stream dispatch, private
+DI and shared coordinator are now prepared in the disjoint draft. Same finite
+JSON, additive encrypted READ-baseline headers, current independent STREAM and
+no selected-user legacy fallback; no new poller. Added TEST_ONLY coordinator/
+dispatch and baseline negative fixtures, not real authority or mounted runtime.
+Inspection caught a real shutdown edge: Hub.poll settles on abort while an
+abort-ignoring source keeps its bounded slot. Joining only the poll would not
+prove actual source completion. Extend the SAME flight slot with a settled
+promise, add Hub.drain and join it at app shutdown; retain occupied-slot bounds,
+current per-frame gates and Candidate custody. Add explicit actual-completion/
+late-rejection tests in the existing realtime suite. This is owned integration
+correctness, not external debt or an already passed test. Review capture of
+principal before awaits and preserve same-row baseline without rebaseline.
+
+Current finite32 packet/source stays byte-identical. Mechanical transfer
+preparation excludes three unrelated compressed replay fixtures;1152safe source
+files,3953150B archive SHAa43ad750ce91dfc9ff086af4e33d563280642f1510c6a7a0ce76823fb0d5b52f,
+filtered source manifest e08d405ef75c51550fd241b5576e1e1e70e3aeb91956c555de730496e8274559.
+All1148safe qualification dependency hashes remain unchanged; no secret, ENV,
+dependency cache or business DB data included. Not transferred or executed.
+SGP public package-lock matches exact81f9975e and Node imagec610 is cached;
+originalPG image-ID probe missed, cached PostgreSQL digest44c4 is present.
+SGP PM Manager job was confirmed actually live, then a new foreign Core
+reservation16:44:30→17:44:30 appeared. HK remains foreign to18:06. No own heavy
+job/container started, no competing lease or peer process stopped. Continue
+source/fixture/target preparation; do not inherit213,229or PM joint evidence.
+
+**Prepared coherent SSE slice /16:55UTC:**12authored source/test files against
+the frozen finite profile,8production/4test,+676/-49lines. Bounded mechanical
+source/whitespace check only, receipt4731dd9ee65972d1f421afa0dab733e1816a778585b099c95330858ac2f51011;
+it is NOT compile, product test or acceptance. Added29pure and5actual-PG/mounted
+HTTP/SSE case definitions. The mounted fixture uses real SessionGuard, existing
+projection.commit/journal, current READ/independent STREAM and physical HTTP/SSE;
+PM remains the explicitly SYNTHETIC mTLS protocol endpoint. No positive scope,
+physical writer or settlement is mocked. Cases cover baseline-not-permission,
+commit-between-snapshot/stream, original Last-Event-ID resume, STREAM revoke
+leaving finite READ intact, bad cursor and source epoch change. All NOT_RUN.
+The test-only local worker has no enabled upstream profiles; bounded coordinator
+drives the actual Hub. Join actual finite/frame completion before ledger reads;
+close sockets/streams/coordinator before isolated fixture teardown.
+
+Rebuilt own active SSE layout1156files/20238749B, manifest
+2c7f5ca21b7a255d83d28c8bb6f1b80e6162dffbd785a5eee95c7d1805f00263;
+exact path /tmp/epg10-08-core-publication-1YUPvjLM/diagnostic-realtime-5291.
+The finite32patch remains7638de85 unchanged. Prepared harness selects fixed
+finite/realtime layouts, isolated numeric names and exact finite own reservation
+of at most300s, refusing foreign/expired/root windows before Docker starts.
+Bash syntax PASS only; reservation/cleanup runtime tests remain NOT_RUN.
+Preserve prior failing receipts; full current233finite and subsequent affected
+SSE/legacy profile plus normal hook must pass before commit/publication/activation.
+
+Fresh SGP Core5291 remains source-only, actual peer node3952261 has npm/node
+workers (observed node3968934/140%CPU), not merely an old lease. HK foreign lock
+still future. Own finite/realtime containers/networks0 on both hosts; own SSE
+images0, no new build/cache. HK global image inventory101 is peer/shared state,
+not our cleanup result. Disk214980820992B available is a shared observation.
+No deletion this slice: active authored/test source and public deps are retained
+for their consuming qualification; no new remote copy exists. No broad prune,
+volume/data removal or rollback/service change. SGP API8400439b/stabled2c23ad6
+restarts0; HK active d6aa7a51/Proxy aa14e21c and named rollback remain unchanged.
+Canonical Portal54c6f5f3/active8b7eb0c1, six other worktrees, PM699c70d2,
+TS668e1032/next8e2849dd preserved. No new commit/push/merge/deploy. Full original08
+IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET; continue exact source qualification
+when its host is genuinely clear, then actual provider/identity commissioning;
+separate07/03/01/06 and connected09→10→11 remain required by the full goal.
+
+**Original08 continuation /17:05UTC, before remote qualification:** previous
+turn was a read-only progress report, not product completion. Exact fresh SGP
+inspection now finds the original Core3952261 worker and PostgreSQL containers
+absent, user/root reservations absent, immutable Core5291 unchanged. HK still
+has the foreign DL18:06 reservation; no HK heavy job is permitted. Prepare a
+fresh SGP disposable finite-HTTP namespace using the already frozen1152-file
+source-only archive a43ad750 (3953150B), its exact transfer pins e08d405e,
+current32 authored patch7638de85 and existing public lockfile81f9975e dependencies
+mounted read-only. No ENV, secrets, DB data, install, image build/pull, peer
+checkout/index modification or operational DB/service/deployment change.
+
+Scope remains exact current-Core production/spec/233PG+HTTP qualification,
+followed by affected SSE/legacy gates and normal-hook source publication. Acquire
+an exclusive own finite reservation only after fresh actual-job/user/root checks;
+cached Node c610fcdf and PostgreSQL44c4ee98, isolated numeric test names/internal
+network/tmpfs, existing2CPU/2GiB Node and1CPU/768MiB PG bounds, no host ports or
+persistent volumes. Preserve all failures and final source/result hashes.
+Cleanup must remove only this namespace's labelled containers/network and owned
+reservation after actual job completion, then exact remote source copies after
+their consuming qualification. Retain bounded receipts locally; no global prune
+or peer cleanup. Real installed identity/provider and connected acceptance remain
+unfinished owned08 work; no test result is inferred from this preparation.
+
+**17:08UTC source/guard result:** exact source-only archive and helpers reached
+/tmp/epg10-08-finite-core-5291-J00MZbQP on SGP;1152/1152hashes match,
+20092474logicalB extracted, public dependency lock81f9975e matches. No secret,
+ENV, DB data or public dependency copy. Runner now mounts only the existing
+public node_modules directory read-only, not its peer app parent. First strict
+production request66444 exited before lease/Docker with
+FOREIGN_TEST_CONTAINER_PRESENT: PM acquired its original finite profile-capital
+window17:05:12→17:10:12; actual PM test/PG containers and Python/Node processes
+were directly observed. This is guard refusal/NOT_RUN, not compile failure,
+product evidence or permission to start a competing job. Owned containers0.
+PM advanced699c70d2→68d165f0 with its qualified16-case Manager receipt committed;
+consume only its exact historical profile scope, not current-Core acceptance.
+
+Improve the own harness before its first launch: capture only own labelled
+disposable PG state/OOM/memory/tmpfs and40bounded log lines before cleanup, so
+connection-loss failures retain cause evidence. Helpers/runner are source-only
+preparation; bash syntax/source pins are structural checks, not product PASS.
+Current-Core5291,32finite patch and12SSE draft bytes unchanged. Remote source
+remains actively retained for this consuming scope; remove exactly after terminal
+qualification and receipt collection, never prune the shared cache or PM job.
+
+**17:16UTC original08 owned SSE correction, before edits:** the original guarded
+production handle71856 acquired its own300s SGP slot at17:13:43 after the Core
+job finished; it is RUNNING, not PASS. A bounded read-only review of the12-file
+SSE draft finds two owned issues before qualification: native controller dispatch
+must preserve existing local/profile availability switches independently of
+legacy membership gates, and optional replay budgets must not disable the finite
+profile snapshot READ. Fix only the disjoint draft: reuse localProfileReadable,
+enforce global+mode availability before native snapshot/stream, and allow genuine
+READ delivery without a cursor when no realtime composition is supplied; STREAM
+stays503. No permission fallback or invented budget. Add focused negative/positive
+tests and adjust mounted fixture to explicitly stop its own projection worker
+before enabling the read profile, rather than bypass disabled-profile behavior.
+No positive authority, physical writer or settlement is mocked. All changed SSE
+source/cases remain NOT_RUN; current32finite production/test bytes stay frozen.
+
+**Original08 continuation /2026-10-18 17:25UTC:** preceding user-requested
+progress report was read-only, not implementation closure. Terminal71856 now
+proves exact frozen5291 production strict compilation PASS, exit0 at17:17:02;
+owned containers/network0, own lease removed, all51protected runtime tuples
+unchanged. Receipt production-171343.json/log remain under the active private
+SGP source namespace pending bounded collection. This is compiler evidence,
+not233-case HTTP/PG acceptance. Continue the SAME immutable finite source with
+seven-spec strict gate and233cases under fresh actual-job/user/root checks and
+an exclusive <=300s reservation; no HK jobs under foreign18:06 lock.
+
+Fresh source review: remote Edge8b7eb0c1 matches local; PM68d165f0, TSnext8e2849dd,
+Core5291a80f (141peer WIP paths) and DLf2094a2 are distinct source tracks, not
+commissioned provider returns. Preserve their checkout/index/runtime. Existing
+actual stable identity/TS-volume audit remains authoritative, never preview
+usernames or fixture grants. No new phase, migration, grant, deploy or command.
+
+Before additional private SSE edits: confirmed owned shutdown gaps extend beyond
+source abort. Consumer preparation can still await current authority/metadata
+after stop returns; Hub pending subscriptions/polls are not joined; local read
+timeouts can leave actual repository promises running after their wrapper ends.
+Fix only the recorded disjoint12-file draft: one scalar/deferred idle barrier
+per owner for accepted preparation/operations/actual repository reads, existing
+scope queue for snapshot preparation, stopped checks before new work/admission,
+and actual final-delivery settlement through its SAME already-admitted Candidate.
+No per-request registry, new poller, invented budget or bare throw abandoning
+custody. Set stopped/close/abort synchronously, then join operations and actual
+source work; shutdown itself is not counted. Add deferred authority/metadata,
+queued snapshot, timeout-late-read and admitted-delivery regression cases. No
+affected SSE test/compile PASS is inferred; frozen finite32 stays unchanged.
+
+**17:30UTC finite spec terminal / private draft preparation:** original88481
+strict seven-spec gate PASS, exit0 at17:29:37; own namespace containers/network0,
+lease removed and51protected runtimes unchanged. Together with production171343
+this qualifies only the exact frozen5291 compiler inputs. Start the declared
+233-case fixture/HTTP gate in the same isolated source namespace under a fresh
+exclusive guard, keeping failures/PG diagnostics and exact terminal teardown.
+
+Owned SSE draft now has joined consumer preparation/final-send, Hub accepted
+subscription/poll work and actual local repository lifetimes, including reads
+which outlive their response timeout. Queued snapshot work uses the existing
+bounded scope queue and refuses after stop. Added deferred stop/authority/read/
+final-owner cases and genuine-PG scope/metadata scheduling negatives; current
+prepared delta expects42pure+7PG cases beyond the frozen finite source and its
+affected legacy suites. These are NOT_RUN definitions, not security/runtime
+acceptance. Review found and corrected the fixture's literal-false config type
+and missing test-only FastifyReply import before compilation. No frozen finite
+source, operational service/config, schema, grant or authority changed.
+
+**17:34UTC current finite source qualified / next exact SSE scope:** terminal44283
+exit0 at17:31:48; direct JUnit inspection proves233actual/unique cases,
+0FAIL/ERROR/SKIP across7suites. Both previously failing mounted deployments/
+relation HTTP cases now pass against current5291, with policy error translation
+and actual final-serve completion join. All3jobs have owned containers/network0,
+own lease removed and51protected runtime tuples unchanged. Bounded source/log/
+JUnit pins and per-suite counts are published in current-core-profile/
+qualification.json; manifest/README/backend indexes now agree. This closes the
+owned finite HTTP typing/composition/test subgap, not source publication through
+normal hooks, installed genuine authority or full08. Preserve old229/focused
+failures and original213receipts separately; no inherited acceptance.
+
+For the next existing08 qualification, freeze the disjoint12-file SSE delta
+(8production/4test,+939/-60) and complete source1156manifestc2d7bb38. Exact safe
+source-only archiveae8527724f7f193f06f75dc26381cad09ca5715f00da1ce6e30ffd43978da666
+(3966345B),1153safe files/pins0ffa9390, excludes only3unrelated compressed replay
+fixtures. Prepare own SGP /tmp/epg10-08-realtime-core-5291-GNBXVSP0 using the same
+cached images/public read-only dependencies and bounds, fresh actual-job/user/
+root checks and exclusive<=300s guard; reuse the bounded runner/controller,
+never an operational mount or peer checkout. All affected SSE/current/legacy
+cases and strict gates remain NOT_RUN until direct receipts. No secret, ENV,
+DB rows, cache copy/install/build/pull, new service, grant or production change.
+Exact containers/network/lease cleanup follows each terminal job; collect bounded
+receipts and remove the exact remote source copies when consumption ends.
+
+**Original08 continuation / entry2026-10-18 17:50UTC:** preceding report-only
+turn produced new diagnostic evidence, not implementation closure: the original
+SSE controller49830 is terminal exit1 at17:40:09. Direct JUnit/log inspection
+shows270executed cases,251PASS/19FAIL, plus3suite-load errors (273JUnit entries,
+22failure/error entries),0SKIP. Failures are13missing accessDigest test-helper
+references,6strict baseline payload rejections for extra source_cursor, and
+3module-load Class-extends-undefined errors at retained-operation-page. These
+are owned source/fixture defects, not external TS debt. Preserve this first
+failed frozen archive/pins/log/receipt; diagnose exact import cycle and baseline
+shape before changing only the disjoint SSE draft. Do not relax strict schemas,
+current authority, legacy behavior, same-Candidate physical delivery or bounds.
+
+Continue the already-approved objective in order: finish exact source
+publication (historical complete30/current finite32), qualify the corrected
+current SSE profile, then genuine provider/identity installation and connected
+revoke/cache/cursor/SSE in08; separate07/03/01/06 before09connected→10→11.
+Guides remain EDGE08 and BE5/6/9.2/14.2; rollback leaves optional bindings
+unmounted and retains original custody/receipts. Source qualification cannot
+authorize a deploy, schema/grant/identity mutation or full08 acceptance. Record
+actual strict/affected regression/hook results for changed source, not inherited
+213/233PASS. Both user/root locks and actual jobs must be checked before each
+heavy job; read-only source/contract preparation continues independently.
+
+The failed SSE job removed its own containers/network/lease, all51protected
+runtime tuples unchanged. Correct io.primus.epg10.owner label probes independently
+confirm0remaining owned containers/networks. Consumed finite source receipt
+collection is complete and controller4666 terminal exit0: exact SGP
+/tmp/epg10-08-finite-core-5291-J00MZbQP removed,1166files/24290084logicalB,
+shared free163443126272→163470274560B and51operational tuples unchanged.
+No image/cache/volume/peer cleanup. SSE source remains only for active failure
+diagnosis until bounded receipts are collected; clean that exact copy afterwards.
+
+Fresh source/runtime audit: local and remote Edge8b7eb0c1, PM e791b3c7,
+Core5291a80f; PM's new profile/Paper/capital witness source is isolated-qualified,
+not a commissioned provider. PM18th dataset remains prepared/WIP, not enabled.
+HK canonical manager checkout54c6f5f3 and all six active feature worktrees are
+preserved. HK Edge/workerd6aa7a51/Proxy aa14e21c revision8814cd2a and P/S/L
+configs6180b9bf/cd79e9c6/98a191c7 retain original starts/restart0; SGP actual API
+8400439b/config963a3d84 and stable APId2c23ad6/config26c0d954 restart0. Verified
+TS container live_data_executor still mounts trading_system_pgdata. Stable
+release roots /srv/primus/portal/releases and /srv/portal/releases plus named
+TSr59/r49 rollback remain unchanged. No push/merge/deploy in this entry.
+Full08 IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET,09connected NOT_STARTED.
+
+**17:54UTC owned SSE diagnosis before changes:** profile-realtime.service now
+imports NativeManagerReadConsumer at runtime, which imports the existing maximum
+operation service→retained-operation-page→LocalRealtimeError from the unfinished
+first module. Break only that new cycle with a type-only consumer import and
+one explicit private coordinator token/useExisting alias in the existing
+AppModule; retain the SAME consumer/shared poller and no new service. The native
+observation binding spreads the baseline's private source_cursor into the strict
+binding; copy only its four declared snapshot/source-set/epoch/generation fields
+instead. Add the missing test-only accessDigest import. Preserve strict schema,
+encrypted cursor, mandatory current authority and physical final-send semantics.
+The corrected affected suite and strict gates remain NOT_RUN until receipts.
+
+**Source publication verification /17:58UTC:** fresh publication guard14unit
+tests PASS,0FAIL/ERROR/SKIP. Complete historical profile actual guarded
+apply→697output hashes→already-applied no-op→reverse→exact687preimages PASS;
+temporary roundtrip target removed in finally. Current finite32 verifier
+ALREADY_APPLIED_EXACT_SOURCE/PASS against the actual233-qualified source,0writes.
+Diff-check PASS. Historical213 and current233strict/behavioral receipts remain
+separate, preserved with failed predecessors. Remote finite-copy cleanup values
+are now recorded in its bounded qualification JSON, not as new tests.
+
+Prepare one coherent14file source-publication slice:6owned verifier/index/plan
+changes,3complete-profile files and5current-core-profile files. Exclude all
+peer-owned untracked egress/feasibility source, and all private SSE draft/source/
+logs/dependencies. Normal repository pre-commit/pre-push hooks stay enabled via
+per-command core.hooksPath=.githooks; verify Bobby's identity and staged scope.
+Run the normal gate only after fresh HK user/root/actual-job checks with own
+finite<=20min lease, isolated standard test cells and exact teardown. Capture
+bounded terminal/log/image/cache/runtime before/after observations. No hook
+bypass, force push, dev/main merge, deployment or runtime DB change. The goal
+explicitly authorizes publication to the existing canonical feature branch;
+verify the resulting remote ref rather than infer push success. Any normal-gate
+failure remains owned and must be fixed before publication. Full08 stays open.
+
 
 
 
