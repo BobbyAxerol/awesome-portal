@@ -308,3 +308,74 @@ found no new consumer acknowledgement; UI remains owner-held. Exact private
 intake is retained at20261017/pm-native-source-refresh-2242.md under the existing
 private evidence root. Unchanged finite correctness receipts are reused only
 at their original source/coverage; no repeat full suite for this source note.
+
+<a id="pm-joint-protocol-intake-20261017-2338"></a>
+## Current PM joint-protocol receipt intake — 2026-10-17T23:38Z
+
+2026-10-17, approximately23:31–23:38UTC. Read-only source inspection while
+the account-policy normal hook owned canonical source/index freeze. This
+intake is NOT a new Portal test run, deployment or trust installation.
+
+### Observed source and custody
+
+- Target: bobby@16.163.212.33, exact PM worktree
+  `/home/bobby/.worktrees/trading-system-pm-v1_1`, branch
+  `feat/portfolio-account-v1_1-parallel`.
+- HEAD94822b53b68147430199a10db47a369521b9e4eb, committed joint-protocol
+  qualification after source parent1b7496a86ce315602260099cc87cb73d67e5ea05.
+- Peer tracked/untracked report/history WIP was inventoried and preserved.
+  Tracked binary-diff SHA256
+  d3ccba5cfc293d7b9130ab71d4b413b9d89c43cc2e8ef07a19d01000de9a0642.
+  This does NOT include untracked file bytes; no full dirty-tree attestation.
+- Fully read descriptor
+  `contracts/baseline/portfolio-account-v1_1/pma11-16-core-native-joint.json`,
+  SHA256505a9418b3a0613eb4997963cfb0ff6a4c987ea64fe13b746fd3a925302fbd82.
+- Read journal §58.134 in full, lines79045–79069 at this observation. Earlier
+  broad tail was truncated and is not treated as a full read of adjacent entries.
+- Evidence header/original-attempt/reuse summary read, not its full1784lines:
+  `pma11-16-core-native-joint-evidence.json`,
+  SHA256196f4eed3a6bbec919651be355e49f9fd2a49e914044b4c08545e003cb9e9994.
+
+### Disposition, not inherited test credit
+
+PM reports actual Core0ccdc5edfbbf6d4e911baa375cd25cf3d4e0e6c1 selected
+TypeScript client/codec against its installed disposable PM/PostgreSQL socket,
+TLS1.3/mTLS, ephemeral TEST_ONLY human/terminal identity. Final8joint tests
+22:53:37.270422→22:54:29.781436UTC passed within52.511s. Qualified unique
+coverage56=20actual-PG+36unit, preserving failed first setup and exact reuse.
+These are PM-owned receipt observations, NOT tests executed by this Portal
+intake or actual current-human/physical final-egress commissioning.
+
+Finite-v1 source/client interoperability is now separately qualified in that
+isolated scope. First malformed-v2 negative was explicitly refined to a complete
+PM-valid scoped_notice frame, checked with the actual PM parser; Core still
+rejects it before HTTP and no native lease is issued. Safe refusal is NOT a
+positive v2 frame interoperability result.
+
+Disposition: ACCEPTED_FOR_IMPLEMENTATION for the concrete Core-owned v2 frame
+adoption gap, with source compatibility review first. Reuse frozen finite-v1
+semantics; adopt exact stream/frame/ordinal/dataset/query/field/generation/
+cursor/scope binding, retain original Base and terminal family through durable
+custody/recovery. Actual two-sided positive frame and cross-family negatives
+are done-when; schema/unit fixture alone is insufficient. Keep the finding in
+existing09/10 native integration records rather than inventing a second transport
+or treating a source-only journal as production authority.
+
+Readiness remains FULL_GATE_OPEN: current human/workload/app/field provider,
+held final-egress/revoke/COMMIT and physical terminal signer are not installed
+by this receipt. Real history/publisher/generation/storage/apply/checkpoint,
+approved workload/SLO/coexistence/P184G2 and consumer/browser gates remain owned
+separately. PM17 remains NOT_STARTED. No new Claude consumer acknowledgement.
+
+### Canonical delivery after account terminal
+
+The account-policy hook reached verified terminal23:46:42UTC (da3a5f5c).
+These exact pins/dispositions are appended in the next affected04 package,
+with the owning Unified link. Do not mutate the hook's frozen
+inputs or run a separate full build for this documentation intake. Any peer WIP
+implementation requires its own fresh source pin/review; no overwrite or test
+claim is authorized by merely observing the worktree.
+
+No remote writes, tests/builds/DB queries/migration, credentials, listener/service
+changes, grant/calibration install, public runtime, frontend edits or push.
+No resources created; no cleanup action required for this read-only intake.

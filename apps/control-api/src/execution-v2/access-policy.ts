@@ -251,6 +251,20 @@ export function currentGrantAllows(context:AccessEvaluationContext,action:Access
     .some(grant=>grant.effect==="ALLOW"&&grant.grant_id===grantId);
 }
 
+/** Exact independent Alpha/Portfolio sharing, using the same canonical full
+ * current graph as receipt-selected grants. Check all matching originals in
+ * one selected-resource check (two canonical matching passes), not once per
+ * candidate grant ID. No original grant or ancestor is removed from context.
+ * Caller caches only within one mint and only for qualified publication IDs. */
+export function currentExplicitReadAllows(context:AccessEvaluationContext,action:"alpha.read"|"portfolio.read",
+  resource:AccessResource,environment:"paper"|"sandbox"|"live"):boolean {
+  if(action!=="alpha.read"&&action!=="portfolio.read")return false;
+  const kind=action==="alpha.read"?"ALPHA":"PORTFOLIO";
+  if(resource.kind!==kind||!evaluateAccess(context,action,resource,environment).allowed)return false;
+  return matchingGrants(context,action,resource,environment).some(grant=>grant.effect==="ALLOW"&&
+    grant.selector.kind==="EXPLICIT_RESOURCE_SET"&&grant.selector.resource_kind===kind);
+}
+
 /** Full business read implies a business read, never technical, export or
  * mutation. A narrower current DENY still wins; no cross-action bypass. */
 export function evaluateBusinessRead(context:AccessEvaluationContext,

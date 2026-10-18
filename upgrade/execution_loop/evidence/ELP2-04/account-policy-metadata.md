@@ -214,3 +214,22 @@ verify-static PASS, runtime_effect=NONE. Exactly one source-input digest changed
 decision/profiles/authority/deployed evidence and all source code remain as
 already tested. The same normal hook must pass on retry; no bypass or repeated
 focused PG/engine/load run is needed for this static ledger correction.
+
+<a id="normal-hook-terminal-20261017-234642"></a>
+### Normal-hook terminal — 2026-10-17T23:46:42Z
+
+Actual retry `account-policy-land-231828` PASS/exit0, landed
+`da3a5f5cf64b1db191d804e43dbc96a0a8375e76`:26files,+1104/−30.
+69 contract files/829 tests PASS;383 API files/6361 tests PASS, with2existing
+skipped files/3skipped tests. API build, real disposable PostgreSQL scoped
+restore and four scoped-access row digests PASS. Original early failed hook
+above is retained, not rewritten as passing.
+
+Private controller SHA256
+882860bed5c628c13c3e5aadeda41fda88a582d7ed3fccea9117a257d272ff9b;
+gate log SHA256 d2a6d919d4ae97eacd8c6a841e892cb0fed8246e162c1a937d52eaf9f8d9e512.
+Frozen source/foreign index checks PASS, eight protected runtime tuples
+unchanged, exact owned Node/PG/network removed and lease released. No push,
+runtime/source grant/credential change, frontend or full04/10 acceptance.
+The [next exact-sharing/mixed Portfolio subset](explicit-resource-and-portfolio.md)
+has its own reviewed source/test/exit matrix; it is not covered by this hook.

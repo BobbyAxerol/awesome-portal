@@ -4,6 +4,7 @@ import "reflect-metadata";
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { performance } from "node:perf_hooks";
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
@@ -12,7 +13,7 @@ import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { SessionsRepository } from "../src/repos/sessions";
 import { ExecutionAccessService } from "../src/execution-v2/access.service";
 import { AccessRepository } from "../src/execution-v2/access.repository";
-import { accessDigest, type AccessRelations } from "../src/execution-v2/access-policy";
+import { accessDigest, type AccessEvaluationContext, type AccessRelations } from "../src/execution-v2/access-policy";
 import type { AccessAction, AccessResource, ResourceSelector, ScopedAccessGrant, ReviewedAccessPolicy } from "../src/execution-v2/access.contract";
 import type { AccessTrustProvider, ReviewedPolicyArtifact } from "../src/execution-v2/access-trust";
 import type { ExecutionReadPublicationRequest, ExecutionReadPublication } from "../src/execution-v2/read-publication";
@@ -149,7 +150,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 scoped Manager raw read
   });
 
   async function fixture(options: { full?: boolean; binding?: boolean; legacy?: boolean; missingDeploymentRelation?: boolean;
-    allowUnrecordedLive?: boolean; contradictoryStrategy?: boolean } = {}) {
+    allowUnrecordedLive?: boolean; contradictoryStrategy?: boolean; directPortfolioIds?:string[]; withoutLinkedAuthority?:boolean } = {}) {
     const workspace = `manager-${randomUUID()}`, now = Date.now();
     await ctx.pool.query("INSERT INTO workspaces(workspace_id,name,owner_user_id) VALUES($1,'TEST_ONLY Manager',$2)", [workspace, owner.userId]);
     for (const user of [owner, researcher]) await ctx.pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,'MEMBER')", [workspace, user.userId]);
@@ -169,12 +170,13 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 scoped Manager raw read
     const trust: AccessTrustProvider = {
       verifyPolicy: async value => value === artifact ? artifact : null, verifyReceipt: async () => null, verifiedHumanMapping: async () => null,
       relations: async (userId): Promise<AccessRelations> => ({ qualified: true, revision: "TEST-relations",
-        own_alpha_ids: userId === researcher.userId ? [OWN.alpha_id] : [], member_portfolio_ids: userId === researcher.userId ? [OWN.portfolio_id] : [],
+        own_alpha_ids: userId === researcher.userId&&!options.withoutLinkedAuthority ? [OWN.alpha_id] : [],
+        member_portfolio_ids: userId === researcher.userId&&!options.withoutLinkedAuthority ? [OWN.portfolio_id] : [],
         roots: { "TEST-root": resources }, membership }),
       readPublication: async (request: ExecutionReadPublicationRequest): Promise<ExecutionReadPublication> => ({
         workspace_id: workspace, environment: request.environment, profile_id: request.profile_id, qualification: "TEST_ONLY",
         publication_revision: "TEST-publication", binding: request.binding, population_coverage: "COMPLETE_FOR_DATASET_WINDOW", provenance_ref: "TEST_ONLY",
-        resources, tuples, current_linkage: { qualification: "TEST_ONLY", revision: "TEST-link", provenance_ref: "TEST_ONLY",
+        resources, tuples, current_linkage: options.withoutLinkedAuthority?null:{ qualification: "TEST_ONLY", revision: "TEST-link", provenance_ref: "TEST_ONLY",
           pairs: [{ alpha_id: OWN.alpha_id, portfolio_id: OWN.portfolio_id }, { alpha_id: PEER.alpha_id, portfolio_id: OWN.portfolio_id }] },
         strategy_lineage: { qualification: "TEST_ONLY", revision: "TEST-strategy", provenance_ref: "TEST_ONLY",
           pairs: [{ strategy_id: "strategy-own", alpha_id: OWN.alpha_id }, { strategy_id: "strategy-peer", alpha_id: PEER.alpha_id }] },
@@ -194,9 +196,11 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 scoped Manager raw read
     };
     if (!options.legacy) {
       await access.installReviewedPolicy(artifact);
+      if(options.directPortfolioIds?.length)await grant("portfolio.read",{
+        kind:"EXPLICIT_RESOURCE_SET",resource_kind:"PORTFOLIO",ids:options.directPortfolioIds});
       if (options.full) await grant("business.read_all", { kind: "ROOT_SCOPE", root_id: "TEST-root" });
       else if (options.binding) await grant("binding.read", { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "BINDING", ids: ["TEST-own-binding"] });
-      else { await grant("alpha.read", { kind: "OWN_ALPHA" }); await grant("portfolio.read_restricted", { kind: "PORTFOLIO_MEMBERSHIP", portfolio_ids: [OWN.portfolio_id] }); }
+      else if(!options.withoutLinkedAuthority) { await grant("alpha.read", { kind: "OWN_ALPHA" }); await grant("portfolio.read_restricted", { kind: "PORTFOLIO_MEMBERSHIP", portfolio_ids: [OWN.portfolio_id] }); }
     }
     const cfg = testConfig({ AUTH_MODE: "dev", DATABASE_URL: ctx.config.DATABASE_URL, EXECUTION_DATABASE_URL: databaseUrl(domainName),
       EXECUTION_READ_PROFILE: "retained_review_v1", FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
@@ -260,8 +264,143 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 scoped Manager raw read
         [workspace, PROFILE, id, JSON.stringify({ ...tuple, risk_grant_id: id, strategy_id: strategy, mode: "PAPER", venue: "TEST", created_at: "2026-09-02T00:00:00Z" })]);
     };
     const commandCenter = new CommandCenterRepository(ctx.pool, cfg, domain, repository, undefined, undefined, scopes);
-    return { workspace, repository, scopes, read, legacy, grants, principal, adapter, financial, financialRepository, seedFinancial, commandCenter, config: cfg };
+    return { workspace, repository, scopes, read, legacy, grants, principal, access, adapter, financial, financialRepository, seedFinancial, commandCenter, config: cfg };
   }
+
+  // Actual Core/Execution PostgreSQL and immutable raw snapshot path. Source
+  // lineage/acceptance remain TEST_ONLY legacy-compatible transport facts;
+  // exact versioned per-resource native legs are covered in the focused unit
+  // suite. Neither lane installs a real human/source provider or field policy.
+  it.each(["paper","sandbox"] as const)("T04-01 explicit independent Portfolio reaches actual %s snapshot without ownership/member/link",async environment=>{
+    const f=await fixture({directPortfolioIds:[PRIVATE.portfolio_id],withoutLinkedAuthority:true});
+    const result=scopedManagerResponseSchema.parse(await f.read("PORTFOLIOS",{environment}));
+    expect(result.items.map(item=>item.identity.portfolio_id)).toEqual([PRIVATE.portfolio_id]);
+    expect(result.items[0].instances).toEqual([expect.objectContaining({deployment_id:PRIVATE.deployment_id})]);
+    // Complete row-grain visibility is not business.read_all/accounting.
+    // PRIVATE has one published tuple and this exact grant covers it all.
+    expect(result.items[0].is_full_resource).toBe(true);
+    expect(result.read_scope.totals_scope).toBe("VISIBLE_ROWS_ONLY");
+    expect(JSON.stringify(result)).not.toMatch(/880002|990001|PRIVATE_CUSTODY|MUST_NOT_LEAVE/);
+    expect(f.legacy).not.toHaveBeenCalled();
+  });
+  it("T04-01 mixed direct and linked Portfolios preserve each whole scope over actual committed data",async()=>{
+    const f=await fixture({directPortfolioIds:[PRIVATE.portfolio_id]});
+    const result=scopedManagerResponseSchema.parse(await f.read("PORTFOLIOS"));
+    expect(result.page.visible_count).toBe(2);
+    const shared=result.items.find(item=>item.identity.portfolio_id===OWN.portfolio_id)!;
+    expect(shared.instances).toEqual([expect.objectContaining({deployment_id:OWN.deployment_id})]);
+    expect(JSON.stringify(shared)).not.toMatch(/880002|990001|TEST-peer-dep|PRIVATE_CUSTODY/);
+    expect(result.items.find(item=>item.identity.portfolio_id===PRIVATE.portfolio_id)!.instances)
+      .toEqual([expect.objectContaining({deployment_id:PRIVATE.deployment_id})]);
+    expect(f.legacy).not.toHaveBeenCalled();
+  });
+  it("T04-02 full-business plus exact and restricted grants retains ordinary whole items without re-summing",async()=>{
+    const f=await fixture({full:true,directPortfolioIds:[PRIVATE.portfolio_id]});
+    const base=f.grants.find(grant=>grant.action==="business.read_all")!;
+    await new AccessRepository(ctx.pool).saveGrant({...base,grant_id:randomUUID(),revision:randomUUID(),
+      action:"portfolio.read_restricted",selector:{kind:"PORTFOLIO_MEMBERSHIP",portfolio_ids:[OWN.portfolio_id]}},true);
+    const snapshot=(await f.repository.snapshot(f.workspace,"paper",PROFILE))!;
+    const ordinary=await f.scopes.authorize(f.principal,{environment:"paper",profileId:PROFILE},{action:"portfolio.read",
+      dataset:{dataset_id:"manager:PORTFOLIOS",source_revision:snapshot.payloadDigest,
+        projection_generation:snapshot.projectionEpoch,catalogue_revision:snapshot.sourceCatalogueSha256,window:null}});
+    const expected=composeManagerItems(ordinary,snapshot,"PORTFOLIOS");
+    const result=scopedManagerResponseSchema.parse(await f.read("PORTFOLIOS"));
+    expect(result.items).toHaveLength(expected.length);
+    for(const item of result.items)expect(item).toEqual(expected.find(value=>value.identity.portfolio_id===item.identity.portfolio_id));
+    expect(f.legacy).not.toHaveBeenCalled();
+  });
+  it("T04-07 actual grant revoke after final profile metadata read rejects prepared Portfolio bytes",async()=>{
+    const f=await fixture({directPortfolioIds:[PRIVATE.portfolio_id],withoutLinkedAuthority:true});
+    const original=f.repository.snapshotMetadata.bind(f.repository);let reads=0;
+    const spy=vi.spyOn(f.repository,"snapshotMetadata").mockImplementation(async(...args)=>{
+      const metadata=await original(...args);
+      if(++reads===2){const grant=f.grants[0];await new AccessRepository(ctx.pool).saveGrant({
+        ...grant,revoked_at_ms:Date.now(),revision:randomUUID()});}
+      return metadata;
+    });
+    try{await expect(f.read("PORTFOLIOS")).rejects.toMatchObject({status:409,code:"EXECUTION_READ_ACCESS_CHANGED"});}
+    finally{spy.mockRestore();}
+    expect(reads).toBe(2);expect(f.legacy).not.toHaveBeenCalled();
+  });
+  it("T04-07 actual Core clock expires earlier paper purpose before distinct final global confirmation without row mutation",async()=>{
+    const f=await fixture({directPortfolioIds:[PRIVATE.portfolio_id],withoutLinkedAuthority:true,allowUnrecordedLive:true});
+    const repository=new AccessRepository(ctx.pool),original=f.grants[0];
+    const coreNow=async()=>Number((await ctx.pool.query<{now_ms:string}>(
+      "SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS now_ms")).rows[0].now_ms);
+    const deadline=await coreNow()+8000;
+    // Prepare immutable independent originals BEFORE the first read. Only
+    // paper expires; later sandbox/live authority remains current throughout.
+    await repository.saveGrant({...original,environments:["paper"],valid_until_ms:deadline,
+      ts_receipt:{...original.ts_receipt!,expires_at_ms:deadline}});
+    await repository.saveGrant({...original,grant_id:randomUUID(),revision:randomUUID(),environments:["sandbox","live"]},true);
+    const grantRows=async()=>accessDigest((await ctx.pool.query(
+      "SELECT grant_id,revision,grant_fact FROM portal_access_grants_v2 WHERE workspace_id=$1 ORDER BY grant_id",[f.workspace])).rows);
+    const before=await grantRows(),trace:string[]=[];
+    let bodyStarted=false,crossed=false,lastEnvironment="",earlierPaperConfirmed:number|null=null,lastConfirm=0;
+    let firstPaperContext:AccessEvaluationContext|null=null,finalLiveMintConfirms=0,globalConfirmCount=0;
+    const snapshot=f.repository.snapshot.bind(f.repository),publication=f.access.readPublication.bind(f.access),
+      confirm=f.access.confirmReadContext.bind(f.access);
+    const readContext=f.access.readContext.bind(f.access);
+    const contextSpy=vi.spyOn(f.access,"readContext").mockImplementation(async(...args)=>{
+      trace.push("current-context");return readContext(...args);
+    });
+    const snapshotSpy=vi.spyOn(f.repository,"snapshot").mockImplementation(async(...args)=>{
+      bodyStarted=true;return snapshot(...args);
+    });
+    const publicationSpy=vi.spyOn(f.access,"readPublication").mockImplementation(async request=>{
+      lastEnvironment=request.environment;trace.push("source:"+request.environment);
+      return publication(request);
+    });
+    const confirmSpy=vi.spyOn(f.access,"confirmReadContext").mockImplementation(async(...args)=>{
+      const global=firstPaperContext!==null&&args[2]===firstPaperContext;
+      const current=await confirm(...args);lastConfirm=current.now_ms;
+      trace.push(global?"global-confirm":"mint-confirm:"+lastEnvironment);
+      if(global){
+        globalConfirmCount++;expect(args[2].now_ms).toBeLessThan(deadline);
+        expect(current.authority_fingerprint).toBe(args[2].authority_fingerprint);return current;
+      }
+      if(bodyStarted&&lastEnvironment==="paper"){
+        earlierPaperConfirmed=current.now_ms;firstPaperContext??=current;
+      }
+      if(bodyStarted&&lastEnvironment==="live"&&++finalLiveMintConfirms===2){
+        // Delay delivery of the LAST mint's ACTUAL DB result, outside locks.
+        // Return that exact unmodified pre-expiry context. Legacy mint proofs
+        // otherwise notice paper expiry first and never test the global fence.
+        expect(earlierPaperConfirmed).not.toBeNull();expect(earlierPaperConfirmed!).toBeLessThan(deadline);
+        expect(current.now_ms).toBeLessThan(deadline);
+        const waitUntil=performance.now()+9000;
+        while(await coreNow()<=deadline){
+          if(performance.now()>waitUntil)throw new Error("TEST_ONLY_CORE_CLOCK_WAIT_EXCEEDED");
+          await new Promise(resolve=>setTimeout(resolve,50));
+        }
+        crossed=true;
+      }
+      return current;
+    });
+    try{
+      await expect(f.read("PORTFOLIOS",{environment:"all"})).rejects.toMatchObject({status:409,code:"EXECUTION_READ_ACCESS_CHANGED"});
+      expect(crossed).toBe(true);expect(globalConfirmCount).toBe(1);expect(lastConfirm).toBeGreaterThan(deadline);
+      expect(finalLiveMintConfirms).toBe(2);expect(trace.at(-1)).toBe("global-confirm");
+      expect(await grantRows()).toBe(before);expect(f.legacy).not.toHaveBeenCalled();
+    }finally{snapshotSpy.mockRestore();publicationSpy.mockRestore();confirmSpy.mockRestore();contextSpy.mockRestore();}
+  },20_000);
+  it("T04-03 actual corrupt authorized decimal drops whole paper profile, preserving healthy sandbox and obligations",async()=>{
+    const f=await fixture({directPortfolioIds:[PRIVATE.portfolio_id]});
+    const stored=await domain.query<{payload:ProfileProjectionDocument}>(`SELECT payload FROM execution_profile_projection_snapshots
+      WHERE workspace_id=$1 AND environment='paper' AND profile_id=$2`,[f.workspace,PROFILE]);
+    const document=stored.rows[0].payload;
+    document.relations.allocations.items[0].fields.allocated_capital="TEST_ONLY_INVALID_DECIMAL";
+    await domain.query(`UPDATE execution_profile_projection_snapshots SET payload=$3::jsonb,payload_digest=$4
+      WHERE workspace_id=$1 AND environment='paper' AND profile_id=$2`,
+      [f.workspace,PROFILE,JSON.stringify(document),accessDigest(document)]);
+    const result=scopedManagerResponseSchema.parse(await f.read("PORTFOLIOS",{environment:"all"}));
+    expect(result.items.map(item=>item.environment)).toEqual(["sandbox","sandbox"]);
+    expect(result.profile_dispositions).toHaveLength(3);
+    expect(result.profile_dispositions.find(value=>value.environment==="paper")).toMatchObject({state:"UNAVAILABLE"});
+    expect(result.profile_dispositions.find(value=>value.environment==="sandbox")).toMatchObject({state:"PARTIAL"});
+    expect(JSON.stringify(result)).not.toMatch(/TEST_ONLY_INVALID_DECIMAL|PRIVATE_CUSTODY|MUST_NOT_LEAVE/);
+    expect(f.legacy).not.toHaveBeenCalled();
+  });
 
   it.each(["current", "grant-revoke", "session-revoke", "leader-session-revoke"] as const)(
     "T04-11 physical Manager document leader/follower with real current authority: %s", async fault => {

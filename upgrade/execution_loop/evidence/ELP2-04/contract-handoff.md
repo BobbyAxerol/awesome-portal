@@ -1,5 +1,18 @@
 # ELP2-04 — Scoped reader handoff to Claude
 
+**2026-10-18 exact-sharing/mixed-Portfolio validation:**
+[Owning04-009 packet](explicit-resource-and-portfolio.md#affected-retake-terminal--2026-10-18t000452z)
+has actual112/112 affected tests/build/scopedPGrestore PASS and separately
+reused323 unchanged tests. No new public schema/field/generation requirement;
+existing scoped Manager consumer must preserve whole ordinary vs restricted
+items, visible-only totals and per-profile states. A real positive-purpose
+error is not permission to retry a broader/legacy API. Exact account DENY may
+remove both own/peer tuples sharing that account; do not infer full custody
+from is_full_resource. Producer landing remains pending normal-hook terminal,
+runtime and consumer acceptance separate; frontend remains owner-held. Read
+the packet and producer commit before proposing a consumer change. Claude
+requests/reviews will be triaged under rules7.3, not inferred as accepted.
+
 Status: **AWAITING_CONSUMER_REVIEW; NOT_RUNTIME_ACTIVATED**.
 Producer branch: `docs/research-loop-plan`; base
 `c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64`. The closeout receipt in this
@@ -151,3 +164,27 @@ Consumer remains NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW.
 When assigned, pin producer commit and generated type/fixture, map only real
 granted values, then take fixture and genuine API/browser receipts separately.
 This handoff is not proof of a real current-human/source provider or acceptance.
+
+## 2026-10-17 — exact sharing and mixed Portfolio purposes
+
+Account metadata producer landed `da3a5f5cf64b1db191d804e43dbc96a0a8375e76`;
+its [normal-hook terminal](account-policy-metadata.md#normal-hook-terminal-20261017-234642)
+supersedes earlier UNCOMMITTED, not source/runtime/consumer qualification.
+
+Read [the owning exact-sharing packet](explicit-resource-and-portfolio.md).
+No new public schema/operation/field or regeneration is required. Existing
+`ManagerScopedResponse` / `managerPortfoliosList` and named retained readers
+receive the corrected current exact-ALLOW population. Explicit Alpha/Portfolio
+sharing does not require inventing ownership/member/linkage. Ordinary Portfolio
+items win whole over restricted duplicates; never union fields, financial rows
+or totals. `is_full_resource` is complete visible resource row grain, not
+business.read_all/custody/accounting authority. Counts remain visible-only.
+
+Respect each profile's PARTIAL/DENIED/UNAVAILABLE, typed 404/409/503 and refresh
+requirements. Old Portfolio cursor semantics intentionally invalidate; do not
+reuse a cursor from the old single-purpose population. Other Manager surfaces
+keep their existing cursor/legacy behavior. Source errors do not grant absence
+and final revoke/expiry aborts prepared bytes even for omitted/shadowed scopes.
+This correction is APPLIED_UNCOMMITTED/NOT_RUN at entry; pin actual terminal
+and commit before integration. Claude remains NOT_STARTED_BY_OWNER_DIRECTION /
+AWAITING_CONSUMER_REVIEW; no frontend edit/assignment/acknowledgement inferred.

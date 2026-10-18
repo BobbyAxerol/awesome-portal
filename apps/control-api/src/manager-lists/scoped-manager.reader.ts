@@ -2,7 +2,7 @@ import { ControlApiConfig, querySigningKeys } from "../config";
 import { accessDigest } from "../execution-v2/access-policy";
 import { projectionRowVisible } from "../execution-v2/read-projection";
 import { ExecutionReadScopeError, ExecutionReadScopes, scopeAllowsField, scopeReadPopulation, scopeResources,
-  type AuthorizedExecutionReadScope, type ReadScopePrincipal } from "../execution-v2/read-scope";
+  type AuthorizedExecutionReadScope, type PortfolioCollectionPurpose, type ReadScopePrincipal } from "../execution-v2/read-scope";
 import { ExecutionProfileProjectionRepository, type ProfileProjectionSnapshot, type ProjectionEnvironment } from "../execution/profile-projection.repository";
 import { KeysetCursorCodec } from "../query/cursor";
 import { type AlphaFleetQuery, type BindingsQuery, type PortfolioListQuery, MANAGER_LIST_ENVIRONMENTS } from "./contracts";
@@ -12,6 +12,11 @@ type Surface = "ALPHA_FLEET" | "PORTFOLIOS" | "BINDINGS" | "BINDING_DETAIL";
 type Query = AlphaFleetQuery | BindingsQuery | PortfolioListQuery;
 type Facts = Record<string, unknown>;
 type Branch = { scope: AuthorizedExecutionReadScope; snapshot: ProfileProjectionSnapshot | null; missingSnapshot: boolean };
+type Disposition = { environment: ProjectionEnvironment; state: "PARTIAL" | "DENIED" | "UNAVAILABLE"; reason_code: string | null };
+type PortfolioGroup = { environment: ProjectionEnvironment; profileId: string;
+  metadata: Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshotMetadata"]>>;
+  outcomes: PortfolioCollectionPurpose[]; scopes: AuthorizedExecutionReadScope[]; snapshot: ProfileProjectionSnapshot | null;
+  complete:boolean };
 function fail(code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_AUTHORITY_UNAVAILABLE" | "EXECUTION_READ_ACCESS_CHANGED" |
   "EXECUTION_READ_FIELD_POLICY_PENDING" | "EXECUTION_READ_SCOPE_LIMIT", status: number): never {
   throw new ExecutionReadScopeError(code, status);
@@ -31,6 +36,12 @@ export class ScopedManagerReader {
 
   async read(principal: ReadScopePrincipal, surface: Surface, query: Query,
     legacy: () => Promise<unknown>, bindingId?: string): Promise<unknown> {
+    // One workspace's sticky policy chooses the implementation, not the
+    // success/failure of a broader or narrower purpose. Legacy is unchanged.
+    if(surface==="PORTFOLIOS"){
+      const p={...principal,user:{...principal.user},session:{...principal.session}},q=structuredClone(query);
+      if(await this.scopes.selectionMode(p)==="SCOPED_V2")return this.readPortfolios(p,q);
+    }
     const environments = query.environment === "all" ? MANAGER_LIST_ENVIRONMENTS : [query.environment];
     const branches: Branch[] = [];
     const dispositions: Array<{ environment: ProjectionEnvironment; state: "PARTIAL" | "DENIED" | "UNAVAILABLE"; reason_code: string | null }> = [];
@@ -91,44 +102,7 @@ export class ScopedManagerReader {
         finally { client.release(); }
         items.push(...composeManagerItems(scope, branch.snapshot!, surface, bindingId));
       }
-      items = this.filtered(items, query);
-      const sort = "sort" in query && query.sort ? query.sort : "name:asc";
-      const [field, direction] = sort.split(":");
-      const value = (item: ScopedManagerItem) => String((item.identity as Facts)[field === "alpha_label" ? "name" : field] ?? "");
-      items.sort((a, b) => (value(a).localeCompare(value(b)) * (direction === "desc" ? -1 : 1)) || resourceKey(a).localeCompare(resourceKey(b)));
-      const limit = "limit" in query && typeof query.limit === "number" ? query.limit : 100;
-      const codec = new KeysetCursorCodec({ activeKeyId: this.config.QUERY_CURSOR_ACTIVE_KEY_ID,
-        keys: querySigningKeys(this.config), ttlSeconds: this.config.QUERY_CURSOR_TTL_SECONDS });
-      const fingerprint = accessDigest({ scopes: branches.map(branch => branch.scope.fingerprint),
-        query: { ...query, after: undefined, before: undefined }, dispositions, surface, bindingId: bindingId ?? null });
-      const resourceId = `manager-scoped:${surface}`;
-      let start = 0;
-      let end: number | undefined;
-      const token = ("after" in query ? query.after : undefined)
-        ?? ("before" in query ? query.before : undefined);
-      const backwards = "before" in query && Boolean(query.before);
-      if (token) {
-        const [boundary] = codec.decode(token, { resourceId, workspaceId: principal.workspaceId,
-          direction: backwards ? "before" : "after", queryFingerprint: fingerprint, boundarySize: 1 });
-        const index = items.findIndex(item => resourceKey(item) === boundary);
-        if (index < 0) fail("EXECUTION_READ_ACCESS_CHANGED", 409);
-        start = backwards ? Math.max(0, index - limit) : index + 1;
-        if (backwards) end = index;
-      }
-      const page: ScopedManagerItem[] = [];
-      let bytes = 16_384;
-      const candidates = items.slice(start, end ?? start + limit);
-      for (const item of backwards ? candidates.reverse() : candidates) {
-        const size = Buffer.byteLength(JSON.stringify(item));
-        if (bytes + size > 1024 * 1024) break;
-        page.push(item); bytes += size;
-      }
-      if (backwards) { page.reverse(); start = end! - page.length; }
-      if (items.length > start && !page.length) fail("EXECUTION_READ_SCOPE_LIMIT", 503);
-      const cursor = (item: ScopedManagerItem, direction: "after" | "before") => codec.encode({
-        resource_id: resourceId, workspace_id: principal.workspaceId, direction, query_fingerprint: fingerprint,
-        boundary: [resourceKey(item)],
-      });
+      const result=this.present(principal,surface,query,items,branches.map(branch=>branch.scope),dispositions,bindingId);
       for (const branch of branches) {
         const current = await this.repository.snapshotMetadata(principal.workspaceId, branch.scope.environment, branch.scope.profileId);
         if (branch.missingSnapshot) {
@@ -141,24 +115,154 @@ export class ScopedManagerReader {
           current.projectionEpoch !== branch.snapshot!.projectionEpoch || current.sourceCatalogueSha256 !== branch.snapshot!.sourceCatalogueSha256)
           fail("EXECUTION_READ_ACCESS_CHANGED", 409);
       }
-      if (surface === "BINDING_DETAIL" && !items.length) fail("EXECUTION_READ_NOT_AVAILABLE", 404);
-      const validated = scopedManagerResponseSchema.safeParse({ schema_version: "portal.execution.manager-scoped.v1", surface,
-        workspace_id: principal.workspaceId, environment: query.environment, record_authority: "PORTAL_PROJECTION",
-        source_authority: "TRADING_SYSTEM", read_at_ms: Date.now(),
-        read_scope: { visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", totals_scope: "VISIBLE_ROWS_ONLY",
-          policy_revisions: [...new Set(branches.map(branch => branch.scope.policyRevision!))] },
-        completeness: "PARTIAL", reason_code: "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
-        profile_dispositions: dispositions,
-        page: { visible_count: items.length, returned_count: page.length, limit, maximum_response_bytes: 1048576,
-          has_more: start + page.length < items.length, next_cursor: start + page.length < items.length && page.length ? cursor(page.at(-1)!, "after") : null,
-          previous_cursor: start > 0 && page.length ? cursor(page[0], "before") : null }, items: page });
-      if (!validated.success) fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
-      return validated.data;
+      if(surface==="BINDING_DETAIL"&&!result.page.visible_count)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+      return result;
     });
   }
 
   private async fenced<T>(branches: Branch[], read: () => Promise<T>, index = 0): Promise<T> {
     return index === branches.length ? read() : this.scopes.deliver(branches[index].scope, () => this.fenced(branches, read, index + 1));
+  }
+
+  private async readPortfolios(principal:ReadScopePrincipal,query:Query):Promise<unknown> {
+    const environments=query.environment==="all"?MANAGER_LIST_ENVIRONMENTS:[query.environment];
+    const groups:PortfolioGroup[]=[],dispositions:Disposition[]=[];
+    for(const environment of environments){
+      try{
+        const profileId=this.profile(environment);
+        const metadata=await this.repository.snapshotMetadata(principal.workspaceId,environment,profileId);
+        const dataset={dataset_id:"manager:PORTFOLIOS",source_revision:metadata?.payloadDigest??"SNAPSHOT_NOT_RECORDED",
+          projection_generation:metadata?.projectionEpoch??"PROJECTION_NOT_RECORDED",
+          catalogue_revision:metadata?.sourceCatalogueSha256??null,window:null};
+        const group:PortfolioGroup={environment,profileId,metadata,outcomes:[],scopes:[],snapshot:null,complete:false};
+        groups.push(group);
+        // Two fixed purposes, one raw snapshot. A real pending/error is not
+        // optional absence; it drops the whole profile in an all-profile read.
+        for(const action of ["portfolio.read","portfolio.read_restricted"] as const){
+          const outcome=await this.scopes.authorizePortfolioCollectionPurpose(principal,{environment,profileId},action,dataset);
+          group.outcomes.push(outcome);if(outcome.state==="AUTHORIZED")group.scopes.push(outcome.scope);
+        }
+        group.complete=true;
+        if(!group.scopes.length){
+          dispositions.push({environment,state:"DENIED",reason_code:"EXECUTION_READ_NOT_AVAILABLE"});
+        }else if(!metadata){
+          if(query.environment!=="all")fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+          dispositions.push({environment,state:"UNAVAILABLE",reason_code:"SCOPED_PROFILE_SNAPSHOT_NOT_RECORDED"});
+        }else dispositions.push({environment,state:"PARTIAL",reason_code:"AUTHORIZED_RETAINED_FACTS"});
+      }catch(error){
+        if(query.environment!=="all"||!(error instanceof ExecutionReadScopeError)||error.status===409)throw error;
+        // No bytes from an incompletely proved profile enter composition.
+        // This disposition is unavailable, never a minted negative purpose.
+        dispositions.push({environment,state:error.status===403||error.status===404?"DENIED":"UNAVAILABLE",reason_code:error.code});
+      }
+    }
+    const available=groups.filter(group=>group.complete&&group.scopes.length&&group.metadata);
+    if(!available.length)fail(dispositions.some(value=>value.state==="UNAVAILABLE")?
+      "EXECUTION_READ_AUTHORITY_UNAVAILABLE":"EXECUTION_READ_NOT_AVAILABLE",
+      dispositions.some(value=>value.state==="UNAVAILABLE")?503:404);
+    const outcomes=groups.flatMap(group=>group.outcomes);
+    return this.scopes.deliverPortfolioCollectionPurposes(outcomes,async()=>{
+      const winners=new Map<string,{item:ScopedManagerItem;scope:AuthorizedExecutionReadScope}>();
+      const emptyScopes:AuthorizedExecutionReadScope[]=[];
+      let served=0;
+      for(const group of available){
+        try{
+        const client=await this.repository.pool.connect();
+        try{
+          await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+          await client.query("SET LOCAL statement_timeout='5000ms'");
+          const snapshot=await this.repository.snapshot(principal.workspaceId,group.environment,group.profileId,client);
+          if(!snapshot)fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+          if(snapshot.payloadDigest!==group.metadata!.payloadDigest||snapshot.projectionEpoch!==group.metadata!.projectionEpoch||
+            snapshot.sourceCatalogueSha256!==group.metadata!.sourceCatalogueSha256||
+            snapshot.document.workspace_id!==principal.workspaceId||snapshot.document.environment!==group.environment||
+            snapshot.document.profile_id!==group.profileId)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+          group.snapshot=snapshot;
+          await client.query("COMMIT");
+        }catch(error){await client.query("ROLLBACK");throw error;}finally{client.release();}
+        const prepared:Array<{item:ScopedManagerItem;scope:AuthorizedExecutionReadScope}>=[];
+        // Ordinary-read purpose comes first and wins each ENTIRE item. Never
+        // union fields/instances or complete a financial grain across scopes.
+        for(const scope of group.scopes){
+          for(const item of composeManagerItems(scope,group.snapshot!,"PORTFOLIOS")){
+            prepared.push({item,scope});
+          }
+        }
+        // Commit a WHOLE profile to the local result only after both purpose
+        // projections succeed. A failing sibling cannot leak its partial rows.
+        for(const value of prepared){const key=resourceKey(value.item);if(!winners.has(key))winners.set(key,value);}
+        if(!prepared.length)emptyScopes.push(...group.scopes);
+        served++;
+        }catch(error){
+          if(query.environment!=="all"||!(error instanceof ExecutionReadScopeError)||error.status!==503)throw error;
+          const disposition=dispositions.find(value=>value.environment===group.environment)!;
+          disposition.state="UNAVAILABLE";disposition.reason_code=error.code;
+          // Retain ALL original outcomes for the final authority fence, even
+          // though this source contributes no rows. No optional absence minted.
+        }
+      }
+      if(!served)fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+      const selectedScopes=[...new Set([...winners.values()].map(value=>value.scope).concat(emptyScopes))];
+      this.validateQuery(selectedScopes.map(scope=>({scope,snapshot:null,missingSnapshot:false})),query);
+      const fingerprint=accessDigest({domain:"PORTFOLIO_COLLECTION_PURPOSES_V2",
+        groups:groups.map(group=>[group.environment,group.profileId,group.outcomes.map(value=>[value.state,value.fingerprint])]),
+        query:{...query,after:undefined,before:undefined},dispositions});
+      const result=this.present(principal,"PORTFOLIOS",query,[...winners.values()].map(value=>value.item),
+        groups.flatMap(group=>group.scopes),dispositions,undefined,fingerprint);
+      // Includes valid negative and authorized-missing groups: source
+      // appearance/change cannot turn their omission into a stable cursor.
+      for(const group of groups){
+        const current=await this.repository.snapshotMetadata(principal.workspaceId,group.environment,group.profileId);
+        if(Boolean(current)!==Boolean(group.metadata)||current&&(current.payloadDigest!==group.metadata!.payloadDigest||
+          current.projectionEpoch!==group.metadata!.projectionEpoch||current.sourceCatalogueSha256!==group.metadata!.sourceCatalogueSha256))
+          fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      }
+      return result;
+    });
+  }
+
+  /** Common finite page grammar; no source I/O or entitlement cache. */
+  private present(principal:ReadScopePrincipal,surface:Surface,query:Query,input:ScopedManagerItem[],
+    scopes:AuthorizedExecutionReadScope[],dispositions:Disposition[],bindingId?:string,contextFingerprint?:string){
+    const items=this.filtered(input,query);
+    const sort="sort" in query&&query.sort?query.sort:"name:asc",[field,direction]=sort.split(":");
+    const value=(item:ScopedManagerItem)=>String((item.identity as Facts)[field==="alpha_label"?"name":field]??"");
+    items.sort((a,b)=>(value(a).localeCompare(value(b))*(direction==="desc"?-1:1))||resourceKey(a).localeCompare(resourceKey(b)));
+    const limit="limit" in query&&typeof query.limit==="number"?query.limit:100;
+    const codec=new KeysetCursorCodec({activeKeyId:this.config.QUERY_CURSOR_ACTIVE_KEY_ID,
+      keys:querySigningKeys(this.config),ttlSeconds:this.config.QUERY_CURSOR_TTL_SECONDS});
+    const fingerprint=contextFingerprint??accessDigest({scopes:scopes.map(scope=>scope.fingerprint),
+      query:{...query,after:undefined,before:undefined},dispositions,surface,bindingId:bindingId??null});
+    const resourceId=`manager-scoped:${surface}`;
+    const token=("after" in query?query.after:undefined)??("before" in query?query.before:undefined);
+    const backwards="before" in query&&Boolean(query.before);
+    let start=0,end:number|undefined;
+    if(token){
+      const [boundary]=codec.decode(token,{resourceId,workspaceId:principal.workspaceId,
+        direction:backwards?"before":"after",queryFingerprint:fingerprint,boundarySize:1});
+      const index=items.findIndex(item=>resourceKey(item)===boundary);
+      if(index<0)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      start=backwards?Math.max(0,index-limit):index+1;if(backwards)end=index;
+    }
+    const page:ScopedManagerItem[]=[],candidates=items.slice(start,end??start+limit);
+    let bytes=16_384;
+    for(const item of backwards?candidates.reverse():candidates){
+      const size=Buffer.byteLength(JSON.stringify(item));if(bytes+size>1024*1024)break;
+      page.push(item);bytes+=size;
+    }
+    if(backwards){page.reverse();start=end!-page.length;}
+    if(items.length>start&&!page.length)fail("EXECUTION_READ_SCOPE_LIMIT",503);
+    const cursor=(item:ScopedManagerItem,direction:"after"|"before")=>codec.encode({resource_id:resourceId,
+      workspace_id:principal.workspaceId,direction,query_fingerprint:fingerprint,boundary:[resourceKey(item)]});
+    const result=scopedManagerResponseSchema.safeParse({schema_version:"portal.execution.manager-scoped.v1",surface,
+      workspace_id:principal.workspaceId,environment:query.environment,record_authority:"PORTAL_PROJECTION",source_authority:"TRADING_SYSTEM",
+      read_at_ms:Date.now(),read_scope:{visibility:"SCOPED",coverage:"AUTHORIZED_ONLY",totals_scope:"VISIBLE_ROWS_ONLY",
+        policy_revisions:[...new Set(scopes.map(scope=>scope.policyRevision!))]},completeness:"PARTIAL",
+      reason_code:"RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",profile_dispositions:dispositions,
+      page:{visible_count:items.length,returned_count:page.length,limit,maximum_response_bytes:1048576,
+        has_more:start+page.length<items.length,next_cursor:start+page.length<items.length&&page.length?cursor(page.at(-1)!,"after"):null,
+        previous_cursor:start>0&&page.length?cursor(page[0],"before"):null},items:page});
+    if(!result.success)fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);return result.data;
   }
   private profile(environment: ProjectionEnvironment): string {
     const id = environment === "paper" ? this.config.EXECUTION_EDGE_PAPER_PROFILE_ID : environment === "sandbox" ?

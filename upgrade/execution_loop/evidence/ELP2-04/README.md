@@ -1,5 +1,15 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+2026-10-17 current approved subset: [independent exact Alpha/Portfolio sharing
+and mixed-purpose Portfolio collection](explicit-resource-and-portfolio.md),
+entry da3a5f5c, APPLIED_UNCOMMITTED/NOT_RUN at entry. Ordinary and restricted
+purposes retain separate whole-item authority and every original final fence;
+no field/accounting union or source-error-as-entitlement-absence. Full04 source,
+remaining parent/technical readers and consumer/runtime gates stay OPEN.
+Actual affected retake2026-10-18T00:04:52UTC:112/112PASS/build/scopedPGrestore;
+four unchanged suites323PASS reused separately, original three failures retained.
+Normal hook remains the landing gate; no runtime/source or consumer activation.
+
 2026-10-17 next approved subset: [finite account-policy metadata and independent
 current account scope](account-policy-metadata.md). Exact existing metadata
 source/PK, six private capture fields/five public candidates; no economic

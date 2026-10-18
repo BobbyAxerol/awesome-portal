@@ -1,5 +1,5 @@
 import { accessDigest, AccessEvaluationContext, businessReadDenied, evaluateAccess, evaluateBusinessRead, grantCurrent, policyReady,
-  environmentRelations, currentBoundaryProof } from "./access-policy";
+  environmentRelations, currentBoundaryProof, currentExplicitReadAllows } from "./access-policy";
 import { AccessAction, AccessPolicyError, AccessResource, accessResource } from "./access.contract";
 import { ExecutionReadPublication, ExecutionReadPublicationRequest, ReadDatasetBinding, readDatasetBinding, readPublication } from "./read-publication";
 import { AUDIT_READ_FIELDS, BUSINESS_READ_FIELDS, TECHNICAL_READ_FIELDS, isBusinessReadField } from "./read-fields";
@@ -8,6 +8,7 @@ import type { ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
 import type { Pool } from "pg";
 import { retainedReview } from "../execution/retained-read-profile";
+import { currentAccessRelations } from "./access-current-relations";
 
 export type ReadEnvironment="paper"|"sandbox"|"live";
 export interface ReadScopePrincipal {user:PortalUser;session:AuthSession;workspaceId:string;viewerWorkspaceId?:string;}
@@ -40,6 +41,17 @@ export interface AuthorizedExecutionReadScope {
   readonly fieldPolicyRef:string|null;
   readonly wholePopulation:boolean;
 }
+/** Private in-process composition outcome, NEVER a browser entitlement.
+ * Even an AUTHORIZED wrapper is not itself a branded read scope. */
+export type PortfolioCollectionPurpose = Readonly<{
+  state:"AUTHORIZED";scope:AuthorizedExecutionReadScope;fingerprint:string;
+}> | Readonly<{state:"NO_CURRENT_ENTITLEMENT";fingerprint:string}>;
+type PortfolioPurposeAction="portfolio.read"|"portfolio.read_restricted";
+type PortfolioPurposeOptions={expected?:PortfolioCollectionPurpose};
+type PortfolioPurposeState={issuer:ExecutionReadScopes;principal:ReadScopePrincipal;
+  binding:ReadScopeBinding;requirement:ReadScopeRequirement;context:AccessEvaluationContext;
+  publication:ExecutionReadPublication;proof:string;};
+const portfolioPurposes=new WeakMap<object,PortfolioPurposeState>();
 type ScopeState={issuer:ExecutionReadScopes;principal:ReadScopePrincipal;binding:ReadScopeBinding;
   requirement:ReadScopeRequirement;tuples:ExecutionReadPublication["tuples"];resources:AccessResource[];
   population:ExecutionReadPublication["tuples"];fields:readonly string[];context:AccessEvaluationContext|null;
@@ -161,6 +173,88 @@ const requestProofResources=(requirement:ReadScopeRequirement,publication:Execut
     tupleLineage(tuple).some(item=>exactKey(item)===exactKey(resource))).flatMap(tupleLineage)];
 };
 
+/** The ordinary grammar and pre-await snapshot are shared; optional purpose
+ * callers cannot author a second, weaker identity/dataset validator. */
+function captureReadScopeInputs(principal:ReadScopePrincipal,binding:ReadScopeBinding,requirement:ReadScopeRequirement){
+  const p={user:{...principal.user},session:{...principal.session},workspaceId:principal.workspaceId,
+    viewerWorkspaceId:principal.viewerWorkspaceId??principal.workspaceId};
+  const b=structuredClone(binding),r=structuredClone(requirement);
+  if(!p.workspaceId||!p.viewerWorkspaceId||!p.user.userId||!p.session.sessionId||
+    p.session.userId!==p.user.userId||p.session.sessionVersion!==p.user.sessionVersion||
+    !["paper","sandbox","live"].includes(b.environment)||!b.profileId)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  if(!businessReads.has(r.action)&&!["maintenance.read","development.read","audit.read","report.export","stream.subscribe"].includes(r.action))
+    fail("EXECUTION_READ_SCOPE_REQUIRED");
+  if(r.resource&&!accessResource.safeParse(r.resource).success||r.dataset&&!readDatasetBinding.safeParse(r.dataset).success)
+    fail("EXECUTION_READ_SCOPE_REQUIRED");
+  if(!businessReads.has(r.action)&&!r.resource)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+  if(r.dataset&&(r.action==="maintenance.read"||r.action==="development.read")&&
+    (r.action!=="maintenance.read"||r.resource?.kind!=="ROOT"||!heartbeatTechnicalDataset(r.dataset)))
+    fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+  if(r.requireWholePopulation&&!r.dataset)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+  return {p,b,r};
+}
+
+/** This is only an omission classifier. Preserve canonical full-graph DENY
+ * precedence before pending fields; this function NEVER issues a read scope. */
+function portfolioPurposePresent(context:AccessEvaluationContext,action:PortfolioPurposeAction,
+  binding:ReadScopeBinding,publication:ExecutionReadPublication):boolean {
+  return publication.resources.some(resource=>resource.kind==="PORTFOLIO"&&
+    !businessReadDenied(context,resource,binding.environment)&&(
+    evaluateBusinessRead(context,action,resource,binding.environment).allowed||
+    evaluateAccess(context,action,resource,binding.environment).reason_code==="RESEARCHER_FIELD_POLICY_PENDING"));
+}
+const portfolioPurposeProof=(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement,
+  context:AccessEvaluationContext,publication:ExecutionReadPublication)=>accessDigest({
+  domain:"manager-portfolio-purpose-proof.v1",actor:p.user.userId,session:p.session.sessionId,
+  generation:p.session.sessionVersion,workspace:p.workspaceId,viewer:p.viewerWorkspaceId,
+  binding:b,requirement:r,authority:contextProof(context,b.environment,publication.resources),publication,
+});
+
+/** Qualifying negative evidence is different from granting it. Only inspect
+ * potential purpose/ceiling source dependencies; no raw ALLOW scan grants
+ * rights and a disjoint/expired native leg is not a global prerequisite. */
+function assertPortfolioPurposeSource(context:AccessEvaluationContext,action:PortfolioPurposeAction,
+  binding:ReadScopeBinding,publication:ExecutionReadPublication,negative:boolean):void {
+  if(!context.actor_current||!context.active_principals.has(context.principal_id))fail("EXECUTION_READ_NOT_AVAILABLE",404);
+  if(!context.authority_fingerprint||!Number.isSafeInteger(context.now_ms)||context.now_ms<0)
+    fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+  const checked=new Set<string>();
+  const qualified=(id:string)=>{
+    if(checked.has(id))return;checked.add(id);
+    const relations=context.relationsFor(id);
+    if(!relations||relations.qualified!==true)fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    if(Object.hasOwn(relations,"current_authority")){
+      const parsed=currentAccessRelations.safeParse(relations.current_authority);
+      if(!parsed.success||parsed.data.subject_user_id!==id||parsed.data.workspace_id!==context.workspace_id)
+        fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    }
+  };
+  qualified(context.principal_id);
+  if(!negative)return;
+  const portfolios=new Set(publication.resources.filter(resource=>resource.kind==="PORTFOLIO").map(resource=>resource.id));
+  if(!portfolios.size)return; // exact complete empty dataset, not an actor-wide entitlement claim
+  type Grant=AccessEvaluationContext["grants"][number];
+  const live=(grant:Grant)=>grant.workspace_id===context.workspace_id&&grant.policy_revision===context.policy!.revision&&
+    grant.revoked_at_ms===null&&grant.valid_from_ms<=context.now_ms&&
+    (grant.valid_until_ms===null||context.now_ms<grant.valid_until_ms)&&grant.environments.includes(binding.environment)&&
+    context.active_principals.has(grant.subject_user_id)&&context.active_principals.has(grant.issued_by);
+  const couldTouch=(grant:Grant)=>grant.selector.kind==="ROOT_SCOPE"||
+    grant.selector.kind==="EXPLICIT_RESOURCE_SET"&&grant.selector.resource_kind==="PORTFOLIO"&&
+      grant.selector.ids.some(id=>portfolios.has(id))||
+    grant.selector.kind==="PORTFOLIO_MEMBERSHIP"&&grant.selector.portfolio_ids.some(id=>portfolios.has(id));
+  for(const candidate of context.grants){
+    if(candidate.subject_user_id!==context.principal_id||
+      candidate.action!==action&&candidate.action!=="business.read_all"||!live(candidate)||!couldTouch(candidate))continue;
+    const seen=new Set<string>();let node:Grant|undefined=candidate;
+    while(node&&seen.size<16&&!seen.has(node.grant_id)&&live(node)&&couldTouch(node)){
+      seen.add(node.grant_id);qualified(node.subject_user_id);
+      const child:Grant=node;
+      node=child.parent_grant_id?context.grants.find(parent=>parent.grant_id===child.parent_grant_id&&
+        parent.subject_user_id===child.issued_by&&parent.action==="access.grant"&&parent.effect==="ALLOW"):undefined;
+    }
+  }
+}
+
 /** Sticky per-workspace policy selection. V2 denial/error never falls back to
  * legacy. This service alone can mint scopes; every delivery is freshly fenced. */
 export class ExecutionReadScopes {
@@ -227,26 +321,118 @@ export class ExecutionReadScopes {
   }
 
   async authorize(principal:ReadScopePrincipal,binding:ReadScopeBinding,requirement:ReadScopeRequirement):Promise<AuthorizedExecutionReadScope> {
-    // Snapshot trusted arguments before any await; request mutation cannot widen a flight.
-    const p={user:{...principal.user},session:{...principal.session},workspaceId:principal.workspaceId,
-      viewerWorkspaceId:principal.viewerWorkspaceId??principal.workspaceId};
-    const b=structuredClone(binding),r=structuredClone(requirement);
-    if(!p.workspaceId||!p.viewerWorkspaceId||!p.user.userId||!p.session.sessionId||
-      p.session.userId!==p.user.userId||p.session.sessionVersion!==p.user.sessionVersion||
-      !["paper","sandbox","live"].includes(b.environment)||!b.profileId)fail("EXECUTION_READ_SCOPE_REQUIRED");
-    if(!businessReads.has(r.action)&&!["maintenance.read","development.read","audit.read","report.export","stream.subscribe"].includes(r.action))
-      fail("EXECUTION_READ_SCOPE_REQUIRED");
-    if(r.resource&&!accessResource.safeParse(r.resource).success||r.dataset&&!readDatasetBinding.safeParse(r.dataset).success)
-      fail("EXECUTION_READ_SCOPE_REQUIRED");
-    if(!businessReads.has(r.action)&&!r.resource)fail("EXECUTION_READ_NOT_AVAILABLE",404);
-    // Do not let a generic technical dataset enter the business/researcher
-    // fallback below. The finite private heartbeat branch is maintenance-only.
-    if(r.dataset&&(r.action==="maintenance.read"||r.action==="development.read")&&
-      (r.action!=="maintenance.read"||r.resource?.kind!=="ROOT"||!heartbeatTechnicalDataset(r.dataset)))
-      fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
-    // A resource check alone cannot prove a complete dataset population.
-    if(r.requireWholePopulation&&!r.dataset)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    const {p,b,r}=captureReadScopeInputs(principal,binding,requirement);
     try{return await this.mint(p,b,r);}catch(error){return rethrowReadScopeError(error);}
+  }
+
+  /** Narrow V2-only private collection composition; no new public capability. */
+  async authorizePortfolioCollectionPurpose(principal:ReadScopePrincipal,binding:ReadScopeBinding,
+    action:PortfolioPurposeAction,dataset:ReadDatasetBinding):Promise<PortfolioCollectionPurpose> {
+    return this.issuePortfolioCollectionPurpose(principal,binding,action,dataset);
+  }
+
+  private assertPortfolioOutcome(outcome:PortfolioCollectionPurpose):PortfolioPurposeState {
+    const state=outcome&&typeof outcome==="object"?portfolioPurposes.get(outcome):undefined;
+    if(!state||state.issuer!==this)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    if(outcome.state==="AUTHORIZED"){
+      assertExecutionReadScope(outcome.scope);
+      if(minted.get(outcome.scope)!.issuer!==this||outcome.scope.mode!=="SCOPED_V2")fail("EXECUTION_READ_SCOPE_REQUIRED");
+    }
+    return state;
+  }
+
+  private async issuePortfolioCollectionPurpose(principal:ReadScopePrincipal,binding:ReadScopeBinding,
+    action:PortfolioPurposeAction,dataset:ReadDatasetBinding,expected?:PortfolioCollectionPurpose):Promise<PortfolioCollectionPurpose> {
+    if(expected)this.assertPortfolioOutcome(expected);
+    const {p,b,r}=captureReadScopeInputs(principal,binding,{action,dataset});
+    if(action!=="portfolio.read"&&action!=="portfolio.read_restricted"||!r.dataset||
+      r.dataset.dataset_id!=="manager:PORTFOLIOS"||r.dataset.window!==null)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    try{
+      const current=await this.mint(p,b,r,{expected});
+      if(expected&&current.fingerprint!==expected.fingerprint)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      return current;
+    }catch(error){
+      // These known original-flight identity/policy losses are changes, never
+      // an optional omission. A genuine source503 remains503, not a fallback.
+      if(expected&&(error instanceof ExecutionReadScopeError&&
+        (error.code==="EXECUTION_READ_NOT_AVAILABLE"||error.code==="EXECUTION_READ_POLICY_PENDING")||
+        error instanceof AccessPolicyError&&["CURRENT_ACTOR_AUTHORITY_REQUIRED","ACCESS_RESOURCE_NOT_FOUND","POLICY_PENDING"].includes(error.code)))
+        fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      return rethrowReadScopeError(error);
+    }
+  }
+
+  private portfolioOutcome(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement,
+    context:AccessEvaluationContext,publication:ExecutionReadPublication,scope?:AuthorizedExecutionReadScope):PortfolioCollectionPurpose {
+    const proof=portfolioPurposeProof(p,b,r,context,publication);
+    const state=scope?"AUTHORIZED" as const:"NO_CURRENT_ENTITLEMENT" as const;
+    const fingerprint=accessDigest({domain:"manager-portfolio-purpose.v1",state,proof,scope:scope?.fingerprint??null});
+    const outcome:PortfolioCollectionPurpose=scope?Object.freeze({state:"AUTHORIZED",scope,fingerprint}):
+      Object.freeze({state:"NO_CURRENT_ENTITLEMENT",fingerprint});
+    portfolioPurposes.set(outcome,{issuer:this,principal:p,binding:b,requirement:r,context,publication,proof});
+    return outcome;
+  }
+
+  /** All purpose flights, including shadowed positives and denied profiles,
+   * remain bound to ONE combined read. Negative wrappers grant no row access. */
+  async deliverPortfolioCollectionPurposes<T>(outcomes:readonly PortfolioCollectionPurpose[],read:()=>Promise<T>):Promise<T> {
+    if(!Array.isArray(outcomes)||outcomes.length===0||outcomes.length>6)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const originals=[...outcomes],states=originals.map(outcome=>this.assertPortfolioOutcome(outcome));
+    if(!originals.some(outcome=>outcome.state==="AUTHORIZED"))fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    const actor=states[0].principal;
+    const actorKey=(p:ReadScopePrincipal)=>JSON.stringify([p.user.userId,p.user.role,p.user.sessionVersion,p.session.sessionId,
+      p.session.sessionVersion,p.session.userId,p.workspaceId,p.viewerWorkspaceId]);
+    const expectedActor=actorKey(actor),keys=new Set<string>(),profiles=new Map<ReadEnvironment,PortfolioPurposeState>();
+    for(const state of states){
+      if(actorKey(state.principal)!==expectedActor)fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const key=JSON.stringify([state.binding.environment,state.binding.profileId,state.requirement.action]);
+      if(keys.has(key))fail("EXECUTION_READ_SCOPE_REQUIRED");keys.add(key);
+      const previous=profiles.get(state.binding.environment);
+      if(previous&&(previous.binding.profileId!==state.binding.profileId||
+        accessDigest(previous.requirement.dataset)!==accessDigest(state.requirement.dataset)||
+        accessDigest(previous.publication)!==accessDigest(state.publication)))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      profiles.set(state.binding.environment,state);
+    }
+    const renew=async()=>{
+      const current:PortfolioCollectionPurpose[]=[];
+      for(let index=0;index<originals.length;index++){
+        const state=states[index];
+        current.push(await this.issuePortfolioCollectionPurpose(state.principal,state.binding,
+          state.requirement.action as PortfolioPurposeAction,state.requirement.dataset!,originals[index]));
+      }
+      return current;
+    };
+    await renew();
+    const result=await read();
+    const final=await renew(),latest=final.map(outcome=>this.assertPortfolioOutcome(outcome));
+    const shared=latest[0].context;
+    if(latest.some(state=>state.context.authority_fingerprint!==shared.authority_fingerprint))
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    let confirmed:AccessEvaluationContext;
+    try{
+      // LAST await: Core only. Never open a new adapter gap after confirmation.
+      confirmed=await this.access.confirmReadContext({user_id:actor.user.userId,session_id:actor.session.sessionId,
+        session_generation:actor.session.sessionVersion},actor.workspaceId,shared);
+    }catch(error){
+      if(error instanceof AccessPolicyError&&["ACCESS_RETRY_REQUIRED","CURRENT_ACTOR_AUTHORITY_REQUIRED","ACCESS_RESOURCE_NOT_FOUND","POLICY_PENDING"].includes(error.code))
+        fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      return rethrowReadScopeError(error);
+    }
+    if(!Number.isSafeInteger(confirmed.now_ms)||confirmed.now_ms<0||confirmed.authority_fingerprint!==shared.authority_fingerprint||
+      confirmed.actor_role!==actor.user.role)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    // Synchronous interval/evaluator/proof pass against the latest actual Core
+    // clock, not an earlier flight clock or a browser/host clock. No more awaits.
+    for(let index=0;index<latest.length;index++){
+      const state=latest[index],outcome=final[index];
+      const context={...state.context,now_ms:confirmed.now_ms,actor_current:confirmed.actor_current,actor_role:confirmed.actor_role};
+      const action=state.requirement.action as PortfolioPurposeAction;
+      assertPortfolioPurposeSource(context,action,state.binding,state.publication,outcome.state==="NO_CURRENT_ENTITLEMENT");
+      const present=portfolioPurposePresent(context,action,state.binding,state.publication);
+      if(present!==(outcome.state==="AUTHORIZED")||
+        portfolioPurposeProof(state.principal,state.binding,state.requirement,context,state.publication)!==state.proof)
+        fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    }
+    return result;
   }
 
   private async identity(principal:ReadScopePrincipal) {
@@ -272,9 +458,12 @@ export class ExecutionReadScopes {
       workspace_exists:boolean;member:boolean;owner:boolean;retained:unknown[]};
   }
 
-  private async mint(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement):Promise<AuthorizedExecutionReadScope> {
+  private async mint(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement):Promise<AuthorizedExecutionReadScope>;
+  private async mint(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement,optional:PortfolioPurposeOptions):Promise<PortfolioCollectionPurpose>;
+  private async mint(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement,optional?:PortfolioPurposeOptions):Promise<AuthorizedExecutionReadScope|PortfolioCollectionPurpose> {
     const identity=await this.identity(p);
     if(identity.role!==p.user.role)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    if(optional&&identity.policy===null&&!identity.policy_seen)fail("EXECUTION_READ_ACCESS_CHANGED",409);
     let context:AccessEvaluationContext|null=null,publication:ExecutionReadPublication|null=null;
     let bindingPairs:{binding_id:string;account_id:string}[]=[];
     let resources:AccessResource[]=[],tuples:ExecutionReadPublication["tuples"]=[],fields:readonly string[]=[...BUSINESS_READ_FIELDS],whole=true;
@@ -359,6 +548,23 @@ export class ExecutionReadScopes {
           if((bindingLineage.empty_binding_ids??[]).some(id=>!keys.has(exactKey({kind:"BINDING",id}))))
             fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
         }
+        if(optional){
+          const action=r.action as PortfolioPurposeAction;
+          if(context.principal_id!==p.user.userId||context.workspace_id!==p.workspaceId)
+            fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+          assertPortfolioPurposeSource(context,action,b,publication,false);
+          const present=portfolioPurposePresent(context,action,b,publication);
+          if(!present)assertPortfolioPurposeSource(context,action,b,publication,true);
+          const proof=portfolioPurposeProof(p,b,r,context,publication);
+          if(optional.expected){
+            const previous=this.assertPortfolioOutcome(optional.expected);
+            // Check classification/proof BEFORE a newly eligible positive can
+            // fail fields/linkage and be mistaken for an optional source fault.
+            if(present!==(optional.expected.state==="AUTHORIZED")||proof!==previous.proof)
+              fail("EXECUTION_READ_ACCESS_CHANGED",409);
+          }
+          if(!present)return this.portfolioOutcome(p,b,r,context,publication);
+        }
         const permittedBindings=bindingQualified?publication.resources.filter(x=>x.kind==="BINDING"&&
           (!r.resource||r.resource.kind==="BINDING"&&r.resource.id===x.id)&&
           allowed("binding.read",x)&&!businessReadDenied(context!,x,b.environment)):[];
@@ -410,23 +616,41 @@ export class ExecutionReadScopes {
           // An unbound/account-only population is NOT invented here.
           const accountTuples=r.action==="account.read"?
             publication.tuples.filter(purposeAllows):[];
+          // An explicitly shared read is not an ownership declaration. Select
+          // only original exact-ID grants of the matching family, then retain
+          // the COMPLETE evaluator graph so current/delegated DENYs still win.
+          // Dynamic OWN_ALPHA/ROOT/membership and restricted discovery keep
+          // their existing linked-slice requirements below.
+          const explicitKind=r.action==="alpha.read"?"ALPHA":r.action==="portfolio.read"?"PORTFOLIO":null;
+          const exactReadCache=new Map<string,boolean>();
+          const explicitTuples=explicitKind?publication.tuples.filter(t=>{
+            if(!purposeAllows(t))return false;
+            const id=explicitKind==="ALPHA"?t.alpha_id:t.portfolio_id;
+            let allowed=exactReadCache.get(id);
+            if(allowed===undefined){
+              allowed=currentExplicitReadAllows(context!,r.action as "alpha.read"|"portfolio.read",
+                {kind:explicitKind,id},b.environment);
+              exactReadCache.set(id,allowed);
+            }
+            return allowed;
+          }):[];
           const currentRelations=environmentRelations(context.relationsFor(p.user.userId),b.environment);
           const own=new Set(currentRelations.own_alpha_ids);
           const linked=new Set(currentRelations.member_portfolio_ids);
           const linkage=publication.current_linkage;
           const linkQualified=linkage&&(linkage.qualification==="SOURCE_VERIFIED"||context.allow_test_only&&linkage.qualification==="TEST_ONLY");
-          if(!linkQualified&&!fullTuples.length&&!bindingTuples.length&&!accountTuples.length)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+          if(!linkQualified&&!fullTuples.length&&!bindingTuples.length&&!accountTuples.length&&!explicitTuples.length)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
           const currentPairs=new Set(linkQualified?linkage.pairs.map(pair=>JSON.stringify([pair.alpha_id,pair.portfolio_id])):[]);
           const linkedTuples=publication.tuples.filter(t=>context!.relationsFor(p.user.userId).qualified&&own.has(t.alpha_id)&&linked.has(t.portfolio_id)&&
             currentPairs.has(JSON.stringify([t.alpha_id,t.portfolio_id]))&&purposeAllows(t)&&
             allowed("alpha.read",{kind:"ALPHA",id:t.alpha_id})&&
             (allowed("portfolio.read_restricted",{kind:"PORTFOLIO",id:t.portfolio_id})||allowed("portfolio.read",{kind:"PORTFOLIO",id:t.portfolio_id})));
-          if(!fullTuples.length||[...linkedTuples,...bindingTuples,...accountTuples].some(t=>!fullTuples.includes(t))){
+          if(!fullTuples.length||[...linkedTuples,...bindingTuples,...accountTuples,...explicitTuples].some(t=>!fullTuples.includes(t))){
             if(policy.state!=="QUALIFIED"||!policy.policy_ref)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
             fields=policy.fields.filter(isBusinessReadField);fieldPolicyRef=policy.policy_ref;
             if(!fields.length)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
           }
-          tuples=[...new Set([...fullTuples,...linkedTuples,...bindingTuples,...accountTuples])];
+          tuples=[...new Set([...fullTuples,...linkedTuples,...bindingTuples,...accountTuples,...explicitTuples])];
           // No matching row does not itself prove an authorized collection.
           if(!tuples.length&&!explicitCollection)fail("EXECUTION_READ_NOT_AVAILABLE",404);
           const visibleKeys=new Set(tuples.flatMap(tupleLineage).map(exactKey));
@@ -490,6 +714,10 @@ export class ExecutionReadScopes {
       population:publication?.tuples??[],fields,context,bindingPairs,
       strategyPairs:publication?.strategy_lineage&&(publication.strategy_lineage.qualification==="SOURCE_VERIFIED"||
         context?.allow_test_only&&publication.strategy_lineage.qualification==="TEST_ONLY")?publication.strategy_lineage.pairs:[]});
+    if(optional){
+      if(mode!=="SCOPED_V2"||!context||!publication)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      return this.portfolioOutcome(p,b,r,context,publication,scope);
+    }
     return scope;
   }
 
