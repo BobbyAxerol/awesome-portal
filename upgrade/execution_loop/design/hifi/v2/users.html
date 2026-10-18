@@ -1,0 +1,82 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Users — V2</title><link rel="stylesheet" href="kit.css">
+<style>
+/* page-local layout only */
+[hidden]{display:none!important}
+.dstrip{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:6px 12px;border:1px dashed var(--line-strong);color:var(--ink-faint);font:500 11px/16px var(--font-sans);letter-spacing:.04em;text-transform:uppercase}
+.bar{display:flex;gap:12px 16px;flex-wrap:wrap;align-items:flex-start;justify-content:space-between}.bar .l{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.ut td{height:52px;white-space:normal}.ut .sub{margin:0}.ut td.act{white-space:normal;min-width:190px}
+.blk{border:1px solid var(--line-strong);background:var(--sunken);padding:12px 16px}.blk h6{margin:0 0 8px;font:500 11px/16px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+.fg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:12px}.fld{display:grid;gap:4px}.fld label{color:var(--ink-faint);font:500 11px/16px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+input.in,select.in{background:var(--paper);border:1px solid var(--line-strong);color:var(--ink);padding:6px 10px;font:400 13px/18px var(--font-sans);width:100%}
+.su{border:1px solid var(--line-strong);border-left:3px solid var(--f-approval);padding:10px 12px;margin-bottom:12px;background:var(--panel)}
+.sk{background:var(--cell);height:14px;margin:10px 0}
+@media(max-width:1100px){.fg{grid-template-columns:1fr}}
+</style></head>
+<body data-page="Users" data-nav="users" data-crumb="Administration / Users">
+<main><div class="stack">
+<div class="mast"><div><h1>Users</h1><div class="sub">Accounts and role presets · Administrators only</div></div>
+ <div class="ctrls"><span class="chipx" id="relay"></span><a class="chipx" href="access.html">My access</a></div></div>
+
+<div class="dstrip"><span>Design preview</span><span>Page</span>
+ <span class="seg" id="sseg"><button data-v="ok" aria-pressed="true">Normal</button><button data-v="loading" aria-pressed="false">Loading</button><button data-v="empty" aria-pressed="false">Empty</button><button data-v="partial" aria-pressed="false">Partial</button><button data-v="stale" aria-pressed="false">Stale</button></span>
+ <span>Step-up</span><span class="seg" id="useg"><button data-v="idle" aria-pressed="true">Not verified</button><button data-v="busy" aria-pressed="false">Verifying</button><button data-v="ok" aria-pressed="false">Verified</button><button data-v="expired" aria-pressed="false">Expired</button><button data-v="fail" aria-pressed="false">Failed</button></span></div>
+
+<div id="notes"></div>
+<div id="denied" class="panel" hidden><div class="empty"><div><b>You can't open this page.</b><div class="na" style="margin-top:6px">Users is for administrators.</div><div style="margin-top:10px"><a href="access.html#see">See what you can access</a></div></div></div></div>
+
+<div id="main" class="stack">
+ <div class="bar"><div class="l"><input class="search" id="q" placeholder="Search by name or username" aria-label="Search accounts"><span class="seg" id="pre" role="group" aria-label="Role preset"></span></div><div id="inv"></div></div>
+ <div id="act" hidden></div>
+ <div class="panel"><div class="ph">Accounts <span class="r" id="cnt"></span></div><div class="tw" id="tw"></div></div>
+ <details><summary>How accounts work</summary><div class="na" style="padding:6px 0">A new account starts invited and holds no credential. Disable ends sessions and blocks sign-in. Nothing here deletes an account. Every change needs a note and a step-up check, and lands in Operations.</div></details>
+</div></div></main>
+<script src="kit.js"></script><script src="charts.js"></script>
+<script>
+var $=function(i){return document.getElementById(i)};function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function flag(k,l){return'<span class="flag" data-k="'+k+'">'+esc(l)+'</span>'}
+var PRE=["Manager","Researcher","Operator","Reviewer","Viewer"],SF={active:["ok","Active"],invited:["pending","Invited"],disabled:["paused","Disabled"],archived:["na","Archived"]};
+var U=[["Bobby Vu","bobby","Manager","active","17 Oct 11:58Z",1],["Stan","stan","Researcher","active","17 Oct 09:14Z"],["Lan","lan","Operator","active","17 Oct 08:02Z"],["Minh","minh","Reviewer","active","16 Oct 17:40Z"],["Thanh Vuong","thanhvuong","Researcher","disabled","Never signed in",0,"Locked until the first password is set"],["Nguyen An","an","Viewer","invited","Never signed in"],["Former Analyst","former-analyst","Viewer","archived","02 Sep 14:20Z"]];
+var S={pst:"ok",pre:"all",q:"",armed:null,su:"idle",note:"",done:null,fields:{}};
+function mark(id,v){[].forEach.call($(id).children,function(b){b.setAttribute("aria-pressed",b.getAttribute("data-v")===v)})}
+function ready(){return KIT.state.data==="ok"&&S.pst!=="stale"}
+function reasonKey(){return KIT.state.data!=="ok"?KIT.why("relay"):KIT.why("Refresh before you change an account",false)}
+function btn(label,id,cls,extra){return ready()?'<button class="btn '+(cls||"")+'" '+(id||"")+'>'+label+'</button>':'<button class="btn" disabled>'+label+'</button>'+reasonKey()}
+function su(){var u=S.su;var msg=u==="ok"?'<span class="mono">Verified 12:06Z · 5 min left</span>':u==="busy"?'<span class="na">Waiting for your key…</span>':u==="expired"?'<span class="na">Check expired at 12:11Z. Verify again.</span>':u==="fail"?'<span class="neg">Not verified. The key was not recognised.</span>':'<span class="na">Needed before this change is sent.</span>';
+ return'<div class="su"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'+flag("approval","Step-up required")+msg+'</div>'+(u==="ok"?"":'<button class="btn" data-su'+(u==="busy"?" disabled":"")+'>'+(u==="expired"||u==="fail"?"Verify again":"Verify with security key")+'</button>')+'</div>'}
+function drawAct(){var a=S.armed,el=$("act");if(S.done){el.hidden=false;el.innerHTML='<div class="blk" style="border-left:3px solid var(--accent)"><h6>'+S.done.t+'</h6><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+flag("operation","Accepted")+' '+flag("display","Catching up")+'<span>'+S.done.m+'</span></div><div style="margin-top:8px"><a href="operations.html?source=users">Open in Operations (source: users)</a> <button class="btn" data-close style="margin-left:12px">Close</button></div></div>';return}
+ if(!a){el.hidden=true;el.innerHTML="";return}el.hidden=false;var inv=a.type==="invite",ok=S.su==="ok",nOK=S.note.length>=12,okf=inv?(S.fields.u&&S.fields.u.length>=2&&S.fields.n):true;
+ var head=inv?'Invite an account':(a.type==="enable"?'Enable ':'Disable ')+esc(a.name);
+ el.innerHTML='<div class="blk"><h6>'+head+' · '+flag("pending","Preview · not recorded")+'</h6>'+
+  (inv?'<div class="fg"><div class="fld"><label for="fu">Username</label><input class="in" id="fu" data-f="u" value="'+esc(S.fields.u||"")+'"></div><div class="fld"><label for="fn">Display name</label><input class="in" id="fn" data-f="n" value="'+esc(S.fields.n||"")+'"></div><div class="fld"><label for="fr">Role preset</label><select class="in" id="fr" data-f="r">'+PRE.map(function(p){return'<option'+(S.fields.r===p?" selected":"")+'>'+p+'</option>'}).join("")+'</select></div></div><div class="na" style="margin-bottom:12px">The account starts invited and holds no credential. Issue one when you are ready to hand it over.</div>':
+   '<div style="margin-bottom:12px">'+(a.type==="enable"?'They can sign in again. Their grants come back as they were.':'Their sessions end now and sign-in is blocked. Nothing is deleted.')+'</div>')+
+  '<div class="fld" style="margin-bottom:12px"><label for="nt">Note (at least 12 characters)</label><input class="in" id="nt" value="'+esc(S.note)+'" placeholder="Why this change"></div>'+su()+
+  '<div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">'+(ok&&nOK&&okf?'<button class="btn pri" data-go>'+(inv?"Send invite":a.type==="enable"?"Enable account":"Disable account")+'</button>':'<button class="btn pri" disabled>'+(inv?"Send invite":a.type==="enable"?"Enable account":"Disable account")+'</button><span class="why" style="margin:0;align-self:center">'+(!ok?"Verify your identity first":!nOK?KIT.WHY.needNote:"Add a username and a display name")+'</span>')+'<button class="btn" data-cancel>Cancel</button></div></div>'}
+function rows(){return U.filter(function(u){return(S.pre==="all"||u[2]===S.pre)&&(!S.q||(u[0]+" "+u[1]).toLowerCase().indexOf(S.q.toLowerCase())>=0)})}
+function render(){var K=KIT.state,den=K.role!=="manager";$("denied").hidden=!den;$("main").hidden=den;
+ $("relay").innerHTML=K.data==="ok"?'<span class="dot"></span>Relay qualified':'<span class="dot warn"></span>Relay not qualified';
+ var nt=[];if(K.data==="nq"&&!den)nt.push('<div class="banner">Relay is not qualified. You can read accounts. Invite and disable stay off.</div>');if(S.pst==="partial"&&!den)nt.push('<div class="banner">Some figures are missing. Last seen is not published for 3 accounts.</div>');if(S.pst==="stale"&&!den)nt.push('<div class="banner">Showing saved data as of 11:46Z. Read-only until you refresh. <button class="btn" data-refresh style="margin-left:8px">Refresh</button></div>');$("notes").innerHTML=nt.join("");if(den)return;
+ var loading=S.pst==="loading",empty=S.pst==="empty",cn={all:U.length};PRE.forEach(function(p){cn[p]=U.filter(function(u){return u[2]===p}).length});
+ $("pre").innerHTML=[["all","All"]].concat(PRE.map(function(p){return[p,p]})).map(function(p){return'<button data-p="'+p[0]+'" aria-pressed="'+(S.pre===p[0])+'">'+p[1]+" "+(loading||empty?"":cn[p[0]])+'</button>'}).join("");
+ $("inv").innerHTML='<div>'+btn("Invite account",'data-invite',"pri")+'</div>';
+ drawAct();var L=empty?[]:rows(),tw=$("tw");$("cnt").textContent=loading?"":L.length+" of "+(empty?0:U.length);
+ if(loading){tw.innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="na">Loading accounts…</div>';return}
+ if(!L.length){tw.innerHTML='<div class="empty" style="min-height:160px"><div style="text-align:center">'+(empty?'<b>Nothing here yet.</b><div class="na">No accounts exist. Invite the first person.</div>':'<b>No accounts match.</b><div class="na">Try another name or preset.</div>')+'</div></div>';return}
+ tw.innerHTML='<table class="ut cards"><thead><tr><th>Account</th><th>State</th><th>Role preset</th><th>Last seen (UTC)</th><th>Actions</th></tr></thead><tbody>'+L.map(function(u,i){var s=SF[u[3]],self=u[5],ls=S.pst==="partial"&&i%2===1?'<span class="na">Not available</span>':u[4]==="Never signed in"?'<span class="na">Never signed in</span>':'<span class="mono">'+u[4]+'</span>';
+  var act;if(self)act='<button class="btn" disabled>Disable</button><span class="why">You cannot disable yourself</span>';else if(u[3]==="archived")act='<span class="na">Archived accounts stay as they are</span>';else if(u[3]==="invited")act=btn("Disable",'data-dis="'+u[1]+'"');else if(u[3]==="disabled")act=btn("Enable",'data-en="'+u[1]+'"');else act=btn("Disable",'data-dis="'+u[1]+'"');
+  return'<tr><td data-l="Account"><b>'+esc(u[0])+'</b>'+(self?' <span class="na">(you)</span>':"")+'<div class="sub"><a class="chipx mono" href="access.html">'+u[1]+'</a></div></td><td data-l="State">'+flag(s[0],s[1])+(u[5]&&0?"":"")+(u[6]?'<div class="sub na">'+u[6]+'</div>':"")+'</td><td data-l="Role preset">'+u[2]+'</td><td data-l="Last seen">'+ls+'</td><td class="act" data-l="Actions">'+act+'</td></tr>'}).join("")+'</tbody></table>'}
+function arm(a){S.armed=a;S.note="";S.su="idle";S.done=null;mark("useg","idle");S.fields={r:"Researcher"};render();var n=document.getElementById("act");if(n&&n.scrollIntoView)n.scrollIntoView({block:"nearest"})}
+document.addEventListener("click",function(e){var t=e.target,b;
+ if(b=t.closest("[data-p]")){S.pre=b.getAttribute("data-p");render();return}
+ if(t.closest("[data-invite]")){arm({type:"invite"});return}
+ if(b=t.closest("[data-dis]")){var u=U.filter(function(x){return x[1]===b.getAttribute("data-dis")})[0];arm({type:"disable",name:u[0]+" ("+u[1]+")"});return}
+ if(b=t.closest("[data-en]")){var u2=U.filter(function(x){return x[1]===b.getAttribute("data-en")})[0];arm({type:"enable",name:u2[0]+" ("+u2[1]+")"});return}
+ if(t.closest("[data-su]")){S.su="busy";mark("useg","busy");render();setTimeout(function(){S.su="ok";mark("useg","ok");render()},700);return}
+ if(t.closest("[data-cancel]")||t.closest("[data-close]")){S.armed=null;S.done=null;render();return}
+ if(t.closest("[data-refresh]")){S.pst="ok";mark("sseg","ok");render();return}
+ if(t.closest("[data-go]")){var a=S.armed;S.done={t:a.type==="invite"?"Invite sent":a.type==="enable"?"Enable sent":"Disable sent",m:a.type==="invite"?esc(S.fields.n||"The account")+" is invited. No credential is issued yet.":esc(a.name)+" will update when the read side catches up."};S.armed=null;render()}});
+document.addEventListener("input",function(e){var t=e.target;if(t.id==="q"){S.q=t.value;var p=t.selectionStart;render();var q=$("q");q.focus();q.setSelectionRange(p,p);return}
+ if(t.id==="nt"||t.hasAttribute("data-f")){var was=[S.note.length>=12,!!(S.fields.u&&S.fields.u.length>=2&&S.fields.n)];if(t.id==="nt")S.note=t.value;else S.fields[t.getAttribute("data-f")]=t.value;var now=[S.note.length>=12,!!(S.fields.u&&S.fields.u.length>=2&&S.fields.n)];if(was[0]!==now[0]||was[1]!==now[1]){var id=t.id,p2=t.selectionStart;render();var n=$(id);if(n){n.focus();if(n.setSelectionRange&&n.type!=="select-one")n.setSelectionRange(p2,p2)}}}});
+$("sseg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.pst=b.getAttribute("data-v");mark("sseg",S.pst);render()});
+$("useg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.su=b.getAttribute("data-v");mark("useg",S.su);if(!S.armed&&!S.done){S.armed={type:"disable",name:"Stan (stan)"};S.note="Leaves the team on 20 Oct";}render()});
+KIT.on(render);
+</script></body></html>

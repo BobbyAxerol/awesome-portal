@@ -1,0 +1,85 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Profile &amp; Access — V2</title><link rel="stylesheet" href="kit.css">
+<style>
+/* layout only */
+.two{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:24px;align-items:start}@media(max-width:1100px){.two{grid-template-columns:1fr}}
+td.w{white-space:normal}.m{font-size:12px;line-height:16px;color:var(--ink-faint)}tr.kid td:first-child{padding-left:28px}
+.cell{background:var(--paper);color:var(--ink-faint);border:1px solid var(--line-strong);padding:1px 8px;font:500 11px/16px var(--font-mono);cursor:pointer;text-transform:uppercase;letter-spacing:.06em}.cell[aria-pressed=true]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}.cell:disabled{opacity:.45;cursor:not-allowed}
+.stp{border:1px solid var(--line-strong);border-left:3px solid var(--f-approval);padding:10px 12px;display:grid;gap:8px;font-size:12px;margin:10px 0}.stp.passed{border-left-color:var(--f-ok)}.stp.failed,.stp.expired{border-left-color:var(--bad)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}.dh th{text-align:center}
+</style></head>
+<body data-page="Profile & Access" data-nav="access" data-crumb="Administration / Profile & Access">
+<main><div class="stack">
+<div class="mast"><div><h1>Profile &amp; Access</h1><div class="sub" id="sub"></div></div>
+ <div class="ctrls"><span class="chipx"><span class="dot" data-data="ok"></span><span class="dot warn" data-data="nq"></span><span data-data="ok">Fresh · 12:04Z</span><span data-data="nq">Permissions not loaded</span></span></div></div>
+<div class="banner" data-data="nq">Business permissions could not be loaded. Nothing below is assumed.</div>
+
+<div class="kpis" style="--n:4" id="idk"></div>
+
+<div class="two">
+ <div class="panel" style="padding:0"><div class="ph" style="margin:0">What you can see <span class="r">Visibility only</span></div><div class="tw"><table><thead><tr><th>Area</th><th>Scope</th></tr></thead><tbody id="see"></tbody></table></div></div>
+ <div class="panel" style="padding:0"><div class="ph" style="margin:0">What you can do <span class="r">Seeing never grants this</span></div><div class="tw"><table class="cards"><thead><tr><th>Action</th><th>Status</th><th>Why</th></tr></thead><tbody id="do"></tbody></table></div></div>
+</div>
+
+<div class="panel" style="padding:0"><div class="ph" style="margin:0">Granted to you <span class="r">Who, since when, until when</span></div><div class="tw"><table class="cards"><thead><tr><th>Access</th><th>Granted by</th><th>Scope</th><th>Since</th><th>Expires</th><th>State</th></tr></thead><tbody id="grant"></tbody></table></div></div>
+
+<div class="panel" style="padding:8px 16px"><details><summary>Reason dictionary · why a control is off</summary><div class="tw"><table><thead><tr><th>Reason</th><th>Shown as</th></tr></thead><tbody id="dict"></tbody></table></div></details></div>
+
+<div class="panel" data-roles="manager" id="mg"><div class="ph">Manage grants <span class="r"><span class="flag" data-k="approval">Step-up required</span></span></div>
+ <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><span class="m">Role preset</span><span class="seg" id="presets"></span></div>
+ <div class="tw"><table class="cards" id="pt"><thead><tr><th>Preset</th><th>Sees</th><th>Decides</th></tr></thead><tbody id="pbody"></tbody></table></div>
+ <div class="tw" style="margin-top:16px"><table id="gt"><thead><tr><th rowspan="2">Account</th><th colspan="2" class="dh">R1 gate</th><th colspan="2" class="dh">R2 gate</th><th colspan="2" class="dh">Canary</th><th colspan="2" class="dh">Live</th></tr><tr><th>See</th><th>Decide</th><th>See</th><th>Decide</th><th>See</th><th>Decide</th><th>See</th><th>Decide</th></tr></thead><tbody id="gbody"></tbody></table></div>
+ <div id="gdlg" style="margin-top:14px" hidden><div class="stp" id="gstp"></div><div class="acts"><button class="btn pri" id="gdo" disabled>Grant capability</button><button class="btn" id="gcancel">Cancel</button></div><div class="m" id="gsum" style="margin-top:6px"></div></div>
+ <div class="m" style="margin-top:12px">Owner access is not granted here and cannot be removed here.</div></div>
+</div></main>
+<script src="kit.js"></script>
+<script>
+var NAME={manager:"Bobby",researcher:"Stan",operator:"Lan",reviewer:"Minh"},PRE={manager:"Manager",researcher:"Researcher",operator:"Operator",reviewer:"Reviewer"};
+function F(k,t){return KIT.flag(k,t)}function W(k){return KIT.WHY[k]||k}function na(t){return'<span class="na">'+t+"</span>"}
+var AREAS=["Overview","Portfolios","Alpha Fleet","Accounts","Operations","Approvals"];
+var SEE={manager:["all","all","all","all","all","all"],reviewer:["all","all","all",0,0,"all"],operator:["all","all","all","all","all",0],researcher:["slice",0,"mine",0,0,"mine"]};
+var GATE={manager:[1,1,1,1],reviewer:[1,1,1,1],operator:[0,0,0,0],researcher:["mine",0,0,0]};
+function seeCell(v,why){return v==="all"?F("ok","All authorized"):v==="slice"?F("partial","Your slice"):v==="mine"?F("partial","Your own only"):F("na","Not shown")+(why?'<div class="m">'+why+"</div>":"")}
+function row3(a,s,w){return'<tr><td data-l="Action">'+a+'</td><td data-l="Status">'+s+'</td><td data-l="Why" class="w m" style="font-size:12px">'+w+"</td></tr>"}
+function st(k){return k==="allow"?F("ok","Allowed"):k==="appr"?F("approval","Needs approval"):k==="soon"?F("stale","Not available yet"):k==="step"?F("ok","Allowed")+" "+F("approval","Step-up"):F("na","Not allowed")}
+var DO={
+ manager:[["Decide at R1 gate","allow",""],["Decide at R2 gate","step","Asks you to confirm it's you"],["Decide at Canary gate","allow",""],["Decide at Live gate","soon","liveClosed"],["Approve archive and reactivation","allow",""],["Request an archive","allow",""],["Start a reactivation review","allow",""],["Send capital commands","soon","relay"],["Acknowledge and resolve operations","allow",""],["Manage grants","step","Up to the access you hold"],["Change your own admin rights","no","Another administrator does it"],["Export tables","soon","noExport"]],
+ reviewer:[["Decide at R1 gate","allow",""],["Decide at R2 gate","step","Asks you to confirm it's you"],["Decide at Canary gate","allow",""],["Decide at Live gate","soon","liveClosed"],["Approve archive and reactivation","allow",""],["Request an archive","no","Not part of your role"],["Start a reactivation review","no","Managers start reviews"],["Send capital commands","no","noGrant"],["Acknowledge and resolve operations","no","Not part of your role"],["Manage grants","no","noGrant"],["Change your own admin rights","no","Another administrator does it"],["Export tables","soon","noExport"]],
+ operator:[["Decide at R1 gate","no","noGrant"],["Decide at R2 gate","no","noGrant"],["Decide at Canary gate","no","noGrant"],["Decide at Live gate","no","liveClosed"],["Approve archive and reactivation","no","noGrant"],["Request an archive","no","Not part of your role"],["Start a reactivation review","no","Managers start reviews"],["Send capital commands","soon","relay"],["Acknowledge and resolve operations","allow",""],["Manage grants","no","noGrant"],["Change your own admin rights","no","Another administrator does it"],["Export tables","soon","noExport"]],
+ researcher:[["Decide at R1 gate","no","noGrant"],["Decide at R2 gate","no","noGrant"],["Decide at Canary gate","no","noGrant"],["Decide at Live gate","no","liveClosed"],["Approve archive and reactivation","no","noGrant"],["Request an archive of your own alpha","appr","A reviewer approves it"],["Suggest a reactivation review","allow","Managers start the review"],["Send capital commands","no","Manager action"],["Acknowledge and resolve operations","no","Not part of your role"],["Manage grants","no","noGrant"],["Change your own admin rights","no","Another administrator does it"],["Export tables","soon","noExport"]]};
+var GR={
+ manager:[["Owner access","Owner anchor","All business data","1 Sep 2026","No end date","ok","Effective"]],
+ reviewer:[["Reviewer preset","Bobby","All authorized","1 Sep 2026","31 Dec 2026","ok","Effective"],["Gate decisions R1, R2, Canary","Bobby","Three gates","1 Sep 2026","31 Dec 2026","ok","Effective"],["Gate decision Live","Bobby","Live gate","17 Oct 2026","31 Dec 2026","paused","Closed on this build"]],
+ operator:[["Operator preset","Bobby","All authorized, read","1 Sep 2026","31 Dec 2026","ok","Effective"],["Acknowledge and resolve","Bobby","Operations","1 Sep 2026","31 Dec 2026","ok","Effective"]],
+ researcher:[["Researcher view","Bobby","Alphas you own","20 Aug 2026","No end date","ok","Effective"],["Archive your own alphas","Bobby","Alphas you own · needs approval","20 Aug 2026","31 Dec 2026","ok","Effective"]]};
+var PRESETS=[["manager","Manager","All authorized","R1, R2, Canary · Live closed"],["researcher","Researcher","Own alphas and portfolios' own part","None · may request archive"],["operator","Operator","All authorized, read","Operations only"],["reviewer","Reviewer","All authorized, read","R1, R2, Canary · Live closed"],["viewer","Viewer","All authorized, read","None"]];
+var ACC=[["Stan","Researcher",[["own",0],[0,0],[0,0],[0,0]]],["Minh","Reviewer",[[1,1],[1,1],[1,1],[1,0]]],["Lan","Operator",[[0,0],[0,0],[0,0],[0,0]]],["Former analyst","Archived",null]];
+var GS={g:null,step:"required"},preset="reviewer";
+function ctx(){return KIT.state}
+function render(){var r=ctx().role,d=ctx().data==="ok";
+ document.getElementById("sub").textContent=d?NAME[r]+" · "+PRE[r]:NAME[r];
+ document.getElementById("idk").innerHTML=[["Signed in as","<div class='v'>"+NAME[r]+"</div>","<div class='n mono'>user_"+r.slice(0,2)+"7f3a…e1</div>"],["Role preset",d?"<div class='v'>"+PRE[r]+"</div>":"<div class='v na'>Not available</div>",d?"<div class='n'>"+({manager:"Read-all · owner",reviewer:"Read-all · decides",operator:"Read-all · acts",researcher:"Your slice only"})[r]+"</div>":"<div class='n'>Permissions not loaded</div>"],["App sign-in","<div class='v'>Active</div>","<div class='n'>Ends in 7 h 12 m</div>"],["Business access",d?"<div class='v'>Accepted</div>":"<div class='v na'>Not available</div>",d?"<div class='n'>Membership r19</div>":"<div class='n'>Trading system not reachable</div>"]].map(function(x){return'<div class="kpi"><div class="l">'+x[0]+"</div>"+x[1]+x[2]+"</div>"}).join("");
+ var s="";AREAS.forEach(function(a,i){s+="<tr><td>"+a+"</td><td>"+(d?seeCell(SEE[r][i],SEE[r][i]?"":"Not part of your role"):na("Not available")+'<div class="m">Permissions not loaded</div>')+"</td></tr>"});
+ ["R1 gate","R2 gate","Canary gate","Live gate"].forEach(function(g,i){var v=GATE[r][i];s+="<tr><td>"+g+"</td><td>"+(d?(v===1?F("ok","Can see"):v==="mine"?F("partial","Your requests"):F("na","Not shown")+'<div class="m">Gate decisions are for reviewers</div>'):na("Not available")+'<div class="m">Permissions not loaded</div>')+"</td></tr>"});
+ document.getElementById("see").innerHTML=s;
+ var o="";if(d)DO[r].forEach(function(x){var why=x[2]?(KIT.WHY[x[2]]?W(x[2])+' · <a href="access.html">My access</a>':x[2]):"";o+=row3(x[0],st(x[1]),why)});else o=row3(na("Not available"),"",'<span class="na">Permissions not loaded. No action is shown as allowed or blocked.</span>');
+ document.getElementById("do").innerHTML=o;
+ var g="";if(d)GR[r].forEach(function(x){g+='<tr><td data-l="Access">'+x[0]+'</td><td data-l="Granted by">'+x[1]+'</td><td data-l="Scope">'+x[2]+'</td><td data-l="Since" class="mono">'+x[3]+'</td><td data-l="Expires" class="mono">'+x[4]+'</td><td data-l="State">'+F(x[5],x[6])+"</td></tr>"});else g='<tr><td colspan="6">'+na("Not available")+' · Grants not loaded</td></tr>';
+ document.getElementById("grant").innerHTML=g;
+ document.getElementById("dict").innerHTML=Object.keys(KIT.WHY).map(function(k){return'<tr><td class="mono">'+k+"</td><td>"+KIT.WHY[k]+"</td></tr>"}).join("");
+ document.getElementById("presets").innerHTML=PRESETS.map(function(p){return'<button data-p="'+p[0]+'" aria-pressed="'+(p[0]===preset)+'">'+p[1]+"</button>"}).join("");
+ document.getElementById("pbody").innerHTML=PRESETS.map(function(p){return'<tr'+(p[0]===preset?' class="sel"':"")+'><td data-l="Preset"><b>'+p[1]+'</b></td><td data-l="Sees" class="w">'+p[2]+'</td><td data-l="Decides" class="w">'+p[3]+"</td></tr>"}).join("");
+ var gb="";ACC.forEach(function(a,ri){gb+="<tr><td><b>"+a[0]+'</b><div class="m">'+a[1]+"</div></td>";if(!a[2])gb+='<td colspan="8">'+F("paused","Archived")+"</td>";else a[2].forEach(function(p,gi){[0,1].forEach(function(k){var on=p[k]===1||(p[k]==="own"),dis=!a[2]||a[1]==="Archived";gb+='<td><button class="cell" aria-pressed="'+on+'" data-r="'+ri+'" data-g="'+gi+'" data-k="'+k+'">'+(k?"Decide":"See")+"</button></td>"})});gb+="</tr>"});
+ document.getElementById("gbody").innerHTML=gb}
+document.addEventListener("click",function(e){var t=e.target,b;
+ if(b=t.closest("#presets button")){preset=b.getAttribute("data-p");render();return}
+ if(b=t.closest(".cell")){var a=ACC[+b.getAttribute("data-r")],gn=["R1 gate","R2 gate","Canary","Live"][+b.getAttribute("data-g")],k=+b.getAttribute("data-k");GS={g:a[0]+"|"+gn+"|"+(k?"Decide":"See"),step:k?"required":"passed"};showDlg();return}
+ if(t.closest("#gcancel")){document.getElementById("gdlg").hidden=true;return}
+ if(t.closest("#gst")){GS.step="verifying";showDlg();setTimeout(function(){if(GS.step==="verifying"){GS.step="passed";showDlg()}},900);return}
+ if(b=t.closest("[data-gs]")){GS.step=b.getAttribute("data-gs");showDlg();return}
+ if(t.closest("#gdo")){document.getElementById("gdlg").hidden=true;KIT.toast("Grant recorded · nothing else changes");return}});
+var STT={required:["Confirm it's you before granting.","Confirm it's you"],verifying:["Waiting for your security key…",""],passed:["Confirmed for 5 min.",""],failed:["Confirmation failed. Nothing was granted.","Try again"],expired:["Confirmation expired. Confirm again.","Confirm it's you"]};
+function showDlg(){var p=GS.g.split("|"),T=STT[GS.step],k=p[2]==="Decide";document.getElementById("gdlg").hidden=false;
+ document.getElementById("gstp").className="stp "+GS.step;document.getElementById("gstp").innerHTML="<div>"+F(GS.step==="passed"?"ok":GS.step==="verifying"?"pending":GS.step==="required"?"approval":"rejected","Step-up required")+"</div><div>"+T[0]+"</div>"+(T[1]?'<div><button class="btn" id="gst">'+T[1]+"</button></div>":"")+'<details><summary>Preview the five states</summary><div class="acts">'+["required","verifying","passed","failed","expired"].map(function(s){return'<button class="btn" data-gs="'+s+'">'+s+"</button>"}).join("")+"</div></details>";
+ document.getElementById("gdo").disabled=GS.step!=="passed";document.getElementById("gsum").innerHTML="Grant "+p[1]+" · "+p[2]+" to "+p[0]+". No external effect. A grant never bypasses evidence, quorum or separation of duty."}
+KIT.on(render);
+</script></body></html>

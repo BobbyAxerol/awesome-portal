@@ -1,0 +1,57 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Overview — V2 kit reference</title><link rel="stylesheet" href="kit.css"></head>
+<body data-page="Overview" data-nav="overview" data-crumb="Execution / Overview">
+<main><div class="stack">
+<div class="mast"><div><h1 data-roles="manager operator reviewer">Overview</h1><h1 data-roles="researcher">Your alphas</h1><div class="sub" data-roles="manager operator reviewer">Fund · <span class="win">90D</span></div><div class="sub" data-roles="researcher">Your slice only</div></div>
+ <div class="ctrls"><span class="chipx"><span class="dot" data-data="ok"></span><span class="dot warn" data-data="nq"></span><span data-data="ok">Fresh · 12:04Z</span><span data-data="nq">Source not qualified</span></span></div></div>
+<div class="banner" data-data="nq">Source not qualified. Figures stay unavailable until it is.</div>
+
+<div class="kpis" data-roles="manager operator reviewer">
+ <div class="kpi"><div class="l">NAV</div><div class="v" data-data="ok">1,204,210.55 <small>USDT</small></div><div class="v na" data-data="nq">Not available</div><div class="n" data-data="ok">Real-funded</div><div class="n" data-data="nq">Source not qualified</div></div>
+ <div class="kpi"><div class="l">Net PnL · <span class="win">90D</span></div><div class="v pos" id="kpnl" data-data="ok">+84,210.55</div><div class="v na" data-data="nq">Not available</div><div class="n" data-data="ok">After fees and funding</div><div class="n" data-data="nq">Fees incomplete</div></div>
+ <div class="kpi"><div class="l">Return · <span class="win">90D</span></div><div class="v pos" data-data="ok">+7.5%</div><div class="v na" data-data="nq">Not available</div><div class="n" data-data="ok">Modified Dietz</div><div class="n" data-data="nq">Method not certified</div></div>
+ <div class="kpi"><div class="l">Drawdown</div><div class="v neg" id="kdd" data-data="ok">−0.4%</div><div class="v na" data-data="nq">Not available</div><div class="n" id="kddm" data-data="ok">Max −3.5%</div><div class="n" data-data="nq">Needs a NAV series</div></div>
+ <div class="kpi"><div class="l">Open incidents</div><div class="v neg" data-data="ok">2</div><div class="v" data-data="nq">2</div><div class="n"><a href="operations.html">Operations</a></div></div></div>
+<div class="kpis" style="--n:3" data-roles="researcher">
+ <div class="kpi"><div class="l">Your allocation</div><div class="v" data-data="ok">120,000 <small>USDT</small></div><div class="v na" data-data="nq">Not available</div></div>
+ <div class="kpi"><div class="l">Net PnL · <span class="win">90D</span></div><div class="v pos" data-data="ok">+21,430</div><div class="v na" data-data="nq">Not available</div></div>
+ <div class="kpi"><div class="l">Alphas</div><div class="v">3</div><div class="n">2 running · 1 paper</div></div></div>
+
+<div class="grid2" data-roles="manager operator reviewer">
+ <div class="panel"><div class="ph"><span class="seg" data-local><button aria-pressed="true" data-v="pnl">Net PnL</button><button aria-pressed="false" data-v="ret">Return</button><button aria-pressed="false" data-v="eq">Equity</button></span><span class="r">▲ added · ▼ returned</span></div>
+  <div class="chart" id="eq" data-data="ok"></div><div class="empty" data-data="nq">No series published</div></div>
+ <div class="panel"><div class="ph">Capital <span class="r">USDT · real-funded</span></div>
+  <table><tbody><tr><td>Initial funds</td><td class="n"><span data-data="ok">1,000,000.00</span><span class="na" data-data="nq">Not available</span></td></tr>
+  <tr><td>Added funds</td><td class="n"><span data-data="ok">120,000.00</span><span class="na" data-data="nq">Not available</span></td></tr>
+  <tr><td>Returned</td><td class="n"><span data-data="ok">0.00</span><span class="na" data-data="nq">Not available</span></td></tr>
+  <tr><td><b>NAV</b></td><td class="n"><span data-data="ok"><b>1,204,210.55</b></span><span class="na" data-data="nq">Not available</span></td></tr></tbody></table>
+  <div style="margin-top:14px" data-data="ok"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft)"><span>Budget used</span><span class="mono">842,300 / 1,100,000</span></div><div class="sla" style="height:6px"><i style="width:76.5%;background:var(--accent)"></i></div></div></div></div>
+
+<div class="grid3" data-roles="manager operator reviewer">
+ <div class="panel"><div class="ph">Needs attention <a class="r" href="operations.html">Operations</a></div>
+  <div data-data="ok"><div class="item"><div class="t"><span><span class="flag" data-k="incident">Incident</span> Broker sync diverged</span><a href="operations.html">Investigate</a></div><div class="m">Binance-02 · overdue 2:00</div><div class="sla bad"><i style="width:100%"></i></div></div>
+   <div class="item"><div class="t"><span><span class="flag" data-k="operation">Operation</span> Recall pending</span><a href="operations.html">Verify</a></div><div class="m">Core · due in 4:00</div><div class="sla"><i style="width:62%"></i></div></div>
+   <div class="item"><div class="t"><span><span class="flag" data-k="approval">Approval</span> Archive request</span><a href="approvals.html">Review</a></div><div class="m">asmith · due in 1:00h</div><div class="sla"><i style="width:30%"></i></div></div></div>
+  <div class="na" data-data="nq">Not available</div></div>
+ <div class="panel"><div class="ph">Since your last visit <span class="r">Oct 17 · 18:20Z</span></div>
+  <div data-data="ok"><div class="item"><div class="t"><span><span class="flag" data-k="approval">Approval</span> Archive request decided</span></div><div class="m">SOL-Break v1 · approved by Bobby</div></div>
+   <div class="item"><div class="t"><span><span class="flag" data-k="operation">Operation</span> Recall applied</span></div><div class="m">Core · budget −40,000 USDT</div></div>
+   <div class="item"><div class="t"><span>NAV <b class="pos mono">+1.4%</b></span></div><div class="m">3 alphas moved stage · 1 new alpha</div></div></div>
+  <div class="na" data-data="nq">Not available</div></div>
+ <div class="panel"><div class="ph">Contributors <span class="seg" data-local><button aria-pressed="true" data-v="a">Amount</button><button aria-pressed="false" data-v="p">Portfolios</button></span></div>
+  <div id="contrib" data-data="ok"></div><div class="na" data-data="nq">Not available</div></div></div>
+
+<div class="panel" data-roles="researcher"><div class="ph">Your alphas <a class="r" href="fleet.html">Alpha Fleet</a></div><div class="tw"><table><thead><tr><th>Alpha</th><th>Stage</th><th class="n">Allocation</th><th class="n">Net PnL</th><th>Health</th></tr></thead><tbody>
+ <tr><td><a href="fleet.html"><b>BTC-Trend</b></a> <span class="mono" style="color:var(--ink-faint)">v3</span></td><td><span class="stage live"><i></i>Live</span><span class="stage paper"><i></i>Paper</span></td><td class="n">120,000</td><td class="n pos">+21,430</td><td><span class="flag" data-k="ok">OK</span></td></tr>
+ <tr><td><a href="fleet.html"><b>SOL-Break</b></a> <span class="mono" style="color:var(--ink-faint)">v1</span></td><td><span class="stage paper"><i></i>Paper</span></td><td class="n">30,000</td><td class="n pos">+3,120</td><td><span class="flag" data-k="ok">OK</span></td></tr></tbody></table></div></div>
+</div></main>
+<script src="kit.js"></script>
+<script src="charts.js"></script>
+<script>
+var mode="pnl";
+function draw(){var h=document.getElementById("eq");if(h&&h.offsetParent){var r=equityChart(h,{mode:mode,seed:11,drift:2800,vol:30000,flows:[{ago:62,v:120000}],label:"Fund performance",base:1120000,end:84210.55});
+ var f=r.data[r.data.length-1],cd=r.dd[r.dd.length-1],md=Math.min.apply(0,r.dd),a=document.getElementById("kpnl"),b=document.getElementById("kdd"),c=document.getElementById("kddm");
+ if(a){a.textContent=(f>=0?"+":"\u2212")+Math.abs(f).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});a.className="v "+(f>=0?"pos":"neg")}if(b)b.textContent="\u2212"+Math.abs(cd).toFixed(1)+"%";if(c)c.textContent="Max \u2212"+Math.abs(md).toFixed(1)+"%"}}
+function bars(){var c=document.getElementById("contrib");if(c&&c.offsetParent)divBars(c,[{n:"BTC-Trend v3",v:21430},{n:"ETH-Mean v2",v:12980},{n:"SOL-Break v1",v:3120},{n:"AVAX-Rev v1",v:-1840},{n:"DOGE-Mom v2",v:-4120}])}
+document.addEventListener("click",function(e){var b=e.target.closest(".ph .seg[data-local] button");if(!b)return;[].forEach.call(b.parentNode.children,function(x){x.setAttribute("aria-pressed",x===b)});if(b.closest(".panel").querySelector("#eq")){mode=b.getAttribute("data-v");draw()}});
+KIT.on(function(){setTimeout(function(){draw();bars()},0)});window.addEventListener("resize",function(){draw();bars()});
+</script></body></html>

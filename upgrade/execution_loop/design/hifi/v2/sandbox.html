@@ -1,0 +1,76 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sandbox certification — V2</title><link rel="stylesheet" href="kit.css">
+<style>
+/* layout only */
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--panel);border:1px solid var(--line-strong)}
+.stp{padding:12px 16px;border-top:3px solid var(--line-strong);border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0;display:grid;gap:6px;align-content:start}
+.stp.pass{border-top-color:var(--f-ok)}.stp.fail{border-top-color:var(--bad)}.stp.na{border-top-style:dashed}
+.stp .h{display:grid;gap:6px;justify-items:start}.stp .nm{font-weight:500}.stp .nm span{font:400 12px/16px var(--font-mono);color:var(--ink-faint);margin-right:6px}
+.stp .m{font-size:12px;line-height:16px;color:var(--ink-faint)}
+.railx{display:grid;gap:24px;align-content:start}
+.bl{margin:0;padding:0;list-style:none}.bl li{padding:8px 0 8px 12px;border-left:3px solid var(--bad);border-bottom:1px solid var(--line-soft)}.bl li:last-child{border-bottom:0}
+textarea.nt{width:100%;min-height:88px;background:var(--paper);color:var(--ink);border:1px solid var(--line-strong);padding:8px 10px;font:400 13px/20px var(--font-sans);resize:vertical}textarea.nt:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.lbl{display:block;font:500 10.5px/16px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin:10px 0 4px}
+.rcpt{border:1px solid var(--f-applied);border-left-width:3px;background:var(--f-applied-bg);padding:10px 12px;display:grid;gap:6px}
+@media(max-width:1100px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:660px){.steps{grid-template-columns:1fr}}
+</style></head>
+<body data-page="Sandbox certification" data-nav="fleet" data-crumb="Execution / Sandbox certification" data-window-lock="Certification run">
+<main><div class="stack">
+<div id="app" class="stack" data-hide-roles="researcher"></div>
+<div class="stack" data-roles="researcher">
+ <div class="mast"><div><h1>Sandbox certification</h1><div class="sub">Operators, managers and reviewers</div></div></div>
+ <div class="panel"><div class="empty" style="min-height:200px"><div style="text-align:center;display:grid;gap:10px"><div>You can’t open this page.</div><div><a href="access.html#see">See what you can access</a> · <a href="fleet.html">Alpha Fleet</a></div></div></div></div>
+</div>
+</div></main>
+<script src="kit.js"></script><script src="charts.js"></script><script src="modules/stage.js"></script>
+<script>
+var TABS=[["reconciliation","Reconciliation"],["steps","Steps (7)"],["promotion-plans","Promotion plans"],["timeline","Timeline"]];
+var note={rec:null,txt:""};
+var BASE=[
+ {n:1,t:"Connect",st:"pass",why:"Testnet keys accepted. The account answered.",src:"Broker",at:"16 Oct 17:58Z"},
+ {n:2,t:"Sync",st:"pass",why:"Balances and positions matched after first sync.",src:"Broker",at:"16 Oct 18:05Z"},
+ {n:3,t:"Order types",st:"pass",why:"Market, limit and stop orders were accepted.",src:"Broker",at:"16 Oct 18:10Z"},
+ {n:4,t:"Reconciliation clean",st:"fail",why:"2 findings are still open.",src:"Derived",at:"17 Oct 12:02Z"},
+ {n:5,t:"Timeboxed run",st:"pass",why:"Ran 6 hours with no halt.",src:"Execution",at:"17 Oct 11:40Z"},
+ {n:6,t:"Cleanup",st:"na",why:"Cleanup evidence has not arrived yet.",src:"Derived"},
+ {n:7,t:"Exit review",st:"na",why:"Waits for steps 4 and 6.",src:"Portal"}];
+function steps(nq,ps){return BASE.map(function(s,i){var o=Object.assign({},s);if(nq){o.st="na";o.why="Source not qualified.";delete o.at}else if(ps==="partial"&&i>=3){o.st="na";o.why="The source did not report this step.";delete o.at}return o})}
+var FL={pass:["ok","Pass"],fail:["rejected","Fail"],na:["na","Unavailable"]};
+function kpi(l,v,n,c){return'<div class="kpi"><div class="l">'+l+"</div>"+v+'<div class="n">'+n+"</div></div>"}
+function kv(t,c){return'<div class="v '+(c||"")+'">'+t+"</div>"}
+function tbl(h,rows,cls){return'<div class="tw"><table class="cards"><thead><tr>'+h.map(function(x){return"<th"+(x[1]?' class="n"':"")+">"+x[0]+"</th>"}).join("")+"</tr></thead><tbody>"+rows.map(function(r){return"<tr>"+r.map(function(c,i){return'<td data-l="'+h[i][0]+'"'+(h[i][1]?' class="n"':"")+">"+c+"</td>"}).join("")+"</tr>"}).join("")+"</tbody></table></div>"}
+function render(){var S=KIT.state;if(S.role==="researcher")return;STG.states([["normal","Normal"],["loading","Loading"],["partial","Partial"],["stale","Stale"]]);
+ var ps=STG.ps(),nq=S.data==="nq",ld=ps==="loading",stale=ps==="stale"&&!nq,part=ps==="partial"&&!nq,tab=STG.tab(TABS),ro=S.role,st=steps(nq,ps);
+ var pass=st.filter(function(s){return s.st==="pass"}).length,fail=st.filter(function(s){return s.st==="fail"}).length,na=st.filter(function(s){return s.st==="na"}).length;
+ var chips=ld?{loading:1}:nq?{rt:["na","Not available"],fr:{k:"na",t:"Source not qualified"},rc:["na","Not available"]}:{rt:["ok","Running"],fr:stale?{k:"stale",t:"Stale · 11:40Z"}:{k:"fresh",t:"Fresh · 12:04Z"},rc:part?["unknown","Not reported"]:["partial","2 open"]};
+ var h=STG.head({stage:"sandbox",crumb:[["Alpha Fleet","fleet.html"],["DOGE-Mom v2","alpha.html"],["OKX-Test-01","account.html"],["Sandbox",null]],title:"Sandbox certification",sub:"DOGE-Mom v2 · OKX testnet",chips:chips,spine:{cur:3,blk:!nq&&!ld}});
+ var banner=nq?'<div class="banner">Source not qualified. Figures stay unavailable until it is.</div>':stale?'<div class="banner">Showing data as of 11:40Z. Source has not updated for 24 min.</div>':part?'<div class="banner">Some figures are missing. 2 of 3 sources reported.</div>':"";
+ var K;if(ld)K=[0,0,0,0,0].map(function(_,i){return kpi(["Steps passed","Open findings","Critical open","Promotion plans","Gate"][i],'<div class="v">'+STG.sk(90)+"</div>","&nbsp;")}).join("");
+ else if(nq)K=[["Steps passed"],["Open findings"],["Critical open"],["Promotion plans"],["Gate"]].map(function(k){return kpi(k[0],'<div class="v na">Not available</div>',"Source not qualified")}).join("");
+ else K=kpi("Steps passed",kv(pass+" / 7"),fail+" failed · "+na+" unavailable")+(part?kpi("Open findings",'<div class="v na">Not available</div>',"Source did not report"):kpi("Open findings",kv("2"),'<a href="#" data-go="reconciliation">Reconciliation</a>'))+(part?kpi("Critical open",'<div class="v na">Not available</div>',"Source did not report"):kpi("Critical open",kv("0"),"None open"))+kpi("Promotion plans",kv("1"),"1 draft")+kpi("Gate",'<div class="v">'+KIT.flag("rejected","Blocked")+"</div>","Exit review");
+ var P;
+ if(ld)P='<div class="panel"><div class="ph">Loading Sandbox certification…</div><span class="sk b"></span><span class="sk b"></span><span class="sk b"></span></div>';
+ else if(tab==="reconciliation"){var rows=[["Equity (USDT)","10,184.20","10,184.21","−0.01"],["Fees paid (USDT)","12.34","12.35","−0.01"],["BTC position","0.0300","0.0300","0.0000"],["Open orders","2","2","0"]];
+  P=STG.triad({rows:rows,na:nq?"all":part?["broker","dif"]:[],why:nq?"Source not qualified.":"The broker did not report.",asof:stale?"11:40Z":"12:04Z"})+
+   '<div class="panel" style="margin-top:24px"><div class="ph">Findings <span class="r">'+(nq?"Not available":part?"Not available":"2 open · 0 critical")+"</span></div>"+(nq||part?'<div class="na">Not available. '+(nq?"Source not qualified.":"The source did not report findings.")+"</div>":tbl([["Finding"],["Severity"],["Opened"],["Status"]],[["Fee total differs by 0.01 USDT",KIT.flag("partial","Minor"),"17 Oct 12:02Z",KIT.flag("pending","Open")],["Fill 3 arrived 4 s after the broker’s",KIT.flag("partial","Minor"),"17 Oct 11:15Z",KIT.flag("pending","Open")]]))+"</div>"}
+ else if(tab==="steps")P='<div class="steps">'+st.map(function(s){var f=FL[s.st];return'<div class="stp '+s.st+'"><div class="h"><span class="nm"><span>'+s.n+"</span>"+s.t+"</span>"+KIT.flag(f[0],f[1])+'</div><div>'+s.why+'</div><div class="m">'+(s.at?"Checked "+s.at+" · "+s.src:"No evidence · "+s.src)+"</div></div>"}).join("")+"</div>";
+ else if(tab==="promotion-plans")P='<div class="panel"><div class="ph">Promotion plans <span class="r">'+(nq?"Not available":"1 draft")+"</span></div>"+(nq?'<div class="na">Not available. Source not qualified.</div>':tbl([["Plan"],["Target"],["Envelope",1],["Status"],["Author"]],[["Plan 1","Canary","5,000.00 USDT",KIT.flag("pending","Draft"),"Bobby"]]))+"</div>";
+ else P='<div class="panel"><div class="ph">Timeline <span class="r">UTC</span></div>'+(nq?'<div class="na">Not available. Source not qualified.</div>':tbl([["At"],["Event"],["By"]],[["17 Oct 12:02Z","Finding opened: fee total differs","System"],["17 Oct 11:40Z","Step 5 passed: timeboxed run","System"],["17 Oct 05:40Z","Timeboxed run started","Lan"],["16 Oct 18:10Z","Step 3 passed: order types","System"],["16 Oct 17:55Z","Certification started","Lan"]]))+"</div>";
+ var why=nq?"Source not qualified":"Steps 4 and 6 must pass first";
+ var block=nq?'<li>Source not qualified. The exit cannot be assessed.</li>':ld?"":'<li>Step 4 failed: 2 findings are still open.</li><li>Step 6 is unavailable: no cleanup evidence yet.</li><li>Step 7 waits for steps 4 and 6.</li>';
+ var exit='<div class="panel"><div class="ph">Exit review <span class="r">'+(ld?"":KIT.flag("rejected","Blocked"))+'</span></div>'+(ld?'<span class="sk b"></span><span class="sk b"></span>':'<ul class="bl">'+block+"</ul>")+'<div style="display:grid;gap:12px;margin-top:14px"><div>'+KIT.disabled("Submit for review",why)+'</div><div>'+KIT.disabled("Request Sandbox exit review","notEnabled")+'</div></div>'+
+  '<details><summary>What exit needs</summary><div class="prov">Clean exposure → final sync → clean dry-run → return HALTED → all actions plan → apply → verify.</div></details>'+
+  '<details><summary>Provenance</summary><div class="prov"><div>Certification scert_fixture_77 · workflow version 1 · deployment dep_77</div><div>Source: broker UNKNOWN · workflow DRAFT'+(nq?" · source UNAVAILABLE":"")+"</div>"+(nq||part?"<div>SANDBOX_STEP_CONNECT_UNAVAILABLE · SANDBOX_STEP_SYNC_UNAVAILABLE · SANDBOX_STEP_ORDER_TYPES_UNAVAILABLE</div><div>SANDBOX_STEP_RECONCILIATION_UNAVAILABLE · SANDBOX_STEP_TIMEBOXED_RUN_UNAVAILABLE</div><div>SANDBOX_STEP_CLEANUP_UNAVAILABLE · SANDBOX_STEP_EXIT_REVIEW_UNAVAILABLE</div>":"<div>SANDBOX_STEP_RECONCILIATION_FAIL · SANDBOX_STEP_CLEANUP_UNAVAILABLE · SANDBOX_STEP_EXIT_REVIEW_UNAVAILABLE</div>")+(note.rec?"<div>Receipt rcpt_sbx_0412</div>":"")+"</div></details></div>";
+ var form;if(ro==="reviewer")form='<div style="margin-top:2px">'+KIT.disabled("Record review note","noGrant")+"</div>";
+ else if(note.rec)form='<div class="rcpt"><div>'+KIT.flag("applied","Recorded")+' <span class="mono">'+note.rec.at+'</span></div><div>By '+note.rec.by+'. It cannot be edited.</div><div><a href="approvals.html">Open in Approvals</a> · <a href="#" data-act="copy">Copy reference</a> · <a href="#" data-act="again">Write another</a></div></div>';
+ else form='<label class="lbl" for="nt">What you checked, and what you concluded</label><textarea class="nt" id="nt" placeholder="At least 24 characters">'+STG.esc(note.txt)+'</textarea><div style="margin-top:10px"><button class="btn pri" id="nb" disabled>Record review note</button><span class="why" id="nw"></span></div>';
+ var rec='<div class="panel"><div class="ph">Record review note <span class="r">Portal evidence</span></div><div class="na" style="margin-bottom:4px">A note records a review. It does not pass a step.</div>'+(ld?'<span class="sk b"></span>':form)+"</div>";
+ document.getElementById("app").innerHTML=h+STG.tabs(TABS,tab)+banner+'<div class="kpis">'+K+'</div><div class="grid2"><div style="min-width:0">'+P+'</div><div class="railx">'+exit+rec+"</div></div>";
+ sync()}
+function sync(){var t=document.getElementById("nt"),b=document.getElementById("nb"),w=document.getElementById("nw");if(!t)return;var n=t.value.trim().length,ok=n>=24;b.disabled=!ok;w.textContent=ok?n+" characters":"Needs at least 24 characters ("+n+" so far)"}
+document.addEventListener("input",function(e){if(e.target.id==="nt"){note.txt=e.target.value;sync()}});
+document.addEventListener("click",function(e){var a=e.target.closest("[data-act],[data-go],#nb");if(!a)return;e.preventDefault();
+ if(a.id==="nb"&&!a.disabled){note.rec={at:"17 Oct 12:06Z",by:KIT.state.role==="operator"?"Lan":"Bobby"};render();KIT.toast("Review note recorded")}
+ else if(a.dataset.act==="copy")KIT.toast("Reference copied");else if(a.dataset.act==="again"){note={rec:null,txt:""};render()}
+ else if(a.dataset.go){STG._tab=a.dataset.go;render()}});
+KIT.on(render);window.addEventListener("stg:tab",render);
+</script></body></html>

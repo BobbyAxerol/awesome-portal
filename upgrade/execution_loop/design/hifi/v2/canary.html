@@ -1,0 +1,54 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Canary control room — V2</title><link rel="stylesheet" href="kit.css">
+<style>
+/* layout only */
+.railx{display:grid;gap:24px;align-content:start}.colx{display:grid;gap:24px;min-width:0;align-content:start}
+.dec{padding:10px 0;border-bottom:1px solid var(--line-soft)}.dec:last-of-type{border-bottom:0}.dec b{font-weight:500}.dec .m{font-size:12px;color:var(--ink-faint);margin-bottom:8px}
+.bl{margin:0;padding:0;list-style:none}.bl li{padding:8px 0 8px 12px;border-left:3px solid var(--bad);border-bottom:1px solid var(--line-soft)}.bl li:last-child{border-bottom:0}
+.rb{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line-soft)}.rb:last-child{border-bottom:0}.rb .m{font-size:12px;color:var(--ink-faint)}
+.gtd{display:flex;gap:10px;align-items:center}.gtd .gg{flex:1}.gtd .mono{width:44px;text-align:right}
+.cmpl{display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+</style></head>
+<body data-page="Canary control room" data-nav="fleet" data-crumb="Execution / Canary control room" data-window-lock="Trial window">
+<main><div class="stack">
+<div id="app" class="stack" data-hide-roles="researcher"></div>
+<div class="stack" data-roles="researcher">
+ <div class="mast"><div><h1>Canary control room</h1><div class="sub">Operators, managers and reviewers</div></div></div>
+ <div class="panel"><div class="empty" style="min-height:200px"><div style="text-align:center;display:grid;gap:10px"><div>You can’t open this page.</div><div><a href="access.html#see">See what you can access</a> · <a href="fleet.html">Alpha Fleet</a></div></div></div></div>
+</div>
+</div></main>
+<script src="kit.js"></script><script src="charts.js"></script><script src="modules/stage.js"></script>
+<script>
+var TABS=[["envelope","Envelope"],["positions-orders","Positions & orders"],["reconciliation","Reconciliation"],["guard-rule","Guard rule"]];
+var CAPS=[["Capital cap (USDT)",10000,5000,3820,2,"10,000.00","5,000.00","3,820.00"],["Gross notional cap (USDT)",20000,10000,6120.4,2,"20,000.00","10,000.00","6,120.40"],["Daily loss cap (USDT)",500,250,38.6,2,"500.00","250.00","38.60"],["Open orders (max)",40,20,1,0,"40","20","1"],["Duration (days)",30,14,6,0,"30","14","6"]];
+function note(t){return'<div class="na">'+t+"</div>"}
+function render(){var S=KIT.state;if(S.role==="researcher")return;STG.states([["normal","Normal"],["loading","Loading"],["partial","Partial"],["stale","Stale"],["guarded","Guarded"]]);
+ var ps=STG.ps(),nq=S.data==="nq",ld=ps==="loading",stale=ps==="stale"&&!nq,part=ps==="partial"&&!nq,gd=ps==="guarded"&&!nq,tab=STG.tab(TABS);
+ var chips=ld?{loading:1}:nq?{rt:["na","Not available"],fr:{k:"na",t:"Source not qualified"},rc:["na","Not available"]}:{rt:["ok","Running"],fr:stale?{k:"stale",t:"Stale · 11:40Z"}:{k:"fresh",t:"Fresh · 12:04Z"},rc:gd?["stale","Broker 14 min old"]:part?["unknown","Not reported"]:["ok","Clean"]};
+ var tk="";for(var i=1;i<=14;i++)tk+='<i class="'+(i<6?"on":i===6?"now":"")+'"></i>';
+ var h=STG.head({stage:"canary",crumb:[["Alpha Fleet","fleet.html"],["ETH-Mean v2","alpha.html"],["Binance-02","account.html"],["Canary",null]],title:"Canary control room",sub:"ETH-Mean v2 · Binance-02 · Core",chips:chips,spine:{cur:4},
+  extra:nq||ld?"":'<div class="trial"><span>Trial day 6 of 14</span><span class="tk" role="img" aria-label="Day 6 of 14">'+tk+"</span><span>Exit review in 8 days</span></div>"});
+ var banner=nq?'<div class="banner">Source not qualified. Figures stay unavailable until it is.</div>':stale?'<div class="banner">Showing data as of 11:40Z. Source has not updated for 24 min.</div>':part?'<div class="banner">Some figures are missing. 2 of 3 sources reported.</div>':gd?'<div class="banner">Broker data is stale. Scale-up is blocked. Protective actions stay open.</div>':"";
+ var k=ld?"ld":nq?"na":"ok",kp=function(l,v,n,c,hide){return STG.kpi(l,v,n,hide&&!ld&&!nq?"na":k,c,hide&&!nq?"Source did not report":"")};
+ var K=kp("Capital consumed","3,820.00 <small>USDT</small>","76% of approved")+kp("Gross notional","6,120.40 <small>USDT</small>","61% of approved",0,part)+kp("Daily PnL","−38.60 <small>USDT</small>","After fees","neg")+kp("Open orders","1","Max 20")+kp("Broker equity","5,112.40 <small>USDT</small>",gd?"Stale · 11:50Z":"Internal 5,112.40",0,part);
+ /* chart panel */
+ var chart='<div class="panel"><div class="ph">Live vs Paper vs Backtest <span class="r">Return since canary start</span></div>'+(ld?'<span class="sk b" style="height:200px"></span>':nq||part?'<div class="empty" style="min-height:200px">Not available. '+(nq?"Source not qualified.":"The live series did not report.")+"</div>":'<div class="chart" id="cmp"></div><div class="cap"><span>Dashed = simulated. Never mixed into one score.</span></div>')+"</div>";
+ /* tabs */
+ var T;
+ if(ld)T='<div class="panel"><div class="ph">Loading Canary control room…</div><span class="sk b"></span><span class="sk b"></span><span class="sk b"></span></div>';
+ else if(tab==="envelope"){var rows=CAPS.map(function(c){var f=c[3]/c[2],pcs=Math.round(f*100);return[c[0],c[5],c[6],part&&c[0].indexOf("Gross")===0||nq?'<span class="na">Not available</span>':c[7],nq||part&&c[0].indexOf("Gross")===0?'<span class="na">Not available</span>':'<div class="gtd">'+STG.gauge(f,c[0])+'<span class="mono">'+pcs+"%</span></div>"]});
+  T='<div class="panel"><div class="ph">Envelope <span class="r">Used = consumed ÷ approved</span></div>'+(nq?note("Consumption is not available. Source not qualified."):'<div class="cmpl">'+KIT.flag(part?"partial":"ok",part?"Partly checked":"Within envelope")+"<span>"+(part?"Gross notional did not report.":"Every cap is under 80% of what was approved.")+"</span></div>")+STG.tbl([["Cap"],["Limit",1],["Approved",1],["Consumed",1],["Used"]],rows)+"</div>"}
+ else if(tab==="positions-orders")T='<div class="panel"><div class="ph">Positions <span class="r">Orders below</span></div>'+(nq?note("Not available. Source not qualified."):STG.tbl([["Symbol"],["Side"],["Quantity",1],["Entry",1],["Mark",1],["Unrealised PnL",1],["Leverage",1]],[["ETHUSDT",KIT.flag("ok","Long"),"1.2000","3,412.50","3,421.10","+10.32","1.1×"],["BNBUSDT",KIT.flag("ok","Long"),"3.5000","566.40","565.10","−4.55","1.0×"]])+'<div class="ph" style="margin:16px -16px 12px;border-top:1px solid var(--line-strong)">Open orders <span class="r">1 open</span></div>'+STG.tbl([["Symbol"],["Type"],["Side"],["Quantity",1],["Price",1],["Since"],["Ack latency",1]],[["ETHUSDT","Limit","Buy","0.4000","3,380.00","11:58Z","212 ms"]]))+"</div>";
+ else if(tab==="reconciliation")T=STG.triad({rows:[["Equity (USDT)","5,112.40","5,112.40","0.00"],["Gross notional (USDT)","6,120.40","6,120.40","0.00"],["ETH position","1.2000","1.2000","0.0000"],["Open orders","1","1","0"]],na:nq?"all":part?["broker","dif"]:[],why:nq?"Source not qualified.":"The broker did not report.",asof:gd?"11:50Z · stale":stale?"11:40Z":"12:04Z"});
+ else T='<div class="panel"><div class="ph">Guard rule <span class="r">Scale-up only</span></div>'+STG.tbl([["Condition"],["Scale-up"],["Protective actions"],["Now"]],[["Broker snapshot is stale",KIT.flag("attention","Blocked"),KIT.flag("ok","Allowed"),nq?KIT.flag("na","Not available"):gd?KIT.flag("stale","Stale"):KIT.flag("ok","Fresh")]])+'<div class="na" style="margin-top:10px">Staleness limits what the Portal can see. Guardrails still run at the venue.</div></div>';
+ var tabsP=ld?T:STG.tabs(TABS,tab)+T;
+ /* rail */
+ var dec=[["Hold","Keep the envelope unchanged.","liveClosed"],["Reduce","Lower the approved caps.","liveClosed"],["Rollback","Return to Paper and close positions.","liveClosed"],["Request scale","Ask for a larger envelope.","Opens at day 14, in 8 days"]];
+ var D='<div class="panel"><div class="ph">Promotion decision <span class="r">Via exit review</span></div>'+dec.map(function(d){return'<div class="dec"><div class="m">'+d[1]+"</div>"+KIT.disabled(d[0],nq?"Source not qualified":d[2])+"</div>"}).join("")+'<details><summary>How promotion works</summary><div class="prov">Decisions go through Canary exit review. Elapsed time alone never promotes.</div></details></div>';
+ var bl=nq?"<li>Source not qualified. Nothing can be assessed yet.</li>":'<li>Production commands are closed on this build, so no decision can be sent.</li><li>The Canary owner has not signed off yet.</li><li>The base risk profile is not verified yet.</li>'+(gd?"<li>Broker data is stale, which blocks scale-up.</li>":"");
+ var B='<div class="panel"><div class="ph">Before scale-up</div>'+(ld?'<span class="sk b"></span><span class="sk b"></span>':'<ul class="bl">'+bl+"</ul>")+'<details><summary>Provenance</summary><div class="prov"><div>PRODUCTION_COMMAND_INACTIVE · CANARY_OWNER_GATE_REQUIRED · BASE_RISK_PROFILE_UNVERIFIED</div><div>LIVE_SOURCE_UNAVAILABLE · BROKER_SYNC_UNAVAILABLE · rule BROKER_STALE_BLOCKS_SCALE_ONLY</div><div>Envelope rev 1 · risk profile risk-profile-rev-12 · deployment dep_88</div></div></details></div>';
+ var rb=[["Flatten plan prepared","Checked 17 Oct 11:30Z","ok","Ready"],["Paper twin running","Same alpha, simulated","ok","Ready"],["Broker data fresh",gd?"Last update 11:50Z":"Last update 12:04Z",gd?"stale":"ok",gd?"Stale":"Ready"],["Last rollback drill","11 Oct 10:00Z","ok","Passed"]];
+ var R='<div class="panel"><div class="ph">Rollback readiness <span class="r">'+(ld?"":nq?KIT.flag("na","Not available"):gd?KIT.flag("partial","Degraded"):KIT.flag("ok","Ready"))+"</span></div>"+(ld?'<span class="sk b"></span><span class="sk b"></span>':nq?note("Not available. Source not qualified."):rb.map(function(r){return'<div class="rb"><div>'+r[0]+'<div class="m">'+r[1]+"</div></div>"+KIT.flag(r[2],r[3])+"</div>"}).join(""))+"</div>";
+ document.getElementById("app").innerHTML=h+banner+'<div class="kpis">'+K+'</div><div class="grid2"><div class="colx">'+chart+'<div style="min-width:0">'+tabsP+'</div></div><div class="railx">'+D+B+R+"</div></div>";
+ var c=document.getElementById("cmp");if(c){var d=STG.demo(124);STG.lines(c,{live:d.live,paper:d.paper,bt:d.bt,start:Date.UTC(2026,9,12,9)})}}
+KIT.on(render);window.addEventListener("stg:tab",render);window.addEventListener("resize",function(){var c=document.getElementById("cmp");if(c&&c._redraw&&c.offsetParent)c._redraw()});
+</script></body></html>

@@ -1,0 +1,109 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin Actions — V2</title><link rel="stylesheet" href="kit.css">
+<style>
+/* page-local layout only */
+[hidden]{display:none!important}
+.dstrip{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:6px 12px;border:1px dashed var(--line-strong);color:var(--ink-faint);font:500 11px/16px var(--font-sans);letter-spacing:.04em;text-transform:uppercase}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:24px;align-items:start}.split>.drawer{position:sticky;top:45px}
+.tier td{height:44px;white-space:normal}.tier td.nm{min-width:180px}.tier .sub{margin:0}.tier tr.on td{background:var(--accent-soft)}.tier tr{cursor:pointer}
+.facts{display:grid;grid-template-columns:96px 1fr;gap:4px 12px;margin:0 0 14px}.facts dt{color:var(--ink-faint);font:500 11px/20px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}.facts dd{margin:0}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-strong);border:1px solid var(--line-strong);margin:0 0 14px}.steps>div{background:var(--panel);padding:8px 10px;font:500 11px/16px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}.steps>div.on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent)}.steps>div.done{color:var(--ink-soft)}
+.blk{border:1px solid var(--line-strong);background:var(--sunken);padding:10px 12px;margin:0 0 12px}.blk h6{margin:0 0 6px;font:500 11px/16px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+.fld{display:grid;gap:4px;margin:0 0 10px}.fld label{color:var(--ink-faint);font:500 11px/16px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+input.in,select.in{background:var(--paper);border:1px solid var(--line-strong);color:var(--ink);padding:6px 10px;font:400 13px/18px var(--font-sans);width:100%}
+.sk{background:var(--cell);height:14px;margin:10px 0}
+@media(max-width:660px){.tier td.nm{display:block}.tier td.nm::before{content:none}}
+@media(max-width:1100px){.split{grid-template-columns:1fr}.split>.drawer{position:static;width:auto}}
+</style></head>
+<body data-page="Admin Actions" data-nav="admin" data-crumb="Administration / Admin Actions">
+<main><div class="stack">
+<div class="mast"><div><h1>Admin Actions</h1><div class="sub">Plan, apply and verify. Administrators only.</div></div>
+ <div class="ctrls"><span class="chipx" id="fresh"></span><a class="chipx" href="operations.html?source=admin">Open in Operations (source: admin)</a></div></div>
+
+<div class="dstrip"><span>Design preview</span><span>Page</span>
+ <span class="seg" id="sseg"><button data-v="ok" aria-pressed="true">Normal</button><button data-v="loading" aria-pressed="false">Loading</button><button data-v="empty" aria-pressed="false">Empty</button><button data-v="partial" aria-pressed="false">Partial</button><button data-v="stale" aria-pressed="false">Stale</button></span>
+ <span>Command</span><span class="seg" id="cseg"><button data-v="none" aria-pressed="true">Not started</button><button data-v="preview" aria-pressed="false">Preview</button><button data-v="accepted" aria-pressed="false">Accepted</button><button data-v="uncertain" aria-pressed="false">Uncertain</button><button data-v="applied" aria-pressed="false">Applied</button><button data-v="display" aria-pressed="false">Catching up</button></span></div>
+
+<div id="notes"></div>
+<div id="denied" class="panel" hidden><div class="empty"><div><b>You can't open this page.</b><div class="na" style="margin-top:6px">Admin Actions is for administrators.</div><div style="margin-top:10px"><a href="access.html#see">See what you can access</a></div></div></div></div>
+
+<div id="main" class="stack">
+ <div class="row" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between"><span class="seg" id="flt" role="group" aria-label="Filter by state"></span><span class="na" id="sum"></span></div>
+ <div class="split"><div class="stack" id="cat"></div><aside class="drawer" id="pane" aria-label="Action detail"></aside></div>
+ <div class="panel" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:center"><span>Capital actions are not started here. They begin in <a href="portfolio.html">Portfolios</a> with a preview.</span><a href="operations.html?source=admin">Open in Operations (source: admin)</a></div>
+ <details><summary>Provenance</summary><div class="tw" style="padding-top:8px"><table><thead><tr><th>Action</th><th>Catalogue state</th><th>First reason it is not live</th></tr></thead><tbody id="prov"></tbody></table><div class="na" style="padding:10px 0">The command relay has one gate per capability. All run from fixtures with the kill switch engaged until the source is qualified.</div></div></details>
+</div></div></main>
+<script src="kit.js"></script><script src="charts.js"></script>
+<script>
+var $=function(i){return document.getElementById(i)};function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function flag(k,l){return'<span class="flag" data-k="'+k+'">'+esc(l)+'</span>'}
+var NOTYET="SUPPORTED · INACTIVE · N27_COMMAND_TRANSPORT_NOT_ACTIVATED",AMB="INCOMPATIBLE · SOURCE_ROUTE_MAPPING_AMBIGUOUS";
+/* a: state when source qualified, n: state when not qualified. r=ready, e=not enabled, w=start elsewhere, b=not offered */
+var T=[{k:"read",n:"Read",d:"Look only. Nothing changes.",i:[
+ ["sys","System health","Check that each service is up","System","r","r","read","CONNECTED · LOCAL R0"],["inspect","Account inspect","See balances and state of an account","Account","r","e","read",AMB],["caph","Capital history","List capital moves for a portfolio","Portfolio","r","e","read",NOTYET],["nav","Performance and NAV","Read NAV and returns","Portfolio","r","e","read",AMB],["size","Sizing explanations","Explain how an order was sized","Alpha","r","e","read",AMB],["bind","Broker bindings and exposure","Show how accounts map to brokers","Account","r","e","read",AMB],["redis","Redis inspection","Look inside the data store directly","System","b","b","read","INCOMPATIBLE · DIRECT_REDIS_ACCESS_FORBIDDEN"]]},
+ {k:"cap",n:"Portfolio capital",d:"Moves money. Starts in Portfolios.",i:[
+ ["cp","Create portfolio","Open a new portfolio","Portfolio","w","w","capital",AMB],["ps","Portfolio state","Pause or resume a portfolio","Portfolio","w","w","capital",NOTYET],["ca","Change allocation","Move budget between alphas","Portfolio","w","w","capital",NOTYET],["cfg","Declarative config","Plan and apply a full config","System","w","w","capital",AMB]]},
+ {k:"dep",n:"Deployment risk",d:"Changes how a deployment may trade.",i:[
+ ["ds","Deployment state","Pause, resume or retire a deployment","Deployment","r","e","cmd",NOTYET],["ts","Trading state per venue","Allow or stop trading on a venue","Venue","r","e","cmd",NOTYET],["rp","Risk profile","Change limits for an alpha","Alpha","e","e","cmd",AMB],["ra","Register alpha","Add an alpha to the registry","Alpha","e","e","cmd",NOTYET]]},
+ {k:"acc",n:"Account",d:"Changes account rules.",i:[
+ ["ap","Account policy","Set what an account may do","Account","r","e","cmd",NOTYET],["sp","Seed paper account","Fill a paper account for testing","Account","e","e","cmd",NOTYET]]},
+ {k:"syn",n:"Sync and reconciliation",d:"Re-reads the broker. Fixes drift.",i:[
+ ["bs","Broker account sync","Pull balances from the broker","Account","r","e","cmd",NOTYET],["rpos","Reconcile positions","Match positions with the broker","Account","r","e","cmd",NOTYET],["roo","Reconcile open orders","Match open orders with the broker","Account","r","e","cmd",NOTYET],["agg","Aggregate physical reconcile","Match all accounts at once","Account","e","e","cmd",NOTYET]]},
+ {k:"em",n:"Emergency",d:"Needs a second approver and a security key.",i:[
+ ["ec","Emergency close","Close positions now","Account","r","e","danger","SUPPORTED · INACTIVE · N16B_COMPATIBLE_COMMAND_IDENTITY_NOT_ACTIVATED"],["hr","Shared testnet hard reset","Wipe the shared test network","System","b","b","danger","INCOMPATIBLE · HOST_DESTRUCTIVE_PROCEDURE_NOT_EXPOSED"],["lr","Lab reset","Wipe the lab environment","System","b","b","danger","INCOMPATIBLE · HOST_DESTRUCTIVE_PROCEDURE_NOT_EXPOSED"]]}];
+var ST={r:["ok","Ready to run"],e:["na","Not enabled for this profile"],w:["operation","Start in Portfolios"],b:["paused","Not offered in the portal"],p:["partial","Not published yet"]};
+var S={flt:"all",sel:"sys",pst:"ok",cs:"none",su:"idle",ran:false,note:""};
+function st(it){var nq=KIT.state.data==="nq",s=nq?it[5]:it[4];if(S.pst==="partial"&&(it[0]==="roo"||it[0]==="agg"))s="p";return s}
+function all(){var o=[];T.forEach(function(t){t.i.forEach(function(it){o.push(it)})});return o}
+function find(id){return all().filter(function(i){return i[0]===id})[0]}
+function counts(){var c={all:0,r:0,e:0,w:0,b:0,p:0};all().forEach(function(i){c.all++;c[st(i)]++});return c}
+function render(){var K=KIT.state,den=K.role!=="manager",nq=K.data==="nq";$("denied").hidden=!den;$("main").hidden=den;
+ $("fresh").innerHTML=nq?'<span class="dot warn"></span>Source not qualified':S.pst==="stale"?'<span class="dot warn"></span>Stale 14m':'<span class="dot"></span>Fresh · 12:00Z';
+ var nt=[];if(nq&&!den)nt.push('<div class="banner">Source not qualified. Only local reads run.</div>');if(S.pst==="partial"&&!den)nt.push('<div class="banner">Some actions are missing. 3 of 4 sources reported.</div>');if(S.pst==="stale"&&!den)nt.push('<div class="banner">Showing the catalogue as of 11:50Z. Source has not updated for 14m.</div>');$("notes").innerHTML=nt.join("");if(den)return;
+ var c=counts(),loading=S.pst==="loading",empty=S.pst==="empty",F=[["all","All"],["r","Ready"],["e","Not enabled"],["w","Start elsewhere"],["b","Not offered"]];if(c.p)F.push(["p","Not published"]);
+ $("flt").innerHTML=F.map(function(f){return'<button data-f="'+f[0]+'" aria-pressed="'+(S.flt===f[0])+'">'+f[1]+" "+(loading||empty?"":c[f[0]])+'</button>'}).join("");
+ $("sum").textContent=loading?"Loading actions…":empty?"":c.r+" of "+c.all+" can run now";
+ var h="";
+ if(loading)h='<div class="panel"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="na">Loading Admin Actions…</div></div>';
+ else if(empty)h='<div class="panel"><div class="empty" style="min-height:200px"><div style="text-align:center"><b>No actions are published for this profile.</b><div class="na">Check Provenance for the catalogue source.</div></div></div></div>';
+ else T.forEach(function(t){var rows=t.i.filter(function(i){return S.flt==="all"||st(i)===S.flt});if(!rows.length)return;var rd=t.i.filter(function(i){return st(i)==="r"}).length;
+  h+='<div class="panel"><div class="ph"><span>'+t.n+'</span><span class="r">'+t.d+' · '+rd+' of '+t.i.length+' ready</span></div><div class="tw"><table class="tier cards"><thead><tr><th>Action</th><th>Scope</th><th>State</th></tr></thead><tbody>'+rows.map(function(i){var s=ST[st(i)];return'<tr data-id="'+i[0]+'" class="'+(S.sel===i[0]?"on":"")+'" tabindex="0"><td class="nm" data-l="Action"><b>'+esc(i[1])+'</b><div class="sub na">'+esc(i[2])+'</div></td><td data-l="Scope">'+i[3]+'</td><td data-l="State">'+flag(s[0],s[1])+(st(i)==="w"?' <a href="portfolio.html">Open</a>':"")+'</td></tr>'}).join("")+'</tbody></table></div></div>'});
+ $("cat").innerHTML=h;
+ $("prov").innerHTML=all().map(function(i){return'<tr><td>'+esc(i[1])+'</td><td class="mono">'+(i[4]==="r"||i[4]==="e"&&false?"":"")+esc(i[7].split(" · ").slice(0,2).join(" · "))+'</td><td class="mono">'+esc(i[7].split(" · ").pop())+'</td></tr>'}).join("");
+ pane()}
+function stepper(){var o=S.cs,idx=o==="none"?0:o==="preview"?1:2,lab=["1 Plan","2 Apply","3 Verify"];return'<div class="steps">'+lab.map(function(l,i){return'<div class="'+(i===idx?"on":i<idx?"done":"")+'">'+l+'</div>'}).join("")+'</div>'}
+function pane(){var el=$("pane"),it=find(S.sel);if(S.pst==="loading"||S.pst==="empty"){el.innerHTML='<div class="ph">Action detail</div><div class="na">'+(S.pst==="loading"?"Loading…":"Pick an action once the catalogue is published.")+'</div>';return}
+ if(!it){el.innerHTML='<div class="ph">Action detail</div><div class="na">Pick an action to see what it does and how it runs.</div>';return}
+ var s=st(it),sx=ST[s],kind=it[6],h='<div class="ph"><span>'+flag(kind==="read"?"ok":kind==="danger"?"incident":kind==="capital"?"operation":"approval",kind==="read"?"Read":kind==="danger"?"Emergency":kind==="capital"?"Capital":"Command")+' '+esc(it[1])+'</span></div>';
+ h+='<dl class="facts"><dt>What</dt><dd>'+esc(it[2])+'</dd><dt>Scope</dt><dd>'+it[3]+'</dd><dt>Who</dt><dd>Administrators</dd><dt>How</dt><dd>'+(kind==="read"?"Runs here. Nothing is sent to the trading system.":"Plan, apply with step-up, then verify.")+'</dd><dt>State</dt><dd>'+flag(sx[0],sx[1])+'</dd></dl>';
+ if(s==="r"&&kind==="read")h+=readUI(it);
+ else if(s==="r")h+=cmdUI(it);
+ else if(s==="w")h+='<div class="blk"><h6>Start in Portfolios</h6>Capital actions begin with a preview in the portfolio. Nothing is started from this page.<div style="margin-top:8px"><a class="btn" href="portfolio.html" style="display:inline-block">Open Portfolios</a></div></div>';
+ else if(s==="p")h+='<div class="blk">This action is not published yet. Try again after the catalogue refreshes.</div>';
+ else h+='<div style="margin-bottom:12px">'+KIT.disabled("Make plan",s==="b"?"readOnly":"notEnabled")+'</div>'+(s==="b"?'<div class="na" style="margin-bottom:12px">This action is not offered in the portal.</div>':"");
+ h+='<details><summary>Provenance</summary><div class="na mono" style="padding:4px 0">'+esc(it[7])+'</div></details>';el.innerHTML=h;bind()}
+function readUI(it){var r=S.ran;return'<div class="blk"><h6>Run local read</h6><div class="fld"><label for="rm">Mode</label><select class="in" id="rm"><option>All modes</option><option>Paper</option><option>Sandbox</option><option>Live</option></select></div><div class="fld"><label for="ra">Account (optional)</label><select class="in" id="ra"><option>All accounts</option><option>Binance-02</option><option>Bybit-01</option><option>Paper-01</option></select></div><button class="btn pri" id="run">Run read</button></div>'+
+ (r?'<div class="blk"><h6>Receipt</h6><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">'+flag("applied","Read finished")+'<span class="mono">17 Oct 12:04Z</span></div><table><thead><tr><th>Service</th><th>State</th></tr></thead><tbody><tr><td>Projection</td><td>'+flag("ok","OK")+'</td></tr><tr><td>Query</td><td>'+flag("ok","OK")+'</td></tr><tr><td>Live updates</td><td>'+flag("stale","Stale 14m")+'</td></tr></tbody></table><div class="na" style="margin-top:8px">Ran on the local read model. Nothing was sent to the trading system.</div><div style="margin-top:6px"><a class="chipx mono" href="operations.html?source=admin">rd-4f21a9</a></div></div>':"")}
+function cmdUI(it){var o=S.cs,h=stepper(),dan=it[6]==="danger",needNote=S.note.length<12;
+ h+='<div class="blk"><h6>1 Plan</h6><div class="fld"><label for="tg">Target</label><select class="in" id="tg"><option>Binance-02</option><option>Bybit-01</option><option>Paper-01</option></select></div><div class="fld"><label for="nt">Note (at least 12 characters)</label><input class="in" id="nt" value="'+esc(S.note)+'" placeholder="Why this change"></div>'+
+  (o==="none"?(needNote?KIT.disabled("Make plan","needNote"):'<button class="btn pri" id="plan">Make plan</button>'):'<span class="na">Plan made</span>')+'</div>';
+ if(o!=="none"){h+='<div class="blk"><h6>Plan</h6><div style="margin-bottom:8px">'+(o==="preview"?flag("pending","Preview · not recorded"):o==="uncertain"?flag("unknown","Uncertain"):o==="applied"?flag("applied","Applied"):o==="display"?flag("applied","Applied")+" "+flag("display","Display catching up"):flag("operation","Accepted")+" "+flag("display","Catching up"))+'</div>'+
+  '<table><thead><tr><th>Field</th><th class="n">Now</th><th class="n">After</th></tr></thead><tbody><tr><td>'+(dan?"Open positions":"Trading state")+'</td><td class="n">'+(dan?"3":"Allowed")+'</td><td class="n">'+(dan?"0":"Paused")+'</td></tr><tr><td>Orders affected</td><td class="n">2</td><td class="n">0</td></tr></tbody></table></div>';
+  if(o==="preview"){h+='<div class="blk"><h6>2 Apply</h6>'+(dan?'<div class="na" style="margin-bottom:8px">Needs a second approver and a security key.</div>':'')+stepUp()+(S.su==="ok"?'<button class="btn pri" id="apply">'+(dan?"Close positions":"Apply")+'</button>':KIT.disabled("Apply","needNote").replace("Add a note of at least 12 characters","Verify your identity first").replace(' · <a href="access.html">My access</a>',""))+'</div>'}
+  if(o==="accepted"||o==="display")h+='<div class="blk"><h6>3 Verify</h6>We sent the request. The screen can lag behind the venue.<div style="margin-top:8px"><button class="btn" id="chk">Check status</button></div></div>';
+  if(o==="uncertain")h+='<div class="blk"><h6>3 Verify</h6><div class="banner" style="margin-bottom:8px">We could not confirm this. It may have applied. Check the original request before doing anything.</div><button class="btn" id="chk">Check original request</button> <div class="why">Send again is blocked until the outcome is known.</div></div>';
+  if(o==="applied")h+='<div class="blk"><h6>3 Verify</h6>Read side is current. Nothing more to do.<div style="margin-top:8px"><a href="operations.html?source=admin">Open in Operations (source: admin)</a></div></div>'}
+ return h}
+function stepUp(){var u=S.su;return'<div class="blk" style="border-left:3px solid var(--f-approval)"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">'+flag("approval","Step-up required")+(u==="ok"?'<span class="mono">Verified 12:06Z · 5 min left</span>':u==="busy"?'<span class="na">Waiting for your key…</span>':u==="fail"?'<span class="neg">Not verified. Try again.</span>':"")+'</div>'+(u==="ok"?"":'<button class="btn" id="su"'+(u==="busy"?" disabled":"")+'>'+(u==="fail"?"Try again":"Verify with security key")+'</button>')+'</div>'}
+function bind(){var g=function(i){return $(i)};if(g("run"))g("run").onclick=function(){S.ran=true;render()};
+ if(g("nt"))g("nt").oninput=function(e){var was=S.note.length<12;S.note=e.target.value;if(was!==(S.note.length<12)){var p=e.target.selectionStart;render();var n=$("nt");if(n){n.focus();n.setSelectionRange(p,p)}}};
+ if(g("plan"))g("plan").onclick=function(){S.cs="preview";S.su="idle";mark("cseg","preview");render()};
+ if(g("su"))g("su").onclick=function(){S.su="busy";render();setTimeout(function(){S.su="ok";render()},700)};
+ if(g("apply"))g("apply").onclick=function(){S.cs="accepted";mark("cseg","accepted");render()};
+ if(g("chk"))g("chk").onclick=function(){S.cs=S.cs==="accepted"?"display":"applied";mark("cseg",S.cs);render()}}
+function mark(id,v){[].forEach.call($(id).children,function(b){b.setAttribute("aria-pressed",b.getAttribute("data-v")===v)})}
+document.addEventListener("click",function(e){var f=e.target.closest("[data-f]");if(f){S.flt=f.getAttribute("data-f");render();return}var tr=e.target.closest("#cat tr[data-id]");if(tr&&!e.target.closest("a")){S.sel=tr.getAttribute("data-id");S.ran=false;S.note="";S.su="idle";if(S.cs!=="none"){S.cs="none";mark("cseg","none")}render()}});
+document.addEventListener("keydown",function(e){if(e.key==="Enter"){var tr=e.target.closest&&e.target.closest("#cat tr[data-id]");if(tr){S.sel=tr.getAttribute("data-id");render()}}});
+$("sseg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.pst=b.getAttribute("data-v");mark("sseg",S.pst);render()});
+$("cseg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.cs=b.getAttribute("data-v");mark("cseg",S.cs);var it=find(S.sel);if(S.cs!=="none"&&(!it||it[6]==="read"||st(it)!=="r")){S.sel="ds";S.flt="all"}if(S.cs==="preview")S.su="idle";if(S.cs!=="none"&&S.note.length<12)S.note="Pause while the broker sync is checked";render()});
+KIT.on(function(){if(KIT.state.data==="nq"&&S.sel!=="sys"&&st(find(S.sel))!=="r"){}render()});
+</script></body></html>

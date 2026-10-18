@@ -1,0 +1,161 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Blotter — V2</title><link rel="stylesheet" href="kit.css">
+<style>
+/* page-local layout only */
+[hidden]{display:none!important}
+.dstrip{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:6px 12px;border:1px dashed var(--line-strong);color:var(--ink-faint);font:500 11px/16px var(--font-sans);letter-spacing:.04em;text-transform:uppercase}
+.scope{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.scope .k{font:500 11px/16px var(--font-mono);color:var(--ink-faint);letter-spacing:.04em}.scope .chipx button{background:none;border:0;color:var(--ink-soft);cursor:pointer;padding:0 2px;font:500 13px/16px var(--font-mono)}
+select.sel{background:var(--paper);border:1px solid var(--line-strong);color:var(--ink);padding:3px 8px;font:400 12px/18px var(--font-sans)}
+.row2{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;justify-content:space-between}.tools{display:flex;gap:12px;align-items:flex-start;position:relative}
+.menu{position:absolute;right:0;top:36px;z-index:20;background:var(--panel);border:1px solid var(--line-strong);padding:8px 12px;min-width:230px;display:none}.menu.on{display:block}.menu label{display:flex;gap:8px;align-items:center;padding:3px 0;cursor:pointer}
+.bt td,.bt th{padding:4px 8px;font-size:12px}.bt th{letter-spacing:.03em;font-size:10.5px}.bt td{height:36px}.bt td .sub{margin:0;font-size:11px;line-height:14px}.bt td.n{font-size:12px}
+.bt th.stk,.bt td.stk{position:sticky;right:0;background:var(--panel);box-shadow:-1px 0 0 var(--line)}.bt th.stk{background:var(--sunken)}.bt tbody tr:hover td.stk{background:var(--cell)}.bt tr.sel td{background:var(--accent-soft)}
+.x{background:none;border:1px solid var(--line-strong);color:var(--ink);width:20px;height:20px;padding:0;cursor:pointer;font:500 12px/1 var(--font-mono);margin-right:6px;vertical-align:middle}
+.kidbox{display:flex;flex-wrap:wrap;gap:16px 40px;white-space:normal;padding:6px 0}.kidbox table{width:auto}.kidbox h6{margin:0 0 6px;font:500 11px/16px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}.kidbox table td,.kidbox table th{padding:3px 8px;height:auto;font-size:12px}
+.pager{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;justify-content:space-between;padding-top:12px}.pager>span{display:flex;gap:12px;flex-wrap:wrap}
+details.panel>summary.ph{margin:-16px;list-style:none;cursor:pointer}details.panel[open]>summary.ph{margin-bottom:14px}details.panel>summary.ph::before{content:"\25B8";margin-right:8px;color:var(--ink-faint)}details.panel[open]>summary.ph::before{content:"\25BE"}details.panel>summary.ph>span:first-of-type{margin-right:auto}
+.bt .kidbox td{display:table-cell;padding:3px 8px}.bt .kidbox tr{display:table-row;border:0;padding:0}.bt .kidbox thead{display:table-header-group}.bt .kidbox td::before{content:none}
+.sk{background:var(--cell);height:14px;margin:10px 0}
+
+</style></head>
+<body data-page="Blotter" data-nav="blotter" data-crumb="Execution / Blotter">
+<main><div class="stack">
+<div class="mast"><div><h1 data-hide-roles="researcher">Blotter</h1><h1 data-roles="researcher">Your orders</h1><div class="sub" data-hide-roles="researcher">Orders and fills · <span class="win">90D</span></div><div class="sub" data-roles="researcher">Your slice only · <span class="win">90D</span></div></div>
+ <div class="ctrls"><span class="chipx" id="fresh"></span></div></div>
+
+<div class="dstrip"><span>Design preview</span><span>Opened from</span>
+ <span class="seg" id="from"><button data-v="deployment" aria-pressed="true">Deployment</button><button data-v="account" aria-pressed="false">Account</button><button data-v="alpha" aria-pressed="false">Alpha</button><button data-v="fill" aria-pressed="false">Fill</button><button data-v="none" aria-pressed="false">Nothing</button></span>
+ <span>State</span><span class="seg" id="sseg"><button data-v="ok" aria-pressed="true">Normal</button><button data-v="loading" aria-pressed="false">Loading</button><button data-v="empty" aria-pressed="false">Empty</button><button data-v="partial" aria-pressed="false">Partial</button><button data-v="stale" aria-pressed="false">Stale</button><button data-v="denied" aria-pressed="false">Denied</button></span></div>
+
+<div id="notes"></div>
+<div id="denied" class="panel" hidden><div class="empty"><div><b>You can't open this page.</b><div class="na" style="margin-top:6px">This scope is outside your slice.</div><div style="margin-top:10px"><a href="access.html#see">See what you can access</a></div></div></div></div>
+
+<div id="main" class="stack">
+ <div class="panel">
+  <div class="scope" id="scope"></div>
+  <div class="row2" style="margin-top:14px"><span class="seg" id="chips" role="group" aria-label="Status"></span>
+   <span class="tools"><span><button class="btn" id="colbtn" aria-expanded="false">Columns ▾</button></span><span id="exp"></span>
+    <div class="menu" id="colmenu" role="group" aria-label="Choose columns"></div></span></div>
+  <div class="na" id="count" style="margin:12px 0 8px"></div>
+  <div class="tw" id="tw"></div>
+  <div class="pager"><span><button class="btn" id="newer">Newer</button><button class="btn" id="older">Older</button></span><span class="na" id="pgnote"></span></div>
+  <details style="margin-top:8px"><summary>How to read</summary><div class="na" style="padding:6px 0">Rows are newest first. Numbers are exact and never shortened. Fees are in the venue currency. Orders with bracket legs, fills and an order path expand in place. Working orders re-price live. Totals by currency are not published for this page yet.</div></details>
+ </div>
+ <details class="panel" id="fun" open><summary class="ph"><span>Order funnel</span><span class="r" id="funr"></span></summary><div id="funb"></div></details>
+ <details class="panel" id="grp"><summary class="ph"><span>Conditional groups</span><span class="r" id="grpr"></span></summary><div id="grpb"></div></details>
+ <details><summary>Provenance</summary><div class="na" style="padding:6px 0" id="prov"></div></details>
+</div></div></main>
+<script src="kit.js"></script><script src="charts.js"></script><script src="modules/trade-replay.js"></script>
+<script>
+var $=function(i){return document.getElementById(i)},MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],END=Date.UTC(2026,9,17,12,0),PAGE=50;
+function p2(n){return(n<10?"0":"")+n}function fd(t,s){var d=new Date(t);return p2(d.getUTCDate())+" "+MON[d.getUTCMonth()]+" "+p2(d.getUTCHours())+":"+p2(d.getUTCMinutes())+(s?":"+p2(d.getUTCSeconds()):"")+"Z"}
+function fx(n,d){var s=Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});return(n<0?"−":"")+s}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function rng(s){return function(){s=(s*1664525+1013904223)%4294967296;return s/4294967296}}
+var DEPS=[{id:"btc-trend-v3",name:"BTC-Trend v3",alpha:"BTC-Trend",acct:"Binance-02",venue:"Binance",stage:"live",sym:"BTCUSDT",base:71000,qd:4,pd:2,n:96,mine:1},
+ {id:"eth-mean-v2",name:"ETH-Mean v2",alpha:"ETH-Mean",acct:"Binance-02",venue:"Binance",stage:"canary",sym:"ETHUSDT",base:2480,qd:3,pd:2,n:64},
+ {id:"avax-rev-v1",name:"AVAX-Rev v1",alpha:"AVAX-Rev",acct:"Bybit-01",venue:"Bybit",stage:"live",sym:"AVAXUSDT",base:34.2,qd:1,pd:2,n:58},
+ {id:"sol-break-v1",name:"SOL-Break v1",alpha:"SOL-Break",acct:"Paper-01",venue:"Paper venue",stage:"paper",sym:"SOLUSDT",base:151.4,qd:2,pd:2,n:120,mine:1},
+ {id:"doge-mom-v2",name:"DOGE-Mom v2",alpha:"DOGE-Mom",acct:"Sandbox-01",venue:"Sandbox venue",stage:"sandbox",sym:"DOGEUSDT",base:.1612,qd:0,pd:4,n:40}];
+var ENVSTAGES={real:["live","canary"],paper:["paper"],sandbox:["sandbox"]},STN={live:"Live",canary:"Canary",paper:"Paper",sandbox:"Sandbox"};
+var SL={working:"Working",conditional:"Conditional",filled:"Filled",partial:"Partial",rejected:"Rejected",cancelled:"Cancelled"},SK={working:"pending",conditional:"pending",filled:"ok",partial:"partial",rejected:"rejected",cancelled:"paused"},SORDER=["working","conditional","filled","partial","rejected","cancelled"];
+var REASON={risk:"The order size was above the deployment cap.",venue:"The venue refused the price because it was outside the allowed band."};
+var ALL=null;
+function build(){if(ALL)return ALL;var out=[],fc=0;function hx(r,n){var s="";for(var i=0;i<n;i++)s+="0123456789abcdef"[Math.floor(r()*16)];return s}
+ DEPS.forEach(function(D,di){var r=rng(101+di*57),t=END-20*6e4,px=D.base,gen=D.n,spanD=80;
+  if(D.id==="btc-trend-v3"){var smp=TradeReplay.sample().filter(function(o){return o.leg==="Entry"});smp.forEach(function(o){var kids=TradeReplay.sample().filter(function(k){return k.parent===o.id}),fl=o.fills,q=fl.reduce(function(a,f){return a+f.q},0),av=fl.reduce(function(a,f){return a+f.q*f.p},0)/q;
+    var legs=kids.map(function(k){return{leg:k.leg==="Close"?"Manual close":k.leg,trigger:k.trigger!=null?k.trigger:null,state:k.status==="Conditional"?"Armed":k.status==="Filled"?(k.leg==="Close"?"Closed":"Triggered"):"Cancelled"}});
+    out.push({id:o.id,t:o.t,dep:D,side:o.side,type:"Limit",tif:"GTC",price:o.price,qty:o.qty,filled:q,avg:av,slip:0,fee:fl.reduce(function(a,f){return a+f.fee},0),status:"filled",cid:"cl-"+o.id.slice(4),vid:"v-"+o.id.slice(4),legs:legs,fills:fl.map(function(f){return{id:f.id,t:f.t,q:f.q,p:f.p,fee:f.fee}}),hop:{s:o.t,g:o.t+380,a:o.t+910,f:fl[0].t}})});
+   gen=D.n-smp.length;t=Date.UTC(2026,9,14,16,0);spanD=78}
+  var step=(spanD*864e5/gen)*1;
+  for(var i=0;i<gen;i++){t-=step*(.2+1.6*r());px*=1+(r()-.5)*.012;var u=r(),st=u<.52?"filled":u<.6?"working":u<.68?"conditional":u<.76?"partial":u<.84?"rejected":"cancelled",side=r()<.5?"buy":"sell",tp=r(),type=st==="conditional"?"Stop limit":tp<.25?"Market":"Limit",qty=+(D.qd?((D.id==="btc-trend-v3"?.08:D.id==="eth-mean-v2"?1.4:D.id==="sol-break-v1"?40:D.id==="avax-rev-v1"?120:1)*(.3+r()*.7)):Math.round(2000+r()*9000)).toFixed(D.qd),
+    price=type==="Market"?null:+(px*(1+(r()-.5)*.002)).toFixed(D.pd),ref=px,fills=[],filled=0,avg=null,slip=null,fee=0,rej=null,id="ord-"+hx(r,6),t0=Math.round(t);
+   if(st==="rejected")rej=r()<.5?"risk":"venue";
+   if(st==="filled"||st==="partial"){var nf=st==="partial"?1+(r()<.4?1:0):1+Math.floor(r()*3),rem=st==="partial"?+(qty*(.3+r()*.4)).toFixed(D.qd):qty,left=rem,tt=t0+1500;for(var f=0;f<nf;f++){var q=f===nf-1?left:+(rem/nf).toFixed(D.qd);left=+(left-q).toFixed(D.qd);if(q<=0&&f===nf-1){q=rem}var p=+((price||ref)*(1+(type==="Market"?(r()-.4)*.0009:-r()*.0003))).toFixed(D.pd),fe=+(q*p*(type==="Market"?.0004:.0002)).toFixed(2);fills.push({id:"fil-"+hx(r,6),t:tt,q:q,p:p,fee:fe});tt+=2000+Math.round(r()*90000)}
+    filled=fills.reduce(function(a,f){return a+f.q},0);avg=fills.reduce(function(a,f){return a+f.q*f.p},0)/filled;fee=fills.reduce(function(a,f){return a+f.fee},0);slip=((avg/(price||ref)-1)*1e4)*(side==="buy"?1:-1)}
+   var legs=[];if(st==="filled"&&r()<.32){var tpx=+(avg*(1+(side==="buy"?1:-1)*.011)).toFixed(D.pd),spx=+(avg*(1-(side==="buy"?1:-1)*.006)).toFixed(D.pd),w=r()<.5;legs=[{leg:"Take profit",trigger:tpx,state:w?"Triggered":"Cancelled"},{leg:"Stop loss",trigger:spx,state:w?"Cancelled":"Triggered"}]}
+   var h={s:t0,g:rej==="risk"?null:t0+200+Math.round(r()*700),a:null,f:fills.length?fills[0].t:null};if(rej!=="risk")h.a=rej==="venue"?null:h.g+300+Math.round(r()*900);
+   out.push({id:id,t:t0,dep:D,side:side,type:type,tif:type==="Market"?"IOC":"GTC",price:price,qty:qty,filled:filled,avg:avg,slip:slip,fee:fee,status:st,rej:rej,cid:"cl-"+hx(r,5),vid:st==="rejected"?null:"v-"+hx(r,7),legs:legs,fills:fills,hop:h})}});
+ out.forEach(function(o){o.n=0});out.sort(function(a,b){return b.t-a.t});ALL=out;return out}
+/* ---------- state ---------- */
+var Q=new URLSearchParams(location.search),S={dep:null,acct:null,alpha:null,status:"all",off:0,exp:{},pst:"ok",focusO:null,focusF:null,cols:null,openFrom:"deployment"};
+var COLS=[["time","Time (UTC)",1],["order","Order",1],["dep","Deployment",1],["acct","Account",0],["alpha","Alpha",0],["sym","Symbol",1],["side","Side · Type",1],["tif","TIF",0],["price","Price",1,"n"],["qty","Filled / Qty",1,"n"],["avg","Avg price",1,"n"],["slip","Slippage",0,"n"],["fee","Fee (USDT)",1,"n"],["cid","Client ID",0],["vid","Venue order",0],["status","Status",1]];
+S.cols={};COLS.forEach(function(c){S.cols[c[0]]=!!c[2]});
+function ini(){var o=null;if(Q.get("fill")){var fid=Q.get("fill");build().forEach(function(x){x.fills.forEach(function(f){if(f.id===fid){o=x;S.focusF=fid}})})}else if(Q.get("order")){o=build().filter(function(x){return x.id===Q.get("order")})[0]||null}
+ if(o){S.focusO=o.id;S.dep=o.dep.id;S.exp[o.id]=1;S.openFrom=Q.get("fill")?"fill":"order"}
+ else{if(Q.get("deployment"))S.dep=Q.get("deployment");if(Q.get("account"))S.acct=Q.get("account");if(Q.get("alpha"))S.alpha=Q.get("alpha");if(S.dep||S.acct||S.alpha)S.openFrom=S.dep?"deployment":S.acct?"account":"alpha";else if(!location.search){S.dep="btc-trend-v3"}else S.openFrom="none"}}
+function authorized(){var env=KIT.state.env,r=KIT.state.role==="researcher";return build().filter(function(o){return ENVSTAGES[env].indexOf(o.dep.stage)>=0&&(!r||o.dep.mine)&&within(o)})}
+function within(o){var w=KIT.state.win;return w==="all"||o.t>=END-(+w)*864e5}
+function scoped(){return authorized().filter(function(o){return(!S.dep||o.dep.id===S.dep)&&(!S.acct||o.dep.acct===S.acct)&&(!S.alpha||o.dep.alpha===S.alpha)})}
+function counts(L){var c={all:L.length};SORDER.forEach(function(k){c[k]=0});L.forEach(function(o){c[o.status]++});return c}
+/* ---------- render ---------- */
+function flag(k,l){return'<span class="flag" data-k="'+k+'">'+esc(l)+'</span>'}
+function depTxt(o){return'<a href="deployment.html"><b>'+esc(o.dep.name)+'</b></a><div class="sub">'+esc(o.dep.venue)+'</div>'}
+var CELL={time:function(o){return'<span class="mono">'+fd(o.t,true)+'</span>'},
+ order:function(o){var arm=o.legs.some(function(l){return l.state==="Armed"});return'<button class="x" data-x="'+o.id+'" aria-expanded="'+!!S.exp[o.id]+'" aria-label="Show legs and fills">'+(S.exp[o.id]?"−":"+")+'</button><a class="chipx mono" href="trade-replay.html?focus=order&order='+o.id+'" title="Open on chart">'+o.id+'</a>'+(arm?' <span title="Bracket legs armed" class="na">◇</span>':"")},
+ dep:depTxt,acct:function(o){return'<a href="account.html">'+esc(o.dep.acct)+'</a>'},alpha:function(o){return'<a href="alpha.html">'+esc(o.dep.alpha)+'</a>'},sym:function(o){return o.dep.sym},
+ side:function(o){return(o.side==="buy"?"Buy":"Sell")+' <span class="na">'+o.type+'</span>'},tif:function(o){return o.tif},
+ price:function(o){return o.price!=null?fx(o.price,o.dep.pd):'<span class="na">At market</span>'},qty:function(o){return o.filled>0||o.status==="filled"||o.status==="partial"?fx(o.filled,o.dep.qd)+" / "+fx(o.qty,o.dep.qd):'<span class="na">None / </span>'+fx(o.qty,o.dep.qd)},
+ avg:function(o){return o.avg!=null?fx(o.avg,o.dep.pd):'<span class="na">No fill</span>'},slip:function(o){return o.slip!=null?fx(o.slip,1)+" bps":'<span class="na">No fill</span>'},
+ fee:function(o,i){return o.fills.length?(S.pst==="partial"&&i%5===3?'<span class="na">Not available</span>':fx(o.fee,2)):'<span class="na">No fill</span>'},cid:function(o){return'<span class="mono">'+o.cid+'</span>'},vid:function(o){return o.vid?'<span class="mono">'+o.vid+'</span>':'<span class="na">Not sent</span>'},
+ status:function(o){return flag(SK[o.status],SL[o.status])}};
+function kid(o,ncols){var L=o.legs,F=o.fills,h=o.hop;
+ function hop(l,t,prev){return t==null?'<tr><td>'+l+'</td><td class="na" colspan="2">Not reached</td></tr>':'<tr><td>'+l+'</td><td class="mono">'+fd(t,true)+'</td><td class="mono na">'+(prev!=null?(t-prev<10000?"+"+(t-prev)+" ms":"+"+((t-prev)/1000).toFixed(1)+" s"):"")+'</td></tr>'}
+ var legs=L.length?'<table><thead><tr><th>Leg</th><th class="n">Trigger</th><th>State</th></tr></thead><tbody>'+L.map(function(l){return'<tr><td>'+l.leg+'</td><td class="n">'+(l.trigger!=null?fx(l.trigger,o.dep.pd):'<span class="na">At market</span>')+'</td><td>'+flag(l.state==="Armed"?"pending":l.state==="Cancelled"?"paused":"ok",l.state)+'</td></tr>'}).join("")+'</tbody></table>':'<div class="na">No bracket legs on this order</div>';
+ var fills=F.length?'<table><thead><tr><th>Fill</th><th>Time (UTC)</th><th class="n">Qty</th><th class="n">Price</th><th class="n">Fee</th></tr></thead><tbody>'+F.map(function(f){return'<tr class="'+(S.focusF===f.id?"sel":"")+'"><td><a class="chipx mono" href="trade-replay.html?focus=order&order='+o.id+'">'+f.id+'</a></td><td class="mono">'+fd(f.t,true)+'</td><td class="n">'+fx(f.q,o.dep.qd)+'</td><td class="n">'+fx(f.p,o.dep.pd)+'</td><td class="n">'+fx(f.fee,2)+'</td></tr>'}).join("")+'</tbody></table>':'<div class="na">'+(o.status==="rejected"?REASON[o.rej]:"No fills yet")+'</div>';
+ var path='<table><tbody>'+hop("Submitted",h.s)+hop("Risk grant",h.g,h.s)+hop("Venue acknowledged",h.a,h.g)+hop("First fill",h.f,h.a)+'</tbody></table>';
+ return'<tr class="kid"><td colspan="'+ncols+'" data-l=""><div class="kidbox"><div><h6>Bracket legs</h6>'+legs+'</div><div><h6>Fills</h6>'+fills+'</div><div><h6>Order path</h6>'+path+(o.status==="rejected"?'<div class="na" style="margin-top:6px">'+REASON[o.rej]+'</div>':"")+'<div style="margin-top:8px"><a href="trade-replay.html?focus=order&order='+o.id+'">Open on chart</a></div></div></div></td></tr>'}
+function visCols(){var r=KIT.state.role==="researcher";return COLS.filter(function(c){return S.cols[c[0]]&&!(r&&c[0]==="acct")})}
+function drawScope(){var el=$("scope"),r=KIT.state.role==="researcher",env=KIT.state.env,h='<span class="chipx"><span class="k">stage</span>'+ENVSTAGES[env].map(function(s){return STN[s]}).join(", ")+'<span class="na">from context bar</span></span>';
+ if(r)h+='<span class="chipx"><span class="k">scope</span>Your slice only</span>';
+ function ch(k,v,key,link){return'<span class="chipx"><span class="k">'+k+'</span>'+(link?'<a href="'+link+'">'+esc(v)+'</a>':esc(v))+' <button data-rm="'+key+'" aria-label="Remove '+k+' filter">✕</button></span>'}
+ var D=S.dep&&DEPS.filter(function(d){return d.id===S.dep})[0];if(D)h+=ch("deployment",D.name+" · "+D.acct,"dep","deployment.html");if(S.acct)h+=ch("account",S.acct,"acct","account.html");if(S.alpha)h+=ch("alpha",S.alpha,"alpha","alpha.html");
+ var opts='<option value="">Add scope…</option>',vis=DEPS.filter(function(d){return ENVSTAGES[env].indexOf(d.stage)>=0&&(!r||d.mine)});
+ opts+='<optgroup label="Deployment">'+vis.map(function(d){return'<option value="dep:'+d.id+'">'+d.name+'</option>'}).join("")+'</optgroup>';
+ if(!r)opts+='<optgroup label="Account">'+Array.from(new Set(vis.map(function(d){return d.acct}))).map(function(a){return'<option value="acct:'+a+'">'+a+'</option>'}).join("")+'</optgroup>';
+ opts+='<optgroup label="Alpha">'+Array.from(new Set(vis.map(function(d){return d.alpha}))).map(function(a){return'<option value="alpha:'+a+'">'+a+'</option>'}).join("")+'</optgroup>';
+ h+='<select class="sel" id="add" aria-label="Add scope">'+opts+'</select>';if(S.dep||S.acct||S.alpha)h+=' <button class="btn" data-clear style="padding:2px 10px">Clear all</button>';el.innerHTML=h;
+ var p=[];if(S.dep)p.push("deployment="+S.dep);if(S.acct)p.push("account="+S.acct);if(S.alpha)p.push("alpha="+S.alpha);try{history.replaceState(null,"",p.length?"?"+p.join("&"):location.pathname)}catch(e){}}
+function render(){var K=KIT.state,nq=K.data==="nq",den=(K.role==="researcher"&&(S.acct||(S.dep&&!DEPS.filter(function(d){return d.id===S.dep})[0].mine)))||S.pst==="denied";
+ $("denied").hidden=!den;$("main").hidden=den;$("fresh").innerHTML=nq?'<span class="dot warn"></span>Source not qualified':S.pst==="stale"?'<span class="dot warn"></span>Stale 14m':'<span class="dot"></span>Fresh · 12:00Z';
+ var nt=[];if(S.focusO&&!den&&!nq)nt.push('<div class="banner info">Opened at '+(S.focusF?'fill <span class="mono">'+S.focusF+'</span> of order ':'order ')+'<span class="mono">'+S.focusO+'</span>. The row is highlighted and open. <a href="trade-replay.html?focus=order&order='+S.focusO+'">Open on chart</a></div>');
+ if(nq)nt.push('<div class="banner">Source not qualified. Figures stay unavailable until it is.</div>');if(S.pst==="partial"&&!nq)nt.push('<div class="banner">Some figures are missing. 2 of 3 sources reported.</div>');if(S.pst==="stale"&&!nq)nt.push('<div class="banner">Showing data as of 11:46Z. Source has not updated for 14m.</div>');$("notes").innerHTML=nt.join("");
+ if(den)return;drawScope();var cols=visCols(),n=cols.length;
+ var base=authorized().filter(function(o){return(!S.dep||o.dep.id===S.dep)&&(!S.acct||o.dep.acct===S.acct)&&(!S.alpha||o.dep.alpha===S.alpha)}),C=counts(base),L=S.pst==="empty"?[]:base.filter(function(o){return S.status==="all"||o.status===S.status}),Cb=S.pst==="empty"?counts([]):C;
+ if(S.focusO){var ix=L.map(function(o){return o.id}).indexOf(S.focusO);if(ix>=0&&!S._placed){S.off=Math.floor(ix/PAGE)*PAGE;S._placed=1}}
+ if(S.off>=L.length)S.off=0;var page=L.slice(S.off,S.off+PAGE),loading=S.pst==="loading";
+ $("chips").innerHTML=[["all","All"]].concat(SORDER.map(function(k){return[k,SL[k]]})).map(function(c){return'<button data-st="'+c[0]+'" aria-pressed="'+(S.status===c[0])+'">'+c[1]+" "+(nq?'':loading?'<span class="na">…</span>':Cb[c[0]])+'</button>'}).join("");
+ var tot=Cb.all;$("count").innerHTML=nq?'Not available · orders source not qualified':loading?'Loading orders…':!tot?'':'Showing <b class="mono">'+page.length+'</b> of <b class="mono">'+(S.status==="all"?tot:L.length)+'</b> '+(S.status==="all"?"authorized":SL[S.status].toLowerCase()+" · "+tot+" authorized")+' · newest first';
+ var tw=$("tw");
+ if(nq){tw.innerHTML='<div class="empty" style="min-height:160px"><div class="na"><b>Not available</b><br>Orders and fills are hidden until the source is qualified.</div></div>'}
+ else if(loading){tw.innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div>'}
+ else if(!page.length){tw.innerHTML='<div class="empty" style="min-height:160px"><div style="text-align:center">'+(S.pst==="empty"||!tot?'<b>Nothing here yet.</b><div class="na">No orders in this scope and window.</div>':'<b>No orders match these filters.</b><div class="na">Try another status.</div>')+'<div style="margin-top:10px"><button class="btn" data-clear data-allst>Clear all</button></div></div></div>'}
+ else{var h='<table class="bt cards"><thead><tr>'+cols.map(function(c){return'<th class="'+(c[3]||"")+(c[0]==="status"?" stk":"")+'">'+c[1]+'</th>'}).join("")+'</tr></thead><tbody>';
+  page.forEach(function(o,i){h+='<tr class="'+(S.focusO===o.id?"sel":"")+'" id="r-'+o.id+'">'+cols.map(function(c){return'<td class="'+(c[3]||"")+(c[0]==="status"?" stk":"")+'" data-l="'+c[1]+'">'+CELL[c[0]](o,i)+'</td>'}).join("")+'</tr>';if(S.exp[o.id])h+=kid(o,n)});tw.innerHTML=h+'</tbody></table>'}
+ $("newer").disabled=S.off===0||nq;$("older").disabled=S.off+PAGE>=L.length||nq;$("pgnote").textContent=nq||!L.length?"":(S.off===0?"At the newest rows":"Rows "+(S.off+1)+" to "+(S.off+page.length));
+ $("exp").innerHTML=KIT.disabled("Export","noExport");
+ $("colmenu").innerHTML=COLS.filter(function(c){return c[0]!=="status"&&!(K.role==="researcher"&&c[0]==="acct")}).map(function(c){return'<label><input type="checkbox" data-col="'+c[0]+'"'+(S.cols[c[0]]?" checked":"")+'> '+c[1]+'</label>'}).join("")+'<div class="na" style="padding-top:6px">Status always stays visible</div>';
+ // funnel
+ var fn=nq||loading?null:(function(){var a=base,s=a.length,g=a.filter(function(o){return o.rej!=="risk"}).length,k=a.filter(function(o){return o.rej!=="risk"&&o.rej!=="venue"}).length,f=a.filter(function(o){return o.filled>0}).length;return[["Submitted",s,"All orders in scope",s],["Risk grant",g,(s-g)+" stopped at risk checks",s],["Venue acknowledged",k,(g-k)+" refused by the venue",s],["Filled",f,"At least one fill",s]]})();
+ $("funr").textContent=fn?"In this scope":"";$("funb").innerHTML=!fn?'<div class="na">'+(nq?"Not available":"Loading…")+'</div>':'<div class="kpis" style="--n:4">'+fn.map(function(c){return'<div class="kpi"><div class="l">'+c[0]+'</div><div class="v">'+c[1]+'</div><div class="n">'+(c[3]?fx(c[3]?c[1]/c[3]*100:0,1)+"% · ":"")+c[2]+'</div></div>'}).join("")+'</div><div class="na" style="margin-top:8px">Intent and signal steps happen before the order and are not carried here.</div>';
+ // groups
+ var gl=nq||loading?[]:base.filter(function(o){return o.legs.length});$("grpr").textContent=nq||loading?"":gl.length+" groups";
+ $("grpb").innerHTML=nq?'<div class="na">Not available</div>':!gl.length?'<div class="na">No conditional groups in this scope</div>':'<div class="tw"><table class="cards"><thead><tr><th>Group</th><th>Deployment</th><th>Legs</th><th>State</th><th>Opened (UTC)</th></tr></thead><tbody>'+gl.slice(0,6).map(function(o){var arm=o.legs.some(function(l){return l.state==="Armed"}),tri=o.legs.some(function(l){return l.state==="Triggered"||l.state==="Closed"});return'<tr><td data-l="Group"><a class="chipx mono" href="trade-replay.html?focus=order&order='+o.id+'">'+o.id+'</a></td><td data-l="Deployment"><a href="deployment.html">'+esc(o.dep.name)+'</a></td><td data-l="Legs">'+o.legs.map(function(l){return l.leg+" "+(l.trigger!=null?fx(l.trigger,o.dep.pd):"at market")}).join(" · ")+'</td><td data-l="State">'+(arm?flag("pending","Armed"):tri?flag("ok","One leg triggered"):flag("paused","Cancelled"))+'</td><td data-l="Opened" class="mono">'+fd(o.t)+'</td></tr>'}).join("")+'</tbody></table></div><div class="na" style="margin-top:8px">Showing '+Math.min(6,gl.length)+' of '+gl.length+'</div>';
+ $("prov").innerHTML='Source: orders and fills read model. Paging uses a keyset cursor on order time, so rows never shift while new orders arrive. Cursor: '+(page.length?fd(page[0].t,true):"none")+'. Counts above are computed from the same rows as the table.'}
+/* ---------- events ---------- */
+document.addEventListener("click",function(e){var t=e.target;
+ var st=t.closest("[data-st]");if(st){S.status=st.getAttribute("data-st");S.off=0;render();return}
+ var x=t.closest("[data-x]");if(x){var id=x.getAttribute("data-x");S.exp[id]=!S.exp[id];render();return}
+ var rm=t.closest("[data-rm]");if(rm){S[rm.getAttribute("data-rm")]=null;S.off=0;S.focusO=null;S.focusF=null;render();return}
+ if(t.closest("[data-clear]")){S.dep=S.acct=S.alpha=null;S.status="all";S.off=0;S.focusO=S.focusF=null;if(S.pst==="empty"){S.pst="ok";mark("sseg","ok")}render();return}
+ if(t.closest("#colbtn")){var m=$("colmenu"),on=!m.classList.contains("on");m.classList.toggle("on",on);$("colbtn").setAttribute("aria-expanded",on);return}
+ if(!t.closest("#colmenu"))$("colmenu").classList.remove("on");
+ if(t.closest("#newer")){S.off=Math.max(0,S.off-PAGE);render();return}if(t.closest("#older")){S.off+=PAGE;render();return}});
+document.addEventListener("change",function(e){var t=e.target;if(t.id==="add"&&t.value){var p=t.value.split(":");S[p[0]]=p[1];S.off=0;render()}if(t.hasAttribute("data-col")){S.cols[t.getAttribute("data-col")]=t.checked;render();$("colmenu").classList.add("on")}});
+function mark(id,v){[].forEach.call($(id).children,function(b){b.setAttribute("aria-pressed",b.getAttribute("data-v")===v)})}
+$("sseg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.pst=b.getAttribute("data-v");mark("sseg",S.pst);render()});
+$("from").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var v=b.getAttribute("data-v");mark("from",v);S.dep=S.acct=S.alpha=null;S.focusO=S.focusF=null;S.exp={};S.status="all";S.off=0;S._placed=0;
+ if(v==="deployment")S.dep="btc-trend-v3";else if(v==="account")S.acct="Binance-02";else if(v==="alpha")S.alpha="BTC-Trend";else if(v==="fill"){S.focusO="ord-b7a2aa";S.focusF=TradeReplay.sample().filter(function(o){return o.id==="ord-b7a2aa"})[0].fills[1].id;S.dep="btc-trend-v3";S.exp[S.focusO]=1}render()});
+KIT.on(function(){var env=KIT.state.env,D=S.dep&&DEPS.filter(function(d){return d.id===S.dep})[0];if(D&&ENVSTAGES[env].indexOf(D.stage)<0){S.dep=null;S.off=0;KIT.toast("Deployment filter cleared: "+D.name+" is not in this environment")}render()});
+ini();mark("from",S.openFrom);
+document.addEventListener("keydown",function(e){if(e.key==="Escape")$("colmenu").classList.remove("on")});
+</script></body></html>

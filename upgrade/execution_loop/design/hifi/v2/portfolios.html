@@ -1,0 +1,95 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Portfolios — V2</title><link rel="stylesheet" href="kit.css"><style>
+.tool{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{flex:1}.sel-bar{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:var(--sunken);border:1px solid var(--line-strong)}
+.pop{position:relative}.pop summary{list-style:none;color:var(--ink);padding:6px 12px;font-size:13px}.pop summary::-webkit-details-marker{display:none}
+.pop .menu{position:absolute;z-index:8;right:0;top:100%;margin-top:2px;background:var(--cell);border:1px solid var(--line-strong);padding:8px 12px;display:grid;gap:4px;min-width:220px}.pop label{display:flex;gap:8px;align-items:center;color:var(--ink-soft)}
+.pt th,.pt td{padding:6px 5px}.pt th{white-space:normal;vertical-align:bottom;letter-spacing:.04em;font-size:10px}.pt td{height:36px}.pt td.c-mgr,.pt td.c-dom{white-space:normal;max-width:80px}.pt.compact td{height:28px;padding-top:2px;padding-bottom:2px}
+th.s{cursor:pointer}th.s::after{content:"";display:inline-block;margin-left:5px;border:3px solid transparent;border-top:4px solid var(--line-strong);border-bottom:0;vertical-align:middle}th.s.on{color:var(--ink)}th.s.on::after{border-top-color:var(--accent)}th.s.up.on::after{transform:rotate(180deg)}
+.nc{display:block;text-align:right}td.n .na{font:400 13px/20px var(--font-sans)}td:not(.n) .nc{text-align:left}td .why{margin-top:0}tfoot td{background:var(--sunken);color:var(--ink-soft)}
+input[type=checkbox]{accent-color:var(--accent-strong);width:14px;height:14px}
+@media(max-width:660px){.pt tr.tot td:first-child{display:none}}
+</style></head>
+<body data-page="Portfolios" data-nav="portfolios" data-crumb="Execution / Portfolios">
+<main><div class="stack">
+
+<div class="stack" data-roles="researcher">
+ <div class="mast"><div><h1>Portfolios</h1><div class="sub">Manager view</div></div></div>
+ <div class="panel"><div class="ph">Access</div><div class="empty" style="min-height:160px;text-align:center"><div><div style="font-size:15px;color:var(--ink)">You can't open this page.</div><div style="margin-top:8px"><a href="access.html">See what you can access</a></div></div></div></div>
+</div>
+
+<div class="stack" data-roles="manager operator reviewer">
+<div class="mast"><div><h1>Portfolios</h1><div class="sub" id="sub"></div></div>
+ <div class="ctrls"><span class="flag" data-k="na">Not scored · policy not set</span><span class="chipx"><span class="dot" data-data="ok"></span><span class="dot warn" data-data="nq"></span><span data-data="ok">Fresh · 12:04Z</span><span data-data="nq">Source not qualified</span></span></div></div>
+<div class="banner" data-data="nq">Source not qualified. Identities are shown; figures are not available yet.</div>
+
+<div class="panel">
+ <div class="tool" style="margin-bottom:12px"><input class="search" id="q" placeholder="Search portfolio or manager" aria-label="Search"><span id="qf" class="tool"></span><span class="sp"></span>
+  <details class="pop"><summary class="btn">Columns</summary><div class="menu" id="colmenu"></div></details><button class="btn" id="dens">Compact</button><span id="exp"></span></div>
+ <div class="sel-bar"><span id="selmsg" style="padding-top:6px"></span><span class="sp"></span><span id="selact"></span></div>
+ <div class="tw"><table class="pt cards" id="pt"></table></div>
+ <div class="sub" style="margin-top:12px" id="foot"></div>
+ <details style="margin-top:8px"><summary>Sort and basis rules</summary><table style="margin-top:8px"><tbody>
+  <tr><td>Money</td><td>Sorts inside one currency and window</td></tr><tr><td>Return</td><td>Modified Dietz, not TWR</td></tr><tr><td>Unavailable values</td><td>Sort last in both directions</td></tr><tr><td>Unallocated</td><td>Not comparable</td></tr></tbody></table></details>
+</div>
+</div>
+</div></main>
+<script src="kit.js"></script><script src="charts.js"></script><script src="modules/compare.js"></script>
+<script>
+(function(){
+var F=Compare.fmt,SG=Compare.sg,sel=[],sort={k:"cap",d:-1},q="",quick="all",compact=false,hide={dom:true};
+var SIM={paper:[{id:"core",cap:262310,ac:250000,pnl:2410.3,ret:.9,dd:-.7,al:2,alpha:2,dep:2},{id:"sat",cap:101200,ac:100000,pnl:1180,ret:1.2,dd:-1.9,al:3,alpha:3,dep:3},{id:"can",cap:48760,ac:50000,pnl:-240,ret:-.5,dd:-1.1,al:1,alpha:1,dep:1}],
+ sandbox:[{id:"core",cap:40120,ac:40000,pnl:120,ret:.3,dd:-.4,al:1,alpha:1,dep:1},{id:"hed",cap:25400,ac:25000,pnl:400,ret:1.6,dd:-.6,al:1,alpha:1,dep:1}]};
+var COLS=[["pf","Portfolio",1,"s"],["mgr","Manager",1,"s"],["cnt","Alphas / deploy.",1,"n"],["al","Allocations",1,"ns"],["dom","Domain",1,""],["cap","NAV",1,"ns"],["ac","Allocated capital",1,"ns"],["pnl","Net PnL",1,"ns"],["ret","Return",1,"ns"],["dd","Drawdown",1,"ns"],["hhi","Concentration",1,"ns"],["h","Health",1,""]];
+function NA(r){return'<span class="nc"><span class="na">Not available</span><span class="why">'+r+'</span></span>'}
+function rows(){var env=KIT.state.env,nq=KIT.state.data==="nq",out=[];
+ if(env==="real"){Compare.PF.filter(function(e){return!e.cur}).forEach(function(e){var m=e.ret!=null?Compare.metrics(e):null;
+   out.push({id:e.id,n:e.n,sub:e.sub,mgr:e.mgr,cnt:e.alpha+" / "+e.dep,al:e.al,dom:"Real-funded",cap:e.base,ac:e.ac,pnl:m?m.pnl:null,ret:m?m.ret:null,dd:m?m.dd:-.8,hhi:e.hhi,h:e.h,pr:e.ret==null?"Fees incomplete":null,cmp:true,hr:e.hhi==null?"Grouping incomplete":null})});
+  out.push({id:"una",n:"Unallocated",sub:"pf_unallocated",mgr:null,cnt:"0 / 0",al:0,dom:null,cap:null,ac:null,pnl:null,ret:null,dd:null,hhi:null,h:["unknown","Unknown"],una:true})}
+ else(SIM[env]||[]).forEach(function(s){var e=Compare.by("pf",s.id);out.push({id:e.id,n:e.n,sub:e.sub,mgr:e.mgr,cnt:s.alpha+" / "+s.dep,al:s.al,dom:"Simulated",cap:s.cap,ac:s.ac,pnl:s.pnl,ret:s.ret,dd:s.dd,hhi:null,h:["display","Simulated"],cmp:true,hr:"Not computed for simulated"})});
+ return out}
+function val(r,k){return{pf:r.n,mgr:r.mgr,cnt:parseInt(r.cnt),al:r.al,cap:r.cap,ac:r.ac,pnl:r.pnl,ret:r.ret,dd:r.dd,hhi:r.hhi}[k]}
+function cmpHref(){return"compare.html?kind=pf&items="+sel.join(",")+"&from=portfolios"}
+function draw(){if(KIT.state.role==="researcher")return;var nq=KIT.state.data==="nq",env=KIT.state.env,all=rows(),t=document.getElementById("pt");
+ var envL={real:"Real-funded",paper:"Paper · Simulated",sandbox:"Sandbox · Simulated"}[env];
+ var list=all.filter(function(r){var s=(r.n+" "+(r.mgr||"")).toLowerCase();if(q&&s.indexOf(q)<0)return false;if(quick==="attn"&&!(r.h&&r.h[0]==="recall"))return false;if(quick==="stale"&&!(r.h&&r.h[0]==="stale"))return false;return true});
+ list.sort(function(a,b){var x=val(a,sort.k),y=val(b,sort.k);var nx=x==null||nq&&["cap","ac","pnl","ret","dd","hhi"].indexOf(sort.k)>=0,ny=y==null||nq&&["cap","ac","pnl","ret","dd","hhi"].indexOf(sort.k)>=0;if(nx&&ny)return 0;if(nx)return 1;if(ny)return-1;return(typeof x==="string"?x.localeCompare(y):x-y)*sort.d});
+ document.getElementById("sub").textContent=all.length+" rows · "+envL+" · USDT";
+ var qf=document.getElementById("qf");qf.innerHTML=[["all","All "+all.length],["attn","Needs attention"],["stale","Stale"]].map(function(c){return'<button class="chipx" data-q="'+c[0]+'" aria-pressed="'+(quick===c[0])+'" style="cursor:pointer;'+(quick===c[0]?"border-color:var(--accent);color:var(--accent)":"")+'">'+c[1]+'</button>'}).join("");
+ var head='<thead><tr><th style="width:28px"></th>'+COLS.map(function(c){var on=sort.k===c[0],sortable=c[3].indexOf("s")>=0&&c[3]!=="ns"||c[3]==="ns";return hide[c[0]]?"":'<th class="c-'+c[0]+(c[3]==="n"||c[3]==="ns"?" n":"")+(c[3].indexOf("s")>=0&&c[0]!=="cnt"?" s":"")+(on?" on"+(sort.d>0?" up":""):"")+'" data-k="'+c[0]+'"'+(on?' aria-sort="'+(sort.d>0?"ascending":"descending")+'"':"")+'>'+c[1]+(c[0]==="ret"?' · <span class="win">90D</span>':c[0]==="pnl"||c[0]==="dd"?' · <span class="win">90D</span>':"")+'</th>'}).join("")+'</tr></thead>';
+ function td(k,cls,l,html){return hide[k]?"":'<td class="'+cls+' c-'+k+'" data-l="'+l+'">'+html+'</td>'}
+ var body=list.map(function(r){var chk=r.cmp?'<input type="checkbox" data-id="'+r.id+'" aria-label="Select '+r.n+'"'+(sel.indexOf(r.id)>=0?" checked":"")+(sel.indexOf(r.id)<0&&sel.length>=4?" disabled":"")+'>':"";
+  var m=function(v,reason,fn){return nq?NA(reason):v==null?NA(r.pr||reason):fn(v)};
+  var win=env==="real";
+  return'<tr'+(sel.indexOf(r.id)>=0?' class="sel"':"")+'><td data-l="">'+chk+'</td>'
+  +td("pf","","Portfolio",'<a href="portfolio.html"><b>'+r.n+'</b></a><div class="sub mono">'+r.sub+'</div>')
+  +td("mgr","","Manager",r.mgr||'<span class="na">Not published</span>')
+  +td("cnt","n","Alphas / deploy.",r.cnt)+td("al","n","Allocations",String(r.al))
+  +td("dom","","Domain",r.dom||'<span class="na">Not published</span>')
+  +td("cap","n","NAV",r.una?'<span class="na">None published</span>':nq?NA("Not qualified"):F(r.cap,2))
+  +td("ac","n","Allocated capital",r.una?'<span class="na">None published</span>':nq?NA("Not published"):F(r.ac,2))
+  +td("pnl","n","Net PnL",r.una?NA("Not published"):m(r.pnl,"Fees incomplete",function(v){return'<span class="'+(v<0?"neg":"pos")+'">'+SG(v,2)+'</span>'}))
+  +td("ret","n","Return",r.una?NA("Not published"):m(r.ret,"Method not certified",function(v){return'<span class="'+(v<0?"neg":"pos")+'">'+SG(v,1)+'%</span>'}))
+  +td("dd","n","Drawdown",r.una?NA("Not published"):nq?NA("Needs a NAV series"):'<span class="neg">'+F(r.dd,1)+'%</span>')
+  +td("hhi","n","Concentration",r.una?NA("Not published"):nq?NA("No grouping"):r.hhi==null?NA(r.hr||"Grouping incomplete"):F(r.hhi,2))
+  +td("h","","Health",nq&&!r.una?KIT.flag("na","Identity"):KIT.flag(r.h[0],r.h[1]))+'</tr>'}).join("");
+ var total=!nq&&env==="real"?list.filter(function(r){return r.cap!=null}).reduce(function(a,r){return a+r.cap},0):null;
+ var span=COLS.filter(function(c){return!hide[c[0]]}).length+1,ci=COLS.filter(function(c){return!hide[c[0]]}).map(function(c){return c[0]}).indexOf("cap");
+ var foot=total!=null&&ci>=0?'<tfoot><tr class="tot"><td colspan="'+(ci+1)+'">Total · NAV · filtered set</td><td class="n">'+F(total,2)+'</td><td colspan="'+(span-ci-2)+'"></td></tr></tfoot>':"";
+ t.className="pt cards"+(compact?" compact":"");t.innerHTML=head+'<tbody>'+(body||'<tr><td colspan="'+span+'"><div class="na" style="padding:12px">No portfolios match.</div></td></tr>')+'</tbody>'+foot;
+ document.getElementById("foot").innerHTML=env==="real"?list.length+" rows · 3 portfolios in another currency · <a href=\"#\" id=\"basis\">Switch basis</a>":list.length+" rows · Simulated capital is never added to Real-funded";
+ sel=sel.filter(function(id){return all.some(function(r){return r.id===id&&r.cmp})});
+ var ok=sel.length>=2&&sel.length<=4;
+ document.getElementById("selmsg").textContent=sel.length?sel.length+" selected":"Select 2 to 4 portfolios to compare";
+ document.getElementById("selact").innerHTML=nq?KIT.disabled("Compare","Source not qualified"):ok?'<a class="btn pri" style="display:inline-block;text-decoration:none" href="'+cmpHref()+'">Compare '+sel.length+'</a>':KIT.disabled("Compare",sel.length?"Select "+(sel.length<2?"at least 2":"at most 4"):"Select 2 to 4 portfolios");
+ document.getElementById("exp").innerHTML=KIT.disabled("Export","noExport");
+ document.getElementById("colmenu").innerHTML='<label><input type="checkbox" checked disabled> Portfolio</label>'+COLS.slice(1).map(function(c){return'<label><input type="checkbox" data-col="'+c[0]+'"'+(hide[c[0]]?"":" checked")+'> '+c[1]+'</label>'}).join("");
+ var w={"7":"7D","30":"30D","90":"90D","all":"ALL"}[KIT.state.win];t.querySelectorAll(".win").forEach(function(e){e.textContent=w})}
+document.addEventListener("click",function(e){var th=e.target.closest("th.s");if(th){var k=th.getAttribute("data-k");sort=sort.k===k?{k:k,d:-sort.d}:{k:k,d:(k==="pf"||k==="mgr")?1:-1};draw();return}
+ var c=e.target.closest("[data-q]");if(c){quick=c.getAttribute("data-q");draw();return}
+ if(e.target.id==="basis"){e.preventDefault();KIT.toast("Currency basis is set in the context bar");return}
+ if(e.target.id==="dens"){compact=!compact;draw()}});
+document.addEventListener("change",function(e){var cb=e.target;if(cb.hasAttribute&&cb.hasAttribute("data-id")){var id=cb.getAttribute("data-id"),i=sel.indexOf(id);if(cb.checked&&i<0&&sel.length<4)sel.push(id);else if(!cb.checked&&i>=0)sel.splice(i,1);draw();return}
+ if(cb.hasAttribute&&cb.hasAttribute("data-col")){hide[cb.getAttribute("data-col")]=!cb.checked;draw();document.querySelector(".pop").open=true}});
+document.getElementById("q").addEventListener("input",function(e){q=e.target.value.trim().toLowerCase();draw()});
+KIT.on(function(){draw()});
+})();
+</script></body></html>

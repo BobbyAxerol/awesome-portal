@@ -119,3 +119,13 @@ Phản hồi: khuyến nghị cần **sáng tạo hơn** → bốn concept ở `
 | D9 | Điều khiển chưa bật: hiện **bị tắt + 1 dòng lý do + link M10** (không ẩn) |
 
 Cần từ backend để thành thật (đã ghi trong sổ đồng bộ khi vào round tới): tìm kiếm entity + mốc last-visit theo user; budget/capital theo deployment + ledger có receipt; manager time-series (FE-013); nguồn tiêu chí gate + lịch sử stage + feed sự kiện; evidence-diff + quyết định một lần gọi trả `receipt_ref`/quorum + SLA/creator id; `group` ở endpoint fleet (FE-012).
+
+## Quyết định sau vòng rà 2 (Bobby, 2026-10-18) — chi tiết ở [review2/00-decision-register.md](review2/00-decision-register.md)
+
+| Mã | Quyết định |
+| --- | --- |
+| A1 | Một mục nav **Approvals** chạy cockpit; bỏ tab Decisions ở M09 (S3 được sửa); Waivers nằm trong Approvals; URL duyệt cũ giữ làm URL chọn |
+| A2 | **Một theme Carbon** cho toàn bộ (S2 bị đảo): cockpit và màn duyệt cùng giao diện tối |
+| A3 | Cockpit sở hữu **mọi loại quyết định** (gate, exit, archive, reactivation, capital, waiver), mỗi loại một làn |
+| A5 | Researcher thấy **allocation + PnL của mình**; ẩn Accounts và heat map; ⌘K do server lọc quyền |
+| A4, B1–B11, C, D, E, F | Áp theo khuyến nghị đồng thuận trong sổ quyết định (context bar của shell, 90D + fallback, Fleet 3 chế độ, Compare là hành động hàng, JourneySpine/EventFeed dùng chung, sidebar 9 mục, vai trò = capability, URL/redirect, thuật ngữ, cờ ngữ nghĩa) |

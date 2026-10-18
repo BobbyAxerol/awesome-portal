@@ -1,0 +1,27 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Approvals — V2</title><link rel="stylesheet" href="kit.css"></head>
+<body data-page="Approvals" data-nav="approvals" data-crumb="Execution / Approvals">
+<main><div class="stack">
+<div class="mast"><div><h1 data-roles="manager reviewer">Approvals</h1><h1 data-roles="researcher">My requests</h1><h1 data-roles="operator">Approvals</h1>
+ <div class="sub" data-roles="manager reviewer">Every decision, sorted by SLA</div><div class="sub" data-roles="researcher">Read only · you can withdraw while waiting</div></div>
+ <div class="ctrls"><span class="chipx"><span class="dot" data-data="ok"></span><span class="dot warn" data-data="nq"></span><span data-data="ok">Fresh · 12:04Z</span><span data-data="nq">Source not qualified</span></span><button class="btn" id="ck-help" data-roles="manager reviewer"><span class="kbd">?</span> Keys</button></div></div>
+<div class="banner" data-data="nq">Source not qualified. Evidence and statuses stay unavailable.</div>
+
+<div id="cockpit">
+ <div data-view="manager reviewer"><div class="ck">
+  <section class="panel q" aria-label="Decision queue"><div class="ph">Queue <span class="r">By SLA</span></div><div class="lanes" id="ck-lanes"></div><div id="ck-q"></div>
+   <details style="padding:0 12px"><summary>Decided today · 2</summary><div class="qm" style="padding-bottom:8px">AP-188 · R1 gate · Approved 09:12Z<br>EX-702 · Exit review · Denied 08:40Z</div></details>
+   <div class="keys"><span><span class="kbd">J</span> <span class="kbd">K</span> move</span><span><span class="kbd">A</span> approve</span><span><span class="kbd">R</span> deny</span><span><span class="kbd">N</span> note</span><span><span class="kbd">?</span> help</span></div></section>
+  <section class="stack" id="ck-main" style="gap:16px" aria-label="Evidence"></section>
+  <aside class="rail" id="ck-rail" aria-label="Decision"></aside>
+ </div></div>
+
+ <div data-view="researcher"><div class="panel" style="padding:0"><div class="ph" style="margin:0">Your requests <span class="r">Decisions are made by reviewers</span></div>
+  <div class="tw"><table class="cards"><thead><tr><th>Request</th><th>Status</th><th class="n">Approvers</th><th>Clock</th><th></th></tr></thead><tbody id="my-body"></tbody></table></div></div></div>
+
+ <div data-view="operator"><div class="panel empty"><div style="text-align:center"><div style="font:600 15px/22px var(--font-sans);color:var(--ink)">You can't open this page.</div><div style="margin-top:6px"><a href="access.html">See what you can access</a></div></div></div></div>
+</div>
+</div></main>
+<div class="ov on" id="ck-helpbox" style="display:none;background:var(--paper);opacity:.97"><div class="pal" style="margin-top:120px;width:380px"><div class="ph" style="margin:0;padding:9px 16px">Keys <span class="r">Esc closes</span></div><table><tbody>
+ <tr><td><span class="kbd">J</span> <span class="kbd">K</span></td><td>Next · previous request</td></tr><tr><td><span class="kbd">A</span></td><td>Primary decision, then <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span></td></tr><tr><td><span class="kbd">R</span></td><td>Deny · note required</td></tr><tr><td><span class="kbd">N</span></td><td>Focus the note</td></tr><tr><td><span class="kbd">Esc</span></td><td>Cancel the pending decision</td></tr></tbody></table></div></div>
+<script src="kit.js"></script><script src="charts.js"></script><script src="modules/cockpit.js"></script>
+<script>Cockpit.mount();</script></body></html>
