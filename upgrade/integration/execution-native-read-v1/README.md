@@ -17,6 +17,14 @@ mounting. The [main journal](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE
 records normal-hook717/restore and both-host cleanup separately from393source
 cases; none of those receipts installs authority or closes connected08.
 
+The additive [genuine runtime factory qualification](current-core-runtime-factory/README.md)
+now verifies real private-file loading and actual SAME-pool AppModule mounting
+on exact39stable migrations plus reviewed native additions: seven cases and
+strict compile PASS. It includes the independently exported current-SSE schema
+reference and unchanged maintenance component needed to reproduce the test.
+This closes isolated factory/schema compatibility, not actual PM provider,
+production identity/session or connected08. Frozen43packet bytes are unchanged.
+
 Use the additive [complete profile](complete-profile/manifest.json) for a
 reproducible historical qualification. It repairs an owned publication omission:
 four qualified READ/STREAM prerequisites were not in the original authored patch.

@@ -7,6 +7,17 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 genuine factory qualification (2026-10-18,21:34UTC):**
+  [real-loader/PG/AppModule packet](../integration/execution-native-read-v1/current-core-runtime-factory/README.md)
+  closes isolated factory/schema compatibility: strict compile and7cases PASS,
+  separate independent current-SSE schema export1PASS; original stale finite
+  golden setup failure retained. Exact39stable migrations plus reviewed native
+  additions, no latest full migration bootstrap or automatic policy.40runtime
+  tuples unchanged, exact1163-file/20.4MB source copy/cells/keys cleaned.
+  Actual PM provider/DB identities/Core runtime/session and connected revoke/
+  cache/cursor/SSE remain unfinished original08work, full08NOT_MET. Existing
+  mocked13cases and393source tests are not relabelled connected acceptance.
+
 - **Original08 current source publication (2026-10-18):**
   [guarded actual Core source](../integration/execution-native-read-v1/README.md)
   retains the original26-file authored patch and three original213-case receipts.

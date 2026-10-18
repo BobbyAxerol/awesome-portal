@@ -1,0 +1,30 @@
+{
+  "schema_version": "portal.native-core-runtime-factory.qualification.v1",
+  "status": "ISOLATED_GENUINE_FACTORY_QUALIFIED_NOT_COMMISSIONED",
+  "source_base_commit": "5291a80f68a11cbccad879d1e99bb6282634f636",
+  "frozen_source_files": 1158,
+  "frozen_source_pins_sha256": "4846abe3426a291f2ea53a144d8f79283e1fc19f898a6f3581f459498def4f2c",
+  "stable_migration_count": 39,
+  "stable_ledger_sha256": "758c9056103f8a40714a0084e566731dafba7848ee7c8232e374da6dde4b2531",
+  "source_sha256": {
+    "runtime-factory-pg.spec.ts": "96f01f329c1d0db6665df7010b080bb33b56b31d3536b9a8d5856e689de099d1",
+    "schema-reference.spec.ts": "519f14d008f3b068f3c46e6d124f653ef11be52af42178d6443067491b8a0731",
+    "core-native-installation.ts": "c2429fab2833dbb7b72d132232e4ad5f79b53725bb360f546a5aa28ed7e21fe9",
+    "runtime-native-schema-golden.json": "a4f60de14ef01dd1a25f30241f246205193feb029efd8efde19f36a6cc5398fb"
+  },
+  "attempts": [
+    {"run_id":"212451","exit_code":1,"strict_compile":"PASS","suite_setup":"FAIL_SOURCE_GOLDEN_MISMATCH","pass":0,"skip":7,"terminal_sha256":"4a608511c9fc495955913da0a8e710ca62c19a7731bb564f7ee2e8d66160f7d2"},
+    {"run_id":"212949","profile":"independent_reference","exit_code":0,"strict_compile":"PASS","pass":1,"fail":0,"skip":0,"terminal_sha256":"0783a8b676cc879734f6d315a34447d06d65d85a99e3733c53371900ef6d0581"},
+    {"run_id":"213041","profile":"genuine_factory","exit_code":0,"strict_compile":"PASS","pass":7,"fail":0,"error":0,"skip":0,"terminal_utc":"2026-10-18T21:33:37.510471+00:00","terminal_sha256":"519464e29c71073afafe1801d734947e9e60304acf62becb5f8f2c9a17c0118b","log_sha256":"4f894a445d175573d4bd97744bada29b9215660577971257c5d4fb192605afbe","junit_sha256":"bfcb05a460df27ea3b879a9d37b1e3ae06d99b9ab5c24a1dcaef9052c7c99ed1","runner_sha256":"1d9579848c7720f352e5a73d2e82865cac6d9c1e9e7cd5bb7e2443841197ae70","interference_samples":33,"foreign_overlap_count":0,"source_unchanged":true,"protected_runtime_count":40,"protected_runtime_unchanged":true,"owned_containers_remaining":0,"owned_networks_remaining":0,"own_lease_removed":true}
+  ],
+  "schema_reference_digest": "sha256:e4923afb657e87c6abd3e7c343435875b7b3758d06cc0c06afba4b28f3f6dd1d",
+  "source_cleanup": {
+    "regular_files_removed":1163,"declared_links_removed":1,"logical_bytes_removed":20410651,
+    "shared_host_free_before_bytes":213467299840,"shared_host_free_after_bytes":213488824320,
+    "docker_mutations":0,"protected_runtime_unchanged":true,"own_lease_removed":true,
+    "receipt_sha256":"fa8f1ac72704e64f8c473557af5e3f0c24f4d60433caab610ce097f7351197ce"
+  },
+  "actual_pm_provider_qualified":false,"actual_portal_session_qualified":false,
+  "runtime_commissioned":false,"production_capacity_evidence":false,
+  "full_epg10_08_acceptance":"NOT_MET"
+}

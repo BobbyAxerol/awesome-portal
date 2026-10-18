@@ -701,6 +701,18 @@ actual provider/schema/identities/factory and connected drills are unfinished
 owned work. Main journal records exact targets, hashes, disk and current
 parallel-source/release/runtime pins; no operational activation occurred.
 
+**Original08 factory continuation21:34UTC:** actual filesystem/private references,
+genuine composition and actual AppModule factory now PASS seven focused cases
+on a fresh PG specimen with exact39stable migrations plus132/134/Candidate;
+strict compile PASS. Initial old finite-golden setup failure is retained;
+new current-SSE reference was independently exported/reviewed in another
+specimen (one export case PASS). See the [factory qualification](integration/execution-native-read-v1/current-core-runtime-factory/README.md).
+No production source was changed and no production DB/policy/identity/provider
+installed. Exact redundant1163-file/20410651B test copy removed,40runtime
+tuples unchanged,0own containers/networks/lease. Actual provider/Core runtime
+commissioning and connected revoke/cache/cursor/SSE remain OWNED08work;
+full08NOT_MET,09connected NOT_STARTED. This does not recertify393or717tests.
+
 - **Execution Edge v1.2 / EPG10-00 (2026-10-15):**
   [EPG10-00…11 in the Execution Loop unified plan §23](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
   is `EPG10-00_COMPLETED_INVENTORY_ONLY`, on

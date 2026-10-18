@@ -21001,6 +21001,113 @@ Portal artifacts. Next permitted action: original08 exact private commissioning
 on the verified DB and genuine current Core mount, then actual connected
 drills. Scope available inputs immediately; no new phase or generic reapproval.
 
+**Original08 genuine runtime-factory qualification / before execution:**
+Continue IN_PROGRESS_OWNED_IMPLEMENTATION, full08 NOT_MET. Publication and
+the approved old SSE transfer/cleanup are terminal; do not restart them.
+TS668e1032/TS-nextf2229d7a/PM2d166ec6 and Core5291 remain unchanged at entry;
+Core170parallel paths are preserved. The still-missing factory proof is owned,
+not an external return: add focused TEST_ONLY cases that use real0400/0600
+files/Ed25519/TLS references, genuine composeNativeCore and actual AppModule
+factory on a fresh PostgreSQL specimen with the exact39stable migrations,
+then only reviewed132/134/Candidate additions. Do not call the broad latest
+harness or silently install all future migrations. Assert exact ledger and
+identity/authority preservation, wrong-target refusal, SAME pool/trust/mutation
+mount and no automatic policy/identity/admission. Existing mocked13cases and
+393source qualification retain their narrower scope. This remains isolated
+factory/schema compatibility, NOT real PM-provider/Portal-session acceptance.
+Freeze production1158pins and39migration closure; add tests outside the frozen
+43file packet. Reuse cached pinned Node/PG/public dependencies with no build,
+pull, install, public listener, operational mount or remote transfer. Envelope:
+one <=2CPU/2GiB/250s Node worker plus <=1CPU/768MiB tmpfs PostgreSQL, private
+internal network. Check both hosts' leases and real jobs, acquire own <=300s
+lease, observe interference and capture terminal/JUnit/source hashes. Always
+remove exact owned containers/network/temp private test keys; retain bounded
+failure receipts. Any failed assertion is owned work, not waived debt. Rollback
+is disposal of this exact test cell; no operational DB/user/grant/service change.
+Actual PM provider/private installation, genuine session path and connected
+revoke/cache/cursor/SSE still follow inside08; commands remain disabled.
+
+**Actual factory attempt212451 / owned compatibility finding:** focused strict
+compile PASS; suite setup FAIL,7cases SKIP/0executed. Old independently exported
+native golden pins Candidate8b8cc757 while the qualified43SSE source correctly
+pins Candidate826e4e08 (132/134unchanged). The old finite golden cannot commission
+the newer frame schema. No assertion weakened or live target learned. Receipt
+at /tmp/epg10-08-genuine-factory-M3EDMClX/attempt-212451: exit1,33interference
+observations/nooverlap,40runtime tuples unchanged,0owned containers/networks,
+ownlease removed; free213658501120→213623169024B (shared-host observation).
+Preserve original fixture/failure. Export a NEW schema-definition-only reference
+from a separate fresh disposable specimen using the SAME qualified SQL and
+existing manifest/digest encoder, exact39ledger; independently review old/new
+132/134/Candidate manifest diff before pinning it in factory tests. Never derive
+expected from the installed target or regenerate the immutable historical
+profile. This is owned schema/runtime compatibility work inside08; it blocks
+actual installation until the corrected qualification passes. SGP has its own
+Core correctness window through22:05UTC; it does not block this HK-only cell,
+and no job/copy/service change is performed on SGP by this slice.
+
+**Independent reference212949 / reviewed before reuse:** one fresh specimen
+export case PASS plus strict compile; actual reference transaction rolled back,
+then disposable cell removed. Schema-only83961B artifacta4f60de1/digeste4923afb
+pins Candidate826e4e08.132/134are byte-identical to old golden; guards and every
+other Candidate relation/function are unchanged. Differences are confined to
+native_read_obligations and native_read_event: actual frame lifecycle enum,
+canonical base-body frame coordinate/unique index and separate domain/notice
+scope pins replace the old unselected draft columns/indexes. Existing writer
+and ACL guards are not weakened.40runtime tuples unchanged,0remaining owned
+containers/networks,lease gone,2interference samples/nooverlap; shared free
+213528879104→213481234432B. Original oldgolden remains untouched. Pin this NEW
+artifact under runtime-native-schema-golden.json, preserve all1158qualified
+inputs and retry factory on ANOTHER fresh specimen; never use the reference
+specimen as the test target or report export as an installed authority.
+
+**Actual genuine factory213041 / isolated compatibility CLOSED:** strict compile
+PASS and7unique cases PASS/0FAIL/ERROR/SKIP on another fresh specimen. Genuine
+filesystem/key loading→composeNativeCore→actual AppModule mount uses SAME pool,
+trust and mutation coordinator; real39ledger/additive-only native installer
+reapply preserves existing identity/ledger rows. No policy, session, native
+obligation or admission is seeded by the loader/mount. Missing session returns
+401 on the actual route; wrong independently pinned DB/system/role, real
+symlink/group-readable refs, fake composition and a second Core pool refuse.
+This closes the isolated genuine-factory proof, not production commissioning.
+Original43/full1158source pins remain unchanged; no reason to rerun393unchanged
+cases or count the one schema-export case as business acceptance. Existing
+13mocked loader cases keep their original limited provenance.
+
+Actual terminal519464e2/log4f894a44/JUnitbfcb05a4,33interference samples/nooverlap;
+40protected HK tuples unchanged,0owned containers/networks,ownlease gone.
+Own test keys were only tmpfs and disappeared with the worker. Exact redundant
+source-copy cleanup21:34:25UTC:1163regular files/20410651logicalB and one known
+dependency link removed after source/UID/no-mount/ownership verification;
+shared free213467299840→213488824320B,40tuples unchanged,0Docker mutation,
+owncleanup lease removed, receiptfa8f1ac7. Bounded three-attempt receipts and
+original inputs remain at /tmp/epg10-08-genuine-factory-M3EDMClX; no source Git
+checkout, private PKI, production/rollback image, shared cache or DB data removed.
+
+Published reproducibility inputs go in the single additive
+`upgrade/integration/execution-native-read-v1/current-core-runtime-factory/`
+packet: two test sources, unchanged reviewed maintenance component, bounded
+schema-definition fixture, sanitized qualification and README. All are source/
+schema-only, no business rows, secrets or node_modules. Parent/backend indices
+are updated in the same slice. Preserve historical/frozen profiles and all
+three peer-untracked areas. Review exact10paths, normal hooks/Bobby identity
+and diff-check before commit/push on the approved feature only. The normal-hook
+and exact owned offline-test-image/cache cleanup receipts are reserved at
+`/tmp/epg10-08-genuine-factory-M3EDMClX/publication-hook.json` and
+`publication-cleanup.json`; include actual pre/post disk, retained image/cache
+set and runtime tuple reconciliation there, never prune shared unproven cache.
+
+**State / next permitted work:** full08 IN_PROGRESS_OWNED_IMPLEMENTATION /
+NOT_MET;09connected NOT_STARTED. Actual PM/private DB identity/schema/acceptance
+and provider, genuine configured production Core mount/current session, then
+connected revoke/cache/cursor/SSE remain unfinished owned08work. Continue these
+now under original approval; SGP's real active job blocks only its deployment/
+tests, not independent private target/config preparation.07command,03publisher
+fence,01/06connected load retain their separate exact owner/input gates. Stable
+services, immutable digests/config, canonical checkout54c6f5f3, active feature
+worktrees, HK/SGP release locations and named rollback artifacts remain exactly
+the retention set above. No operational restart/write/command/broker activation
+occurred in this qualification.
+
 
 
 
