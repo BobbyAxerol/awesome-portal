@@ -171,8 +171,8 @@ không nuốt unrelated regression. Mock/fixture PASS không thay real API recei
 ## 6. Testing, resources và phase reporting
 
 - Xác định impacted tests từ source/schema/profile/dependency hash. Chạy focused
-  regressions theo gói, gom normal hook/gates một lần cho coherent commit; không
-  bypass hook, không lặp full build/engine/load/DR chỉ vì thay docs.
+  regressions theo gói, gom normal hook/gates theo tầng R0–R3 ở §10.10 (hook đầy đủ ở mốc, không
+  bypass ngoài R0/R1 đã nêu); không lặp full build/engine/load/DR chỉ vì thay docs.
 - Gói có build/test ghi dữ liệu cần approved target/budget. Không tự chạy24h
   soak mặc định: chọn duration/repeat/fault matrix có chứng minh workload,
   giữ exit gate; thay threshold phải có owner approval, không giảm data để PASS.
@@ -594,3 +594,25 @@ Bổ sung cho §8 (độc lập, bounded, một người tích hợp); không m�
 Duyệt: **APPROVED nguyên văn (Bobby, 2026-10-17)** cho §9 (trừ cách cài reader ở 9.8.2, chờ giải thích thêm) và §10;
 hiệu lực từ round sau. Quyết định cùng ngày: không chọn lát dọc nối-thật sớm — **thiết kế cả bộ song song trước, nối
 thật sau khi từng nguồn qualified**. Duyệt rules không phải giao UXM; phase vẫn cần Bobby giao.
+
+### 10.10 Kiểm chứng và hook theo tầng, commit vẫn tách phần (Bobby, 2026-10-18, chọn phương án A)
+
+Vấn đề: hook pre-commit chạy toàn bộ `verify-workspace.sh` (~20–25 phút, build Docker) cho **mọi** commit, kể cả docs; ở giai đoạn đầu phát triển, chờ hook sau mỗi commit làm chậm tiến độ mà không thêm bằng chứng. **Commit vẫn tách theo phần như rules** (code riêng, docs riêng, mỗi đơn vị/lát một commit có nghĩa); chỉ độ sâu kiểm chứng đổi theo tầng.
+
+1. **Chọn tầng trước khi commit** bằng cách đọc path đã stage, ghi tầng vào thân commit (`Verification: R0|R1|R2 ...`) và vào `test-results.json` (`tier`). Chọn tầng cao hơn khi nghi ngờ.
+
+| Tầng | Khi nào | Phải chạy trước commit | Hook |
+| --- | --- | --- | --- |
+| **R0** docs/design/evidence, không đụng code, không đụng ledger toàn vẹn | mọi commit chỉ Markdown/JSON tài liệu/HTML thiết kế | `git diff --cached --check`; link/path trong file đã sửa; `scripts/execution-tracking-test.sh` nếu sửa tracker/Unified/ledger | `--no-verify` được phép |
+| **R1** phát triển trong lát, nhánh `claude/fe-parity`, chưa push | code frontend (hoặc test) của một đơn vị | vitest **focused** (thư mục chạm + gate liên quan trong thẻ lát) + `tsc --noEmit`; `scripts/refresh-release-integrity-ledgers.sh --write` nếu chạm Execution frontend; build cờ tắt + grep khi chạm điểm mount | `--no-verify` được phép |
+| **R2** mốc | cuối mỗi lát (S0, S1…), trước bàn giao cho Codex/Bobby duyệt, trước **mọi** push, ff-merge hoặc hạ cánh | vitest rộng (`src/execution src/styles src/app src/portal`), build cờ tắt/bật, baseline ảnh pinned-image ở verify mode khi lát đụng pixel | hook đầy đủ, **không** bypass |
+| **R3** chạm ngoài frontend | backend, contract, compose, Dockerfile, hạ tầng, `.githooks`, `scripts/verify-*` | gate riêng của khu vực đó | hook đầy đủ ngay lúc commit |
+
+2. **Hook đầy đủ chạy một lần ở mốc R2 và phủ mọi commit R0/R1 từ lần R2 trước.** Lát chỉ được ghi DELIVERED sau khi R2 xanh; trước đó ghi `R1 only, R2 pending` trong packet. Commit mốc là commit cuối của lát (có thể là docs); hook chạy trên cây tại điểm đó.
+3. **Không bao giờ báo xanh cho gate chưa chạy.** Gate nào bỏ qua ghi `NOT_RUN` + lý do + tầng nào sẽ chạy nó. Lỗi có sẵn trên tip Codex không chặn lát nhưng phải vào debt register với bằng chứng "fail không do thay đổi này".
+4. **Phạm vi bypass hẹp:** chỉ `--no-verify` cho R0/R1 trên `claude/fe-parity`, chưa push. Không dùng cho nhánh khác, không dùng khi chạm tầng R3, không dùng để vượt một gate đã đỏ vì lỗi do mình gây ra. Mỗi push/ff-merge/hạ cánh yêu cầu R2 xanh trên đúng SHA đẩy đi.
+5. **Chạy nền, không canh:** hook R2, vitest rộng và baseline chạy nền; trong lúc hook R2 chạy, cây code đóng băng (chỉ ghi vào scratchpad). Vitest focused và `tsc` chạy ngay trong lúc làm việc, không đợi.
+6. **Subagent:** mỗi đơn vị chỉ chạy gate focused của mình; primary chạy gate rộng một lần sau khi hợp nhất.
+7. Điều này **thay** câu "gom normal hook/gates một lần cho coherent commit" ở §6 bằng quy tắc cụ thể trên, vẫn giữ "không lặp full build/engine/load/DR chỉ vì thay docs" và "không bypass hook" cho mọi trường hợp ngoài R0/R1 nêu ở khoản 4.
+
+Duyệt: **APPROVED (Bobby, 2026-10-18)**, phương án A của câu hỏi "Hook theo tầng".
