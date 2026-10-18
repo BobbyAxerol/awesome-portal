@@ -36,6 +36,8 @@ package-lock; caches, credentials, ENV and database state are not in this packet
 
 Continue the [original08 journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23207-original08--actual-provider-owning-boundary-and-connected-acceptance):
 publish through normal hooks, then commission real providers/identities and
-qualify connected revoke/cache/cursor/SSE. The separate native profile SSE draft
-is not qualified by this finite HTTP receipt.
+qualify connected revoke/cache/cursor/SSE. The newer
+[SSE/runtime source profile](../current-core-runtime-profile/README.md) has
+its own fresh389+4case and strict qualification; it is not certified by this
+finite HTTP receipt and does not commission runtime authority.
 This packet alone is neither that commissioning nor connected08 acceptance.

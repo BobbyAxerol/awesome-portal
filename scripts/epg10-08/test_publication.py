@@ -149,6 +149,60 @@ class PublicationTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "SOURCE_PATH_REFUSED"):
                     publication.safe_path(self.target, name, dependency=True)
 
+    def auxiliary_profile(self):
+        _, manifest = self.complete_profile()
+        pins = {}
+        for relative in publication.AUXILIARY_SOURCES:
+            path = self.target / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"TEST_ONLY public auxiliary source\n")
+            pins[relative] = publication.sha(path.read_bytes())
+        manifest["qualification_auxiliary_sources"] = pins
+        (self.packet / "manifest.json").write_text(json.dumps(manifest))
+        return manifest
+
+    def test_exact_auxiliary_closure_is_readonly(self):
+        self.auxiliary_profile()
+        with patch.object(publication.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            self.assertEqual(publication.verify(self.packet, self.target)["writes"], 0)
+
+    def test_changed_or_missing_auxiliary_refused_before_patch_check(self):
+        for mode in ("changed", "missing"):
+            self.auxiliary_profile()
+            path = self.target / "deploy/control-api/bootstrap-users.yaml"
+            path.write_bytes(b"peer change") if mode == "changed" else path.unlink()
+            with patch.object(publication.subprocess, "run") as run:
+                with self.assertRaisesRegex(ValueError, "QUALIFIED_AUXILIARY_CONFLICT"):
+                    publication.verify(self.packet, self.target)
+            run.assert_not_called()
+
+    def test_auxiliary_set_cannot_add_private_or_escape_paths(self):
+        for relative in ("../private.key", "apps/control-api/.env", "deploy/private.yaml"):
+            manifest = self.auxiliary_profile()
+            manifest["qualification_auxiliary_sources"][relative] = "0" * 64
+            (self.packet / "manifest.json").write_text(json.dumps(manifest))
+            with self.assertRaisesRegex(ValueError, "QUALIFIED_AUXILIARY_SOURCE_SET_REFUSED"):
+                publication.verify(self.packet, self.target)
+
+    def test_auxiliary_parent_symlink_refused(self):
+        self.auxiliary_profile()
+        original = self.target / "deploy/control-api/bootstrap-users.yaml"
+        original.unlink()
+        original.parent.rmdir()
+        original.parent.symlink_to(self.root, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "SOURCE_SYMLINK_REFUSED"):
+            publication.verify(self.packet, self.target)
+
+    def test_auxiliary_digest_shape_and_partial_set_refused(self):
+        for value, error in (({}, "SOURCE_SET_REFUSED"),
+                             ({k: "invalid" for k in publication.AUXILIARY_SOURCES}, "DIGEST_REFUSED")):
+            manifest = self.auxiliary_profile()
+            manifest["qualification_auxiliary_sources"] = value
+            (self.packet / "manifest.json").write_text(json.dumps(manifest))
+            with self.assertRaisesRegex(ValueError, "QUALIFIED_AUXILIARY_" + error):
+                publication.verify(self.packet, self.target)
+
 
 if __name__ == "__main__":
     unittest.main()

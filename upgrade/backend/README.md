@@ -20,11 +20,21 @@ Chúng không thay thế phase hoặc exit gate trong
   [32-file current source profile](../integration/execution-native-read-v1/current-core-profile/README.md)
   has fresh production/seven-spec strict and233unique cases PASS,0FAIL/ERROR/SKIP
   after typed-refusal/completion-join fixes; old failures remain. No provider commissioning or connected
-  acceptance follows from source publication. Latest main journal governs:
-  disjoint current-Core SSE preparation has12files/8production/4test with42pure
-  plus7mounted-PG cases prepared but NOT_RUN. It reuses the shared coordinator/
-  Hub and joins actual preparation/source/repository completion on shutdown; it is not a new poller,
-  STREAM grant, runtime source or extension of historical213PASS.
+  acceptance follows from source publication. The fuller
+  [current SSE/runtime profile](../integration/execution-native-read-v1/current-core-runtime-profile/README.md)
+  now freezes43authored files/full1154app-source closure on5291. Both fresh
+  production/14-spec strict gates PASS;389unique regression/unit cases plus
+  4separate actual-PG rollback cases PASS, zeroFAIL/ERROR/SKIP.393distinct across
+  two runs, no inherited historical/SGP credit. It includes all360SSE/finite
+  cases on the changed pool/runtime source. SGP191942raw360 remains TAINTED;
+  explicitly retire its still-unstarted narrower retake only after the stronger
+  profile/roundtrip is verified, then exact source/public cleanup. No fake
+  result, relaxed guard/timeout or source egress. PG15independent reference
+  PASS is not installed permission/identity; loader tests mock refs/composition,
+  not actual factory commissioning. SSE reuses the coordinator/Hub and joins
+  actual late completion, not a new poller or TS Event source.
+  Actual provider/schema/identity/current-Core mount and connected revoke/
+  cache/cursor/SSE remain the same owned08work; no operational mutation.
   original08 remains IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET;09connected
   NOT_STARTED. The older "no owned runnable work" statements below describe
   historical independent slices, not the current mounting/commissioning work.

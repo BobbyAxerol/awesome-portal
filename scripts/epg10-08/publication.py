@@ -16,6 +16,32 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+AUXILIARY_SOURCES = frozenset({
+    "apps/control-api/tooling/generate-eds02-contract-source.mjs",
+    "apps/control-api/tooling/generate-eds11r-manager-relation-registry.mjs",
+    "deploy/control-api/bootstrap-users.yaml",
+})
+
+
+def verify_auxiliary(manifest: dict, target: Path) -> None:
+    if "qualification_auxiliary_sources" not in manifest:
+        return
+    sources = manifest["qualification_auxiliary_sources"]
+    if not isinstance(sources, dict) or set(sources) != AUXILIARY_SOURCES:
+        raise ValueError("QUALIFIED_AUXILIARY_SOURCE_SET_REFUSED")
+    for relative, digest in sources.items():
+        if (not isinstance(digest, str) or len(digest) != 64
+                or any(c not in "0123456789abcdef" for c in digest)):
+            raise ValueError("QUALIFIED_AUXILIARY_DIGEST_REFUSED")
+        path = target
+        for part in PurePosixPath(relative).parts:
+            path = path / part
+            if path.is_symlink():
+                raise ValueError("SOURCE_SYMLINK_REFUSED")
+        if not path.is_file() or sha(path.read_bytes()) != digest:
+            raise ValueError("QUALIFIED_AUXILIARY_CONFLICT: " + relative)
+
+
 def safe_path(root: Path, relative: str, *, dependency: bool = False) -> Path:
     name = PurePosixPath(relative)
     suffixes = {".ts", ".sql", ".json", ".mts", ".yaml"} if dependency else {".ts"}
@@ -63,6 +89,7 @@ def verify(packet: Path, target: Path) -> dict:
                     raise ValueError("QUALIFIED_OUTPUT_DIGEST_MISMATCH")
             elif not path.is_file() or sha(path.read_bytes()) != digest:
                 raise ValueError("QUALIFIED_DEPENDENCY_CONFLICT: " + relative)
+    verify_auxiliary(manifest, target)
     before = after = 0
     for relative, pins in files.items():
         path = safe_path(target, relative)

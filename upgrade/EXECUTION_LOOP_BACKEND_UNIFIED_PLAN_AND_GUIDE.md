@@ -20239,6 +20239,677 @@ explicitly authorizes publication to the existing canonical feature branch;
 verify the resulting remote ref rather than infer push success. Any normal-gate
 failure remains owned and must be fixed before publication. Full08 stays open.
 
+**Normal source gate terminal /2026-10-18 18:01:31UTC:** controller79022 exit0,
+normal commit8204eeea9752af731f2049fb01964491fe5cac46 by configured Bobby identity,
+14files/+8874/-19. Actual hook130contracts/717API PASS, supported build and
+PostgreSQL restore drill PASS; no inherited current-Core/SSE acceptance. Log
+a6859411de52f0bf1dc2512ab7c7e1f8592bb9ce71413c408cd4b10308b09b11,
+91596B, own lease removed and all40HK protected runtime tuples unchanged.
+Only peer's original3untracked groups remain; no peer staged/index/source write.
+Canonical feature publication is now running through the normal pre-push hook;
+verify its actual terminal/ref before calling it published. No dev/main merge.
+
+Corrected SSE source has12files/8production/4test,+953/-62 and one extra
+absent-composition alias regression. Frozen1156source manifest5d75649e,
+safe archiveafeff8a40a33ee0ae506e12af9c189d13413c2c9e2b14ead942506547311bf23
+(3966629B),1153transfer pins0762a65a. Exact source-only SGP preparation at
+/tmp/epg10-08-realtime-core-5291-fixed1-Xob6R7Gw verifies1153hashes,
+20161198logicalB. Controller33357 is READ_ONLY_WAIT: actual foreign Core hook
+80335/80408 plus Node test cells under codex-elp210-commissioning-land-175337
+reservation until18:53:37. No SSE test/lease/container started there. Wait for
+physical termination, not merely deadline expiry; preserve that owner.
+
+Do the distinct strict compiler gate on now-quiet HK rather than leave runnable
+qualification preparation idle: same exact1153source bytes, pinned cached Node
+c610/public package-lock81f9975e, readonly dependency mount,2CPU/2GiB/1536MiB
+heap/250s command/<=300s own guard, no install/build/pull/host ports/DB/volume.
+Use its own disposable HK source namespace and existing runner, explicit checked
+public dependency-root input only. No duplicate behavior test or capacity claim;
+SGP retains its queued affected HTTP/PG tests. Collect terminal receipts and
+remove exact per-host source copies after consumption. All strict/SSE gates
+remain NOT_RUN until direct evidence; optional alias exists only with genuine
+composition, not an unconditional missing provider.
+
+**Genuine target and parallel intake:** bounded actual TS READ ONLY metadata
+transaction using existing configured loginbobby confirms cluster hash9e0c2ad6
+and database live_data_executor unchanged; public.ts_users, pm_membership policy/
+memberships, pm_core_authority, pm_business_read, pm_registry and pm_current_access
+are all absent. First diagnostic with assumed postgres role refused before SQL
+because that role does not exist; corrected to actual existing container login,
+2s statement/500ms lock timeout and explicit ROLLBACK,0writes. This correct-schema
+probe replaces no old source authority; reviewed minimal fresh installation is
+still required, not already commissioned. No broad PM migration/provisioning.
+Read-only32path current-Core comparison finds16exact qualified outputs,2exact
+preimages(AppModule/controller) and14different peer source paths; never apply
+our whole packet over its staged C7 work. Core C7 itself declares source-dark,
+no runtime/provider/grants; after its actual landing reconcile the precise
+affected bindings with its owning changes and rerun only impacted evidence.
+PMc889872d adds held metadata/provenance history source, not runtime authority.
+Full08 IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET;09connected NOT_STARTED.
+
+**Feature publication terminal:** original71481 exit0; normal pre-push retained,
+canonical awesome-portal feature ref independently returns
+8204eeea9752af731f2049fb01964491fe5cac46. Both complete30 and current finite32
+source/closure/233receipt are now pullable, not private-only claims. No force,
+merge, runtime release, database mutation or full08 acceptance follows.
+
+**Original08 continuation / entry2026-10-18 18:14UTC:** preceding report-only
+turn supplied the actual corrected-SSE production terminal receipt: run180448
+ended18:07:26UTC, exit0,40protected HK runtime tuples unchanged, own containers/
+networks0 and lease removed. This advances to the distinct strict ten-spec gate,
+not behavioral or connected acceptance. Source remains exact1153-file frozen
+afeff8a4/0762a65a packet in the prepared HK namespace. Run `spec` with the same
+pinned public dependencies/image/resource ceilings only after fresh user/root
+reservations and actual jobs are checked; reuse the reviewed runner and exact
+terminal teardown. No source edits, increased budget, install/build/pull, grant
+or operational restart. Corrected SSE affected behavior is still NOT_RUN.
+
+SGP read-only actual-process check18:14:11UTC confirms foreign Core hook80335/
+80408 and its Node/PG cells still live; our original waiting controller103133
+is also physically live and has not started its tests. Continue polling that
+same controller/namespace, not a duplicate job or expired-lock assumption.
+Independently prepare the genuine native installation using PM's existing
+reviewed installer/catalogue, exact TS cluster/DB and verified stable identities;
+inspect source and private reference metadata only, no invented authority or
+blanket PM migration. Preserve current peer C7/staged paths. Full08 remains
+IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET,09connected NOT_STARTED; goal active.
+
+**Scoped old failed-source cleanup before execution:** original SSE173833 has
+physical terminal exit1, no own containers/network/lease, and all5bounded
+receipt/log/JUnit files have been collected and hash-verified at HK
+mount-evidence/sgp-sse-first-failure-ytwl9fpx. Remove only the obsolete SGP
+/tmp/epg10-08-realtime-core-5291-GNBXVSP0 after verifying all1153source pins,
+archiveae852772/pins0ffa9390, the complete declared root inventory, collected
+evidence hashes, no process or container mount references to that exact path,
+and unchanged protected operational tuples before/after. Do not touch corrected
+Xob6R7Gw/waiter103133, Core's running hook, images/cache/networks/volumes or peer
+source. Preserve bounded failure receipts and original source archive on HK;
+record exact removed bytes and shared-host disk observations, not inferred
+exclusive reclaim. This is source-copy cleanup, not a shared Docker prune.
+
+Private trust full-file read was rejected before execution; the safer explicit
+whitelist of schema/status/activated/workload_id and metadata field NAMES passed.
+No key/certificate/token value was output. Trust remains PREPARED_NOT_INSTALLED;
+the rejection creates no new authority or reason to stop other owned work.
+
+**Strict ten-spec terminal / owned fixture corrections before edits:** run181435
+ended18:17:15UTC exit2,40protected runtime tuples unchanged, own cells/net/lease0.
+Four exact TS errors: two new coordinator mocks inferred Promise<undefined>
+instead of their real Promise<void> completion contract, and two pre-existing
+execution-realtime EventEmitter Object.assign method-this inference failures.
+Correct only explicit test types, retaining every runtime assertion and all ten
+strict specs; add the mechanically copied legacy fixture to the new authored
+delta(13files/8production/5test). No product behavior, compiler relaxation,
+time/resource increase or failed-case waiver. Keep fixed1 source/receipts frozen;
+fresh fixed2 must rerun strict gate against its exact corrected bytes. SGP fixed1
+waiter has not started; retire only that own waiting controller after confirming
+no job/lease, before any corrected behavioral successor is admitted.
+
+Old source cleanup44609 refused on an ownership assertion BEFORE unlink/delete.
+Inspect the exact copied-file uid mismatch before selecting a safe authorized
+cleanup path; original failed source/evidence still intact, no removal claimed.
+
+**Cleanup correction / terminal76710:** the refusing path was the expected
+broken-on-host `/deps/node_modules` symlink classified by os.walk as a file,
+not an actual owner mismatch. Accept only that exact previously declared link;
+all other symlinks/owners still refuse. Source cleanup now verifies1153pins and
+5retained receipts, removes1163regular files/24,415,664logicalB from only the old
+GNBXVSP0 namespace.51operational tuples unchanged; shared SGP free
+163172802560→163199864832B,0Docker resource mutations. Bounded receipt remains
+HK mount-evidence/sgp-first-sse-source-cleanup.json; original failures preserved.
+Same terminal controller verifies and SIGINTs only our fixed1 waiter103133
+before any test/lease/cell, confirms physical exit and foreign Core reservation
+unchanged. No uncertain running job restarted, no peer process stopped.
+
+**Corrected fixed2 / execution boundary:**13files/8production/5test,+955/-64;
+safe1153source pinscf215513/archivef513c25e(3,966,713B), full1156pins1f7c3a8b.
+Only two test files differ from fixed1; production strict180448 evidence remains
+limited to its unchanged production closure, not a claimed spec PASS. Prepared
+HK /tmp/epg10-08-realtime-core-5291-fixed2-hk-3XQp7bxr verifies1153hashes/
+20,161,333logicalB. Run corrected ten-spec then affected behavior on the already
+approved isolated HK executor rather than await occupied SGP; actual PM/PG/
+mTLS/HTTP remain TEST_ONLY. Same cached images/dependencies,2CPU/2GiB Node,
+1CPU/768MiB PG/tmpfs512MiB,250s/<=300s reservation and exact cleanup; no load/
+capacity/cross-host/runtime acceptance. SGP's original unstarted waiter is
+terminal before any HK behavior. Finish and collect original receipts, then
+clean corrected per-host source copies and only unreferenced owned test image
+in an actual quiet cleanup window. No install/pull/build or peer mutation.
+
+**Corrected ten-spec terminal:** original41056/run181937 ended18:22:14UTC exit0,
+40protected runtime tuples unchanged and own cells/net/lease0. Full fixed1→fixed2
+1153-pin comparison confirms ONLY execution-realtime.spec.ts and the new
+native-profile-realtime-mount.spec.ts changed; all production/dependency bytes
+are unchanged, so production180448 is applicable to that unchanged production
+closure, not inherited acceptance of altered tests. Fresh fixed2 affected ten-
+suite actual PG/mTLS/HTTP/SSE job5292/run182232 now runs on HK after fresh both-
+user/root/actual-cell checks, using the same exact runner/ceilings. No behavior
+PASS until its direct terminal/JUnit; original failed strict181435 preserved.
+
+**Fixed2 behavioral terminal5292/run182232:**18:24:39UTC exit1;360unique cases,
+359PASS/1FAIL/0ERROR/SKIP across10suites. The sole failure is the mounted actual
+PG/socket original-baseline + Last-Event-ID resume case,20s fixture deadline;
+all remaining9suites and other coupled cases pass.40operational tuples unchanged,
+own cells/net/lease0. Keep original log/JUnit/source frozen; no waiver or capacity
+claim. Before any product change add bounded TEST_ONLY phase markers to only that
+fixture and run its exact selector in a separate diagnostic snapshot/controller
+with the same guards/bounds, to distinguish first frame, disconnect, replay and
+joined teardown. Use actual failure cause, not a timeout increase or blind full
+rerun. Full08 remains unfinished owned implementation, not external debt.
+
+**Resume diagnostic60142/run182723 terminal:**18:28:02UTC exit1,1selected case
+still fails original20s deadline; other51coupled cases intentionally unselected,
+not suite failures or credited PASS. Markers prove snapshot, first frame, actual
+disconnect, second response/Last-Event-ID frame, second cancel and pending0 all
+complete. It hangs inside joined fixture close, not replay/frame correctness.
+40protected runtime tuples unchanged and exact own cells/net/lease0. Add only
+two test spies marking actual stopRealtime versus mounted.close completion to
+locate the real teardown owner; production source unchanged. New diagnostic4
+pins6222502e/archiveecebc828 retains all1153source bytes and original failed
+receipts. Do not infer a product bug or force-close a service before this trace.
+
+Parallel Core read-only18:27:48UTC: original hook80335/80408 gone and its guard/
+test cells removed; HEAD still5291a80f,143peer paths preserved. Owner return
+reports4actor-timeout failures and proposed invocation-local source parsing
+reuse; no landed/qualified C7 source or native runtime. This is that producer's
+owned correction, not permission to overwrite its checkout or reuse its PASS.
+
+**Diagnostic4 terminal85376/run182922:**18:29:44UTC exit1; STOP_BEGIN/STOP_END
+prove actual consumer/Hub drain completed. A spy on Nest's dynamically proxied
+app.close recursively redispatched itself and caused a new diagnostic-only
+RangeError; remove that spy, not a production fix. Original diagnostic3 already
+isolates the original timeout to app close after both frames/pending0.
+The mounted fixture uses global fetch without owning its connection dispatcher;
+select a dedicated existing pinned undici Agent(2connections/1pipeline), use
+its fetch for only this fixture and destroy only that owned client dispatcher
+after abort + actual consumer drain, before normal app.close. Preserve every
+scope/frame/resume/revoke assertion and all original timeouts. This tests the
+client-lifecycle cause without force-closing the server, shared global Agent,
+production sockets or any authority. Remove all temporary trace/spies, fresh
+exact failing selector first, then complete strict/360case closure if it passes.
+
+**Publication preparation boundary:** prepare a separate current-Core realtime
+profile, preserving historical complete30 and finite32 byte-for-byte. The full
+authored union against immutable5291 is36paths;13SSE delta paths are NOT the full
+integration patch. Artifact generation must refuse until direct exact-source
+strict and all360unique affected cases PASS, with original failures retained.
+Reuse existing v2 publication verifier and add exact optional auxiliary closure
+for only the two immutable app tooling mjs files and root bootstrap YAML; these
+three apparatus dependencies were previously provenance-only. No arbitrary
+path/extension widening. Add focused tamper/missing/path/symlink/shape guards,
+then actual patch/preimage/after/no-op verification. Source/profile qualification
+still does not install identity, policy, runtime or waive genuine connected08.
+
+**Fixed5 focused terminal68396/run183217:**18:32:40UTC exit0, exact resume case
+1PASS/0FAIL/ERROR,51intentionally unselected. Dedicated fixture client cleanup
+allows both real frames, disconnect/replay, pending0 and actual app.close to
+complete inside the original deadline. No production source change was needed
+after fixed1; temporary trace/spies removed.40operational tuples unchanged,
+own cells/net/lease0. Fixed5 safe1153pinsbfa7de85/archivea0f02406 and prepared
+HK namespace /tmp/epg10-08-realtime-core-5291-fixed5-hk-Dbz3Dhcs remain frozen.
+Run fresh ten-spec strict and full360case affected closure before publication;
+do not inherit the earlier359PASS or call this selected diagnostic full success.
+
+**Independent resource follow-through before execution:** retire source-only
+SGP fixed1-Xob6R7Gw now that its exact waiter is physically terminal and tests
+never started. Reuse the same1153-pin/no-process/no-mount/owner/root-inventory/
+protected-runtime cleanup, with its distinct archiveafeff8a4/pins0762a65a and only
+source-preparation receipt. Preserve its original source archive/transfer pins
+on HK. No image/cache prune while either host runs a correctness job. HK old
+strict/diagnostic source copies remain only until bounded receipts are collected
+and their direct production receipt is consumed by the final source publisher;
+then remove exact disposable copies. Active fixed5/source/deps remain named
+current qualification inputs, not historical rollback or an implicit archive.
+
+**Approved goal continuation /18:43UTC:** the preceding turn was a requested
+read-only progress report, not additional implementation or connected evidence.
+Resume original08, preserving the complete source→real provider→connected
+acceptance objective. Fixed5 ten-spec strict run183330 ended18:36:06UTC exit0,
+40protected runtime tuples unchanged, own containers/networks0 and lease removed.
+Run the full360unique affected cases on these SAME frozen bytes after fresh HK
+user/root reservations and actual-job checks; retain original failed attempts,
+timeouts and ceilings. No inherited359PASS, skip, authority installation or
+runtime promotion. Publish only after direct full success; source qualified
+does not close08. Reconcile current PM/Core/TS inputs before real binding.
+
+Unstarted SGP fixed1 cleanup has actual terminal receipt
+sgp-unstarted-fixed1-source-cleanup.json:1159regular files/24,289,935logicalB
+removed only from exact Xob6R7Gw namespace after its waiter retired.51protected
+operational tuples unchanged; shared-host free163192356864→163219320832B;
+0Docker resource mutations. Prior failed GNBXVSP0 cleanup remains separate.
+HK obsolete extracted copies remain pending bounded receipt capture and final
+publisher consumption; do not claim all-source cleanup complete before that.
+
+**Executor dependency review before transfer:** HK now has foreign DL rustls/
+resource reservation18:40:14→21:20:14UTC; no new heavy job or prune there. SGP
+has no future user/root reservation, but a physically live Core pytest must
+finish before our correctness reservation. The two old e17/e16 PG containers
+are September fixtures, not ours and never cleanup targets. Source preparation
+does not start a job. SGP shared public cache has undici7.29.0 while the qualified
+HK immutable public cache has7.29.1 despite equal package-lock81f9975e: do NOT
+quietly substitute dependencies. Prepare a separate bounded <=160MiB public
+dependency copy from the exact HK qualification inputs, no compression/install/
+lifecycle scripts or shared-cache edits, with file hashes and allowed internal
+symlinks. Transfer only that public dependency tree plus the frozen1153-source
+archivea0f02406/pinsbfa7de85 and reviewed runner to a fresh owned SGP namespace;
+no ENV/secret/DB rows/private config. Validate bytes before execution and clean
+the exact copy after receipts are collected. Full behavior/connected08 remain
+NOT_RUN/NOT_MET until direct terminal evidence.
+
+**Transfer review disposition:** auto-review rejected prepare-fixed5-sgp.py
+BEFORE process creation: new internal source/dependency egress was not covered
+by prior exact-packet approvals.0bytes copied, no archive/namespace/job created;
+do not bypass via another copy path or remote reconstruction. An exact async
+approval request names sourcea0f02406/1153files/3,966,748B, public dependencies
+<=160MiB, isolated SGP namespace and teardown. Until answered, continue local
+owned source/runtime/installer compatibility work; no new HK heavy job under
+foreign DL reservation and no unapproved SGP transfer. This does not block
+source review or mark the full goal externally blocked.
+
+**Runnable real-runtime source preparation before edits:** the historical
+161line private loader still returns `nativeManagerConsumer`, but current5291
+AppModule accepts genuine `nativeManagerRead` composition plus optional explicit
+realtime limits. Installing that old loader would not mount the qualified
+consumer. Prepare a NEW local current-runtime draft, mechanically reusing the
+reviewed loader/main/tests and explicit bounded-pool/restart-authority changes;
+preserve finite32 and fixed5 source/receipts unchanged. Reconcile only main.ts,
+db/pool.ts, native-core-runtime.ts and its focused tests against current5291:
+return the SAME genuine composition/pool/trust/mutation object, optionally bind
+all seven private SSE budgets, keep absent-config legacy startup unchanged,
+verify actual DB/system/current+session role BEFORE app mount, never read/install
+offline owner policy from runtime. Retain5291 execution-data pool/disconnect
+handlers and current transaction behavior except the reviewed exact rollback-
+failure handling needed to preserve an original unknown-COMMIT error. Tests
+must cover bounded profile mismatch/reuse, actual DI mount, inert loading,
+secret/reference denial, correct target, optional READ/STREAM separation and
+unknown-COMMIT recovery. No broad migration, peer checkout write, grant, source
+transfer, runtime flag/listener, service restart or qualified claim follows
+from this source-only preparation; heavy gates wait for an eligible executor.
+
+**Prepared current-runtime slice:** own local
+/tmp/epg10-08-current-runtime-5291-wgAuNRtt contains only3production+4test files,
+mechanical original loader/tests and reviewed rollback fixtures, then narrow
+current5291 edits. Loader now returns AppModule's genuine nativeManagerRead
+composition and optional strict seven-field SSE limits; no obsolete unmounted
+nativeManagerConsumer callback. Main prepares references before pool/app;
+pool preserves current execution-data/disconnect code and legacy defaults,
+rejects changed bounded profiles rather than mutating live pools. Added7actual
+pg-Pool no-socket test definitions,2SSE-config definitions and reused9rollback
+unit/4actual-PG fixtures. These33expected cases are PREPARED_NOT_RUN, not PASS;
+actual factory/connected authority still must be tested. No source export,
+runtime DB/config/service mutation or peer edit. Fixed5 stays byte-frozen.
+
+**One local gated successor, before launch:** queue only fixed5 full360 using
+wait-fixed5-hk.py. Waiter creates no measurement lease/container while foreign
+guards or actual cargo/rustc/pytest/Node test processes are present; reads both
+user/root guards and physical jobs each45s, maximum3h. Once quiet it invokes
+the SAME reviewed exclusive finite runner exactly once with the SAME1153pins,
+dependencies/ceilings, original tests/timeouts and terminal teardown. No overlap
+with a SGP behavior job: approved transfer remains pending; retire only this
+own still-waiting controller before ever selecting another executor. A waiting
+process is not a running test/PASS. Publication and full08 remain unfinished;
+own final cleanup waits for consumed receipts and the quiet maintenance window.
+
+**PG15 reference preparation, before source copy:** actual TS database image is
+cached Timescale/PG15 digest6343bdc87ca132c6b53acb26113a6bad1821d188fa39975a745f32ddd9757634,
+not the PG16 behavioral fixture. Prepare the existing independently pinned
+pm-native-golden-export.py/config, exact5SQL, native_fence.py and namespace init
+under the active private preparation root; no new schema encoder or live-derived
+expected catalogue. Later disposable PG15 reference must use its OWN empty
+pm_native_golden_test database from TEMPLATE template0/ownerbobby, not default
+Timescale public extension objects, no live volumes/rows/identities/acceptances.
+Existing image28ea3958 supplies only public Python dependencies. Golden8/32
+admission remains TEST_ONLY, not production capacity or actual installation.
+Freeze the7file runtime overlay against fixed5 and all source/SQL hashes now;
+actual job waits for the eligible executor. No production DDL/grant/identity,
+new image/install, external copy or fake reference acceptance.
+
+**Exact transfer approval received:** Bobby explicitly permits frozen
+sourcea0f02406/1153files/3,966,748B plus the matching public dependencies<=160MiB,
+reviewed runner, isolated SGP test and cleanup. This supersedes only the rejected
+fixed5 transfer, not authority/runtime/extra source scope. Retire our HK waiting
+controller2911850 after checking exact command/owner/state/no job or own lease;
+never touch the DL owner/window. Then run the previously reviewed exact transfer
+helper once; the7new runtime files and9PG15-reference files are NOT included.
+Fresh SGP guard and actual-process checks remain mandatory before any job.
+
+Local preparation freeze is actual static evidence only: runtime1158source pins
+4846abe3426a291f2ea53a144d8f79283e1fc19f898a6f3581f459498def4f2c;
+9PG15reference pins6b90cc0f70fa80268f0c62466147f117ebba55082fd8bdf267ac0ab7731bdb7e.
+All33new runtime cases and PG15 golden execution remain NOT_RUN. No provider,
+grant, identity, DB schema or service was commissioned by preparation.
+
+**19:02UTC exact approved transfer terminal:** helper21996 ended0. Frozen
+source1153/20,161,590logicalB and public8509regular+15internal-links/
+126,451,068logicalB verified at exact owned
+`/tmp/epg10-08-realtime-core-5291-fixed5-sgp-1umg5x8C`; all source/public
+hashes match. Receipt fixed5-sgp-preparation.json retains exact seven input
+hashes. No secret/ENV/DB/shared-cache/runtime mutation. HK waiting controller
+2911850 retired before any job; no duplicate executor. SGP Core has a genuine
+19:01:33→20:01:33 reservation and live TypeScript job; our behavior test has
+NOT_STARTED. Queue only a read-only local controller that checks BOTH SGP
+guards and physical heavy/test processes before invoking the same approved
+remote runner once with the isolated public-dependency root. Waiting creates
+no lease/container. Preserve the exact source/dependencies and historical failed
+attempts; collect terminal receipt/log/JUnit before exact cleanup. This is
+isolated correctness, not native authority commissioning/capacity/full08.
+
+**19:06UTC runnable preparation:** source-publication builder now requires
+hash-verified SGP terminal behavior/JUnit against SAME fixed5source/public pins;
+production/ten-spec strict retain their actual HK provenance. It cannot emit
+the36-file successor on359PASS/1FAIL or while the new receipt is absent. Local
+collect-fixed5-sgp.py is PREPARED_NOT_RUN: bounded receipts<=5MiB, exact names/
+hashes, physical job/mount termination, then exact source+public tree validation
+before cleanup. Cleanup refuses foreign guards/heavy jobs and retains runtime
+tuples plus shared-host pre/post free bytes; no prune/volume/shared-cache action.
+Both backend indices now reflect13SSEfiles and pending360 rather than stale
+12-file/NOT_RUN preparation. `git diff --check` PASS; no new test/PASS/commit
+or push is claimed under HK's foreign DL reservation. SGP controller94096
+remains read-only waiting, no own container or lease started. Original08 still
+IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET;09connected NOT_STARTED.
+
+**Parallel-source reconciliation19:08UTC:** PM advanced fromc889 to
+4622d86f7efa9e324f14f37d278765afe7b0519f (seven-file mixed correctness landing).
+Its direct36functional+26offline PASS and persistent bounded raw schedules are
+TEST_ONLY, not production capacity or native commissioning. Exact five native
+SQL and native_fence.py hashes remain unchanged, so this landing introduces no
+new native schema preimage drift and earns no inherited Edge test credit. TS
+canonical668e1032/next8e2849dd unchanged. Read-only Docker inventory confirms
+existing P/S/L Edge+worker d6aa7a510ddf, Source Proxy aa14e21c5469 and projection
+PG cf78e76683b9 still active; no own runtime action. Source canonical checkout
+remains manager-v2@54c6f5f3, active feature upgrade-v1_2@8204eeea; no branch,
+worktree, release or rollback artifact removed. Exact collector/builder/waiter
+Python AST parse including rendered remote collector succeeds (STATIC_PARSE_ONLY,
+not test/runtime evidence). SGP peer Core test containers are genuinely live;
+our sole controller still waits read-only, no own lease/container.
+
+**19:12UTC independent next-target preparation before edits:** prepare one
+local PG15 golden runner against the already frozen nine-source reference,
+not another installer/encoder. Exact cached TS image6343bdc8 provides PG15;
+cached Manager28ea3958 provides public Python dependencies. Private internal
+network, own labelled containers with DNS alias pm-native-golden-db, PG/tmpfs
+only, fresh TEMPLATEtemplate0 database, explicit memory/CPU/pid/time ceilings;
+no operational volume/secret/identity/acceptance/DB mutation. Refuse future
+user/root windows, actual foreign tests/builds and any existing own-name
+resource; use an exclusive bounded reservation and always reconcile/remove
+only labelled own cells/network before returning. Helper keeps independent
+source/golden pins and actual result, never promotes TEST_ONLY8/32 admission
+into production capacity. PREPARED_NOT_RUN while HK DL window remains active;
+not included in the separately approved SGP source transfer.
+
+**Prepared PG15 runner (no execution):** run-pg15-native-reference.py SHA256
+2e39aa719e7e226201153e263f104e80b92c4b4a96ac83b220aab6e4dbd6f71a
+passes Python AST parsing only. It uses direct isolated PG15 initdb, not TS
+init scripts/tuning or a production volume; private child PGDATA avoids root-
+owned tmpfs permissions, then creates only pm_native_golden_test TEMPLATE0.
+Caps: PG1CPU/768MiB+Python1CPU/512MiB, labelled network/no host port/volume,
+75s exporter timeout/300s exclusive lease, exact cached images/source pins.
+Always teardown checks only owned labels and records actual terminal/runtime
+tuples; stderr/disposable PG logs bounded64KiB, golden<=16KiB. No new container,
+image, lease, golden/PASS, SQL/grant/identity or operational mutation exists.
+The existing Core golden (p132/p134/current-human candidate) is a DIFFERENT
+already-derived specimen; it must not be confused with this PM reference.
+Current94096 controller is confirmed live by repeated same-handle outputs and
+live peer Core nodes/PG, not merely a lock file. This turn completes runnable
+reference preparation and is a verified wait for the original exact SSE job;
+source publication/actual current-Core binding/full08 remain unfinished.
+
+**19:19:42UTC exact fixed5 behavior actually started:** same controller94096
+observed both SGP guards clear and peer physical jobs/test cells ended, then
+invoked the approved original runner ONCE on exact1umg5x8C root with its own
+public dependency tree. Actual run_id191942/profiletests; exclusive own lease,
+same cached Node/PG images and resource ceilings. No test/connected PASS yet;
+await terminal receipt, physical job/resource termination and bounded collector
+before publication or exact source/public cleanup. No HK job or operational
+service/database mutation was started.
+
+**19:23UTC actual191942 outcome / isolation counterexample:** terminal exit0,
+JUnit360unique/10suites,0FAIL/ERROR/SKIP; own containers/network0 and lease
+removed. Protected runtime tuple52, not prior51, is unchanged. Investigation
+identifies extra UNOWNED angry_hopper/5af58d547b58, imagePlaywright1.62.1
+dcc5531e, started19:19:37 (before our19:19:42 start), CPU264.84%/2.224GiB when
+inspected. Generic container name and browser process escaped the old guard.
+This is TAINTED_FOREIGN_BROWSER_JOB, NOT an isolated qualification PASS; keep
+all actual360results/receipts and do not publish a qualified profile from it.
+Fix owned preflight to inspect image identity and browser/build process classes,
+not just test-name prefixes. Recheck both guards AND actual jobs, then retake
+SAME fixed5 source/public dependencies/360selectors without new source approval
+or weaker assertion. Never stop/remove the unowned browser. PM has acquired
+19:22:10→19:27:10 window AFTER our terminal; source cleanup waits for actual
+quiet as well. No product defect or connected acceptance follows from this
+raw green run; own guard correction is implementation, not external debt.
+
+**Owned guard correction / real negative validation:** terminal tainted
+191942's five bounded files115,900B are hash-verified locally, JUnit
+4641ca4c338616cf50f151fca4b0c71dd090b0a44b56f83add9e520c52aaa37f.
+Two read-only image-enrichment attempts failed closed before any successor job:
+running containers can outlive removed tags AND image metadata. Do not change
+foreign images or claim this a TS defect. Simplified guard reads container
+identity/image directly, denies anonymous default names and browser images,
+and recognizes actual chrome-headless/Playwright processes. Actual negative
+validation catches angry_hopper plus live chrome processes and PM window.
+Controller90812 terminal GUARD_FAILED_NO_JOB retained; sole successor26889
+waits read-only with SAME source/runner/dependencies. Reuse corrected guard in
+PG15/normal-publication/cleanup preparations; no source-payload expansion.
+Before retake add a bounded read-only interference observer during the run:
+ignore ONLY own exact labelled cells/PIDs/lease, sample actual foreign guards/
+jobs every5s, retain any overlap and refuse qualification if observed. This is
+isolation instrumentation, not production latency/capacity measurement. Preserve
+old JUnit under current-mount-191942.xml before original runner overwrites its
+fixed output path; no selector/timeout/assertion/source change.
+
+**19:37UTC verified wait / retained actual progress:** sole retake controller
+26889/PID3037142 remains READ_ONLY_WAIT/job_startedfalse with anonymous/browser/
+actual Chrome reasons. Observer90324 is confirmed live, waits read-only and
+creates no own reservation/container. Source mount identifies foreign frontend
+checkout /home/bobby/portal-research-fe; no timeout was advertised. Never infer
+permission to stop it, and don't reuse this raw green as isolation acceptance.
+Original191942 is actual360PASS but TAINTED; its own cells/network/lease are
+absent. Exact frozen SGP source/public copy stays named ACTIVE_RETAKE_INPUT until
+the accepted terminal/receipt collection and quiet exact cleanup; no discarded
+evidence or fake cleanup. Historical failed closed guard/controller attempts
+remain separate, neither started a test. New guard is reused in PG15, cleanup
+and publication preparation. Six control scripts AST parse and git diff--check
+PASS (STATIC_ONLY); no new product/capacity/connected PASS. Feature checkout
+upgrade-v1_2@8204eeea, branch feat/execution-edge-upgrade-v1_2, retains uncommitted WIP,
+no new push/merge/release/runtime/operational DB action. Main/backend indices
+agree: original08 IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET,09connected not
+started. Next SAME-source retake→bounded evidence/exact cleanup→source publication
+through normal hooks, then genuine current-Core/PM/DB/identity commission/drill;
+no new general approval or phase is required.
+
+**19:44–19:47UTC parallel-source/report reconciliation (read-only):** PM now
+0c8811cb3d7550ed984ae9f4d6726259a61bd86d, with cc06f13e's six-case finite
+consumer qualification separate from mounted-BFF acceptance. PM's mounted-eight
+attempt192757 ended at its existing worker deadline with no completed JUnit;
+do not borrow eight-case credit or weaken a timeout. Core remains immutable
+5291a80f68a11cbccad879d1e99bb6282634f636; its latest journal retains failed
+normal-gate attempts and no commissioned native source. Dirty peer bytes/index
+remain untouched. Before actual commission recheck exact selected dependencies,
+not just branch HEAD. The original foreign browser ended, but a new Playwright
+loving_sutherland/6fbeb80c99d6 is actually running with non-zombie Chrome
+processes; same retake26889/observer90324 continue read-only, no duplicate job.
+
+For the owner's five-day progress request, exact Edge branch history over
+2026-10-13T19:45:00Z–2026-10-18T19:45:00Z contains38non-merge commits and265unique
+paths (468file-change entries),120385insertions/902deletions. This is NOT120k
+new product-code lines:71code/test/script paths account for30204+/489−,
+25Markdown paths20040+/368−,3source patches8243+/0− and166contract/config/other
+paths61898+/45−. Repeated edits count in churn, not distinct final-source size;
+commits from other repositories or uncommitted SSE/runtime drafts are excluded.
+git diff--check PASS; own tracked WIP5paths585+/6− before this journal update.
+No new test, source qualification, release, deployment or operational DB effect.
+
+**19:53UTC verified scheduling boundary:** SGP now has actual foreign Core job
+and reservation codex-elp210-commissioning-land-195216 through20:52:16UTC.
+Retake26889/observer90324 are still the same live waiting handles, no own job
+started. HK's separate DL reservation remains through21:20:14UTC. These block
+only host-dependent test/hook work, not source review. Do not restart the waiting
+executor, bypass either window or treat raw tainted360 as an accepted retake.
+
+**Runnable publication preparation before the windows clear:** retire the old
+private commit controller's fourteen-path assumption for the previous HTTP
+slice. The SSE successor must require an exact twelve-path staged allowlist:
+the two publication guard/test files, main/backend indices, parent and finite
+profile READMEs, and five files in the new immutable realtime profile. No apps/
+or peer untracked paths may enter this commit. Retain normal repository hooks,
+Bobby identity, fresh host guards and runtime/lease reconciliation; no commit
+or staged qualification claim until the clean retake and actual source
+roundtrip pass. Static preparation is not an executed hook or test result.
+
+**20:12UTC genuine parallel returns / owner report:** PM advances to
+c164955a9173e234558cbbce7a8258036945cf04 via544407be: current RETURN assignment
+has16fresh cases plus350retained unchanged cases, separately5original-native
+composition cases. Its receipt explicitly forbids summing those into a fresh
+366run or commissioned provider/fence claim. Earlier failures stay historical,
+not the latest RETURN disposition. Current PM index keeps full03/04/13–16OPEN,
+17NOT_STARTED; six finite consumer cases are not mounted-BFF/SSE acceptance.
+Final101+16/61relation rehearsal and corrected profile24 remain unqualified.
+Provenance/Archive-origin monitor integration is optional, isolated-tested and
+not activated; do not silently add its operations to Edge's frozen command set.
+
+TSnext is nowf2229d7a6f32c512be5f5a4ec0bd83b7710e9e31 (journal-only DL roll
+disposition; writer untouched). Native local Paper CDC proof does not publish
+an external endpoint: N03 remains deliberately SOURCE_DARK/NOT_ACTIVATED per
+immutable owner-return. That is not a request for nonexistent credentials and
+does not close Edge03's complete source/fence coverage. Direct Git still places
+the canonical TS checkout at fix/dev-consumer-recovery-integration@668e1032;
+do not overwrite this current observation with an older journal's dev label.
+No source/identity/provider commissioned, peer mutation or new product test by
+this read-only reconciliation. Same retake/observer still live; Core's actual
+job blocks SGP. Preserve exact receipt scopes when preparing the owner's report.
+
+**20:14UTC publication verification:** read-only SSH git ls-remote confirms
+awesome-portal/feat/execution-edge-upgrade-v1_2 at exact8204eeea9752af731f2049fb01964491fe5cac46.
+The twelve-path controller parses, diff--check passes, index stays empty and
+peer paths remain untouched; no new hook/commit/push or accepted SSE profile.
+Both26889/90324 confirmed live, still waiting for the actual Core job/window.
+
+**20:21UTC Core actual terminal return:** owner controller195216 ended
+20:20:21.738499UTC, exit1/FAIL_OR_INCOMPLETE, source and protected runtimes
+unchanged, own resources0. Entry/terminal HEAD both5291a80f; no new committed
+Core dependency needs porting. Terminal points to unedited gate log
+ccf7e333f89767b823dbf1087c75025877ac7839e7b67ba9a90d262ba9c80483;
+its1087contract PASS are not a normal-hook/commissioning PASS. Do not rerun or
+repair that peer's gate under Edge authority. Original retake26889 remains
+live, now held by actual foreign browser/process work, not the ended Core
+reservation. No new owned test, source payload, deployment or operational DB
+mutation; retain the same exact retake input and observer.
+
+**20:29UTC HK becomes independently runnable / owned guard defect:** fresh
+actual HK inspection finds neither future user/root reservation nor heavy job;
+the earlier DL window was released, so do not keep waiting for its old21:20
+deadline. New private guard falsely classifies stable redis_service and
+redis_marketdata as anonymous Docker jobs. Read-only identity proof confirms
+a6624b3127f86dc110a662c1bcad3f59827f5a11cb849313dcbf08e3f17cd094 /
+trading_system:redis and792a1732d3e541d627516b7bd80441a1f5d213972f41182be440d9b65005e69b /
+data_layer:redis_marketdata, both immutable image05a97a47, started15September,
+restart0. Fix only this guard with exact ID/name/Compose-project/service
+retention tuples, never a broad Redis or snake-case exemption. Keep browser,
+unknown/default-name, actual process and both lock denials. Run focused guard
+units plus already-prepared isolated PG15 reference next under a fresh finite
+lease; no source egress or operational DDL. SGP retake remains its original
+live executor, independently blocked by foreign work. Current-runtime33 are
+still PREPARED_NOT_RUN and do not inherit their parent's360raw results.
+
+**Actual guard/PG15 result20:30UTC:** seven orchestration guard tests PASS;
+fresh actual guard returns no HK blocker. PG15 reference75046 starts and exits1
+before source derivation: disposable initdb permits loopback, not the separate
+private Python cell. Its log explicitly denies test-only bobby/
+pm_native_golden_test from172.27.0.3. No source/authority PASS; preserve this
+first failed attempt. Terminal proves40protected runtime tuples unchanged,
+own containers/network0, own lease removed, operational mutations0.
+Correct ONLY disposable reference HBA via a separate pinned readonly test
+config: local trust and host access limited to that exact test DB/role on
+samenet. No production HBA, password, host listener/port or source SQL change.
+Use a fresh named attempt/evidence directory and unchanged resource ceilings;
+rerun after fresh host guards, never overwrite the failed evidence.
+
+**PG15 successor36532 actual PASS20:31:48UTC:** exact9source pins unchanged,
+PG150018 independent reference exported successfully; cataloguede6d4da7,
+source fingerprint3abe05e4, prepared catalogue8b7aced8. This is reference
+derivation ONLY: permissions_verifiedfalse, identities/acceptances installed
+false, runtime_enabledfalse, production-capacityfalse.40protected tuples
+unchanged; own cells/network0 and own lease removed, operational mutations0.
+Preserve the first HBA failure and this separate successful receipt.
+
+**Before current-runtime execution:** mechanically reuse the finite runner
+under /tmp/epg10-08-current-runtime-5291-wgAuNRtt, exact1158pins4846abe3 and
+same public dependency closure. First production strict, then14-spec strict.
+Run389distinct non-rollback-PG cases (parent360 plus29new) against the original
+disposable control-api-test-postgres-*/portal_control_test target; run the4new
+actual rollback/COMMIT-ACK cases separately against their already-frozen exact
+native-core-read-db/native_core_read_test guard. Do not relax either target
+guard, skip4cases or inherit parent360 after pool changes. Use cached images,
+private network/tmpfs/nohostport/volume/build/pull/install, unchanged2CPU/2GiB
+Node and1CPU/768MiB PG,250second node timeout/300second lease per profile.
+Fresh both-lock/physical-job guard and5second read-only interference sampling
+must exclude ONLY this exact new runtime owner/cell PIDs. Retain every failure
+and exact terminal cleanup; no connected/factory/provider acceptance or source
+egress from these isolated tests.
+
+**Current-runtime production203503 actual PASS20:37:48UTC:** source1158pins
+4846abe3 compile with unchanged2GiB/250second ceiling; exit0,32interference
+samples/no overlaps/errors,40protected tuples unchanged, own cells/network0,
+own lease removed. This does not qualify33behavioral cases or a real factory
+mount. Guard7355970b is frozen in the receipt. Correct upcoming controller
+evidence to capture runner/shell/guard hashes at start and shared-host disk
+pre/post teardown; no invented missing pre-disk metric for the earlier PG15
+or this compile. No image build/pull/cache operation, persistent volume or
+operational mutation. Next same-source14-spec strict,389regression/new-unit
+cases and separate4actual-PG cases under the unchanged finite envelopes.
+
+**Current-runtime14-spec203820 actual PASS20:41:03UTC:** exit0,31interference
+samples/no overlaps/errors, exact1158source unchanged,40protected tuples
+unchanged, own cells/network0 and lease removed. Runnerb92146f4/shelle0fe3c80/
+guard7355970b pinned. Shared-host free214654648320→213934116864B is an
+observation, not claimed own reclaimed bytes or proof of a leak in shared
+runtime data. No image build/pull/cache mutation. Both strict gates now PASS
+for this exact new source; behavioral389+4 still NOT_RUN. Start389only now
+with the original13spec selection, then its separately guarded4PG cases;
+preserve native-runtime mock/factory/connected proof boundaries.
+
+**Current-runtime behavior actual20:43–20:44UTC:** JUnit verifies389unique/
+13suites plus separately4unique actual-PG rollback cases, zeroFAIL/ERROR/SKIP
+in each run. Both source1158pins4846abe3 unchanged, exit0,23and2interference
+samples with no overlaps/errors,40protected tuples unchanged; own cells/network0
+and leases removed. Actual4cases include physical COMMIT/ROLLBACK followed by
+ACK loss, failed rollback and backend termination, with original error and
+healthy-borrower preservation. This is393distinct cases across two runs, NOT
+one393run, commissioning/factory acceptance or production network-fault proof.
+
+**Publication consolidation decision / same approved08:** this fresh HK
+successor exercises ALL360SSE/finite cases plus33runtime cases on the fuller
+current source, with both fresh production/14-spec strict gates. It therefore
+supersedes the narrower pending36file realtime-only publication; do not require
+another synthetic360retake solely to manufacture an intermediate packet.
+Publish ONE exact43file current-core-runtime-profile against immutable5291,
+full1154app-source closure plus three allowed auxiliary sources. Retain raw
+SGP191942taint as historical with no case credit. The SGP waiting executor is
+not a failed/stopped job: after its current state/handle is verified, explicitly
+retire it only if still unstarted and the stronger exact-source qualification
+is durably frozen. If already started, let it terminate/collect normally.
+Record intentional supersession, not a fabricated timeout/result; exact SGP
+source/public cleanup remains mandatory after no-live-job and retained hashes.
+Normal hooks, reviewed twelve-path scope, Bobby identity and feature-only push
+remain required. Source-only393 never closes original08 or opens09connected;
+actual provider/schema/identity/current Core mount and connected drills remain
+the same assigned work, no new phase or generic approval request.
+
+**Actual fuller publication frozen/verified20:49UTC:** new
+current-core-runtime-profile has43authored files/full1154app-source closure,
+patch344226B/240c5e3a83073e9f38f47948c34296aea79fcdea0a30b36a95be784d7d585211.
+Fresh19publication-guard tests PASS. Actual apply→all-output-hash→already-applied
+no-op→reverse→all-preimage check PASS on1142preimage files plus four auxiliary/
+layout files. Five inherited EOF notices do not alter any source byte; no
+relaxed preimage/context/assertion. Own exact roundtrip copy removed; shared
+free215906131968→215900901376B, no runtime/DB mutation. Main/backend/parent/
+finite-profile indices now agree on393across389+4runs and separate mocked
+loader vs genuine factory/connected qualification. Review/stage only the exact
+twelve paths, retain normal hooks and immutable historical profiles. Inventory
+images/BuildKit before/after the real hook; do not prune peer/operational data.
+Only after hook PASS commit/push this approved feature, then finish actual
+provider/Core commission and the still-required exact test-source cleanup.
+
 
 
 

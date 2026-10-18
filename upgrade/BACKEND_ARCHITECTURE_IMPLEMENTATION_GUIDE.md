@@ -666,13 +666,25 @@ now has fresh production/seven-spec strict gates and233unique cases PASS,
 PASS inherited. Source preflight remains a separate mandatory check, not
 connected/provider acceptance. Original08 remains owned
 implementation IN_PROGRESS/NOT_MET, not an external blanket wait or connected
-release. Separate SSE mounting preparation now changes12files (8production,
-4test), preserving the finite JSON and using the existing local timer/Hub with
-current independent STREAM. Shutdown joins actual source completion, not only
-abort/timeout, accepted preparation/operations and actual late repository reads.
-42pure and7actual-PG/mounted cases are prepared, ALL NOT_RUN;
-source/whitespace inventory is not qualification. Current32finite profile stays
-frozen. See the [campaign main journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
+release. The newer [current-Core SSE/runtime source profile](integration/execution-native-read-v1/current-core-runtime-profile/README.md)
+freezes43authored files/full1154app-source closure against the SAME5291base.
+Fresh production/14-spec strict gates and389unique regression/unit plus4separate
+actual-PG rollback cases PASS, zeroFAIL/ERROR/SKIP;393distinct across two runs,
+not one393run. This includes all360finite/SSE cases on the fuller source, no
+historical233or tainted SGP191942credit. The original SGP raw360PASS remains
+TAINTED by an unowned Playwright job. The still-unstarted narrow retake is
+explicitly superseded only after the stronger profile/preimage roundtrip is
+verified; retain terminal proof and exact source/public cleanup, not a fake
+result. No guard/timeout/target assertion is weakened.
+SSE reuses the existing coordinator/Hub and joins actual late completion.
+Optional private runtime refs select the genuine same-pool/trust/mutation
+composition; loader units mock filesystem/composition, not actual factory
+commissioning. PG15reference is independently exported from exact9source files,
+but permissions/identities/runtime are NOT installed. Current32finite profile
+stays frozen. No deploy/shared-cache edit/operational DB mutation follows.
+Actual provider/schema/identity/current-Core mount and connected revoke/cache/
+cursor/SSE remain owned08work, not a new phase. See the
+[campaign main journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
 for current source/runtime/cleanup and scoped next actions; historical tracking
 below does not supersede this continuation.
 

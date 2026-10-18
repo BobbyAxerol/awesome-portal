@@ -1,5 +1,13 @@
 # Original EPG10-08 — qualified Core source publication
 
+For the latest qualified source, read the
+[current Core SSE/runtime profile](current-core-runtime-profile/README.md):
+43authored files/full1154app-source closure against5291a80f, both fresh strict
+gates and393distinct cases across389+4runs, zeroFAIL/ERROR/SKIP. It includes
+the finite HTTP consumer plus observation SSE and conditional runtime loader;
+the historical profiles below remain immutable. It is source qualification,
+not commissioned provider/identity, actual factory or connected08 acceptance.
+
 Use the additive [complete profile](complete-profile/manifest.json) for a
 reproducible historical qualification. It repairs an owned publication omission:
 four qualified READ/STREAM prerequisites were not in the original authored patch.
@@ -53,7 +61,7 @@ Preserve the current Core `relations.qualified` legacy membership guard when
 reconciling `access-policy.ts`; the historical exact profile does not contain
 that later safety change. The32-file current-Core HTTP mount has its own fresh
 233-case/strict qualification and is not certified by this historical packet.
-The latest [current-Core source profile](current-core-profile/README.md) is now
+The finite [current-Core HTTP profile](current-core-profile/README.md) is
 reconciled against5291a80f, preserving its pending-recall additions. It is
 explicitly isolated-source qualified, not a commissioned or activated release;
 its own [qualification](current-core-profile/qualification.json) proves both
