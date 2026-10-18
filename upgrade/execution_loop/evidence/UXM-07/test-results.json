@@ -17,12 +17,12 @@
       "tests": "2569 passed / 2 failed / 1 skipped",
       "failures": [
         {
-          "test": "tokens.test.ts \u00b7 keeps every declared foreground/background pair legible on operations-carbon",
+          "test": "tokens.test.ts · keeps every declared foreground/background pair legible on operations-carbon",
           "debt": "DEBT-UXM07-001",
           "pre_existing": true
         },
         {
-          "test": "r2Ledger.test.ts \u00b7 covers every execution/governance table the control-api names in SQL",
+          "test": "r2Ledger.test.ts · covers every execution/governance table the control-api names in SQL",
           "debt": "DEBT-UXM07-002",
           "pre_existing": true
         }
@@ -126,5 +126,32 @@
         "reason": "R1 commits; covered at the S1 R2 milestone"
       }
     ]
+  },
+  "r2": {
+    "date": "2026-10-18",
+    "base": "claude/fe-parity rebased on Codex 5291a80f (pending-recall commit)",
+    "full_precommit_hook": "runs on the commit that carries this file (R2); the earlier B1/B2 hook run (517684b6) already passed",
+    "vitest": {
+      "cmd": "npx vitest run src/execution src/styles src/app src/portal e2e",
+      "tests": "17,492 pass / 26 expected-fail / 1 red (r2Ledger) before the Codex rebase; after the rebase r2Ledger passes (22/22)"
+    },
+    "visual_pinned_image": {
+      "cmd": "scripts/portal-web-visual.sh --workers=2 (mcr.microsoft.com/playwright:v1.62.1-noble)",
+      "first_full_run": "375 passed / 17 failed / 16 skipped",
+      "failures": {
+        "_preview-governance-c06 x4": "needs GOV_WORKSPACE of a real stack; not a baseline; environment-dependent, fails whenever unset",
+        "execution-surface-audit clipped+type-scale x10": "same 10 fail on a pristine checkout of Codex 5291a80f; the 5 WCAG-AA tests fail there too and PASS on this branch (DEBT-UXM07-001 fix)",
+        "EL-V2-05 governance chain x1": "fails on a pristine checkout of Codex 5291a80f (locator 'Exit reviews' not found)",
+        "EL-V2-07 command-center + EL-V2-08 account x2": "caused by this branch (the V2 5-row alpha fleet double reached V1); fixed: V2 rows only with screensV2; command-center passes, account re-recorded"
+      },
+      "pristine_codex_tip_run": "surface-audit + journeys on 5291a80f: 17 failed / 105 passed (same pinned image)",
+      "rerun_journeys_after_fix": "80 passed / 2 failed (EL-V2-05 pre-existing; account baseline changed by DEBT-UXM07-003)",
+      "baseline_rerecorded": [
+        "e2e/execution-journeys.spec.ts-snapshots/el-v2-08-account-acct-live-grid-v21-chromium-preview-linux.png (the old image printed UDB_CONTEXT_HTTP_501, a double that never answered retained-review; now the honest absent state). One image, viewed.]"
+      ],
+      "recorder_check": "1 passed after --update with -g account-acct-live-grid; git shows exactly one PNG changed"
+    },
+    "browser_v2": "34/34 on the port-4176 V2 build (17 routes x 1440/390)",
+    "flag_off_dist": "0 files contain any V2 class; class-collision gate added in v2Hygiene.test.ts"
   }
 }

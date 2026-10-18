@@ -3,16 +3,6 @@
   "updated": "2026-10-18",
   "open": [
     {
-      "id": "DEBT-UXM07-002",
-      "title": "R2 persistence ledger lacks the V2 operations queue table",
-      "where": "apps/portal/frontend/src/execution/r2Ledger.test.ts:117 ('covers every execution/governance table the control-api names in SQL')",
-      "measured": "missing: execution_operation_queue_v2 (added by Codex with executionF0BlockedOperationsListV2); fails on docs/research-loop-plan tip 0d5ceaba without any UXM-07 change",
-      "not_fixed_because": "The ledger names persistence ownership for Codex tables; adding a row is Codex's ownership decision, not a frontend appearance change.",
-      "pre_commit_hook_blocks": false,
-      "proposed": "Codex adds the table to the R2 ledger (or states it is out of scope) in the next landing turn.",
-      "owner": "Codex"
-    },
-    {
       "id": "DEBT-UXM07-004",
       "title": "Reader defects documented by the L3 conformance suites",
       "where": "formatExact.ts group() (quadratic), profileRead.ts readFleetDeployment/readCurrency* (money = any non-empty string), inboxRowV2.ts whole()/ids, laneModel.ts isClosedRow, fleetModel.ts healthView, duplicate ids per page",
@@ -34,6 +24,13 @@
       "consequence": "Compare rides /deployments/portfolios?view=compare",
       "proposed": "registry rev 7 adds EXECUTION_COMPARE_SCREEN at /deployments/compare",
       "owner": "Codex (FE-039/C-5)"
+    },
+    {
+      "id": "DEBT-UXM07-007",
+      "title": "Visual/e2e red that already exists on Codex tip 5291a80f",
+      "where": "e2e/execution-surface-audit.spec.ts (clipped paragraphs and type-scale on lab pages gate-r1-review, live-full-operations, sandbox-certification, incident-detail at 5 widths = 10 tests), e2e/execution-journeys.spec.ts EL-V2-05 (locator 'Exit reviews'), e2e/_preview-governance-c06.spec.ts (needs GOV_WORKSPACE of a real stack)",
+      "evidence": "same failures on a pristine detached checkout of 5291a80f under the pinned image (17 failed / 105 passed); not caused by UXM-07",
+      "owner": "Codex (V1 lab copy and governance inbox) / Bobby (the c06 probe is real-stack only; it is not excluded from the chromium project's testIgnore)"
     }
   ],
   "closed": [
@@ -59,6 +56,17 @@
       "proposed": "Codex/Bobby decide the stub (e.g. canonical execution-retained-review.valid.json with a non-retained scope) and re-green execution-preview.spec.",
       "owner": "Codex / Bobby decision",
       "closed_by": "0341aec1 (double answers the typed 404 UDB_RETAINED_REVIEW_NOT_CONFIGURED; specs allow exactly that URL); execution-preview spec 2/2 pass"
+    },
+    {
+      "id": "DEBT-UXM07-002",
+      "title": "R2 persistence ledger lacks the V2 operations queue table",
+      "where": "apps/portal/frontend/src/execution/r2Ledger.test.ts:117 ('covers every execution/governance table the control-api names in SQL')",
+      "measured": "missing: execution_operation_queue_v2 (added by Codex with executionF0BlockedOperationsListV2); fails on docs/research-loop-plan tip 0d5ceaba without any UXM-07 change",
+      "not_fixed_because": "The ledger names persistence ownership for Codex tables; adding a row is Codex's ownership decision, not a frontend appearance change.",
+      "pre_commit_hook_blocks": false,
+      "proposed": "Codex adds the table to the R2 ledger (or states it is out of scope) in the next landing turn.",
+      "owner": "Codex",
+      "closed_by": "Codex 5291a80f registered execution_operation_queue_v2 (r2Ledger.test passes after the rebase)"
     }
   ]
 }

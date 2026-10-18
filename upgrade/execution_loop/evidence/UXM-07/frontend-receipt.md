@@ -106,3 +106,9 @@ Baseline ảnh pinned-image và hook đầy đủ cho S2 (R2, bước kế tiế
 
 ## Khác thiết kế (ghi để Bobby/Codex xem)
 Compare đặt ở `?view=compare` trên route Portfolios; Users chỉ đọc (ghi vẫn ở V1, `?view=legacy`); màn Accounts không có tab "All environments" (contract một environment); nhãn "Sandbox" thay "Testnet"; địa chỉ broker không bao giờ hiện ("Withheld"); Blotter scope chips chỉ lọc "loaded pages"; Admin cho "Make plan" với action SUPPORTED_BUT_INACTIVE (apply luôn tắt) — cần Bobby/Codex xác nhận; tên capability `execution.*` tạm (DEBT-UXM07-005).
+
+## R2 (2026-10-18) — hook đầy đủ, baseline ảnh pinned-image, hạ cánh
+- Nhánh `claude/fe-parity` đã rebase lên tip Codex `5291a80f` (Codex đã commit gói pending-recall; Source Truth Board do Codex điền cột nguồn cho 12 hàng).
+- Visual (pinned image `mcr.microsoft.com/playwright:v1.62.1-noble`, toàn bộ): lần đầu 375 pass / 17 fail. 15 trong 17 lỗi (surface-audit ×10, EL-V2-05, c06 ×4) **cũng đỏ trên bản sạch của tip Codex** (ghi DEBT-UXM07-007); riêng 5 test WCAG-AA đỏ trên tip Codex nay **xanh** nhờ DEBT-UXM07-001. Hai lỗi do nhánh này (command-center, account cao hơn vì double V2 làm giàu fleet) đã sửa: dữ liệu giàu chỉ với `screensV2`.
+- Một baseline được ghi lại có chủ đích: `el-v2-08-account-acct-live-grid-v21` (ảnh cũ in `UDB_CONTEXT_HTTP_501` do double chưa trả retained-review — DEBT-UXM07-003). Đã xem ảnh mới.
+- Chi tiết: [test-results.json](test-results.json) mục `r2`.
