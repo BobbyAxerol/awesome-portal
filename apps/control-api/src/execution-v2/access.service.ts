@@ -22,6 +22,7 @@ import { captureCurrentHumanSnapshot } from "./current-human-snapshot";
 import { CurrentHumanLeaseError } from "./current-human-candidate";
 import { CurrentHumanMutations, type CurrentHumanMutationBinding, type CurrentHumanMutationHooks } from "./current-human-mutations";
 import { currentAcceptanceMatches, currentAccessRelations } from "./access-current-relations";
+import { reviewedParentAuditRoot } from "./parent-read-fields";
 
 type Tx={db:PoolClient;repo:AccessRepository;context:AccessEvaluationContext;recheck:(check:()=>void)=>void};
 type OperationResult={receipt:AccessReceipt;replayed:boolean};
@@ -65,6 +66,7 @@ export class ExecutionAccessService {
       throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
     return {principal_id:actor.user_id,workspace_id:workspace,now_ms:current.now,actor_current:true,
       authority_fingerprint:current.authority_fingerprint,actor_lease_until_ms:current.lease_until_ms,actor_role:current.actor_role,
+      actor_member:current.actor_member,
       policy:current.policy,grants:current.grants,active_principals:new Set(current.active),
       allow_test_only:this.allowTestOnly,relationsFor:id=>relationMap.get(id)??{
         qualified:false,revision:"UNQUALIFIED",own_alpha_ids:[],member_portfolio_ids:[],roots:{},membership:null}};
@@ -79,7 +81,8 @@ export class ExecutionAccessService {
     const current=await this.captureReadContext(actor,workspace);
     if(current.authority_fingerprint!==expected.authority_fingerprint)
       throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
-    return {...expected,now_ms:current.now,actor_lease_until_ms:current.lease_until_ms,actor_role:current.actor_role,actor_current:true};
+    return {...expected,now_ms:current.now,actor_lease_until_ms:current.lease_until_ms,actor_role:current.actor_role,
+      actor_member:current.actor_member,actor_current:true};
   }
 
   /** Internal producer port; no HTTP endpoint or fallback authority. */
@@ -554,7 +557,11 @@ export class ExecutionAccessService {
       for(const grant of artifact.root_grants){
         if(grant.parent_grant_id!==null||grant.issued_by!==anchor||grant.workspace_id!==artifact.policy.workspace_id||
           grant.policy_revision!==artifact.policy.revision||grant.revoked_at_ms!==null||grant.action==="owner.recovery"||
-          tsBusinessAction(grant.action)&&grant.effect==="ALLOW"&&(!grant.requires_ts_acceptance||grant.ts_receipt!==null))
+          tsBusinessAction(grant.action)&&grant.effect==="ALLOW"&&!grant.requires_ts_acceptance||
+          grant.requires_ts_acceptance&&(grant.ts_receipt!==null||grant.ts_acceptance_digest!==undefined)||
+          grant.action==="audit.read"&&grant.effect==="ALLOW"&&
+            (grant.requires_ts_acceptance||(artifact.policy.parent_read_fields??[]).some(seal=>seal.field_policy_ref===grant.field_policy_ref))&&
+            !reviewedParentAuditRoot(grant,artifact.policy))
           throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH");
       }
       if(!write)return null;

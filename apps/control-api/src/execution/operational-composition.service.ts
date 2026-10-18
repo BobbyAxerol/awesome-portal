@@ -6,6 +6,7 @@ import { ControlApiConfig } from "../config";
 import { GovernanceError, GovernanceService } from "../governance/governance.service";
 import { governanceConditionsQuery } from "../governance/contracts";
 import { PaperExitService } from "../governance/paper-exit.service";
+import { PositiveParentReads } from "../governance/positive-parent.service";
 import { IncidentService } from "../operations/incident.service";
 import { ExecutionOperationsService } from "../operations/operations.service";
 import { OperationsWorkflowService } from "../operations/workflow.service";
@@ -67,6 +68,7 @@ export class OperationalCompositionService {
     @Optional() @Inject(WorkspacesRepository) private readonly workspaces?: WorkspacesRepository,
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
     @Optional() @Inject(OperationalReadService) private readonly currentReads?: OperationalReadService,
+    @Optional() @Inject(PositiveParentReads) private readonly positiveParents?: PositiveParentReads,
   ) {}
 
   async approval(
@@ -74,6 +76,14 @@ export class OperationalCompositionService {
     approvalId: string,
     view: "r1" | "r2" | "live",
   ): Promise<Record<string, unknown>> {
+    if (view === "r2" && await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.positiveParents) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      const prepared = await this.positiveParents.prepare(principal,"R2",approvalId);
+      // Pure composition stays INSIDE the same issuer-bound flight; there is
+      // no awaited source/projection work after its genuine final Core fence.
+      return this.positiveParents.finish(prepared, governance =>
+        this.currentComposition(principal,"approval_r2",{governance,accepted_manager_facts:null}));
+    }
     const governance = view === "r1"
       ? await this.governance.detail(principal.user, principal.workspaceId, approvalId, principal.session)
       : view === "r2"
@@ -106,6 +116,12 @@ export class OperationalCompositionService {
   }
 
   async exitReview(principal: PortalDerivationPrincipal, reviewId: string): Promise<Record<string, unknown>> {
+    if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.positiveParents) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      const prepared = await this.positiveParents.prepare(principal,"PAPER_EXIT",reviewId);
+      return this.positiveParents.finish(prepared, exit_review =>
+        this.currentComposition(principal,"paper_exit_review",{exit_review}));
+    }
     return this.compose(principal, "paper_exit_review", {
       exit_review: await this.paperExit.detail(principal.user, principal.workspaceId, reviewId, principal.session),
     }, () => this.paperExit.assertReadAuthority(principal.user, principal.workspaceId, principal.session));

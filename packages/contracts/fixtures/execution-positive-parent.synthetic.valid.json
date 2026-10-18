@@ -1,0 +1,692 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "production_config": false,
+  "authority_installed": false,
+  "r2": {
+    "schema_version": "portal.execution.governance-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "R2",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_r2",
+      "gate": "R2",
+      "status": "EXPIRED",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_IMMUTABLE_REFERENCE",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "observed_risk_grant_id": "grant_TEST_ONLY_historical",
+      "currency": "TEST_ONLY:USD"
+    }
+  },
+  "r2_absent": {
+    "schema_version": "portal.execution.governance-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "R2",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_r2",
+      "gate": "R2",
+      "status": "EXPIRED",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "lineage": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    }
+  },
+  "paper_exit": {
+    "schema_version": "portal.execution.governance-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "PAPER_EXIT",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_exit",
+      "gate": "PAPER_EXIT",
+      "status": "PENDING",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "review": {
+      "review_id": "apr_TEST_ONLY_exit",
+      "review_state": "PENDING",
+      "review_version": 1,
+      "promote_to": "SANDBOX_VALIDATION",
+      "extension_days": null,
+      "extended_until_ms": null,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000
+    },
+    "evaluation": {
+      "availability": "AVAILABLE",
+      "evaluation_policy_version": "TEST_ONLY:exit-policy",
+      "evaluation_formula_version": "TEST_ONLY:exit-formula",
+      "panels": [
+        {
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "panel_kind": "OBSERVATION_COVERAGE",
+          "source_authority": "RESEARCH",
+          "panel_state": "OK",
+          "as_of_ms": 1790812800000,
+          "freshness_state": "OK",
+          "source_completeness": "POLL_BOUNDED",
+          "poll_interval_ms": 1000,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "panel_kind": "DRIFT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "panel_kind": "LIMITS_HEALTH",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "panel_kind": "PORTFOLIO_FIT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        }
+      ],
+      "findings": [
+        {
+          "finding_id": "finding_TEST_ONLY_0",
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "outcome": "PASS",
+          "blocking": false,
+          "required": true,
+          "as_of_ms": 1790812800000
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_1",
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_2",
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_3",
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        }
+      ]
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "r2_approval_id": "apr_TEST_ONLY_r2",
+      "source_snapshot_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "evidence_set_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  },
+  "paper_exit_absent": {
+    "schema_version": "portal.execution.governance-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "PAPER_EXIT",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_exit",
+      "gate": "PAPER_EXIT",
+      "status": "PENDING",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "review": {
+      "review_id": "apr_TEST_ONLY_exit",
+      "review_state": "PENDING",
+      "review_version": 1,
+      "promote_to": "SANDBOX_VALIDATION",
+      "extension_days": null,
+      "extended_until_ms": null,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000
+    },
+    "evaluation": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "lineage": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    }
+  },
+  "paper_exit_extended": {
+    "schema_version": "portal.execution.governance-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "PAPER_EXIT",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_exit",
+      "gate": "PAPER_EXIT",
+      "status": "PENDING",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "review": {
+      "review_id": "apr_TEST_ONLY_exit",
+      "review_state": "EXTENDED",
+      "review_version": 2,
+      "promote_to": "SANDBOX_VALIDATION",
+      "extension_days": 14,
+      "extended_until_ms": 1792022400000,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790899200000
+    },
+    "evaluation": {
+      "availability": "AVAILABLE",
+      "evaluation_policy_version": "TEST_ONLY:exit-policy",
+      "evaluation_formula_version": "TEST_ONLY:exit-formula",
+      "panels": [
+        {
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "panel_kind": "OBSERVATION_COVERAGE",
+          "source_authority": "RESEARCH",
+          "panel_state": "OK",
+          "as_of_ms": 1790812800000,
+          "freshness_state": "OK",
+          "source_completeness": "POLL_BOUNDED",
+          "poll_interval_ms": 1000,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "panel_kind": "DRIFT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "panel_kind": "LIMITS_HEALTH",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "panel_kind": "PORTFOLIO_FIT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        }
+      ],
+      "findings": [
+        {
+          "finding_id": "finding_TEST_ONLY_0",
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "outcome": "PASS",
+          "blocking": false,
+          "required": true,
+          "as_of_ms": 1790812800000
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_1",
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_2",
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_3",
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        }
+      ]
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "r2_approval_id": "apr_TEST_ONLY_r2",
+      "source_snapshot_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "evidence_set_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  },
+  "r2_composition": {
+    "schema_version": "execution.operational-composition.v1",
+    "logical_operation_id": "executionOperationalApprovalR2V1",
+    "record_authority": "PORTAL_CONTROL",
+    "source_authority": "PORTAL_CONTROL_ONLY",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "read_at_ms": 1792281600000,
+    "read_at": "2026-10-18T00:00:00.000Z",
+    "composite_revision": "sha256:9f1741d7cc1ad1e8c88f1dab44224ee895145ba97b9a45ccfdd950d7f0b14ea5",
+    "source_health": {
+      "input_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "state": "UNAVAILABLE",
+      "reason_code": "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED",
+      "source_side_effect_requested": false
+    },
+    "redacted_command_journal": {
+      "digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "state": "UNAVAILABLE",
+      "reason_code": "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED",
+      "source_side_effect_requested": false
+    },
+    "canary_twin_comparison": {
+      "state": "UNAVAILABLE",
+      "reason_code": "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED",
+      "source_side_effect_requested": false
+    },
+    "command_authority": {
+      "state": "UNCHANGED_FAIL_CLOSED",
+      "source_side_effect_requested": false
+    },
+    "lineage": {
+      "source_health_input_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "command_journal_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "workflow_digest": "sha256:07341aeb202c922be02529cd735c9642719713df2333ea8c4f08dd8818a960cd",
+      "formula_version": "execution.operational-composition.v1"
+    },
+    "data": {
+      "governance": {
+        "schema_version": "portal.execution.governance-parent.v2",
+        "workspace_id": "ws_TEST_ONLY_parent",
+        "record_authority": "PORTAL",
+        "provenance_basis": "CURRENT_CORE_BASELINE",
+        "field_contract_revision": "portal.execution.parent-fields.v1",
+        "observed_at_ms": 1792281600000,
+        "source": {
+          "authority": "PORTAL",
+          "source_verdict": "NOT_ASSERTED",
+          "source_side_effect_requested": false
+        },
+        "anchors": {
+          "deployment_id": "dep_TEST_ONLY_parent",
+          "portfolio_id": "pf_TEST_ONLY_parent",
+          "environment": "PAPER"
+        },
+        "family": "R2",
+        "approval": {
+          "approval_id": "apr_TEST_ONLY_r2",
+          "gate": "R2",
+          "status": "EXPIRED",
+          "approval_version": 1,
+          "policy_version": "TEST_ONLY:policy-v1",
+          "quorum_required": 2,
+          "quorum_met": 0,
+          "evidence_complete": false,
+          "created_at_ms": 1790812800000,
+          "updated_at_ms": 1790812800000,
+          "sla_due_at_ms": 1790899200000,
+          "expires_at_ms": 1790985600000,
+          "decided_at_ms": null
+        },
+        "lineage": {
+          "availability": "AVAILABLE",
+          "basis": "STORED_IMMUTABLE_REFERENCE",
+          "r1_approval_id": "apr_TEST_ONLY_r1",
+          "observed_risk_grant_id": "grant_TEST_ONLY_historical",
+          "currency": "TEST_ONLY:USD"
+        }
+      },
+      "accepted_manager_facts": null
+    }
+  },
+  "paper_exit_composition": {
+    "schema_version": "execution.operational-composition.v1",
+    "logical_operation_id": "executionOperationalPaperExitReviewV1",
+    "record_authority": "PORTAL_CONTROL",
+    "source_authority": "PORTAL_CONTROL_ONLY",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "read_at_ms": 1792281600000,
+    "read_at": "2026-10-18T00:00:00.000Z",
+    "composite_revision": "sha256:656a1cf2a47af44759a3a00420b8bbbe76b4c69cdd3b23a3a4f5a33a9dacbd74",
+    "source_health": {
+      "input_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "state": "UNAVAILABLE",
+      "reason_code": "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED",
+      "source_side_effect_requested": false
+    },
+    "redacted_command_journal": {
+      "digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "state": "UNAVAILABLE",
+      "reason_code": "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED",
+      "source_side_effect_requested": false
+    },
+    "canary_twin_comparison": {
+      "state": "UNAVAILABLE",
+      "reason_code": "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED",
+      "source_side_effect_requested": false
+    },
+    "command_authority": {
+      "state": "UNCHANGED_FAIL_CLOSED",
+      "source_side_effect_requested": false
+    },
+    "lineage": {
+      "source_health_input_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "command_journal_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "workflow_digest": "sha256:329628729d7b8180718eca933d923d3828016fd0f6dd7ee4807252cb510362e3",
+      "formula_version": "execution.operational-composition.v1"
+    },
+    "data": {
+      "exit_review": {
+        "schema_version": "portal.execution.governance-parent.v2",
+        "workspace_id": "ws_TEST_ONLY_parent",
+        "record_authority": "PORTAL",
+        "provenance_basis": "CURRENT_CORE_BASELINE",
+        "field_contract_revision": "portal.execution.parent-fields.v1",
+        "observed_at_ms": 1792281600000,
+        "source": {
+          "authority": "PORTAL",
+          "source_verdict": "NOT_ASSERTED",
+          "source_side_effect_requested": false
+        },
+        "anchors": {
+          "deployment_id": "dep_TEST_ONLY_parent",
+          "portfolio_id": "pf_TEST_ONLY_parent",
+          "environment": "PAPER"
+        },
+        "family": "PAPER_EXIT",
+        "approval": {
+          "approval_id": "apr_TEST_ONLY_exit",
+          "gate": "PAPER_EXIT",
+          "status": "PENDING",
+          "approval_version": 1,
+          "policy_version": "TEST_ONLY:policy-v1",
+          "quorum_required": 2,
+          "quorum_met": 0,
+          "evidence_complete": false,
+          "created_at_ms": 1790812800000,
+          "updated_at_ms": 1790812800000,
+          "sla_due_at_ms": 1790899200000,
+          "expires_at_ms": 1790985600000,
+          "decided_at_ms": null
+        },
+        "review": {
+          "review_id": "apr_TEST_ONLY_exit",
+          "review_state": "PENDING",
+          "review_version": 1,
+          "promote_to": "SANDBOX_VALIDATION",
+          "extension_days": null,
+          "extended_until_ms": null,
+          "created_at_ms": 1790812800000,
+          "updated_at_ms": 1790812800000
+        },
+        "evaluation": {
+          "availability": "AVAILABLE",
+          "evaluation_policy_version": "TEST_ONLY:exit-policy",
+          "evaluation_formula_version": "TEST_ONLY:exit-formula",
+          "panels": [
+            {
+              "panel_id": "panel_TEST_ONLY_0",
+              "ordinal": 0,
+              "panel_kind": "OBSERVATION_COVERAGE",
+              "source_authority": "RESEARCH",
+              "panel_state": "OK",
+              "as_of_ms": 1790812800000,
+              "freshness_state": "OK",
+              "source_completeness": "POLL_BOUNDED",
+              "poll_interval_ms": 1000,
+              "formula_version": null
+            },
+            {
+              "panel_id": "panel_TEST_ONLY_1",
+              "ordinal": 1,
+              "panel_kind": "DRIFT",
+              "source_authority": "EXECUTION",
+              "panel_state": "UNAVAILABLE",
+              "as_of_ms": null,
+              "freshness_state": "UNKNOWN",
+              "source_completeness": "UNKNOWN",
+              "poll_interval_ms": null,
+              "formula_version": null
+            },
+            {
+              "panel_id": "panel_TEST_ONLY_2",
+              "ordinal": 2,
+              "panel_kind": "LIMITS_HEALTH",
+              "source_authority": "EXECUTION",
+              "panel_state": "UNAVAILABLE",
+              "as_of_ms": null,
+              "freshness_state": "UNKNOWN",
+              "source_completeness": "UNKNOWN",
+              "poll_interval_ms": null,
+              "formula_version": null
+            },
+            {
+              "panel_id": "panel_TEST_ONLY_3",
+              "ordinal": 3,
+              "panel_kind": "PORTFOLIO_FIT",
+              "source_authority": "EXECUTION",
+              "panel_state": "UNAVAILABLE",
+              "as_of_ms": null,
+              "freshness_state": "UNKNOWN",
+              "source_completeness": "UNKNOWN",
+              "poll_interval_ms": null,
+              "formula_version": null
+            }
+          ],
+          "findings": [
+            {
+              "finding_id": "finding_TEST_ONLY_0",
+              "panel_id": "panel_TEST_ONLY_0",
+              "ordinal": 0,
+              "outcome": "PASS",
+              "blocking": false,
+              "required": true,
+              "as_of_ms": 1790812800000
+            },
+            {
+              "finding_id": "finding_TEST_ONLY_1",
+              "panel_id": "panel_TEST_ONLY_1",
+              "ordinal": 1,
+              "outcome": "INSUFFICIENT",
+              "blocking": true,
+              "required": true,
+              "as_of_ms": null
+            },
+            {
+              "finding_id": "finding_TEST_ONLY_2",
+              "panel_id": "panel_TEST_ONLY_2",
+              "ordinal": 2,
+              "outcome": "INSUFFICIENT",
+              "blocking": true,
+              "required": true,
+              "as_of_ms": null
+            },
+            {
+              "finding_id": "finding_TEST_ONLY_3",
+              "panel_id": "panel_TEST_ONLY_3",
+              "ordinal": 3,
+              "outcome": "INSUFFICIENT",
+              "blocking": true,
+              "required": true,
+              "as_of_ms": null
+            }
+          ]
+        },
+        "lineage": {
+          "availability": "AVAILABLE",
+          "basis": "VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE",
+          "r1_approval_id": "apr_TEST_ONLY_r1",
+          "r2_approval_id": "apr_TEST_ONLY_r2",
+          "source_snapshot_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "evidence_set_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      }
+    }
+  }
+}

@@ -8,6 +8,7 @@ import { AccessRepository, type AccessEvent, type AccessReceipt } from "./access
 import { CurrentHumanLeaseError } from "./current-human-candidate";
 import type { CurrentHumanMutations } from "./current-human-mutations";
 import { currentAcceptanceMatches, currentAccessRelations, type CurrentAccessRelations } from "./access-current-relations";
+import { reviewedParentAuditRoot } from "./parent-read-fields";
 
 /** Private normalized verifier output, NOT a declaration of an existing TS wire.
  * A policy artifact cannot qualify this fact or copy an ordinary proposal receipt. */
@@ -118,11 +119,12 @@ export async function acceptRootMembershipReceipt(pool: Pool,
       const grant = parsedGrant.data;
       if (grant.parent_grant_id !== null || grant.issued_by !== anchor || grant.workspace_id !== fact.workspace_id ||
         grant.policy_revision !== p.revision || grant.subject_user_id !== fact.portal_user_id || grant.effect !== "ALLOW" ||
-        !tsBusinessAction(grant.action) || !grant.requires_ts_acceptance || grant.action !== fact.action ||
+        !(tsBusinessAction(grant.action)||reviewedParentAuditRoot(grant,p)) || !grant.requires_ts_acceptance || grant.action !== fact.action ||
         accessDigest(canonicalSelector(grant.selector)) !== fact.selector_digest ||
         accessDigest([...grant.environments].sort()) !== accessDigest([...fact.environments].sort()) ||
         accessDigest(grant) !== fact.grant_digest || grant.revision !== fact.expected_grant_revision) throw refusal();
-      if (grant.revoked_at_ms !== null || grant.ts_receipt !== null) throw new AccessPolicyError("RECEIPT_REVISION_CONFLICT", 409);
+      if (grant.revoked_at_ms !== null || grant.ts_receipt !== null || grant.ts_acceptance_digest !== undefined)
+        throw new AccessPolicyError("RECEIPT_REVISION_CONFLICT", 409);
       if (grant.action === "portfolio.read_restricted" && (p.researcher_fields.state !== "QUALIFIED" ||
           !p.researcher_fields.policy_ref || grant.field_policy_ref !== p.researcher_fields.policy_ref)) throw refusal();
       const ids = [...new Set([anchor, grant.subject_user_id])];
@@ -133,6 +135,8 @@ export async function acceptRootMembershipReceipt(pool: Pool,
         grant.subject_user_id !== anchor && !members.rows.some(m => m.user_id === grant.subject_user_id))
         throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
       const assertCurrent = (now: number) => {
+        if (grant.action === "audit.read" && !reviewedParentAuditRoot(grant,p,now))
+          throw new AccessPolicyError("RECEIPT_REVISION_CONFLICT",409);
         if (grant.valid_from_ms > now || grant.valid_until_ms !== null && grant.valid_until_ms <= now ||
           fact.effective_at_ms < grant.valid_from_ms || fact.effective_at_ms > now ||
           fact.expires_at_ms !== null && (fact.expires_at_ms <= now || fact.expires_at_ms <= fact.effective_at_ms) ||

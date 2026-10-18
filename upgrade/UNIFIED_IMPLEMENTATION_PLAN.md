@@ -12038,3 +12038,29 @@ Actual corrected qualification21:06:16.131619–21:07:29.428425UTC:348PASS (278u
   N29/EDS-12 semantic verifiers PASS with runtime_effect:NONE, no verdict or
   authority change. Retry the same coherent owned batch through normal hook;
   no new focused PG/build or whole-phase/consumer/runtime acceptance.
+
+- Combined original04/07/08 normal hook is now TERMINAL/PASS at
+  2026-10-18T07:48:53UTC, landed `ac056d46`:896contract/7072API PASS
+  +3existing skips, build/scopedPGrestore/four access digests, frozen source/
+  index/eight protected runtimes and owned cleanup PASS. [Exact hashes,
+  preserved failures and narrow phase limits](execution_loop/evidence/ELP2-04/parent-capture-integrity.md#normal-hook-terminal--2026-10-18t074853utc).
+  Next approved original04-008/009 [finite positive R2/Paper Exit package](execution_loop/evidence/ELP2-04/positive-governance-parents.md)
+  is APPLIED_UNCOMMITTED/NOT_RUN at entry: existing verified reviewed-policy
+  field seals + independent exact audit-root receipts, both native anchors,
+  unchanged bounded parent hashes and SAME final-flight composition. No
+  root-only operation publication, technical-purpose or source/consumer
+  closure inferred. Claude review intake7.3 remains mandatory at each package;
+  no actual new consumer ACK, UXM owner-held. Original04 widercoverage,
+  source/trust/budget/calibration/coexistence/P184G2/browser and11entry OPEN;
+  no frontend, policy installation, push/dev/main/sign/release/deploy.
+
+- Original04 finite-parent affected validation08:13UTC [records the actual
+ 603/605 result, two accepted fixture-only repairs, and113/113 pure-contract
+ PASS](execution_loop/evidence/ELP2-04/positive-governance-parents.md#applied-review-and-affected-validation--2026-10-18t0813utc).
+ The first PG lane failed before restore; do not describe it as PASS. Single
+ coherent normal hook retakes those corrected cases/restore, no duplicate
+ focused API build for Markdown. Existing generated governance operations now
+ have strict finite additive parent variants and explicit typed absence;
+ component publication does not deliver the still-OPEN selected-operation
+ reader. Claude review/request intake follows7.3 in the owning exit matrix;
+ no actual new ACK/FE assignment or source/runtime/release acceptance inferred.

@@ -148,7 +148,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns an active, workspace-bound R2 review only when its immutable portfolio/currency scope exists. Missing, cross-workspace, closed, and expired reviews are not disclosed. */
+        /** @description Sticky current Core mode is selected before finite parent detail. Legacy v1 remains separate. SCOPED_V2 requires current exact deployment AND portfolio PAPER audit plus the existing gate and reviewed root field purpose before protected loading. R2 uses governance.r2.read; Paper Exit preserves active membership. Optional lineage/evaluation has its own purpose. Historical planning expiry is not read expiry; CURRENT_CORE_BASELINE is not source attestation. No owner/ADMIN shortcut, mutation, upstream call or current-source verdict. One shared authority flight fences the pure response after storage/source rechecks and LAST Core. */
         get: operations["executionGovernanceR2Review"];
         put?: never;
         post?: never;
@@ -165,7 +165,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns a Portal-owned Paper Exit Review with deterministic evidence evaluation. Missing, partial, stale and unavailable evidence are explicit fail-closed states. */
+        /** @description Sticky current Core mode is selected before finite parent detail. Legacy v1 remains separate. SCOPED_V2 requires current exact deployment AND portfolio PAPER audit plus the existing gate and reviewed root field purpose before protected loading. R2 uses governance.r2.read; Paper Exit preserves active membership. Optional lineage/evaluation has its own purpose. Historical planning expiry is not read expiry; CURRENT_CORE_BASELINE is not source attestation. No owner/ADMIN shortcut, mutation, upstream call or current-source verdict. One shared authority flight fences the pure response after storage/source rechecks and LAST Core. */
         get: operations["executionGovernancePaperExitReview"];
         put?: never;
         post?: never;
@@ -795,6 +795,295 @@ export interface components {
             /** @constant */
             source_side_effect_requested: false;
         };
+        /** @description Finite current-authorized Portal R2 parent. Stored lineage is historical reference, never an effective TS grant, current R1 permission, source acceptance or dispatch. No prose, actors or monetary values. */
+        R2ParentReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.governance-parent.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "PAPER";
+            };
+            /** @description Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read. */
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "R2";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            /** @constant */
+            family: "R2";
+            lineage: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "STORED_IMMUTABLE_REFERENCE";
+                r1_approval_id: string;
+                observed_risk_grant_id: string;
+                currency: string;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+        };
+        /** @description Finite current-authorized Paper Exit. Current stored bytes verified for integrity, not historical source acceptance. Optional sections require their own exact current reviewed field purposes. No raw capture/preimage/private intent/prose is returned. */
+        PaperExitParentReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.governance-parent.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "PAPER";
+            };
+            /** @description Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read. */
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "PAPER_EXIT";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            /** @constant */
+            family: "PAPER_EXIT";
+            /** @description Runtime additionally checks updated>=created and review_id===approval.approval_id. Review disposition is Portal-only, never upstream promotion. */
+            review: {
+                review_id: string;
+                /** @enum {string} */
+                review_state: "PENDING" | "EXTENDED" | "REJECTED_TO_PAPER_HELD" | "PROMOTION_AUTHORIZED";
+                review_version: number;
+                /** @constant */
+                promote_to: "SANDBOX_VALIDATION";
+                extension_days: 14 | null;
+                extended_until_ms: number | null;
+                created_at_ms: number;
+                updated_at_ms: number;
+            } & unknown;
+            evaluation: {
+                /** @constant */
+                availability: "AVAILABLE";
+                evaluation_policy_version: string;
+                evaluation_formula_version: string;
+                panels: ({
+                    panel_id: string;
+                    ordinal: number;
+                    /** @enum {string} */
+                    panel_kind: "OBSERVATION_COVERAGE" | "DRIFT" | "LIMITS_HEALTH" | "PORTFOLIO_FIT";
+                    /** @enum {string} */
+                    source_authority: "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED";
+                    /** @enum {string} */
+                    panel_state: "OK" | "PARTIAL" | "STALE" | "UNAVAILABLE" | "ERROR";
+                    as_of_ms: number | null;
+                    /** @enum {string} */
+                    freshness_state: "OK" | "STALE" | "UNKNOWN";
+                    /** @enum {string} */
+                    source_completeness: "EVENT_SOURCED" | "POLL_BOUNDED" | "UNKNOWN";
+                    poll_interval_ms: number | null;
+                    formula_version: string | null;
+                } & (unknown & unknown))[];
+                findings: {
+                    finding_id: string;
+                    panel_id: string;
+                    ordinal: number;
+                    /** @enum {string} */
+                    outcome: "PASS" | "WATCH" | "FAIL" | "INSUFFICIENT";
+                    blocking: boolean;
+                    required: boolean;
+                    as_of_ms: number | null;
+                }[];
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+            lineage: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE";
+                r1_approval_id: string;
+                r2_approval_id: string;
+                source_snapshot_hash: string;
+                evidence_set_hash: string;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+        };
+        OperationalR2ParentCompositionV2: {
+            /** @constant */
+            schema_version: "execution.operational-composition.v1";
+            /** @constant */
+            logical_operation_id: "executionOperationalApprovalR2V1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            source_authority: "PORTAL_CONTROL_ONLY";
+            workspace_id: string;
+            read_at_ms: number;
+            /** Format: date-time */
+            read_at: string;
+            composite_revision: string;
+            source_health: {
+                input_digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            redacted_command_journal: {
+                digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            canary_twin_comparison: {
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            command_authority: {
+                /** @constant */
+                state: "UNCHANGED_FAIL_CLOSED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            lineage: {
+                source_health_input_digest: string;
+                command_journal_digest: string;
+                workflow_digest: string;
+                /** @constant */
+                formula_version: "execution.operational-composition.v1";
+            };
+            data: {
+                governance: components["schemas"]["R2ParentReadV2"];
+                accepted_manager_facts: null;
+            };
+        };
+        OperationalPaperExitParentCompositionV2: {
+            /** @constant */
+            schema_version: "execution.operational-composition.v1";
+            /** @constant */
+            logical_operation_id: "executionOperationalPaperExitReviewV1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            source_authority: "PORTAL_CONTROL_ONLY";
+            workspace_id: string;
+            read_at_ms: number;
+            /** Format: date-time */
+            read_at: string;
+            composite_revision: string;
+            source_health: {
+                input_digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            redacted_command_journal: {
+                digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            canary_twin_comparison: {
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            command_authority: {
+                /** @constant */
+                state: "UNCHANGED_FAIL_CLOSED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            lineage: {
+                source_health_input_digest: string;
+                command_journal_digest: string;
+                workflow_digest: string;
+                /** @constant */
+                formula_version: "execution.operational-composition.v1";
+            };
+            data: {
+                exit_review: components["schemas"]["PaperExitParentReadV2"];
+            };
+        };
         Capabilities: {
             /** @constant */
             schema_version: "governance.review-capture-capabilities.v1";
@@ -1379,6 +1668,16 @@ export interface components {
                     decision_evidence_manifest?: components["schemas"]["evidence_manifest"];
                 };
             };
+        };
+        CommandProblem: {
+            error: {
+                code: string;
+                message: string;
+            };
+            request_id: string;
+            public_copy_key?: string;
+            /** @enum {string} */
+            safe_next_action?: "QUERY_SAME_INTENT" | "REVIEW_BLOCKER";
         };
         NullableDateTime: components["schemas"]["DateTime"] | null;
         Review: {
@@ -2452,13 +2751,74 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Portal-owned R2 review scope */
+            /** @description Legacy parent OR finite current-authorized v2 parent; optional absence stays typed and no source decision is asserted. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["execution-governance-r2-review.v1.schema"];
+                    "application/json": components["schemas"]["execution-governance-r2-review.v1.schema"] | components["schemas"]["R2ParentReadV2"];
+                };
+            };
+            /** @description Strict finite input invalid. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authenticated Portal session required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current actor/session lifecycle denied; no parent detail returned. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Uniform unknown, hidden, wrong workspace/family/target parent; no disclosure. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ACCESS_RETRY_REQUIRED: current authority or stored parent changed; no legacy fallback. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed parent field-purpose, integrity, bound or configuration unavailable; no raw SQL/provider/Zod text. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -2477,13 +2837,74 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Portal-owned Paper Exit Review */
+            /** @description Legacy parent OR finite current-authorized v2 parent; optional absence stays typed and no source decision is asserted. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaperExitReviewResponse"];
+                    "application/json": components["schemas"]["PaperExitReviewResponse"] | components["schemas"]["PaperExitParentReadV2"];
+                };
+            };
+            /** @description Strict finite input invalid. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authenticated Portal session required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current actor/session lifecycle denied; no parent detail returned. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Uniform unknown, hidden, wrong workspace/family/target parent; no disclosure. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ACCESS_RETRY_REQUIRED: current authority or stored parent changed; no legacy fallback. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed parent field-purpose, integrity, bound or configuration unavailable; no raw SQL/provider/Zod text. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
                 };
             };
             default: components["responses"]["Problem"];

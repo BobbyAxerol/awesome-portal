@@ -1,5 +1,13 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+**Latest actual landing2026-10-18T07:48:53UTC:** normal hook committed
+`ac056d46`,896contracts/7072API PASS +3existing skipped tests; build,
+scopedPGrestore/four access digests, source/index/eight protected runtimes and
+exact owned cleanup PASS. [Exact receipt and remaining limits](parent-capture-integrity.md#normal-hook-terminal--2026-10-18t074853utc).
+The next approved original04 package is [finite positive R2/Paper Exit parents](positive-governance-parents.md),
+APPLIED_UNCOMMITTED/NOT_RUN at entry. Original04-008/009 full coverage and
+04-010consumer gates remain OPEN, not closed by a captured-parent prerequisite.
+
 **Latest focused terminal2026-10-18T07:08:35UTC:** captured-parent prerequisite
 11suites/320PASS, build/scopedPGrestore/four access digests/source-index/eight
 runtime freeze/owned cleanup PASS. [Exact hashes, accepted review and limits](parent-capture-integrity.md#focused-terminal--2026-10-18t070835utc).
@@ -672,3 +680,13 @@ cleanup PASS, protected runtimes unchanged. [Terminal hashes and scope](current-
 This closes that finite correction/landing, not remaining qualified parents,
 technical/audit purposes or consumer/source gates. Next07/08 shared-helper
 repair has its own focused proof; no unchanged engine/load/browser rerun.
+
+**Finite positive parent validation,2026-10-18T08:13UTC:** [Owning packet and
+preserved failures](positive-governance-parents.md#applied-review-and-affected-validation--2026-10-18t0813utc)
+records603/605 API cases with two fixture failures, then real fixture-only
+corrections without relaxed authorization/DB guards. Separate affected pure
+contracts113/113 PASS. A single normal hook must retake the corrected cases
+and PG restore; no second focused build for docs. Original04-009 generic parent
+operation/technical purposes and source/consumer gates remain OPEN. Recurring
+Claude findings go into this owning to-do/exit matrix under rules7.3, not chat
+alone, and do not become ACK/consumer acceptance automatically.

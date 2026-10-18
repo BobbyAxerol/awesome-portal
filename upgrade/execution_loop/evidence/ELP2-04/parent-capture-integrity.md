@@ -140,3 +140,32 @@ profile, source configuration or deployed evidence changed. Both static
 verifiers PASS; these are offline pins, not new product/source qualification.
 The same owned-path normal-hook retry includes those four paths. No focused
 PG/engine/browser rebuild for this derived-only correction.
+
+## Normal-hook terminal —2026-10-18T07:48:53UTC
+
+Actual `parent-capture-land-071419` TERMINAL/PASS/exit0, committed
+`ac056d461d2ab2c79b893514a9ece10a5d47be66` through the normal hook:
+69contract files/896PASS;393API files PASS +2existing skipped files,
+7072API tests PASS +3existing skipped tests. API build, actual scopedPGrestore
+and all four scoped-access row digests PASS. The test-only serial-client fix
+and all three prior obsolete operation-parent spies are retaken here; prior
+failed hook attempts remain preserved above. Counts overlap focused receipts
+and must not be added to imply unique cumulative coverage.
+
+Receipt directory
+`/home/bobby/.local/state/portal-execution-elp210/20261017/parent-capture-land-071419/`.
+Controller SHA256
+`1e5611ff6a51720108dfb14c6cdac5c6cd0c35efb9df61b20888d707c93c9294`,
+log `2ce8779cb4c667f9a5f03df7625201fe2ff302374277580ae3ee6c4a3e03ee84`.
+Frozen source/index and all eight protected runtime tuples stayed unchanged.
+Owned containers/network and exact lease removed; no remaining owned resource.
+Post-cell snapshot07:53UTC: root154GiBfree/76%used,10968MiBavailable memory;
+NO_ACTION_NEEDED, no broad cleanup. No push, shared/runtime migration or deploy.
+
+Commit41files +7293/-1790 against49bdc6e1 includes generated schemas/types,
+tests and owning packets as well as implementation; these are not all new
+application code. Individual paths/counts remain in the commit, not counted
+again as agent contributions. Next approved backend work is the finite
+[positive parent publication](positive-governance-parents.md). Full04-008/009,
+source/runtime/provider/config/coexistence/P184G2/browser and11entry remain OPEN.
+Claude remains owner-held/AWAITING_CONSUMER_REVIEW; no ACK inferred.

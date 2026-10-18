@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PORTAL_CAPABILITIES } from "../repos/owner-access";
 import { executionEnvironment, utcMilliseconds } from "./foundation.contract";
+import { parentReadFieldSeals, type ParentReadFieldSeal } from "./parent-read-fields";
 // JSON Schema maxLength counts code points, not UTF-16 code units.
 const opaqueRevision=z.string().min(1).refine(value=>[...value].length<=256,"REVISION_TOO_LONG");
 
@@ -125,6 +126,8 @@ export interface ReviewedAccessPolicy {
   researcher_fields: { state: "PENDING" | "QUALIFIED"; policy_ref: string | null; fields: string[] };
   /** Optional private reviewed Manager field seals; absent means no domain read. */
   manager_read_domains?: ManagerDomainFieldSeal[];
+  /** Private owner-reviewed finite parent purposes, not a browser policy upload. */
+  parent_read_fields?: ParentReadFieldSeal[];
 }
 
 export interface AccessActor {
@@ -177,7 +180,8 @@ export const reviewedAccessPolicy=z.object({workspace_id:accessText,revision:opa
     fields:z.array(accessText).max(256)}).strict(),
   manager_read_domains:z.array(managerDomainFieldSeal).max(32).refine(values=>new Set(values.map(v=>JSON.stringify([
     v.environment,v.domain.profile_id,v.domain.catalogue_sha256,v.domain.profile_sha256,v.domain.field_policy_sha256]))).size===values.length,
-    "DUPLICATE_MANAGER_SEAL").optional()}).strict();
+    "DUPLICATE_MANAGER_SEAL").optional(),
+  parent_read_fields:parentReadFieldSeals.optional()}).strict();
 
 /** Explicit stored union. A present invalid version MUST NOT fall back to the
  * legacy decoder; public grantChanges/resourceSelector remain unchanged. */

@@ -535,7 +535,7 @@
     "/api/v1/execution/governance/approvals/{approval_id}/r2": {
       "get": {
         "operationId": "executionGovernanceR2Review",
-        "description": "Returns an active, workspace-bound R2 review only when its immutable portfolio/currency scope exists. Missing, cross-workspace, closed, and expired reviews are not disclosed.",
+        "description": "Sticky current Core mode is selected before finite parent detail. Legacy v1 remains separate. SCOPED_V2 requires current exact deployment AND portfolio PAPER audit plus the existing gate and reviewed root field purpose before protected loading. R2 uses governance.r2.read; Paper Exit preserves active membership. Optional lineage/evaluation has its own purpose. Historical planning expiry is not read expiry; CURRENT_CORE_BASELINE is not source attestation. No owner/ADMIN shortcut, mutation, upstream call or current-source verdict. One shared authority flight fences the pure response after storage/source rechecks and LAST Core.",
         "parameters": [
           {
             "$ref": "#/components/parameters/ApprovalId"
@@ -546,11 +546,127 @@
         ],
         "responses": {
           "200": {
-            "description": "Portal-owned R2 review scope",
+            "description": "Legacy parent OR finite current-authorized v2 parent; optional absence stays typed and no source decision is asserted.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/R2ReviewResponse"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/R2ReviewResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/R2ParentReadV2"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Strict finite input invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current authenticated Portal session required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current actor/session lifecycle denied; no parent detail returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Uniform unknown, hidden, wrong workspace/family/target parent; no disclosure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "ACCESS_RETRY_REQUIRED: current authority or stored parent changed; no legacy fallback.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Fixed parent field-purpose, integrity, bound or configuration unavailable; no raw SQL/provider/Zod text.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
                 }
               }
             }
@@ -564,7 +680,7 @@
     "/api/v1/execution/governance/exit-reviews/{review_id}": {
       "get": {
         "operationId": "executionGovernancePaperExitReview",
-        "description": "Returns a Portal-owned Paper Exit Review with deterministic evidence evaluation. Missing, partial, stale and unavailable evidence are explicit fail-closed states.",
+        "description": "Sticky current Core mode is selected before finite parent detail. Legacy v1 remains separate. SCOPED_V2 requires current exact deployment AND portfolio PAPER audit plus the existing gate and reviewed root field purpose before protected loading. R2 uses governance.r2.read; Paper Exit preserves active membership. Optional lineage/evaluation has its own purpose. Historical planning expiry is not read expiry; CURRENT_CORE_BASELINE is not source attestation. No owner/ADMIN shortcut, mutation, upstream call or current-source verdict. One shared authority flight fences the pure response after storage/source rechecks and LAST Core.",
         "parameters": [
           {
             "$ref": "#/components/parameters/ReviewId"
@@ -575,11 +691,127 @@
         ],
         "responses": {
           "200": {
-            "description": "Portal-owned Paper Exit Review",
+            "description": "Legacy parent OR finite current-authorized v2 parent; optional absence stays typed and no source decision is asserted.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse"
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/PaperExitParentReadV2"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Strict finite input invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current authenticated Portal session required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current actor/session lifecycle denied; no parent detail returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Uniform unknown, hidden, wrong workspace/family/target parent; no disclosure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "ACCESS_RETRY_REQUIRED: current authority or stored parent changed; no legacy fallback.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Fixed parent field-purpose, integrity, bound or configuration unavailable; no raw SQL/provider/Zod text.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
                 }
               }
             }
@@ -1334,6 +1566,18 @@
       },
       "LiveDecisionOperation": {
         "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/LiveDecisionOperation"
+      },
+      "R2ParentReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/R2ParentReadV2"
+      },
+      "PaperExitParentReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/PaperExitParentReadV2"
+      },
+      "OperationalR2ParentCompositionV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalR2ParentCompositionV2"
+      },
+      "OperationalPaperExitParentCompositionV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalPaperExitParentCompositionV2"
       }
     }
   }

@@ -4,6 +4,7 @@ import {readFileSync,writeFileSync} from "node:fs";
 import {dirname,resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {operationalCurrentSchemas,updateOperationalPaths,synchronizeOperationalFixture} from "./execution-operational-current-reader.mjs";
+import {parentCurrentSchemas,updateParentPaths,synchronizeParentFixture} from "./execution-positive-parent-reader.mjs";
 const root=resolve(dirname(fileURLToPath(import.meta.url)),"..");
 const route="/api/v1/execution/operations/{operation_id}";
 export const f0ReadRoute="/api/v1/execution/operations/f0/{operation_id}";
@@ -135,6 +136,7 @@ export function synchronizeOperationReaders(check=false) {
   let schemaAfter=member(schemaBefore,"F0BlockedOperationRead",f0BlockedReaderSchema(),"$defs",4);
   schemaAfter=member(schemaAfter,"F0CommandCollection",f0CollectionSchema(),"$defs",4);
   for(const [name,value] of Object.entries(operationalCurrentSchemas()))schemaAfter=member(schemaAfter,name,value,"$defs",4);
+  for(const [name,value] of Object.entries(parentCurrentSchemas()))schemaAfter=member(schemaAfter,name,value,"$defs",4);
   if(check){if(schemaBefore!==schemaAfter)throw new Error("Finite F0 reader schema drift");}
   else writeFileSync(schemaPath,schemaAfter);
   for(const name of ["execution-operations","execution-governance"]) {
@@ -160,6 +162,11 @@ export function synchronizeOperationReaders(check=false) {
       for(const key of Object.keys(operationalCurrentSchemas()))components.schemas[key]={$ref:"../schemas/execution-operations.v1.schema.json#/$defs/"+key};
       after=member(after,"components",components,null,2);
     }
+    if(name==="execution-governance"){
+      const updated=JSON.parse(after);
+      for(const path of updateParentPaths(updated))after=member(after,path,updated.paths[path],"paths",4);
+      after=member(after,"components",updated.components,null,2);
+    }
     if(check){if(before!==after)throw new Error("Operation reader contract drift: "+name);}
     else writeFileSync(path,after);
   }
@@ -168,6 +175,7 @@ export function synchronizeOperationReaders(check=false) {
   if(check){if(readFileSync(fixture,"utf8")!==bytes)throw new Error("F0 collection fixture drift");}
   else writeFileSync(fixture,bytes);
   synchronizeOperationalFixture(check);
+  synchronizeParentFixture(check);
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))
   synchronizeOperationReaders(process.argv.includes("--check"));

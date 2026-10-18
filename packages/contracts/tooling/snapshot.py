@@ -50,6 +50,8 @@ TRACKED = (
     "tooling/generate-execution-manager-scoped.mjs",
     "tooling/generate-execution-scoped-records.mjs",
     "tooling/execution-operation-reader.mjs",
+    "tooling/execution-positive-parent-reader.mjs",
+    "fixtures/execution-positive-parent.synthetic.valid.json",
     "tooling/execution-operational-current-reader.mjs",
     "fixtures/execution-operational-current.synthetic.valid.json",
     "tooling/generate-execution-resource-scoped.mjs",

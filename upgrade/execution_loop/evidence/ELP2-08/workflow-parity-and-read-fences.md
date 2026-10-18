@@ -180,3 +180,10 @@ activation. Prior failed hook remains preserved, not erased. One coherent
 normal-hook retry gates landing; unchanged07/08 focused and contracts coverage
 is reused only at its exact pins, not summed. Full families/workflows/source/
 consumer/09/10/11 gates remain OPEN.
+
+Normal-hook landing now actual: committedac056d46, terminal07:48:53UTC,
+896contract/7072API PASS +3existing skipped tests, build/scopedPGrestore/four
+access digests/source-index/eight runtimes/owned cleanup PASS. [Exact terminal
+and immutable hashes](../ELP2-04/parent-capture-integrity.md#normal-hook-terminal--2026-10-18t074853utc).
+This closes the local parity/fence landing, not the whole original07/08
+missing source adapters, command commissioning or consumer/browser gates.

@@ -42,6 +42,8 @@ import { OutboxRepository, ProductAuditRepository } from "./repos/outbox";
 import { GovernanceController } from "./governance/governance.controller";
 import { GovernanceRepository } from "./governance/governance.repository";
 import { GovernanceService } from "./governance/governance.service";
+import { PositiveParentRepository } from "./governance/positive-parent.repository";
+import { PositiveParentReads } from "./governance/positive-parent.service";
 import { PaperExitRepository } from "./governance/paper-exit.repository";
 import { PaperExitService } from "./governance/paper-exit.service";
 import { GovernanceReviewCaptureService } from "./governance/review-capture.service";
@@ -479,6 +481,8 @@ export class AppModule {
         GovernanceRepository,
         ResearchRunSyncService,
         GovernanceService,
+        PositiveParentRepository,
+        PositiveParentReads,
         PaperExitRepository,
         PaperExitService,
         GovernanceReviewCaptureService,

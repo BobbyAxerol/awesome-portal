@@ -71,6 +71,7 @@ mkdir -p \
   "${WORKSPACE_DIR}/packages/contracts" \
   "${WORKSPACE_DIR}/apps/portal/registry/openapi" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations" \
+  "${WORKSPACE_DIR}/apps/control-api/src/governance" \
   "${WORKSPACE_DIR}/apps/control-api/src/research" \
   "${WORKSPACE_DIR}/apps/control-api/src/repos" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2" \
@@ -106,6 +107,8 @@ cp -a \
 # credentials, node_modules or any runtime mount. The test cell stays networkless.
 cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/access-digest.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/parent-read-fields.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/history.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/profile-adapter.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/subject-activity.contract.ts" \
@@ -140,6 +143,10 @@ cp -a "${ROOT_DIR}/apps/control-api/src/resource-read/scoped-resource.contract.t
   "${WORKSPACE_DIR}/apps/control-api/src/resource-read/"
 cp -a "${ROOT_DIR}/apps/control-api/src/operations/operational-read.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations/"
+# Finite parent schema/field-digest parity stays pure: no repository, service,
+# private provider, configuration or PostgreSQL runtime is copied here.
+cp -a "${ROOT_DIR}/apps/control-api/src/governance/positive-parent.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/governance/"
 # Access validation reuses the finite capability vocabulary. Its PostgreSQL
 # imports are type-only: copying this explicit dependency opens no DB/runtime
 # access and keeps contract/parser parity in the networkless test cell.

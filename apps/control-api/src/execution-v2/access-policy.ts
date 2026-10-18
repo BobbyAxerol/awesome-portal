@@ -109,6 +109,8 @@ export interface AccessEvaluationContext {
   /** Genuine Core min(idle, absolute) session ceiling, never a public field. */
   actor_lease_until_ms?: number;
   actor_role?: "ADMIN"|"USER";
+  /** Genuine Core membership; the protected-owner exception is not membership. */
+  actor_member?: boolean;
 }
 export function policyReady(context: AccessEvaluationContext): boolean {
   const policy = context.policy;

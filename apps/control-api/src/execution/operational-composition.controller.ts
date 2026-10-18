@@ -50,6 +50,7 @@ export class OperationalCompositionController {
   ) {}
 
   @Get("/approvals/:approval_id")
+  @Header("Cache-Control", "private, no-store")
   async approval(@Req() request: CompositionRequest, @Param("approval_id") approvalId: string, @Query() raw: unknown) {
     this.assertId(approvalId);
     const principal = await this.principal(request, raw);
@@ -57,6 +58,7 @@ export class OperationalCompositionController {
   }
 
   @Get("/exit-reviews/:review_id")
+  @Header("Cache-Control", "private, no-store")
   async exitReview(@Req() request: CompositionRequest, @Param("review_id") reviewId: string, @Query() raw: unknown) {
     this.assertId(reviewId);
     return this.compositions.exitReview(await this.principal(request, raw), reviewId);

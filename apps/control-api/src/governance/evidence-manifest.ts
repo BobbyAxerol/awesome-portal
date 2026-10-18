@@ -11,7 +11,8 @@ function canonical(value: unknown): string {
 }
 
 /** Byte-identical to the original R1 manifest hash; usable inside transactions. */
-export function computeEvidenceManifestHash(evidence: readonly EvidenceRecord[]): string {
+export function computeEvidenceManifestHash(evidence: readonly Pick<EvidenceRecord,
+  "evidenceId"|"ordinal"|"sha256"|"schemaVersion"|"sourceAuthority"|"capturedAt">[]): string {
   const value = [...evidence]
     .sort((left, right) => left.ordinal - right.ordinal || left.evidenceId.localeCompare(right.evidenceId))
     .map((item) => ({ evidence_id: item.evidenceId, sha256: item.sha256,

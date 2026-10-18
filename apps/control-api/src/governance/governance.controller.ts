@@ -53,6 +53,7 @@ import { ExecutionReadScopes } from "../execution-v2/read-scope";
 import { ExecutionCommandService } from "../execution-v2/command.service";
 import { commandId } from "../execution-v2/command.contract";
 import { CommandHttpError,commandHttpCall } from "../execution-v2/command.error";
+import { PositiveParentReads } from "./positive-parent.service";
 
 interface GovernanceRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -74,6 +75,7 @@ export class GovernanceController {
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
     @Optional() @Inject(ExecutionCommandService) private readonly trustedCommands?: ExecutionCommandService,
     @Optional() @Inject(OperationalReadService) private readonly currentReads?: OperationalReadService,
+    @Optional() @Inject(PositiveParentReads) private readonly positiveParents?: PositiveParentReads,
   ) {}
 
   @Get("/governance/review-capture-capabilities")
@@ -311,12 +313,19 @@ export class GovernanceController {
   }
 
   @Get("/governance/approvals/:approval_id/r2")
+  @Header("Cache-Control", "private, no-store")
   async r2(
     @Req() request: GovernanceRequest,
     @Param("approval_id") approvalId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalWorkspaceId };
+    if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.positiveParents) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      return this.positiveParents.detail(principal,"R2",approvalId);
+    }
     return this.governance.r2Detail(request.portalUser, workspaceId, approvalId, request.portalSession);
   }
 
@@ -336,12 +345,19 @@ export class GovernanceController {
   }
 
   @Get("/governance/exit-reviews/:review_id")
+  @Header("Cache-Control", "private, no-store")
   async exitReview(
     @Req() request: GovernanceRequest,
     @Param("review_id") reviewId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalWorkspaceId };
+    if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.positiveParents) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      return this.positiveParents.detail(principal,"PAPER_EXIT",reviewId);
+    }
     return this.paperExit.detail(request.portalUser, workspaceId, reviewId, request.portalSession);
   }
 

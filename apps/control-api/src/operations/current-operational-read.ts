@@ -18,6 +18,10 @@ export type OperationalAuditCohort = Readonly<{ context: AccessEvaluationContext
 declare const flightBrand: unique symbol;
 export interface PreparedOperationalRead<T> { readonly [flightBrand]: T; }
 export type ExactAuditTarget = Readonly<{ resource: AccessResource; environment: "paper" | "sandbox" | "live" }>;
+/** Held internal obligations, not a reusable public authorization permit. */
+export type ExactReadQualification = Readonly<{ proof: string; valid_until_ms: number }>;
+export type ExactReadAuthorizer = (context: AccessEvaluationContext,
+  audit: ReturnType<typeof requireCurrentTsAuditRead>) => ExactReadQualification;
 type ReadFence = { actor: AccessActor; workspace: string; captured: AccessEvaluationContext;
   check: (context: AccessEvaluationContext) => void; until: (context: AccessEvaluationContext) => number;
   changed: () => Error };
@@ -132,7 +136,9 @@ export class CurrentOperationalReads {
    * errors (including absent/unusable targets) remain inside the same flight. */
   async prepareExact<T>(actor: AccessActor, workspace: string, load: () => Promise<{
     target: ExactAuditTarget;
-    decode: (context: AccessEvaluationContext, decision: ReturnType<typeof requireCurrentTsAuditRead>) => T;
+    authorize?: ExactReadAuthorizer;
+    beforeFinal?: () => Promise<void>;
+    decode: (context: AccessEvaluationContext, decision: ReturnType<typeof requireCurrentTsAuditRead>) => T | Promise<T>;
   }>, onError: (error: unknown) => Error, beforeLoadTarget?: ExactAuditTarget): Promise<PreparedOperationalRead<T>> {
     const a = structuredClone(actor), captured = await this.access.readContext(a, workspace);
     const changed = () => new AccessPolicyError("ACCESS_RETRY_REQUIRED", 409);
@@ -140,6 +146,22 @@ export class CurrentOperationalReads {
       resource: Object.freeze(accessResource.parse(value.resource)),
       environment: executionEnvironment.parse(value.environment) });
     let target: ExactAuditTarget | undefined, fingerprint: string | undefined;
+    let authorize: ExactReadAuthorizer | undefined, qualificationFingerprint: string | undefined;
+    const qualification = (context: AccessEvaluationContext,
+      decision: ReturnType<typeof requireCurrentTsAuditRead>) => {
+      if (!authorize) return undefined;
+      const effective = { ...context, now_ms: Math.max(context.now_ms, Date.now()) };
+      const value = authorize(effective, decision);
+      if (!value || typeof value !== "object" || "then" in value ||
+        typeof value.proof !== "string" || !/^sha256:[0-9a-f]{64}$/.test(value.proof) ||
+        !Number.isSafeInteger(value.valid_until_ms) ||
+        value.valid_until_ms <= Math.max(effective.now_ms, Date.now()))
+        throw new OperationalReadError("OPERATIONAL_READ_AUTHORITY_UNAVAILABLE");
+      if (qualificationFingerprint !== undefined && qualificationFingerprint !== value.proof) throw changed();
+      // Genuine Core lease renewal is not an immutable authority change.
+      qualificationFingerprint ??= value.proof;
+      return value;
+    };
     const audit = (context: AccessEvaluationContext) => {
       if (context.principal_id !== a.user_id || context.workspace_id !== workspace || !context.actor_current ||
         !context.authority_fingerprint || !Number.isSafeInteger(context.now_ms) ||
@@ -156,12 +178,17 @@ export class CurrentOperationalReads {
         decision: [decision.policy_revision, decision.scope_revision, decision.field_policy_ref],
         source: currentBoundaryProof(context, target.environment, [target.resource]) });
       if (fingerprint !== undefined && fingerprint !== proof) throw changed();
-      return { decision, proof };
+      const qualified = qualification(context, decision);
+      return { decision, proof, qualified };
     };
     const state: Flight<T> = { issuer: this, onError, fence: { actor: a, workspace, captured, changed,
       check: context => { audit(context); },
-      until: context => target ? nativeNoticeValidUntil(context, target.environment, context.actor_lease_until_ms!) :
-        context.actor_lease_until_ms! } };
+      until: context => {
+        const primary = target ? nativeNoticeValidUntil(context, target.environment, context.actor_lease_until_ms!) :
+          context.actor_lease_until_ms!;
+        const qualified = target ? audit(context)?.qualified : undefined;
+        return qualified ? Math.min(primary, qualified.valid_until_ms) : primary;
+      } } };
     try {
       if (beforeLoadTarget) {
         target = captureTarget(beforeLoadTarget);
@@ -171,11 +198,16 @@ export class CurrentOperationalReads {
       if (target && (target.resource.kind !== selected.resource.kind || target.resource.id !== selected.resource.id ||
         target.environment !== selected.environment)) throw new Error("EXACT_READ_TARGET_CHANGED");
       target = selected;
+      authorize = loaded.authorize;
+      state.beforeFinal = loaded.beforeFinal;
       // The raw store transaction is already released. Refresh current source
       // relations as well as Core before any private record/status decoder.
       const fresh = await this.access.readContext(a, workspace), authorized = audit(fresh)!;
       fingerprint ??= authorized.proof;
-      state.result = loaded.decode(fresh, authorized.decision);
+      // Additional parent/member/field obligations are synchronous above,
+      // BEFORE bounded protected SQL/hash decoding. Its local transaction
+      // releases before finish refreshes native source and LAST Core.
+      state.result = await loaded.decode(fresh, authorized.decision);
     } catch (error) { state.error = onError(error); }
     const handle = Object.freeze({}) as PreparedOperationalRead<T>;
     flights.set(handle, state); return handle;
