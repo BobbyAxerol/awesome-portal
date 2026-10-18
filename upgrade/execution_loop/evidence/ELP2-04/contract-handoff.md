@@ -289,3 +289,29 @@ build/scopedPGrestore/source-index/eight runtime freeze and owned cleanup at
 2026-10-18T05:35:46UTC. This supersedes NOT_RUN for those cases only; normal
 hook/landing still pending. See [the exact terminal](current-operational-parents.md#precision-retake-terminal-2026-10-18t053546utc).
 Claude review/acceptance is separate and remains awaited, not inferred.
+
+Captured-parent affected proof is now actual:11suites/320PASS, build/restore/
+access digests and teardown PASS at07:08:35UTC. [Exact result and narrow
+test-only follow-through](parent-capture-integrity.md#focused-terminal--2026-10-18t070835utc).
+No new browser field, permission or positive source purpose. Whole04 and
+consumer acceptance remain open; one coherent normal-hook commit pending.
+
+## 2026-10-18 — immutable captured-parent prerequisite
+
+[Owning contract/implementation/validation/rollback matrix](parent-capture-integrity.md)
+is applied uncommitted, tests NOT_RUN at entry. No public DTO, browser field,
+permission, route or frontend design changes. Additive0142 protects captured
+parent identity/evidence from forward UPDATE/DELETE, preserving exact existing
+lifecycle writers. Paper Exit final-at-INSERT hash uses the unchanged preimage;
+existing history is CURRENT_CORE_BASELINE, not newly witnessed original data.
+Full positive parent/operation and technical purpose coverage remains next.
+Do not turn this integrity prerequisite into AVAILABLE in a consumer or call
+the whole04 complete. Claude owner-held/AWAITING_CONSUMER_REVIEW remains.
+Original07/08 first normal hook failed only three obsolete raw-read spies;
+the corrected HTTP tests join this affected lane, with no guard relaxation.
+
+Landing follow-through: actual normal hook committed49bdc6e1 at06:10UTC,
+883contracts/6829API PASS,3existing skips, build/restore and cleanup PASS;
+[complete source/receipt boundary](current-operational-parents.md#normal-hook-terminal--2026-10-18t061000utc).
+Existing finite DTO/cursor metadata privacy is unchanged. Claude intake follows
+campaign7.3; no acknowledgement or browser acceptance inferred from delivery.

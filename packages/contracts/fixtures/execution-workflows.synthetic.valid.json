@@ -121,6 +121,240 @@
       }
     },
     {
+      "id": "W08-CREATE-DRAFT",
+      "gate": "T08-02",
+      "schema": "WorkflowCreate",
+      "response": {
+        "schema_version": "portal.execution.create-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "requested_economic_capital": "1000",
+        "requested_initial_budget": "300",
+        "currency": "USDT",
+        "create": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "fund": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "initial_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "state": "DRAFT",
+        "automatic_activation": false,
+        "physical_transfer_performed": false,
+        "trading_readiness": "SEPARATE_AUTHORITY_REQUIRED"
+      }
+    },
+    {
+      "id": "W08-CREATE-PENDING",
+      "gate": "T08-02",
+      "schema": "WorkflowCreate",
+      "response": {
+        "schema_version": "portal.execution.create-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "requested_economic_capital": "1000",
+        "requested_initial_budget": "300",
+        "currency": "USDT",
+        "create": {
+          "state": "PENDING",
+          "receipt_ref": null
+        },
+        "fund": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "initial_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "state": "CREATE_PENDING",
+        "automatic_activation": false,
+        "physical_transfer_performed": false,
+        "trading_readiness": "SEPARATE_AUTHORITY_REQUIRED"
+      }
+    },
+    {
+      "id": "W08-FUNDING-PENDING",
+      "gate": "T08-02",
+      "schema": "WorkflowCreate",
+      "response": {
+        "schema_version": "portal.execution.create-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "requested_economic_capital": "1000",
+        "requested_initial_budget": "300",
+        "currency": "USDT",
+        "create": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:create"
+        },
+        "fund": {
+          "state": "PENDING",
+          "receipt_ref": null
+        },
+        "initial_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "state": "FUNDING_PENDING",
+        "automatic_activation": false,
+        "physical_transfer_performed": false,
+        "trading_readiness": "SEPARATE_AUTHORITY_REQUIRED"
+      }
+    },
+    {
+      "id": "W08-BUDGET-PENDING",
+      "gate": "T08-02",
+      "schema": "WorkflowCreate",
+      "response": {
+        "schema_version": "portal.execution.create-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "requested_economic_capital": "1000",
+        "requested_initial_budget": "300",
+        "currency": "USDT",
+        "create": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:create"
+        },
+        "fund": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:fund"
+        },
+        "initial_grant": {
+          "state": "PENDING",
+          "receipt_ref": null
+        },
+        "state": "BUDGET_PENDING",
+        "automatic_activation": false,
+        "physical_transfer_performed": false,
+        "trading_readiness": "SEPARATE_AUTHORITY_REQUIRED"
+      }
+    },
+    {
+      "id": "W08-CREATE-UNKNOWN",
+      "gate": "T08-02",
+      "schema": "WorkflowCreate",
+      "response": {
+        "schema_version": "portal.execution.create-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "requested_economic_capital": "1000",
+        "requested_initial_budget": "300",
+        "currency": "USDT",
+        "create": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:create"
+        },
+        "fund": {
+          "state": "UNKNOWN",
+          "receipt_ref": null
+        },
+        "initial_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "state": "OUTCOME_UNKNOWN",
+        "automatic_activation": false,
+        "physical_transfer_performed": false,
+        "trading_readiness": "SEPARATE_AUTHORITY_REQUIRED"
+      }
+    },
+    {
+      "id": "W08-CREATE-REJECTED",
+      "gate": "T08-02",
+      "schema": "WorkflowCreate",
+      "response": {
+        "schema_version": "portal.execution.create-workflow.v1",
+        "context": {
+          "workspace_id": "TEST_ONLY:workspace",
+          "environment": "paper",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "policy_revision": "TEST_ONLY:policy",
+          "snapshot_ref": "TEST_ONLY:snapshot",
+          "source_as_of_ms": null,
+          "observed_at_ms": 1792100000000
+        },
+        "requested_economic_capital": "1000",
+        "requested_initial_budget": "300",
+        "currency": "USDT",
+        "create": {
+          "state": "APPLIED",
+          "receipt_ref": "TEST_ONLY:create"
+        },
+        "fund": {
+          "state": "REJECTED",
+          "receipt_ref": null
+        },
+        "initial_grant": {
+          "state": "NOT_REQUESTED",
+          "receipt_ref": null
+        },
+        "state": "REJECTED",
+        "automatic_activation": false,
+        "physical_transfer_performed": false,
+        "trading_readiness": "SEPARATE_AUTHORITY_REQUIRED"
+      }
+    },
+    {
       "id": "W08-ACK-UNKNOWN",
       "gate": "T08-10",
       "schema": "WorkflowCapital",
@@ -688,6 +922,68 @@
           "exposure_cap": null,
           "source_receipt_ref": null,
           "source_as_of_ms": null
+        },
+        "effect_is_projection_not_receipt": true,
+        "source_parent_ref": null,
+        "confirm_is_approval": false,
+        "physical_transfer_performed": false
+      }
+    },
+    {
+      "id": "W08-CONFIRM-PARTIAL-CAPACITY",
+      "gate": "T08-03",
+      "schema": "WorkflowConfirmation",
+      "response": {
+        "schema_version": "portal.execution.workflow-confirmation.v1",
+        "intent": {
+          "schema_version": "execution.capital-intent.v2",
+          "workspace_id": "TEST_ONLY:workspace",
+          "resource": {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY:portfolio"
+          },
+          "environment": "paper",
+          "expected_policy_revision": "TEST_ONLY:policy1",
+          "business_payload": {
+            "schema_version": "pma.capital-command.v1.1",
+            "operation": "TOP_UP",
+            "idempotency_key": "TEST_ONLY:key-0001",
+            "recipient_kind": "PORTFOLIO",
+            "currency": "USDT",
+            "reason": "TEST_ONLY component fixture",
+            "expected_versions": {
+              "budget": "9007199254740993",
+              "source": "2",
+              "parent": "3"
+            },
+            "amount": "100.000000000000000001"
+          }
+        },
+        "preview": {
+          "schema_version": "portal.execution.command-preview.v1",
+          "allowed": false,
+          "reason_code": "COMMAND_RELAY_NOT_QUALIFIED",
+          "preview_digest": null,
+          "expires_at_ms": null,
+          "profile_ref": null,
+          "approval_required": null,
+          "approval_gate": null,
+          "business_applied": false,
+          "reserved": false
+        },
+        "before": {
+          "economic_backing": "0.000",
+          "margin_risk_budget": null,
+          "exposure_cap": null,
+          "source_receipt_ref": "TEST_ONLY:before-capacity",
+          "source_as_of_ms": 0
+        },
+        "projected_after": {
+          "economic_backing": null,
+          "margin_risk_budget": "100.000000000000000001",
+          "exposure_cap": null,
+          "source_receipt_ref": "TEST_ONLY:projected-capacity",
+          "source_as_of_ms": 1792100000000
         },
         "effect_is_projection_not_receipt": true,
         "source_parent_ref": null,

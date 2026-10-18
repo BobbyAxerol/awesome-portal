@@ -229,10 +229,11 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 exact trusted-command p
   });
 
   it("rejects a grant revoke after real stored bytes are read, before delivery", async () => {
-    const f = await fixture(), original = CommandStore.prototype.get;
+    const f = await fixture(), original = CommandStore.prototype.workflowCandidate;
     let changed = false;
-    const pause = vi.spyOn(CommandStore.prototype, "get").mockImplementation(async function (this: CommandStore, ws, id) {
+    const pause = vi.spyOn(CommandStore.prototype, "workflowCandidate").mockImplementation(async function (this: CommandStore, ws, id) {
       const row = await original.call(this, ws, id);
+      if (ws === f.workspace && id === f.record.id) expect(row?.id).toBe(f.record.id);
       if (ws === f.workspace && id === f.record.id && !changed) {
         changed = true; await f.repo.saveGrant({ ...f.grant, revoked_at_ms: Date.now(), revision: next() });
       }
@@ -249,9 +250,10 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 exact trusted-command p
 
   it("rejects a session revoked after the guard and real stored read", async () => {
     const f = await fixture(), otherSession = await auth.login({ assertion: username, username, credential: password });
-    const original = CommandStore.prototype.get; let changed = false;
-    const pause = vi.spyOn(CommandStore.prototype, "get").mockImplementation(async function (this: CommandStore, ws, id) {
+    const original = CommandStore.prototype.workflowCandidate; let changed = false;
+    const pause = vi.spyOn(CommandStore.prototype, "workflowCandidate").mockImplementation(async function (this: CommandStore, ws, id) {
       const row = await original.call(this, ws, id);
+      if (ws === f.workspace && id === f.record.id) expect(row?.id).toBe(f.record.id);
       if (ws === f.workspace && id === f.record.id && !changed) {
         changed = true;
         await ctx.pool.query("UPDATE auth_sessions SET state='REVOKED',revoked_at=clock_timestamp(),revoke_reason='TEST_ONLY delayed GET' WHERE session_id=$1", [otherSession.sessionId]);
@@ -281,7 +283,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 exact trusted-command p
 
   it("sanitizes command-store failure without falling into an unqualified parent", async () => {
     const f = await fixture();
-    const broken = vi.spyOn(CommandStore.prototype, "get").mockRejectedValueOnce(new Error("SELECT secret FROM private_relation; PRIVATE_KEY"));
+    const broken = vi.spyOn(CommandStore.prototype, "workflowCandidate").mockRejectedValueOnce(new Error("SELECT secret FROM private_relation; PRIVATE_KEY"));
     try { await mounted(f, async http => {
       const response = await http.get(); expect(response.statusCode).toBe(503);
       expect(response.json()).toMatchObject({ error: { code: "COMMAND_UNAVAILABLE" }, safe_next_action: "QUERY_SAME_INTENT" });

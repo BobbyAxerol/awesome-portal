@@ -31,6 +31,7 @@ TRACKED = (
     "fixtures/execution-scoped-realtime.synthetic.valid.json",
     "tooling/generate-execution-workflows.mjs",
     "tooling/execution-capital-workflow-schema.mjs",
+    "tooling/execution-workflow-semantics.mjs",
     "tooling/execution-workflow-fixtures.mjs",
     "openapi/execution-workflows.openapi.json",
     "schemas/execution-workflows.v1.schema.json",

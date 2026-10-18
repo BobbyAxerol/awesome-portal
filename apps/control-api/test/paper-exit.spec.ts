@@ -4,10 +4,16 @@ import { Argon2CredentialService } from "../src/auth/argon";
 import { AuthService } from "../src/auth/auth.service";
 import { EvidenceRecord } from "../src/governance/governance.repository";
 import { computeEvidenceManifestHash } from "../src/governance/governance.service";
-import { PaperExitRepository } from "../src/governance/paper-exit.repository";
+import {
+  PaperExitRepository,
+  type PaperExitFindingRecord,
+  type PaperExitLineageRecord,
+  type PaperExitPanelRecord,
+} from "../src/governance/paper-exit.repository";
 import {
   computePaperExitSourceSnapshotHash,
   evaluatePaperExit,
+  type PaperExitSourceSnapshotInput,
 } from "../src/governance/paper-exit.service";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 import { assertReviewContextContract } from "./contract-validator";
@@ -155,6 +161,9 @@ describe("PRE-IAM-02 Paper Exit Review", () => {
     blocking?: boolean;
     evidenceComplete?: boolean;
     quorumRequired?: number;
+    // TEST_ONLY: simulate a persisted legacy-corrupt record once at INSERT.
+    // Never UPDATE immutable source facts or disable the production guards.
+    legacyCorruption?: "SOURCE_HASH" | "EVIDENCE_MANIFEST";
   }) {
     const requester = input.requester ?? owner;
     const creator = input.creator ?? owner;
@@ -179,7 +188,9 @@ describe("PRE-IAM-02 Paper Exit Review", () => {
       retentionClass: "GOVERNANCE_LONG_TERM",
       accessPolicy: "WORKSPACE_APPROVER",
     }));
-    const evidenceSetHash = computeEvidenceManifestHash(evidence);
+    const actualEvidenceSetHash = computeEvidenceManifestHash(evidence);
+    const evidenceSetHash = input.legacyCorruption === "EVIDENCE_MANIFEST"
+      ? `sha256:${"e".repeat(64)}` : actualEvidenceSetHash;
     await ctx.pool.query(
       `INSERT INTO governance_approval_requests
          (approval_id, workspace_id, gate, subject_type, subject_id, subject_label,
@@ -209,7 +220,64 @@ describe("PRE-IAM-02 Paper Exit Review", () => {
           item.sourceReference, item.required, item.capturedAt, item.retentionClass, item.accessPolicy],
       );
     }
-    const placeholder = `sha256:${"0".repeat(64)}`;
+    // Build the exact persisted hash inputs before the root INSERT. Decimal
+    // strings, Date/null distinctions and database-default values stay exact.
+    const lineageRows = [
+      ["ARTIFACT", "artifact", HASHES[0], "/research/artifacts/artifact-1", HASHES[0], "RESEARCH"],
+      ["R1_APPROVAL", "R1", "AP-118", "/governance/approvals/AP-118/r1", null, "PORTAL"],
+      ["R2_APPROVAL", "R2", "AP-152", "/governance/approvals/AP-152/r2", null, "PORTAL"],
+      ["OBSERVATION_POLICY", "observation policy", "obs_29", "/policies/obs_29", HASHES[1], "PORTAL"],
+      ["EVIDENCE_PACK", "evidence pack", "ep_4471", "/evidence/ep_4471", HASHES[2], "DERIVED"],
+    ] as const;
+    const lineage: PaperExitLineageRecord[] = lineageRows.map((row, ordinal) => ({
+      lineageId: `${input.reviewId}-lineage-${ordinal + 1}`, ordinal,
+      kind: row[0], label: row[1], value: row[2], href: row[3],
+      digest: row[4], sourceAuthority: row[5], required: true,
+    }));
+    const panelKinds = ["OBSERVATION_COVERAGE", "DRIFT", "LIMITS_HEALTH", "PORTFOLIO_FIT"] as const;
+    const panelTitles = ["Observation coverage", "Drift vs approved evidence", "Limits & operational health", "Portfolio fit — observed vs expected"];
+    const panels: PaperExitPanelRecord[] = [];
+    const findings: PaperExitFindingRecord[] = [];
+    for (let index = 0; index < panelKinds.length; index += 1) {
+      if (input.omitPanel === panelKinds[index]) continue;
+      const panelState = index === 0 && input.panelState ? input.panelState : "OK";
+      const panelId = `${input.reviewId}-panel-${index + 1}`;
+      panels.push({
+        panelId, ordinal: index, panelKind: panelKinds[index], title: panelTitles[index],
+        sourceAuthority: index === 1 || index === 3 ? "DERIVED" : "EXECUTION",
+        sourceReference: `source-${index + 1}`, sourceHref: `/sources/${index + 1}`,
+        panelState, reason: panelState === "OK" ? null : `${panelTitles[index]} is ${panelState.toLowerCase()}`,
+        asOf: panelState === "UNAVAILABLE" || panelState === "ERROR" ? null : capturedAt,
+        freshnessState: panelState === "STALE" ? "STALE" : panelState === "OK" ? "OK" : "UNKNOWN",
+        sourceCompleteness: "EVENT_SOURCED", pollIntervalMs: null, formulaVersion: "paper-exit-eval.v1",
+      });
+      const blocking = input.blocking === true && index === 2;
+      const insufficient = index === 1;
+      findings.push({
+        findingId: `${input.reviewId}-finding-${index + 1}`, panelId, ordinal: 0,
+        metricKey: `metric.${index + 1}`, label: blocking ? "max drawdown breached" : panelTitles[index],
+        outcome: blocking ? "FAIL" : insufficient ? "INSUFFICIENT" : "PASS", blocking, required: true,
+        carriesTo: insufficient ? "SANDBOX_CERTIFICATION" : null,
+        exactValue: index === 3 ? "1842.000000000000000001" : `${30 + index}`,
+        unit: index === 3 ? "CURRENCY" : "COUNT", currency: index === 3 ? "USDC" : null,
+        thresholdValue: index === 2 ? "6.00" : null,
+        sourceLabel: input.missingFindingSource && index === 0 ? null : `source ${index + 1}`,
+        sourceHref: input.missingFindingSource && index === 0 ? null : `/sources/${index + 1}`,
+        evidenceHash: input.missingFindingSource && index === 0 ? null : HASHES[index],
+        formulaVersion: "paper-exit-eval.v1", asOf: capturedAt,
+      });
+    }
+    const sourceInput: PaperExitSourceSnapshotInput = {
+      review: { reviewId: input.reviewId, deploymentId: `dep-${input.reviewId}`,
+        portfolioId: "PF_MAIN", venue: "DERIBIT", artifactDigest: HASHES[0],
+        observationPolicyId: "obs_29", observationPolicyVersion: "observation.v3",
+        observationPolicyDigest: HASHES[1], evidencePackId: "ep_4471", evidencePackDigest: HASHES[2],
+        evaluationPolicyVersion: "paper-exit.v1", evaluationFormulaVersion: "paper-exit-eval.v1" },
+      approval: { evidenceSetHash }, lineage, panels, findings,
+    };
+    const actualSourceSnapshotHash = computePaperExitSourceSnapshotHash(sourceInput);
+    const sourceSnapshotHash = input.legacyCorruption === "SOURCE_HASH"
+      ? `sha256:${"f".repeat(64)}` : actualSourceSnapshotHash;
     await ctx.pool.query(
       `INSERT INTO governance_paper_exit_reviews
          (review_id, workspace_id, deployment_id, portfolio_id, venue, artifact_digest,
@@ -222,72 +290,53 @@ describe("PRE-IAM-02 Paper Exit Review", () => {
                'paper-exit.v1', 'paper-exit-eval.v1', $7,
                '30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles',
                'Approve promotion with carried slippage evidence.')`,
-      [input.reviewId, workspaceId, `dep-${input.reviewId}`, HASHES[0], HASHES[1], HASHES[2], placeholder],
+      [input.reviewId, workspaceId, `dep-${input.reviewId}`, HASHES[0], HASHES[1], HASHES[2], sourceSnapshotHash],
     );
-    const lineage = [
-      ["ARTIFACT", "artifact", HASHES[0], "/research/artifacts/artifact-1", HASHES[0], "RESEARCH"],
-      ["R1_APPROVAL", "R1", "AP-118", "/governance/approvals/AP-118/r1", null, "PORTAL"],
-      ["R2_APPROVAL", "R2", "AP-152", "/governance/approvals/AP-152/r2", null, "PORTAL"],
-      ["OBSERVATION_POLICY", "observation policy", "obs_29", "/policies/obs_29", HASHES[1], "PORTAL"],
-      ["EVIDENCE_PACK", "evidence pack", "ep_4471", "/evidence/ep_4471", HASHES[2], "DERIVED"],
-    ];
-    for (const [index, row] of lineage.entries()) {
+    for (const row of lineage) {
       await ctx.pool.query(
         `INSERT INTO governance_paper_exit_lineage
-           (lineage_id, review_id, ordinal, kind, label, value, href, digest, source_authority)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [`${input.reviewId}-lineage-${index + 1}`, input.reviewId, index, ...row],
+           (lineage_id, review_id, ordinal, kind, label, value, href, digest, source_authority, required)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [row.lineageId, input.reviewId, row.ordinal, row.kind, row.label, row.value,
+          row.href, row.digest, row.sourceAuthority, row.required],
       );
     }
-    const panelKinds = ["OBSERVATION_COVERAGE", "DRIFT", "LIMITS_HEALTH", "PORTFOLIO_FIT"];
-    const panelTitles = ["Observation coverage", "Drift vs approved evidence", "Limits & operational health", "Portfolio fit — observed vs expected"];
-    for (let index = 0; index < panelKinds.length; index += 1) {
-      if (input.omitPanel === panelKinds[index]) continue;
-      const panelState = index === 0 && input.panelState ? input.panelState : "OK";
-      const freshness = panelState === "STALE" ? "STALE" : panelState === "OK" ? "OK" : "UNKNOWN";
-      const reason = panelState === "OK" ? null : `${panelTitles[index]} is ${panelState.toLowerCase()}`;
-      const panelId = `${input.reviewId}-panel-${index + 1}`;
+    for (const row of panels) {
       await ctx.pool.query(
         `INSERT INTO governance_paper_exit_panels
            (panel_id, review_id, ordinal, panel_kind, title, source_authority,
             source_reference, source_href, panel_state, reason, as_of,
-            freshness_state, source_completeness, formula_version)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-                 'EVENT_SOURCED', 'paper-exit-eval.v1')`,
-        [panelId, input.reviewId, index, panelKinds[index], panelTitles[index],
-          index === 1 || index === 3 ? "DERIVED" : "EXECUTION", `source-${index + 1}`,
-          `/sources/${index + 1}`, panelState, reason,
-          panelState === "UNAVAILABLE" || panelState === "ERROR" ? null : capturedAt,
-          freshness],
+            freshness_state, source_completeness, poll_interval_ms, formula_version)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        [row.panelId, input.reviewId, row.ordinal, row.panelKind, row.title, row.sourceAuthority,
+          row.sourceReference, row.sourceHref, row.panelState, row.reason, row.asOf,
+          row.freshnessState, row.sourceCompleteness, row.pollIntervalMs, row.formulaVersion],
       );
-      const blocking = input.blocking === true && index === 2;
-      const insufficient = index === 1;
+    }
+    for (const row of findings) {
       await ctx.pool.query(
         `INSERT INTO governance_paper_exit_findings
            (finding_id, review_id, panel_id, ordinal, metric_key, label, outcome,
             blocking, required, carries_to, exact_value, unit, currency, threshold_value,
             source_label, source_href, evidence_hash, formula_version, as_of)
-         VALUES ($1, $2, $3, 0, $4, $5, $6, $7, true, $8, $9, $10, $11, $12,
-                 $13, $14, $15, 'paper-exit-eval.v1', $16)`,
-        [`${input.reviewId}-finding-${index + 1}`, input.reviewId, panelId,
-          `metric.${index + 1}`, blocking ? "max drawdown breached" : panelTitles[index],
-          blocking ? "FAIL" : insufficient ? "INSUFFICIENT" : "PASS", blocking,
-          insufficient ? "SANDBOX_CERTIFICATION" : null,
-          index === 3 ? "1842.000000000000000001" : `${30 + index}`,
-          index === 3 ? "CURRENCY" : "COUNT", index === 3 ? "USDC" : null,
-          index === 2 ? "6.00" : null, input.missingFindingSource && index === 0 ? null : `source ${index + 1}`,
-          input.missingFindingSource && index === 0 ? null : `/sources/${index + 1}`,
-          input.missingFindingSource && index === 0 ? null : HASHES[index], capturedAt],
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+        [row.findingId, input.reviewId, row.panelId, row.ordinal, row.metricKey, row.label,
+          row.outcome, row.blocking, row.required, row.carriesTo, row.exactValue, row.unit,
+          row.currency, row.thresholdValue, row.sourceLabel, row.sourceHref, row.evidenceHash,
+          row.formulaVersion, row.asOf],
       );
     }
     const repository = new PaperExitRepository(ctx.pool);
     const snapshot = await repository.detail(workspaceId, input.reviewId);
     expect(snapshot).not.toBeNull();
-    const sourceSnapshotHash = computePaperExitSourceSnapshotHash(snapshot!);
-    await ctx.pool.query(
-      `UPDATE governance_paper_exit_reviews SET source_snapshot_hash = $2 WHERE review_id = $1`,
-      [input.reviewId, sourceSnapshotHash],
-    );
+    expect(snapshot!.review.sourceSnapshotHash).toBe(sourceSnapshotHash);
+    expect(snapshot!.lineage).toEqual(lineage);
+    expect(snapshot!.panels).toEqual(panels);
+    expect(snapshot!.findings).toEqual(findings);
+    expect(computePaperExitSourceSnapshotHash(snapshot!)).toBe(actualSourceSnapshotHash);
+    if (input.legacyCorruption === "SOURCE_HASH") {
+      expect(snapshot!.review.sourceSnapshotHash).not.toBe(actualSourceSnapshotHash);
+    }
     return { evidenceHashes: HASHES, evidenceSetHash, sourceSnapshotHash };
   }
 
@@ -502,27 +551,43 @@ describe("PRE-IAM-02 Paper Exit Review", () => {
     expect(conflict.json().error.code).toBe("REQUEST_KEY_PAYLOAD_CONFLICT");
   });
 
-  it("detects evidence/source tampering and makes source facts and decisions append-only", async () => {
-    await seedExitReview({ reviewId: "EX-INTEGRITY" });
+  it("rejects forward source/manifest mutation without changing the persisted hash", async () => {
+    const seeded = await seedExitReview({ reviewId: "EX-FORWARD-INTEGRITY" });
+    const repository = new PaperExitRepository(ctx.pool);
+    const before = (await repository.detail(workspaceId, "EX-FORWARD-INTEGRITY"))!;
     await expect(ctx.pool.query(
-      `UPDATE governance_paper_exit_findings SET label = 'tampered' WHERE review_id = 'EX-INTEGRITY'`,
+      `UPDATE governance_paper_exit_findings SET label = 'tampered' WHERE review_id = 'EX-FORWARD-INTEGRITY'`,
     )).rejects.toMatchObject({ code: "55000" });
-    await ctx.pool.query(
-      `UPDATE governance_paper_exit_reviews SET source_snapshot_hash = $2 WHERE review_id = $1`,
-      ["EX-INTEGRITY", `sha256:${"f".repeat(64)}`],
-    );
-    const sourceTampered = await inject(reviewer, `/api/v1/execution/governance/exit-reviews/EX-INTEGRITY?workspace_id=${workspaceId}`);
-    expect(sourceTampered.statusCode).toBe(409);
-    expect(sourceTampered.json().error.code).toBe("SOURCE_SNAPSHOT_INTEGRITY_FAILED");
+    // Each statement is rejected independently by Main-owned migration 0142.
+    // Workspace/R1/R2/target identity is not covered by the source hash alone.
+    const refusedUpdates = [
+      ["UPDATE governance_paper_exit_reviews SET source_snapshot_hash=$2 WHERE review_id=$1", `sha256:${"f".repeat(64)}`],
+      ["UPDATE governance_paper_exit_reviews SET workspace_id=$2 WHERE review_id=$1", `${workspaceId}-wrong`],
+      ["UPDATE governance_paper_exit_reviews SET deployment_id=$2 WHERE review_id=$1", "dep-wrong"],
+      ["UPDATE governance_paper_exit_reviews SET r1_approval_id=$2 WHERE review_id=$1", "AP-wrong-r1"],
+      ["UPDATE governance_paper_exit_reviews SET r2_approval_id=$2 WHERE review_id=$1", "AP-wrong-r2"],
+      ["UPDATE governance_approval_requests SET evidence_set_hash=$2 WHERE approval_id=$1", `sha256:${"e".repeat(64)}`],
+    ] as const;
+    for (const [sql, value] of refusedUpdates) {
+      await expect(ctx.pool.query(sql, ["EX-FORWARD-INTEGRITY", value]))
+        .rejects.toMatchObject({ code: "55000" });
+      const unchanged = (await repository.detail(workspaceId, "EX-FORWARD-INTEGRITY"))!;
+      expect(unchanged).toEqual(before);
+      expect(computePaperExitSourceSnapshotHash(unchanged)).toBe(seeded.sourceSnapshotHash);
+    }
+    const read = await inject(reviewer, `/api/v1/execution/governance/exit-reviews/EX-FORWARD-INTEGRITY?workspace_id=${workspaceId}`);
+    expect(read.statusCode).toBe(200);
+  });
 
-    await seedExitReview({ reviewId: "EX-EVIDENCE-INTEGRITY" });
-    await ctx.pool.query(
-      `UPDATE governance_approval_requests SET evidence_set_hash = $2 WHERE approval_id = $1`,
-      ["EX-EVIDENCE-INTEGRITY", `sha256:${"e".repeat(64)}`],
-    );
-    const evidenceTampered = await inject(reviewer, `/api/v1/execution/governance/exit-reviews/EX-EVIDENCE-INTEGRITY?workspace_id=${workspaceId}`);
-    expect(evidenceTampered.statusCode).toBe(409);
-    expect(evidenceTampered.json().error.code).toBe("EVIDENCE_MANIFEST_INTEGRITY_FAILED");
+  it.each([
+    ["SOURCE_HASH", "SOURCE_SNAPSHOT_INTEGRITY_FAILED"],
+    ["EVIDENCE_MANIFEST", "EVIDENCE_MANIFEST_INTEGRITY_FAILED"],
+  ] as const)("fails closed for a TEST_ONLY once-inserted legacy-corrupt %s", async (legacyCorruption, expectedCode) => {
+    const reviewId = `EX-LEGACY-${legacyCorruption}`;
+    await seedExitReview({ reviewId, legacyCorruption });
+    const read = await inject(reviewer, `/api/v1/execution/governance/exit-reviews/${reviewId}?workspace_id=${workspaceId}`);
+    expect(read.statusCode).toBe(409);
+    expect(read.json().error.code).toBe(expectedCode);
   });
 
   it("keeps evaluation deterministic over the immutable snapshot", async () => {

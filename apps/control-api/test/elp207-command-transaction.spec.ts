@@ -127,12 +127,20 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07 real PostgreSQL transpo
     expect(fixed).toMatchObject({delivery:"ACKNOWLEDGED",business:{state:"APPLIED"},projection:"CATCHING_UP"});
     expect(f.counts()).toEqual({sends:1,lookups:1,effects:1});
   });
-  it("T07-07 restart SENDING/missing or expired source receipt remains unknown, no effect inference",async()=>{
-    const f=await fixture(),a=f.makeAuthorization();a.idempotency_retained_until_ms=Date.now()-1;
+  it.each(["current-retention","expired-retention"] as const)("T07-07 expired original send proof with %s never grants a resend",async retention=>{
+    const f=await fixture(),a=f.makeAuthorization(),now=Date.now();
+    // Honest immutable historical chronology: old send expiry is not report
+    // revocation, and only retained same-key lookup may resolve ambiguity.
+    a.issued_at_ms=now-120000;a.expires_at_ms=now-60000;
+    a.idempotency_retained_until_ms=retention==="current-retention"?now+60000:now-1;
+    if(retention==="current-retention")f.effects.set(f.intent.business_payload.idempotency_key,f.result(a,f.intent));
     const store=new CommandStore(ctx.pool),db=await ctx.pool.connect();let id:string;
     try{await db.query("BEGIN");const r=await store.insert(db,user.userId,f.intent,intentHash(actor,f.intent),a);id=r.id;await store.claim(db,r);await db.query("COMMIT");}finally{db.release();}
+    expect((await f.service.status(actor,f.workspace,id!)).delivery).toBe("SENDING");
+    expect(f.counts()).toEqual({sends:0,lookups:0,effects:retention==="current-retention"?1:0});
     const recovered=await f.service.reconcile(actor,f.workspace,id!);
-    expect(recovered).toMatchObject({delivery:"DELIVERY_UNKNOWN",business:{state:"UNKNOWN"}});expect(f.counts()).toEqual({sends:0,lookups:0,effects:0});
+    expect(recovered).toMatchObject(retention==="current-retention"?{delivery:"ACKNOWLEDGED",business:{state:"APPLIED"}}:{delivery:"DELIVERY_UNKNOWN",business:{state:"UNKNOWN"}});
+    expect(f.counts()).toEqual({sends:0,lookups:retention==="current-retention"?1:0,effects:retention==="current-retention"?1:0});
   });
   it("T07-02 revoke during preparation refuses before send and leaves no intent",async()=>{
     const f=await fixture(),original=f.trust.prepare;

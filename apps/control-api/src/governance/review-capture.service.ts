@@ -8,7 +8,8 @@ import { newUlid } from "../id";
 import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
 import { computeEvidenceManifestHash, GovernanceError } from "./governance.service";
 import { type EvidenceRecord } from "./governance.repository";
-import { PaperExitRepository } from "./paper-exit.repository";
+import { PaperExitRepository, type PaperExitLineageRecord, type PaperExitPanelRecord,
+  type PaperExitFindingRecord } from "./paper-exit.repository";
 import { computePaperExitSourceSnapshotHash } from "./paper-exit.service";
 import type { PaperExitCreate, R2Capture, SandboxReviewNote } from "./review-capture.contracts";
 import type { ApprovalRecord, R2LineageRecord } from "./governance.repository";
@@ -155,13 +156,9 @@ export class GovernanceReviewCaptureService {
       // This explicit Portal policy says no source evaluation has been accepted.
       // Its digest is not a fabricated Trading System observation-policy digest.
       const policyHash = projectionDigest({ authority: "PORTAL", policy: POLICY, promote: false, reason: GAP });
-      await client.query(`INSERT INTO governance_paper_exit_reviews
-        (review_id,workspace_id,deployment_id,portfolio_id,venue,artifact_digest,r1_approval_id,r2_approval_id,
-         observation_policy_id,observation_policy_version,observation_policy_digest,evidence_pack_id,evidence_pack_digest,
-         evaluation_policy_version,evaluation_formula_version,source_snapshot_hash,observation_summary,recommendation)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$1,$11,$9,$9,$11,$12,$13)`,
-      [id,input.workspace_id,input.deployment_id,lineage.portfolio_id,deployment.venue,artifact.sha256,
-        r1.approval_id,r2.approval_id,POLICY,policyHash,manifest,input.summary,GAP]);
+      // Allocate the exact immutable children before inserting their root. All
+      // nullable/defaulted hash facts are explicit and match the persisted rows;
+      // a placeholder hash followed by UPDATE is never a capture protocol.
       const pins = [
         ["ARTIFACT",artifact.artifactId ?? artifact.evidenceId,artifact.sha256,"RESEARCH"],
         ["R1_APPROVAL",r1.approval_id,r1.evidence_set_hash,"PORTAL"],
@@ -169,25 +166,59 @@ export class GovernanceReviewCaptureService {
         ["OBSERVATION_POLICY",POLICY,policyHash,"PORTAL"],
         ["EVIDENCE_PACK",id,manifest,"PORTAL"],
       ];
-      for (const [ordinal, pin] of pins.entries()) await client.query(`INSERT INTO governance_paper_exit_lineage
-        (lineage_id,review_id,ordinal,kind,label,value,digest,source_authority) VALUES ($1,$2,$3,$4,$4,$5,$6,$7)`,
-      [newUlid("lineage"),id,ordinal,...pin]);
-      for (const [ordinal, kind] of EXIT_PANELS.entries()) {
+      const sourceLineage: PaperExitLineageRecord[] = pins.map(([kind,value,digest,sourceAuthority],ordinal) => ({
+        lineageId:newUlid("lineage"),ordinal,kind,label:kind,value,href:null,digest,sourceAuthority,required:true,
+      }));
+      const sourcePanels: PaperExitPanelRecord[] = [];
+      const sourceFindings: PaperExitFindingRecord[] = [];
+      for (const [ordinal,kind] of EXIT_PANELS.entries()) {
         const panelId = newUlid("panel");
+        sourcePanels.push({panelId,ordinal,panelKind:kind,title:kind,sourceAuthority:"DERIVED",
+          sourceReference:snapshot.payloadDigest,sourceHref:null,panelState:"UNAVAILABLE",reason:GAP,
+          asOf:null,freshnessState:"UNKNOWN",sourceCompleteness:"UNKNOWN",pollIntervalMs:null,formulaVersion:POLICY});
+        sourceFindings.push({findingId:newUlid("find"),panelId,ordinal:0,metricKey:kind,
+          label:`Portal review: ${input.summary}`,outcome:"INSUFFICIENT",blocking:true,required:true,
+          carriesTo:"PAPER_EXIT_REVIEW",exactValue:null,unit:null,currency:null,thresholdValue:null,
+          sourceLabel:"Portal-authored review note",sourceHref:null,evidenceHash:null,formulaVersion:POLICY,asOf:null});
+      }
+      const sourceSnapshotHash = computePaperExitSourceSnapshotHash({
+        review:{reviewId:id,deploymentId:input.deployment_id,portfolioId:lineage.portfolio_id,
+          venue:deployment.venue,artifactDigest:artifact.sha256,observationPolicyId:POLICY,
+          observationPolicyVersion:POLICY,observationPolicyDigest:policyHash,evidencePackId:id,
+          evidencePackDigest:manifest,evaluationPolicyVersion:POLICY,evaluationFormulaVersion:POLICY},
+        approval:{evidenceSetHash:manifest},lineage:sourceLineage,panels:sourcePanels,findings:sourceFindings,
+      });
+      await client.query(`INSERT INTO governance_paper_exit_reviews
+        (review_id,workspace_id,deployment_id,portfolio_id,venue,artifact_digest,r1_approval_id,r2_approval_id,
+         observation_policy_id,observation_policy_version,observation_policy_digest,evidence_pack_id,evidence_pack_digest,
+         evaluation_policy_version,evaluation_formula_version,source_snapshot_hash,observation_summary,recommendation)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$1,$11,$9,$9,$14,$12,$13)`,
+      [id,input.workspace_id,input.deployment_id,lineage.portfolio_id,deployment.venue,artifact.sha256,
+        r1.approval_id,r2.approval_id,POLICY,policyHash,manifest,input.summary,GAP,sourceSnapshotHash]);
+      for (const item of sourceLineage) await client.query(`INSERT INTO governance_paper_exit_lineage
+        (lineage_id,review_id,ordinal,kind,label,value,href,digest,source_authority,required)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [item.lineageId,id,item.ordinal,item.kind,item.label,item.value,item.href,item.digest,item.sourceAuthority,item.required]);
+      for (const item of sourcePanels) {
         await client.query(`INSERT INTO governance_paper_exit_panels
-          (panel_id,review_id,ordinal,panel_kind,title,source_authority,source_reference,panel_state,reason,
-           freshness_state,source_completeness,formula_version)
-          VALUES ($1,$2,$3,$4,$4,'DERIVED',$5,'UNAVAILABLE',$6,'UNKNOWN','UNKNOWN',$7)`,
-        [panelId,id,ordinal,kind,snapshot.payloadDigest,GAP,POLICY]);
+          (panel_id,review_id,ordinal,panel_kind,title,source_authority,source_reference,source_href,panel_state,reason,
+           as_of,freshness_state,source_completeness,poll_interval_ms,formula_version)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+        [item.panelId,id,item.ordinal,item.panelKind,item.title,item.sourceAuthority,item.sourceReference,item.sourceHref,
+          item.panelState,item.reason,item.asOf,item.freshnessState,item.sourceCompleteness,item.pollIntervalMs,item.formulaVersion]);
+      }
+      for (const item of sourceFindings) {
         await client.query(`INSERT INTO governance_paper_exit_findings
-          (finding_id,review_id,panel_id,ordinal,metric_key,label,outcome,blocking,carries_to,source_label,formula_version)
-          VALUES ($1,$2,$3,0,$4,$5,'INSUFFICIENT',true,'PAPER_EXIT_REVIEW','Portal-authored review note',$6)`,
-        [newUlid("find"),id,panelId,kind,`Portal review: ${input.summary}`,POLICY]);
+          (finding_id,review_id,panel_id,ordinal,metric_key,label,outcome,blocking,required,carries_to,exact_value,
+           unit,currency,threshold_value,source_label,source_href,evidence_hash,formula_version,as_of)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+        [item.findingId,id,item.panelId,item.ordinal,item.metricKey,item.label,item.outcome,item.blocking,item.required,
+          item.carriesTo,item.exactValue,item.unit,item.currency,item.thresholdValue,item.sourceLabel,item.sourceHref,
+          item.evidenceHash,item.formulaVersion,item.asOf]);
       }
       const captured = await this.exits.detail(input.workspace_id,id,client);
-      if (!captured) fail("CAPTURE_READBACK_FAILED", 500);
-      await client.query("UPDATE governance_paper_exit_reviews SET source_snapshot_hash=$2 WHERE review_id=$1",
-        [id,computePaperExitSourceSnapshotHash(captured)]);
+      if (!captured || captured.review.sourceSnapshotHash !== sourceSnapshotHash ||
+        computePaperExitSourceSnapshotHash(captured) !== sourceSnapshotHash) fail("CAPTURE_READBACK_FAILED", 500);
       return { aggregate_id: id, review_id: id, workflow_version: 1,
         read_path: `/api/v1/execution/governance/exit-reviews/${id}`,
         captured_projection_digest: snapshot.payloadDigest, source_verdict: "NOT_ASSERTED",

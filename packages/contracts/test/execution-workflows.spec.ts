@@ -128,4 +128,142 @@ describe("ELP2-08 generated workflow contract", () => {
           effect_kind: operation === "FUND" ? "ECONOMIC_ASSIGNMENT" : "MANAGEMENT_BUDGET" });
     }
   });
+  it("structural Create parity covers all nine states, exact zero and precedence without a new runtime derivation", () => {
+    const cases = fixture.cases.filter((v: any) => v.schema === "WorkflowCreate");
+    expect([...new Set(cases.map((v: any) => v.response.state))].sort()).toEqual([...c.workflowCreateState.options].sort());
+    const base = story("W08-CREATED-FUNDED");
+    const step = (state: ReturnType<typeof c.workflowReceiptStep.parse>["state"]) => ({ state, receipt_ref: state === "APPLIED" ? "TEST_ONLY:" + state : null });
+    // 864 bounded combinations: zero/nonzero capital and budget, every receipt
+    // step state, including UNKNOWN beating REJECTED and both beating create.
+    for (const capital of ["0.000", "100.000000000000000001"])
+      for (const budget of ["0", "20.000000000000000001"])
+        for (const create of c.workflowReceiptStep.innerType().shape.state.options)
+          for (const fund of c.workflowReceiptStep.innerType().shape.state.options)
+            for (const grant of c.workflowReceiptStep.innerType().shape.state.options) {
+              const v = { ...base, requested_economic_capital: capital, requested_initial_budget: budget,
+                create: step(create), fund: step(fund), initial_grant: step(grant) };
+              v.state = c.deriveCreateWorkflowState(v);
+              const expected = c.workflowCreate.safeParse(v).success;
+              const label = [capital, budget, create, fund, grant, v.state].join("/");
+              expect(validate("WorkflowCreate", v), label).toBe(expected);
+              if (expected) for (const forged of c.workflowCreateState.options.filter(s => s !== v.state)) {
+                expect(c.workflowCreate.safeParse({ ...v, state: forged }).success, label + "/" + forged).toBe(false);
+                expect(validate("WorkflowCreate", { ...v, state: forged }), label + "/" + forged).toBe(false);
+              }
+            }
+  });
+  it("Lifecycle structural parity preserves exact stages, complete counts and the narrower RESUME rule", () => {
+    const base = story("W08-MOVE-REVIEW-ONLY");
+    const check = (v: any, expected: boolean, label: string) => {
+      expect(c.workflowLifecycle.safeParse(v).success, label).toBe(expected);
+      expect(validate("WorkflowLifecycle", v), label).toBe(expected);
+    };
+    for (const environment of ["paper", "sandbox", "live"])
+      for (const stage of ["PAPER", "SANDBOX", "CANARY", "LIVE"])
+        check({ ...base, context: { ...base.context, environment }, financial_stage: stage },
+          environment === "paper" ? stage === "PAPER" : environment === "sandbox" ? stage === "SANDBOX" : ["CANARY", "LIVE"].includes(stage),
+          environment + "/" + stage);
+    for (const operation of ["MOVE_ASSIGNMENT", "REBIND", "ARCHIVE", "RESUME"]) {
+      const current = { ...base, operation, lifecycle: operation === "ARCHIVE" ? "ARCHIVE_REQUESTED" : "ACTIVE" };
+      check(current, true, operation + "/drained");
+      for (const key of Object.keys(c.workflowObligationCounts.shape)) for (const n of [null, 1]) {
+        check({ ...current, obligations: { ...current.obligations, counts: { ...current.obligations.counts, [key]: n } } },
+          n !== null && operation === "RESUME" && !["locks", "recalls", "unknown_outcomes"].includes(key),
+          operation + "/" + key + "/" + n);
+      }
+    }
+    for (const field of ["source_budget_return", "destination_budget_grant", "economic_settlement"]) {
+      const v = { ...base, [field]: { state: "NOT_REQUESTED", receipt_ref: null } };
+      check(v, false, field + "/ready");
+      check({ ...v, state: "BLOCKED", reason_code: "ASSIGNMENT_RECEIPTS_REQUIRED" }, true, field + "/blocked");
+    }
+    for (const field of ["coverage", "freshness", "source_receipt_ref"])
+      check({ ...base, obligations: { ...base.obligations, [field]: field === "coverage" ? "PARTIAL" : field === "freshness" ? "STALE" : null } }, false, field);
+    check({ ...base, state: "BLOCKED" }, false, "blocked-without-reason");
+    check({ ...base, state: "PENDING_DRAIN" }, false, "pending-without-reason");
+    check({ ...base, reason_code: "SOURCE_NOT_QUALIFIED" }, false, "ready-with-reason");
+    check({ ...base, operation: "REACTIVATE" }, false, "reactivation-is-never-ready");
+    check({ ...base, lifecycle: "ARCHIVED" }, false, "archived-move");
+    check({ ...base, operation: "RESUME", lifecycle: "ARCHIVE_REQUESTED" }, false, "resume-archive-requested");
+    for (const remaining_budget of [null, "1", "0.000000000000000001"])
+      check({ ...base, operation: "ARCHIVE", lifecycle: "ARCHIVE_REQUESTED", remaining_budget }, false, "archive-budget");
+    check({ ...base, operation: "ARCHIVE", lifecycle: "ACTIVE" }, false, "archive-needs-disposition");
+    check({ ...base, operation: "ARCHIVE", lifecycle: "ARCHIVE_REQUESTED", remaining_budget: "0.000" }, true, "archive-zero");
+  });
+  it("provisioned monitors require all lineage fields but only RUNNING requires an observation", () => {
+    const base = story("W08-PAPER-MONITOR-LINEAGE");
+    const check = (v: any, expected: boolean, label: string) => {
+      expect(c.workflowLifecycle.safeParse(v).success, label).toBe(expected);
+      expect(validate("WorkflowLifecycle", v), label).toBe(expected);
+    };
+    for (const field of ["deployment_id", "origin_deployment_id", "alpha_version_id", "params_digest", "lineage_receipt_ref",
+      "reason", "effective_at_ms", "approved_config_digest", "virtual_capital", "currency", "last_observation_ms"])
+      check({ ...base, monitor: { ...base.monitor, [field]: null } }, false, "monitor/" + field);
+    for (const state of ["PAUSED", "STALE", "QUOTA_STOPPED"])
+      check({ ...base, monitor: { ...base.monitor, state, last_observation_ms: null } }, true, state + "/no-observation");
+    check(base, true, "running");
+  });
+  it("Navigation structural parity preserves nullable origins, ALL context and exact gate/stage mappings", () => {
+    const base = story("W08-MANAGER-NAVIGATION");
+    const check = (v: any, expected: boolean, label: string) => {
+      expect(c.workflowNavigation.safeParse(v).success, label).toBe(expected);
+      expect(validate("WorkflowNavigation", v), label).toBe(expected);
+    };
+    check({ ...base, origin: null, window: null }, true, "nullable");
+    for (const environment of [null, "paper", "sandbox", "live"]) {
+      check({ ...base, financial_stage_filter: "ALL", environment }, true, "ALL/" + environment);
+      for (const stage of ["PAPER", "SANDBOX", "CANARY", "LIVE"])
+        check({ ...base, financial_stage_filter: stage, environment },
+          environment === ({ PAPER: "paper", SANDBOX: "sandbox", CANARY: "live", LIVE: "live" } as Record<string, string>)[stage],
+          stage + "/" + environment);
+    }
+    check({ ...base, origin: { ...base.origin, gate: "PAPER_EXIT", review_id: null } }, false, "exit-needs-review");
+    check({ ...base, origin: { ...base.origin, gate: "PAPER_EXIT", review_id: "TEST_ONLY:review" } }, true, "exit-review");
+    for (const gate of ["R1", "R2", "LIVE_GATE"])
+      check({ ...base, origin: { ...base.origin, gate, review_id: null } }, true, gate);
+  });
+  it("Confirmation independently requires provenance for every non-null capacity including exact zero", () => {
+    const base = story("W08-CONFIRM-SOURCE-DARK");
+    const check = (v: any, expected: boolean, label: string) => {
+      expect(c.workflowConfirmation.safeParse(v).success, label).toBe(expected);
+      expect(validate("WorkflowConfirmation", v), label).toBe(expected);
+    };
+    check(base, true, "all-null");
+    check(story("W08-CONFIRM-PARTIAL-CAPACITY"), true, "partial-capacity");
+    for (const block of ["before", "projected_after"]) {
+      for (const field of ["economic_backing", "margin_risk_budget", "exposure_cap"])
+        for (const value of ["0", "0.000", "0.000000000000000001"])
+          for (const source_receipt_ref of [null, "TEST_ONLY:capacity-source"])
+            for (const source_as_of_ms of [null, 0]) {
+              const v = { ...base, [block]: { ...base[block], [field]: value, source_receipt_ref, source_as_of_ms } };
+              check(v, source_receipt_ref !== null && source_as_of_ms !== null,
+                [block, field, value, source_receipt_ref, source_as_of_ms].join("/"));
+            }
+      // Metadata is permitted independently when all three amounts are null.
+      check({ ...base, [block]: { ...base[block], source_receipt_ref: "TEST_ONLY:metadata-only" } }, true, block + "/only-ref");
+      check({ ...base, [block]: { ...base[block], source_as_of_ms: 0 } }, true, block + "/only-time");
+      const other = block === "before" ? "projected_after" : "before";
+      check({ ...base, [block]: { ...base[block], economic_backing: "0" },
+        [other]: { ...base[other], source_receipt_ref: "TEST_ONLY:other-block", source_as_of_ms: 0 } }, false, block + "/no-borrowed-provenance");
+      check({ ...base, [block]: { ...base[block], economic_backing: "0", source_receipt_ref: "", source_as_of_ms: 0 } }, false, block + "/empty-ref");
+      check({ ...base, [block]: { ...base[block], economic_backing: 0, source_receipt_ref: "TEST_ONLY:ref", source_as_of_ms: 0 } }, false, block + "/no-decimal-coercion");
+    }
+  });
+  it("documents relational constraints as runtime-only instead of claiming ordinary JSON sibling comparison", () => {
+    const navigation = story("W08-MANAGER-NAVIGATION");
+    for (const from_ms of [navigation.window.to_ms, navigation.window.to_ms + 1]) {
+      const v = { ...navigation, window: { ...navigation.window, from_ms } };
+      expect(c.workflowNavigation.safeParse(v).success).toBe(false);
+      expect(validate("WorkflowNavigation", v)).toBe(true);
+    }
+    const monitor = story("W08-PAPER-MONITOR-LINEAGE");
+    for (const patch of [{ deployment_id: monitor.monitor.origin_deployment_id },
+      { last_observation_ms: monitor.monitor.effective_at_ms - 1 }]) {
+      const v = { ...monitor, monitor: { ...monitor.monitor, ...patch } };
+      expect(c.workflowLifecycle.safeParse(v).success).toBe(false);
+      expect(validate("WorkflowLifecycle", v)).toBe(true);
+    }
+    // Existing Capital context correlation and decimal partition stay runtime-
+    // only; their dedicated tests/emitter and canonical Score refs are untouched.
+  });
 });

@@ -572,7 +572,7 @@ export interface components {
             physical_transfer_performed: false;
             /** @constant */
             trading_readiness: "SEPARATE_AUTHORITY_REQUIRED";
-        } & unknown;
+        } & (unknown & unknown & unknown & unknown & unknown);
         WorkflowCapital: {
             /** @constant */
             schema_version: "portal.execution.capital-workflow.v1";
@@ -620,7 +620,7 @@ export interface components {
             confirm_is_approval: false;
             /** @constant */
             physical_transfer_performed: false;
-        };
+        } & (unknown & unknown);
         WorkflowLifecycle: {
             /** @constant */
             schema_version: "portal.execution.lifecycle-workflow.v1";
@@ -684,7 +684,7 @@ export interface components {
                 virtual_capital: string | null;
                 currency: string | null;
             };
-        } & unknown;
+        } & (unknown & unknown & unknown & unknown & unknown & unknown);
         WorkflowNavigation: {
             /** @constant */
             schema_version: "portal.execution.workflow-navigation.v1";
@@ -718,7 +718,7 @@ export interface components {
             economic_aggregation: "EXPLICIT_AUTHORIZED_PARTITION_ONLY";
             /** @constant */
             saved_view_grants_access: false;
-        };
+        } & (unknown & unknown & unknown & unknown & unknown & unknown);
         WorkflowAction: {
             /** @enum {string} */
             operation: "CREATE_PORTFOLIO" | "REGISTER_INSTANCE" | "FUND" | "RETURN_CAPITAL" | "INITIAL_GRANT" | "TOP_UP" | "IMMEDIATE_DECREASE" | "RECALL_PARTIAL" | "RECALL_FULL" | "ADJUST_TARGET_BUDGET" | "SET_ROOT_LIMIT" | "APPLY_PENDING" | "CANCEL_REMAINING" | "REALLOCATE_BUDGET" | "ADMIN_LOCK" | "ADMIN_UNLOCK" | "HALT" | "REDUCING" | "RESUME" | "MOVE_ASSIGNMENT" | "REBIND" | "ARCHIVE" | "CREATE_PAPER_MONITOR" | "REACTIVATE";

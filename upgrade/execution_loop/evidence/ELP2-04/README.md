@@ -1,5 +1,20 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+**Latest focused terminal2026-10-18T07:08:35UTC:** captured-parent prerequisite
+11suites/320PASS, build/scopedPGrestore/four access digests/source-index/eight
+runtime freeze/owned cleanup PASS. [Exact hashes, accepted review and limits](parent-capture-integrity.md#focused-terminal--2026-10-18t070835utc).
+One test-only same-client query deprecation repair goes through the combined
+normal hook; producer still UNCOMMITTED, whole04 and consumer gates OPEN.
+
+**Current2026-10-18:** [captured-parent identity prerequisite](parent-capture-integrity.md)
+is APPLIED_UNCOMMITTED/NOT_RUN on49bdc6e1 after the actual07/08 hook terminal.
+One additive0142 protects six parent roots without rewriting history; genuine
+Paper Exit inserts the final source hash once. Honest immutable fixtures and
+actual-PG mutation/lifecycle/rollback coverage are included. One affected11suite
+lane also retakes three raw-read spies from the failed07/08 hook, followed by
+one coherent normal-hook commit. This is a prerequisite, not the full positive
+parent/technical-purpose reader delivery; original04-008/009 and04-010 stay OPEN.
+
 **Latest affected terminal2026-10-18T03:46:03UTC:** exact-own F0 collection and
 current-session boundary:7API suites/454PASS,45contract PASS, build/scoped PG
 restore/four access-row digests/source-index/eight runtimes/owned cleanup PASS.
@@ -649,3 +664,11 @@ target/environment scope is enforced before counts/page; own-only F0 remains
 separate; source panels remain unavailable before wrong-purpose source I/O.
 This is not whole04 acceptance. Claude remains NOT_STARTED_BY_OWNER_DIRECTION /
 AWAITING_CONSUMER_REVIEW; no acknowledgement, runtime or release activation.
+
+**Current operational landing,2026-10-18T06:10UTC:** actual normal hook committed
+`49bdc6e16ab30bbc5a23b5dec9a8a872a5ec49f1`,883contract/6829API PASS with
+3existing skipped tests; build/scoped restore/four access digests and exact
+cleanup PASS, protected runtimes unchanged. [Terminal hashes and scope](current-operational-parents.md#normal-hook-terminal--2026-10-18t061000utc).
+This closes that finite correction/landing, not remaining qualified parents,
+technical/audit purposes or consumer/source gates. Next07/08 shared-helper
+repair has its own focused proof; no unchanged engine/load/browser rerun.

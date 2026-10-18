@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import ts from 'typescript';
 import { workflowFixtures } from './execution-workflow-fixtures.mjs';
 import { capitalWorkflowSchemas } from './execution-capital-workflow-schema.mjs';
+import { workflowStructuralRefinements } from './execution-workflow-semantics.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..'), require = createRequire(import.meta.url), cache = new Map();
 function load(path) {
   if (cache.has(path)) return cache.get(path).exports;
@@ -15,7 +16,7 @@ function load(path) {
 }
 function json(s) {
   const d = s._def, t = d.typeName;
-  if (t === 'ZodEffects') return json(d.schema); // Semantic refinements remain runtime/test obligations.
+  if (t === 'ZodEffects') return json(d.schema); // Structural semantics are restored below; relational checks remain runtime-only.
   if (t === 'ZodUnknown') return {}; // Nested PM transform is replaced with the canonical strict CommandIntent ref below.
   if (t === 'ZodNullable') return { anyOf: [json(d.innerType), { type: 'null' }] };
   if (t === 'ZodLiteral') return { const: d.value };
@@ -63,18 +64,10 @@ schemas.WorkflowReadState.allOf = [{
   if: { properties: { state: { enum: ['LOADING', 'UNAVAILABLE', 'DENIED', 'REVOKED', 'RESYNC_REQUIRED'] } }, required: ['state'] },
   then: { properties: { may_display_data: { const: false } } },
 }];
-schemas.WorkflowCreate.allOf = [{
-  if: { properties: { state: { const: 'CREATED_WITH_CAPITAL' } }, required: ['state'] },
-  then: { properties: { create: { properties: { state: { const: 'APPLIED' } } }, fund: { properties: { state: { const: 'APPLIED' } } } } },
-}];
 // Preserve the runtime's receipt/null-amount distinction in served JSON too.
 // Decimal partition arithmetic remains a runtime obligation, never target-as-amount.
 Object.assign(schemas, capitalWorkflowSchemas(c, json));
-schemas.WorkflowLifecycle.allOf = [{
-  if: { properties: { state: { const: 'READY_FOR_AUTHORITY_REVIEW' } }, required: ['state'] },
-  then: { properties: { reason_code: { type: 'null' }, obligations: { properties: { coverage: { const: 'COMPLETE' }, freshness: { const: 'FRESH' }, source_receipt_ref: { type: 'string' } } } } },
-  else: { properties: { reason_code: { type: 'string' } } },
-}];
+for (const [name, allOf] of Object.entries(workflowStructuralRefinements(c, json))) schemas[name].allOf = allOf;
 schemas.WorkflowScorePresentation = { type: 'object', additionalProperties: false,
   required: ['canonical_score', 'facet', 'headline', 'public_copy_key', 'regime_changes_score', 'analytics_gates_safety_action'],
   properties: { canonical_score: ref('ScoreCapsule'), facet: { enum: ['ACTUAL', 'SIMULATED', 'EARLY', 'MIXED_OBSERVATION'] },

@@ -494,6 +494,34 @@ Existing05-001/06-002/07-001/09-001/10-002 remain their original source/config/
 consumer/budget gates; calibration/coexistence/P184G2/browser still OPEN and
 11NOT_ENTRY_READY. No new Claude receipt;7.3 intake remains mandatory.
 
+## Read-only owner intake —2026-10-18T07:03UTC
+
+Actual SSH repin: Edge worktree remains
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`, branch
+feat/execution-edge-upgrade-v1_2, HEAD20a1d27fa4d03ef7162a7980fda3fe3602995a8b.
+Owner staged/unstaged/untracked work was read, never changed. Main read the
+complete latest150-line journal addendum; final journal SHA256
+776c2444d263b4c19026e25a0b3fff93296d0a82c63b071b1570772712fd944d.
+
+Owner current reducer port remains a private3-hunk draft,44+/5−. Original46
+assertions plus10proposed real-PG cases are56expected, NOT a PASS. Its failed
+compiler schedule ran0cases and preserved its cleanup receipt; the two later
+bounded waiting controllers ended75 with0new tests/resources. Do not add
+these expected cases or prior65PM definitions to Main's local coverage.
+The separate pure target-guard rerun did actually report23PASS at06:44UTC,
+same definitions, not23new unique cases; this is not strict compile/realPG/
+normal-hook/native authority acceptance. Owner receipt9c8e86e604afafbf9726f1225f06df23352d1a1f87224d4bbdee05a7a27404bd.
+
+The07:01 owner entry reserves ONLY its private SAME-engine Manager Notice
+draft: full domain/selected-source identity, ordinary READ∩independent STREAM,
+SAME maps/Hub/Candidate/egress/settlement and existing CandidateSQL. No entity
+ROOT/census replacement, new PM STREAM/poller/engine or mounted authority.
+Main does not duplicate this ongoing owner work or infer delivery from its
+planned tests. Finite READ remains independent from STREAM. Actual provider/
+trust/install/writer, full09/10, approved budgets/calibration/coexistence/
+P184G2/browser and11entry remain OPEN. This intake changed no remote file,
+credential, data, grant, config, runtime or user session.
+
 Read-only recheck2026-10-18T03:44UTC: actual Edge HEAD remains20a1d27f;
 the exact owner journal and actual tracked entrypoint
 `services/portal-execution-edge-rs/crates/edge-service/src/main.rs` retain the
@@ -505,3 +533,45 @@ new PASS/runtime evidence, remote write, build, command, DB or source change.
 Local04 collection affected terminal03:46UTC is454API/45contract PASS plus
 build/scoped restore/frozen runtimes/exact cleanup; [owning limits](../ELP2-04/f0-current-audit-read.md#affected-terminal--2026-10-18t034603utc).
 It does not close source05/07/09/10 or turn typed absence into availability.
+
+## Owner-source follow-through —2026-10-18T05:31UTC
+
+Correction to the historical compile-failure status above: Main's bounded
+read-only owner-journal/receipt-header follow-up observed Edge isolated240PASS
+NOT_DEPLOYED plus separate current-schema15PASS NOT_INSTALLED. Receipt hashes
+are respectively `c6138e4fe09437734839eedfc89342140f0498a8d905075ecdac2aa0b92e49e9`
+and `5320635cef4a212f2f3acbe291371634f69f9d9526046733abd11d434b10fbc5`
+under Edge `upgrade/evidence/execution-edge-v1_2/EPG10-08/`. No independent
+Portal execution, installed source/DB/role proof or normal hook is inferred.
+Edge HEAD20a1d27fa4d03ef7162a7980fda3fe3602995a8b and main.rs/scoped_read.rs
+hashes above unchanged; actual current-Core port remains owner work, not a
+missing adapter to duplicate. Dirty owner WIP was preserved.
+
+PM owner joint receipt
+`contracts/baseline/portfolio-account-v1_1/pma11-16-core-coordinator-joint-evidence.json`
+SHA256 `f962ae3315af22e7c8d7ab8ff4a75610464425ac00dff88789d0961fee1d9c57`
+reports65unique qualified definitions across compatible61+3+1 receipts,
+NOT one65-case run, plus26separate offline cases. Genuine Core/PM socket/PG
+composition used TEST_ONLY identities/config/relations/signers: not current
+human/provider installation. Source-owner results, not Main reruns. Exact
+private complete intake SHA256
+`660e3c5f4b4d8957a335e493c944063fe6f1ad456153e5c7b4a14a4f02b7b500`.
+
+The source-owner distinction is accepted: bounded Manager current-page
+observation may use existing projection metadata+durable Portal journal with
+PORTAL_OBSERVATION/CURRENT_PAGE_ONLY/TS_replay=false, without waiting for TS
+N03/alpha_fleet_overview. Rights remain PM held READ ∩ Core Manager READ ∩
+independent Core Manager STREAM, SAME Hub/Candidate/Egress/settlement. Full
+profile/catalogue/profile-digest/field-policy/source identity/READ digest seals
+before admission; original MANAGER_HTTP/MANAGER_SSE_FRAME recovery only. Do not
+invent PM STREAM, duplicate poller/source/journal or call it authoritative TS
+replay. Named alpha_fleet publication remains its own OPEN gate, not a blanket
+blocker. Coordinate exact owner port rather than overwrite concurrent WIP.
+
+Later06:06–06:07 read-only PM repin found clean source HEAD
+`b9fae791824435f21d773705f21023cd38d1416d`; [exact changed/unchanged command
+semantics and limitations](../ELP2-07/coverage-and-handoff.md#2026-10-18--exact-report-fences-and-refreshed-pm-source).
+No resource/test/build/DB/credential/runtime mutation in either intake;
+cleanup NO_ACTION_NEEDED. Genuine provider/identity/field/STREAM/config and
+publication installation, cold recovery/native causality, budget/calibration,
+coexistence/P184G2/browser remain OPEN;11NOT_ENTRY_READY. No Claude ACK inferred.

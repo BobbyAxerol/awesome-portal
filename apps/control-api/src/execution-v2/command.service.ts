@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import { CurrentOperationalReads } from "../operations/current-operational-read";
 import { KeysetCursorCodec,type CursorKeyring } from "../query/cursor";
 import { QueryContractError } from "../query/contracts";
 import { commandCollection,commandCollectionQuery,CommandCollectionError,
@@ -91,16 +92,14 @@ export function mergeSource(old:CommandRecord,raw:SourceCommandResult):CommandSt
 
 export class ExecutionCommandService {
   private readonly store:CommandStore;
+  private readonly reads:CurrentOperationalReads;
   private activeIo=0;
   private readonly collectionCursor:KeysetCursorCodec|null;
   constructor(pool:Pool,private readonly access:ExecutionAccessService,private readonly trust:CommandTrust=unqualifiedCommandTrust,
     private readonly allowTestOnly=false,cursor?:CursorKeyring){this.store=new CommandStore(pool);
+    this.reads=new CurrentOperationalReads(access);
     this.collectionCursor=cursor?new KeysetCursorCodec(cursor):null;}
-  private report(c:AccessEvaluationContext,resource:CommandIntent["resource"],environment:CommandIntent["environment"]) {
-    return requireCurrentTsAuditRead(c,resource,environment);
-  }
-  private permit(c:AccessEvaluationContext,i:CommandIntent,read=false) {
-    if(read){this.report(c,i.resource,i.environment);return;}
+  private permit(c:AccessEvaluationContext,i:CommandIntent) {
     const result=evaluateAccess(c,action[i.business_payload.operation],i.resource,i.environment);
     if(!result.allowed)throw new AccessPolicyError(result.reason_code??"ACCESS_DENIED",403);
   }
@@ -163,28 +162,32 @@ export class ExecutionCommandService {
     if(!old)throw new CommandError("COMMAND_RESOURCE_NOT_FOUND",404);
     return old.status;
   }
+  private readError(error:unknown):Error {
+    if(error instanceof CommandError||error instanceof AccessPolicyError||error instanceof CommandCollectionError)return error;
+    // Existing commandHttpCall maps this fixed internal refusal to
+    // COMMAND_UNAVAILABLE; never leak OperationalReadError/provider/SQL copy.
+    return new Error("COMMAND_UNAVAILABLE");
+  }
+  private async storedReport<T>(actor:AccessActor,workspace:string,id:string,
+    project:(record:ReturnType<typeof workflowCommandRecord>,current:AccessEvaluationContext,
+      decision:ReturnType<typeof requireCurrentTsAuditRead>)=>T):Promise<T> {
+    const prepared=await this.reads.prepareExact<T>(actor,workspace,async()=>{
+      const row=await this.store.workflowCandidate(workspace,id);
+      if(!row)throw new CommandError("COMMAND_RESOURCE_NOT_FOUND",404);
+      const target=workflowCommandTarget(row); // bounded target ONLY, not private decode
+      return {target,decode:(current,decision)=>project(workflowCommandRecord(row,workspace,id,target),current,decision)};
+    },error=>this.readError(error));
+    return this.reads.finish(prepared);
+  }
   async status(actor:AccessActor,workspace:string,id:string) {
-    const c=await this.access.readContext(actor,workspace),old=await this.store.get(workspace,id);
-    if(!old)throw new CommandError("COMMAND_RESOURCE_NOT_FOUND",404);
-    this.permit(c,old.intent,true);
-    const current=await this.access.confirmReadContext(actor,workspace,c);this.permit(current,old.intent,true);
-    return old.status;
+    return this.storedReport(actor,workspace,id,({status})=>status);
   }
   /** Current-authorized local presentation only. No command/provider dispatch,
    * recovery, status update, event or audit write. The original author may differ
    * from the current report reader; old new-send expiry is not current ACL. */
   async workflow(actor:AccessActor,workspace:string,id:string):Promise<ReturnType<typeof capitalWorkflow>> {
-    const captured=await this.access.readContext(actor,workspace);
-    const row=await this.store.workflowCandidate(workspace,id);
-    if(!row)throw new CommandError("COMMAND_RESOURCE_NOT_FOUND",404);
-    const target=workflowCommandTarget(row);
-    this.report(captured,target.resource,target.environment);
-    // Last awaited operation. Release the bounded read transaction before this
-    // current Core fence; no source calls or database awaits follow it.
-    const current=await this.access.confirmReadContext(actor,workspace,captured);
-    const decision=this.report(current,target.resource,target.environment);
-    try {
-      const {intent,status}=workflowCommandRecord(row,workspace,id,target);
+    return this.storedReport(actor,workspace,id,({intent,status},current,decision)=>{
+      const target={resource:intent.resource,environment:intent.environment};
       if(decision.policy_revision===null)throw new CommandError("COMMAND_STATUS_UNVERIFIED",503);
       const context={workspace_id:workspace,environment:target.environment,resource:target.resource,
         policy_revision:decision.policy_revision,
@@ -194,76 +197,70 @@ export class ExecutionCommandService {
         // Stored updated_at_ms is Portal state time, never PM source-cutoff proof.
         source_as_of_ms:null,observed_at_ms:Math.max(current.now_ms,Date.now())};
       return capitalWorkflow(context,intent.business_payload.currency,status);
-    } finally {
-      // Also fence validation failures: expiry while decoding a corrupt visible
-      // record must not become a corruption/existence oracle after access ends.
-      this.report({...current,now_ms:Math.max(current.now_ms,Date.now())},target.resource,target.environment);
-    }
+    });
   }
   /** A local finite status read only. Never calls command trust/reconcile/recovery.
    * Mandatory exact resource prevents an empty list becoming global discovery.
    */
   async collection(actor:AccessActor,raw:CommandCollectionQuery):Promise<CommandCollection> {
     const q=commandCollectionQuery.parse(raw),resource={kind:q.resource_kind,id:q.resource_id};
-    const c=await this.access.readContext(actor,q.workspace_id);
-    this.report(c,resource,q.environment); // nonvacuous authority, before DB.
-    if(!this.collectionCursor)throw new CommandCollectionError("COMMAND_COLLECTION_NOT_CONFIGURED",503);
-    const candidates=await this.store.statusCandidates(q.workspace_id,resource,q.environment);
-    // No DB transaction/client survives into the current authority check.
-    const current=await this.access.confirmReadContext(actor,q.workspace_id,c);
-    const decision=this.report(current,resource,q.environment);
-    if(candidates.length>1024)throw new CommandCollectionError("COMMAND_COLLECTION_OVERFLOW",503);
-    const rows=candidates.map(row=>{
-      const target=commandStatus.shape.resource.parse(row.resource);
-      const env=commandStatus.shape.environment.parse(row.environment);
-      // Query is over immutable intent fields; mutable status cannot grant scope.
-      if(target.kind!==resource.kind||target.id!==resource.id||env!==q.environment)
-        throw new CommandError("COMMAND_STATUS_UNVERIFIED",503);
-      this.report(current,target,env); // every immutable intent tuple before sort/page.
-      const status=commandStatus.parse(row.status);
-      if(status.command_id!==row.id||status.resource.kind!==target.kind||
-        status.resource.id!==target.id||status.environment!==env)
-        throw new CommandError("COMMAND_STATUS_UNVERIFIED",503);
-      return status;
-    }).sort((a,b)=>b.created_at_ms-a.created_at_ms||
-      (a.command_id<b.command_id?-1:a.command_id>b.command_id?1:0));
-    const query={workspace_id:q.workspace_id,resource,environment:q.environment,limit:q.limit};
-    // Only this authorized exact-target status set participates. No hidden
-    // workspace total, other-resource source digest or private intent/body.
-    const fingerprint=accessDigest({domain:"portal.execution.command-collection.v1",actor,query,
-      core_authority:current.authority_fingerprint,policy_revision:decision.policy_revision,
-      scope_revision:decision.scope_revision,field_policy_ref:decision.field_policy_ref,
-      visible_statuses:rows.map(row=>accessDigest(row))});
-    let offset=0;
-    if(q.after) {
-      let boundary:readonly (string|number|boolean)[];
-      try {boundary=this.collectionCursor.decode(q.after,{resourceId:"execution.trusted-capital-commands.v1",
-        workspaceId:q.workspace_id,direction:"after",queryFingerprint:fingerprint,boundarySize:2});}
-      catch(error) {
-        if(error instanceof QueryContractError)throw new CommandCollectionError(
-          error.code==="CURSOR_CONTEXT_MISMATCH"?"COMMAND_COLLECTION_CURSOR_CHANGED":"COMMAND_COLLECTION_CURSOR_INVALID",
-          error.code==="CURSOR_CONTEXT_MISMATCH"?409:400);
-        throw error;
-      }
-      const index=rows.findIndex(row=>row.created_at_ms===boundary[0]&&row.command_id===boundary[1]);
-      if(index<0)throw new CommandCollectionError("COMMAND_COLLECTION_CURSOR_CHANGED",409);
-      offset=index+1;
-    }
-    const items=rows.slice(offset,offset+q.limit),hasMore=offset+items.length<rows.length;
-    const last=items[items.length-1];
-    const next=hasMore?this.collectionCursor.encode({resource_id:"execution.trusted-capital-commands.v1",
-      workspace_id:q.workspace_id,direction:"after",query_fingerprint:fingerprint,
-      boundary:[last.created_at_ms,last.command_id]}):null;
-    const result=commandCollection.parse({schema_version:"portal.execution.command-collection.v1",
-      family:"TRUSTED_CAPITAL_COMMANDS_ONLY",coverage:"EXACT_AUTHORIZED_RESOURCE_ONLY",
-      resource,environment:q.environment,items,
-      page:{limit:q.limit,returned_count:items.length,has_more:hasMore,next_cursor:next}});
-    if(Buffer.byteLength(JSON.stringify(result),"utf8")>1024*1024)
-      throw new CommandCollectionError("COMMAND_COLLECTION_RESPONSE_BOUND",503);
-    // No awaited work after the final Core confirmation; clock/TS validity is
-    // evaluated again synchronously immediately before returning the page.
-    this.report({...current,now_ms:Math.max(current.now_ms,Date.now())},resource,q.environment);
-    return result;
+    const target={resource,environment:q.environment};
+    const prepared=await this.reads.prepareExact<CommandCollection>(actor,q.workspace_id,async()=>{
+      const codec=this.collectionCursor;
+      if(!codec)throw new CommandCollectionError("COMMAND_COLLECTION_NOT_CONFIGURED",503);
+      const candidates=await this.store.statusCandidates(q.workspace_id,resource,q.environment);
+      return {target,decode:(current,decision)=>{
+        if(candidates.length>1024)throw new CommandCollectionError("COMMAND_COLLECTION_OVERFLOW",503);
+        const rows=candidates.map(row=>{
+          const rowTarget=commandStatus.shape.resource.parse(row.resource);
+          const env=commandStatus.shape.environment.parse(row.environment);
+          // Every immutable intent tuple must equal the exact scope authorized
+          // before SQL and again before decode. No status can create scope.
+          if(rowTarget.kind!==resource.kind||rowTarget.id!==resource.id||env!==q.environment)
+            throw new CommandError("COMMAND_STATUS_UNVERIFIED",503);
+          const status=commandStatus.parse(row.status);
+          if(status.command_id!==row.id||status.resource.kind!==rowTarget.kind||
+            status.resource.id!==rowTarget.id||status.environment!==env)
+            throw new CommandError("COMMAND_STATUS_UNVERIFIED",503);
+          return status;
+        }).sort((a,b)=>b.created_at_ms-a.created_at_ms||
+          (a.command_id<b.command_id?-1:a.command_id>b.command_id?1:0));
+        const query={workspace_id:q.workspace_id,resource,environment:q.environment,limit:q.limit};
+        // Status-only collection: no claim of private actor/hash/CAS validation.
+        const fingerprint=accessDigest({domain:"portal.execution.command-collection.v1",actor,query,
+          core_authority:current.authority_fingerprint,policy_revision:decision.policy_revision,
+          scope_revision:decision.scope_revision,field_policy_ref:decision.field_policy_ref,
+          visible_statuses:rows.map(row=>accessDigest(row))});
+        let offset=0;
+        if(q.after) {
+          let boundary:readonly (string|number|boolean)[];
+          try {boundary=codec.decode(q.after,{resourceId:"execution.trusted-capital-commands.v1",
+            workspaceId:q.workspace_id,direction:"after",queryFingerprint:fingerprint,boundarySize:2});}
+          catch(error) {
+            if(error instanceof QueryContractError)throw new CommandCollectionError(
+              error.code==="CURSOR_CONTEXT_MISMATCH"?"COMMAND_COLLECTION_CURSOR_CHANGED":"COMMAND_COLLECTION_CURSOR_INVALID",
+              error.code==="CURSOR_CONTEXT_MISMATCH"?409:400);
+            throw error;
+          }
+          const index=rows.findIndex(row=>row.created_at_ms===boundary[0]&&row.command_id===boundary[1]);
+          if(index<0)throw new CommandCollectionError("COMMAND_COLLECTION_CURSOR_CHANGED",409);
+          offset=index+1;
+        }
+        const items=rows.slice(offset,offset+q.limit),hasMore=offset+items.length<rows.length;
+        const last=items[items.length-1];
+        const next=hasMore?codec.encode({resource_id:"execution.trusted-capital-commands.v1",
+          workspace_id:q.workspace_id,direction:"after",query_fingerprint:fingerprint,
+          boundary:[last.created_at_ms,last.command_id]}):null;
+        const result=commandCollection.parse({schema_version:"portal.execution.command-collection.v1",
+          family:"TRUSTED_CAPITAL_COMMANDS_ONLY",coverage:"EXACT_AUTHORIZED_RESOURCE_ONLY",
+          resource,environment:q.environment,items,
+          page:{limit:q.limit,returned_count:items.length,has_more:hasMore,next_cursor:next}});
+        if(Buffer.byteLength(JSON.stringify(result),"utf8")>1024*1024)
+          throw new CommandCollectionError("COMMAND_COLLECTION_RESPONSE_BOUND",503);
+        return result;
+      }};
+    },error=>this.readError(error),target);
+    return this.reads.finish(prepared);
   }
   async reconcile(actor:AccessActor,workspace:string,id:string) {
     await this.status(actor,workspace,id);

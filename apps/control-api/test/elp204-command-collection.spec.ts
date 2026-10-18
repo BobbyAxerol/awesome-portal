@@ -29,6 +29,7 @@ import { commandCollection, type CommandCollection } from "../src/execution-v2/c
 import { ExecutionCommandController } from "../src/execution-v2/command.controller";
 import { ExecutionCommandService, intentHash } from "../src/execution-v2/command.service";
 import { CommandStore, type CommandRecord } from "../src/execution-v2/command.store";
+import { KeysetCursorCodec } from "../src/query/cursor";
 import { commandAuthorization, type CommandTrust } from "../src/execution-v2/command-trust";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 
@@ -166,11 +167,15 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
     expect(response.json()).toMatchObject({ error: { code } });
   }
 
-  it("plain capital status refuses a genuine session lease that expires after its final actual Core capture", async () => {
+  it.each(["status", "workflow", "collection"] as const)("%s refuses a genuine session lease that expires after its final actual Core capture", async reader => {
     const f = await fixture(), record = await seed(f);
     const session = await auth.login({ assertion: viewer.username, username: viewer.username, credential: password });
     const actor = { ...viewer.actor, session_id: session.sessionId };
-    expect(await f.commands.status(actor, f.workspace, record.id)).toEqual(record.status);
+    const request = async () => reader === "status" ? f.commands.status(actor, f.workspace, record.id) : reader === "workflow"
+      ? (await f.commands.workflow(actor, f.workspace, record.id)).status
+      : (await f.commands.collection(actor, { workspace_id: f.workspace, resource_kind: f.resource.kind, resource_id: f.resource.id,
+        environment: f.environment, limit: 25 })).items[0];
+    expect(await request()).toEqual(record.status);
     const original = f.access.confirmReadContext.bind(f.access); let captured = false;
     const delay = vi.spyOn(f.access, "confirmReadContext").mockImplementation(async (...args) => {
       const row = (await ctx.pool.query(`UPDATE auth_sessions SET idle_expires_at=clock_timestamp()+interval '1500 milliseconds'
@@ -183,7 +188,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
       await new Promise(resolve => setTimeout(resolve, wait)); captured = true; return current;
     });
     try {
-      await expect(f.commands.status(actor, f.workspace, record.id))
+      await expect(request())
         .rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403 });
       expect(captured).toBe(true);
     } finally { delay.mockRestore(); }
@@ -251,7 +256,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
   it("a genuine delegated DENY keeps its app-only access.grant ancestor and blocks collection before SQL AND detail", async () => {
     const f = await fixture(), record = await seed(f); await delegated(f, "DENY");
     expect(evaluateAccess(await f.access.readContext(viewer.actor, f.workspace), "audit.read", f.resource, f.environment).allowed).toBe(false);
-    const scan = vi.spyOn(CommandStore.prototype, "statusCandidates"), detail = vi.spyOn(CommandStore.prototype, "get");
+    const scan = vi.spyOn(CommandStore.prototype, "statusCandidates"), detail = vi.spyOn(CommandStore.prototype, "workflowCandidate");
     try { await mounted(f, async http => {
       error(await http.get(), 404, "COMMAND_RESOURCE_NOT_FOUND"); expect(scan).not.toHaveBeenCalled();
       error(await http.detail(record.id), 404, "COMMAND_RESOURCE_NOT_FOUND"); expect(detail).toHaveBeenCalled();
@@ -390,6 +395,120 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
       try { await mounted(f, async http => { error(await http.get(q), 400, "COMMAND_INPUT_INVALID"); expect(scan).not.toHaveBeenCalled(); }); }
       finally { scan.mockRestore(); }
     });
+
+  it.each(["bad-cursor", "overflow", "corrupt-status", "loader"] as const)(
+    "collection %s cannot bypass the final Core grant fence", async failure => {
+      const f = await fixture(), record = await seed(f);
+      if (failure === "overflow") await bulk(f, record, 1024); // Actual1025-row census, not a duplicated lookahead mock.
+      const original = CommandStore.prototype.statusCandidates; let reached = false;
+      const scan = vi.spyOn(CommandStore.prototype, "statusCandidates").mockImplementation(async function (this: CommandStore, ...args) {
+        const rows = await original.apply(this, args);
+        if (args[0] !== f.workspace) return rows;
+        reached = true;
+        await f.repo.saveGrant({ ...f.grant, revoked_at_ms: Date.now(), revision: next() });
+        if (failure === "loader") throw new Error("PRIVATE_COLLECTION_DIAGNOSTIC SELECT private_source");
+        if (failure === "corrupt-status") return rows.map((row, index) => index ? row : {
+          ...row, status: { PRIVATE_SQL: "PRIVATE_COLLECTION_DIAGNOSTIC" } });
+        return rows;
+      });
+      try { await mounted(f, async http => {
+        const response = await http.get(failure === "bad-cursor" ? { after: "TEST_ONLY:not-a-signed-cursor" } : {});
+        expect(reached).toBe(true); error(response, 409, "ACCESS_RETRY_REQUIRED");
+        expect(response.body).not.toMatch(/PRIVATE_COLLECTION_DIAGNOSTIC|PRIVATE_SQL|SELECT|SyntaxError|HMAC/);
+        expect(response.body).not.toContain(record.id);
+      }); } finally { scan.mockRestore(); }
+    });
+
+  it("collection rejects corrupt rows outside the requested page instead of silently returning a partial trusted cohort", async () => {
+    const f = await fixture(), first = await seed(f); await bulk(f, first, 2);
+    const original = CommandStore.prototype.statusCandidates;
+    const scan = vi.spyOn(CommandStore.prototype, "statusCandidates").mockImplementation(async function (this: CommandStore, ...args) {
+      const rows = await original.apply(this, args);
+      if (args[0] !== f.workspace) return rows;
+      // Cursor census validates every authorized row, not just the selected
+      // first page. Keep the newest rows valid, corrupt the oldest status.
+      const oldest = rows.reduce((a, b) => (a.status as CommandStatus).created_at_ms < (b.status as CommandStatus).created_at_ms ? a : b);
+      return rows.map(row => row === oldest ? { ...row, status: { PRIVATE_SQL: "PRIVATE_LOOKAHEAD_DIAGNOSTIC" } } : row);
+    });
+    try { await mounted(f, async http => {
+      const response = await http.get({ limit: "1" }); error(response, 503, "COMMAND_UNAVAILABLE");
+      expect(response.body).not.toMatch(/PRIVATE_LOOKAHEAD_DIAGNOSTIC|PRIVATE_SQL/);
+    }); } finally { scan.mockRestore(); }
+  });
+
+  it("a genuine renewed Core session replaces the initial lease after a delayed census", async () => {
+    const f = await fixture(), record = await seed(f);
+    const session = await auth.login({ assertion: viewer.username, username: viewer.username, credential: password });
+    const actor = { ...viewer.actor, session_id: session.sessionId };
+    let initialDeadline: number | undefined, initialContext = true, delayed = false;
+    const readContext = f.access.readContext.bind(f.access), census = CommandStore.prototype.statusCandidates;
+    const capture = vi.spyOn(f.access, "readContext").mockImplementation(async (...args) => {
+      if (initialContext && args[0].session_id === session.sessionId && args[1] === f.workspace) {
+        initialContext = false;
+        await ctx.pool.query("UPDATE auth_sessions SET idle_expires_at=clock_timestamp()+interval '1500 milliseconds' WHERE session_id=$1 AND state='ACTIVE'", [session.sessionId]);
+        const current = await readContext(...args); initialDeadline = current.actor_lease_until_ms;
+        expect(Number.isSafeInteger(initialDeadline)).toBe(true); return current;
+      }
+      return readContext(...args);
+    });
+    const scan = vi.spyOn(CommandStore.prototype, "statusCandidates").mockImplementation(async function (this: CommandStore, ...args) {
+      const rows = await census.apply(this, args);
+      if (args[0] !== f.workspace) return rows;
+      // Renew BEFORE the original genuine lease expires: no expired-session
+      // resurrection. Then cross the old deadline outside all read locks.
+      const renewed = await ctx.pool.query(`UPDATE auth_sessions SET idle_expires_at=clock_timestamp()+interval '10 minutes'
+        WHERE session_id=$1 AND state='ACTIVE' AND idle_expires_at>clock_timestamp() AND absolute_expires_at>clock_timestamp()
+        RETURNING floor(extract(epoch FROM least(idle_expires_at,absolute_expires_at))*1000)::bigint AS ms`, [session.sessionId]);
+      expect(renewed.rowCount).toBe(1); expect(Number(renewed.rows[0].ms)).toBeGreaterThan(initialDeadline!);
+      const wait = initialDeadline! - Date.now() + 10; expect(wait).toBeGreaterThan(0); expect(wait).toBeLessThan(2600);
+      await new Promise(resolve => setTimeout(resolve, wait)); delayed = true; return rows;
+    });
+    try {
+      const result = await f.commands.collection(actor, { workspace_id: f.workspace, resource_kind: f.resource.kind,
+        resource_id: f.resource.id, environment: f.environment, limit: 25 });
+      expect(delayed).toBe(true); expect(Date.now()).toBeGreaterThan(initialDeadline!);
+      expect(result.items).toEqual([record.status]);
+    } finally { scan.mockRestore(); capture.mockRestore(); }
+    expect(f.commandTrust.prepare).not.toHaveBeenCalled(); expect(f.commandTrust.send).not.toHaveBeenCalled();
+    expect(f.commandTrust.lookup).not.toHaveBeenCalled();
+  }, 10_000);
+
+  it.each(["bad-cursor", "overflow", "corrupt-status", "loader"] as const)(
+    "collection %s is constructed or held BEFORE the last actual Core confirmation", async failure => {
+      const f = await fixture(), record = await seed(f), trace: string[] = [];
+      if (failure === "overflow") await bulk(f, record, 1024);
+      const census = CommandStore.prototype.statusCandidates, confirm = f.access.confirmReadContext.bind(f.access);
+      const decode = KeysetCursorCodec.prototype.decode;
+      const cursor = vi.spyOn(KeysetCursorCodec.prototype, "decode").mockImplementation(function (this: KeysetCursorCodec, ...args) {
+        trace.push("failure"); return decode.apply(this, args);
+      });
+      const scan = vi.spyOn(CommandStore.prototype, "statusCandidates").mockImplementation(async function (this: CommandStore, ...args) {
+        const rows = await census.apply(this, args);
+        if (args[0] !== f.workspace) return rows;
+        if (failure === "loader") { trace.push("failure"); throw new Error("PRIVATE_COLLECTION_DIAGNOSTIC"); }
+        if (failure === "overflow") return new Proxy(rows, { get(target, property, receiver) {
+          if (property === "length") trace.push("failure"); return Reflect.get(target, property, receiver);
+        } });
+        if (failure === "corrupt-status") {
+          Object.defineProperty(rows[0], "status", { enumerable: true, get() {
+            trace.push("failure"); return { PRIVATE_SQL: "PRIVATE_COLLECTION_DIAGNOSTIC" };
+          } });
+        }
+        return rows;
+      });
+      const final = vi.spyOn(f.access, "confirmReadContext").mockImplementation(async (...args) => {
+        const current = await confirm(...args); trace.push("confirmed"); return current;
+      });
+      try { await mounted(f, async http => {
+        const response = await http.get(failure === "bad-cursor" ? { after: "TEST_ONLY:not-a-signed-cursor" } : {});
+        error(response, failure === "bad-cursor" ? 400 : 503,
+          failure === "bad-cursor" ? "COMMAND_COLLECTION_CURSOR_INVALID" : failure === "overflow" ? "COMMAND_COLLECTION_OVERFLOW" : "COMMAND_UNAVAILABLE");
+        expect(trace).toContain("failure"); expect(trace.at(-1)).toBe("confirmed");
+        expect(trace.lastIndexOf("confirmed")).toBeGreaterThan(trace.lastIndexOf("failure"));
+        expect(response.body).not.toMatch(/PRIVATE_COLLECTION_DIAGNOSTIC|PRIVATE_SQL|SELECT|SyntaxError|HMAC/);
+      }); } finally { scan.mockRestore(); final.mockRestore(); cursor.mockRestore(); }
+    });
+
   it("missing login is 401 and missing cursor configuration fails honestly after authorization", async () => {
     const f = await fixture("PORTFOLIO", "paper", false), scan = vi.spyOn(CommandStore.prototype, "statusCandidates");
     try { await mounted(f, async http => {

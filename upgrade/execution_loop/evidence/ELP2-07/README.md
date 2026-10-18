@@ -216,3 +216,15 @@ read-only. No authenticated Outcome, target identity, action/grant or command
 runtime is inferred. Other families/current-human/owning-COMMIT remain OPEN.
 08 has since been assigned in the approved batch; the older next-assignment
 wording above is historical, not a new approval request.
+
+**Current07/08 local repair,2026-10-18:** [workflow structural parity and
+current read fences](../ELP2-08/workflow-parity-and-read-fences.md) are
+APPLIED_UNCOMMITTED/NOT_RUN at entry49bdc6e1. Same status/collection/workflow
+operations; exact target before full decode and fresh authority after body/error
+composition. Qualified source/COMMIT and remaining family gates stay OPEN.
+No frontend or runtime activation; consumer remains owner-held/awaited.
+
+Actual focused terminal06:22:32UTC supersedes the preparation NOT_RUN above:
+368API/80contract PASS, APIbuild/scopedPGrestore, frozen source/index/runtime8
+and owned cleanup PASS. [Receipt, hashes and independent review limits](../ELP2-08/workflow-parity-and-read-fences.md#focused-terminal--2026-10-18t062232utc).
+Single normal-hook landing remains pending; full source/family gates unchanged.

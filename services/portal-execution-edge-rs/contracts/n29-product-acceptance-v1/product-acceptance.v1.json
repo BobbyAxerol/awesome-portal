@@ -81,7 +81,7 @@
     "governance_product_migration_sha256": "sha256:e9193e9baaa1886dd882d1e6b806dd117b6f6a08d0862bc386ac20c81c679383",
     "governance_product_schema_sha256": "sha256:68cd5e901b7199d867ebfbf0edbacb24f97b6b387f31ece8e660d48bbf4ffbb9",
     "governance_product_openapi_sha256": "sha256:9d325814d9f81d8a172977e1f3fd864a1ef46df29c726efd6837053de3b63b9e",
-    "governance_product_test_sha256": "sha256:d36cd1b2b9655b89ea409ecce8828c2aca1ee386b456cbca2fe2c7a95f4a6b43",
+    "governance_product_test_sha256": "sha256:e7980be17bbd19f27308f59fa51c7aed140c31eedf7109b6555d4d9b225d2be3",
     "br72_schema_sha256": "sha256:05fe339f3d25dfb68f5af531f083f0161c1b1dca960b63edb0038f4615317248",
     "br72_fleet_v2_schema_sha256": "sha256:144659c2b745ec83d2f8d2403b5cc2e21e4a3762e4abce5368caed2af2d07613",
     "br72_openapi_sha256": "sha256:e9f3aa2c6431a8309246d3a67c7b46702f85e4aced72fc655f9487dec2f5013c",

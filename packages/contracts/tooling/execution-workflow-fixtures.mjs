@@ -17,6 +17,12 @@ export function workflowFixtures(f, c) {
   add('W08-CREATED-ZERO', 'T08-02', 'WorkflowCreate', f.createWorkflow({ ...create, requested_economic_capital: '0', requested_initial_budget: '0',
     fund: step('NOT_REQUIRED'), initial_grant: step('NOT_REQUIRED') }));
   add('W08-CREATED-FUNDED', 'T08-02', 'WorkflowCreate', f.createWorkflow({ ...create, fund: applied('fund'), initial_grant: applied('grant') }));
+  add('W08-CREATE-DRAFT', 'T08-02', 'WorkflowCreate', f.createWorkflow({ ...create, create: step('NOT_REQUESTED') }));
+  add('W08-CREATE-PENDING', 'T08-02', 'WorkflowCreate', f.createWorkflow({ ...create, create: step('PENDING') }));
+  add('W08-FUNDING-PENDING', 'T08-02', 'WorkflowCreate', f.createWorkflow({ ...create, fund: step('PENDING') }));
+  add('W08-BUDGET-PENDING', 'T08-02', 'WorkflowCreate', f.createWorkflow({ ...create, fund: applied('fund'), initial_grant: step('PENDING') }));
+  add('W08-CREATE-UNKNOWN', 'T08-02', 'WorkflowCreate', f.createWorkflow({ ...create, fund: step('UNKNOWN') }));
+  add('W08-CREATE-REJECTED', 'T08-02', 'WorkflowCreate', f.createWorkflow({ ...create, fund: step('REJECTED') }));
   add('W08-ACK-UNKNOWN', 'T08-10', 'WorkflowCapital', f.capitalWorkflow(context, 'USDT', status));
   const capital = (operation, state, amounts) => {
     const resource = operation === 'SET_ROOT_LIMIT' ? { kind: 'ROOT', id: 'TEST_ONLY:root' } : context.resource;
@@ -38,6 +44,11 @@ export function workflowFixtures(f, c) {
     before: { economic_backing: null, margin_risk_budget: null, exposure_cap: null, source_receipt_ref: null, source_as_of_ms: null },
     projected_after: { economic_backing: null, margin_risk_budget: null, exposure_cap: null, source_receipt_ref: null, source_as_of_ms: null },
     effect_is_projection_not_receipt: true, source_parent_ref: null, confirm_is_approval: false, physical_transfer_performed: false }));
+  const confirmation = copy(cases.find(v => v.id === 'W08-CONFIRM-SOURCE-DARK').response);
+  add('W08-CONFIRM-PARTIAL-CAPACITY', 'T08-03', 'WorkflowConfirmation', c.workflowConfirmation.parse({ ...confirmation,
+    before: { ...confirmation.before, economic_backing: '0.000', source_receipt_ref: 'TEST_ONLY:before-capacity', source_as_of_ms: 0 },
+    projected_after: { ...confirmation.projected_after, margin_risk_budget: '100.000000000000000001',
+      source_receipt_ref: 'TEST_ONLY:projected-capacity', source_as_of_ms: context.observed_at_ms } }));
   const counts = { positions: 0, working_orders: 0, reservations: 0, unknown_outcomes: 0, locks: 0, recalls: 0, settlements: 0, active_children: 0 };
   const lifecycle = { context, operation: 'MOVE_ASSIGNMENT', financial_stage: context.environment === 'paper' ? 'PAPER' : context.environment === 'sandbox' ? 'SANDBOX' : 'CANARY', lifecycle: 'ACTIVE',
     obligations: { counts, coverage: 'COMPLETE', freshness: 'FRESH', source_receipt_ref: 'TEST_ONLY:census' },

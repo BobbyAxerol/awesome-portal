@@ -192,3 +192,31 @@ is no longer NOT_RUN. [Actual normal-hook/restore receipt](../ELP2-04/finite-acc
 records6011 API/791 contract PASS with3 existing skips and unchanged runtimes.
 This delivers only the finite exact-resource collection/alias subset, not an
 additional executor, actual source authority or acknowledged frontend consumer.
+
+## 2026-10-18 — exact report fences and refreshed PM source
+
+Main accepted the [original07/08 repair matrix and typed consumer handoff](../ELP2-08/workflow-parity-and-read-fences.md)
+at entry49bdc6e1. Actual operation IDs remain
+`executionCapitalCommandStatusV1`, `executionCapitalCommandCollectionV1`,
+`executionCapitalCommandWorkflowGetV1`. No route/public-field/action added.
+Collection remains narrow status-only; full detail/workflow validate original
+actor/hash/profile/CAS/amount separately from current read rights. Current
+authority is checked after body/safe-error composition; GET never dispatches.
+Code/derived contracts APPLIED_UNCOMMITTED, focused proof pending. No new
+Claude receipt or ACK found on intake; consumer remains owner-held/awaited.
+
+Read-only PM repin06:06–06:07UTC: exact approved PM worktree HEAD
+`b9fae791824435f21d773705f21023cd38d1416d`, tracked diff and untracked-name
+inventory empty at observation. `operator_adapters.py` SHA256
+`8ca39c1b9e0e5d21f3d3d22b444270e69a840832a7b66c173b3ff6419bfc2ab9`;
+`binding_contract.py` SHA256
+`1bf9848a8e37ad9324cce0959b9b8df970df6efba36f6a413c5abc57b00814a5`.
+Main read complete relevant diff from49a6acc3 plus current binding125–195.
+Optional existing history exporter is not another command sender. Move census
+requires exactly positions/orders/reservations/unknown/locks/pending_recall/
+fees; no proof that local settlements covers fees. Zero census without three
+capital receipts remains BLOCKED_RECEIPTS, readiness is not APPLIED.
+Private exact source note SHA256
+`0b5e400e9b8829ca98877cc1967a7f3d90350267bd2382e4b2a7ce99b478df40`.
+Journal tail output was truncated; no new full journal/runtime acceptance
+claimed. Original source family/action/COMMIT/installation gates stay OPEN.

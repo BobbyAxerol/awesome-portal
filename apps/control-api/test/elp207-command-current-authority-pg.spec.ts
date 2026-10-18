@@ -204,6 +204,28 @@ describe.skipIf(!URL)("ELP2-07 selected command correspondence through real Core
     expect(f.send).toHaveBeenCalledOnce();
   });
 
+  it.each(["status", "workflow"] as const)("%s re-resolves actual TEST_ONLY versioned audit source after the stored-row read", async reader => {
+    const f = await fixture(), i = f.intent(), record = await f.submit(i), before = await commandRows(f), original = CommandStore.prototype.workflowCandidate;
+    let changed = false;
+    const scan = vi.spyOn(CommandStore.prototype, "workflowCandidate").mockImplementation(async function (this: CommandStore, ...args) {
+      const raw = await original.apply(this, args);
+      if (args[0] === f.workspace && !changed) {
+        changed = true;
+        // The synthetic provider changes its real versioned response. Do not
+        // forge a positive context, change Core rows or revoke mutation grants.
+        f.source.grants.find(grant => grant.grant_id === f.audit.grant_id)!.targets = [];
+      }
+      return raw;
+    });
+    try {
+      await expect(reader === "status" ? f.service.status(actor, f.workspace, record.command_id)
+        : f.service.workflow(actor, f.workspace, record.command_id)).rejects.toMatchObject({ status: 404 });
+      expect(changed).toBe(true);
+      expect(evaluateAccess(await f.access.readContext(actor, f.workspace), "capital.top_up", i.resource, i.environment).allowed).toBe(true);
+      expect(await commandRows(f)).toEqual(before); expect(f.send).toHaveBeenCalledOnce();
+    } finally { scan.mockRestore(); }
+  });
+
   it.each([null, undefined, {}, { schema_version: "UNKNOWN" }])("present invalid extension fails closed despite matching legacy receipt: %j", async invalid => {
     const f = await fixture(), i = f.intent(), a = f.authorization(i);
     f.relations.membership = { receipt_id: a.membership_receipt_ref, revision: a.membership_revision, mapping_revision: a.mapping_revision };

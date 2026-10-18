@@ -11970,3 +11970,71 @@ Actual corrected qualification21:06:16.131619–21:07:29.428425UTC:348PASS (278u
   Earlier failures remain preserved; unchanged contracts are reused, not new
   coverage. One coherent normal-hook landing remains, no further focused PG
   build for receipt-only edits; whole04/09/10/11 and Claude-owner gates unchanged.
+
+- Operations normal-hook terminal2026-10-18T06:10UTC committed
+  `49bdc6e16ab30bbc5a23b5dec9a8a872a5ec49f1`,41files,+4300/−97;
+  883contract/6829API PASS with3existing skips, build/scopedPGrestore/four
+  access digests/source-index/runtime8/owned cleanup PASS. [Exact terminal,
+  hashes and unchanged full04 limits](execution_loop/evidence/ELP2-04/current-operational-parents.md#normal-hook-terminal--2026-10-18t061000utc).
+  Preserved failures/pending statements above are historical, not new blockers.
+- Original07/08 [workflow semantic parity and genuine current read-fence
+  repair](execution_loop/evidence/ELP2-08/workflow-parity-and-read-fences.md)
+  APPLIED_UNCOMMITTED at49bdc6e1, generation PASS, affected tests NOT_RUN at
+  preparation. Same operations/fields; no upstream command, identity change or
+  frontend edit. One focused isolated lane then one normal-hook commit. Other
+  families/source workflows remain OPEN; next original04/07/09/10 work stays
+  within the active goal, not ELP2-11 or release activation.
+- [Latest bounded source-owner intake](execution_loop/evidence/ELP2-10/source-followthrough.md#owner-source-follow-through--2026-10-18t0531utc)
+  corrects old compile-failure shorthand: owner240+separate15 and PM compatible
+  61+3+1 results are TEST_ONLY/NOT_INSTALLED, not Main execution or runtime
+  trust. Manager bounded current-page observation need not wait for named TS
+  replay publication; SAME authority/coordinator/source paths only. PM repin
+  b9fae791 preserves exact move census including fees; readiness is not APPLIED.
+  Original installation/budget/calibration/coexistence/P184G2/browser remain
+  OPEN. Claude recurring intake7.3 retained; no new consumer ACK/assignment.
+- Original07/08 actual focused terminal2026-10-18T06:22:32UTC:
+  7API suites/368PASS +2contract suites/80PASS, APIbuild/scopedPGrestore/four
+  access digests PASS; source/index/eight protected runtime tuples unchanged,
+  owned resources empty/lease released. [Immutable receipt/review/limits](execution_loop/evidence/ELP2-08/workflow-parity-and-read-fences.md#focused-terminal--2026-10-18t062232utc).
+  Independent applied-source review ACCEPT is not extra test coverage. Single
+  coherent normal-hook landing pending, no duplicate focused build. Full
+  family/workflow/source/consumer/09/10 gates and11entry remain OPEN; no push,
+  dev/main/sign/release/deploy/runtime activation or consumer acknowledgement.
+
+### Original04/07/08 — captured-parent prerequisite and exact failed-hook repair
+
+- Original07/08 hook `workflow-parity-land-062501` actually ended06:59:41UTC:
+  896contract/6882API PASS,3FAIL in one operation-parent test file; no
+  commit/restore PASS. [Exact failed receipt and accepted raw-read spy repair](execution_loop/evidence/ELP2-08/workflow-parity-and-read-fences.md#first-normal-hook-terminal--2026-10-18t065941utc).
+  Source/index/eight runtime tuples unchanged, owned apparatus removed.
+- [Original04-008/009 captured-parent scope/matrix](execution_loop/evidence/ELP2-04/parent-capture-integrity.md)
+  is APPLIED_UNCOMMITTED/NOT_RUN at49bdc6e1: one additive0142 protects six
+  parent identities/evidence while preserving existing lifecycle writers;
+  genuine Paper Exit inserts its final hash once, with actual atomicity/replay
+  regressions and honest immutable expiry/corruption cohorts. No history
+  rewrite, runtime migration, new field/permission or frontend edit.
+- One affected11suite PG/HTTP/build/scoped-restore lane retakes corrected
+  operation-parent spies together with this dependency-closed prerequisite;
+  unchanged focused07/08 receipts retain exact old source coverage. One
+  coherent normal-hook retry, not a separate full build for the test seam.
+  Full positive parent/operation and technical field-purpose publication,
+  qualified source/trust, budgets/calibration/coexistence/P184G2/browser remain
+  OPEN;11NOT_ENTRY_READY. Claude intake7.3: no actual new review/ACK received,
+  UXM owner-held/AWAITING_CONSUMER_REVIEW. No push/dev/main/sign/release/deploy.
+
+- Combined original04/07/08 affected terminal2026-10-18T07:08:35UTC:
+  11suites/320PASS, APIbuild/scopedPGrestore/four access digests, frozen source/
+  index/eight protected runtimes and exact teardown PASS. [Exact hashes,
+  independent review and next original04 scope](execution_loop/evidence/ELP2-04/parent-capture-integrity.md#focused-terminal--2026-10-18t070835utc).
+  All three prior obsolete-spy failures now genuinely pass, without weakened
+  authorization/assertions. One test-only serial-query correction is retaken
+  by the single coherent normal hook; no duplicate focused build. Whole04,
+  original07–10 source/consumer/config/coexistence/P184G2/browser and11 entry
+  remain OPEN. No new Claude acknowledgement or frontend assignment.
+
+- Combined parent-integrity hook071024 stopped07:12:10UTC on the changed
+  Governance test's N29 hash, before contracts/API/restore; no commit. [Exact
+  preserved failure and four derived-pin refreshes](execution_loop/evidence/ELP2-04/parent-capture-integrity.md#early-normal-hook-terminal--2026-10-18t071210utc).
+  N29/EDS-12 semantic verifiers PASS with runtime_effect:NONE, no verdict or
+  authority change. Retry the same coherent owned batch through normal hook;
+  no new focused PG/build or whole-phase/consumer/runtime acceptance.

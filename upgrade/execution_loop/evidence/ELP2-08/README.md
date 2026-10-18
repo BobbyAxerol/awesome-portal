@@ -1,5 +1,17 @@
 # ELP2-08 — Workflows và HiFi states
 
+**Latest affected terminal2026-10-18T07:08:35UTC:** all three prior failed
+raw-read spies now PASS in11suites/320cases, build/scopedrestore/cleanup PASS.
+[Exact result and remaining landing boundary](workflow-parity-and-read-fences.md#corrected-spy-affected-terminal--2026-10-18t070835utc).
+One coherent normal-hook retry pending; no whole08/source/consumer acceptance.
+
+**Current2026-10-18T06:59UTC:** first parity/read-fence normal hook terminated
+with896contract/6882API PASS and3failed test spies in operation-parent; no
+commit/restore PASS. [Exact failure and bounded correction](workflow-parity-and-read-fences.md#first-normal-hook-terminal--2026-10-18t065941utc).
+The corrected actual raw-read seam is validated with the original04 captured-
+parent prerequisite in one affected lane, then one coherent normal-hook retry.
+Earlier pending text is preserved history; source/consumer/full08 remain OPEN.
+
 **2026-10-17 continuation:** [capital workflow read](capital-workflow-read.md)
 adds the missing current-authorized local GET, preserving the schema-only
 workflow OpenAPI and original command semantics. Applied/uncommitted, tests
@@ -173,3 +185,22 @@ PASS within247/247API and84/84contract tests, APIbuild/scopedPGrestore PASS.
 Exact source/foreign index/protected runtimes unchanged; own resources removed.
 Only coherent normal-hook landing and actual source/consumer gates remain;
 do not treat this local correction as a commissioned executor.
+
+## Current07/08 continuation —2026-10-18
+
+[Structural workflow parity and genuine current report fences](workflow-parity-and-read-fences.md)
+are APPLIED_UNCOMMITTED at clean entry49bdc6e1. The same canonical Zod semantics
+now emit representable JSON refinements; arbitrary sibling comparisons remain
+runtime checks. Status/workflow/collection share exact-current authority and
+final body/error fences without changing public routes/fields or dispatch.
+Generation PASS after reusing existing zod; actual API/contract proof NOT_RUN
+at preparation. One bounded focused lane then one coherent normal hook.
+Original source family/workflow, design/browser and authority gates remain
+OPEN. Backend next is proof/landing then remaining original04/07/09/10 work;
+Claude fixtures/design only after assignment, consumer acknowledgement absent.
+
+Actual focused terminal2026-10-18T06:22:32UTC:7affected API suites/368PASS,
+2contract suites/80PASS, build/scopedPGrestore/four access-row digests PASS;
+source/index/runtime8 unchanged, resources removed. [Terminal/review boundary](workflow-parity-and-read-fences.md#focused-terminal--2026-10-18t062232utc).
+This supersedes NOT_RUN, not full08/source/browser acceptance. One coherent
+normal-hook commit is next; no second focused build for receipt-only edits.

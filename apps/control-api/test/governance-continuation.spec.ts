@@ -1,11 +1,11 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
 import { Argon2CredentialService } from "../src/auth/argon";
 import { AuthService } from "../src/auth/auth.service";
 import { type EvidenceRecord } from "../src/governance/governance.repository";
 import { computeEvidenceManifestHash, GovernanceService } from "../src/governance/governance.service";
 import { PaperExitRepository } from "../src/governance/paper-exit.repository";
-import { computePaperExitSourceSnapshotHash, PaperExitService } from "../src/governance/paper-exit.service";
+import { computePaperExitSourceSnapshotHash, PaperExitService, type PaperExitSourceSnapshotInput } from "../src/governance/paper-exit.service";
 import { GovernanceGrantsRepository } from "../src/repos/governance-grants";
 import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
@@ -141,6 +141,7 @@ describe("GOV-C1 continuation: independent local decisions and fresh authority",
 
   async function seedApproval(id: string, options: {
     requester?: Actor; quorum?: number; paper?: boolean; gate?: "R1" | "R2" | "LIVE_GATE";
+    capture?: { createdAt: Date; slaDueAt: Date; expiresAt: Date };
   } = {}) {
     const requester = options.requester ?? author;
     const capturedAt = new Date("2026-10-12T00:00:00.000Z");
@@ -157,13 +158,17 @@ describe("GOV-C1 continuation: independent local decisions and fresh authority",
         (approval_id, workspace_id, gate, subject_type, subject_id, subject_label, environment,
          target_label, requester_user_id, requester_username, artifact_creator_user_id,
          artifact_creator_username, status, policy_version, quorum_required, evidence_set_hash,
-         evidence_complete, blocker_count, sla_due_at, expires_at)
+         evidence_complete, blocker_count, sla_due_at, expires_at, created_at)
        VALUES ($1,$2,$3,$4,'av_continuation','Technical test',$5,'Technical test',
          $6,$7,$6,$7,'PENDING','approval.v3',$8,$9,true,0,
-         now() + interval '6 hours', now() + interval '48 hours')`,
+         COALESCE($10::timestamptz, now() + interval '6 hours'),
+         COALESCE($11::timestamptz, now() + interval '48 hours'),
+         COALESCE($12::timestamptz, now()))`,
       [id, workspaceId, options.paper ? "PAPER_EXIT" : options.gate ?? "R1", options.paper ? "EXIT_REVIEW" : "ALPHA_VERSION",
         options.paper ? "PAPER" : "RESEARCH", requester.userId, requester.username,
-        options.quorum ?? 1, computeEvidenceManifestHash(evidence)],
+        options.quorum ?? 1, computeEvidenceManifestHash(evidence),
+        options.capture?.slaDueAt ?? null, options.capture?.expiresAt ?? null,
+        options.capture?.createdAt ?? null],
     );
     for (const item of evidence) {
       await ctx.pool.query(
@@ -268,15 +273,43 @@ describe("GOV-C1 continuation: independent local decisions and fresh authority",
 
   it("refuses an expired approval even when its previously issued plan is unexpired", async () => {
     const id = "GOV-C1-EXPIRED-AFTER-PLAN";
-    const planned = await plan(reviewer, planBody(id, await seedApproval(id)));
+    const now = Date.now();
+    const capture = { createdAt: new Date(now - 2 * 60 * 60 * 1000),
+      slaDueAt: new Date(now - 60 * 60 * 1000),
+      expiresAt: new Date(now + Math.min(30_000, ctx.config.GOVERNANCE_PLAN_TTL_SECONDS * 500)) };
+    const planned = await plan(reviewer, planBody(id, await seedApproval(id, { capture })));
+    expect(planned.statusCode).toBe(201);
     expect(planned.json().blockers).toEqual([]);
-    await ctx.pool.query(`UPDATE governance_approval_requests
-      SET created_at = now() - interval '2 days', sla_due_at = now() - interval '1 day',
-          expires_at = now() - interval '1 second' WHERE approval_id = $1`, [id]);
-    const denied = await apply(reviewer, planned.json());
-    expect(denied.statusCode).toBe(409);
-    expect(denied.json().error.code).toBe("APPROVAL_EXPIRED");
+    const before = (await ctx.pool.query(
+      "SELECT to_jsonb(request) AS root FROM governance_approval_requests request WHERE approval_id=$1", [id],
+    )).rows[0].root;
+    const planBefore = (await ctx.pool.query<{ status: string; expires_at: Date }>(
+      "SELECT status,expires_at FROM governance_decision_plans WHERE operation_id=$1", [planned.json().operation_id],
+    )).rows[0];
+    expect(capture.expiresAt.valueOf()).toBeGreaterThan(Date.now());
+    expect(planBefore.expires_at.valueOf()).toBeGreaterThan(capture.expiresAt.valueOf() + 1);
+    // Exercise the existing JS approval-expiry guard after genuine admission;
+    // never claim that this Date-only clock advances SQL Inbox time.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date(capture.expiresAt.valueOf() + 1));
+      expect(Date.now()).toBeLessThan(planBefore.expires_at.valueOf());
+      const denied = await apply(reviewer, planned.json());
+      expect(denied.statusCode).toBe(409);
+      expect(denied.json().error.code).toBe("APPROVAL_EXPIRED");
+    } finally {
+      vi.useRealTimers();
+    }
     await noDecision(id);
+    expect((await ctx.pool.query(
+      "SELECT to_jsonb(request) AS root FROM governance_approval_requests request WHERE approval_id=$1", [id],
+    )).rows[0].root).toEqual(before);
+    expect((await ctx.pool.query(
+      "SELECT status,expires_at FROM governance_decision_plans WHERE operation_id=$1", [planned.json().operation_id],
+    )).rows[0]).toEqual(planBefore);
+    expect((await ctx.pool.query(
+      "SELECT reason_code FROM product_audit_events WHERE aggregate_id=$1 AND reason_code='APPROVAL_EXPIRED'", [id],
+    )).rows).toEqual([{ reason_code: "APPROVAL_EXPIRED" }]);
   });
 
   it("revalidates manifest bytes after a post-plan append rather than trusting the old aggregate column", async () => {
@@ -518,6 +551,23 @@ describe("GOV-C1 continuation: independent local decisions and fresh authority",
     "keeps Paper Exit same-read pins and fresh authority: %s", async (scenario) => {
     const id = `GOV-C1-PAPER-${scenario}`;
     const hashes = await seedApproval(id, { paper: true });
+    const approval = (await ctx.pool.query<{ evidence_set_hash: string }>(
+      "SELECT evidence_set_hash FROM governance_approval_requests WHERE approval_id=$1 AND workspace_id=$2",
+      [id, workspaceId],
+    )).rows[0];
+    expect(approval).toBeDefined();
+    const sourceInput: PaperExitSourceSnapshotInput = {
+      review: { reviewId: id, deploymentId: "dep_technical", portfolioId: "pf_technical",
+        venue: "TECHNICAL", artifactDigest: HASHES[0], observationPolicyId: "obs_technical",
+        observationPolicyVersion: "observation.v3", observationPolicyDigest: HASHES[1],
+        evidencePackId: "ep_technical", evidencePackDigest: HASHES[2],
+        evaluationPolicyVersion: "paper-exit.v1", evaluationFormulaVersion: "paper-exit-eval.v1" },
+      approval: { evidenceSetHash: approval.evidence_set_hash },
+      lineage: [{ ordinal: 0, kind: "ARTIFACT", label: "Technical lineage", value: "technical",
+        href: null, digest: HASHES[0], sourceAuthority: "RESEARCH", required: true }],
+      panels: [], findings: [],
+    };
+    const sourceSnapshotHash = computePaperExitSourceSnapshotHash(sourceInput);
     await ctx.pool.query(
       `INSERT INTO governance_paper_exit_reviews
         (review_id,workspace_id,deployment_id,portfolio_id,venue,artifact_digest,r1_approval_id,
@@ -527,7 +577,7 @@ describe("GOV-C1 continuation: independent local decisions and fresh authority",
        VALUES ($1,$2,'dep_technical','pf_technical','TECHNICAL',$3,'apr_technical_r1','apr_technical_r2',
          'obs_technical','observation.v3',$4,'ep_technical',$5,'paper-exit.v1','paper-exit-eval.v1',$6,
          'TECHNICAL_SYNTHETIC: no execution source activated','Safe local extension only')`,
-      [id, workspaceId, HASHES[0], HASHES[1], HASHES[2], `sha256:${"0".repeat(64)}`],
+      [id, workspaceId, HASHES[0], HASHES[1], HASHES[2], sourceSnapshotHash],
     );
     await ctx.pool.query(
       `INSERT INTO governance_paper_exit_lineage
@@ -536,8 +586,11 @@ describe("GOV-C1 continuation: independent local decisions and fresh authority",
       [`${id}_lineage`, id, HASHES[0]],
     );
     const snapshot = (await new PaperExitRepository(ctx.pool).detail(workspaceId, id))!;
-    await ctx.pool.query("UPDATE governance_paper_exit_reviews SET source_snapshot_hash = $2 WHERE review_id = $1",
-      [id, computePaperExitSourceSnapshotHash(snapshot)]);
+    expect(snapshot.review.sourceSnapshotHash).toBe(sourceSnapshotHash);
+    expect(computePaperExitSourceSnapshotHash(snapshot)).toBe(sourceSnapshotHash);
+    expect(snapshot.lineage).toEqual([{ lineageId: `${id}_lineage`, ...sourceInput.lineage[0] }]);
+    expect(snapshot.panels).toEqual([]);
+    expect(snapshot.findings).toEqual([]);
     const read = await request(reviewer, `/api/v1/execution/governance/exit-reviews/${id}?workspace_id=${workspaceId}`);
     expect(read.statusCode).toBe(200);
     const data = read.json().data;

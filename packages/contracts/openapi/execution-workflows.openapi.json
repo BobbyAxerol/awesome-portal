@@ -3571,29 +3571,583 @@
         ],
         "allOf": [
           {
+            "not": {
+              "type": "object",
+              "properties": {
+                "create": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "const": "NOT_REQUIRED"
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ]
+                }
+              },
+              "required": [
+                "create"
+              ]
+            }
+          },
+          {
             "if": {
+              "type": "object",
+              "properties": {
+                "requested_economic_capital": {
+                  "type": "string",
+                  "pattern": "^0(?:\\.0+)?$"
+                }
+              },
+              "required": [
+                "requested_economic_capital"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "fund": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "const": "NOT_REQUIRED"
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ]
+                }
+              },
+              "required": [
+                "fund"
+              ]
+            },
+            "else": {
+              "not": {
+                "type": "object",
+                "properties": {
+                  "fund": {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "const": "NOT_REQUIRED"
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "required": [
+                  "fund"
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "requested_initial_budget": {
+                  "type": "string",
+                  "pattern": "^0(?:\\.0+)?$"
+                }
+              },
+              "required": [
+                "requested_initial_budget"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "initial_grant": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "const": "NOT_REQUIRED"
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ]
+                }
+              },
+              "required": [
+                "initial_grant"
+              ]
+            },
+            "else": {
+              "not": {
+                "type": "object",
+                "properties": {
+                  "initial_grant": {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "const": "NOT_REQUIRED"
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "required": [
+                  "initial_grant"
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "not": {
+                "type": "object",
+                "properties": {
+                  "create": {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "const": "APPLIED"
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "required": [
+                  "create"
+                ]
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "not": {
+                    "type": "object",
+                    "properties": {
+                      "fund": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "const": "APPLIED"
+                          }
+                        },
+                        "required": [
+                          "state"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "fund"
+                    ]
+                  }
+                },
+                {
+                  "not": {
+                    "type": "object",
+                    "properties": {
+                      "initial_grant": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "const": "APPLIED"
+                          }
+                        },
+                        "required": [
+                          "state"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "initial_grant"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "create": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "const": "UNKNOWN"
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "create"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "fund": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "const": "UNKNOWN"
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "fund"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "initial_grant": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "const": "UNKNOWN"
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "initial_grant"
+                  ]
+                }
+              ]
+            },
+            "then": {
+              "type": "object",
               "properties": {
                 "state": {
-                  "const": "CREATED_WITH_CAPITAL"
+                  "const": "OUTCOME_UNKNOWN"
                 }
               },
               "required": [
                 "state"
               ]
             },
-            "then": {
-              "properties": {
-                "create": {
-                  "properties": {
-                    "state": {
-                      "const": "APPLIED"
-                    }
+            "else": {
+              "if": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "create": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "const": "REJECTED"
+                          }
+                        },
+                        "required": [
+                          "state"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "create"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "fund": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "const": "REJECTED"
+                          }
+                        },
+                        "required": [
+                          "state"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "fund"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "initial_grant": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "const": "REJECTED"
+                          }
+                        },
+                        "required": [
+                          "state"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "initial_grant"
+                    ]
+                  }
+                ]
+              },
+              "then": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "const": "REJECTED"
                   }
                 },
-                "fund": {
+                "required": [
+                  "state"
+                ]
+              },
+              "else": {
+                "if": {
+                  "type": "object",
+                  "properties": {
+                    "create": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "const": "NOT_REQUESTED"
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "create"
+                  ]
+                },
+                "then": {
+                  "type": "object",
                   "properties": {
                     "state": {
-                      "const": "APPLIED"
+                      "const": "DRAFT"
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ]
+                },
+                "else": {
+                  "if": {
+                    "not": {
+                      "type": "object",
+                      "properties": {
+                        "create": {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "const": "APPLIED"
+                            }
+                          },
+                          "required": [
+                            "state"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "create"
+                      ]
+                    }
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "const": "CREATE_PENDING"
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  },
+                  "else": {
+                    "if": {
+                      "allOf": [
+                        {
+                          "not": {
+                            "type": "object",
+                            "properties": {
+                              "requested_economic_capital": {
+                                "type": "string",
+                                "pattern": "^0(?:\\.0+)?$"
+                              }
+                            },
+                            "required": [
+                              "requested_economic_capital"
+                            ]
+                          }
+                        },
+                        {
+                          "not": {
+                            "type": "object",
+                            "properties": {
+                              "fund": {
+                                "type": "object",
+                                "properties": {
+                                  "state": {
+                                    "const": "APPLIED"
+                                  }
+                                },
+                                "required": [
+                                  "state"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "fund"
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "then": {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "fund": {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "const": "PENDING"
+                              }
+                            },
+                            "required": [
+                              "state"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "fund"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "const": "FUNDING_PENDING"
+                          }
+                        },
+                        "required": [
+                          "state"
+                        ]
+                      },
+                      "else": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "const": "CREATED_UNFUNDED"
+                          }
+                        },
+                        "required": [
+                          "state"
+                        ]
+                      }
+                    },
+                    "else": {
+                      "if": {
+                        "allOf": [
+                          {
+                            "not": {
+                              "type": "object",
+                              "properties": {
+                                "requested_initial_budget": {
+                                  "type": "string",
+                                  "pattern": "^0(?:\\.0+)?$"
+                                }
+                              },
+                              "required": [
+                                "requested_initial_budget"
+                              ]
+                            }
+                          },
+                          {
+                            "not": {
+                              "type": "object",
+                              "properties": {
+                                "initial_grant": {
+                                  "type": "object",
+                                  "properties": {
+                                    "state": {
+                                      "const": "APPLIED"
+                                    }
+                                  },
+                                  "required": [
+                                    "state"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "initial_grant"
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "const": "BUDGET_PENDING"
+                          }
+                        },
+                        "required": [
+                          "state"
+                        ]
+                      },
+                      "else": {
+                        "if": {
+                          "type": "object",
+                          "properties": {
+                            "requested_economic_capital": {
+                              "type": "string",
+                              "pattern": "^0(?:\\.0+)?$"
+                            }
+                          },
+                          "required": [
+                            "requested_economic_capital"
+                          ]
+                        },
+                        "then": {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "const": "CREATED_ZERO_CAPITAL"
+                            }
+                          },
+                          "required": [
+                            "state"
+                          ]
+                        },
+                        "else": {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "const": "CREATED_WITH_CAPITAL"
+                            }
+                          },
+                          "required": [
+                            "state"
+                          ]
+                        }
+                      }
                     }
                   }
                 }
@@ -3965,6 +4519,230 @@
           "source_parent_ref",
           "confirm_is_approval",
           "physical_transfer_performed"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "before": {
+                      "type": "object",
+                      "properties": {
+                        "economic_backing": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "economic_backing"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "before"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "before": {
+                      "type": "object",
+                      "properties": {
+                        "margin_risk_budget": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "margin_risk_budget"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "before"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "before": {
+                      "type": "object",
+                      "properties": {
+                        "exposure_cap": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "exposure_cap"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "before"
+                  ]
+                }
+              ]
+            },
+            "then": {
+              "allOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "before": {
+                      "type": "object",
+                      "properties": {
+                        "source_receipt_ref": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "source_receipt_ref"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "before"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "before": {
+                      "type": "object",
+                      "properties": {
+                        "source_as_of_ms": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "source_as_of_ms"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "before"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "projected_after": {
+                      "type": "object",
+                      "properties": {
+                        "economic_backing": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "economic_backing"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "projected_after"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "projected_after": {
+                      "type": "object",
+                      "properties": {
+                        "margin_risk_budget": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "margin_risk_budget"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "projected_after"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "projected_after": {
+                      "type": "object",
+                      "properties": {
+                        "exposure_cap": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "exposure_cap"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "projected_after"
+                  ]
+                }
+              ]
+            },
+            "then": {
+              "allOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "projected_after": {
+                      "type": "object",
+                      "properties": {
+                        "source_receipt_ref": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "source_receipt_ref"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "projected_after"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "projected_after": {
+                      "type": "object",
+                      "properties": {
+                        "source_as_of_ms": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "source_as_of_ms"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "projected_after"
+                  ]
+                }
+              ]
+            }
+          }
         ]
       },
       "WorkflowLifecycle": {
@@ -4446,6 +5224,7 @@
         "allOf": [
           {
             "if": {
+              "type": "object",
               "properties": {
                 "state": {
                   "const": "READY_FOR_AUTHORITY_REVIEW"
@@ -4456,32 +5235,753 @@
               ]
             },
             "then": {
-              "properties": {
-                "reason_code": {
-                  "type": "null"
-                },
-                "obligations": {
+              "allOf": [
+                {
+                  "type": "object",
                   "properties": {
-                    "coverage": {
-                      "const": "COMPLETE"
+                    "reason_code": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "reason_code"
+                  ]
+                },
+                {
+                  "not": {
+                    "type": "object",
+                    "properties": {
+                      "operation": {
+                        "const": "REACTIVATE"
+                      }
                     },
-                    "freshness": {
-                      "const": "FRESH"
+                    "required": [
+                      "operation"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "lifecycle": {
+                        "const": "ARCHIVED"
+                      }
                     },
-                    "source_receipt_ref": {
-                      "type": "string"
+                    "required": [
+                      "lifecycle"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "operation": {
+                        "const": "CREATE_PAPER_MONITOR"
+                      }
+                    },
+                    "required": [
+                      "operation"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "lifecycle": {
+                        "const": "ARCHIVE_REQUESTED"
+                      }
+                    },
+                    "required": [
+                      "lifecycle"
+                    ]
+                  },
+                  "then": {
+                    "not": {
+                      "type": "object",
+                      "properties": {
+                        "operation": {
+                          "const": "RESUME"
+                        }
+                      },
+                      "required": [
+                        "operation"
+                      ]
                     }
                   }
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "obligations": {
+                      "type": "object",
+                      "properties": {
+                        "coverage": {
+                          "const": "COMPLETE"
+                        }
+                      },
+                      "required": [
+                        "coverage"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "obligations"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "obligations": {
+                      "type": "object",
+                      "properties": {
+                        "freshness": {
+                          "const": "FRESH"
+                        }
+                      },
+                      "required": [
+                        "freshness"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "obligations"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "obligations": {
+                      "type": "object",
+                      "properties": {
+                        "source_receipt_ref": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "source_receipt_ref"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "obligations"
+                  ]
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "operation": {
+                        "const": "RESUME"
+                      }
+                    },
+                    "required": [
+                      "operation"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "obligations": {
+                        "type": "object",
+                        "properties": {
+                          "counts": {
+                            "type": "object",
+                            "required": [
+                              "positions",
+                              "working_orders",
+                              "reservations",
+                              "unknown_outcomes",
+                              "locks",
+                              "recalls",
+                              "settlements",
+                              "active_children"
+                            ],
+                            "properties": {
+                              "positions": {
+                                "type": "integer"
+                              },
+                              "working_orders": {
+                                "type": "integer"
+                              },
+                              "reservations": {
+                                "type": "integer"
+                              },
+                              "unknown_outcomes": {
+                                "const": 0
+                              },
+                              "locks": {
+                                "const": 0
+                              },
+                              "recalls": {
+                                "const": 0
+                              },
+                              "settlements": {
+                                "type": "integer"
+                              },
+                              "active_children": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        },
+                        "required": [
+                          "counts"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "obligations"
+                    ]
+                  },
+                  "else": {
+                    "type": "object",
+                    "properties": {
+                      "obligations": {
+                        "type": "object",
+                        "properties": {
+                          "counts": {
+                            "type": "object",
+                            "required": [
+                              "positions",
+                              "working_orders",
+                              "reservations",
+                              "unknown_outcomes",
+                              "locks",
+                              "recalls",
+                              "settlements",
+                              "active_children"
+                            ],
+                            "properties": {
+                              "positions": {
+                                "const": 0
+                              },
+                              "working_orders": {
+                                "const": 0
+                              },
+                              "reservations": {
+                                "const": 0
+                              },
+                              "unknown_outcomes": {
+                                "const": 0
+                              },
+                              "locks": {
+                                "const": 0
+                              },
+                              "recalls": {
+                                "const": 0
+                              },
+                              "settlements": {
+                                "const": 0
+                              },
+                              "active_children": {
+                                "const": 0
+                              }
+                            }
+                          }
+                        },
+                        "required": [
+                          "counts"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "obligations"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "operation": {
+                        "const": "MOVE_ASSIGNMENT"
+                      }
+                    },
+                    "required": [
+                      "operation"
+                    ]
+                  },
+                  "then": {
+                    "allOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "source_budget_return": {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "const": "APPLIED"
+                              }
+                            },
+                            "required": [
+                              "state"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "source_budget_return"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "destination_budget_grant": {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "const": "APPLIED"
+                              }
+                            },
+                            "required": [
+                              "state"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "destination_budget_grant"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "economic_settlement": {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "const": "APPLIED"
+                              }
+                            },
+                            "required": [
+                              "state"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "economic_settlement"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "operation": {
+                        "const": "ARCHIVE"
+                      }
+                    },
+                    "required": [
+                      "operation"
+                    ]
+                  },
+                  "then": {
+                    "allOf": [
+                      {
+                        "not": {
+                          "type": "object",
+                          "properties": {
+                            "lifecycle": {
+                              "const": "ACTIVE"
+                            }
+                          },
+                          "required": [
+                            "lifecycle"
+                          ]
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "remaining_budget": {
+                            "type": "string",
+                            "pattern": "^0(?:\\.0+)?$"
+                          }
+                        },
+                        "required": [
+                          "remaining_budget"
+                        ]
+                      }
+                    ]
+                  }
                 }
-              }
+              ]
             },
             "else": {
+              "type": "object",
               "properties": {
                 "reason_code": {
                   "type": "string"
                 }
-              }
+              },
+              "required": [
+                "reason_code"
+              ]
             }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "context": {
+                  "type": "object",
+                  "properties": {
+                    "environment": {
+                      "const": "paper"
+                    }
+                  },
+                  "required": [
+                    "environment"
+                  ]
+                }
+              },
+              "required": [
+                "context"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "financial_stage": {
+                  "enum": [
+                    "PAPER"
+                  ]
+                }
+              },
+              "required": [
+                "financial_stage"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "context": {
+                  "type": "object",
+                  "properties": {
+                    "environment": {
+                      "const": "sandbox"
+                    }
+                  },
+                  "required": [
+                    "environment"
+                  ]
+                }
+              },
+              "required": [
+                "context"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "financial_stage": {
+                  "enum": [
+                    "SANDBOX"
+                  ]
+                }
+              },
+              "required": [
+                "financial_stage"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "context": {
+                  "type": "object",
+                  "properties": {
+                    "environment": {
+                      "const": "live"
+                    }
+                  },
+                  "required": [
+                    "environment"
+                  ]
+                }
+              },
+              "required": [
+                "context"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "financial_stage": {
+                  "enum": [
+                    "CANARY",
+                    "LIVE"
+                  ]
+                }
+              },
+              "required": [
+                "financial_stage"
+              ]
+            }
+          },
+          {
+            "if": {
+              "not": {
+                "type": "object",
+                "properties": {
+                  "monitor": {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "const": "NOT_PROVISIONED"
+                      }
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "required": [
+                  "monitor"
+                ]
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "monitor": {
+                      "type": "object",
+                      "properties": {
+                        "deployment_id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "deployment_id"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "monitor"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "monitor": {
+                      "type": "object",
+                      "properties": {
+                        "origin_deployment_id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "origin_deployment_id"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "monitor"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "monitor": {
+                      "type": "object",
+                      "properties": {
+                        "alpha_version_id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "alpha_version_id"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "monitor"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "monitor": {
+                      "type": "object",
+                      "properties": {
+                        "params_digest": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "params_digest"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "monitor"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "monitor": {
+                      "type": "object",
+                      "properties": {
+                        "lineage_receipt_ref": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "lineage_receipt_ref"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "monitor"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "monitor": {
+                      "type": "object",
+                      "properties": {
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "reason"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "monitor"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "monitor": {
+                      "type": "object",
+                      "properties": {
+                        "effective_at_ms": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "effective_at_ms"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "monitor"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "monitor": {
+                      "type": "object",
+                      "properties": {
+                        "approved_config_digest": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "approved_config_digest"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "monitor"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "monitor": {
+                      "type": "object",
+                      "properties": {
+                        "virtual_capital": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "virtual_capital"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "monitor"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "monitor": {
+                      "type": "object",
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "currency"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "monitor"
+                  ]
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "monitor": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "const": "RUNNING"
+                          }
+                        },
+                        "required": [
+                          "state"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "monitor"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "monitor": {
+                        "type": "object",
+                        "properties": {
+                          "last_observation_ms": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "last_observation_ms"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "monitor"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "$comment": "Canonical runtime additionally checks monitor deployment_id != origin_deployment_id and last_observation_ms >= effective_at_ms. Ordinary JSON Schema has no arbitrary sibling-value comparison. Current source/target authority and pure-projector prerequisites are not installed by this structural schema."
           }
         ]
       },
@@ -4708,6 +6208,147 @@
           "origin",
           "economic_aggregation",
           "saved_view_grants_access"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "origin": {
+                  "type": "object",
+                  "properties": {
+                    "gate": {
+                      "const": "PAPER_EXIT"
+                    }
+                  },
+                  "required": [
+                    "gate"
+                  ]
+                }
+              },
+              "required": [
+                "origin"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "origin": {
+                  "type": "object",
+                  "properties": {
+                    "review_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "review_id"
+                  ]
+                }
+              },
+              "required": [
+                "origin"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "financial_stage_filter": {
+                  "const": "PAPER"
+                }
+              },
+              "required": [
+                "financial_stage_filter"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "environment": {
+                  "const": "paper"
+                }
+              },
+              "required": [
+                "environment"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "financial_stage_filter": {
+                  "const": "SANDBOX"
+                }
+              },
+              "required": [
+                "financial_stage_filter"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "environment": {
+                  "const": "sandbox"
+                }
+              },
+              "required": [
+                "environment"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "financial_stage_filter": {
+                  "const": "CANARY"
+                }
+              },
+              "required": [
+                "financial_stage_filter"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "environment": {
+                  "const": "live"
+                }
+              },
+              "required": [
+                "environment"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "financial_stage_filter": {
+                  "const": "LIVE"
+                }
+              },
+              "required": [
+                "financial_stage_filter"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "environment": {
+                  "const": "live"
+                }
+              },
+              "required": [
+                "environment"
+              ]
+            }
+          },
+          {
+            "$comment": "Canonical runtime additionally requires window.from_ms < window.to_ms when window is not null. ALL does not force environment=null. Navigation is not an authorization grant."
+          }
         ]
       },
       "WorkflowAction": {

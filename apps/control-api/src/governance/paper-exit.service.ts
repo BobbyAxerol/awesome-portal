@@ -81,7 +81,18 @@ function sameStrings(left: readonly string[], right: readonly string[]): boolean
  * Hashes only immutable source facts and their policy identity. Portal decision
  * state, actor identity and read time are deliberately excluded.
  */
-export function computePaperExitSourceSnapshotHash(snapshot: PaperExitSnapshot): string {
+export interface PaperExitSourceSnapshotInput {
+  review: Pick<PaperExitSnapshot["review"],
+    "reviewId" | "deploymentId" | "portfolioId" | "venue" | "artifactDigest" |
+    "observationPolicyId" | "observationPolicyVersion" | "observationPolicyDigest" |
+    "evidencePackId" | "evidencePackDigest" | "evaluationPolicyVersion" | "evaluationFormulaVersion">;
+  approval: Pick<PaperExitSnapshot["approval"], "evidenceSetHash">;
+  lineage: readonly Omit<PaperExitSnapshot["lineage"][number], "lineageId">[];
+  panels: readonly PaperExitSnapshot["panels"][number][];
+  findings: readonly PaperExitSnapshot["findings"][number][];
+}
+
+export function computePaperExitSourceSnapshotHash(snapshot: PaperExitSourceSnapshotInput): string {
   return digest({
     review_id: snapshot.review.reviewId,
     deployment_id: snapshot.review.deploymentId,

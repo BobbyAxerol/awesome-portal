@@ -183,3 +183,13 @@ signing or release. Actual trust/provider/installation and remaining07/08/10
 gates remain OPEN;11NOT_ENTRY_READY. Claude can consume the published operation,
 shared WorkflowCapital DTO and canonical synthetic fixture when assigned;
 NOT_STARTED_BY_OWNER_DIRECTION/AWAITING_CONSUMER_REVIEW is unchanged.
+
+**2026-10-18 follow-through:** [the same reader's current identity and final
+body/error fences](workflow-parity-and-read-fences.md) are being tightened in
+the approved original07/08 scope. The earlier terminal remains historical
+evidence, not proof for changed dependencies. Same operation/DTO, no dispatch,
+runtime/FE changes or new permission. Actual focused/normal-hook retake pending.
+
+Actual focused retake06:22:32UTC is now PASS within368API/80contract cases,
+build/restore/source-index/runtime8/cleanup PASS; [exact receipt](workflow-parity-and-read-fences.md#focused-terminal--2026-10-18t062232utc).
+Normal hook/landing remains pending; no actual source command/browser claimed.

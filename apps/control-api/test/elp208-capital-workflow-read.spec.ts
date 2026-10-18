@@ -158,7 +158,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
   }
 
   async function mounted(f: Fixture, run: (http: { get(id: string, query?: Record<string, string>, token?: string | null): Promise<Response>;
-    raw(url: string, token?: string | null): Promise<Response>; detail(id: string): Promise<Response>; preview(): Promise<Response> }) => Promise<void>, config: ControlApiConfig = ctx.config) {
+    raw(url: string, token?: string | null): Promise<Response>; detail(id: string, token?: string | null): Promise<Response>; preview(): Promise<Response> }) => Promise<void>, config: ControlApiConfig = ctx.config) {
     const app = await NestFactory.create<NestFastifyApplication>({ module: CapitalWorkflowTestModule,
       controllers: [ExecutionCommandController], providers: [SessionGuard,
         { provide: AuthService, useValue: auth }, { provide: CONTROL_API_CONFIG, useValue: config },
@@ -171,7 +171,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
       const raw = (url: string, token: string | null = viewer.session.token) => http.inject({ method: "GET", headers: headers(token), url });
       await run({ raw,
         get: (id, query = {}, token = viewer.session.token) => raw(`/api/v1/execution/capital-commands/${id}/workflow?${new URLSearchParams({ workspace_id: f.workspace, ...query })}`, token),
-        detail: id => raw(`/api/v1/execution/capital-commands/${id}?workspace_id=${encodeURIComponent(f.workspace)}`),
+        detail: (id, token = viewer.session.token) => raw(`/api/v1/execution/capital-commands/${id}?workspace_id=${encodeURIComponent(f.workspace)}`, token),
         preview: () => http.inject({ method: "POST", headers: headers(viewer.session.token), url: "/api/v1/execution/capital-commands/preview", payload: {} }) });
     } finally { await app.close(); }
   }
@@ -244,11 +244,15 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
     const f = await fixture(), first = await seed(f, "RECALL_FULL"), record = await business(f, first, "APPLIED");
     await mounted(f, async http => { expect(read(await http.get(record.id)).status.business.amounts?.applied).toBe(exactAmount); });
   });
-  it("expired original new-send/lookup proof remains readable under current accepted report authority", async () => {
+  it.each(["workflow", "status"] as const)("%s preserves expired original new-send/lookup proof under current accepted report authority", async reader => {
     const f = await fixture(), initial = await seed(f, "TOP_UP", { expiredOriginal: true }), record = await business(f, initial, "APPLIED");
     expect(record.authorization.expires_at_ms).toBeLessThan(Date.now());
     expect(record.authorization.idempotency_retained_until_ms).toBeLessThan(Date.now());
-    await mounted(f, async http => { expect(read(await http.get(record.id)).status).toEqual(record.status); });
+    await mounted(f, async http => {
+      const response = reader === "workflow" ? await http.get(record.id) : await http.detail(record.id);
+      expect(response.statusCode).toBe(200);
+      expect(reader === "workflow" ? read(response).status : commandStatus.parse(response.json())).toEqual(record.status);
+    });
   });
   it("a different currently authorized audit reviewer reads history using the original actor's immutable hash", async () => {
     const f = await fixture(), record = await seed(f);
@@ -312,10 +316,11 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
     });
     try { await run(); } finally { interception.mockRestore(); }
   }
-  it.each(["status-shape", "status-id", "status-operation", "status-resource", "status-environment", "status-profile", "status-qualification",
+  it.each((["workflow", "status"] as const).flatMap(reader => (["status-shape", "status-id", "status-operation", "status-resource", "status-environment", "status-profile", "status-qualification",
     "intent-currency", "intent-workspace", "record-workspace", "record-id", "record-hash", "original-actor", "authorization-actor", "authorization-hash",
-    "authorization-resource", "authorization-environment", "authorization-operation", "authorization-policy", "authorization-versions"] as const)(
-    "sanitizes authorized %s inconsistency instead of mixing identities or exposing parser/source prose", async variant => {
+    "authorization-resource", "authorization-environment", "authorization-operation", "authorization-policy", "authorization-versions"] as const)
+    .map(variant => ({ reader, variant }))))(
+    "sanitizes authorized $reader $variant inconsistency instead of mixing identities or exposing parser/source prose", async ({ reader, variant }) => {
       const f = await fixture(), record = await seed(f);
       await fault(f, raw => {
         const value = raw as unknown as { id: string; workspace: string; actor: string; hash: string; intent: CommandIntent;
@@ -340,13 +345,15 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
         if (variant === "authorization-operation") value.authorization.operation = "FUND";
         if (variant === "authorization-policy") value.authorization.policy_revision = next();
         if (variant === "authorization-versions") value.authorization.expected_versions.budget = "1";
-      }, async () => { await mounted(f, async http => { const response = await http.get(record.id);
+      }, async () => { await mounted(f, async http => { const response = reader === "workflow" ? await http.get(record.id) : await http.detail(record.id);
         refusal(response, 503); expect((response.json() as { error: { code: string } }).error.code).toMatch(/^COMMAND_(?:STATUS_UNVERIFIED|UNAVAILABLE)$/); }); });
     });
-  it("corrupt hidden status is the same404 as missing; authorization runs before full raw status parsing", async () => {
+  it.each((["workflow", "status"] as const).flatMap(reader => (["status", "authorization"] as const).map(field => ({ reader, field }))))(
+    "$reader hidden corrupt $field is the same404 as missing before private decode", async ({ reader, field }) => {
     const f = await fixture(), record = await seed(f); await f.repo.saveGrant({ ...f.grant, revoked_at_ms: Date.now(), revision: next() });
-    await fault(f, raw => { (raw as unknown as { status: unknown }).status = { PRIVATE_SQL: "PRIVATE_WF_DIAGNOSTIC" }; }, async () => {
-      await mounted(f, async http => { const hidden = await http.get(record.id), absent = await http.get(missing);
+    await fault(f, raw => { (raw as unknown as Record<string, unknown>)[field] = { PRIVATE_SQL: "PRIVATE_WF_DIAGNOSTIC" }; }, async () => {
+      await mounted(f, async http => { const hidden = reader === "workflow" ? await http.get(record.id) : await http.detail(record.id);
+        const absent = reader === "workflow" ? await http.get(missing) : await http.detail(missing);
         refusal(hidden, 404, "COMMAND_RESOURCE_NOT_FOUND"); expect(hidden.json()).toEqual(absent.json()); });
     });
   });
@@ -357,7 +364,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
     finally { failure.mockRestore(); }
   });
 
-  it.each(["grant", "session", "session-expiry"] as const)("real %s invalidation after actual PG candidate read prevents workflow delivery", async variant => {
+  it.each((["workflow", "status"] as const).flatMap(reader => (["grant", "session", "session-expiry"] as const).map(variant => ({ reader, variant }))))(
+    "real $variant invalidation after actual PG candidate read prevents $reader delivery", async ({ reader, variant }) => {
     const f = await fixture(), record = await seed(f), session = await auth.login({ assertion: viewer.username, username: viewer.username, credential: password });
     const original = CommandStore.prototype.workflowCandidate; let changed = false;
     const interception = vi.spyOn(CommandStore.prototype, "workflowCandidate").mockImplementation(async function (this: CommandStore, ...args) {
@@ -369,10 +377,60 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
       }
       return raw;
     });
-    try { await mounted(f, async http => { const response = await http.get(record.id, {}, session.token); expect(changed).toBe(true);
+    try { await mounted(f, async http => { const response = reader === "workflow" ? await http.get(record.id, {}, session.token) : await http.detail(record.id, session.token); expect(changed).toBe(true);
       refusal(response, variant === "grant" ? 409 : 403, variant === "grant" ? "ACCESS_RETRY_REQUIRED" : "CURRENT_ACTOR_AUTHORITY_REQUIRED");
       expect(response.body).not.toContain(record.id); }); } finally { interception.mockRestore(); }
   });
+
+  it.each((["workflow", "status"] as const).flatMap(reader => (["missing", "invalid-target", "loader"] as const).map(failure => ({ reader, failure }))))(
+    "$reader $failure error is held until the final actual Core fence", async ({ reader, failure }) => {
+      const f = await fixture(), record = await seed(f), original = CommandStore.prototype.workflowCandidate;
+      let reached = false;
+      const scan = vi.spyOn(CommandStore.prototype, "workflowCandidate").mockImplementation(async function (this: CommandStore, ...args) {
+        const raw = await original.apply(this, args);
+        if (args[0] !== f.workspace) return raw;
+        reached = true;
+        // This runs after a genuine released read, not inside a DB lock or a
+        // fabricated positive authority context. Core fingerprint must change.
+        await f.repo.saveGrant({ ...f.grant, revoked_at_ms: Date.now(), revision: next() });
+        if (failure === "loader") throw new Error("PRIVATE_WF_DIAGNOSTIC SELECT private_source");
+        if (failure === "missing") return null;
+        return { ...raw!, intent: { PRIVATE_SQL: "PRIVATE_WF_DIAGNOSTIC" } };
+      });
+      try { await mounted(f, async http => {
+        const response = reader === "workflow" ? await http.get(record.id) : await http.detail(record.id);
+        expect(reached).toBe(true); refusal(response, 409, "ACCESS_RETRY_REQUIRED");
+        expect(response.body).not.toContain(record.id);
+      }); } finally { scan.mockRestore(); }
+    });
+
+  it.each((["workflow", "status"] as const).flatMap(reader => (["missing", "invalid-target", "loader", "private-decode"] as const).map(failure => ({ reader, failure }))))(
+    "$reader $failure completes its actual final Core confirmation after the held failure", async ({ reader, failure }) => {
+      const f = await fixture(), record = await seed(f), trace: string[] = [];
+      const candidate = CommandStore.prototype.workflowCandidate, confirm = f.access.confirmReadContext.bind(f.access);
+      const scan = vi.spyOn(CommandStore.prototype, "workflowCandidate").mockImplementation(async function (this: CommandStore, ...args) {
+        const raw = await candidate.apply(this, args);
+        if (args[0] !== f.workspace) return raw;
+        trace.push("loaded");
+        if (failure === "loader") { trace.push("failure"); throw new Error("PRIVATE_WF_DIAGNOSTIC"); }
+        if (failure === "missing") { trace.push("failure"); return null; }
+        if (failure === "invalid-target") { trace.push("failure"); return { ...raw!, intent: {} }; }
+        const result = { ...raw! };
+        Object.defineProperty(result, "status", { enumerable: true, get() {
+          trace.push("failure"); return { PRIVATE_SQL: "PRIVATE_WF_DIAGNOSTIC" };
+        } });
+        return result;
+      });
+      const final = vi.spyOn(f.access, "confirmReadContext").mockImplementation(async (...args) => {
+        const current = await confirm(...args); trace.push("confirmed"); return current;
+      });
+      try { await mounted(f, async http => {
+        const response = reader === "workflow" ? await http.get(record.id) : await http.detail(record.id);
+        refusal(response, failure === "missing" || failure === "invalid-target" ? 404 : 503);
+        expect(trace).toContain("failure"); expect(trace.at(-1)).toBe("confirmed");
+        expect(trace.lastIndexOf("confirmed")).toBeGreaterThan(trace.lastIndexOf("failure"));
+      }); } finally { scan.mockRestore(); final.mockRestore(); }
+    });
   it.each(["grant-expiry", "receipt-expiry", "future-deny"] as const)("the final synchronous wall clock detects %s after the last DB confirmation", async variant => {
     const f = await fixture(), record = await seed(f), future = f.grant.valid_until_ms! + 1;
     if (variant === "receipt-expiry") await f.repo.saveGrant({ ...f.grant, valid_until_ms: future + 60_000,
@@ -444,7 +502,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
       `/api/v1/execution/capital-commands/${record.id}/workflow/extra`, `/api/v1/execution/capital-commands/${record.id}/reconcile`])
       expect(coreExecutionRead(path)).toBe(false);
   });
-  it("workflow GET does not call prepare/send/lookup/recovery/reconcile or change command, event or audit rows", async () => {
+  it("status and workflow GET do not call prepare/send/lookup/recovery/reconcile or change command, event or audit rows", async () => {
     const f = await fixture(), record = await seed(f);
     const ledger = async () => (await ctx.pool.query(`SELECT row_to_json(c) AS command_row,
       (SELECT jsonb_agg(to_jsonb(e) ORDER BY to_jsonb(e)::text) FROM execution_trusted_command_events e WHERE e.command_id=c.command_id) AS command_events,
@@ -453,7 +511,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
     const before = await ledger(), recover = vi.spyOn(f.commands, "recover"), reconcile = vi.spyOn(f.commands, "reconcile"),
       submit = vi.spyOn(f.commands, "submit"), preview = vi.spyOn(f.commands, "preview"), update = vi.spyOn(CommandStore.prototype, "update"),
       insert = vi.spyOn(CommandStore.prototype, "insert"), claim = vi.spyOn(CommandStore.prototype, "claim");
-    try { await mounted(f, async http => { read(await http.get(record.id)); read(await http.get(record.id)); });
+    try { await mounted(f, async http => { read(await http.get(record.id));
+      expect(commandStatus.parse((await http.detail(record.id)).json())).toEqual(record.status);
+      read(await http.get(record.id)); });
       expect(await ledger()).toEqual(before);
       for (const call of [recover, reconcile, submit, preview, update, insert, claim,
         f.commandTrust.prepare, f.commandTrust.send, f.commandTrust.lookup]) expect(call).not.toHaveBeenCalled();

@@ -8,6 +8,9 @@ import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { GovernanceGrantsRepository } from "../src/repos/governance-grants";
 import { GovernanceReviewCaptureService } from "../src/governance/review-capture.service";
+import { PaperExitRepository } from "../src/governance/paper-exit.repository";
+import { computePaperExitSourceSnapshotHash } from "../src/governance/paper-exit.service";
+import { computeEvidenceManifestHash } from "../src/governance/governance.service";
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
@@ -462,9 +465,84 @@ describe("N29 governance product closeout", () => {
     const exitInput={ workspace_id:exitContext.workspace_id,request_key:"ar06-exit",summary:"Insufficient accepted source evidence; record review, not promotion.",
       r2_approval_id:exitContext.parent_approval_id,expected_r2_version:exitContext.expected_parent_version,
       deployment_id:exitContext.candidates[0].deployment_id,expected_projection_digest:exitContext.expected_projection_digest };
+    // TEST_ONLY late audit failure after the final-at-INSERT hash and exact
+    // children are written. Transaction rollback is not a guarded row DELETE.
+    const captureCounts = async () => (await ctx.pool.query(`SELECT
+      (SELECT count(*)::int FROM governance_approval_requests) AS approvals,
+      (SELECT count(*)::int FROM governance_approval_evidence) AS evidence,
+      (SELECT count(*)::int FROM governance_paper_exit_reviews) AS reviews,
+      (SELECT count(*)::int FROM governance_paper_exit_lineage) AS lineage,
+      (SELECT count(*)::int FROM governance_paper_exit_panels) AS panels,
+      (SELECT count(*)::int FROM governance_paper_exit_findings) AS findings,
+      (SELECT count(*)::int FROM governance_review_captures) AS captures,
+      (SELECT count(*)::int FROM product_audit_events WHERE event_type='governance.review.captured') AS audits`)).rows[0];
+    const beforeExitCapture = await captureCounts();
+    await ctx.pool.query(`CREATE FUNCTION test_exit_capture_audit_failure() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF NEW.event_type='governance.review.captured'
+        AND NEW.metadata_json->>'action'='PAPER_EXIT_CREATE'
+        THEN RAISE EXCEPTION 'test Paper Exit audit unavailable'; END IF;
+      RETURN NEW; END; $$;
+      CREATE TRIGGER test_exit_capture_audit_failure BEFORE INSERT ON product_audit_events
+      FOR EACH ROW EXECUTE FUNCTION test_exit_capture_audit_failure()`);
+    try {
+      const failedExit = await mutation(bobby,"/api/v1/execution/governance/paper-exit/create",exitInput);
+      expect(failedExit.statusCode).toBe(500);
+      expect(await captureCounts()).toEqual(beforeExitCapture);
+    } finally {
+      await ctx.pool.query("DROP TRIGGER test_exit_capture_audit_failure ON product_audit_events; DROP FUNCTION test_exit_capture_audit_failure()");
+    }
+    // Retry the SAME failed capture key through the actual API below.
     const exit=await mutation(bobby,"/api/v1/execution/governance/paper-exit/create",exitInput);
     expect(exit.statusCode,JSON.stringify(exit.json())).toBe(201);
     assertCaptureContract(exit.json());
+    const exitId = exit.json().review_id;
+    const exitRepository = new PaperExitRepository(ctx.pool);
+    const captured = (await exitRepository.detail(workspaceId, exitId))!;
+    expect(captured).not.toBeNull();
+    expect(captured.lineage).toHaveLength(5);
+    expect(captured.panels).toHaveLength(4);
+    expect(captured.findings).toHaveLength(4);
+    expect(captured.approval.evidenceSetHash).toBe(computeEvidenceManifestHash(captured.evidence));
+    expect(captured.review.sourceSnapshotHash).toBe(computePaperExitSourceSnapshotHash(captured));
+    const childIds = {
+      lineage: captured.lineage.map((row) => row.lineageId),
+      panels: captured.panels.map((row) => row.panelId),
+      findings: captured.findings.map((row) => row.findingId),
+    };
+    // Replay the genuine capture via HTTP. No SQL insertion of workflow rows,
+    // source mutation, guard bypass, additional children or duplicate audit.
+    const exitReplays = await Promise.all(Array.from({ length: 2 }, () =>
+      mutation(bobby, "/api/v1/execution/governance/paper-exit/create", exitInput)));
+    for (const replay of exitReplays) {
+      expect(replay.statusCode, JSON.stringify(replay.json())).toBe(201);
+      assertCaptureContract(replay.json());
+      expect(replay.json()).toMatchObject({ review_id: exitId, replayed: true });
+    }
+    const changedExit = await mutation(bobby, "/api/v1/execution/governance/paper-exit/create", {
+      ...exitInput, summary: "Changed intent must not reuse the original Paper Exit capture.",
+    });
+    expect(changedExit.statusCode).toBe(409);
+    expect(changedExit.json().error.code).toBe("REQUEST_KEY_CONFLICT");
+    const replayedExit = (await exitRepository.detail(workspaceId, exitId))!;
+    expect(replayedExit.review.sourceSnapshotHash).toBe(captured.review.sourceSnapshotHash);
+    expect(computePaperExitSourceSnapshotHash(replayedExit)).toBe(captured.review.sourceSnapshotHash);
+    expect({
+      lineage: replayedExit.lineage.map((row) => row.lineageId),
+      panels: replayedExit.panels.map((row) => row.panelId),
+      findings: replayedExit.findings.map((row) => row.findingId),
+    }).toEqual(childIds);
+    expect((await ctx.pool.query(
+      "SELECT count(*)::int n FROM governance_paper_exit_reviews WHERE review_id=$1 AND workspace_id=$2",
+      [exitId, workspaceId],
+    )).rows[0].n).toBe(1);
+    expect((await ctx.pool.query(
+      "SELECT count(*)::int n FROM governance_review_captures WHERE aggregate_id=$1 AND workspace_id=$2",
+      [exitId, workspaceId],
+    )).rows[0].n).toBe(1);
+    expect((await ctx.pool.query(
+      "SELECT count(*)::int n FROM product_audit_events WHERE event_type='governance.review.captured' AND aggregate_id=$1 AND workspace_id=$2",
+      [exitId, workspaceId],
+    )).rows[0].n).toBe(1);
     const review=await request(lan,`${exit.json().read_path}?workspace_id=${workspaceId}`);
     expect(review.statusCode,JSON.stringify(review.json())).toBe(200);
     expect(review.json().data.gate_met).toBe(false);
@@ -481,6 +559,9 @@ describe("N29 governance product closeout", () => {
       schema_version:"governance.paper-exit-decision-apply-request.v1",workspace_id:workspaceId,apply_token:reject.json().apply_token,
     });
     expect(rejected.statusCode,JSON.stringify(rejected.json())).toBe(202);
+    const decidedExit = (await exitRepository.detail(workspaceId, exitId))!;
+    expect(decidedExit.review.sourceSnapshotHash).toBe(captured.review.sourceSnapshotHash);
+    expect(computePaperExitSourceSnapshotHash(decidedExit)).toBe(captured.review.sourceSnapshotHash);
     expect((await ctx.pool.query("SELECT count(*)::int AS n FROM governance_promotion_authority_grants")).rows[0].n).toBe(0);
     expect((await ctx.pool.query("SELECT count(*)::int AS n FROM governance_approval_decisions WHERE approval_id=$1", [r2.approval_id])).rows[0].n).toBe(1);
     expect((await ctx.pool.query("SELECT count(*)::int AS n FROM product_audit_events WHERE event_type='governance.review.captured'")).rows[0].n).toBe(2);
@@ -563,15 +644,21 @@ describe("N29 governance product closeout", () => {
     );
     expect(emptyConditions.json().read_truth).toEqual(emptyInbox.json().read_truth);
 
-    const created = await mutation(stan, "/api/v1/execution/governance/approvals", createPayload());
-    expect(created.statusCode).toBe(201);
-    const approvalId = created.json().approval.approval_id as string;
+    // TEST_ONLY captured blocked cohort. Genuine HTTP creation/replay is
+    // exercised above; never mutate its captured evidence completeness later.
+    const approvalId = "AP-N29-BLOCKED-CAPTURE";
     await ctx.pool.query(
-      `UPDATE governance_approval_requests
-          SET evidence_complete = false, blocker_count = 1,
-              blocker_summary = 'Evidence review is incomplete.'
-        WHERE approval_id = $1`,
-      [approvalId],
+      `INSERT INTO governance_approval_requests
+        (approval_id,workspace_id,gate,subject_type,subject_id,subject_label,
+         environment,target_label,requester_user_id,requester_username,
+         artifact_creator_user_id,artifact_creator_username,status,policy_version,
+         quorum_required,evidence_set_hash,evidence_complete,blocker_count,
+         blocker_summary,sla_due_at,expires_at)
+       VALUES ($1,$2,'R1','ALPHA_VERSION','alpha_n29','Delta RSI · blocked capture',
+         'RESEARCH','Paper',$3,$4,$3,$4,'PENDING','n29-test-policy-v1',
+         1,$5,false,1,'Evidence review is incomplete.',
+         now()+interval '6 hours',now()+interval '48 hours')`,
+      [approvalId,workspaceId,stan.userId,stan.username,computeEvidenceManifestHash([])],
     );
     const blockedList = await request(
       lan,

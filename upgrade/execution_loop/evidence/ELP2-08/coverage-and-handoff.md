@@ -257,3 +257,32 @@ planning; source-dependent sends remain blocked locally, not a global UI block.
 Full08 still needs approved design/browser and source-connected operation/read
 receipts. Rollback removes/hides only additive unused workflow consumers;
 preserve immutable receipts, current grants, original command recovery/history.
+
+## 2026-10-18 — current additive repair handoff
+
+[Owning parity/read-fence matrix](workflow-parity-and-read-fences.md) covers
+existing T08-02/03/06…13 without adding fields/actions or changing version.
+Regenerate with `npm run generate:execution-workflows`; canonical synthetic
+fixture includes all9Create states and partial capacity provenance. Runtime
+still owns ID/time ordering and exact amount comparisons; types alone cannot
+express those checks. Current status/workflow/collection safe errors and data
+share a genuine final authority fence, no historical proof reauthorizes a read.
+Producer APPLIED_UNCOMMITTED; focused proof/normal hook pending. No Claude
+review/receipt/ACK newly received; ELP2-REQ-08-001 remains awaited, not CLOSED.
+Keep accepted components; actual source/workflow/browser gates remain OPEN.
+
+Focused proof now actual:368API/80contract PASS, APIbuild/scopedPGrestore and
+cleanup PASS at06:22:32UTC; [pins and coverage limits](workflow-parity-and-read-fences.md#focused-terminal--2026-10-18t062232utc).
+Producer still uncommitted until normal hook lands; this is not consumer ACK.
+
+First hook now terminal06:59:41UTC:896contracts/6882API PASS,3test-seam failures,
+no commit/restore PASS. [Failure and correction](workflow-parity-and-read-fences.md#first-normal-hook-terminal--2026-10-18t065941utc)
+are retained; only affected11suite validation plus one combined original04/
+07/08 normal-hook retry follow. Public contract/fixture/design handoff unchanged;
+producer still UNCOMMITTED/AWAITING_CONSUMER_REVIEW, no claimed acknowledgement.
+
+Affected retake actually passed11suites/320cases at07:08:35UTC, including all
+three unchanged original revoke/safe-error assertions. [Receipt and narrow
+test follow-through](workflow-parity-and-read-fences.md#corrected-spy-affected-terminal--2026-10-18t070835utc).
+Public generated types/fixtures and owner-held Claude handoff stay unchanged.
+One combined normal hook owns landing; no extra focused build for docs.

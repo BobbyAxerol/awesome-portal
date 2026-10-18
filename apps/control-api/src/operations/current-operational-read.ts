@@ -1,4 +1,5 @@
-import { AccessPolicyError, type AccessActor } from "../execution-v2/access.contract";
+import { AccessPolicyError, accessResource, type AccessActor, type AccessResource } from "../execution-v2/access.contract";
+import { executionEnvironment } from "../execution-v2/foundation.contract";
 import { accessDigest, currentBoundaryProof, resolvedResources, type AccessEvaluationContext } from "../execution-v2/access-policy";
 import { requireCurrentTsAuditRead } from "../execution-v2/current-audit-read";
 import { ExecutionAccessService } from "../execution-v2/access.service";
@@ -16,7 +17,11 @@ export class OperationalReadError extends CommandHttpError {
 export type OperationalAuditCohort = Readonly<{ context: AccessEvaluationContext; scope: PostgresRowScope; fingerprint: string }>;
 declare const flightBrand: unique symbol;
 export interface PreparedOperationalRead<T> { readonly [flightBrand]: T; }
-type Flight<T> = { issuer: CurrentOperationalReads; principal: ReadScopePrincipal; cohort: OperationalAuditCohort;
+export type ExactAuditTarget = Readonly<{ resource: AccessResource; environment: "paper" | "sandbox" | "live" }>;
+type ReadFence = { actor: AccessActor; workspace: string; captured: AccessEvaluationContext;
+  check: (context: AccessEvaluationContext) => void; until: (context: AccessEvaluationContext) => number;
+  changed: () => Error };
+type Flight<T> = { issuer: CurrentOperationalReads; fence: ReadFence; onError: (error: unknown) => Error;
   result?: T; error?: Error; beforeFinal?: () => Promise<void> };
 const flights = new WeakMap<object, Flight<unknown>>();
 const environments = ["paper", "sandbox", "live"] as const;
@@ -109,9 +114,69 @@ export class CurrentOperationalReads {
     const context = await this.access.readContext(actor, p.workspaceId);
     if (context.actor_role !== p.user.role) throw new OperationalReadError("OPERATIONAL_READ_CHANGED", 409);
     const cohort = operationalAuditCohort(context, actor);
-    const state: Flight<T> = { issuer: this, principal: p, cohort };
+    const changed = () => new OperationalReadError("OPERATIONAL_READ_CHANGED", 409);
+    const state: Flight<T> = { issuer: this, onError: safeError, fence: { actor, workspace: p.workspaceId,
+      captured: context, changed, check: next => {
+        const renewed = operationalAuditCohort(next, actor);
+        if (next.actor_role !== p.user.role || renewed.fingerprint !== cohort.fingerprint) throw changed();
+      }, until: next => Math.min(...environments.map(environment =>
+        nativeNoticeValidUntil(next, environment, next.actor_lease_until_ms!))) } };
     try { Object.assign(state, await build(cohort, check => { state.beforeFinal = check; })); }
     catch (error) { state.error = safeError(error); }
+    const handle = Object.freeze({}) as PreparedOperationalRead<T>;
+    flights.set(handle, state); return handle;
+  }
+  /** One exact current audit target, not a PortalUser/role wrapper or a census
+   * of unrelated grants. load may extract bounded immutable target metadata;
+   * decode is protected by a fresh full-graph audit decision. All contextual
+   * errors (including absent/unusable targets) remain inside the same flight. */
+  async prepareExact<T>(actor: AccessActor, workspace: string, load: () => Promise<{
+    target: ExactAuditTarget;
+    decode: (context: AccessEvaluationContext, decision: ReturnType<typeof requireCurrentTsAuditRead>) => T;
+  }>, onError: (error: unknown) => Error, beforeLoadTarget?: ExactAuditTarget): Promise<PreparedOperationalRead<T>> {
+    const a = structuredClone(actor), captured = await this.access.readContext(a, workspace);
+    const changed = () => new AccessPolicyError("ACCESS_RETRY_REQUIRED", 409);
+    const captureTarget = (value: ExactAuditTarget): ExactAuditTarget => Object.freeze({
+      resource: Object.freeze(accessResource.parse(value.resource)),
+      environment: executionEnvironment.parse(value.environment) });
+    let target: ExactAuditTarget | undefined, fingerprint: string | undefined;
+    const audit = (context: AccessEvaluationContext) => {
+      if (context.principal_id !== a.user_id || context.workspace_id !== workspace || !context.actor_current ||
+        !context.authority_fingerprint || !Number.isSafeInteger(context.now_ms) ||
+        !Number.isSafeInteger(context.actor_lease_until_ms) ||
+        Math.max(context.now_ms, Date.now()) >= context.actor_lease_until_ms!)
+        throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED", 403);
+      // Core changes retain the established retry response, before attempting
+      // a new target decision. A renewed genuine lease is NOT in this digest.
+      if (context.authority_fingerprint !== captured.authority_fingerprint) throw changed();
+      if (!target) return undefined;
+      const decision = requireCurrentTsAuditRead(context, target.resource, target.environment);
+      const proof = accessDigest({ domain: "portal.execution.exact-audit.v1", actor: a, workspace,
+        core: context.authority_fingerprint, target,
+        decision: [decision.policy_revision, decision.scope_revision, decision.field_policy_ref],
+        source: currentBoundaryProof(context, target.environment, [target.resource]) });
+      if (fingerprint !== undefined && fingerprint !== proof) throw changed();
+      return { decision, proof };
+    };
+    const state: Flight<T> = { issuer: this, onError, fence: { actor: a, workspace, captured, changed,
+      check: context => { audit(context); },
+      until: context => target ? nativeNoticeValidUntil(context, target.environment, context.actor_lease_until_ms!) :
+        context.actor_lease_until_ms! } };
+    try {
+      if (beforeLoadTarget) {
+        target = captureTarget(beforeLoadTarget);
+        fingerprint = audit(captured)!.proof; // Collection authority BEFORE any private row/count SQL.
+      }
+      const loaded = await load(), selected = captureTarget(loaded.target);
+      if (target && (target.resource.kind !== selected.resource.kind || target.resource.id !== selected.resource.id ||
+        target.environment !== selected.environment)) throw new Error("EXACT_READ_TARGET_CHANGED");
+      target = selected;
+      // The raw store transaction is already released. Refresh current source
+      // relations as well as Core before any private record/status decoder.
+      const fresh = await this.access.readContext(a, workspace), authorized = audit(fresh)!;
+      fingerprint ??= authorized.proof;
+      state.result = loaded.decode(fresh, authorized.decision);
+    } catch (error) { state.error = onError(error); }
     const handle = Object.freeze({}) as PreparedOperationalRead<T>;
     flights.set(handle, state); return handle;
   }
@@ -119,8 +184,8 @@ export class CurrentOperationalReads {
     const state = flights.get(handle) as Flight<T> | undefined;
     if (!state || state.issuer !== this) throw new OperationalReadError("OPERATIONAL_READ_SCOPE_REQUIRED");
     flights.delete(handle);
-    const { principal, cohort } = state, actor = actorFor(principal);
-    try { await state.beforeFinal?.(); } catch (error) { state.error = safeError(error); }
+    const { fence } = state;
+    try { await state.beforeFinal?.(); } catch (error) { state.error = state.onError(error); }
     let result: R | undefined;
     if (!state.error && state.result !== undefined) {
       try {
@@ -129,26 +194,38 @@ export class CurrentOperationalReads {
           throw new OperationalReadError("OPERATIONAL_READ_UNAVAILABLE");
         if (Buffer.byteLength(JSON.stringify(result), "utf8") > 1_048_576)
           throw new OperationalReadError("OPERATIONAL_READ_RESPONSE_BOUND");
-      } catch (error) { state.error = safeError(error); }
+      } catch (error) { state.error = state.onError(error); }
     }
-    const fresh = await this.access.readContext(actor, principal.workspaceId);
-    const renewed = operationalAuditCohort(fresh, actor);
-    if (fresh.actor_role !== principal.user.role || renewed.fingerprint !== cohort.fingerprint)
-      throw new OperationalReadError("OPERATIONAL_READ_CHANGED", 409);
+    let fresh = fence.captured;
+    try {
+      fresh = await this.access.readContext(fence.actor, fence.workspace);
+      fence.check(fresh);
+    } catch (error) {
+      // A failed fresh relation read NEVER authorizes the body via captured
+      // relations. Keep only its fixed safe error, then still check current
+      // Core/session. captured is an error-only expected Core fingerprint.
+      state.error = state.onError(error);
+    }
     // LAST await for body AND contextual errors. No adapter/socket I/O after it.
-    const confirmed = await this.access.confirmReadContext(actor, principal.workspaceId, fresh);
-    const until = Math.min(...environments.map(environment =>
-      nativeNoticeValidUntil(confirmed, environment, confirmed.actor_lease_until_ms!)));
-    const final = operationalAuditCohort({ ...confirmed, now_ms: Math.max(confirmed.now_ms, Date.now()) }, actor);
-    if (final.fingerprint !== cohort.fingerprint) throw new OperationalReadError("OPERATIONAL_READ_CHANGED", 409);
+    let confirmed: AccessEvaluationContext;
+    try { confirmed = await this.access.confirmReadContext(fence.actor, fence.workspace, fresh); }
+    catch (error) { throw state.onError(error); }
+    let until: number | undefined, boundaryError: Error | undefined;
+    try { until = fence.until(confirmed); } catch (error) { boundaryError = state.onError(error); }
+    try { fence.check({ ...confirmed, now_ms: Math.max(confirmed.now_ms, Date.now()) }); }
+    catch (error) { boundaryError = state.onError(error); }
     // O(1) terminal clock check AFTER potentially large synchronous proof/hash
     // construction. A future DENY/native transition cannot slip past an earlier
     // per-target check; genuine session renewal above remains supported.
     const now = Math.max(confirmed.now_ms, Date.now());
-    if (now >= confirmed.actor_lease_until_ms!) throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED", 403);
-    if (now >= until) throw new OperationalReadError("OPERATIONAL_READ_CHANGED", 409);
+    if (!Number.isSafeInteger(confirmed.actor_lease_until_ms) || now >= confirmed.actor_lease_until_ms!)
+      throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED", 403);
+    // A current exact DENY/expiry keeps its uniform 404. If the wall clock
+    // crosses only AFTER the final proof, conservatively require a retry.
+    if (boundaryError) throw boundaryError;
+    if (until !== undefined && now >= until) throw fence.changed();
     if (state.error) throw state.error;
-    if (result === undefined) throw new OperationalReadError("OPERATIONAL_READ_UNAVAILABLE");
+    if (result === undefined) throw state.onError(new OperationalReadError("OPERATIONAL_READ_UNAVAILABLE"));
     return result;
   }
 }
