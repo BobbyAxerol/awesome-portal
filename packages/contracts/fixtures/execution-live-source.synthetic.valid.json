@@ -1,0 +1,776 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "production_config": false,
+  "authority_installed": false,
+  "source_publication_installed": false,
+  "populated": {
+    "schema_version": "portal.execution.live-source-operations.v2",
+    "workspace_id": "ws_TEST_ONLY_live_source",
+    "environment": "live",
+    "profile_id": "profile_TEST_ONLY_source",
+    "deployment_id": "dep_TEST_ONLY_source",
+    "record_authority": "PORTAL_RETAINED_OBSERVATION",
+    "source_verdict": "NOT_ASSERTED",
+    "visibility": "SCOPED",
+    "coverage": "AUTHORIZED_ONLY",
+    "observed_at_ms": 1792281600000,
+    "source_side_effect_requested": false,
+    "runtime_activation_requested": false,
+    "data": {
+      "deployments": {
+        "state": "PARTIAL",
+        "reason_code": "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.deployments:strategy_deployments",
+          "purpose": "alpha.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:deployments-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 1,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": [
+          {
+            "observation_id": "por1_0000000000000000000000000000000000000000000000000000000000000001",
+            "values": {
+              "strategy_id": "strategy_TEST_ONLY_source",
+              "account_id": "account_TEST_ONLY_source",
+              "mode": "live",
+              "venue": "TEST_ONLY:venue",
+              "deployment_id": "dep_TEST_ONLY_source",
+              "state": "OBSERVED",
+              "currency": "TEST_ONLY:USD",
+              "created_at_ms": 0,
+              "updated_at_ms": 1792281600000
+            }
+          }
+        ]
+      },
+      "positions": {
+        "state": "PARTIAL",
+        "reason_code": "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.positions:positions_v2",
+          "purpose": "alpha.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:positions-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 1,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": [
+          {
+            "observation_id": "por1_0000000000000000000000000000000000000000000000000000000000000002",
+            "values": {
+              "strategy_id": "strategy_TEST_ONLY_source",
+              "account_id": "account_TEST_ONLY_source",
+              "mode": "live",
+              "venue": "TEST_ONLY:venue",
+              "position_id": "position_TEST_ONLY_source",
+              "instrument_id": "TEST_ONLY:BTC-USDT",
+              "side": "LONG",
+              "signed_qty": "0.000000000000000001",
+              "quantity": "0.000000000000000001",
+              "avg_px_open": "9007199254740993.123456789123456789",
+              "avg_px_close": null,
+              "mark_price": "9007199254740994.000000000000000001",
+              "notional": "1.000000000000000001",
+              "realized_pnl": "0",
+              "unrealized_pnl": "-0.000000000000000001",
+              "updated_at_ms": 1792281600000
+            }
+          }
+        ]
+      },
+      "sessions": {
+        "state": "PARTIAL",
+        "reason_code": "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.sessions:execution_sessions",
+          "purpose": "alpha.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:sessions-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 1,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": [
+          {
+            "observation_id": "por1_0000000000000000000000000000000000000000000000000000000000000003",
+            "values": {
+              "strategy_id": "strategy_TEST_ONLY_source",
+              "account_id": "account_TEST_ONLY_source",
+              "mode": "live",
+              "venue": "TEST_ONLY:venue",
+              "state": "OBSERVED",
+              "submitted_count": "9007199254740993",
+              "risk_rejected_count": "0",
+              "broker_rejected_count": null,
+              "filled_count": "1",
+              "updated_at_ms": 1792281600000
+            }
+          }
+        ]
+      },
+      "orders": {
+        "state": "PARTIAL",
+        "reason_code": "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.orders:orders",
+          "purpose": "alpha.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:orders-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 1,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": [
+          {
+            "observation_id": "por1_0000000000000000000000000000000000000000000000000000000000000004",
+            "values": {
+              "strategy_id": "strategy_TEST_ONLY_source",
+              "account_id": "account_TEST_ONLY_source",
+              "mode": "live",
+              "venue": "TEST_ONLY:venue",
+              "order_id": "order_TEST_ONLY_source",
+              "instrument_id": "TEST_ONLY:BTC-USDT",
+              "side": "BUY",
+              "quantity": "1.000000000000000001",
+              "price": "0",
+              "status": "OBSERVED",
+              "created_at_ms": 0,
+              "updated_at_ms": 1792281600000
+            }
+          }
+        ]
+      },
+      "fills": {
+        "state": "PARTIAL",
+        "reason_code": "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.fills:fills",
+          "purpose": "alpha.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:fills-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 1,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": [
+          {
+            "observation_id": "por1_0000000000000000000000000000000000000000000000000000000000000005",
+            "values": {
+              "strategy_id": "strategy_TEST_ONLY_source",
+              "account_id": "account_TEST_ONLY_source",
+              "mode": "live",
+              "venue": "TEST_ONLY:venue",
+              "fill_id": "fill_TEST_ONLY_source",
+              "instrument_id": "TEST_ONLY:BTC-USDT",
+              "side": "BUY",
+              "price": "1.000000000000000001",
+              "quantity": "0.000000000000000001",
+              "realized_pnl": null,
+              "trade_time_ms": 1792281600000
+            }
+          }
+        ]
+      },
+      "accounts": {
+        "state": "PARTIAL",
+        "reason_code": "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.accounts:accounts",
+          "purpose": "account.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:accounts-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "ACCOUNT",
+        "limit": 200,
+        "returned_count": 1,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": [
+          {
+            "observation_id": "por1_0000000000000000000000000000000000000000000000000000000000000006",
+            "values": {
+              "strategy_id": "strategy_TEST_ONLY_source",
+              "account_id": "account_TEST_ONLY_source",
+              "mode": "live",
+              "venue": "TEST_ONLY:venue",
+              "base_currency": "TEST_ONLY:USD",
+              "created_at_ms": 0,
+              "updated_at_ms": 1792281600000
+            }
+          }
+        ]
+      },
+      "account_balances": {
+        "state": "PARTIAL",
+        "reason_code": "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.accounts:account_balances",
+          "purpose": "account.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:account_balances-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "ACCOUNT",
+        "limit": 200,
+        "returned_count": 1,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": [
+          {
+            "observation_id": "por1_0000000000000000000000000000000000000000000000000000000000000007",
+            "values": {
+              "account_id": "account_TEST_ONLY_source",
+              "currency": "TEST_ONLY:USD",
+              "total": "9007199254740993.123456789123456789",
+              "locked": "0",
+              "free": null,
+              "updated_at_ms": 1792281600000
+            }
+          }
+        ]
+      },
+      "margin_balances": {
+        "state": "PARTIAL",
+        "reason_code": "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.accounts:margin_balances",
+          "purpose": "account.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:margin_balances-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "ACCOUNT",
+        "limit": 200,
+        "returned_count": 1,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": [
+          {
+            "observation_id": "por1_0000000000000000000000000000000000000000000000000000000000000008",
+            "values": {
+              "account_id": "account_TEST_ONLY_source",
+              "instrument_id": "TEST_ONLY:BTC-USDT",
+              "currency": "TEST_ONLY:USD",
+              "initial": "0.000000000000000001",
+              "maintenance": null,
+              "updated_at_ms": 1792281600000
+            }
+          }
+        ]
+      },
+      "account_sync": {
+        "state": "PARTIAL",
+        "reason_code": "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.accounts:account_sync_effective",
+          "purpose": "account.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:account_sync-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "ACCOUNT",
+        "limit": 200,
+        "returned_count": 1,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": [
+          {
+            "observation_id": "por1_0000000000000000000000000000000000000000000000000000000000000009",
+            "values": {
+              "account_id": "account_TEST_ONLY_source",
+              "mode": "live",
+              "currency": "TEST_ONLY:USD",
+              "status": "OBSERVED",
+              "created_at_ms": 0
+            }
+          }
+        ]
+      },
+      "reconciliation": {
+        "state": "PARTIAL",
+        "reason_code": "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.reconciliation:reconciliation_findings",
+          "purpose": "account.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:reconciliation-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 1,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": [
+          {
+            "observation_id": "por1_000000000000000000000000000000000000000000000000000000000000000a",
+            "values": {
+              "strategy_id": "strategy_TEST_ONLY_source",
+              "account_id": "account_TEST_ONLY_source",
+              "mode": "live",
+              "venue": "TEST_ONLY:venue",
+              "status": "OBSERVED",
+              "created_at_ms": 0
+            }
+          }
+        ]
+      },
+      "broker_sync": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "BROKER_PURPOSE_NOT_COMMISSIONED",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": null,
+          "purpose": null,
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": null,
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "NOT_COMMISSIONED",
+        "limit": 200,
+        "returned_count": 0,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": []
+      }
+    },
+    "runtime": {
+      "state": null,
+      "reason_code": "SOURCE_RUNTIME_ACTIVATION_NOT_ASSERTED"
+    },
+    "realtime": {
+      "active": false,
+      "reason_code": "FINITE_SCOPED_READ_NOT_STREAM_AUTHORITY"
+    },
+    "commands": {
+      "enabled": false,
+      "reason_code": "READ_NOT_COMMAND_AUTHORITY"
+    }
+  },
+  "unpublished": {
+    "schema_version": "portal.execution.live-source-operations.v2",
+    "workspace_id": "ws_TEST_ONLY_live_source",
+    "environment": "live",
+    "profile_id": "profile_TEST_ONLY_source",
+    "deployment_id": "dep_TEST_ONLY_source",
+    "record_authority": "PORTAL_RETAINED_OBSERVATION",
+    "source_verdict": "NOT_ASSERTED",
+    "visibility": "SCOPED",
+    "coverage": "AUTHORIZED_ONLY",
+    "observed_at_ms": 1792281600000,
+    "source_side_effect_requested": false,
+    "runtime_activation_requested": false,
+    "data": {
+      "deployments": {
+        "state": "PARTIAL",
+        "reason_code": "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.deployments:strategy_deployments",
+          "purpose": "alpha.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:deployments-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 1,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": [
+          {
+            "observation_id": "por1_0000000000000000000000000000000000000000000000000000000000000001",
+            "values": {
+              "strategy_id": "strategy_TEST_ONLY_source",
+              "account_id": "account_TEST_ONLY_source",
+              "mode": "live",
+              "venue": "TEST_ONLY:venue",
+              "deployment_id": "dep_TEST_ONLY_source",
+              "state": "OBSERVED",
+              "currency": "TEST_ONLY:USD",
+              "created_at_ms": 0,
+              "updated_at_ms": 1792281600000
+            }
+          }
+        ]
+      },
+      "positions": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "SOURCE_PANEL_NOT_CAPTURED",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.positions:positions_v2",
+          "purpose": "alpha.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:positions-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 0,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": []
+      },
+      "sessions": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "SOURCE_PANEL_NOT_CAPTURED",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.sessions:execution_sessions",
+          "purpose": "alpha.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:sessions-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 0,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": []
+      },
+      "orders": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "SOURCE_PANEL_NOT_CAPTURED",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.orders:orders",
+          "purpose": "alpha.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:orders-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 0,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": []
+      },
+      "fills": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "SOURCE_PANEL_NOT_CAPTURED",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.fills:fills",
+          "purpose": "alpha.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:fills-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 0,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": []
+      },
+      "accounts": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "SOURCE_PANEL_NOT_CAPTURED",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.accounts:accounts",
+          "purpose": "account.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:accounts-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "ACCOUNT",
+        "limit": 200,
+        "returned_count": 0,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": []
+      },
+      "account_balances": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "SOURCE_PANEL_NOT_CAPTURED",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.accounts:account_balances",
+          "purpose": "account.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:account_balances-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "ACCOUNT",
+        "limit": 200,
+        "returned_count": 0,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": []
+      },
+      "margin_balances": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "SOURCE_PANEL_NOT_CAPTURED",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.accounts:margin_balances",
+          "purpose": "account.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:margin_balances-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "ACCOUNT",
+        "limit": 200,
+        "returned_count": 0,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": []
+      },
+      "account_sync": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "SOURCE_PANEL_NOT_CAPTURED",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.accounts:account_sync_effective",
+          "purpose": "account.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:account_sync-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "ACCOUNT",
+        "limit": 200,
+        "returned_count": 0,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": []
+      },
+      "reconciliation": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "SOURCE_PANEL_NOT_CAPTURED",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": "relation:manager.reconciliation:reconciliation_findings",
+          "purpose": "account.read",
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": "TEST_ONLY:reconciliation-fields",
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "DEPLOYMENT",
+        "limit": 200,
+        "returned_count": 0,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": []
+      },
+      "broker_sync": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "BROKER_PURPOSE_NOT_COMMISSIONED",
+        "source_as_of_ms": null,
+        "source_clock_reason": "SOURCE_CLOCK_NOT_SCOPED",
+        "provenance": {
+          "dataset_id": null,
+          "purpose": null,
+          "field_contract_revision": "portal.execution.live-source-fields.v2",
+          "field_policy_ref": null,
+          "projection_basis": "SAME_RETAINED_DOCUMENT",
+          "source_revision": null,
+          "source_cursor": null,
+          "source_completeness": "UNKNOWN",
+          "history_semantics": "BOUNDED_RETAINED_NOT_FULL_HISTORY"
+        },
+        "exact_total": null,
+        "grain": "NOT_COMMISSIONED",
+        "limit": 200,
+        "returned_count": 0,
+        "has_more": false,
+        "next_cursor": null,
+        "previous_cursor": null,
+        "records": []
+      }
+    },
+    "runtime": {
+      "state": null,
+      "reason_code": "SOURCE_RUNTIME_ACTIVATION_NOT_ASSERTED"
+    },
+    "realtime": {
+      "active": false,
+      "reason_code": "FINITE_SCOPED_READ_NOT_STREAM_AUTHORITY"
+    },
+    "commands": {
+      "enabled": false,
+      "reason_code": "READ_NOT_COMMAND_AUTHORITY"
+    }
+  }
+}

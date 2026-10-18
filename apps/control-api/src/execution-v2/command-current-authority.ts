@@ -14,6 +14,7 @@ export function commandMembershipCurrent(authorization:CommandAuthorization,acto
   const relations=context.relationsFor(actor.user_id);
   if(!Object.hasOwn(relations,"current_authority")) {
     // Absence only: preserve historical private DTO and singleton behavior.
+    if(relations.qualified!==true)return false;
     const membership=relations.membership;
     return Boolean(membership&&membership.revision===authorization.membership_revision&&
       membership.mapping_revision===authorization.mapping_revision&&

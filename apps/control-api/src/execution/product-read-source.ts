@@ -7,6 +7,8 @@ import { ControlApiConfig, querySigningKeys } from "../config";
 import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
 import { authorizeRetainedRelation, scopedRetainedRows, retainedFieldAllowed, retainedRelationAction, fenceRetainedSnapshot } from "./retained-operation-page";
 import { projectionRowVisible } from "../execution-v2/read-projection";
+import {scopedLiveSource} from "../profile-read/scoped-live-source";
+import type {LiveSourceOperationsRead,LiveSourceReadQuery} from "../live/live-source.contract";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
   CurrentSourceEnvironment,
@@ -140,6 +142,79 @@ export class ExecutionProductReadSource {
       }
       throw error;
     }
+  }
+
+  /** One bounded exact-resource SOURCE_ONLY screen. Existing named source and
+   * legacy reads remain unchanged; V2 never falls through to their authority. */
+  async scopedLiveOperations<T=LiveSourceOperationsRead>(principal:CurrentSourcePrincipal,deploymentId:string,
+    project:(view:LiveSourceOperationsRead)=>T=(value=>value as unknown as T),query:LiveSourceReadQuery={}):Promise<T>{
+    if(!this.readScopes)throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    const profileId=profile(this.config,"live"),scopeService=this.readScopes;
+    const gate=await scopeService.authorize(principal,{environment:"live",profileId},
+      {action:"governance.live.read",resource:{kind:"DEPLOYMENT",id:deploymentId}});
+    if(gate.mode!=="SCOPED_V2")throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
+    const checks:Array<()=>void>=[],keyId=this.config.QUERY_CURSOR_ACTIVE_KEY_ID;
+    // Preserve the SAME codec; translate only its known safe cursor refusal
+    // into this flight's typed public error. Arbitrary exceptions remain503.
+    const decode=(token:string|undefined,binding:string)=>{
+      try{return decodeScopedCursor(this.config,token,binding);}catch(error){
+        if(error instanceof CurrentSourceProxyError&&error.code==="N31_PROJECTION_CURSOR_INVALID"&&error.status===400)
+          throw new ExecutionReadScopeError("EXECUTION_READ_CURSOR_INVALID",400);
+        throw error;
+      }
+    };
+    const remember=(token:string,binding:string)=>{
+      if(checks.length>=21)throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT",503);
+      checks.push(()=>{
+        if(keyId!==this.config.QUERY_CURSOR_ACTIVE_KEY_ID)
+          throw new ExecutionReadScopeError("EXECUTION_READ_CURSOR_INVALID",400);
+        decode(token,binding);
+      });
+    };
+    const cursors={gateFingerprint:gate.fingerprint,
+      decode:(token:string|undefined,binding:string)=>{
+        if(token)remember(token,binding);
+        return decode(token,binding);
+      },
+      encode:(offset:number,binding:string)=>{
+        const token=encodeScopedCursor(this.config,offset,binding);remember(token,binding);return token;
+      }};
+    return scopeService.deliverScopedTogether([gate],async retain=>{
+      if(principal.workspaceId!==this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID)
+        throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE",404);
+      if(this.config.FEATURE_EXECUTION_LOCAL_PROJECTION!=="true")
+        throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+      const metadata=await this.repository.snapshotMetadata(principal.workspaceId,"live",profileId);
+      // Establish the original exact Alpha/Deployment authority before loading
+      // the full private document; the independent Live gate is insufficient.
+      const deploymentScope=await authorizeRetainedRelation(scopeService,principal,"live",profileId,
+        "manager.deployments","strategy_deployments",metadata??undefined,{kind:"DEPLOYMENT",id:deploymentId});
+      if(!deploymentScope||deploymentScope.mode!=="SCOPED_V2")throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
+      retain(deploymentScope);
+      const {snapshot}=await this.localSnapshot("live",true);
+      if(!metadata||snapshot.payloadDigest!==metadata.payloadDigest||snapshot.projectionEpoch!==metadata.projectionEpoch||
+        snapshot.sourceCatalogueSha256!==metadata.sourceCatalogueSha256)
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
+      let result:T|undefined,held:unknown,failed=false;
+      try{
+        const view=await scopedLiveSource(this.config,scopeService,principal,snapshot,deploymentId,retain,query,cursors);
+        result=project(view);
+        // Projectors are trusted PURE composition only. Reject accidental async
+        // work rather than create an invisible authority gap after final delivery.
+        if(result&&typeof result==="object"&&typeof (result as {then?:unknown}).then==="function")
+          throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+        const encoded=JSON.stringify(result);
+        if(typeof encoded!=="string"||Buffer.byteLength(encoded,"utf8")>1048576)
+          throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT",503);
+      }catch(error){held=error;failed=true;}
+      // Revalidate the original retained document even when decode, exact
+      // purpose acquisition, pure composition or byte-cap errors are held.
+      // The group then renews EVERY already-minted obligation and confirms
+      // actual Core last; neither an error nor omitted panel skips that fence.
+      await fenceRetainedSnapshot(this.repository,principal.workspaceId,"live",profileId,snapshot);
+      if(failed)throw held;
+      return result as T;
+    },()=>{for(const check of checks)check();});
   }
 
   /**

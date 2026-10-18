@@ -121,6 +121,166 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** @description Finite stored Portal metadata under current maintenance.read plus exact TS-qualified ROOT audit and reviewed Activation field seals. Explicit environment is a CURRENT technical perspective, not captured native origin; no role/read_all authority or source verdict. Historical plan expiry is not read expiry. Exact flags are validated, not masked. Missing capabilities NOT_RECORDED do not invent default versions. Evidence and compatibility are independently optional; private signatures/prose/actors/request/hash witnesses never disclose or enter public revision. SAME issuer-bound flight holds bodies AND contextual errors through fresh source and LAST Core/session/clock checks. No GET writes or activation. */
+        ActivationCapabilitiesReadV2: {
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            workspace_id: string;
+            perspective: {
+                /** @enum {string} */
+                environment: "paper" | "sandbox" | "live";
+                root_id: string;
+                /** @constant */
+                basis: "CURRENT_PUBLISHED_TECHNICAL_ROOT";
+                captured_native_environment: null;
+            };
+            observed_at_ms: number;
+            snapshot_revision: string;
+            /** @constant */
+            schema_version: "portal.execution.activation-capabilities-read.v2";
+            capabilities: ({
+                /** @enum {string} */
+                capability_key: "PROJECTION" | "QUERY" | "SSE" | "COMMAND_R1" | "COMMAND_R2" | "COMMAND_R3" | "COMMAND_R4";
+                /** @constant */
+                record_state: "NOT_RECORDED";
+            } | {
+                /** @enum {string} */
+                capability_key: "PROJECTION" | "QUERY" | "SSE" | "COMMAND_R1" | "COMMAND_R2" | "COMMAND_R3" | "COMMAND_R4";
+                /** @constant */
+                record_state: "RECORDED";
+                /** @constant */
+                effective_profile: "fixture";
+                /** @enum {string} */
+                desired_profile: "fixture" | "shadow" | "paper" | "sandbox" | "live_canary" | "live_full";
+                capability_version: number;
+                /** @constant */
+                source_enabled: false;
+                /** @constant */
+                runtime_enabled: false;
+                /** @constant */
+                kill_switch_engaged: true;
+                last_plan_id: string | null;
+                created_at_ms: number;
+                updated_at_ms: number;
+            })[] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        };
+        /** @description Finite stored Portal metadata under current maintenance.read plus exact TS-qualified ROOT audit and reviewed Activation field seals. Explicit environment is a CURRENT technical perspective, not captured native origin; no role/read_all authority or source verdict. Historical plan expiry is not read expiry. Exact flags are validated, not masked. Missing capabilities NOT_RECORDED do not invent default versions. Evidence and compatibility are independently optional; private signatures/prose/actors/request/hash witnesses never disclose or enter public revision. SAME issuer-bound flight holds bodies AND contextual errors through fresh source and LAST Core/session/clock checks. No GET writes or activation. Runtime additionally verifies exact stored timestamp chronology and state/child/head integrity. Standard JSON Schema validates finite scalar/closed shape and cannot express sibling timestamp ordering; AJV shape validation alone is not that producer-integrity proof. */
+        ActivationPlanReadV2: {
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            workspace_id: string;
+            perspective: {
+                /** @enum {string} */
+                environment: "paper" | "sandbox" | "live";
+                root_id: string;
+                /** @constant */
+                basis: "CURRENT_PUBLISHED_TECHNICAL_ROOT";
+                captured_native_environment: null;
+            };
+            observed_at_ms: number;
+            snapshot_revision: string;
+            /** @constant */
+            schema_version: "portal.execution.activation-plan-read.v2";
+            plan: {
+                plan_id: string;
+                /** @enum {string} */
+                capability_key: "PROJECTION" | "QUERY" | "SSE" | "COMMAND_R1" | "COMMAND_R2" | "COMMAND_R3" | "COMMAND_R4";
+                /** @enum {string} */
+                action: "PROMOTE" | "ROLLBACK";
+                /** @enum {string} */
+                from_profile: "fixture" | "shadow" | "paper" | "sandbox" | "live_canary" | "live_full";
+                /** @enum {string} */
+                target_profile: "fixture" | "shadow" | "paper" | "sandbox" | "live_canary" | "live_full";
+                expected_capability_version: number;
+                plan_version: number;
+                /** @enum {string} */
+                stored_status: "READY" | "BLOCKED" | "DENIED" | "APPLIED" | "VERIFIED";
+                /** @constant */
+                expiry_basis: "HISTORICAL_CAPTURE_NOT_CURRENT_READ_AUTHORITY";
+                expires_at_ms: number;
+                applied_at_ms: number | null;
+                verified_at_ms: number | null;
+                resulting_capability_version: number | null;
+                created_at_ms: number;
+                updated_at_ms: number;
+                /** @constant */
+                source_side_effect_requested: false;
+                /** @constant */
+                runtime_activation_requested: false;
+                /** @constant */
+                owner_artifact_imported: false;
+            };
+            capability: {
+                /** @enum {string} */
+                capability_key: "PROJECTION" | "QUERY" | "SSE" | "COMMAND_R1" | "COMMAND_R2" | "COMMAND_R3" | "COMMAND_R4";
+                /** @constant */
+                record_state: "RECORDED";
+                /** @constant */
+                effective_profile: "fixture";
+                /** @enum {string} */
+                desired_profile: "fixture" | "shadow" | "paper" | "sandbox" | "live_canary" | "live_full";
+                capability_version: number;
+                /** @constant */
+                source_enabled: false;
+                /** @constant */
+                runtime_enabled: false;
+                /** @constant */
+                kill_switch_engaged: true;
+                last_plan_id: string | null;
+                created_at_ms: number;
+                updated_at_ms: number;
+            };
+            evidence: {
+                /** @constant */
+                availability: "NOT_AUTHORIZED";
+            } | {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "STORED_NOT_ACTIVATION_TRUST";
+                items: {
+                    ordinal: number;
+                    /** @enum {string} */
+                    kind: "CONTRACT" | "IMAGE" | "SCHEMA" | "QUALIFICATION" | "ROLLBACK";
+                    reference_id: string;
+                    artifact_digest: string;
+                    schema_version: string;
+                    compatibility_revision: string;
+                    expires_at_ms: number;
+                    /** @constant */
+                    structure_valid: true;
+                    /** @constant */
+                    owner_accepted: false;
+                    /** @constant */
+                    trusted_for_activation: false;
+                }[];
+            };
+            compatibility: {
+                /** @constant */
+                availability: "NOT_AUTHORIZED";
+            } | {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "STORED_REQUIREMENTS_NOT_COMPATIBILITY_VERDICT";
+                items: {
+                    ordinal: number;
+                    /** @enum {string} */
+                    kind: "CONTRACT" | "IMAGE" | "SCHEMA" | "CAPABILITY";
+                    component: string;
+                    exact_revision: string;
+                    expected_digest: string;
+                }[];
+            };
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         /** Format: date-time */
         Timestamp: string;
         Identifier: string;
@@ -165,6 +325,16 @@ export interface components {
             read_at: components["schemas"]["Timestamp"];
             actor: components["schemas"]["Actor"];
             capabilities: components["schemas"]["Capability"][];
+        };
+        CommandProblem: {
+            error: {
+                code: string;
+                message: string;
+            };
+            request_id: string;
+            public_copy_key?: string;
+            /** @enum {string} */
+            safe_next_action?: "QUERY_SAME_INTENT" | "REVIEW_BLOCKER";
         };
         /** @enum {unknown} */
         DeliveryProfile: "fixture" | "shadow" | "paper" | "sandbox" | "live_canary" | "live_full";
@@ -262,6 +432,8 @@ export interface operations {
         parameters: {
             query?: {
                 workspace_id?: string;
+                /** @description REQUIRED for SCOPED_V2: explicit current unique published ROOT perspective; never inferred from target profile. Legacy unchanged. */
+                environment?: "paper" | "sandbox" | "live";
             };
             header?: never;
             path?: never;
@@ -269,16 +441,67 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Seven independent source-dark capabilities. */
+            /** @description Legacy v1 OR finite current-authorized Activation metadata; no activation. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CapabilitiesResponse"];
+                    "application/json": components["schemas"]["CapabilitiesResponse"] | components["schemas"]["ActivationCapabilitiesReadV2"];
+                };
+            };
+            /** @description Fixed current read refusal; no raw provider/SQL/private data. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
                 };
             };
             401: components["responses"]["Problem"];
+            /** @description Fixed current read refusal; no raw provider/SQL/private data. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed current read refusal; no raw provider/SQL/private data. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed current read refusal; no raw provider/SQL/private data. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed current read refusal; no raw provider/SQL/private data. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
         };
     };
     planStagedActivation: {
@@ -312,6 +535,8 @@ export interface operations {
         parameters: {
             query?: {
                 workspace_id?: string;
+                /** @description REQUIRED for SCOPED_V2: explicit current unique published ROOT perspective; never inferred from target profile. Legacy unchanged. */
+                environment?: "paper" | "sandbox" | "live";
             };
             header?: never;
             path: {
@@ -321,16 +546,67 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Persisted plan snapshot. */
+            /** @description Legacy v1 OR finite current-authorized Activation metadata; no activation. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlanResponse"];
+                    "application/json": components["schemas"]["PlanResponse"] | components["schemas"]["ActivationPlanReadV2"];
+                };
+            };
+            /** @description Fixed current read refusal; no raw provider/SQL/private data. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed current read refusal; no raw provider/SQL/private data. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed current read refusal; no raw provider/SQL/private data. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
                 };
             };
             404: components["responses"]["Problem"];
+            /** @description Fixed current read refusal; no raw provider/SQL/private data. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed current read refusal; no raw provider/SQL/private data. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
         };
     };
     applyStagedActivationPlan: {

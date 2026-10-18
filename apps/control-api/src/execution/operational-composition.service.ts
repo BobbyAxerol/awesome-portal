@@ -7,6 +7,7 @@ import { GovernanceError, GovernanceService } from "../governance/governance.ser
 import { governanceConditionsQuery } from "../governance/contracts";
 import { PaperExitService } from "../governance/paper-exit.service";
 import { PositiveParentReads } from "../governance/positive-parent.service";
+import { LiveParentReads } from "../governance/live-parent.service";
 import { IncidentService } from "../operations/incident.service";
 import { ExecutionOperationsService } from "../operations/operations.service";
 import { OperationsWorkflowService } from "../operations/workflow.service";
@@ -69,6 +70,7 @@ export class OperationalCompositionService {
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
     @Optional() @Inject(OperationalReadService) private readonly currentReads?: OperationalReadService,
     @Optional() @Inject(PositiveParentReads) private readonly positiveParents?: PositiveParentReads,
+    @Optional() @Inject(LiveParentReads) private readonly liveParents?: LiveParentReads,
   ) {}
 
   async approval(
@@ -76,6 +78,14 @@ export class OperationalCompositionService {
     approvalId: string,
     view: "r1" | "r2" | "live",
   ): Promise<Record<string, unknown>> {
+    if(view==="live"&&await this.readScopes?.coreSelectionMode(principal)==="SCOPED_V2"){
+      if(!this.liveParents)throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      const prepared=await this.liveParents.prepare(principal,approvalId);
+      // Pure composition INSIDE the SAME flight; no independent source calls
+      // or rich legacy fallback, no falsely held cross-authority snapshot.
+      return this.liveParents.finish(prepared,governance=>this.currentComposition(principal,"live_review",{
+        governance,accepted_manager_facts:governance.accepted_manager_facts}));
+    }
     if (view === "r2" && await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
       if (!this.positiveParents) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
       const prepared = await this.positiveParents.prepare(principal,"R2",approvalId);

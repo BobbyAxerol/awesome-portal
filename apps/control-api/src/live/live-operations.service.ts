@@ -59,11 +59,17 @@ export class LiveOperationsService {
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
 
-  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string) {
-    await this.assertReadAccess(user, workspaceId);
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string,
+    query:import("./live-source.contract").LiveSourceReadQuery={}) {
     const principal = { user, session, workspaceId, viewerWorkspaceId };
     if (this.readScopes && await this.readScopes.coreSelectionMode(principal) === "SCOPED_V2")
-      throw new GovernanceError("LIVE_SCOPED_PARENT_NOT_COMMISSIONED", "Live parent evidence field authority is not commissioned.", 503);
+      // Independent positive source-only path. No Canary read, artifact/R1/R2
+      // ancestry inference, owner/ADMIN fallback or new business permission.
+      return this.profileReads.liveOperations(principal,deploymentId,undefined,query);
+    await this.assertReadAccess(user, workspaceId);
+    // New finite navigation is V2-only, never silently ignored by legacy.
+    if(query.panel!==undefined||query.cursor!==undefined)
+      throw new GovernanceError("LIVE_SOURCE_QUERY_INVALID","Live source navigation is not available.",400);
     const result = await this.detailLegacy(user, session, workspaceId, deploymentId, viewerWorkspaceId);
     await this.assertReadAccess(user, workspaceId);
     if (this.readScopes && await this.readScopes.coreSelectionMode(principal) !== "LEGACY_COMPATIBILITY")

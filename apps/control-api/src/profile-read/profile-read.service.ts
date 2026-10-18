@@ -159,6 +159,15 @@ export class ProfileReadService {
     return this.snapshot(principal, environment, screenId);
   }
 
+  /** SAME ProductRead source/scopes and combined final fence, never the legacy
+   * Promise.allSettled path which intentionally tolerates source failures. */
+  liveOperations<T=import("../live/live-source.contract").LiveSourceOperationsRead>(
+    principal:ProfileReadPrincipal,deploymentId:string,
+    project?:(view:import("../live/live-source.contract").LiveSourceOperationsRead)=>T,
+    query:import("../live/live-source.contract").LiveSourceReadQuery={}):Promise<T>{
+    return this.source.scopedLiveOperations(principal,deploymentId,project,query);
+  }
+
   async accountBroker(
     principal: ProfileReadPrincipal,
     accountId: string,

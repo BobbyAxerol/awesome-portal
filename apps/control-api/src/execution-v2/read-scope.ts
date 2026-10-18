@@ -20,12 +20,13 @@ export interface ReadScopePrincipal {user:PortalUser;session:AuthSession;workspa
 export interface ReadScopeBinding {environment:ReadEnvironment;profileId:string;}
 export interface ReadScopeRequirement {
   action:"business.read_all"|"alpha.read"|"portfolio.read"|"portfolio.read_restricted"|"portfolio.discover_linked"|"account.read"|"binding.read"|
-    "maintenance.read"|"development.read"|"audit.read"|"report.export"|"stream.subscribe";
+    "maintenance.read"|"development.read"|"audit.read"|"report.export"|"stream.subscribe"|"governance.live.read";
   resource?:AccessResource;
   dataset?:ReadDatasetBinding;
   requireWholePopulation?:boolean;
 }
 export type ReadScopeErrorCode="EXECUTION_READ_SCOPE_REQUIRED"|"EXECUTION_READ_ACCESS_CHANGED"|
+  "EXECUTION_READ_QUERY_INVALID"|"EXECUTION_READ_CURSOR_INVALID"|
   "EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED"|
   "EXECUTION_READ_NOT_AVAILABLE"|"EXECUTION_READ_POLICY_PENDING"|"EXECUTION_READ_PUBLICATION_NOT_QUALIFIED"|
   "EXECUTION_READ_FIELD_POLICY_PENDING"|"EXECUTION_READ_SCOPE_LIMIT"|"EXECUTION_READ_AUTHORITY_UNAVAILABLE";
@@ -293,7 +294,11 @@ function captureReadScopeInputs(principal:ReadScopePrincipal,binding:ReadScopeBi
   if(!p.workspaceId||!p.viewerWorkspaceId||!p.user.userId||!p.session.sessionId||
     p.session.userId!==p.user.userId||p.session.sessionVersion!==p.user.sessionVersion||
     !["paper","sandbox","live"].includes(b.environment)||!b.profileId)fail("EXECUTION_READ_SCOPE_REQUIRED");
-  if(!businessReads.has(r.action)&&!["maintenance.read","development.read","audit.read","report.export","stream.subscribe"].includes(r.action))
+  if(!businessReads.has(r.action)&&!["maintenance.read","development.read","audit.read","report.export","stream.subscribe","governance.live.read"].includes(r.action))
+    fail("EXECUTION_READ_SCOPE_REQUIRED");
+  // Existing Portal capability, only an independent screen gate. It supplies
+  // NO business, Account, custody, audit, stream or physical-delivery fields.
+  if(r.action==="governance.live.read"&&(b.environment!=="live"||r.resource?.kind!=="DEPLOYMENT"||r.dataset||r.requireWholePopulation))
     fail("EXECUTION_READ_SCOPE_REQUIRED");
   if(r.resource&&!accessResource.safeParse(r.resource).success||r.dataset&&!readDatasetBinding.safeParse(r.dataset).success)
     fail("EXECUTION_READ_SCOPE_REQUIRED");
@@ -897,7 +902,7 @@ export class ExecutionReadScopes {
         }
       }
       if(!businessReads.has(r.action))fields=r.action==="maintenance.read"||r.action==="development.read"?
-        [...TECHNICAL_READ_FIELDS]:r.action==="audit.read"?[...AUDIT_READ_FIELDS]:fields;
+        [...TECHNICAL_READ_FIELDS]:r.action==="audit.read"?[...AUDIT_READ_FIELDS]:r.action==="governance.live.read"?[]:fields;
     }else{
       // Legacy membership preserves the named business-read contract only.
       // It is never a new export/stream/technical entitlement.
@@ -932,6 +937,103 @@ export class ExecutionReadScopes {
     if(state.issuer!==this)fail("EXECUTION_READ_SCOPE_REQUIRED");
     const current=await this.authorize(state.principal,state.binding,state.requirement);
     if(current.fingerprint!==scope.fingerprint)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+  }
+
+  /** Finite SAME-issuer read composition. A registrar grants nothing: it only
+   * retains already-minted obligations until the WHOLE body/error is ready.
+   * This is a point-in-time read fence, NOT native physical-send custody or
+   * an atomic snapshot of independent external writers. No external await is
+   * permitted after the final actual Core confirmation below. */
+  async deliverScopedTogether<T>(initial:readonly AuthorizedExecutionReadScope[],
+    read:(retain:(scope:AuthorizedExecutionReadScope)=>void)=>Promise<T>,
+    validateBeforeRelease?:()=>void):Promise<T>{
+    if(!Array.isArray(initial)||!initial.length||initial.length>16)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const original:AuthorizedExecutionReadScope[]=[],states:ScopeState[]=[];
+    const actorKey=(s:ScopeState)=>JSON.stringify([s.principal.user.userId,s.principal.user.role,
+      s.principal.session.userId,s.principal.session.sessionId,s.principal.session.sessionVersion,
+      s.principal.workspaceId,s.principal.viewerWorkspaceId,s.binding]);
+    let expected:string|undefined;
+    const retain=(scope:AuthorizedExecutionReadScope)=>{
+      assertExecutionReadScope(scope);const state=minted.get(scope)!;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context)fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const key=actorKey(state);if(expected!==undefined&&key!==expected)fail("EXECUTION_READ_SCOPE_REQUIRED");
+      expected=key;if(original.includes(scope))return;
+      if(original.length>=16)fail("EXECUTION_READ_SCOPE_LIMIT",503);
+      original.push(scope);states.push(state);
+    };
+    initial.forEach(retain);
+    let result:T|undefined,held:unknown,failed=false;
+    const priority=(e:unknown)=>e instanceof AccessPolicyError||
+      e instanceof ExecutionReadScopeError&&e.status>=401&&e.status<500?2:1;
+    const hold=(e:unknown)=>{if(!failed||priority(e)>priority(held))held=e;failed=true;};
+    try{result=await read(retain);}catch(error){hold(error);}
+    const renewed:ScopeState[]=[];
+    let authorityFailed=false;
+    // Preserve EVERY original positive, including a panel omitted after an
+    // error. A later successful purpose never replaces an earlier obligation.
+    for(let i=0;i<original.length;i++){
+      try{
+        const s=states[i],current=await this.authorize(s.principal,s.binding,s.requirement);
+        if(current.mode!=="SCOPED_V2"||current.fingerprint!==original[i].fingerprint)
+          fail("EXECUTION_READ_ACCESS_CHANGED",409);
+        renewed.push(minted.get(current)!);
+      }catch(error){
+        // A failed current-purpose renewal (including unavailable503) is
+        // terminal authority failure, never masked by an earlier input400.
+        if(!authorityFailed||priority(error)>priority(held))held=error;
+        failed=true;authorityFailed=true;
+      }
+    }
+    const final=renewed.length?renewed[renewed.length-1]:states[0];
+    const actor=states[0].principal,shared=final.context!;
+    let confirmed:AccessEvaluationContext;
+    try{
+      // LAST await, also when parsing/projection/source/cap errors were held.
+      confirmed=await this.access.confirmReadContext({user_id:actor.user.userId,
+        session_id:actor.session.sessionId,session_generation:actor.session.sessionVersion},actor.workspaceId,shared);
+    }catch(error){return rethrowReadScopeError(error);}
+    const now=Math.max(confirmed.now_ms,Date.now()),lease=confirmed.actor_lease_until_ms;
+    if(!Number.isSafeInteger(now)||now<0||typeof lease!=="number"||!Number.isSafeInteger(lease)||lease<=now)
+      fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    if(confirmed.actor_role!==actor.user.role||confirmed.authority_fingerprint!==shared.authority_fingerprint)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    let until=lease!;
+    for(const state of renewed){
+      const previous=state.context!;
+      if(previous.authority_fingerprint!==confirmed.authority_fingerprint)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      // The last fresh adapter context is shared by ALL original targets,
+      // not each relation's earlier private copy. Otherwise a revoke of the
+      // first purpose during renewal of a later purpose could be overlooked.
+      const context={...shared,now_ms:now,actor_current:confirmed.actor_current,
+        actor_role:confirmed.actor_role,actor_lease_until_ms:lease};
+      const resources=[...state.resources,...(state.requirement.resource?[state.requirement.resource]:[])];
+      if(accessDigest(contextProof(context,state.binding.environment,resources))!==
+        accessDigest(contextProof(previous,state.binding.environment,resources)))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      if(state.requirement.action==="governance.live.read"&&
+        !evaluateAccess(context,"governance.live.read",state.requirement.resource!,"live").allowed)
+        fail("EXECUTION_READ_NOT_AVAILABLE",404);
+      until=Math.min(until,nativeNoticeValidUntil(context,state.binding.environment,lease!));
+    }
+    // Pure proof/hash work above consumes time too. No post-fence await or
+    // copied old lease may leak a body/error across a real transition.
+    // Trusted PURE terminal check only (currently the existing lps2 expiry/
+    // active key recheck). It grants no authority, performs no IO and runs for
+    // held errors too. Time spent here is covered by the subsequent checks.
+    let releaseError:unknown,releaseFailed=false;
+    try{
+      const checked=validateBeforeRelease?.() as unknown;
+      if(checked&&typeof checked==="object"&&typeof (checked as {then?:unknown}).then==="function")
+        fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    }catch(error){releaseError=error;releaseFailed=true;}
+    const terminal=Math.max(now,Date.now());
+    if(terminal>=lease!)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    if(terminal>=until)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    // Current-authority refusals outrank cursor/cap/parse errors. A cursor
+    // expiring during awaits outranks a held PRIVATE decode failure, never a
+    // genuine failed current grant/session obligation.
+    if(releaseFailed&&!authorityFailed&&(!failed||priority(held)<2))return rethrowReadScopeError(releaseError);
+    if(failed)return rethrowReadScopeError(held);
+    return result as T;
   }
 
   async deliver<T>(scope:AuthorizedExecutionReadScope,read:()=>Promise<T>):Promise<T> {

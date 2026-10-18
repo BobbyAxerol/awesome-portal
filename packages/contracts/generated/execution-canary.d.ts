@@ -11,6 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Sticky current Core mode preserves legacy v1 separately. SCOPED_V2 publishes only a finite current-authorized Portal parent after BOTH current TS-qualified deployment/portfolio audit anchors and the exact reviewed root field purpose. Sandbox uses SANDBOX current correspondence and active membership; Canary uses LIVE current correspondence plus independent governance.canary.read. Current association is NOT captured historical native membership. Optional fields require separate purposes. Stored Portal evaluation/DRAFT never asserts a source verdict, current eligibility, activated runtime or effective capital; source screens remain explicitly unpublished. No mutation/upstream call, owner/ADMIN shortcut or fallback after current-authority refusal. One shared flight fences body and contextual errors after local/source checks and LAST Core. */
         get: operations["getCanaryControlRoom"];
         put?: never;
         post?: never;
@@ -48,6 +49,98 @@ export interface components {
             code?: string;
         } & {
             [key: string]: unknown;
+        };
+        /** @description Finite immutable Portal Canary DRAFT under exact current LIVE deployment+portfolio audit, independent governance.canary.read and CANARY_ROOT fields. LIVE is requested current association, NOT an attested historical native environment or active Canary. Proposal amounts are positive exact decimal strings, at most20 integer/18 fractional digits, never JS Number, economic backing/budget or effective exposure. Optional proposal/lineage each require their own reviewed purpose. Source verdict NOT_ASSERTED; production_command_active and every side-effect flag remain false. Captured certification version is historical metadata, not current eligibility. */
+        CanaryParentReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.following-parent.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+                /** @constant */
+                runtime_activation_requested: false;
+                /** @constant */
+                promotion_execution_requested: false;
+            };
+            accepted_manager_facts: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION";
+            };
+            /** @constant */
+            family: "CANARY";
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "LIVE";
+                /** @constant */
+                association_basis: "CURRENT_NATIVE_TARGET_CORRESPONDENCE";
+                /** @constant */
+                captured_environment_attested: false;
+            };
+            envelope: {
+                envelope_id: string;
+                revision: number;
+                previous_envelope_id: string | null;
+                /** @constant */
+                status: "DRAFT";
+                expected_certification_version: number;
+                created_at_ms: number;
+                /** @constant */
+                source_integration_state: "UNAVAILABLE";
+                /** @constant */
+                delivery_profile: "fixture";
+                /** @constant */
+                production_command_active: false;
+            } & unknown;
+            proposal: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "PROPOSED_NOT_EFFECTIVE";
+                base_risk_profile_revision: string;
+                currency: string;
+                capital_cap: string;
+                gross_notional_cap: string;
+                daily_loss_cap: string;
+                max_open_orders: number;
+                duration_days: number;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+            lineage: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "STORED_PORTAL_REFERENCE";
+                certification_id: string;
+                promotion_plan_id: string;
+                paper_exit_review_id: string;
+                r1_approval_id: string;
+                r2_approval_id: string;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
         };
         /** Format: date-time */
         Timestamp: string;
@@ -330,13 +423,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Latest Portal envelope composed with per-branch ready, empty, partial, stale or unavailable Live-profile facts. */
+            /** @description Legacy parent OR finite current-authorized v2 Portal root; not an effective source, certification, capital or execution verdict. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CanaryControlRoom"];
+                    "application/json": components["schemas"]["CanaryControlRoom"] | components["schemas"]["CanaryParentReadV2"];
                 };
             };
             404: components["responses"]["Problem"];

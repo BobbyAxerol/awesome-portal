@@ -18,12 +18,14 @@ for(const name of readdirSync(resolve(root,"schemas"))){
 ajv.addSchema(load("openapi/execution-trusted-commands.openapi.json"),base+"openapi/execution-trusted-commands.openapi.json");
 const documents=names.map(name=>load("openapi/"+name+".openapi.json"));
 documents.forEach((api,index)=>ajv.addSchema(api,base+"openapi/"+names[index]+".openapi.json"));
+// Existing documents/loader/harness; no alternate schema or duplicate runner.
+ajv.addSchema(load("openapi/execution-canary.openapi.json"),base+"openapi/execution-canary.openapi.json");
 const pointer="/paths/~1api~1v1~1execution~1operations~1{operation_id}/get/responses/200/content/application~1json/schema";
 const validators=names.map(name=>ajv.compile({$ref:base+"openapi/"+name+".openapi.json#"+pointer}));
 const trusted=load("fixtures/execution-trusted-commands.synthetic.valid.json");
 const old=load("fixtures/execution-command-operation.valid.json");
 describe("ELP2-04 one named operation reader across historical documents",()=>{
-  it("preserves operationIds and adds current workflow to the six existing concrete schemas",()=>{
+  it("preserves operationIds and all seven existing variants while adding two finite selected plans",()=>{
     expect(documents.map(api=>api.paths["/api/v1/execution/operations/{operation_id}"].get.operationId))
       .toEqual(["getExecutionCommandOperationF0","getPaperExitDecisionOperation"]);
     for(const api of documents){
@@ -32,7 +34,7 @@ describe("ELP2-04 one named operation reader across historical documents",()=>{
       expect(get.responses["200"].headers["Cache-Control"].schema.const).toBe("private, no-store");
       for(const status of [400,401,403,404,409,503])expect(get.responses[status]).toBeDefined();
     }
-    expect(operationReaderSchema().oneOf).toHaveLength(7);
+    expect(operationReaderSchema().oneOf).toHaveLength(9);
   });
   it.each(names.map((name,index)=>[name,index] as const))("%s retains F0 and accepts strict trusted status without inferring APPLIED",(name,index)=>{
     const validate=validators[index];
@@ -49,6 +51,53 @@ describe("ELP2-04 one named operation reader across historical documents",()=>{
       "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/"+name+"DecisionOperation");
     expect(refs).toContain("../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionOperation");
     for(const validate of validators)expect(validate({schema_version:"arbitrary",payload:{}})).toBe(false);
+  });
+  it("both existing generic documents serve each finite selected-plan fixture, not a parent ROOT or arbitrary private fields",()=>{
+    const fixture=load("fixtures/execution-positive-parent.synthetic.valid.json");
+    const keys=["r2_operation","r2_operation_uncaptured","r2_operation_applied","r2_operation_expired",
+      "paper_exit_operation","paper_exit_operation_applied","paper_exit_operation_expired"];
+    for(const check of validators){
+      for(const key of keys){const body=fixture[key];expect(check(body),JSON.stringify(check.errors)).toBe(true);
+        for(const patch of [{response_json:{}},{receipt:{}},{private_actor_id:"TEST_ONLY"},
+          {family:"LIVE"},{status:"SUCCEEDED"},{schema_version:"portal.execution.governance-parent.v2"}])
+          expect(check({...body,...patch})).toBe(false);
+      }
+      expect(check(fixture.r2)).toBe(false);expect(check(fixture.paper_exit)).toBe(false);
+    }
+    const refs=operationReaderSchema().oneOf.map(item=>item.$ref);
+    for(const name of ["R2ParentOperationReadV2","PaperExitParentOperationReadV2"])
+      expect(refs).toContain("../schemas/execution-operations.v1.schema.json#/$defs/"+name);
+    for(const api of documents)for(const status of [400,401,403,404,409,503]){
+      const response=api.paths["/api/v1/execution/operations/{operation_id}"].get.responses[status];
+      expect(response.headers["Cache-Control"].schema.const).toBe("private, no-store");
+      expect(response.content["application/json"].schema)
+        .toEqual({$ref:"execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"});
+    }
+  });
+});
+
+describe("ELP2-04 existing following-family GET response unions",()=>{
+  const fixture=load("fixtures/execution-positive-parent.synthetic.valid.json");
+  it.each([
+    ["execution-governance","certification",["sandbox","sandbox_absent","sandbox_draft"],
+      "fixtures/execution-sandbox-certification.unavailable.valid.json"],
+    ["execution-canary","canary",["canary","canary_absent","canary_revision"],
+      "fixtures/execution-canary-control-room.unavailable.valid.json"],
+  ] as const)("%s preserves its real legacy reader and adds only its own finite root",(document,suffix,keys,legacyFixture)=>{
+    const path="/api/v1/execution/deployments/{deployment_id}/"+suffix;
+    const pointer="/paths/"+path.replaceAll("~","~0").replaceAll("/","~1")+
+      "/get/responses/200/content/application~1json/schema";
+    const check=ajv.compile({$ref:base+"openapi/"+document+".openapi.json#"+pointer});
+    expect(check(load(legacyFixture)),JSON.stringify(check.errors)).toBe(true);
+    for(const key of keys){
+      const body=fixture[key];expect(check(body),JSON.stringify(check.errors)).toBe(true);
+      for(const patch of [{account_binding:{}},{private_actor_id:"TEST_ONLY"},
+        {source:{...body.source,source_verdict:"ACCEPTED"}},{raw_payload:{}},
+        {schema_version:"portal.execution.governance-parent.v2"}])expect(check({...body,...patch})).toBe(false);
+    }
+    expect(check(suffix==="canary"?fixture.sandbox:fixture.canary)).toBe(false);
+    for(const generic of validators)for(const key of keys)expect(generic(fixture[key])).toBe(false);
+    expect(operationReaderSchema().oneOf).toHaveLength(9); // selected operations only; ROOTs are not operations
   });
 });
 
@@ -211,7 +260,7 @@ describe("ELP2-04 separate exact-own F0 collection contract",()=>{
     expect(f0CollectionQuery.parse(fixture.query)).toEqual(fixture.query);
     expect(f0Collection.safeParse(fixture.response).success).toBe(true);
     expect(validate(fixture.response),JSON.stringify(validate.errors)).toBe(true);
-    expect(operationReaderSchema().oneOf).toHaveLength(7);
+    expect(operationReaderSchema().oneOf).toHaveLength(9);
   });
   it.each([200,400,401,403,404,409,503])("has a no-store typed response for %s",status=>{
     const response=path.get.responses[status];expect(response.headers["Cache-Control"].schema.const).toBe("private, no-store");

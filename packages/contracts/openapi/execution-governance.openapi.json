@@ -944,7 +944,7 @@
     "/api/v1/execution/operations/{operation_id}": {
       "get": {
         "operationId": "getPaperExitDecisionOperation",
-        "description": "Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. Other SCOPED_V2 ids require actual immutable queue/F0 provenance under exact target/environment audit, never creator/ADMIN/read_all permission or a family fallback. Legacy decision readers remain separate with their gate checks. GET never dispatches/reconciles; ACK is not APPLIED/FILLED. HTTP private, no-store.",
+        "description": "Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. SCOPED_V2 uses positive stored family identity: F0 keeps immutable queue/intent provenance and exact target audit; selected R2/Paper plans require BOTH current PAPER deployment/portfolio audit anchors, ROOT plus exact DECISION_OPERATION field purpose and the actual gate/member requirement. Unknown, unsupported or ambiguous identity never tries another family. No creator/ADMIN/read_all permission substitute. Legacy decision readers remain separate. Historical expiry/expected versions do not expire today's authorized read or assert current apply eligibility. GET never dispatches/reconciles; stored Portal APPLIED is not TS acceptance/FILLED. HTTP private, no-store.",
         "parameters": [
           {
             "$ref": "#/components/parameters/OperationId"
@@ -955,7 +955,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized concrete operation; current-audit finite workflow variant is additive.",
+            "description": "Authorized concrete operation; finite workflow and selected R2/Paper plan variants are additive, not source receipts.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -987,6 +987,12 @@
                     },
                     {
                       "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalWorkflowV2"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/R2ParentOperationReadV2"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/PaperExitParentOperationReadV2"
                     }
                   ]
                 }
@@ -994,22 +1000,106 @@
             }
           },
           "400": {
-            "description": "Typed current-authority refusal; no upstream or legacy fallback."
+            "description": "Typed current-authority refusal; no upstream or legacy fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
           },
           "401": {
-            "description": "Typed current-authority refusal; no upstream or legacy fallback."
+            "description": "Typed current-authority refusal; no upstream or legacy fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
           },
           "403": {
-            "description": "Typed current-authority refusal; no upstream or legacy fallback."
+            "description": "Typed current-authority refusal; no upstream or legacy fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Unknown and hidden commands have the same safe envelope."
+            "description": "Unknown and hidden commands have the same safe envelope.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
           },
           "409": {
-            "description": "Typed current-authority refusal; no upstream or legacy fallback."
+            "description": "Typed current-authority refusal; no upstream or legacy fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
           },
           "503": {
-            "description": "Typed current-authority refusal; no upstream or legacy fallback."
+            "description": "Typed current-authority refusal; no upstream or legacy fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/Problem"
@@ -1020,7 +1110,7 @@
     "/api/v1/execution/deployments/{deployment_id}/certification": {
       "get": {
         "operationId": "getSandboxCertification",
-        "description": "Returns the Portal-owned seven-step Sandbox Certification and three source-attributed panels. Missing source evidence remains explicitly unavailable.",
+        "description": "Sticky current Core mode preserves legacy v1 separately. SCOPED_V2 publishes only a finite current-authorized Portal parent after BOTH current TS-qualified deployment/portfolio audit anchors and the exact reviewed root field purpose. Sandbox uses SANDBOX current correspondence and active membership; Canary uses LIVE current correspondence plus independent governance.canary.read. Current association is NOT captured historical native membership. Optional fields require separate purposes. Stored Portal evaluation/DRAFT never asserts a source verdict, current eligibility, activated runtime or effective capital; source screens remain explicitly unpublished. No mutation/upstream call, owner/ADMIN shortcut or fallback after current-authority refusal. One shared flight fences body and contextual errors after local/source checks and LAST Core.",
         "parameters": [
           {
             "$ref": "#/components/parameters/DeploymentId"
@@ -1031,11 +1121,25 @@
         ],
         "responses": {
           "200": {
-            "description": "Sandbox Certification detail",
+            "description": "Legacy parent OR finite current-authorized v2 Portal root; not an effective source, certification, capital or execution verdict.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse"
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/SandboxParentReadV2"
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
                 }
               }
             }
@@ -1578,6 +1682,24 @@
       },
       "OperationalPaperExitParentCompositionV2": {
         "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalPaperExitParentCompositionV2"
+      },
+      "R2ParentOperationReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/R2ParentOperationReadV2"
+      },
+      "PaperExitParentOperationReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/PaperExitParentOperationReadV2"
+      },
+      "SandboxParentReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/SandboxParentReadV2"
+      },
+      "CanaryParentReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/CanaryParentReadV2"
+      },
+      "LiveParentReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/LiveParentReadV2"
+      },
+      "OperationalLiveParentCompositionV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalLiveParentCompositionV2"
       }
     }
   }

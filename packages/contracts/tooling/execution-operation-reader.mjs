@@ -1,10 +1,12 @@
-/** Historical generic operation union plus one explicitly scoped F0 reader.
- * Neither this contract nor the additive route commissions relay or parents. */
+/** Existing generic operation union with finite current-authorized variants.
+ * Contract publication never commissions relay, source authority or a parent. */
 import {readFileSync,writeFileSync} from "node:fs";
 import {dirname,resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {operationalCurrentSchemas,updateOperationalPaths,synchronizeOperationalFixture} from "./execution-operational-current-reader.mjs";
-import {parentCurrentSchemas,updateParentPaths,synchronizeParentFixture} from "./execution-positive-parent-reader.mjs";
+import {parentCurrentSchemas,updateParentPaths,updateFollowingParentPaths,updateLiveParentPath,synchronizeParentFixture,
+  liveSourceCurrentSchemas,updateLiveSourcePath,synchronizeLiveSourceFixture} from "./execution-positive-parent-reader.mjs";
+import {activationCurrentSchemas,updateActivationPaths,activationCurrentFixture,activationFixtureName} from "./execution-activation-current-reader.mjs";
 const root=resolve(dirname(fileURLToPath(import.meta.url)),"..");
 const route="/api/v1/execution/operations/{operation_id}";
 export const f0ReadRoute="/api/v1/execution/operations/f0/{operation_id}";
@@ -90,6 +92,8 @@ export const operationReaderSchema=()=>({oneOf:[
   {$ref:"../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionOperation"},
   {$ref:"execution-trusted-commands.openapi.json#/components/schemas/CommandStatus"},
   {$ref:"../schemas/execution-operations.v1.schema.json#/$defs/OperationalWorkflowV2"},
+  {$ref:"../schemas/execution-operations.v1.schema.json#/$defs/R2ParentOperationReadV2"},
+  {$ref:"../schemas/execution-operations.v1.schema.json#/$defs/PaperExitParentOperationReadV2"},
 ]});
 
 /** The published catalogue is generated from the same reviewed 64-key source
@@ -137,17 +141,24 @@ export function synchronizeOperationReaders(check=false) {
   schemaAfter=member(schemaAfter,"F0CommandCollection",f0CollectionSchema(),"$defs",4);
   for(const [name,value] of Object.entries(operationalCurrentSchemas()))schemaAfter=member(schemaAfter,name,value,"$defs",4);
   for(const [name,value] of Object.entries(parentCurrentSchemas()))schemaAfter=member(schemaAfter,name,value,"$defs",4);
+  for(const [name,value] of Object.entries(liveSourceCurrentSchemas()))schemaAfter=member(schemaAfter,name,value,"$defs",4);
+  for(const [name,value] of Object.entries(activationCurrentSchemas()))schemaAfter=member(schemaAfter,name,value,"$defs",4);
   if(check){if(schemaBefore!==schemaAfter)throw new Error("Finite F0 reader schema drift");}
   else writeFileSync(schemaPath,schemaAfter);
   for(const name of ["execution-operations","execution-governance"]) {
     const path=resolve(root,"openapi/"+name+".openapi.json"),before=readFileSync(path,"utf8"),api=JSON.parse(before);
     const get=api.paths[route].get;
-    get.description="Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. Other SCOPED_V2 ids require actual immutable queue/F0 provenance under exact target/environment audit, never creator/ADMIN/read_all permission or a family fallback. Legacy decision readers remain separate with their gate checks. GET never dispatches/reconciles; ACK is not APPLIED/FILLED. HTTP private, no-store.";
-    get.responses["200"]={description:"Authorized concrete operation; current-audit finite workflow variant is additive.",
+    get.description="Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. SCOPED_V2 uses positive stored family identity: F0 keeps immutable queue/intent provenance and exact target audit; selected R2/Paper plans require BOTH current PAPER deployment/portfolio audit anchors, ROOT plus exact DECISION_OPERATION field purpose and the actual gate/member requirement. Unknown, unsupported or ambiguous identity never tries another family. No creator/ADMIN/read_all permission substitute. Legacy decision readers remain separate. Historical expiry/expected versions do not expire today's authorized read or assert current apply eligibility. GET never dispatches/reconciles; stored Portal APPLIED is not TS acceptance/FILLED. HTTP private, no-store.";
+    get.responses["200"]={description:"Authorized concrete operation; finite workflow and selected R2/Paper plan variants are additive, not source receipts.",
       headers:{"Cache-Control":{schema:{const:"private, no-store"}}},
       content:{"application/json":{schema:operationReaderSchema()}}};
-    for(const status of [400,401,403,404,409,503]) get.responses[status]??={description:
-      status===404?"Unknown and hidden commands have the same safe envelope.":"Typed current-authority refusal; no upstream or legacy fallback."};
+    for(const status of [400,401,403,404,409,503]){
+      const existing=get.responses[status]??{};
+      get.responses[status]={...existing,description:existing.description??(status===404?
+        "Unknown and hidden commands have the same safe envelope.":"Typed current-authority refusal; no upstream or legacy fallback."),
+        headers:{...existing.headers,"Cache-Control":{schema:{const:"private, no-store"}}},
+        content:{...existing.content,"application/json":{schema:{$ref:"execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"}}}};
+    }
     let after=member(before,route,api.paths[route],"paths",4);
     if(name==="execution-operations"){
       const updated=JSON.parse(after);updateOperationalPaths(updated);
@@ -165,17 +176,53 @@ export function synchronizeOperationReaders(check=false) {
     if(name==="execution-governance"){
       const updated=JSON.parse(after);
       for(const path of updateParentPaths(updated))after=member(after,path,updated.paths[path],"paths",4);
+      for(const path of updateFollowingParentPaths(updated,name))after=member(after,path,updated.paths[path],"paths",4);
       after=member(after,"components",updated.components,null,2);
     }
     if(check){if(before!==after)throw new Error("Operation reader contract drift: "+name);}
     else writeFileSync(path,after);
   }
+  // Canary has no generic operation GET. Touch only its existing finite
+  // parent GET and component, using the SAME finite-member writer.
+  const canaryPath=resolve(root,"openapi/execution-canary.openapi.json");
+  const canaryBefore=readFileSync(canaryPath,"utf8"),canary=JSON.parse(canaryBefore);
+  let canaryAfter=canaryBefore;
+  for(const path of updateFollowingParentPaths(canary,"execution-canary"))
+    canaryAfter=member(canaryAfter,path,canary.paths[path],"paths",4);
+  canaryAfter=member(canaryAfter,"components",canary.components,null,2);
+  if(check){if(canaryBefore!==canaryAfter)throw new Error("Following parent contract drift: execution-canary");}
+  else writeFileSync(canaryPath,canaryAfter);
+  // Stored approval metadata and the source-only deployment screen retain
+  // distinct routes and independently proven authority.
+  const profileReadPath=resolve(root,"openapi/execution-profile-read.openapi.json");
+  const profileBefore=readFileSync(profileReadPath,"utf8"),profileRead=JSON.parse(profileBefore);
+  const parentRoute=updateLiveParentPath(profileRead);
+  let profileAfter=member(profileBefore,parentRoute,profileRead.paths[parentRoute],"paths",4);
+  if(check){if(profileBefore!==profileAfter)throw new Error("Finite Live parent contract drift");}
+  else writeFileSync(profileReadPath,profileAfter);
+  // Existing Live deployment GET, not the separate stored approval route.
+  // Same finite member writer; all unrelated historical bytes remain intact.
+  const livePath=resolve(root,"openapi/execution-live-full.openapi.json");
+  const liveBefore=readFileSync(livePath,"utf8"),live=JSON.parse(liveBefore);
+  const liveRoute=updateLiveSourcePath(live);
+  let liveAfter=member(liveBefore,liveRoute,live.paths[liveRoute],"paths",4);
+  liveAfter=member(liveAfter,"components",live.components,null,2);
+  if(check){if(liveBefore!==liveAfter)throw new Error("Finite Live source contract drift");}
+  else writeFileSync(livePath,liveAfter);
   const fixture=resolve(root,"fixtures/execution-f0-command-collection.synthetic.valid.json");
   const bytes=JSON.stringify(f0CollectionFixture(),null,2)+"\n";
   if(check){if(readFileSync(fixture,"utf8")!==bytes)throw new Error("F0 collection fixture drift");}
   else writeFileSync(fixture,bytes);
+  const activationPath=resolve(root,"openapi/execution-staged-activation.openapi.json"),activationBefore=readFileSync(activationPath,"utf8"),activation=JSON.parse(activationBefore);
+  let activationAfter=activationBefore;
+  for(const path of updateActivationPaths(activation))activationAfter=member(activationAfter,path,activation.paths[path],"paths",4);
+  activationAfter=member(activationAfter,"components",activation.components,null,2);
+  const activationFixturePath=resolve(root,"fixtures/"+activationFixtureName),activationFixtureBytes=JSON.stringify(activationCurrentFixture(),null,2)+"\n";
+  if(check){if(activationBefore!==activationAfter||readFileSync(activationFixturePath,"utf8")!==activationFixtureBytes)throw Error("Activation reader contract drift");}
+  else{writeFileSync(activationPath,activationAfter);writeFileSync(activationFixturePath,activationFixtureBytes);}
   synchronizeOperationalFixture(check);
   synchronizeParentFixture(check);
+  synchronizeLiveSourceFixture(check);
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))
   synchronizeOperationReaders(process.argv.includes("--check"));

@@ -216,7 +216,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. Other SCOPED_V2 ids require actual immutable queue/F0 provenance under exact target/environment audit, never creator/ADMIN/read_all permission or a family fallback. Legacy decision readers remain separate with their gate checks. GET never dispatches/reconciles; ACK is not APPLIED/FILLED. HTTP private, no-store. */
+        /** @description Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. SCOPED_V2 uses positive stored family identity: F0 keeps immutable queue/intent provenance and exact target audit; selected R2/Paper plans require BOTH current PAPER deployment/portfolio audit anchors, ROOT plus exact DECISION_OPERATION field purpose and the actual gate/member requirement. Unknown, unsupported or ambiguous identity never tries another family. No creator/ADMIN/read_all permission substitute. Legacy decision readers remain separate. Historical expiry/expected versions do not expire today's authorized read or assert current apply eligibility. GET never dispatches/reconciles; stored Portal APPLIED is not TS acceptance/FILLED. HTTP private, no-store. */
         get: operations["getPaperExitDecisionOperation"];
         put?: never;
         post?: never;
@@ -233,7 +233,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns the Portal-owned seven-step Sandbox Certification and three source-attributed panels. Missing source evidence remains explicitly unavailable. */
+        /** @description Sticky current Core mode preserves legacy v1 separately. SCOPED_V2 publishes only a finite current-authorized Portal parent after BOTH current TS-qualified deployment/portfolio audit anchors and the exact reviewed root field purpose. Sandbox uses SANDBOX current correspondence and active membership; Canary uses LIVE current correspondence plus independent governance.canary.read. Current association is NOT captured historical native membership. Optional fields require separate purposes. Stored Portal evaluation/DRAFT never asserts a source verdict, current eligibility, activated runtime or effective capital; source screens remain explicitly unpublished. No mutation/upstream call, owner/ADMIN shortcut or fallback after current-authority refusal. One shared flight fences body and contextual errors after local/source checks and LAST Core. */
         get: operations["getSandboxCertification"];
         put?: never;
         post?: never;
@@ -1082,6 +1082,447 @@ export interface components {
             };
             data: {
                 exit_review: components["schemas"]["PaperExitParentReadV2"];
+            };
+        };
+        /** @description Exact selected Portal plan with current-authorized ROOT metadata. APPLIED is stored Portal state, NOT TS acceptance/settlement/verification. Original expiry is historical metadata, not current read TTL; no status rewrite. Runtime additionally checks expires_at_ms>=created_at_ms and nonnull applied_at_ms>=created_at_ms, plus ROOT timestamp relations. Public millisecond equality is valid for a strictly positive sub-ms stored interval. No private intent, actor, token, response, receipt, prose or optional parent section. R2 captured parent pins are all-null or all-present; they are NOT today's R1 version or current permission. */
+        R2ParentOperationReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.governance-parent-operation.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "PAPER";
+            };
+            /** @description Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read. */
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "R2";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            operation_id: string;
+            /** @constant */
+            command_version: 1;
+            expected_version: number;
+            /** @enum {string} */
+            status: "PLANNED" | "APPLIED" | "EXPIRED";
+            parent_approval_id: string | null;
+            parent_approval_version: number | null;
+            parent_evidence_set_hash: string | null;
+            created_at_ms: number;
+            expires_at_ms: number;
+            applied_at_ms: number | null;
+            /** @constant */
+            family: "R2";
+            /** @constant */
+            command_type: "GOVERNANCE_R2_DECISION";
+            /** @enum {string} */
+            decision: "APPROVE" | "APPROVE_WITH_CONDITION" | "DENY";
+        } & (unknown & ({
+            parent_approval_id?: null;
+            parent_approval_version?: null;
+            parent_evidence_set_hash?: null;
+        } | {
+            parent_approval_id?: string;
+            parent_approval_version?: number;
+            parent_evidence_set_hash?: string;
+        }));
+        /** @description Exact selected Portal plan with current-authorized ROOT metadata. APPLIED is stored Portal state, NOT TS acceptance/settlement/verification. Original expiry is historical metadata, not current read TTL; no status rewrite. Runtime additionally checks expires_at_ms>=created_at_ms and nonnull applied_at_ms>=created_at_ms, plus ROOT timestamp relations. Public millisecond equality is valid for a strictly positive sub-ms stored interval. No private intent, actor, token, response, receipt, prose or optional parent section. Paper plans do not capture parent_approval_*; all three fields must remain null. expected_version is the captured review version. */
+        PaperExitParentOperationReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.governance-parent-operation.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "PAPER";
+            };
+            /** @description Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read. */
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "PAPER_EXIT";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            operation_id: string;
+            /** @constant */
+            command_version: 1;
+            expected_version: number;
+            /** @enum {string} */
+            status: "PLANNED" | "APPLIED" | "EXPIRED";
+            parent_approval_id: null;
+            parent_approval_version: null;
+            parent_evidence_set_hash: null;
+            created_at_ms: number;
+            expires_at_ms: number;
+            applied_at_ms: number | null;
+            /** @constant */
+            family: "PAPER_EXIT";
+            /** @constant */
+            command_type: "GOVERNANCE_PAPER_EXIT_DECISION";
+            /** @enum {string} */
+            decision: "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
+        } & unknown;
+        /** @description Finite Portal Sandbox root under current exact SANDBOX deployment+portfolio audit, reviewed SANDBOX_ROOT fields and active workspace membership. CURRENT_NATIVE_TARGET_CORRESPONDENCE is a current association only, NOT an attested historical native deployment/portfolio edge. Optional steps/lineage each require their own exact reviewed purpose. Source/runtime/promotion effects are false. No private account, operator, prose, URLs, smoke amounts, raw evidence or commands. */
+        SandboxParentReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.following-parent.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+                /** @constant */
+                runtime_activation_requested: false;
+                /** @constant */
+                promotion_execution_requested: false;
+            };
+            accepted_manager_facts: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION";
+            };
+            /** @constant */
+            family: "SANDBOX";
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "SANDBOX";
+                /** @constant */
+                association_basis: "CURRENT_NATIVE_TARGET_CORRESPONDENCE";
+                /** @constant */
+                captured_environment_attested: false;
+            };
+            /** @description Stored Portal lifecycle, never source certification or current promotion eligibility. Runtime additionally checks updated_at_ms>=created_at_ms, submitted_at_ms>=created_at_ms when present and decided_at_ms>=submitted_at_ms when present. Public millisecond equality is legal. */
+            certification: {
+                certification_id: string;
+                /** @enum {string} */
+                workflow_state: "DRAFT" | "IN_REVIEW" | "APPROVED" | "DENIED";
+                workflow_version: number;
+                policy_version: string;
+                formula_version: string;
+                created_at_ms: number;
+                updated_at_ms: number;
+                submitted_at_ms: number | null;
+                decided_at_ms: number | null;
+                /** @enum {string} */
+                source_integration_state: "UNAVAILABLE" | "SHADOW";
+                /** @enum {string} */
+                delivery_profile: "fixture" | "shadow";
+            } & (unknown & unknown);
+            steps: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "CURRENT_LATEST_STORED";
+                items: ({
+                    /** @enum {string} */
+                    step_key: "CONNECT" | "SYNC" | "ORDER_TYPES" | "RECONCILIATION" | "TIMEBOXED_RUN" | "CLEANUP" | "EXIT_REVIEW";
+                    /** @enum {string} */
+                    availability: "AVAILABLE" | "NOT_RECORDED";
+                    evidence_id: string | null;
+                    stored_evaluation_state: ("PASS" | "FAIL" | "STALE" | "UNAVAILABLE") | null;
+                    source_authority: ("PORTAL" | "EXECUTION" | "BROKER" | "DERIVED") | null;
+                    source_verification_state: ("VERIFIED" | "UNAVAILABLE") | null;
+                    as_of_ms: number | null;
+                    expires_at_ms: number | null;
+                } & unknown)[] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+            lineage: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "STORED_PORTAL_REFERENCE";
+                promotion_grant_id: string;
+                paper_exit_review_id: string;
+                r1_approval_id: string;
+                r2_approval_id: string;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+        };
+        /** @description Finite immutable Portal Canary DRAFT under exact current LIVE deployment+portfolio audit, independent governance.canary.read and CANARY_ROOT fields. LIVE is requested current association, NOT an attested historical native environment or active Canary. Proposal amounts are positive exact decimal strings, at most20 integer/18 fractional digits, never JS Number, economic backing/budget or effective exposure. Optional proposal/lineage each require their own reviewed purpose. Source verdict NOT_ASSERTED; production_command_active and every side-effect flag remain false. Captured certification version is historical metadata, not current eligibility. */
+        CanaryParentReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.following-parent.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+                /** @constant */
+                runtime_activation_requested: false;
+                /** @constant */
+                promotion_execution_requested: false;
+            };
+            accepted_manager_facts: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION";
+            };
+            /** @constant */
+            family: "CANARY";
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "LIVE";
+                /** @constant */
+                association_basis: "CURRENT_NATIVE_TARGET_CORRESPONDENCE";
+                /** @constant */
+                captured_environment_attested: false;
+            };
+            envelope: {
+                envelope_id: string;
+                revision: number;
+                previous_envelope_id: string | null;
+                /** @constant */
+                status: "DRAFT";
+                expected_certification_version: number;
+                created_at_ms: number;
+                /** @constant */
+                source_integration_state: "UNAVAILABLE";
+                /** @constant */
+                delivery_profile: "fixture";
+                /** @constant */
+                production_command_active: false;
+            } & unknown;
+            proposal: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "PROPOSED_NOT_EFFECTIVE";
+                base_risk_profile_revision: string;
+                currency: string;
+                capital_cap: string;
+                gross_notional_cap: string;
+                daily_loss_cap: string;
+                max_open_orders: number;
+                duration_days: number;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+            lineage: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "STORED_PORTAL_REFERENCE";
+                certification_id: string;
+                promotion_plan_id: string;
+                paper_exit_review_id: string;
+                r1_approval_id: string;
+                r2_approval_id: string;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+        };
+        /** @description Finite stored Portal LIVE_GATE under current exact DEPLOYMENT/LIVE audit, independent governance.live.read and reviewed LIVE_ROOT purpose. No Portfolio or R1/R2 predecessor was captured or fabricated. Historical expiry is metadata, not current read authority. Manifest integrity is local stored-byte verification, not TS acceptance, broker state or runtime commissioning; source facts stay separately unavailable. Runtime additionally verifies timestamp ordering, exact workspace/parent/target and original manifest. No private actor/prose/hash preimage. */
+        LiveParentReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.live-parent.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+                /** @constant */
+                runtime_activation_requested: false;
+            };
+            anchors: {
+                deployment_id: string;
+                /** @constant */
+                environment: "LIVE";
+            };
+            /** @description Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read. */
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "LIVE_GATE";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            /** @constant */
+            family: "LIVE_GATE";
+            accepted_manager_facts: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION";
+            };
+        };
+        OperationalLiveParentCompositionV2: {
+            /** @constant */
+            schema_version: "execution.operational-composition.v1";
+            /** @constant */
+            logical_operation_id: "executionOperationalLiveReviewV1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            source_authority: "PORTAL_CONTROL_ONLY";
+            workspace_id: string;
+            read_at_ms: number;
+            /** Format: date-time */
+            read_at: string;
+            composite_revision: string;
+            source_health: {
+                input_digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            redacted_command_journal: {
+                digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            canary_twin_comparison: {
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            command_authority: {
+                /** @constant */
+                state: "UNCHANGED_FAIL_CLOSED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            lineage: {
+                source_health_input_digest: string;
+                command_journal_digest: string;
+                workflow_digest: string;
+                /** @constant */
+                formula_version: "execution.operational-composition.v1";
+            };
+            data: {
+                governance: components["schemas"]["LiveParentReadV2"];
+                accepted_manager_facts: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    reason_code: "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION";
+                };
             };
         };
         Capabilities: {
@@ -2975,57 +3416,75 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Authorized concrete operation; current-audit finite workflow variant is additive. */
+            /** @description Authorized concrete operation; finite workflow and selected R2/Paper plan variants are additive, not source receipts. */
             200: {
                 headers: {
                     "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExecutionCommandOperation"] | components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"] | components["schemas"]["CommandStatus"] | components["schemas"]["OperationalWorkflowV2"];
+                    "application/json": components["schemas"]["ExecutionCommandOperation"] | components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"] | components["schemas"]["CommandStatus"] | components["schemas"]["OperationalWorkflowV2"] | components["schemas"]["R2ParentOperationReadV2"] | components["schemas"]["PaperExitParentOperationReadV2"];
                 };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */
             400: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */
             401: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */
             403: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
             /** @description Unknown and hidden commands have the same safe envelope. */
             404: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */
             409: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */
             503: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
             default: components["responses"]["Problem"];
         };
@@ -3043,13 +3502,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Sandbox Certification detail */
+            /** @description Legacy parent OR finite current-authorized v2 Portal root; not an effective source, certification, capital or execution verdict. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CertificationResponse"];
+                    "application/json": components["schemas"]["CertificationResponse"] | components["schemas"]["SandboxParentReadV2"];
                 };
             };
             default: components["responses"]["Problem"];

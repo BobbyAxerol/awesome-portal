@@ -23,6 +23,12 @@ export interface PositiveParentOperationCandidate {
   readonly parent: PositiveParentCandidate;
   readonly operationId: string;
 }
+/** Routing metadata only, never a reusable authorization permit.
+ * UNAVAILABLE includes absent, unsupported, invalid join and local collisions.
+ * A NULL joined parent is deliberately NOT permission to try another reader. */
+export type PositiveParentOperationIdentity =
+  | Readonly<{ kind: "PARENT"; selected: PositiveParentOperationCandidate }>
+  | Readonly<{ kind: "F0" | "UNAVAILABLE" }>;
 
 /** Internal finite SQL records. Main owns validation/public purpose mapping.
  * UTC strings retain PG precision; do not put them through Date for revision.
@@ -237,7 +243,9 @@ export class PositiveParentRepository {
     const limit = cap + 1;
     const result = await db.query<{ payload: string | null }>(`WITH selected AS MATERIALIZED (
       ${sql} LIMIT ${limit}
-    ), encoded AS MATERIALIZED (SELECT row_to_json(selected)::text AS payload FROM selected),
+    ), encoded AS MATERIALIZED (
+      SELECT row_to_json(__parent_selected_row)::text AS payload FROM selected AS __parent_selected_row
+    ),
     admitted AS (SELECT count(*)<=${cap} AND COALESCE(sum(octet_length(payload)),0)<=${budget.bytes}
       AND COALESCE(max(octet_length(payload)),0)<=${ROW_BYTES} AS ok FROM encoded)
     SELECT CASE WHEN admitted.ok THEN encoded.payload ELSE NULL END AS payload
@@ -274,7 +282,7 @@ export class PositiveParentRepository {
    * Existing ecm_ routing remains with Main. Same-workspace F0/other governance
    * family collision refuses; foreign-workspace collisions cannot affect it.
    */
-  async operationIdentityCandidate(workspace: string, operationId: string): Promise<PositiveParentOperationCandidate | null> {
+  async operationIdentityCandidate(workspace: string, operationId: string): Promise<PositiveParentOperationIdentity> {
     if (!IdentifierSchema.safeParse(workspace).success || !IdentifierSchema.safeParse(operationId).success)
       return fail("PARENT_IDENTITY_INVALID");
     return this.read(async (db,budget) => {
@@ -290,11 +298,36 @@ export class PositiveParentRepository {
             AND NOT EXISTS (SELECT 1 FROM ${opposite} other
               WHERE other.workspace_id=a.workspace_id AND other.operation_id=p.operation_id)
             AND NOT EXISTS (SELECT 1 FROM execution_command_plans_f0 f
-              WHERE f.workspace_id=a.workspace_id AND f.operation_id=p.operation_id)`;
+              WHERE f.workspace_id=a.workspace_id AND f.operation_id=p.operation_id)
+            AND NOT EXISTS (SELECT 1 FROM execution_operation_queue_items q
+              WHERE q.workspace_id=a.workspace_id AND q.operation_id=p.operation_id)`;
       });
-      const rows = await this.rows<PositiveParentCandidate & {operationId:string}>(db,budget,
-        alternatives.join(" UNION ALL "),[workspace,operationId],1);
-      return rows[0] ? Object.freeze({parent:candidate(rows[0]),operationId}) : null;
+      // Ownership and joined identity are from the SAME bounded RR snapshot.
+      // Every local plan counts, including unsupported R1/Live command rows or
+      // a malformed/missing parent join. Do not inspect private plan fields.
+      const rows = await this.rows<{ kind: string; selected: (PositiveParentCandidate & {operationId:string}) | null }>(db,budget,
+        `WITH owners AS MATERIALIZED (
+          SELECT EXISTS (SELECT 1 FROM governance_decision_plans WHERE workspace_id=$1 AND operation_id=$2) AS governance,
+            EXISTS (SELECT 1 FROM governance_paper_exit_decision_plans WHERE workspace_id=$1 AND operation_id=$2) AS paper,
+            EXISTS (SELECT 1 FROM execution_command_plans_f0 WHERE workspace_id=$1 AND operation_id=$2) AS f0,
+            EXISTS (SELECT 1 FROM execution_operation_queue_items WHERE workspace_id=$1 AND operation_id=$2) AS queue
+        ), parent_candidate AS MATERIALIZED (${alternatives.join(" UNION ALL ")})
+        SELECT CASE
+          WHEN (owners.governance::int+owners.paper::int)=1 AND NOT owners.f0 AND NOT owners.queue
+            AND parent_candidate."operationId" IS NOT NULL THEN 'PARENT'
+          WHEN (owners.f0 OR owners.queue) AND NOT owners.governance AND NOT owners.paper THEN 'F0'
+          ELSE 'UNAVAILABLE' END AS kind,
+          CASE WHEN parent_candidate."operationId" IS NULL THEN NULL
+            ELSE row_to_json(parent_candidate) END AS selected
+        FROM owners LEFT JOIN parent_candidate ON true`,[workspace,operationId],1);
+      const row = rows[0];
+      if (!row) return fail("PARENT_RECORD_INVALID");
+      if (row.kind === "PARENT") {
+        if (!row.selected || row.selected.operationId !== operationId) return fail("PARENT_IDENTITY_INVALID");
+        return Object.freeze({kind:"PARENT",selected:Object.freeze({parent:candidate(row.selected),operationId})});
+      }
+      if (row.kind === "F0" || row.kind === "UNAVAILABLE") return Object.freeze({kind:row.kind});
+      return fail("PARENT_RECORD_INVALID");
     });
   }
 
@@ -448,7 +481,9 @@ export class PositiveParentRepository {
           AND NOT EXISTS (SELECT 1 FROM ${opposite} other
             WHERE other.workspace_id=r.workspace_id AND other.operation_id=c.operation_id)
           AND NOT EXISTS (SELECT 1 FROM execution_command_plans_f0 f
-            WHERE f.workspace_id=r.workspace_id AND f.operation_id=c.operation_id)`,"c.created_at,c.operation_id"),
+            WHERE f.workspace_id=r.workspace_id AND f.operation_id=c.operation_id)
+          AND NOT EXISTS (SELECT 1 FROM execution_operation_queue_items q
+            WHERE q.workspace_id=r.workspace_id AND q.operation_id=c.operation_id)`,"c.created_at,c.operation_id"),
         [...values,operationId],1);
       if (operationId !== undefined && operations.length !== 1) return fail("PARENT_NOT_FOUND");
       for (const op of operations) {

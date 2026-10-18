@@ -1,5 +1,34 @@
 # ELP2-04 — Scoped reader handoff to Claude
 
+**Technical reader continuation2026-10-18:** same generation target now
+updates six clients (operations/governance/canary/live-full/staged-activation/
+profile-read). Existing `executionGateLiveReviewV1` has `LiveParentReadV2`;
+existing `getLiveFullOperations` has `LiveSourceOperationsReadV2`;
+existing `listActivationCapabilities`/`getStagedActivationPlan` have
+`ActivationCapabilitiesReadV2`/`ActivationPlanReadV2`. Narrow by schema_version,
+not legacy casting or operation-prefix guesses. Exact contract/authority and
+actual validation status are in the [owning packet](positive-parent-operations-and-following.md#technical-reader-consumer-addendum--2026-10-18).
+Source-only Live panels and stored Live approval are independent reads, not a
+joint atomic source/approval verdict. No shared preview or frontend assignment.
+Producer is UNCOMMITTED; AWAITING_CONSUMER_REVIEW remains unchanged.
+
+**Technical gate update10:52UTC:** Node22 build passed but seven API checks
+failed; [actual results and accepted fixture corrections](positive-parent-operations-and-following.md#actual-affected-technical-gate--2026-10-18t105253utc)
+are preserved. Local pure ProductRead86/86 passed afterwards; coherent API/
+restore/hook landing is still pending. In particular a genuinely replaced
+publication can fail503 during ORIGINAL authority renewal, outranking a held
+snapshot409. Never interpret either as permission to retry legacy or render
+an old body. Activation Core grant change409 is distinct from native-only404.
+No public contract changed in these corrections and no consumer ACK is claimed.
+
+**Current2026-10-18:** ROOT parents landed0d5ceaba with actual914contract/
+7143API PASS at08:53UTC. The next [exact selected-operation and Sandbox/Canary
+consumer handoff](positive-parent-operations-and-following.md#contract-and-claude-handoff)
+has generated finite variants but remains UNCOMMITTED/VALIDATION_NOT_RUN at
+entry. Preserve schema/family dispatch, current field-purpose absence and
+CURRENT_CORE_BASELINE vs actual native authority. No frontend assignment or
+ACK inferred; AWAITING_CONSUMER_REVIEW/NOT_STARTED_BY_OWNER_DIRECTION.
+
 **Exact-own collection local validation2026-10-18T03:46:03UTC:**7API suites/
 454PASS and45contract PASS, build/scoped restore/current source freeze/owned
 cleanup PASS. Producer is UNCOMMITTED pending one normal hook; exact per-file

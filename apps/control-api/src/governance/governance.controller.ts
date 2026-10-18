@@ -54,6 +54,7 @@ import { ExecutionCommandService } from "../execution-v2/command.service";
 import { commandId } from "../execution-v2/command.contract";
 import { CommandHttpError,commandHttpCall } from "../execution-v2/command.error";
 import { PositiveParentReads } from "./positive-parent.service";
+import { LiveParentReads } from "./live-parent.service";
 
 interface GovernanceRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -76,6 +77,7 @@ export class GovernanceController {
     @Optional() @Inject(ExecutionCommandService) private readonly trustedCommands?: ExecutionCommandService,
     @Optional() @Inject(OperationalReadService) private readonly currentReads?: OperationalReadService,
     @Optional() @Inject(PositiveParentReads) private readonly positiveParents?: PositiveParentReads,
+    @Optional() @Inject(LiveParentReads) private readonly liveParents?: LiveParentReads,
   ) {}
 
   @Get("/governance/review-capture-capabilities")
@@ -330,12 +332,19 @@ export class GovernanceController {
   }
 
   @Get("/governance/approvals/:approval_id/live")
+  @Header("Cache-Control", "private, no-store")
   async live(
     @Req() request: GovernanceRequest,
     @Param("approval_id") approvalId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
+    const principal={user:request.portalUser,session:request.portalSession,workspaceId,
+      viewerWorkspaceId:request.portalWorkspaceId};
+    if(await this.readScopes?.coreSelectionMode(principal)==="SCOPED_V2"){
+      if(!this.liveParents)throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      return this.liveParents.detail(principal,approvalId);
+    }
     return this.governance.liveDetail(
       request.portalUser,
       request.portalSession,
@@ -511,6 +520,11 @@ export class GovernanceController {
     const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
       viewerWorkspaceId: request.portalWorkspaceId };
     if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.positiveParents) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      const parent = await this.positiveParents.operationOrNull(principal, operationId);
+      if (parent !== null) return parent;
+      // Only a positively classified F0 ID reaches its UNCHANGED reader. No
+      // catch/fallback after parent selection, absence, collision or safe error.
       if (!this.currentReads) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
       return this.currentReads.workflow(principal, operationId);
     }

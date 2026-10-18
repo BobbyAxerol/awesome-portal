@@ -724,7 +724,7 @@ export class ExecutionAccessService {
           throw new AccessPolicyError("TS_MEMBERSHIP_REVISION_CONFLICT",409);
       } else {
         const current=relations?.membership;
-        if(!current||current.revision!==fact.membership_revision||current.receipt_id!==fact.receipt_id||
+        if(relations?.qualified!==true||!current||current.revision!==fact.membership_revision||current.receipt_id!==fact.receipt_id||
           current.mapping_revision!==fact.mapping_revision) throw new AccessPolicyError("TS_MEMBERSHIP_REVISION_CONFLICT",409);
       }
     }

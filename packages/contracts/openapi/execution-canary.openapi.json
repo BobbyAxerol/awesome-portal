@@ -10,16 +10,53 @@
       "get": {
         "operationId": "getCanaryControlRoom",
         "parameters": [
-          { "name": "deployment_id", "in": "path", "required": true, "schema": { "type": "string" } },
-          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string" } }
+          {
+            "name": "deployment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
-            "description": "Latest Portal envelope composed with per-branch ready, empty, partial, stale or unavailable Live-profile facts.",
-            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom" } } }
+            "description": "Legacy parent OR finite current-authorized v2 Portal root; not an effective source, certification, capital or execution verdict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/CanaryParentReadV2"
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
           },
-          "404": { "$ref": "#/components/responses/Problem" }
-        }
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "description": "Sticky current Core mode preserves legacy v1 separately. SCOPED_V2 publishes only a finite current-authorized Portal parent after BOTH current TS-qualified deployment/portfolio audit anchors and the exact reviewed root field purpose. Sandbox uses SANDBOX current correspondence and active membership; Canary uses LIVE current correspondence plus independent governance.canary.read. Current association is NOT captured historical native membership. Optional fields require separate purposes. Stored Portal evaluation/DRAFT never asserts a source verdict, current eligibility, activated runtime or effective capital; source screens remain explicitly unpublished. No mutation/upstream call, owner/ADMIN shortcut or fallback after current-authority refusal. One shared flight fences body and contextual errors after local/source checks and LAST Core."
       }
     },
     "/api/v1/execution/governance/canary-envelopes": {
@@ -46,20 +83,43 @@
       "Problem": {
         "type": "object",
         "additionalProperties": true,
-        "required": ["type", "title", "status"],
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
         "properties": {
-          "type": { "type": "string" },
-          "title": { "type": "string" },
-          "status": { "type": "integer" },
-          "detail": { "type": "string" },
-          "code": { "type": "string" }
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
         }
+      },
+      "CanaryParentReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/CanaryParentReadV2"
       }
     },
     "responses": {
       "Problem": {
         "description": "Typed fail-closed problem.",
-        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
       }
     }
   }

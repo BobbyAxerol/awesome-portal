@@ -9,13 +9,150 @@
     "/api/v1/execution/activation/capabilities": {
       "get": {
         "operationId": "listActivationCapabilities",
-        "parameters": [{ "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string" } }],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "description": "REQUIRED for SCOPED_V2: explicit current unique published ROOT perspective; never inferred from target profile. Legacy unchanged.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Seven independent source-dark capabilities.",
-            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-staged-activation.v1.schema.json#/$defs/CapabilitiesResponse" } } }
+            "description": "Legacy v1 OR finite current-authorized Activation metadata; no activation.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-staged-activation.v1.schema.json#/$defs/CapabilitiesResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ActivationCapabilitiesReadV2"
+                    }
+                  ]
+                }
+              }
+            }
           },
-          "401": { "$ref": "#/components/responses/Problem" }
+          "400": {
+            "description": "Fixed current read refusal; no raw provider/SQL/private data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Fixed current read refusal; no raw provider/SQL/private data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Fixed current read refusal; no raw provider/SQL/private data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Fixed current read refusal; no raw provider/SQL/private data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Fixed current read refusal; no raw provider/SQL/private data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -38,12 +175,157 @@
       "get": {
         "operationId": "getStagedActivationPlan",
         "parameters": [
-          { "name": "plan_id", "in": "path", "required": true, "schema": { "type": "string" } },
-          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string" } }
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "description": "REQUIRED for SCOPED_V2: explicit current unique published ROOT perspective; never inferred from target profile. Legacy unchanged.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          }
         ],
         "responses": {
-          "200": { "description": "Persisted plan snapshot.", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-staged-activation.v1.schema.json#/$defs/PlanResponse" } } } },
-          "404": { "$ref": "#/components/responses/Problem" }
+          "200": {
+            "description": "Legacy v1 OR finite current-authorized Activation metadata; no activation.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-staged-activation.v1.schema.json#/$defs/PlanResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ActivationPlanReadV2"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fixed current read refusal; no raw provider/SQL/private data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Fixed current read refusal; no raw provider/SQL/private data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Fixed current read refusal; no raw provider/SQL/private data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Fixed current read refusal; no raw provider/SQL/private data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Fixed current read refusal; no raw provider/SQL/private data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -72,38 +354,161 @@
   },
   "components": {
     "schemas": {
-      "Hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+      "Hash": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
       "PlanRequest": {
-        "type": "object", "additionalProperties": false,
-        "required": ["schema_version", "workspace_id", "request_key", "capability_key", "action", "target_profile", "expected_capability_version", "compatibility_requirements", "evidence_refs", "reason"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "request_key",
+          "capability_key",
+          "action",
+          "target_profile",
+          "expected_capability_version",
+          "compatibility_requirements",
+          "evidence_refs",
+          "reason"
+        ],
         "properties": {
-          "schema_version": { "const": "execution.staged-activation-plan-request.v1" },
-          "workspace_id": { "type": "string" },
-          "request_key": { "type": "string" },
-          "capability_key": { "enum": ["PROJECTION", "QUERY", "SSE", "COMMAND_R1", "COMMAND_R2", "COMMAND_R3", "COMMAND_R4"] },
-          "action": { "enum": ["PROMOTE", "ROLLBACK"] },
-          "target_profile": { "enum": ["fixture", "shadow", "paper", "sandbox", "live_canary", "live_full"] },
-          "expected_capability_version": { "type": "integer", "minimum": 1 },
-          "compatibility_requirements": { "type": "array", "maxItems": 16, "items": { "type": "object" } },
-          "evidence_refs": { "type": "array", "maxItems": 16, "items": { "type": "object" } },
-          "reason": { "type": "string", "minLength": 8, "maxLength": 2000 }
+          "schema_version": {
+            "const": "execution.staged-activation-plan-request.v1"
+          },
+          "workspace_id": {
+            "type": "string"
+          },
+          "request_key": {
+            "type": "string"
+          },
+          "capability_key": {
+            "enum": [
+              "PROJECTION",
+              "QUERY",
+              "SSE",
+              "COMMAND_R1",
+              "COMMAND_R2",
+              "COMMAND_R3",
+              "COMMAND_R4"
+            ]
+          },
+          "action": {
+            "enum": [
+              "PROMOTE",
+              "ROLLBACK"
+            ]
+          },
+          "target_profile": {
+            "enum": [
+              "fixture",
+              "shadow",
+              "paper",
+              "sandbox",
+              "live_canary",
+              "live_full"
+            ]
+          },
+          "expected_capability_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "compatibility_requirements": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object"
+            }
+          },
+          "evidence_refs": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 2000
+          }
         }
       },
       "TransitionRequest": {
-        "type": "object", "additionalProperties": false,
-        "required": ["schema_version", "workspace_id", "request_key", "expected_plan_version", "expected_capability_version"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "request_key",
+          "expected_plan_version",
+          "expected_capability_version"
+        ],
         "properties": {
-          "schema_version": { "enum": ["execution.staged-activation-apply-request.v1", "execution.staged-activation-verify-request.v1"] },
-          "workspace_id": { "type": "string" },
-          "request_key": { "type": "string" },
-          "expected_plan_version": { "type": "integer", "minimum": 1 },
-          "expected_capability_version": { "type": "integer", "minimum": 1 }
+          "schema_version": {
+            "enum": [
+              "execution.staged-activation-apply-request.v1",
+              "execution.staged-activation-verify-request.v1"
+            ]
+          },
+          "workspace_id": {
+            "type": "string"
+          },
+          "request_key": {
+            "type": "string"
+          },
+          "expected_plan_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expected_capability_version": {
+            "type": "integer",
+            "minimum": 1
+          }
         }
       },
-      "Problem": { "type": "object", "additionalProperties": true, "required": ["type", "title", "status"], "properties": { "type": { "type": "string" }, "title": { "type": "string" }, "status": { "type": "integer" }, "code": { "type": "string" } } }
+      "Problem": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "ActivationCapabilitiesReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ActivationCapabilitiesReadV2"
+      },
+      "ActivationPlanReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ActivationPlanReadV2"
+      }
     },
     "responses": {
-      "Problem": { "description": "Typed fail-closed problem.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+      "Problem": {
+        "description": "Typed fail-closed problem.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
     }
   }
 }

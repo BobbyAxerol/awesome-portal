@@ -575,3 +575,88 @@ No resource/test/build/DB/credential/runtime mutation in either intake;
 cleanup NO_ACTION_NEEDED. Genuine provider/identity/field/STREAM/config and
 publication installation, cold recovery/native causality, budget/calibration,
 coexistence/P184G2/browser remain OPEN;11NOT_ENTRY_READY. No Claude ACK inferred.
+
+## Read-only owner intake —2026-10-18T08:18–08:19UTC
+
+Main read complete private `next09-mounted-source-followup.md`, SHA256
+`ca007dae9e9659db1aabc4525a522c7848fa943de7b0534ec230ca743a646183`.
+SOURCE_ONLY/NOT_RUN, no DB/API/credential contents, remote edits/test/build or
+runtime change. Exact approved host/worktrees remain those in the source
+alignment receipt. Observations are separate instants, not an atomic deployed
+artifact/authority snapshot.
+
+Edge HEAD `20a1d27fa4d03ef7162a7980fda3fe3602995a8b`, tracked dirty diff
+`a367896d86cdaced1bb6a292ef1c32f876a9640466fdf2e2a2403680ba186e05`;
+PM clean `0e5ca2128d6a48c7568d94935a661d51a28c0622`. Existing Edge replay PG
+source and Rust entrypoint are unchanged; the latter still has no observed
+ScopedReadService/PgScopedReplaySource/ScopedRealtimeHub construction. Do not
+recreate an existing adapter or infer a mount from class/source presence.
+
+Owner Manager Notice/reducer port is PREPARED_NOT_TYPECHECKED_NOT_EXECUTED_NOT_MOUNTED.
+Exact six-member62,423B archive SHA256
+`d2ac4a8e75652139510db777bc9eb6431fe1b89617668f527eef5829f59eb0cb`
+was approved for isolated transfer but not observed transferred. Owner has
+prepared one combined87expected cases after stopping its own prior waiter;
+no actual terminal87PASS was observed. This is not a reason to restart or
+duplicate its owned implementation/test. Earlier240 and separate15 remain
+historical receipts, not qualification of those newly changed bytes.
+
+PM source census owner receipt SHA256
+`5e32c2ab74eadc4076b3843d0744a6fe1f76e8ce9bd2b43bdfc40ece8fa654e2`
+reports81unique product cases plus26separate offline cases; not Main tests or
+Portal coverage. Fifty relations were inspected in one visibility;11baseline
+rows remain uncaptured/observed_state_matches=false. No genuine native
+generation/publication/head, held current human, snapshot barrier or atomic
+receiver checkpoint follows from that source census; six native wire modules
+remain unchanged.
+
+Accepted next09 path is exact qualified compatible owner hunks → existing
+ScopedNoticeSource + bounded current projection journal → SAME Hub/Candidate/
+physical NativeReadEgress/NativeFrameSettlement → existing Manager runtime
+realtime lifetime. ROOT-only notice qualification is a real local gap; no
+second store/ledger/poller/per-browser upstream is planned. Lane remains
+PORTAL_OBSERVATION/CURRENT_PAGE_ONLY/TS_replay=false, PM held READ ∩ Core
+Manager READ ∩ independent STREAM. Finite HTTP READ does not acquire STREAM.
+Named alpha_fleet source publication stays a separate OPEN requirement.
+
+Whole09/10 provider/trust/writer/current-human, installation, approved budgets/
+calibration/coexistence/P184G2/browser and11entry remain OPEN. Claude recurring
+intake7.3 preserved; no new actual consumer ACK. No resources created;
+cleanup/rollback NO_ACTION_NEEDED. This updates source-owner progress only.
+
+## Read-only owner intake —2026-10-18T10:35UTC
+
+Exact approved HK worktrees only; no remote edits, tests/builds, DB/API business
+calls, credential access, service or runtime changes. Main read the current
+Edge journal tail and PM final58.143/prepared58.144 sections, not every line of
+either journal. These are independent source observations, not a jointly held
+deployed-artifact/authority receipt.
+
+Edge HEAD remains `20a1d27fa4d03ef7162a7980fda3fe3602995a8b`; concurrent owner
+tracked/untracked WIP preserved. Observed journal SHA256
+`821103c61a0a5dbf7c4835242f6cfbb85fdc63ad16d6ac3f6ae64b4acbf0c096`.
+The owner is already implementing the SAME Manager observation source, scalar
+snapshot provenance and requested-limit/selected-Candidate continuity fixes.
+New realtime overlay has73 expected test definitions, NOT_EXECUTED; another87
+case qualification remains owner-owned. Do not duplicate/restart those jobs or
+count expected cases as PASS. Source/dependency transfer for an isolated HK
+qualification was rejected before process start: no observed transfer or new
+source installation. Existing240 and15 receipts do not qualify changed bytes.
+
+PM HEAD is now `3a796feb407886944d70d1c84c005c78fd28cb47`, with concurrent
+history-correlation WIP. Owner58.143 reports28 fresh tests (21PG/7unit),
+10:15:40–10:16:13UTC, plus26 separate offline planning cases. Real guarded
+rollback/fault/lost-ACK cases do not prove outer_commit, native generation,
+authenticated physical delivery or provider installation. Prepared58.144
+17-dataset history-correlation producer/client tests remain NOT_RUN. Existing
+report/source-history reader/export byte digests are unchanged from the
+previous source intake. These are source-owner results, not Main reruns or
+additional Portal coverage.
+
+Accepted next action: integrate only compatible, actually qualified owner
+source hunks through existing Manager consumer/runtime and SAME realtime
+lifetime. Native publication/current-human/field+STREAM installation, economic
+inputs, approved budget/calibration/coexistence/P184G2/browser remain OPEN;
+11NOT_ENTRY_READY. No Claude acknowledgement inferred; keep source and consumer
+requests under their original owning IDs. No resources created; cleanup and
+rollback NO_ACTION_NEEDED.

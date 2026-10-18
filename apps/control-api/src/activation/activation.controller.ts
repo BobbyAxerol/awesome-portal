@@ -11,6 +11,7 @@ import { newUlid } from "../id";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { ActivationService } from "./activation.service";
+import { CurrentActivationReads } from "./current-activation.service";
 import {
   StagedActivationApplyRequestSchema,
   StagedActivationPlanRequestSchema,
@@ -32,13 +33,15 @@ export class ActivationController {
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Optional() @Inject(ExecutionReadScopes) private readonly scopes?: ExecutionReadScopes,
+    @Optional() @Inject(CurrentActivationReads) private readonly currentReads?: CurrentActivationReads,
   ) {}
 
   @Get("/capabilities")
   @Header("Cache-Control", "private, no-store")
-  async capabilities(@Req() request: ActivationRequest, @Query("workspace_id") rawWorkspaceId?: unknown) {
+  async capabilities(@Req() request: ActivationRequest, @Query("workspace_id") rawWorkspaceId?: unknown, @Query("environment") rawEnvironment?: unknown) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.readTechnical(request, workspaceId, () => this.activation.capabilities(request.portalUser, workspaceId));
+    return this.readTechnical(request, workspaceId, () => this.activation.capabilities(request.portalUser, workspaceId),
+      () => this.currentReads!.capabilities(this.principal(request,workspaceId),rawEnvironment));
   }
 
   @Get("/plans/:plan_id")
@@ -47,20 +50,22 @@ export class ActivationController {
     @Req() request: ActivationRequest,
     @Param("plan_id") planId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
+    @Query("environment") rawEnvironment?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.readTechnical(request, workspaceId, () => this.activation.detail(request.portalUser, workspaceId, planId));
+    return this.readTechnical(request, workspaceId, () => this.activation.detail(request.portalUser, workspaceId, planId),
+      () => this.currentReads!.detail(this.principal(request,workspaceId),planId,rawEnvironment));
   }
 
-  private async readTechnical<T>(request: ActivationRequest, workspaceId: string, read: () => Promise<T>): Promise<T> {
+  private principal(request:ActivationRequest,workspaceId:string){return {user:request.portalUser,session:request.portalSession,workspaceId,
+    viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId};}
+  private async readTechnical<T,R>(request: ActivationRequest, workspaceId: string, read: () => Promise<T>, current:()=>Promise<R>): Promise<T|R> {
     const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
       viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId };
-    // Activation evidence/signature/compatibility fields have no commissioned
-    // V2 field policy. Maintenance health permission is not permission to read
-    // those details. Do not replace a plan with an unrelated health-only DTO,
-    // infer its environment from the URL, or disclose existence/evidence first.
-    if (this.scopes && await this.scopes.coreSelectionMode(principal) === "SCOPED_V2")
+    if (this.scopes && await this.scopes.coreSelectionMode(principal) === "SCOPED_V2") {
+      if(this.currentReads)return current();
       throw new GovernanceError("ACTIVATION_TECHNICAL_FIELDS_NOT_COMMISSIONED", "Activation technical field policy is not commissioned.", 503);
+    }
     const result = await read();
     if (this.scopes && await this.scopes.coreSelectionMode(principal) !== "LEGACY_COMPATIBILITY")
       throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);

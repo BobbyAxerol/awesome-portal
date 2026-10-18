@@ -1,5 +1,11 @@
 # ELP2-03 — Scoped policy, delegation and TS membership proposals
 
+**Current2026-10-18:** [Legacy qualification intake/use repair](legacy-qualification.md)
+is APPLIED_UNCOMMITTED/VALIDATION_NOT_RUN on0d5ceaba. Three narrow guards and
+existing regressions share the original04 coherent normal hook, not a second
+cell. Prior OwnProfile/per-grant delivery is preserved; genuine issuer/source/
+delegated ceiling and consumer gates remain OPEN, no runtime rights installed.
+
 Status: LOCAL_TECHNICAL_CHECKPOINT_LANDED / EXTERNAL_GATES_OPEN. Assigned in
 the active01→04 goal;03 now landed at
 `c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64` through normal hook89719 exit0.

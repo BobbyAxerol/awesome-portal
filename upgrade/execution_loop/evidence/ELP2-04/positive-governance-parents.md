@@ -169,3 +169,28 @@ earlier unstaged check). Remove only those blank lines and refresh the canonical
 snapshot digest; same semantics/tests, no second focused API build. No commit,
 source/index/runtime drift or test resources from that failed attempt. Retry
 the same owned coherent batch via normal hook, never bypass it.
+
+## Normal-hook terminal —2026-10-18T08:53:27UTC
+
+The same coherent retry `positive-parent-land-081609` is terminal PASS/exit0,
+landed `0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05`:36files,+5040/−31 against
+`ac056d46`. Contracts70files/914cases PASS; API394files PASS plus2existing
+skipped files,7143cases PASS plus3existing skips. These totals include the
+corrected positive-parent71/71, not extra independent coverage. API build and
+actual scoped PostgreSQL restore, including four access-row digests, PASS.
+N29/EDS12 retain runtime_effect NONE. Source/index and eight protected runtime
+tuples unchanged; owned resources empty and measurement lease released.
+Qualification: TEST_ONLY_CORE_CORRECTNESS_NOT_COMMISSIONING.
+
+Private immutable directory:
+`/home/bobby/.local/state/portal-execution-elp210/20261017/positive-parent-land-081609/`.
+Controller SHA256 `93cf4c7fbe2aed3d0326489984ec6718c74a28942d8f0822fa16f643c9b7b666`;
+gate.log `fb40b5c356670b11c832bb76c52e12e36b63a1265d231f116ff315d6b4b17585`.
+Earlier failures remain preserved. This supersedes pending local landing only,
+not actual source/provider/trust/consumer acceptance. No unchanged engine/load/
+browser gate was rerun to record the terminal.
+
+Next approved original04-008/009 package:
+[selected operations and Sandbox/Canary roots](positive-parent-operations-and-following.md).
+Those changed bytes require their own single coherent normal hook; they do
+not inherit this PASS. Full04/09/10/11 gates remain OPEN, no runtime/UI change.

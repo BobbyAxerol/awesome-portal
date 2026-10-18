@@ -8,7 +8,7 @@ import type { PositiveParentCandidate } from "./positive-parent.repository";
 import { parentFieldSetDigest, type ParentFieldPurpose } from "../execution-v2/parent-read-fields";
 
 const REVISION = "portal.execution.parent-fields.v1";
-const resources = (candidate: PositiveParentCandidate): readonly AccessResource[] => [
+const resources = (candidate: Pick<PositiveParentCandidate,"deploymentId"|"portfolioId">): readonly AccessResource[] => [
   { kind: "DEPLOYMENT", id: candidate.deploymentId }, { kind: "PORTFOLIO", id: candidate.portfolioId },
 ];
 const refused = (): never => { throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND", 404); };
@@ -19,22 +19,36 @@ export class ParentFieldPurposeError extends Error {
 /** Field selection cannot pick a different unrestricted ALLOW to rescue a
  * denied/expired/delegated seal-specific leaf. Current audit and gate DENYs
  * remain on the complete graph. No role/owner/read_all/.decide implication. */
-function selectedSeal(context: AccessEvaluationContext, candidate: PositiveParentCandidate, purpose: ParentFieldPurpose) {
+function selectedSeal(context:AccessEvaluationContext,candidate:PositiveParentCandidate,purpose:ParentFieldPurpose){
+  return selectedParentSeal(context,{...candidate,environment:"paper"},purpose);
+}
+// Shared exact selector only. Caller keeps its own existing gate/current-field
+// proof and same-flight terminal fence; this object is NOT a transferable permit.
+export function selectedParentSeal(context:AccessEvaluationContext,
+  candidate:Pick<PositiveParentCandidate,"workspaceId"|"deploymentId"|"portfolioId">&{environment:"paper"|"sandbox"|"live"},
+  purpose:ParentFieldPurpose){
+  return selectedParentFieldSeal(context,candidate.environment,resources(candidate),purpose);
+}
+/** SAME selected-leaf algorithm. Callers supply genuine exact stored/current
+ * anchors, never empty or duplicated placeholders to mint a field permit. */
+export function selectedParentFieldSeal(context:AccessEvaluationContext,
+  environment:"paper"|"sandbox"|"live",targets:readonly AccessResource[],purpose:ParentFieldPurpose){
+  if(targets.length<1||targets.length>2||new Set(targets.map(t=>JSON.stringify([t.kind,t.id]))).size!==targets.length)return null;
   const now = Math.max(context.now_ms, Date.now()), policy = context.policy;
-  const seal = policy?.parent_read_fields?.find(value => value.purpose === purpose && value.environment === "paper" &&
+  const seal = policy?.parent_read_fields?.find(value => value.purpose === purpose && value.environment === environment &&
     value.contract_revision === REVISION && value.field_set_sha256 === parentFieldSetDigest(purpose) &&
     value.valid_from_ms <= now && value.valid_until_ms > now);
   if (!seal) return null;
   const effective = { ...context, now_ms: now };
   const selected: { kind: string; id: string; grant_id: string; revision: string }[] = [];
-  for (const target of resources(candidate)) {
+  for (const target of targets) {
     // The overall audit check is not an authority for a different field leaf.
-    requireCurrentTsAuditRead(effective, target, "paper");
+    requireCurrentTsAuditRead(effective, target, environment);
     const grant = [...effective.grants].sort((a,b) => a.grant_id < b.grant_id ? -1 : a.grant_id > b.grant_id ? 1 : 0)
       .find(value => value.subject_user_id === effective.principal_id && value.workspace_id === effective.workspace_id &&
         value.action === "audit.read" && value.effect === "ALLOW" && value.requires_ts_acceptance === true &&
         value.field_policy_ref === seal.field_policy_ref && effective.relationsFor(value.subject_user_id).qualified &&
-        currentGrantAllows(effective, "audit.read", target, "paper", value.grant_id));
+        currentGrantAllows(effective, "audit.read", target, environment, value.grant_id));
     if (!grant) return null;
     selected.push({ kind: target.kind, id: target.id, grant_id: grant.grant_id, revision: grant.revision });
   }

@@ -147,7 +147,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. Other SCOPED_V2 ids require actual immutable queue/F0 provenance under exact target/environment audit, never creator/ADMIN/read_all permission or a family fallback. Legacy decision readers remain separate with their gate checks. GET never dispatches/reconciles; ACK is not APPLIED/FILLED. HTTP private, no-store. */
+        /** @description Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. SCOPED_V2 uses positive stored family identity: F0 keeps immutable queue/intent provenance and exact target audit; selected R2/Paper plans require BOTH current PAPER deployment/portfolio audit anchors, ROOT plus exact DECISION_OPERATION field purpose and the actual gate/member requirement. Unknown, unsupported or ambiguous identity never tries another family. No creator/ADMIN/read_all permission substitute. Legacy decision readers remain separate. Historical expiry/expected versions do not expire today's authorized read or assert current apply eligibility. GET never dispatches/reconciles; stored Portal APPLIED is not TS acceptance/FILLED. HTTP private, no-store. */
         get: operations["getExecutionCommandOperationF0"];
         put?: never;
         post?: never;
@@ -1344,6 +1344,140 @@ export interface components {
             /** @enum {string} */
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
         };
+        /** @description Exact selected Portal plan with current-authorized ROOT metadata. APPLIED is stored Portal state, NOT TS acceptance/settlement/verification. Original expiry is historical metadata, not current read TTL; no status rewrite. Runtime additionally checks expires_at_ms>=created_at_ms and nonnull applied_at_ms>=created_at_ms, plus ROOT timestamp relations. Public millisecond equality is valid for a strictly positive sub-ms stored interval. No private intent, actor, token, response, receipt, prose or optional parent section. R2 captured parent pins are all-null or all-present; they are NOT today's R1 version or current permission. */
+        R2ParentOperationReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.governance-parent-operation.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "PAPER";
+            };
+            /** @description Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read. */
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "R2";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            operation_id: string;
+            /** @constant */
+            command_version: 1;
+            expected_version: number;
+            /** @enum {string} */
+            status: "PLANNED" | "APPLIED" | "EXPIRED";
+            parent_approval_id: string | null;
+            parent_approval_version: number | null;
+            parent_evidence_set_hash: string | null;
+            created_at_ms: number;
+            expires_at_ms: number;
+            applied_at_ms: number | null;
+            /** @constant */
+            family: "R2";
+            /** @constant */
+            command_type: "GOVERNANCE_R2_DECISION";
+            /** @enum {string} */
+            decision: "APPROVE" | "APPROVE_WITH_CONDITION" | "DENY";
+        } & (unknown & ({
+            parent_approval_id?: null;
+            parent_approval_version?: null;
+            parent_evidence_set_hash?: null;
+        } | {
+            parent_approval_id?: string;
+            parent_approval_version?: number;
+            parent_evidence_set_hash?: string;
+        }));
+        /** @description Exact selected Portal plan with current-authorized ROOT metadata. APPLIED is stored Portal state, NOT TS acceptance/settlement/verification. Original expiry is historical metadata, not current read TTL; no status rewrite. Runtime additionally checks expires_at_ms>=created_at_ms and nonnull applied_at_ms>=created_at_ms, plus ROOT timestamp relations. Public millisecond equality is valid for a strictly positive sub-ms stored interval. No private intent, actor, token, response, receipt, prose or optional parent section. Paper plans do not capture parent_approval_*; all three fields must remain null. expected_version is the captured review version. */
+        PaperExitParentOperationReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.governance-parent-operation.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "PAPER";
+            };
+            /** @description Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read. */
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "PAPER_EXIT";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            operation_id: string;
+            /** @constant */
+            command_version: 1;
+            expected_version: number;
+            /** @enum {string} */
+            status: "PLANNED" | "APPLIED" | "EXPIRED";
+            parent_approval_id: null;
+            parent_approval_version: null;
+            parent_evidence_set_hash: null;
+            created_at_ms: number;
+            expires_at_ms: number;
+            applied_at_ms: number | null;
+            /** @constant */
+            family: "PAPER_EXIT";
+            /** @constant */
+            command_type: "GOVERNANCE_PAPER_EXIT_DECISION";
+            /** @enum {string} */
+            decision: "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
+        } & unknown;
         OperationAcknowledgeRequest: {
             /** @constant */
             schema_version: "execution.operation-acknowledge-request.v1";
@@ -2107,57 +2241,75 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Authorized concrete operation; current-audit finite workflow variant is additive. */
+            /** @description Authorized concrete operation; finite workflow and selected R2/Paper plan variants are additive, not source receipts. */
             200: {
                 headers: {
                     "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExecutionCommandOperation"] | components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"] | components["schemas"]["CommandStatus"] | components["schemas"]["OperationalWorkflowV2"];
+                    "application/json": components["schemas"]["ExecutionCommandOperation"] | components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"] | components["schemas"]["CommandStatus"] | components["schemas"]["OperationalWorkflowV2"] | components["schemas"]["R2ParentOperationReadV2"] | components["schemas"]["PaperExitParentOperationReadV2"];
                 };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */
             400: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */
             401: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */
             403: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
             /** @description Unknown and hidden commands have the same safe envelope. */
             404: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */
             409: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
             /** @description Typed current-authority refusal; no upstream or legacy fallback. */
             503: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
         };
     };

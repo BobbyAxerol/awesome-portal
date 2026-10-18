@@ -12064,3 +12064,98 @@ Actual corrected qualification21:06:16.131619–21:07:29.428425UTC:348PASS (278u
  component publication does not deliver the still-OPEN selected-operation
  reader. Claude review/request intake follows7.3 in the owning exit matrix;
  no actual new ACK/FE assignment or source/runtime/release acceptance inferred.
+
+### Original04 continuation — operations and Sandbox/Canary,2026-10-18
+
+- ROOT parent normal hook is actually TERMINAL/PASS at08:53:27UTC, landed
+  `0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05`:36files,+5040/−31,
+  914contract/7143API PASS +3existing skips, build/scopedPGrestore/four access
+  digests/frozen source-index/eight runtimes/owned cleanup PASS.
+  [Owning exact terminal and hashes](execution_loop/evidence/ELP2-04/positive-governance-parents.md#normal-hook-terminal--2026-10-18t085327utc).
+  Prior failed receipts remain history, no repeat gate for this Markdown.
+- [Next original04-008/009 source/authority/consumer matrix](execution_loop/evidence/ELP2-04/positive-parent-operations-and-following.md):
+  exact selected R2/Paper operations plus current-authorized finite Sandbox/
+  Canary roots on existing routes. APPLIED_UNCOMMITTED/VALIDATION_NOT_RUN at
+  entry; strict generated contracts/TEST_ONLY fixtures, one coherent normal
+  hook after integration. No historical environment or native acceptance
+  invented, no root-only/ADMIN/creator fallback or source/mutation activation.
+- [Fresh readonly owner intake](execution_loop/evidence/ELP2-10/source-followthrough.md#read-only-owner-intake--2026-10-18t08180819utc):
+  Edge owns the prepared Manager Notice/reducer qualification, not a missing
+  replay adapter to duplicate. PM clean0e5ca212 source census does not install
+  real human/publication/field/STREAM authority; next09 uses SAME source/Hub/
+  Candidate/physical-egress/settlement. Full04/09/10source/config/budgets/
+  calibration/coexistence/P184G2/browser remain OPEN;11NOT_ENTRY_READY.
+- Recurring Claude review7.3 applies at entry/freeze/landing/exit: original
+  finding IDs, explicit disposition and phase-owned to-do/exit, not chat-only
+  or another queue. No actual new consumer acknowledgement, UXM owner-held/
+  AWAITING_CONSUMER_REVIEW. No frontend, push/dev/main/sign/release/deploy.
+
+- [Original02–03 reviewed legacy qualification repair](execution_loop/evidence/ELP2-03/legacy-qualification.md)
+  is APPLIED_UNCOMMITTED/VALIDATION_NOT_RUN on0d5ceaba: exact TS-required use,
+  independent command membership and new ACCEPTED intake require literal
+  qualified=true. Existing app-only/negative outcome/immutable ACK behavior
+  stays unchanged. Same04 coherent hook, no extra testcell/public field. Prior
+  OwnProfile/per-grant delivered evidence is preserved, not reopened as missing.
+
+- Original04 operation/following continuation's09:06 normal hook actually
+  FAILED; one-file diagnostic terminated09:31UTC with99PASS/60FAIL. [Owning
+  failure receipt, hashes, accepted source review and exact corrections](execution_loop/evidence/ELP2-04/positive-parent-operations-and-following.md#actual-failed-gates-and-accepted-corrections--2026-10-18t0932utc).
+  Explicit SQL whole-row alias fixes a real JSON-column collision; the Sandbox
+  revoke assertion now checks actual404/LAST Core rather than incorrect403.
+  FIX_APPLIED_UNCOMMITTED/RETAKE_NOT_RUN, no relaxed authority or threshold.
+  Contracts939PASS/buildPASS at captured bytes are separate from incomplete
+  aggregate API/restore. Both failed cells cleaned up; source/index/eight
+  runtimes and HEAD0d5ceaba unchanged. Same coherent normal-hook retake next,
+  no new full04/source/consumer acceptance. Claude reviews/contributions stay
+  mandatory phase-owned intake7.3; no actual new ACK or frontend assignment.
+
+- Original04 coherent hook09:36 is terminal10:15UTC/FAIL:939 contracts and
+  build PASS;7243API PASS/6FAIL/3existing skips. [Owning failure disposition
+  and next Live/Activation/source-reader exit matrix](execution_loop/evidence/ELP2-04/positive-parent-operations-and-following.md#normal-hook-terminal-and-next-technical-readers--2026-10-18).
+  Source/index/eight runtimes preserved and owned cell empty. Six assertion/
+  fixture failures corrected without weakened authorization; next technical
+  reader package APPLIED_UNCOMMITTED/NOT_RUN. Same original04-008/009,
+  mandatory source/consumer gates still OPEN; no claimed whole04/10 exit,
+  consumer ACK, push, dev/main or release activation.
+
+- Original04 technical reader integration now has finite Live parent,
+  Activation metadata and independently scoped Live retained panels with
+  SAME-route opaque continuation/ACCOUNT vs DEPLOYMENT grain. [Exact types,
+  authority/absence/cursor and Claude consumer handoff](execution_loop/evidence/ELP2-04/positive-parent-operations-and-following.md#technical-reader-consumer-addendum--2026-10-18).
+  Six generated clients updated;122 pure Node20 contract diagnostics PASS,
+  actual isolated Node22/PG/HTTP/restore still NOT_RUN at entry. Producer
+  remains UNCOMMITTED. Related Claude reviews/contributions/requests follow
+  rules7.3 in this owning packet, not a parallel queue; no actual new ACK.
+  One bounded affected gate next, then normal-hook landing when coherent.
+  Full04/source/consumer/10 gates OPEN;11NOT_ENTRY_READY. No FE/runtime/push.
+
+- Original04 technical focus actually failed the Node22 build at10:36UTC,
+  before API/restore: optional trusted `viewerWorkspaceId` was missing from the
+  shared principal type. [Exact failure, log hash and narrow correction](execution_loop/evidence/ELP2-04/positive-parent-operations-and-following.md#actual-technical-build-failure-and-bounded-correction--2026-10-18).
+  FIX_APPLIED_UNCOMMITTED/RETAKE_NOT_RUN, no authority/UI change; same affected
+  cell then coherent normal hook, not another full gate for documentation.
+  [Fresh10:35 source-owner intake](execution_loop/evidence/ELP2-10/source-followthrough.md#read-only-owner-intake--2026-10-18t1035utc)
+  preserves ongoing PM/Edge ownership: prepared cases are not PASS or installed
+  authority. Claude recurring review/request intake7.3 stays phase-owned, with
+  explicit disposition and actual ACK required; all mandatory open gates stay
+  OPEN and11NOT_ENTRY_READY. No source/runtime/push/release activation.
+
+- Original04 technical affected gate actually terminated10:52:53UTC: supported
+  Node22 build PASS,748API PASS/7FAIL; restore NOT_RUN. [Exact failure receipt,
+  seven source-checked fixture corrections and short86/86 pure retake](execution_loop/evidence/ELP2-04/positive-parent-operations-and-following.md#actual-affected-technical-gate--2026-10-18t105253utc).
+  Current authority/source refusal precedence,401-row traversal and per-read
+  limits stay intact. Producer UNCOMMITTED; one coherent normal-hook landing
+  next, not a second full focus for assertion fixes. Claude review/request
+  intake remains mandatory under7.3 and consumer AWAITING_CONSUMER_REVIEW;
+  full04/source/09/10/11 and runtime/release gates are not marked green.
+
+- Original04 coherent hook is terminal11:40:18UTC/FAIL:960contracts, generated
+  comparison and supported Node22 build PASS;7387API PASS/1FAIL/3existing skips,
+  restore NOT_RUN, no commit. [Exact log hash, source-only review and narrow
+  Live boundary mock correction with12/12 pure retake](execution_loop/evidence/ELP2-04/positive-parent-operations-and-following.md#coherent-hook-result-and-live-boundary-fixture--2026-10-18t1140utc).
+  Production authority/limits and eight protected runtimes unchanged; owned
+  resources empty. One coherent normal-hook retry follows, not another full
+  focused build for docs. Claude recurring review/contribution/request intake
+  is mandatory rules7.3 with explicit owning disposition/to-do/exit and actual
+  ACK; no new acknowledgement inferred. Full04/source/09/10 remain OPEN,
+  11NOT_ENTRY_READY; no FE/runtime/push/dev/main/release.

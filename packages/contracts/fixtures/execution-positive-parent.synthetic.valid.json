@@ -688,5 +688,828 @@
         }
       }
     }
+  },
+  "r2_operation": {
+    "schema_version": "portal.execution.governance-parent-operation.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "R2",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_r2",
+      "gate": "R2",
+      "status": "EXPIRED",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "operation_id": "op_TEST_ONLY_R2_PLANNED",
+    "command_type": "GOVERNANCE_R2_DECISION",
+    "command_version": 1,
+    "expected_version": 1,
+    "status": "PLANNED",
+    "decision": "DENY",
+    "parent_approval_id": "apr_TEST_ONLY_r1",
+    "parent_approval_version": 1,
+    "parent_evidence_set_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "created_at_ms": 1790812800000,
+    "expires_at_ms": 1790899200000,
+    "applied_at_ms": null
+  },
+  "r2_operation_uncaptured": {
+    "schema_version": "portal.execution.governance-parent-operation.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "R2",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_r2",
+      "gate": "R2",
+      "status": "EXPIRED",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "operation_id": "op_TEST_ONLY_R2_PLANNED_uncaptured",
+    "command_type": "GOVERNANCE_R2_DECISION",
+    "command_version": 1,
+    "expected_version": 1,
+    "status": "PLANNED",
+    "decision": "DENY",
+    "parent_approval_id": null,
+    "parent_approval_version": null,
+    "parent_evidence_set_hash": null,
+    "created_at_ms": 1790812800000,
+    "expires_at_ms": 1790899200000,
+    "applied_at_ms": null
+  },
+  "r2_operation_applied": {
+    "schema_version": "portal.execution.governance-parent-operation.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "R2",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_r2",
+      "gate": "R2",
+      "status": "EXPIRED",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "operation_id": "op_TEST_ONLY_R2_APPLIED",
+    "command_type": "GOVERNANCE_R2_DECISION",
+    "command_version": 1,
+    "expected_version": 1,
+    "status": "APPLIED",
+    "decision": "DENY",
+    "parent_approval_id": "apr_TEST_ONLY_r1",
+    "parent_approval_version": 1,
+    "parent_evidence_set_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "created_at_ms": 1790812800000,
+    "expires_at_ms": 1790899200000,
+    "applied_at_ms": 1790812801000
+  },
+  "r2_operation_expired": {
+    "schema_version": "portal.execution.governance-parent-operation.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "R2",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_r2",
+      "gate": "R2",
+      "status": "EXPIRED",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "operation_id": "op_TEST_ONLY_R2_EXPIRED",
+    "command_type": "GOVERNANCE_R2_DECISION",
+    "command_version": 1,
+    "expected_version": 1,
+    "status": "EXPIRED",
+    "decision": "DENY",
+    "parent_approval_id": "apr_TEST_ONLY_r1",
+    "parent_approval_version": 1,
+    "parent_evidence_set_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "created_at_ms": 1790812800000,
+    "expires_at_ms": 1790899200000,
+    "applied_at_ms": null
+  },
+  "paper_exit_operation": {
+    "schema_version": "portal.execution.governance-parent-operation.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "PAPER_EXIT",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_exit",
+      "gate": "PAPER_EXIT",
+      "status": "PENDING",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "operation_id": "op_TEST_ONLY_PAPER_EXIT_PLANNED",
+    "command_type": "GOVERNANCE_PAPER_EXIT_DECISION",
+    "command_version": 1,
+    "expected_version": 1,
+    "status": "PLANNED",
+    "decision": "REJECT",
+    "parent_approval_id": null,
+    "parent_approval_version": null,
+    "parent_evidence_set_hash": null,
+    "created_at_ms": 1790812800000,
+    "expires_at_ms": 1790899200000,
+    "applied_at_ms": null
+  },
+  "paper_exit_operation_applied": {
+    "schema_version": "portal.execution.governance-parent-operation.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "PAPER_EXIT",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_exit",
+      "gate": "PAPER_EXIT",
+      "status": "PENDING",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "operation_id": "op_TEST_ONLY_PAPER_EXIT_APPLIED",
+    "command_type": "GOVERNANCE_PAPER_EXIT_DECISION",
+    "command_version": 1,
+    "expected_version": 1,
+    "status": "APPLIED",
+    "decision": "REJECT",
+    "parent_approval_id": null,
+    "parent_approval_version": null,
+    "parent_evidence_set_hash": null,
+    "created_at_ms": 1790812800000,
+    "expires_at_ms": 1790899200000,
+    "applied_at_ms": 1790812801000
+  },
+  "paper_exit_operation_expired": {
+    "schema_version": "portal.execution.governance-parent-operation.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "PAPER_EXIT",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_exit",
+      "gate": "PAPER_EXIT",
+      "status": "PENDING",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "operation_id": "op_TEST_ONLY_PAPER_EXIT_EXPIRED",
+    "command_type": "GOVERNANCE_PAPER_EXIT_DECISION",
+    "command_version": 1,
+    "expected_version": 1,
+    "status": "EXPIRED",
+    "decision": "REJECT",
+    "parent_approval_id": null,
+    "parent_approval_version": null,
+    "parent_evidence_set_hash": null,
+    "created_at_ms": 1790812800000,
+    "expires_at_ms": 1790899200000,
+    "applied_at_ms": null
+  },
+  "sandbox": {
+    "schema_version": "portal.execution.following-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "promotion_execution_requested": false
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "family": "SANDBOX",
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "SANDBOX",
+      "association_basis": "CURRENT_NATIVE_TARGET_CORRESPONDENCE",
+      "captured_environment_attested": false
+    },
+    "certification": {
+      "certification_id": "cert_TEST_ONLY_parent",
+      "workflow_state": "APPROVED",
+      "workflow_version": 3,
+      "policy_version": "TEST_ONLY:sandbox-policy",
+      "formula_version": "TEST_ONLY:sandbox-formula",
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812802000,
+      "submitted_at_ms": 1790812801000,
+      "decided_at_ms": 1790812802000,
+      "source_integration_state": "UNAVAILABLE",
+      "delivery_profile": "fixture"
+    },
+    "steps": {
+      "availability": "AVAILABLE",
+      "basis": "CURRENT_LATEST_STORED",
+      "items": [
+        {
+          "step_key": "CONNECT",
+          "availability": "AVAILABLE",
+          "evidence_id": "evidence_TEST_ONLY_0",
+          "stored_evaluation_state": "PASS",
+          "source_authority": "PORTAL",
+          "source_verification_state": "VERIFIED",
+          "as_of_ms": 1790812800000,
+          "expires_at_ms": 1790812801000
+        },
+        {
+          "step_key": "SYNC",
+          "availability": "AVAILABLE",
+          "evidence_id": "evidence_TEST_ONLY_1",
+          "stored_evaluation_state": "FAIL",
+          "source_authority": "EXECUTION",
+          "source_verification_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "expires_at_ms": null
+        },
+        {
+          "step_key": "ORDER_TYPES",
+          "availability": "AVAILABLE",
+          "evidence_id": "evidence_TEST_ONLY_2",
+          "stored_evaluation_state": "STALE",
+          "source_authority": "BROKER",
+          "source_verification_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "expires_at_ms": null
+        },
+        {
+          "step_key": "RECONCILIATION",
+          "availability": "AVAILABLE",
+          "evidence_id": "evidence_TEST_ONLY_3",
+          "stored_evaluation_state": "UNAVAILABLE",
+          "source_authority": "DERIVED",
+          "source_verification_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "expires_at_ms": null
+        },
+        {
+          "step_key": "TIMEBOXED_RUN",
+          "availability": "NOT_RECORDED",
+          "evidence_id": null,
+          "stored_evaluation_state": null,
+          "source_authority": null,
+          "source_verification_state": null,
+          "as_of_ms": null,
+          "expires_at_ms": null
+        },
+        {
+          "step_key": "CLEANUP",
+          "availability": "NOT_RECORDED",
+          "evidence_id": null,
+          "stored_evaluation_state": null,
+          "source_authority": null,
+          "source_verification_state": null,
+          "as_of_ms": null,
+          "expires_at_ms": null
+        },
+        {
+          "step_key": "EXIT_REVIEW",
+          "availability": "NOT_RECORDED",
+          "evidence_id": null,
+          "stored_evaluation_state": null,
+          "source_authority": null,
+          "source_verification_state": null,
+          "as_of_ms": null,
+          "expires_at_ms": null
+        }
+      ]
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_PORTAL_REFERENCE",
+      "promotion_grant_id": "grant_TEST_ONLY_parent",
+      "paper_exit_review_id": "apr_TEST_ONLY_exit",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "r2_approval_id": "apr_TEST_ONLY_r2"
+    }
+  },
+  "sandbox_absent": {
+    "schema_version": "portal.execution.following-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "promotion_execution_requested": false
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "family": "SANDBOX",
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "SANDBOX",
+      "association_basis": "CURRENT_NATIVE_TARGET_CORRESPONDENCE",
+      "captured_environment_attested": false
+    },
+    "certification": {
+      "certification_id": "cert_TEST_ONLY_parent",
+      "workflow_state": "APPROVED",
+      "workflow_version": 3,
+      "policy_version": "TEST_ONLY:sandbox-policy",
+      "formula_version": "TEST_ONLY:sandbox-formula",
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812802000,
+      "submitted_at_ms": 1790812801000,
+      "decided_at_ms": 1790812802000,
+      "source_integration_state": "UNAVAILABLE",
+      "delivery_profile": "fixture"
+    },
+    "steps": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "lineage": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    }
+  },
+  "sandbox_draft": {
+    "schema_version": "portal.execution.following-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "promotion_execution_requested": false
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "family": "SANDBOX",
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "SANDBOX",
+      "association_basis": "CURRENT_NATIVE_TARGET_CORRESPONDENCE",
+      "captured_environment_attested": false
+    },
+    "certification": {
+      "certification_id": "cert_TEST_ONLY_parent",
+      "workflow_state": "DRAFT",
+      "workflow_version": 1,
+      "policy_version": "TEST_ONLY:sandbox-policy",
+      "formula_version": "TEST_ONLY:sandbox-formula",
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "submitted_at_ms": null,
+      "decided_at_ms": null,
+      "source_integration_state": "UNAVAILABLE",
+      "delivery_profile": "fixture"
+    },
+    "steps": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "lineage": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    }
+  },
+  "canary": {
+    "schema_version": "portal.execution.following-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "promotion_execution_requested": false
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "family": "CANARY",
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "LIVE",
+      "association_basis": "CURRENT_NATIVE_TARGET_CORRESPONDENCE",
+      "captured_environment_attested": false
+    },
+    "envelope": {
+      "envelope_id": "env_TEST_ONLY_parent",
+      "revision": 1,
+      "previous_envelope_id": null,
+      "status": "DRAFT",
+      "expected_certification_version": 3,
+      "created_at_ms": 1790812800000,
+      "source_integration_state": "UNAVAILABLE",
+      "delivery_profile": "fixture",
+      "production_command_active": false
+    },
+    "proposal": {
+      "availability": "AVAILABLE",
+      "basis": "PROPOSED_NOT_EFFECTIVE",
+      "base_risk_profile_revision": "TEST_ONLY:risk-proposal",
+      "currency": "USDT",
+      "capital_cap": "9007199254740993.123456789123456789",
+      "gross_notional_cap": "9007199254740994.000000000000000001",
+      "daily_loss_cap": "0.000000000000000001",
+      "max_open_orders": 10,
+      "duration_days": 7
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_PORTAL_REFERENCE",
+      "certification_id": "cert_TEST_ONLY_parent",
+      "promotion_plan_id": "plan_TEST_ONLY_parent",
+      "paper_exit_review_id": "apr_TEST_ONLY_exit",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "r2_approval_id": "apr_TEST_ONLY_r2"
+    }
+  },
+  "canary_absent": {
+    "schema_version": "portal.execution.following-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "promotion_execution_requested": false
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "family": "CANARY",
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "LIVE",
+      "association_basis": "CURRENT_NATIVE_TARGET_CORRESPONDENCE",
+      "captured_environment_attested": false
+    },
+    "envelope": {
+      "envelope_id": "env_TEST_ONLY_parent",
+      "revision": 1,
+      "previous_envelope_id": null,
+      "status": "DRAFT",
+      "expected_certification_version": 3,
+      "created_at_ms": 1790812800000,
+      "source_integration_state": "UNAVAILABLE",
+      "delivery_profile": "fixture",
+      "production_command_active": false
+    },
+    "proposal": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "lineage": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    }
+  },
+  "canary_revision": {
+    "schema_version": "portal.execution.following-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "promotion_execution_requested": false
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "family": "CANARY",
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "LIVE",
+      "association_basis": "CURRENT_NATIVE_TARGET_CORRESPONDENCE",
+      "captured_environment_attested": false
+    },
+    "envelope": {
+      "envelope_id": "env_TEST_ONLY_parent_2",
+      "revision": 2,
+      "previous_envelope_id": "env_TEST_ONLY_parent",
+      "status": "DRAFT",
+      "expected_certification_version": 3,
+      "created_at_ms": 1790812800000,
+      "source_integration_state": "UNAVAILABLE",
+      "delivery_profile": "fixture",
+      "production_command_active": false
+    },
+    "proposal": {
+      "availability": "AVAILABLE",
+      "basis": "PROPOSED_NOT_EFFECTIVE",
+      "base_risk_profile_revision": "TEST_ONLY:risk-proposal",
+      "currency": "USDT",
+      "capital_cap": "9007199254740993.123456789123456789",
+      "gross_notional_cap": "9007199254740994.000000000000000001",
+      "daily_loss_cap": "0.000000000000000001",
+      "max_open_orders": 10,
+      "duration_days": 7
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_PORTAL_REFERENCE",
+      "certification_id": "cert_TEST_ONLY_parent",
+      "promotion_plan_id": "plan_TEST_ONLY_parent",
+      "paper_exit_review_id": "apr_TEST_ONLY_exit",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "r2_approval_id": "apr_TEST_ONLY_r2"
+    }
+  },
+  "live": {
+    "schema_version": "portal.execution.live-parent.v2",
+    "family": "LIVE_GATE",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "environment": "LIVE"
+    },
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false
+    },
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_live",
+      "gate": "LIVE_GATE",
+      "status": "PENDING",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    }
+  },
+  "live_composition": {
+    "schema_version": "execution.operational-composition.v1",
+    "logical_operation_id": "executionOperationalLiveReviewV1",
+    "record_authority": "PORTAL_CONTROL",
+    "source_authority": "PORTAL_CONTROL_ONLY",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "read_at_ms": 1792281600000,
+    "read_at": "2026-10-18T00:00:00.000Z",
+    "composite_revision": "sha256:3446c4330cae61873c89553da45d52c9a70315b3e4f66be9d2dbbcaf5eb16b5b",
+    "source_health": {
+      "input_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "state": "UNAVAILABLE",
+      "reason_code": "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED",
+      "source_side_effect_requested": false
+    },
+    "redacted_command_journal": {
+      "digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "state": "UNAVAILABLE",
+      "reason_code": "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED",
+      "source_side_effect_requested": false
+    },
+    "canary_twin_comparison": {
+      "state": "UNAVAILABLE",
+      "reason_code": "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED",
+      "source_side_effect_requested": false
+    },
+    "command_authority": {
+      "state": "UNCHANGED_FAIL_CLOSED",
+      "source_side_effect_requested": false
+    },
+    "lineage": {
+      "source_health_input_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "command_journal_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
+      "workflow_digest": "sha256:adcfa7c7b5e58a403ea65b926fcfb370f21c0a3891b86d756b21940247d155c8",
+      "formula_version": "execution.operational-composition.v1"
+    },
+    "data": {
+      "governance": {
+        "schema_version": "portal.execution.live-parent.v2",
+        "family": "LIVE_GATE",
+        "workspace_id": "ws_TEST_ONLY_parent",
+        "record_authority": "PORTAL",
+        "provenance_basis": "CURRENT_CORE_BASELINE",
+        "field_contract_revision": "portal.execution.parent-fields.v1",
+        "observed_at_ms": 1792281600000,
+        "anchors": {
+          "deployment_id": "dep_TEST_ONLY_parent",
+          "environment": "LIVE"
+        },
+        "source": {
+          "authority": "PORTAL",
+          "source_verdict": "NOT_ASSERTED",
+          "source_side_effect_requested": false,
+          "runtime_activation_requested": false
+        },
+        "approval": {
+          "approval_id": "apr_TEST_ONLY_live",
+          "gate": "LIVE_GATE",
+          "status": "PENDING",
+          "approval_version": 1,
+          "policy_version": "TEST_ONLY:policy-v1",
+          "quorum_required": 2,
+          "quorum_met": 0,
+          "evidence_complete": false,
+          "created_at_ms": 1790812800000,
+          "updated_at_ms": 1790812800000,
+          "sla_due_at_ms": 1790899200000,
+          "expires_at_ms": 1790985600000,
+          "decided_at_ms": null
+        },
+        "accepted_manager_facts": {
+          "availability": "NOT_PUBLISHED",
+          "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+        }
+      },
+      "accepted_manager_facts": {
+        "availability": "NOT_PUBLISHED",
+        "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+      }
+    }
   }
 }

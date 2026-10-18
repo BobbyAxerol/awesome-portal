@@ -1762,6 +1762,82 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
       });
     });
 
+  it.each(["initial", "after-insert"] as const)(
+    "legacy ACCEPTED %s qualification refusal rolls back exact authority rows and permits the same proof after requalification", async phase => {
+      const f = await fixture(), { submitted } = await business(f), fact = await tsFact(f, submitted), proof = f.trust.seal(fact);
+      const pending = await storedGrant(submitted.receipt.grant_id!), before = await authorityRows(f);
+      const membership = structuredClone(f.trust.memberships.get(fact.portal_user_id)!);
+      const originalRelations = f.trust.relations.bind(f.trust);
+      let qualified = phase !== "initial";
+      const relations = vi.spyOn(f.trust, "relations").mockImplementation(async (id, workspace) => {
+        const value = await originalRelations(id, workspace);
+        if (id !== fact.portal_user_id || workspace !== f.workspace) return value;
+        expect(Object.hasOwn(value, "current_authority")).toBe(false);
+        return { ...value, qualified };
+      });
+      const inspected = f.service as unknown as { validateTsBinding(...args: unknown[]): void };
+      const originalBinding = inspected.validateTsBinding.bind(f.service), originalEvent = AccessRepository.prototype.event;
+      let inTx: AccessRelations | undefined, writes = 0, afterWriteNow: number | undefined;
+      const clocks: number[] = [];
+      const binding = vi.spyOn(inspected, "validateTsBinding").mockImplementation((...args: unknown[]) => {
+        inTx = args[5] as AccessRelations | undefined;clocks.push(args[6] as number);
+        expect(inTx?.membership).toEqual(membership);
+        return originalBinding(...args);
+      });
+      const event = vi.spyOn(AccessRepository.prototype, "event").mockImplementation(async function (this: AccessRepository, input) {
+        await originalEvent.call(this, input);
+        if (input.workspace_id !== f.workspace || input.operation !== "TS_RECEIPT") return;
+        writes++;
+        expect((await this.sourceEvent(fact.source, fact.receipt_id))?.event_id).toBe(input.event_id);
+        expect((await this.proposal(f.workspace, submitted.receipt.proposal_id!))?.state).toBe("TS_APPLIED");
+        expect((await this.grants(f.workspace)).find(g => g.grant_id === pending.grant_id)?.ts_receipt?.receipt_id).toBe(fact.receipt_id);
+        afterWriteNow = Number((await this.db.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
+        expect(inTx?.qualified).toBe(true);
+        // Existing fault-injection seam: alter only the detached TEST_ONLY
+        // snapshot after REAL writes, never the provider fact, DB clock or lease.
+        inTx!.qualified = false;
+      });
+      try {
+        try {
+          await expect(f.service.acceptTsReceipt(proof)).rejects.toMatchObject({ code: "TS_MEMBERSHIP_REVISION_CONFLICT", status: 409 });
+          expect(writes).toBe(phase === "initial" ? 0 : 1);
+          expect(clocks).toHaveLength(phase === "initial" ? 1 : 2);
+          if (phase === "after-insert") expect(clocks.at(-1)).toBeGreaterThanOrEqual(afterWriteNow!);
+          expect(await authorityRows(f)).toEqual(before);
+          expect(await storedGrant(pending.grant_id)).toEqual(pending);
+          expect((await new AccessRepository(ctx.pool).proposal(f.workspace, submitted.receipt.proposal_id!)))
+            .toMatchObject({ state: "TS_PENDING", submission_receipt: submitted.receipt });
+          expect(await new AccessRepository(ctx.pool).sourceEvent(fact.source, fact.receipt_id)).toBeNull();
+          expect(f.trust.memberships.get(fact.portal_user_id)).toEqual(membership);
+          expect(f.trust.receipts.get(proof)).toEqual(fact);
+        } finally { event.mockRestore(); binding.mockRestore(); }
+        qualified = true;
+        const accepted = await f.service.acceptTsReceipt(proof);
+        expect(accepted).toMatchObject({ replayed: false, receipt: { outcome: "TS_APPLIED", ts_authority: "ACCEPTED" } });
+        const grant = await storedGrant(pending.grant_id);
+        expect(grant.ts_acceptance_digest).toBe(accessDigest(fact));
+        expect(grant.ts_receipt).toMatchObject({ receipt_id: fact.receipt_id, membership_revision: fact.membership_revision,
+          mapping_revision: fact.mapping_revision });
+        expect((await new AccessRepository(ctx.pool).proposal(f.workspace, submitted.receipt.proposal_id!)))
+          .toMatchObject({ state: "TS_APPLIED", submission_receipt: submitted.receipt });
+        await f.service.revoke(actor(owner), f.workspace, grant.grant_id, f.policy.revision, grant.revision, next("legacy-intake-history-revoke"));
+        qualified = false;relations.mockClear();
+        const historicalRows = await authorityRows(f);
+        const mapping = vi.spyOn(f.trust, "verifiedHumanMapping").mockRejectedValue(new Error("TEST_ONLY historical ACK needs no fresh mapping"));
+        const historicalBinding = vi.spyOn(inspected, "validateTsBinding").mockImplementation(() => {
+          throw new Error("TEST_ONLY historical ACK must not activate a legacy grant");
+        });
+        try {
+          expect(await f.service.acceptTsReceipt(proof)).toEqual({ receipt: accepted.receipt, replayed: true });
+          expect(relations).not.toHaveBeenCalled();expect(mapping).not.toHaveBeenCalled();expect(historicalBinding).not.toHaveBeenCalled();
+          expect(await authorityRows(f)).toEqual(historicalRows);
+          expect((await storedGrant(pending.grant_id)).revoked_at_ms).not.toBeNull();
+          expect(f.trust.memberships.get(fact.portal_user_id)).toEqual(membership);
+          expect(f.trust.receipts.get(proof)).toEqual(fact);
+        } finally { historicalBinding.mockRestore(); mapping.mockRestore(); }
+      } finally { relations.mockRestore(); }
+    });
+
   it.each(["future-effective", "already-expired"] as const)(
     "ordinary legacy ACCEPTED fact with %s wall-clock bounds never enters authority/event writes", async fault => {
       const f = await fixture(), { submitted } = await business(f);
@@ -1784,19 +1860,33 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
     });
 
   it.each(["REJECTED", "UNKNOWN"] as const)(
-    "ordinary %s observation is not incorrectly subjected to ACCEPTED wall-clock activation", async outcome => {
+    "ordinary %s observation survives unqualified legacy membership and expiry without ACCEPTED activation", async outcome => {
       const f = await fixture(), { submitted } = await business(f);
       const now = Number((await ctx.pool.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
       const fact = await tsFact(f, submitted, { outcome, expires_at_ms: now - 1 });
       const proof = f.trust.seal(fact, false), pending = await storedGrant(submitted.receipt.grant_id!);
-      const result = await f.service.acceptTsReceipt(proof);
-      expect(result.receipt).toMatchObject({ outcome: outcome === "REJECTED" ? "TS_REJECTED" : "TS_UNKNOWN", ts_authority: outcome });
-      expect(await storedGrant(pending.grant_id)).toEqual(pending);
-      const proposal = await f.service.proposal(actor(manager), f.workspace, submitted.receipt.proposal_id!);
-      expect(proposal.submission_receipt).toEqual(submitted.receipt);
-      const before = await authorityRows(f);
-      expect(await f.service.acceptTsReceipt(proof)).toEqual({ receipt: result.receipt, replayed: true });
-      expect(await authorityRows(f)).toEqual(before);
+      // Retaining a tuple is not an accepted entitlement. Authentication of
+      // this negative observation remains the verifier's separate fact.
+      f.trust.memberships.set(fact.portal_user_id, { receipt_id: fact.receipt_id,
+        revision: fact.membership_revision, mapping_revision: fact.mapping_revision });
+      const originalRelations = f.trust.relations.bind(f.trust);
+      const relations = vi.spyOn(f.trust, "relations").mockImplementation(async (id, workspace) => {
+        const value = await originalRelations(id, workspace);
+        if (id !== fact.portal_user_id || workspace !== f.workspace) return value;
+        expect(Object.hasOwn(value, "current_authority")).toBe(false);
+        return { ...value, qualified: false };
+      });
+      try {
+        const result = await f.service.acceptTsReceipt(proof);
+        expect(result.receipt).toMatchObject({ outcome: outcome === "REJECTED" ? "TS_REJECTED" : "TS_UNKNOWN", ts_authority: outcome });
+        expect(await storedGrant(pending.grant_id)).toEqual(pending);
+        const proposal = await f.service.proposal(actor(manager), f.workspace, submitted.receipt.proposal_id!);
+        expect(proposal.submission_receipt).toEqual(submitted.receipt);
+        expect(proposal.state).toBe(outcome === "REJECTED" ? "TS_REJECTED" : "TS_UNKNOWN");
+        const before = await authorityRows(f);
+        expect(await f.service.acceptTsReceipt(proof)).toEqual({ receipt: result.receipt, replayed: true });
+        expect(await authorityRows(f)).toEqual(before);
+      } finally { relations.mockRestore(); }
     });
 
   it("ELP2-10 historical delegated replay skips qualification and drain despite revoke and unrelated UNKNOWN work", async () => {

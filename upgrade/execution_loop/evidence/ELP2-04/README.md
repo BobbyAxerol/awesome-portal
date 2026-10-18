@@ -1,5 +1,38 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+**Latest actual2026-10-18T10:52:53UTC:** technical affected gate build PASS,
+748API PASS/7FAIL; restore NOT_RUN. [Seven exact dispositions and corrected
+86/86 pure ProductRead diagnostic](positive-parent-operations-and-following.md#actual-affected-technical-gate--2026-10-18t105253utc).
+All corrections preserve production authority,401-row input and refusal
+precedence. One coherent normal-hook retake/landing remains; producer
+UNCOMMITTED, full04/source/runtime/consumer gates still OPEN. Older preparation
+statuses below are history, not a current PASS or Claude acknowledgement.
+
+**Current2026-10-18 technical continuation:** the10:15 normal-hook failure
+and six corrected assertions/fixtures are preserved in the [same owning
+packet](positive-parent-operations-and-following.md#normal-hook-terminal-and-next-technical-readers--2026-10-18).
+Selected-operation/Sandbox/Canary plus Live parent/Activation/Live source
+are APPLIED_UNCOMMITTED. Same-route Live continuation preserves Account vs
+Deployment grain and all original purposes;122 pure contract tests PASS,
+actual new PG/HTTP gate remains NOT_RUN at entry. This is not source/native,
+full04, consumer or runtime qualification; previous current notes are history.
+
+**Current correction2026-10-18T09:32UTC:** the operation/following normal hook
+failed; one-file diagnosis confirmed a PostgreSQL whole-row/JSON collision
+and an incorrect Sandbox404 assertion. Both are corrected, UNCOMMITTED;
+coherent normal-hook retake pending. [Exact failures, hashes, review disposition
+and unchanged runtime/cleanup](positive-parent-operations-and-following.md#actual-failed-gates-and-accepted-corrections--2026-10-18t0932utc).
+No full04 or consumer PASS; older preparation/next-focus text is history.
+
+**Latest actual landing2026-10-18T08:53:27UTC:** `0d5ceaba`,914contracts/
+7143API PASS +3existing skips; build/scopedPGrestore/four access digests,
+source-index/eight runtimes and owned cleanup PASS.
+[Exact terminal/hashes](positive-governance-parents.md#normal-hook-terminal--2026-10-18t085327utc).
+Next original04-008/009 [operations and Sandbox/Canary roots](positive-parent-operations-and-following.md)
+are APPLIED_UNCOMMITTED/VALIDATION_NOT_RUN at entry; one coherent normal hook,
+no second focus. Fullsource/technical/consumer gates remain OPEN; historical
+pending statements below are not the latest status.
+
 **Latest actual landing2026-10-18T07:48:53UTC:** normal hook committed
 `ac056d46`,896contracts/7072API PASS +3existing skipped tests; build,
 scopedPGrestore/four access digests, source/index/eight protected runtimes and

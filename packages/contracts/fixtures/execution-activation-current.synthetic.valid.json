@@ -1,0 +1,185 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "production_config": false,
+  "authority_installed": false,
+  "capabilities": {
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "perspective": {
+      "environment": "paper",
+      "root_id": "TEST_ONLY:root",
+      "basis": "CURRENT_PUBLISHED_TECHNICAL_ROOT",
+      "captured_native_environment": null
+    },
+    "schema_version": "portal.execution.activation-capabilities-read.v2",
+    "capabilities": [
+      {
+        "capability_key": "PROJECTION",
+        "record_state": "NOT_RECORDED"
+      },
+      {
+        "capability_key": "QUERY",
+        "record_state": "RECORDED",
+        "effective_profile": "fixture",
+        "desired_profile": "fixture",
+        "capability_version": 1,
+        "source_enabled": false,
+        "runtime_enabled": false,
+        "kill_switch_engaged": true,
+        "last_plan_id": null,
+        "created_at_ms": 1000,
+        "updated_at_ms": 1000
+      },
+      {
+        "capability_key": "SSE",
+        "record_state": "NOT_RECORDED"
+      },
+      {
+        "capability_key": "COMMAND_R1",
+        "record_state": "NOT_RECORDED"
+      },
+      {
+        "capability_key": "COMMAND_R2",
+        "record_state": "NOT_RECORDED"
+      },
+      {
+        "capability_key": "COMMAND_R3",
+        "record_state": "NOT_RECORDED"
+      },
+      {
+        "capability_key": "COMMAND_R4",
+        "record_state": "NOT_RECORDED"
+      }
+    ],
+    "observed_at_ms": 10000,
+    "snapshot_revision": "sha256:d8d56eac362dc0c7f848b3f522e73d91bf61bb724c50c4dfa9ef0a471b8d7307"
+  },
+  "plan": {
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "perspective": {
+      "environment": "paper",
+      "root_id": "TEST_ONLY:root",
+      "basis": "CURRENT_PUBLISHED_TECHNICAL_ROOT",
+      "captured_native_environment": null
+    },
+    "schema_version": "portal.execution.activation-plan-read.v2",
+    "capability": {
+      "capability_key": "QUERY",
+      "record_state": "RECORDED",
+      "effective_profile": "fixture",
+      "desired_profile": "fixture",
+      "capability_version": 1,
+      "source_enabled": false,
+      "runtime_enabled": false,
+      "kill_switch_engaged": true,
+      "last_plan_id": null,
+      "created_at_ms": 1000,
+      "updated_at_ms": 1000
+    },
+    "plan": {
+      "plan_id": "TEST_ONLY:plan",
+      "capability_key": "QUERY",
+      "action": "PROMOTE",
+      "from_profile": "fixture",
+      "target_profile": "shadow",
+      "expected_capability_version": 1,
+      "plan_version": 1,
+      "stored_status": "BLOCKED",
+      "expiry_basis": "HISTORICAL_CAPTURE_NOT_CURRENT_READ_AUTHORITY",
+      "expires_at_ms": 5000,
+      "applied_at_ms": null,
+      "verified_at_ms": null,
+      "resulting_capability_version": null,
+      "created_at_ms": 1000,
+      "updated_at_ms": 1000,
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "owner_artifact_imported": false
+    },
+    "evidence": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_NOT_ACTIVATION_TRUST",
+      "items": [
+        {
+          "ordinal": 0,
+          "kind": "CONTRACT",
+          "reference_id": "TEST_ONLY:evidence",
+          "artifact_digest": "sha256:c0c42231d7a3d42c461b5f389e8daa2e0eee89cec82fc04a8b4afe7af0e23551",
+          "schema_version": "TEST_ONLY.v1",
+          "compatibility_revision": "TEST_ONLY.v1",
+          "expires_at_ms": 5000,
+          "structure_valid": true,
+          "owner_accepted": false,
+          "trusted_for_activation": false
+        }
+      ]
+    },
+    "compatibility": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_REQUIREMENTS_NOT_COMPATIBILITY_VERDICT",
+      "items": []
+    },
+    "observed_at_ms": 10000,
+    "snapshot_revision": "sha256:41556ec827810e1c702cb1c5ff0fdd501f698a9b2ed24abf1a5f6e4aaed6820a"
+  },
+  "plan_absent": {
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "perspective": {
+      "environment": "paper",
+      "root_id": "TEST_ONLY:root",
+      "basis": "CURRENT_PUBLISHED_TECHNICAL_ROOT",
+      "captured_native_environment": null
+    },
+    "schema_version": "portal.execution.activation-plan-read.v2",
+    "capability": {
+      "capability_key": "QUERY",
+      "record_state": "RECORDED",
+      "effective_profile": "fixture",
+      "desired_profile": "fixture",
+      "capability_version": 1,
+      "source_enabled": false,
+      "runtime_enabled": false,
+      "kill_switch_engaged": true,
+      "last_plan_id": null,
+      "created_at_ms": 1000,
+      "updated_at_ms": 1000
+    },
+    "plan": {
+      "plan_id": "TEST_ONLY:plan",
+      "capability_key": "QUERY",
+      "action": "PROMOTE",
+      "from_profile": "fixture",
+      "target_profile": "shadow",
+      "expected_capability_version": 1,
+      "plan_version": 1,
+      "stored_status": "BLOCKED",
+      "expiry_basis": "HISTORICAL_CAPTURE_NOT_CURRENT_READ_AUTHORITY",
+      "expires_at_ms": 5000,
+      "applied_at_ms": null,
+      "verified_at_ms": null,
+      "resulting_capability_version": null,
+      "created_at_ms": 1000,
+      "updated_at_ms": 1000,
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "owner_artifact_imported": false
+    },
+    "evidence": {
+      "availability": "NOT_AUTHORIZED"
+    },
+    "compatibility": {
+      "availability": "NOT_AUTHORIZED"
+    },
+    "observed_at_ms": 10000,
+    "snapshot_revision": "sha256:1f5b61d1806f9ed7d91bbae0a8e47a08e0265f97b11508794139ef42c8c5e7c6"
+  }
+}

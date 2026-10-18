@@ -22,7 +22,7 @@ export function authorization():CommandAuthorization {
     approval_required:false,required_approval_gate:null,approval:null,r2_basis:null,commit_checks:{human:true,workload:true,membership:true,scope:true,versions:true,capacity:true,approval:true}});
 }
 const context={principal_id:actor.user_id,workspace_id:intent.workspace_id,now_ms:now,policy:{revision:intent.expected_policy_revision},
-  relationsFor:()=>({membership:{revision:"TEST_ONLY:membership",mapping_revision:"TEST_ONLY:mapping",receipt_id:"TEST_ONLY:membership-receipt"}})} as AccessEvaluationContext;
+  relationsFor:()=>({qualified:true,membership:{revision:"TEST_ONLY:membership",mapping_revision:"TEST_ONLY:mapping",receipt_id:"TEST_ONLY:membership-receipt"}})} as AccessEvaluationContext;
 function record():CommandRecord{return {id:fixture.ack_only.command_id,actor:actor.user_id,hash:intentHash(actor,intent),intent,authorization:authorization(),
   status:commandStatus.parse(fixture.ack_only),attempt:"TEST_ONLY:attempt"};}
 function source():SourceCommandResult {const a=authorization();return {authority_ref:a.authority_ref,profile_ref:a.profile_ref,workspace_id:intent.workspace_id,

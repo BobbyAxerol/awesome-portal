@@ -449,6 +449,8 @@ export interface CurrentSourcePrincipal {
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
+  /** Trusted session workspace, distinct from a retained source workspace. */
+  viewerWorkspaceId?: string;
 }
 
 export interface CurrentSourcePageQuery {

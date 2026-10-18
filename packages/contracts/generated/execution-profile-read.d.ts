@@ -59,6 +59,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Sticky current Core selects the independent exact Live reader before legacy reads. SCOPED_V2 requires current qualified DEPLOYMENT/LIVE audit, governance.live.read and LIVE_ROOT purpose before protected SQL. No fabricated Portfolio or predecessor, owner/read_all/decide shortcut or source-screen call. One SAME flight fences successful metadata and held errors after exact local equality, source and LAST Core/session/clock checks. Historical approval expiry is not read expiry; stored approval is not current TS acceptance, execution or activation. */
         get: operations["executionGateLiveReviewV1"];
         put?: never;
         post?: never;
@@ -473,6 +474,70 @@ export interface components {
             production_command_active: false;
             workspace_id?: string;
         };
+        /** @description Finite stored Portal LIVE_GATE under current exact DEPLOYMENT/LIVE audit, independent governance.live.read and reviewed LIVE_ROOT purpose. No Portfolio or R1/R2 predecessor was captured or fabricated. Historical expiry is metadata, not current read authority. Manifest integrity is local stored-byte verification, not TS acceptance, broker state or runtime commissioning; source facts stay separately unavailable. Runtime additionally verifies timestamp ordering, exact workspace/parent/target and original manifest. No private actor/prose/hash preimage. */
+        LiveParentReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.live-parent.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+                /** @constant */
+                runtime_activation_requested: false;
+            };
+            anchors: {
+                deployment_id: string;
+                /** @constant */
+                environment: "LIVE";
+            };
+            /** @description Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read. */
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "LIVE_GATE";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            /** @constant */
+            family: "LIVE_GATE";
+            accepted_manager_facts: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION";
+            };
+        };
+        CommandProblem: {
+            error: {
+                code: string;
+                message: string;
+            };
+            request_id: string;
+            public_copy_key?: string;
+            /** @enum {string} */
+            safe_next_action?: "QUERY_SAME_INTENT" | "REVIEW_BLOCKER";
+        };
     };
     responses: never;
     parameters: never;
@@ -557,13 +622,74 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Portal live gate joined to Live-profile facts */
+            /** @description Legacy Live review OR finite current-authorized stored LIVE_GATE root. Separate source facts stay typed unavailable. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["governance-live-review.v1.schema"];
+                    "application/json": components["schemas"]["governance-live-review.v1.schema"] | components["schemas"]["LiveParentReadV2"];
+                };
+            };
+            /** @description Strict finite input invalid. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authenticated Portal session required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current actor/session lifecycle denied; no parent detail returned. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Uniform unknown, hidden, wrong workspace/family/target parent; no disclosure. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ACCESS_RETRY_REQUIRED: current authority or stored parent changed; no legacy fallback. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed parent field-purpose, integrity, bound or configuration unavailable; no raw SQL/provider/Zod text. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
                 };
             };
         };

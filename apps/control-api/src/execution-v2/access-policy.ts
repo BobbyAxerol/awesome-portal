@@ -160,7 +160,7 @@ export function grantCurrent(grant: ScopedAccessGrant, context: AccessEvaluation
       } catch { return false; }
     } else {
       const receipt=grant.ts_receipt, current=relations.membership;
-      if (!receipt || !current || receipt.receipt_id !== current.receipt_id || receipt.membership_revision !== current.revision ||
+      if (relations.qualified !== true || !receipt || !current || receipt.receipt_id !== current.receipt_id || receipt.membership_revision !== current.revision ||
         receipt.mapping_revision !== current.mapping_revision || receipt.effective_at_ms > context.now_ms ||
         receipt.expires_at_ms !== null && receipt.expires_at_ms <= context.now_ms) return false;
     }

@@ -1,4 +1,5 @@
-import { r2ParentRead, paperExitParentRead, type R2ParentRead, type PaperExitParentRead } from "./positive-parent.contract";
+import { r2ParentRead, paperExitParentRead, r2ParentOperationRead, paperExitParentOperationRead,
+  type R2ParentRead, type PaperExitParentRead, type PositiveParentOperationRead } from "./positive-parent.contract";
 import type { RawPositiveParent } from "./positive-parent.repository";
 
 export type PositiveParentRead = R2ParentRead | PaperExitParentRead;
@@ -15,7 +16,7 @@ const absent = () => ({ availability: "NOT_PUBLISHED", reason_code: "PARENT_FIEL
 
 /** Explicit objects only: adding an internal repository field cannot publish
  * it. Validation is intentionally at the final DTO boundary as well as SQL. */
-export function mapPositiveParent(raw: RawPositiveParent, sections: ParentSections, observedAtMs: number): PositiveParentRead {
+function parentRoot(raw: RawPositiveParent, observedAtMs: number) {
   const p = raw.identity, a = raw.approval;
   const common = {
     schema_version: "portal.execution.governance-parent.v2", family: p.family,
@@ -31,6 +32,10 @@ export function mapPositiveParent(raw: RawPositiveParent, sections: ParentSectio
   if (a.approval_id !== p.approvalId || raw.scope.portfolio_id !== p.portfolioId ||
     raw.lineage.r1_approval_id !== p.r1ApprovalId || raw.lineage.r2_approval_id !== p.r2ApprovalId)
     throw new Error("PARENT_IDENTITY_MISMATCH");
+  return common;
+}
+export function mapPositiveParent(raw: RawPositiveParent, sections: ParentSections, observedAtMs: number): PositiveParentRead {
+  const p = raw.identity, a = raw.approval, common = parentRoot(raw, observedAtMs);
   if (p.family === "R2") return r2ParentRead.parse({ ...common, lineage: sections.lineage ? {
     availability: "AVAILABLE", basis: "STORED_IMMUTABLE_REFERENCE", r1_approval_id: p.r1ApprovalId,
     observed_risk_grant_id: raw.lineage.historical_risk_grant_id, currency: raw.scope.currency,
@@ -55,4 +60,20 @@ export function mapPositiveParent(raw: RawPositiveParent, sections: ParentSectio
       r1_approval_id: p.r1ApprovalId, r2_approval_id: p.r2ApprovalId,
       source_snapshot_hash: v.source_snapshot_hash, evidence_set_hash: a.evidence_set_hash } : absent(),
   });
+}
+
+/** Explicit selected row only; never spread an operation/receipt/private row. */
+export function mapPositiveParentOperation(raw: RawPositiveParent, selectedOperationId: string,
+  observedAtMs: number): PositiveParentOperationRead {
+  if (raw.operations.length !== 1 || raw.operations[0]!.operation_id !== selectedOperationId)
+    throw new Error("PARENT_OPERATION_IDENTITY_MISMATCH");
+  const op = raw.operations[0]!, common = parentRoot(raw, observedAtMs);
+  const body = { ...common, schema_version: "portal.execution.governance-parent-operation.v2",
+    operation_id: op.operation_id, family: raw.identity.family,
+    command_type: op.command_type, command_version: op.command_version,
+    expected_version: op.expected_version, status: op.status, decision: op.decision,
+    parent_approval_id: op.parent_approval_id, parent_approval_version: op.parent_approval_version,
+    parent_evidence_set_hash: op.parent_evidence_set_hash,
+    created_at_ms: ms(op.created_at), expires_at_ms: ms(op.expires_at), applied_at_ms: optionalMs(op.applied_at) };
+  return raw.identity.family === "R2" ? r2ParentOperationRead.parse(body) : paperExitParentOperationRead.parse(body);
 }

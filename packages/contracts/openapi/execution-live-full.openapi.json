@@ -10,28 +10,198 @@
       "get": {
         "operationId": "getLiveFullOperations",
         "parameters": [
-          { "name": "deployment_id", "in": "path", "required": true, "schema": { "type": "string" } },
-          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string" } }
+          {
+            "name": "deployment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "panel",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "deployments",
+                "positions",
+                "sessions",
+                "orders",
+                "fills",
+                "accounts",
+                "account_balances",
+                "margin_balances",
+                "account_sync",
+                "reconciliation"
+              ]
+            },
+            "description": "Fixed Live panel only. Advances that panel; all other panels return their first page. Same independent Live/Alpha/Account current-authority flight. Account panels remain ACCOUNT grain, not deployment economics."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "minLength": 1
+            },
+            "description": "Opaque Portal lps2 continuation from this exact panel under the SAME deployment/workspace/profile/session/current scope and immutable retained snapshot. Requires panel. Never a source cursor; no source or authority selection. Expired/changed-view cursor is refused; restart this panel from its first page."
+          }
         ],
         "responses": {
           "200": {
-            "description": "Portal predecessor facts plus bounded Live-profile panels and local projection continuity.",
-            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-live-full-operations.v1.schema.json#/$defs/LiveFullOperations" } } }
+            "description": "Legacy Live operations OR finite current-authorized source-only retained observations, never a joint ROOT+source acceptance.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-live-full-operations.v1.schema.json#/$defs/LiveFullOperations"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/LiveSourceOperationsReadV2"
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
           },
-          "404": { "$ref": "#/components/responses/Problem" }
-        }
+          "400": {
+            "description": "Current authenticated session, exact app/source/field authority and valid request required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current authenticated session, exact app/source/field authority and valid request required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current authenticated session, exact app/source/field authority and valid request required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Uniform hidden/missing workspace, deployment or source grain; no existence leak.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Current authority/publication changed; refresh without fallback.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Fixed INTERNAL_ERROR envelope for unexpected faults; not raw exception text.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Fixed unavailable/unqualified/overflow refusal; no private provider or SQL text.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Sticky current Core preserves legacy separately. SCOPED_V2 is the exact DEPLOYMENT/LIVE source-only reader under independent governance.live.read, original Alpha/Account purposes and exact reviewed fields. Before retained reads, after every purpose, after snapshot equality and at LAST Core, the SAME combined flight retains all current obligations for body and held errors. No Canary/root lookup or fallback, source/broker acceptance, stream, activation, command, mutation, synthetic total or global population claim. Panel/source clock absence remains typed; Portal observed time is not source freshness."
       }
     }
   },
   "components": {
     "schemas": {
       "Problem": {
-        "type": "object", "additionalProperties": true, "required": ["type", "title", "status"],
-        "properties": { "type": { "type": "string" }, "title": { "type": "string" }, "status": { "type": "integer" }, "detail": { "type": "string" }, "code": { "type": "string" } }
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "LiveSourceOperationsReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/LiveSourceOperationsReadV2"
       }
     },
     "responses": {
-      "Problem": { "description": "Typed fail-closed problem.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+      "Problem": {
+        "description": "Typed fail-closed problem.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -1,3 +1,4 @@
+import { FollowingParentReads } from "../governance/following-parent.service";
 import { createHash } from "crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
@@ -58,6 +59,7 @@ export class CanaryService {
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
     @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
+    @Optional() @Inject(FollowingParentReads) private readonly followingParents?: FollowingParentReads,
   ) {}
 
   /**
@@ -83,8 +85,10 @@ export class CanaryService {
   }
 
   async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string) {
-    await this.assertGovernance(user, "read", workspaceId);
     const principal = { user, session, workspaceId, viewerWorkspaceId };
+    if(this.followingParents&&await this.followingParents.mode(principal)==="SCOPED_V2")
+      return this.followingParents.detail(principal,"CANARY",deploymentId);
+    await this.assertGovernance(user, "read", workspaceId);
     if (this.readScopes && await this.readScopes.coreSelectionMode(principal) === "SCOPED_V2")
       throw new GovernanceError("CANARY_SCOPED_PARENT_NOT_COMMISSIONED", "Canary parent evidence field authority is not commissioned.", 503);
     const envelope = await this.repository.latestByDeployment(workspaceId, deploymentId);

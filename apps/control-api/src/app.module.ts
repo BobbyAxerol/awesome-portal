@@ -44,6 +44,10 @@ import { GovernanceRepository } from "./governance/governance.repository";
 import { GovernanceService } from "./governance/governance.service";
 import { PositiveParentRepository } from "./governance/positive-parent.repository";
 import { PositiveParentReads } from "./governance/positive-parent.service";
+import { FollowingParentRepository } from "./governance/following-parent.repository";
+import { FollowingParentReads } from "./governance/following-parent.service";
+import { LiveParentRepository } from "./governance/live-parent.repository";
+import { LiveParentReads } from "./governance/live-parent.service";
 import { PaperExitRepository } from "./governance/paper-exit.repository";
 import { PaperExitService } from "./governance/paper-exit.service";
 import { GovernanceReviewCaptureService } from "./governance/review-capture.service";
@@ -113,6 +117,8 @@ import { LiveOperationsService } from "./live/live-operations.service";
 import { ActivationController } from "./activation/activation.controller";
 import { ActivationRepository } from "./activation/activation.repository";
 import { ActivationService } from "./activation/activation.service";
+import { CurrentActivationRepository } from "./activation/current-activation.repository";
+import { CurrentActivationReads } from "./activation/current-activation.service";
 import { ScreenBffController } from "./screen-bff/screen-bff.controller";
 import { ScreenBffService } from "./screen-bff/screen-bff.service";
 import { PaperReadController } from "./paper-read/paper-read.controller";
@@ -483,6 +489,10 @@ export class AppModule {
         GovernanceService,
         PositiveParentRepository,
         PositiveParentReads,
+        FollowingParentRepository,
+        FollowingParentReads,
+        LiveParentRepository,
+        LiveParentReads,
         PaperExitRepository,
         PaperExitService,
         GovernanceReviewCaptureService,
@@ -508,6 +518,8 @@ export class AppModule {
         LiveOperationsService,
         ActivationRepository,
         ActivationService,
+        CurrentActivationRepository,
+        CurrentActivationReads,
         ScreenBffService,
         PaperReadService,
         ProfileReadService,

@@ -22,6 +22,8 @@ import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { SessionsRepository } from "../src/repos/sessions";
 import { CONTROL_API_CONFIG } from "../src/tokens";
 import { GovernanceController } from "../src/governance/governance.controller";
+import { PositiveParentRepository } from "../src/governance/positive-parent.repository";
+import { PositiveParentReads } from "../src/governance/positive-parent.service";
 import { GovernanceService } from "../src/governance/governance.service";
 import { PaperExitService } from "../src/governance/paper-exit.service";
 import { GovernanceReviewCaptureService } from "../src/governance/review-capture.service";
@@ -535,6 +537,7 @@ describe.skipIf(!URL)("ELP2-04 current operational parents / actual PG+HTTP / TE
         { provide: GovernanceReviewCaptureService, useValue: legacy }, { provide: ExecutionOperationsService, useValue: legacy },
         { provide: OperationsWorkflowService, useValue: legacy }, { provide: IncidentService, useValue: legacy },
         { provide: ExecutionReadScopes, useValue: f.scopes }, { provide: OperationalReadService, useValue: f.service },
+        { provide: PositiveParentReads, useValue: new PositiveParentReads(new PositiveParentRepository(ctx.pool), f.access, f.scopes) },
         { provide: OperationalCompositionService, useValue: compositions }] },
     new FastifyAdapter(), { logger: false, abortOnError: false });
     try {

@@ -27,6 +27,8 @@ export class LiveOperationsController {
     @Req() request: LiveRequest,
     @Param("deployment_id") deploymentId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
+    @Query("panel") rawPanel?:unknown,
+    @Query("cursor") rawCursor?:unknown,
   ) {
     const workspaceId = rawWorkspaceId === undefined || rawWorkspaceId === null || rawWorkspaceId === ""
       ? request.portalWorkspaceId
@@ -35,6 +37,6 @@ export class LiveOperationsController {
       throw new GovernanceError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
     return this.live.detail(request.portalUser, request.portalSession, workspaceId, deploymentId,
-      request.portalViewerWorkspaceId ?? request.portalWorkspaceId);
+      request.portalViewerWorkspaceId ?? request.portalWorkspaceId,{panel:rawPanel,cursor:rawCursor});
   }
 }

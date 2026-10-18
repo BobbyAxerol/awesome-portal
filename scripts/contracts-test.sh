@@ -71,6 +71,8 @@ mkdir -p \
   "${WORKSPACE_DIR}/packages/contracts" \
   "${WORKSPACE_DIR}/apps/portal/registry/openapi" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations" \
+  "${WORKSPACE_DIR}/apps/control-api/src/activation" \
+  "${WORKSPACE_DIR}/apps/control-api/src/live" \
   "${WORKSPACE_DIR}/apps/control-api/src/governance" \
   "${WORKSPACE_DIR}/apps/control-api/src/research" \
   "${WORKSPACE_DIR}/apps/control-api/src/repos" \
@@ -146,7 +148,14 @@ cp -a "${ROOT_DIR}/apps/control-api/src/operations/operational-read.contract.ts"
 # Finite parent schema/field-digest parity stays pure: no repository, service,
 # private provider, configuration or PostgreSQL runtime is copied here.
 cp -a "${ROOT_DIR}/apps/control-api/src/governance/positive-parent.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/following-parent.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/live-parent.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/governance/"
+cp -a "${ROOT_DIR}/apps/control-api/src/activation/current-activation.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/activation/contracts.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/activation/"
+cp -a "${ROOT_DIR}/apps/control-api/src/live/live-source.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/live/"
 # Access validation reuses the finite capability vocabulary. Its PostgreSQL
 # imports are type-only: copying this explicit dependency opens no DB/runtime
 # access and keeps contract/parser parity in the networkless test cell.

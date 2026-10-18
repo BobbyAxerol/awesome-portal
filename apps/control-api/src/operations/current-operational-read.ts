@@ -134,7 +134,7 @@ export class CurrentOperationalReads {
    * of unrelated grants. load may extract bounded immutable target metadata;
    * decode is protected by a fresh full-graph audit decision. All contextual
    * errors (including absent/unusable targets) remain inside the same flight. */
-  async prepareExact<T>(actor: AccessActor, workspace: string, load: () => Promise<{
+  async prepareExact<T>(actor: AccessActor, workspace: string, load: (captured: AccessEvaluationContext) => Promise<{
     target: ExactAuditTarget;
     authorize?: ExactReadAuthorizer;
     beforeFinal?: () => Promise<void>;
@@ -194,7 +194,7 @@ export class CurrentOperationalReads {
         target = captureTarget(beforeLoadTarget);
         fingerprint = audit(captured)!.proof; // Collection authority BEFORE any private row/count SQL.
       }
-      const loaded = await load(), selected = captureTarget(loaded.target);
+      const loaded = await load(captured), selected = captureTarget(loaded.target);
       if (target && (target.resource.kind !== selected.resource.kind || target.resource.id !== selected.resource.id ||
         target.environment !== selected.environment)) throw new Error("EXACT_READ_TARGET_CHANGED");
       target = selected;

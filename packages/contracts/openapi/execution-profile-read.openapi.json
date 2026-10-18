@@ -27,8 +27,145 @@
     "/api/v1/execution/governance/approvals/{approval_id}/live": {
       "get": {
         "operationId": "executionGateLiveReviewV1",
-        "parameters": [{ "name": "approval_id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Portal live gate joined to Live-profile facts", "content": { "application/json": { "schema": { "$ref": "../schemas/governance-live-review.v1.schema.json" } } } } }
+        "parameters": [
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy Live review OR finite current-authorized stored LIVE_GATE root. Separate source facts stay typed unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/governance-live-review.v1.schema.json"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/LiveParentReadV2"
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "400": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Strict finite input invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current authenticated Portal session required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current actor/session lifecycle denied; no parent detail returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Uniform unknown, hidden, wrong workspace/family/target parent; no disclosure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "ACCESS_RETRY_REQUIRED: current authority or stored parent changed; no legacy fallback.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Fixed parent field-purpose, integrity, bound or configuration unavailable; no raw SQL/provider/Zod text.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Sticky current Core selects the independent exact Live reader before legacy reads. SCOPED_V2 requires current qualified DEPLOYMENT/LIVE audit, governance.live.read and LIVE_ROOT purpose before protected SQL. No fabricated Portfolio or predecessor, owner/read_all/decide shortcut or source-screen call. One SAME flight fences successful metadata and held errors after exact local equality, source and LAST Core/session/clock checks. Historical approval expiry is not read expiry; stored approval is not current TS acceptance, execution or activation."
       }
     }
   }

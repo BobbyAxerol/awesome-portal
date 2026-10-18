@@ -90,10 +90,36 @@ describe("original08 current native/Core grant compatibility (TEST_ONLY)",()=>{
     (r as {current_authority:unknown}).current_authority=invalid;c.relationsFor=()=>r;
     expect(decide(c).allowed).toBe(false);
   });
-  it("the explicitly absent extension retains existing legacy tuple behavior",()=>{
+  it("literal qualified true retains absent-extension legacy behavior without rewriting acceptance",()=>{
     const gs=[grant()],c=context(gs),r=relations(source(gs));delete r.current_authority;
     r.membership={revision:gs[0].ts_receipt!.membership_revision,receipt_id:gs[0].ts_receipt!.receipt_id,mapping_revision:mapping};
-    c.relationsFor=()=>r;expect(decide(c).allowed).toBe(true);
+    const before=JSON.stringify(gs);c.relationsFor=()=>r;
+    expect(r.qualified).toBe(true);expect(decide(c).allowed).toBe(true);
+    expect(grantCurrent(gs[0],c)).toBe(true);expect(JSON.stringify(gs)).toBe(before);
+  });
+  it.each([false,undefined,null,"false","true",1,{}])("legacy TS gates reject nonliteral qualification %j despite an unchanged matching tuple",invalid=>{
+    for(const requires_ts_acceptance of [true,false]) {
+      // The false flag cannot waive the independent business-ALLOW TS gate.
+      const gs=[grant(undefined,{requires_ts_acceptance})],c=context(gs),r=relations(source(gs));delete r.current_authority;
+      r.membership={revision:gs[0].ts_receipt!.membership_revision,receipt_id:gs[0].ts_receipt!.receipt_id,mapping_revision:mapping};
+      (r as unknown as Record<string,unknown>).qualified=invalid;c.relationsFor=()=>r;
+      const before=JSON.stringify(gs),membership=JSON.stringify(r.membership);
+      expect(grantCurrent(gs[0],c)).toBe(false);expect(decide(c).allowed).toBe(false);
+      expect(JSON.stringify(gs)).toBe(before);expect(JSON.stringify(r.membership)).toBe(membership);
+    }
+  });
+  it("unqualified legacy census does not remove app-only explicit ALLOW or DENY",()=>{
+    const allow=grant("TEST_ONLY:app-allow",{action:"maintenance.read",requires_ts_acceptance:false,ts_receipt:null});
+    const deny=grant("TEST_ONLY:app-deny",{action:"maintenance.read",effect:"DENY",requires_ts_acceptance:false,ts_receipt:null});
+    // App-only grants have no TS receipt; do not ask the TS fixture builder
+    // to fabricate one before overriding the unqualified relations below.
+    const c=context([allow],source()),r=relations(source());delete r.current_authority;
+    r.qualified=false;r.membership=null;c.relationsFor=()=>r;
+    expect(evaluateAccess(c,"maintenance.read",P,"paper").allowed).toBe(true);
+    c.grants=[allow,deny];const before=JSON.stringify(c.grants);
+    expect(grantCurrent(deny,c)).toBe(true);
+    expect(evaluateAccess(c,"maintenance.read",P,"paper")).toMatchObject({allowed:false,reason_code:"ACCESS_DENIED"});
+    expect(JSON.stringify(c.grants)).toBe(before);
   });
   it.each(["subject_user_id","workspace_id","mapping_revision","ts_user_id"] as const)("wrong current %s denies without rewriting acceptance",field=>{
     const s=source();(s as Record<string,unknown>)[field]="TEST_ONLY:wrong";

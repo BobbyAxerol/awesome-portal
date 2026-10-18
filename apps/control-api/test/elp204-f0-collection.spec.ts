@@ -30,6 +30,7 @@ import { ExecutionF0ReadController } from "../src/operations/f0-read.controller"
 import { ExecutionF0ReadService } from "../src/operations/f0-read.service";
 import { OperationalReadService } from "../src/operations/operational-read.service";
 import { OperationalReadRepository } from "../src/operations/operational-read.repository";
+import { PositiveParentReads } from "../src/governance/positive-parent.service";
 import { f0Collection, f0BlockedOperation, type F0Collection } from "../src/operations/f0-read.contract";
 import type { AccessActor, AccessResource, ReviewedAccessPolicy, ScopedAccessGrant } from "../src/execution-v2/access.contract";
 import { accessDigest, evaluateAccess, validateDelegation, type AccessRelations } from "../src/execution-v2/access-policy";
@@ -201,7 +202,7 @@ describe.skipIf(!URL)("ELP2-04 F0-only exact-own collection / actual PG HTTP / T
         expect(p.items[0]).toEqual(f0BlockedOperation.parse((await http.detail(record.operationId)).json()));
       });
     });
-  it("whole AppModule routes literal/f0 to collection, without unlocking generic operation parent", async () => {
+  it("whole AppModule routes literal/f0 to collection and keeps unknown generic IDs out of F0 workflow", async () => {
     const f = await fixture(), record = await seed(f), appService = ctx.app.get(ExecutionF0ReadService);
     // Only the service's TEST_ONLY authority dependencies are delegated. The
     // actual complete AppModule router/guards/controller/contract stay mounted.
@@ -210,6 +211,7 @@ describe.skipIf(!URL)("ELP2-04 F0-only exact-own collection / actual PG HTTP / T
       new ExecutionReadScopes(ctx.pool, f.access, ctx.config), ctx.config);
     const parent = vi.spyOn(ctx.app.get(OperationalReadService), "workflow")
       .mockImplementation((principal, id) => current.workflow(principal, id));
+    const selectedParent = vi.spyOn(ctx.app.get(PositiveParentReads), "operationOrNull");
     const http = ctx.app.getHttpAdapter().getInstance() as FastifyInstance;
     const headers = { cookie: `${SESSION_COOKIE}=${creator.session.token}`, "x-request-id": "TEST_ONLY-f0-collection" };
     try {
@@ -224,10 +226,14 @@ describe.skipIf(!URL)("ELP2-04 F0-only exact-own collection / actual PG HTTP / T
       const generic = await http.inject({ method: "GET", headers,
         url: `/api/v1/execution/operations/op_TEST_ONLY_nonexistent?workspace_id=${encodeURIComponent(f.workspace)}` });
       error(generic, 404, "OPERATIONAL_READ_NOT_FOUND");
-      expect(parent).toHaveBeenCalledOnce();
+      // Only a positively classified F0 ID may reach its workflow. The absent
+      // ID is now refused by the real parent selector, with no F0 fallback.
+      expect(selectedParent).toHaveBeenCalledOnce();
+      expect(selectedParent).toHaveBeenCalledWith(expect.objectContaining({workspaceId:f.workspace}), "op_TEST_ONLY_nonexistent");
+      expect(parent).not.toHaveBeenCalled();
       expect(delegate).toHaveBeenCalledTimes(1); expect(f.forbidden).not.toHaveBeenCalled();
       // Route precedence + explicit fixture authority only, not PM commissioning.
-    } finally { parent.mockRestore(); delegate.mockRestore(); }
+    } finally { selectedParent.mockRestore(); parent.mockRestore(); delegate.mockRestore(); }
   });
   it("authorized empty is exact-own only, never global queue or inferred authority", async () => {
     const f = await fixture(); await seed(f, { author: delegator });

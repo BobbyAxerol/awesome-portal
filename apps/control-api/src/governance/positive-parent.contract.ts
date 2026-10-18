@@ -97,5 +97,48 @@ export const paperExitParentRead = z.object({ ...base, family: z.literal("PAPER_
 }).strict().refine(value => value.approval.gate === "PAPER_EXIT" &&
   value.review.review_id === value.approval.approval_id, "PARENT_GATE_IDENTITY_MISMATCH");
 
+/** Selected Portal plan metadata, NOT apply eligibility, native settlement,
+ * receipt verification or a history list. ROOT + DECISION_OPERATION purposes
+ * qualify the exact selected ID on BOTH anchors before any protected SQL. */
+const selectedOperation = {
+  schema_version: z.literal("portal.execution.governance-parent-operation.v2"),
+  operation_id: id, command_version: z.literal(1), expected_version: version,
+  status: z.enum(["PLANNED", "APPLIED", "EXPIRED"]),
+  parent_approval_id: id.nullable(), parent_approval_version: version.nullable(),
+  parent_evidence_set_hash: digest.nullable(),
+  created_at_ms: ms, expires_at_ms: ms, applied_at_ms: ms.nullable(),
+};
+function operationInvariants(value: {
+  status: string; created_at_ms: number; expires_at_ms: number; applied_at_ms: number | null;
+  parent_approval_id: string | null; parent_approval_version: number | null; parent_evidence_set_hash: string | null;
+}, context: z.RefinementCtx) {
+  const pins = [value.parent_approval_id, value.parent_approval_version, value.parent_evidence_set_hash];
+  if (value.expires_at_ms < value.created_at_ms ||
+    (value.status === "APPLIED") !== (value.applied_at_ms !== null) ||
+    value.applied_at_ms !== null && value.applied_at_ms < value.created_at_ms ||
+    pins.some(pin => pin === null) && pins.some(pin => pin !== null))
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "PARENT_OPERATION_INVALID" });
+}
+export const r2ParentOperationRead = z.object({ ...base, ...selectedOperation,
+  family: z.literal("R2"), command_type: z.literal("GOVERNANCE_R2_DECISION"),
+  decision: z.enum(["APPROVE", "APPROVE_WITH_CONDITION", "DENY"]),
+}).strict().superRefine((value, context) => {
+  operationInvariants(value, context);
+  if (value.approval.gate !== "R2")
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "PARENT_GATE_MISMATCH" });
+});
+export const paperExitParentOperationRead = z.object({ ...base, ...selectedOperation,
+  family: z.literal("PAPER_EXIT"), command_type: z.literal("GOVERNANCE_PAPER_EXIT_DECISION"),
+  decision: z.enum(["PROMOTE", "EXTEND_OBSERVATION", "REJECT"]),
+  // The Paper plan has no parent_approval_* capture columns. Do not invent
+  // R2 pins from today's review or confuse expected_review_version with them.
+  parent_approval_id: z.null(), parent_approval_version: z.null(), parent_evidence_set_hash: z.null(),
+}).strict().superRefine((value, context) => {
+  operationInvariants(value, context);
+  if (value.approval.gate !== "PAPER_EXIT")
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "PARENT_GATE_MISMATCH" });
+});
+export type PositiveParentOperationRead = z.infer<typeof r2ParentOperationRead> | z.infer<typeof paperExitParentOperationRead>;
+
 export type R2ParentRead = z.infer<typeof r2ParentRead>;
 export type PaperExitParentRead = z.infer<typeof paperExitParentRead>;

@@ -10,6 +10,7 @@ import { accessDigest, canonicalSelector, evaluateAccess, type AccessEvaluationC
 import { currentAccessRelations, grantBindingDigest, type CurrentAccessRelations } from "../src/execution-v2/access-current-relations";
 import { commandIntent, type CommandIntent } from "../src/execution-v2/command.contract";
 import { commandAuthorization, type CommandAuthorization, type CommandTrust } from "../src/execution-v2/command-trust";
+import { commandMembershipCurrent } from "../src/execution-v2/command-current-authority";
 import { ExecutionCommandService, intentHash, validateAuthorization } from "../src/execution-v2/command.service";
 import type { ExecutionAccessService } from "../src/execution-v2/access.service";
 import type { CommandStore } from "../src/execution-v2/command.store";
@@ -166,14 +167,28 @@ describe("ELP2-07 per-grant accepted correspondence (TEST_ONLY, uninstalled)",()
     refuse(f,{...f.authorization(other),delegation_ref:f.selected.grant_id});
     const audit=f.add(f.grant("TEST_ONLY:audit","TEST_ONLY:portfolio-a",["paper"],"audit.read"));refuse(f,f.authorization(audit));
   });
-  it("preserves absent-extension singleton behavior and unchanged strict private DTO bytes",()=>{
-    const f=fixture(),a=f.authorization(),before=JSON.stringify(a);
+  it("preserves literal-true legacy authority and unchanged acceptance/private DTO bytes",()=>{
+    const f=fixture(),a=f.authorization(),before=JSON.stringify(a),grants=JSON.stringify(f.grants);
     delete f.relations.current_authority;
     f.relations.membership={revision:a.membership_revision,mapping_revision:a.mapping_revision,receipt_id:a.membership_receipt_ref};
+    expect(f.relations.qualified).toBe(true);
+    expect(commandMembershipCurrent(a,actor,f.intent(),f.context,"capital.top_up",NOW)).toBe(true);
     expect(()=>validate(f,a)).not.toThrow();expect(JSON.stringify(a)).toBe(before);
+    expect(JSON.stringify(f.grants)).toBe(grants);
     expect(commandAuthorization.parse(JSON.parse(before))).toEqual(a);
     expect(commandAuthorization.safeParse({...a,core_grant_id:f.selected.grant_id}).success).toBe(false);
     expect(()=>validateAuthorization(a,actor,f.intent(),f.context,false,NOW)).toThrow("COMMAND_RELAY_NOT_QUALIFIED");
+  });
+  it.each([false,undefined,null,"false","true",1,{}])("legacy command membership rejects nonliteral qualification %j without rewriting receipts",invalid=>{
+    const f=fixture(),a=f.authorization(),before=JSON.stringify(a),grants=JSON.stringify(f.grants);
+    delete f.relations.current_authority;
+    f.relations.membership={revision:a.membership_revision,mapping_revision:a.mapping_revision,receipt_id:a.membership_receipt_ref};
+    (f.relations as unknown as Record<string,unknown>).qualified=invalid;
+    const membership=JSON.stringify(f.relations.membership);
+    // Direct helper assertion discriminates its guard from the shared-policy repair.
+    expect(commandMembershipCurrent(a,actor,f.intent(),f.context,"capital.top_up",NOW)).toBe(false);
+    refuse(f,a);expect(JSON.stringify(a)).toBe(before);expect(JSON.stringify(f.grants)).toBe(grants);
+    expect(JSON.stringify(f.relations.membership)).toBe(membership);
   });
   it.each(["final-clock","final-context"])("service uses %s after awaited store write (synthetic boundary only)",async fault=>{
     const f=fixture(),a=f.authorization(),i=f.intent();
