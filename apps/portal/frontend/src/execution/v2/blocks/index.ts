@@ -1,0 +1,50 @@
+/**
+ * V2 shared blocks. Plain props in, markup out: nothing here reads a store, a
+ * route or a chart library. Screens import from this barrel only.
+ *
+ * - `Kpi` / `KpiStrip`: label, value, basis, with the three honest absences.
+ * - `NotPublished` and the one FE-id table.
+ * - `EventFeed`: a subject's events with a keyset `Load more` contract.
+ * - `JourneySpine`: R1, R2, Paper, Sandbox, Canary, Live; never infers history.
+ * - `Triad`: Internal, Broker, Difference; never computes.
+ * - `ReplayPanel`: the V2 frame; the V1 chart loads lazily.
+ * - `SectionPanel` / `PanelHead` / `StateBoundary` / `PanelGate`.
+ */
+export { Kpi, KpiStrip } from "./Kpi";
+export type { KpiProps, KpiStripProps } from "./Kpi";
+export { MetricText, NO_VALUE_COPY, UNREADABLE_COPY } from "./metric";
+export type { MetricTextProps } from "./metric";
+export {
+  FE_FLEET,
+  FE_OPERATIONS,
+  FE_REQUEST_LABEL,
+  NOT_PUBLISHED,
+  NotPublished,
+  feLabel,
+  notPublishedFact,
+  notPublishedReason,
+  notPublishedText,
+} from "./notPublished";
+export type { FeId, NotPublishedId, NotPublishedProps, UnpublishedFact } from "./notPublished";
+export { EventFeed } from "./EventFeed";
+export type { EventFeedCursor, EventFeedProps, EventFeedRow } from "./EventFeed";
+export { JourneySpine, SPINE_STAGES, SPINE_STAGE_IDS, spineNodeState } from "./JourneySpine";
+export type {
+  SpineCriteria,
+  SpineDomain,
+  SpineNodeState,
+  SpineStageFacts,
+  SpineStageId,
+  SpineStageSpec,
+  SpineVariant,
+  JourneySpineProps,
+} from "./JourneySpine";
+export { Triad } from "./Triad";
+export type { TriadCell, TriadNotComputed, TriadProps, TriadRow, TriadSide } from "./Triad";
+export { ReplayPanel } from "./ReplayPanel";
+export type { ReplayChip, ReplayLogRow, ReplayPanelProps } from "./ReplayPanel";
+export { LazyReplayCandleChart, LazyTradeReplayEvents } from "./replayLazy";
+export { PanelHead, SectionPanel } from "./SectionPanel";
+export type { PanelHeadLevel, PanelHeadProps, SectionPanelProps } from "./SectionPanel";
+export { PanelGate, StateBoundary } from "./StateBoundary";
+export type { PanelGateProps, StateBoundaryProps } from "./StateBoundary";

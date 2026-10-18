@@ -1,0 +1,462 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { readUtcEpochMs, type UtcEpochMs } from "../../screenDataContract";
+import { readMetric, type Metric } from "../boundary";
+import { FE as FLEET_FE } from "../screens/fleet/fleetModel";
+import { FE as OPS_FE } from "../screens/operations/notPublished";
+import {
+  EventFeed,
+  FE_FLEET,
+  FE_OPERATIONS,
+  FE_REQUEST_LABEL,
+  JourneySpine,
+  Kpi,
+  KpiStrip,
+  NotPublished,
+  PanelHead,
+  SPINE_STAGE_IDS,
+  SectionPanel,
+  StateBoundary,
+  Triad,
+  notPublishedText,
+  spineNodeState,
+  type EventFeedRow,
+} from "./index";
+
+afterEach(cleanup);
+
+const BIG = "12345678901234567890.123456789";
+const metric = (value: string, state = "AVAILABLE", unit: "money" | "qty" | "pct" = "money"): Metric => {
+  const m = readMetric({ state, value }, { unit });
+  if (m === null) throw new Error(`unreadable fixture ${value}`);
+  return m;
+};
+const absent = (state: string, reason_code: string): Metric => {
+  const m = readMetric({ state, reason_code }, { unit: "money" });
+  if (m === null) throw new Error("unreadable absent fixture");
+  return m;
+};
+const at = (ms: number): UtcEpochMs => {
+  const t = readUtcEpochMs(ms);
+  if (t === null) throw new Error("bad instant");
+  return t;
+};
+const DASHES = /[—–]|\bN\/A\b|\bNaN\b/;
+
+describe("NotPublished and the one FE table", () => {
+  it("prints the word, the id and the label", () => {
+    render(<NotPublished id="FE-021" reasonCode="AUDIT_UNQUALIFIED">Who did what</NotPublished>);
+    expect(screen.getByText("Not published")).toBeTruthy();
+    expect(document.body.textContent).toContain("(FE-021)");
+    expect(document.body.textContent).toContain("Who did what");
+    expect(screen.getByText("AUDIT_UNQUALIFIED")).toBeTruthy();
+    expect(notPublishedText("FE-027/028")).toBe("Not published (FE-027/028)");
+  });
+
+  it("holds exactly the ids and wording of the two tables it replaces", () => {
+    expect(FE_OPERATIONS).toEqual(OPS_FE);
+    expect(FE_FLEET).toEqual(FLEET_FE);
+    for (const id of Object.values(FE_OPERATIONS)) expect(FE_REQUEST_LABEL[id]).toBeTruthy();
+    for (const fact of Object.values(FE_FLEET)) {
+      expect(FE_REQUEST_LABEL[fact.fe]).toBeTruthy();
+    }
+    // The fleet wording is the label where the id is unambiguous.
+    expect(FE_REQUEST_LABEL["FE-012"]).toBe("Group by");
+    expect(FE_REQUEST_LABEL["FE-035"]).toBe("Map");
+    expect(FE_REQUEST_LABEL["FE-027, FE-028"]).toBe("Readiness");
+  });
+});
+
+describe("Kpi", () => {
+  it("keeps a 29-digit decimal exact: float digits never appear, the original rides on title", () => {
+    render(
+      <KpiStrip label="Totals">
+        <Kpi label="NAV" metric={metric(BIG, "AVAILABLE", "qty")} suffix="USDT" basis="Virtual ledger" />
+      </KpiStrip>,
+    );
+    const num = document.querySelector(".exec-blk-num") as HTMLElement;
+    expect(num.getAttribute("title")).toBe(BIG);
+    expect(num.getAttribute("data-full")).toBe(BIG);
+    expect(num.textContent).toBe("12,345,678,901,234,567,890.12345679");
+    expect(document.body.textContent).not.toContain("12345678901234567000");
+    expect(screen.getByText("Virtual ledger")).toBeTruthy();
+    expect(screen.getByText(/USDT/)).toBeTruthy();
+  });
+
+  it("labels the group and each term", () => {
+    render(
+      <KpiStrip label="Fleet totals">
+        <Kpi label="Net PnL" metric={metric("1.50")} />
+      </KpiStrip>,
+    );
+    const group = screen.getByRole("group", { name: "Fleet totals" });
+    expect(within(group).getByText("Net PnL").tagName).toBe("DT");
+  });
+
+  it("prints Not published (FE-xxx) and it wins over a metric", () => {
+    render(<Kpi label="Window return" notPublished="FE-025" metric={metric("1.00")} />);
+    expect(document.body.textContent).toContain("Not published");
+    expect(document.body.textContent).toContain("(FE-025)");
+    expect(document.querySelector(".exec-blk-num")).toBeNull();
+  });
+
+  it("prints the state word and the reason for an absence, and says so for unreadable and missing", () => {
+    const { unmount } = render(<Kpi label="A" metric={absent("UNAVAILABLE", "SOURCE_GAP")} />);
+    expect(screen.getByText("Not available · SOURCE_GAP")).toBeTruthy();
+    unmount();
+    const denied = render(<Kpi label="B" metric={absent("DENIED", "NO_GRANT")} />);
+    expect(screen.getByText("Not permitted · NO_GRANT")).toBeTruthy();
+    denied.unmount();
+    const bad = render(<Kpi label="C" metric={null} />);
+    expect(screen.getByText("Not available · unreadable value")).toBeTruthy();
+    bad.unmount();
+    render(<Kpi label="D" absentReason="NOT_REQUESTED" />);
+    expect(screen.getByText("Not available · NOT_REQUESTED")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(DASHES);
+  });
+
+  it("tones only a signed figure, only by its published sign, never a partial or an exact zero", () => {
+    const { container, rerender } = render(<Kpi label="PnL" metric={metric("-12.5")} signed />);
+    expect(container.querySelector(".exec-blk-num")?.getAttribute("data-tone")).toBe("negative");
+    rerender(<Kpi label="PnL" metric={metric("12.5")} signed />);
+    expect(container.querySelector(".exec-blk-num")?.getAttribute("data-tone")).toBe("positive");
+    rerender(<Kpi label="Balance" metric={metric("12.5")} />);
+    expect(container.querySelector(".exec-blk-num")?.getAttribute("data-tone")).toBeNull();
+    rerender(<Kpi label="PnL" metric={metric("-12.5", "PARTIAL")} signed />);
+    expect(container.querySelector(".exec-blk-num")?.getAttribute("data-tone")).toBeNull();
+    expect(container.textContent).toContain("Partial");
+    rerender(<Kpi label="PnL" metric={metric("0.00")} signed />);
+    expect(container.querySelector(".exec-blk-num")?.getAttribute("data-tone")).toBeNull();
+    expect(container.querySelector(".exec-blk-num")?.textContent).toBe("0.00");
+  });
+});
+
+describe("SectionPanel, PanelHead and StateBoundary", () => {
+  it("names the region by its heading and honours the level", () => {
+    render(
+      <SectionPanel title="Positions" level={2} aside="as of 17 Oct">
+        body
+      </SectionPanel>,
+    );
+    const region = screen.getByRole("region", { name: "Positions" });
+    expect(within(region).getByRole("heading", { level: 2, name: "Positions" })).toBeTruthy();
+    expect(within(region).getByText("as of 17 Oct")).toBeTruthy();
+  });
+
+  it("PanelHead renders a heading without a panel", () => {
+    render(<PanelHead title="Trade log" level={4} />);
+    expect(screen.getByRole("heading", { level: 4, name: "Trade log" })).toBeTruthy();
+  });
+
+  it("ok renders only the body", () => {
+    const { container } = render(<StateBoundary status="ok">the body</StateBoundary>);
+    expect(container.textContent).toBe("the body");
+  });
+
+  it.each([
+    ["empty", "Nothing to show"],
+    ["insufficient_data", "Insufficient data"],
+    ["denied", "Withheld"],
+    ["unavailable", "Unavailable"],
+    ["terminal", "Failed"],
+  ] as const)("%s replaces the body with the shared PanelState", (status, word) => {
+    const props = status === "denied" || status === "unavailable" || status === "terminal"
+      ? { status, reason: "Needs the Manager role" }
+      : { status, reason: "No rows matched" };
+    const { container } = render(<StateBoundary {...props}>the body</StateBoundary>);
+    expect(screen.getByText(word)).toBeTruthy();
+    expect(container.textContent).not.toContain("the body");
+    expect(container.querySelector(".exec-state")?.getAttribute("data-status")).toBe(status);
+  });
+
+  it("loading is the skeleton with an announced status", () => {
+    render(<StateBoundary status="loading">the body</StateBoundary>);
+    expect(screen.getByRole("status", { name: "Loading" })).toBeTruthy();
+  });
+
+  it.each(["partial", "stale"] as const)("%s keeps the body, demoted, under the state line", (status) => {
+    const { container } = render(<StateBoundary status={status} reason="Two sources behind">the body</StateBoundary>);
+    expect(container.querySelector(".exec-state")?.getAttribute("data-status")).toBe(status);
+    expect(container.querySelector(".exec-blk-demoted")?.textContent).toBe("the body");
+  });
+});
+
+const ROWS: EventFeedRow[] = [
+  { id: "e3", at: at(Date.UTC(2026, 9, 17, 9, 14)), kind: "recall", kindLabel: "Recall applied", target: "Core", outcome: "Budget returned" },
+  { id: "e2", at: at(Date.UTC(2026, 9, 16, 8, 0)), kind: "approval", target: "BTC-Trend v3", outcome: "Sandbox exit approved", href: "/alphas/btc" },
+  { id: "e1", at: at(Date.UTC(2026, 9, 1, 0, 5)), kind: "incident", target: "Binance-02", outcome: "Broker sync diverged" },
+];
+
+describe("EventFeed", () => {
+  it("renders UTC time, kind chip, target and outcome in source order, with a named table", () => {
+    render(<EventFeed scope="BTC-Trend v3" rows={ROWS} />);
+    const table = screen.getByRole("table", { name: "Events for BTC-Trend v3" });
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(rows).toHaveLength(3);
+    expect(rows[0].textContent).toContain("17 Oct 09:14Z");
+    expect(rows[0].textContent).toContain("Recall applied");
+    expect(rows[0].textContent).toContain("Budget returned");
+    expect(rows[2].textContent).toContain("1 Oct 00:05Z");
+    expect(within(table).getByRole("link", { name: "BTC-Trend v3" }).getAttribute("href")).toBe("/alphas/btc");
+    expect(within(table).getAllByRole("columnheader").map((c) => c.textContent)).toEqual(["When (UTC)", "Kind", "Target", "Outcome"]);
+    expect(screen.getByRole("region", { name: "Events" })).toBeTruthy();
+  });
+
+  it("adds Actor and Receipt only when some row has them, and says Not available for a gap", () => {
+    render(<EventFeed scope="X" rows={[{ ...ROWS[0], actor: "bjones" }, ROWS[1]]} />);
+    expect(screen.getByRole("columnheader", { name: "Actor" })).toBeTruthy();
+    expect(screen.getAllByText("Not available").length).toBeGreaterThan(0);
+  });
+
+  it("empty ok-with-no-rows reads as empty, not as a blank table", () => {
+    render(<EventFeed scope="BTC-Trend v3" rows={[]} />);
+    expect(screen.getByText("Nothing to show")).toBeTruthy();
+    expect(screen.getByText(/No events recorded for BTC-Trend v3/)).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("unavailable and denied carry their reason; a missing reason is said, not hidden", () => {
+    const { unmount } = render(<EventFeed scope="X" rows={[]} status="unavailable" reason="Journal read timed out" />);
+    expect(screen.getByText("Unavailable")).toBeTruthy();
+    expect(screen.getByText("Journal read timed out")).toBeTruthy();
+    unmount();
+    render(<EventFeed scope="X" rows={[]} status="denied" />);
+    expect(screen.getByText("No reason was published.")).toBeTruthy();
+  });
+
+  it("a feed with no source is Not published (FE-031)", () => {
+    render(<EventFeed scope="INC-44" rows={ROWS} notPublished="FE-031" />);
+    expect(document.body.textContent).toContain("Not published");
+    expect(document.body.textContent).toContain("(FE-031)");
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("Load more follows the keyset contract: shown while hasMore, calls once, busy ignores clicks", () => {
+    const onLoadMore = vi.fn();
+    const { rerender } = render(<EventFeed scope="X" rows={ROWS} cursor={{ hasMore: true, onLoadMore }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+    rerender(<EventFeed scope="X" rows={ROWS} cursor={{ hasMore: true, loadingMore: true, onLoadMore }} />);
+    const busy = screen.getByRole("button", { name: "Loading more" });
+    expect(busy.getAttribute("aria-busy")).toBe("true");
+    expect(busy.hasAttribute("disabled")).toBe(false);
+    expect(busy.getAttribute("aria-disabled")).toBeNull();
+    fireEvent.click(busy);
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+    rerender(<EventFeed scope="X" rows={ROWS} cursor={{ hasMore: false, onLoadMore }} />);
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("a failed page is announced, keeps the rows, and offers Try again", () => {
+    const onLoadMore = vi.fn();
+    render(<EventFeed scope="X" rows={ROWS} cursor={{ hasMore: true, error: "Timed out", onLoadMore }} />);
+    expect(screen.getByRole("alert").textContent).toContain("Could not load more events");
+    expect(screen.getAllByRole("row")).toHaveLength(4);
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+  });
+
+  it("bare drops the panel chrome", () => {
+    render(<EventFeed scope="X" rows={ROWS} bare />);
+    expect(screen.queryByRole("region")).toBeNull();
+    expect(screen.getByRole("table")).toBeTruthy();
+  });
+});
+
+describe("JourneySpine", () => {
+  it("with nothing published every stage is Unknown and the current stage is Not published", () => {
+    render(<JourneySpine />);
+    const list = screen.getByRole("list", { name: "Lifecycle" });
+    const items = within(list).getAllByRole("listitem");
+    expect(items).toHaveLength(6);
+    for (const item of items) {
+      expect(item.getAttribute("data-s")).toBe("unknown");
+      expect(item.textContent).toContain("Unknown");
+      expect(item.textContent).toContain("Not published");
+      expect(item.textContent).toContain("(FE-027/028)");
+    }
+    expect(within(list).queryByText("Done")).toBeNull();
+    expect(within(list).queryByText("Now")).toBeNull();
+    expect(document.body.textContent).toContain("Current stage");
+    expect(document.body.textContent).not.toMatch(DASHES);
+  });
+
+  it("current stage comes from props only; earlier stages stay Unknown, later ones Not reached; nothing is inferred done", () => {
+    render(<JourneySpine current="sandbox" />);
+    const states = screen.getAllByRole("listitem").map((li) => li.getAttribute("data-s"));
+    expect(states).toEqual(["unknown", "unknown", "unknown", "cur", "ahead", "ahead"]);
+    expect(screen.queryByText("Done")).toBeNull();
+    expect(screen.getAllByText("Not reached")).toHaveLength(2);
+    const now = screen.getAllByRole("listitem")[3];
+    expect(now.getAttribute("aria-current")).toBe("step");
+    // days, criteria and decider are absent on the current stage
+    expect(now.textContent).toContain("Days in stage");
+    expect(now.textContent).toContain("Gate criteria");
+    expect(now.textContent).toContain("Decider");
+    expect(now.textContent).toContain("(FE-027/028)");
+  });
+
+  it("renders published facts and a done stage only when the source says done", () => {
+    render(
+      <JourneySpine
+        current="canary"
+        stages={{
+          r1: { outcome: "done", decidedBy: "bjones", line: "Approved 02 Jul 10:00Z" },
+          canary: { daysInStage: 12, criteria: { met: 5, total: 7 }, decider: "Manager" },
+        }}
+      />,
+    );
+    const items = screen.getAllByRole("listitem");
+    expect(items[0].getAttribute("data-s")).toBe("done");
+    expect(items[0].textContent).toContain("Approved");
+    expect(items[0].textContent).toContain("By bjones");
+    expect(items[1].getAttribute("data-s")).toBe("unknown");
+    const canary = items[4];
+    expect(canary.textContent).toContain("12");
+    expect(canary.textContent).toContain("days in stage");
+    expect(canary.textContent).toContain("5 of 7 criteria met");
+    expect(canary.textContent).toContain("Decides: Manager");
+    expect(canary.textContent).not.toContain("Not published");
+  });
+
+  it("a blocked current stage says Blocked and shows the published reason", () => {
+    render(<JourneySpine current="paper" blocked stages={{ paper: { daysInStage: 3, blockedReason: "Drift over limit" } }} />);
+    const paper = screen.getAllByRole("listitem")[2];
+    expect(paper.getAttribute("data-s")).toBe("blk");
+    expect(paper.textContent).toContain("Blocked");
+    expect(paper.textContent).toContain("Drift over limit");
+  });
+
+  it("uses the Real-funded domain word for Canary and Live and Simulated for Paper and Sandbox", () => {
+    render(<JourneySpine current="live" />);
+    const items = screen.getAllByRole("listitem");
+    expect(items[2].textContent).toContain("Simulated");
+    expect(items[3].textContent).toContain("Simulated");
+    expect(items[4].textContent).toContain("Real-funded domain");
+    expect(items[5].textContent).toContain("Real-funded domain");
+    expect(items[5].textContent).toContain("No exit gate");
+  });
+
+  it("rejects non-integer day counts instead of printing them", () => {
+    render(<JourneySpine current="paper" stages={{ paper: { daysInStage: 1.5 } }} />);
+    expect(screen.getAllByRole("listitem")[2].textContent).not.toContain("1.5");
+    expect(screen.getAllByRole("listitem")[2].textContent).toContain("Days in stage");
+  });
+
+  it("compact is a labelled stepper whose nodes are buttons only when selectable", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(<JourneySpine variant="compact" current="paper" />);
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(screen.getAllByRole("img")).toHaveLength(6);
+    rerender(<JourneySpine variant="compact" current="paper" onSelect={onSelect} selected="sandbox" />);
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(6);
+    expect(buttons[2].getAttribute("aria-label")).toBe("Paper, Now");
+    expect(buttons[3].getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(buttons[4]);
+    expect(onSelect).toHaveBeenCalledWith("canary");
+  });
+
+  it("mini is one named image listing every stage and its state", () => {
+    render(<JourneySpine variant="mini" current="r2" stages={{ r1: { outcome: "done" } }} />);
+    const img = screen.getByRole("img");
+    const name = img.getAttribute("aria-label") ?? "";
+    expect(name).toContain("R1 gate, Done");
+    expect(name).toContain("R2 gate, Now");
+    expect(name).toContain("Live, Later");
+    expect(img.querySelectorAll("i")).toHaveLength(6);
+  });
+
+  it("mini with nothing published says Unknown for all six", () => {
+    render(<JourneySpine variant="mini" />);
+    const name = screen.getByRole("img").getAttribute("aria-label") ?? "";
+    expect(name.match(/Unknown/g)).toHaveLength(6);
+  });
+
+  it("full variant nodes are buttons with aria-pressed when onSelect is given", () => {
+    const onSelect = vi.fn();
+    render(<JourneySpine current="paper" onSelect={onSelect} selected="paper" />);
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(6);
+    expect(buttons[2].getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(buttons[0]);
+    expect(onSelect).toHaveBeenCalledWith("r1");
+  });
+
+  it("spineNodeState is pure vocabulary: position is not history", () => {
+    expect(SPINE_STAGE_IDS.map((id) => spineNodeState(id, "paper", false, undefined))).toEqual([
+      "unknown", "unknown", "cur", "ahead", "ahead", "ahead",
+    ]);
+    expect(spineNodeState("r1", null, false, { outcome: "done" })).toBe("done");
+  });
+});
+
+describe("Triad", () => {
+  const rows = [
+    { key: "cash", label: "Cash", suffix: "USDT", internal: metric(BIG), broker: metric("12345678901234567890.1"), difference: metric("-0.0235") },
+    { key: "pos", label: "Position", internal: metric("1.5", "AVAILABLE", "qty"), broker: absent("UNAVAILABLE", "VENUE_GAP"), difference: { kind: "not-computed", reason: "SHARED_BINDING" } as const },
+  ];
+
+  it("prints the three columns with exact values, as-of captions and signed difference tone", () => {
+    render(<Triad rows={rows} internal={{ asOf: at(Date.UTC(2026, 9, 17, 9, 14)) }} broker={{ asOf: null }} />);
+    const group = screen.getByRole("group", { name: "Reconciliation" });
+    const [internal, broker, diff] = within(group).getAllByRole("region");
+    expect(internal.textContent).toContain("Virtual ledger · 17 Oct 09:14Z");
+    expect(broker.textContent).toContain("Venue report · Not available");
+    expect(diff.textContent).toContain("Derived · matching scopes only");
+    const exact = internal.querySelector(".exec-blk-num") as HTMLElement;
+    expect(exact.getAttribute("title")).toBe(BIG);
+    expect(exact.getAttribute("data-tone")).toBeNull();
+    expect(broker.querySelector(".exec-blk-num")?.getAttribute("data-tone")).toBeNull();
+    expect(diff.querySelector(".exec-blk-num")?.getAttribute("data-tone")).toBe("negative");
+  });
+
+  it("says Not available for an absent metric and Not computed for a published non-computation", () => {
+    render(<Triad rows={rows} />);
+    expect(screen.getByText("Not available · VENUE_GAP")).toBeTruthy();
+    expect(screen.getByText("Not computed · SHARED_BINDING")).toBeTruthy();
+  });
+
+  it("an absent side prints Not available in every row, never a value or a zero difference", () => {
+    render(<Triad rows={rows} broker={null} />);
+    const broker = screen.getAllByRole("region")[1];
+    expect(within(broker).getAllByText("Not available")).toHaveLength(2);
+    expect(broker.querySelector(".exec-blk-num")).toBeNull();
+  });
+
+  it("an unreadable cell is said, a missing cell is Not available, nothing prints a dash", () => {
+    render(<Triad rows={[{ key: "x", label: "X", internal: null }]} />);
+    expect(screen.getByText("Not available · unreadable value")).toBeTruthy();
+    expect(screen.getAllByText("Not available").length).toBe(2);
+    expect(document.body.textContent).not.toMatch(DASHES);
+  });
+
+  it("never tones a partial difference", () => {
+    render(<Triad rows={[{ key: "x", label: "X", difference: metric("-5.00", "PARTIAL") }]} />);
+    expect(document.querySelector(".exec-blk-num")?.getAttribute("data-tone")).toBeNull();
+  });
+});
+
+describe("hygiene of the block sources", () => {
+  const dir = __dirname;
+  const sources = readdirSync(dir)
+    .filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\./.test(f))
+    .map((f) => ({ f, text: readFileSync(join(dir, f), "utf8") }));
+
+  it("finds the block sources", () => {
+    expect(sources.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("no source prints a dash, N/A, a disabled button or converts a decimal through Number()", () => {
+    for (const { f, text } of sources) {
+      expect(text, f).not.toMatch(/—/);
+      expect(text, f).not.toMatch(/"N\/A"/);
+      expect(text, f).not.toMatch(/<button[^>]*(?<![-\w])disabled\b/);
+      expect(text, f).not.toMatch(/\b(?:Number|parseFloat)\(\s*(?:value|decimal|metric|row\.(?:qty|price|fee))/);
+      expect(text, f).not.toMatch(/\.toFixed\(/);
+    }
+  });
+});
