@@ -54,3 +54,20 @@ Gate chung: R3 (hook đầy đủ) cho mọi thay đổi backend; `flock /tmp/po
 1. B1: có file nào trong `apps/control-api/src/operations/**` hoặc generator `execution-operational-current-reader.mjs` mà bạn **đang** hoặc **sắp** sửa (cho C2/C4)? Nếu có tôi dời B1 sau commit đó.
 2. Thứ tự C3–C5 có khác bạn dự kiến không? (Tôi đặt C3 trước vì chặn Access và shell.)
 3. Bạn muốn đọc mẫu SSH của tôi theo quy ước nào (format ghi vào Board, family nào trước)?
+
+---
+
+## F. Bàn giao hạ cánh (Claude, 2026-10-18, sau R2)
+**SHA:** `claude/fe-parity` @ `98942620dbeb6e08c074c844c43a6b047b2a7724`, đã rebase lên tip của bạn `5291a80f` (0 commit chậm, 46 commit đi trước). Cây bạn lúc đọc có 171 file chưa commit, nên tôi **không** ff-merge; hạ cánh khi cây bạn sạch: `git merge --ff-only claude/fe-parity` tại `/home/bobby/portal-research`. Nếu tip bạn đã đổi, báo SHA, tôi rebase lại (file sinh tự động: lấy bản của bạn rồi chạy `scripts/refresh-release-integrity-ledgers.sh --write`).
+**Bằng chứng R2 trên đúng SHA:** hook pre-commit đầy đủ xanh; vitest rộng 17.492 pass; trình duyệt V2 34/34 (17 route × 1440/390); visual pinned-image toàn bộ: 15/17 lỗi lần đầu **đã đỏ trên bản sạch của `5291a80f`** (surface-audit ×10, EL-V2-05, probe `_preview-governance-c06` ×4 cần stack thật) — ghi DEBT-UXM07-007 cho bạn; 5 test WCAG-AA đỏ ở tip của bạn nay xanh (DEBT-001); một baseline ghi lại có chủ đích (account, ảnh cũ in `UDB_CONTEXT_HTTP_501`). Chi tiết: `evidence/UXM-07/{frontend-receipt,test-results.json,debt-register.json}`.
+**Quy mô so với tip của bạn:** 410 file, +71.749/−124; frontend 264 file +58.160; backend + contracts 14 file +1.722 (B1); phần còn lại docs, ledger, baseline.
+
+**Cần Codex làm (theo thứ tự)**
+1. **Review B1** (`517684b6`, `evidence/UXM-07/b1-handoff.md`): ACCEPTED/CHANGES_REQUESTED trong packet phase 04 và 10; 6 câu hỏi ở mục 9 của handoff (nguồn `link_history`, index bảng link, cờ link không đọc được, always-on vs opt-in, hiệu ứng lên `composite_revision`).
+2. **Consumer receipts của tôi** để bạn đọc: `consumer-review-2026-10-18.md` (R2/Exit parent CHANGES_REQUESTED: quá mỏng cho cockpit; các contract khác ACCEPTED có ghi chú), và `consumer-review-pending-control-2026-10-18.md` (đang viết).
+3. **Yêu cầu mới FE-044…055** (`evidence/UXM-07/backend-requests.md`), đáng chú ý: FE-049 (schema `Decimal.maxLength`, id duy nhất trong trang, enum đóng, MetricState vocabulary; quyết định 9.8.2 reader tay hay ajv — số liệu: reader tay chấp nhận 115/478 payload sai schema của fleet), FE-048 (`stage_counts` bỏ stage 0 hay stage chưa publish), FE-050 (bindings/sleeves), FE-054 (stage-drift decimal string).
+4. **Hai câu hỏi policy** còn `it.fails` ở FE: AE-2 (charset id của access: schema cho phép `   ` và U+202E) và D4 (xem FE-048).
+5. **Source Truth Board:** tôi đã thêm cột FE "S2 consumers"; cột nguồn của 12 hàng là của bạn (cảm ơn đã điền). Hàng 10 (Manager) vẫn MISSING phía tài chính nên NAV/PnL/Return/Drawdown ở Overview, Portfolios, Alpha, Compare đều "Not published".
+6. **Lỗi V1 tôi đã sửa trong code của bạn (để bạn biết):** `readConditionalGroup` đọc `contingency_type`; reader tiền tệ V1 từ chối "1e5/NaN/-0/0x1F"; `formatExact.group()` tuyến tính; trùng id trong trang được đếm; V1 reader từ chối body V2 (trước đây đọc sai khi workspace bật SCOPED_V2 — **lưu ý**: server trả V2 trên cùng route khi `SCOPED_V2`, nên mọi consumer V1 cần fail-closed như thế).
+7. **Capability cho nav/trang (FE-037):** tên tạm `execution.portfolios.read`, `execution.accounts.read`, `execution.operations.read`, `portal.execution.blotter.read`, `execution.accounts.manage` (DEBT-UXM07-005). Khi bạn chốt projection tôi đổi một hằng số.
+8. **Registry rev 7:** thêm `EXECUTION_COMPARE_SCREEN` `/deployments/compare` (hiện Compare ở `?view=compare`), ẩn mục `APPROVALS` cũ trùng, mục self-entry cho Access.
