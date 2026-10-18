@@ -68,3 +68,41 @@ Baseline ảnh pinned-image, Playwright V1 ở 4174/4175 (spec `execution-previe
 
 ## Khác thiết kế/brief
 Cockpit: hàng đợi dạng danh sách nút (thẻ <660px), không phải `CardsTable`; "All" ở chip làn không gồm waiver; `rawRows` thêm vào `InboxResult` vì reader V1 bỏ creator/requester; `DecidedRow.approvalId` thêm (additive). Operations: cửa sổ 24H là state cục bộ (codec URL chỉ biết 7D/30D/90D/ALL); không mở incident từ hàng (FE-042).
+
+---
+
+# S1e + S2 · Access, Overview, Portfolios, Portfolio 360, Compare, Alpha 360 + Replay, Accounts + Account 360, Blotter, Admin Actions, Users, và nền dùng chung
+
+Lane: **FIXTURE_LAB / BFF_DOUBLE** (không có đọc thật). Tier **R1** cho mọi commit FE; backend B1 (`517684b6`) và B2 (`77ded3ef`) đã qua **hook đầy đủ (R3)**, hook đó phủ các commit R1/R0 trước nó. R2 đầy đủ của S1+S2 chạy ở cuối lát (xem test-results.json). Chưa push.
+
+## Đã giao (commit, theo thứ tự)
+| Việc | Commit | Ghi chú |
+| --- | --- | --- |
+| F5a testkit L1–L3 + conformance boundary/fleet/cockpit | `182096db` | 1.809 test, 10 lỗi reader ghi bằng `it.fails` |
+| S2-0a biểu đồ SVG dùng chung · S2-0b khối dùng chung | `52b55c73` · `9c77ab86` | EquityPanel, Spark, DivBars, CompareOverlay, CapitalFlow, EventRibbon · Kpi, NotPublished, EventFeed, JourneySpine, Triad, ReplayPanel, StateBoundary |
+| F10 reader V1 từ chối body V2 + reader V2 + dispatch + cockpit | `6cb31d4f` | sửa lỗi "no R1 lineage" sai |
+| S1e Access | `b4c4c50f` | cờ `profile`; owner giữ ma trận V1 ở tab "Manage grants" |
+| DEBT-003 retained-review | `0341aec1` | double trả 404 có kiểu; spec V1 xanh lại |
+| B2 FE-040 · B1 FE-042/043 | `77ded3ef` · `517684b6` | B1 là backend (hook R3 xanh) |
+| F8 consumer review + Board | `128e1cf4` | |
+| DEBT-001 | `34b30032` | chữ nút governance V1 |
+| S2 · Portfolios/360/Compare | `7d8b0df1` | cờ `portfolios`, `compare` |
+| S2 · Alpha 360 + Replay | `0d545f4b` | cờ `alpha`, `replay` |
+| S2 · Accounts + Account 360 | `1b7fca7d` | cờ `account` |
+| S2 · Overview, Blotter, Admin, Users | `7077d590` | cờ `overview`, `blotter`, `admin`, `users` |
+| S2 nối route + spec trình duyệt 17 route | `4becbee7` | |
+| Sửa namespace class, nhãn biểu đồ, lý do trạng thái | `c2366a9c` | tìm bằng trình duyệt |
+| `readConditionalGroup` đọc `contingency_type` | `59328a43` | lỗi V1 do gói Blotter tìm ra |
+| F5b sửa 8 lỗi reader · bộ conformance phần 2 | `263eade6` · `6332a3d3` | 10.250 test, 26 `it.fails` mới |
+
+## Evidence (thật)
+- Trình duyệt thật (bản build cờ bật, BFF double, 17 route × 1440/390): **34/34**, không lỗi console, không request ra ngoài origin, không tràn ngang. Ảnh xem bằng mắt (không phải baseline).
+- Trình duyệt bắt được bảy lỗi mà test đơn vị xanh vẫn lọt: theme cockpit sáng/tối lệch; nút window mở dù server chưa có; `observed_at_ms: 0`; gắn nhầm `case` làm hỏng Command Center; **class V2 trùng class V1** (`exec-chart-*`, `exec-alpha-*`, `exec-bl-*`, `exec-equity`, `exec-spark`: bật cờ sẽ restyle biểu đồ V1) → đổi tên + test chặn; nhãn trục/giá trị cuối bị cắt ở 390px; trạng thái Stale/Partial chỉ in một chữ vì thiếu lý do.
+- Vitest rộng (`src/execution src/styles src/app src/portal e2e`): **17.492 pass**, 26 expected-fail (lỗi reader có ghi chú), **1 đỏ có sẵn** `r2Ledger` (DEBT-UXM07-002, Codex). `tsc` sạch. Build cờ tắt: 0 file chứa class V2.
+- Reader V2 hiện chặn: số tiền dạng "1e5/NaN/-0/0x1F", id trùng trong trang, số nguyên > 2^53, status lạ bị coi là đã đóng, chuỗi 70.000 chữ số.
+
+## Chưa làm / NOT_RUN
+Baseline ảnh pinned-image và hook đầy đủ cho S2 (R2, bước kế tiếp); Playwright V1 journeys ở 4174/4175 (trừ `execution-preview`, đã chạy xanh); bundle-size test (cần `dist/`); researcher view (FE-026 chưa quyết, chỉ chặn theo capability); realtime/poll trên màn Alpha; route Compare riêng (cần registry rev 7).
+
+## Khác thiết kế (ghi để Bobby/Codex xem)
+Compare đặt ở `?view=compare` trên route Portfolios; Users chỉ đọc (ghi vẫn ở V1, `?view=legacy`); màn Accounts không có tab "All environments" (contract một environment); nhãn "Sandbox" thay "Testnet"; địa chỉ broker không bao giờ hiện ("Withheld"); Blotter scope chips chỉ lọc "loaded pages"; Admin cho "Make plan" với action SUPPORTED_BUT_INACTIVE (apply luôn tắt) — cần Bobby/Codex xác nhận; tên capability `execution.*` tạm (DEBT-UXM07-005).

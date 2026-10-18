@@ -3,17 +3,6 @@
   "updated": "2026-10-18",
   "open": [
     {
-      "id": "DEBT-UXM07-001",
-      "title": "V1 governance primary button fails the carbon contrast gate",
-      "where": "apps/portal/frontend/src/execution/execution.css:7278 (.exec-gov .exec-btn-apply: background var(--accent) + color var(--accent-contrast))",
-      "measured": "--accent-contrast (#ffffff) on --accent (#78a9ff) = 2.35:1; src/styles/tokens.test.ts 'keeps every declared foreground/background pair legible on operations-carbon' fails on docs/research-loop-plan tip 0d5ceaba without any UXM-07 change",
-      "origin": "c67a0b1d 2026-10-12 feat(governance-ux) (Codex line)",
-      "not_fixed_because": "UXM-07 is flag-off pixel-neutral and may not edit V1 CSS or accepted baselines. A one-line fix (color: var(--paper), as execution.css:5981 already does) changes V1 governance button pixels and needs a baseline decision.",
-      "pre_commit_hook_blocks": false,
-      "proposed": "Codex or Bobby approves color: var(--paper) on line 7278 and a re-recorded governance baseline; V2 buttons never use --accent-contrast on --accent.",
-      "owner": "Codex / Bobby decision"
-    },
-    {
       "id": "DEBT-UXM07-002",
       "title": "R2 persistence ledger lacks the V2 operations queue table",
       "where": "apps/portal/frontend/src/execution/r2Ledger.test.ts:117 ('covers every execution/governance table the control-api names in SQL')",
@@ -24,6 +13,43 @@
       "owner": "Codex"
     },
     {
+      "id": "DEBT-UXM07-004",
+      "title": "Reader defects documented by the L3 conformance suites",
+      "where": "formatExact.ts group() (quadratic), profileRead.ts readFleetDeployment/readCurrency* (money = any non-empty string), inboxRowV2.ts whole()/ids, laneModel.ts isClosedRow, fleetModel.ts healthView, duplicate ids per page",
+      "status": "being fixed by F5b; D4 (stage_counts zero) waits on Codex (FE-048)",
+      "owner": "Claude (FE); D4 Codex"
+    },
+    {
+      "id": "DEBT-UXM07-005",
+      "title": "Nav and screen gating use provisional capability names",
+      "where": "v2/shell/roleNav.ts V2_CAPABILITY (execution.portfolios.read, execution.accounts.read, execution.operations.read, portal.execution.blotter.read, execution.accounts.manage)",
+      "consequence": "With today's session nobody holds them, so Portfolios/Accounts/Operations/Blotter stay fail-closed; the V2 browser spec injects them",
+      "proposed": "Codex FE-037/038 projection; rename one constant when it lands",
+      "owner": "Codex (FE-037)"
+    },
+    {
+      "id": "DEBT-UXM07-006",
+      "title": "Compare has no registry row",
+      "where": "previewRegistry / registry.json (Codex)",
+      "consequence": "Compare rides /deployments/portfolios?view=compare",
+      "proposed": "registry rev 7 adds EXECUTION_COMPARE_SCREEN at /deployments/compare",
+      "owner": "Codex (FE-039/C-5)"
+    }
+  ],
+  "closed": [
+    {
+      "id": "DEBT-UXM07-001",
+      "title": "V1 governance primary button fails the carbon contrast gate",
+      "where": "apps/portal/frontend/src/execution/execution.css:7278 (.exec-gov .exec-btn-apply: background var(--accent) + color var(--accent-contrast))",
+      "measured": "--accent-contrast (#ffffff) on --accent (#78a9ff) = 2.35:1; src/styles/tokens.test.ts 'keeps every declared foreground/background pair legible on operations-carbon' fails on docs/research-loop-plan tip 0d5ceaba without any UXM-07 change",
+      "origin": "c67a0b1d 2026-10-12 feat(governance-ux) (Codex line)",
+      "not_fixed_because": "UXM-07 is flag-off pixel-neutral and may not edit V1 CSS or accepted baselines. A one-line fix (color: var(--paper), as execution.css:5981 already does) changes V1 governance button pixels and needs a baseline decision.",
+      "pre_commit_hook_blocks": false,
+      "proposed": "Codex or Bobby approves color: var(--paper) on line 7278 and a re-recorded governance baseline; V2 buttons never use --accent-contrast on --accent.",
+      "owner": "Codex / Bobby decision",
+      "closed_by": "34b30032 (execution.css:7278 text uses the surface ink; hover keeps white on the strong accent); governance baselines re-recorded at R2"
+    },
+    {
       "id": "DEBT-UXM07-003",
       "title": "e2e BFF double does not answer the UDB-03 retained-review read",
       "where": "apps/portal/frontend/e2e/bffDouble.ts (no /retained-review branch) vs src/execution/retainedReview.ts:158",
@@ -31,8 +57,8 @@
       "not_fixed_because": "Serving a 200 body would flip every screen into retained (read-only) mode and a 404 still logs a console error; which stub the double should serve is a test-contract decision for the owner of the V1 spec. The V2 spec tolerates exactly this one URL and its console line (execution-v2-s1.spec.ts).",
       "pre_commit_hook_blocks": false,
       "proposed": "Codex/Bobby decide the stub (e.g. canonical execution-retained-review.valid.json with a non-retained scope) and re-green execution-preview.spec.",
-      "owner": "Codex / Bobby decision"
+      "owner": "Codex / Bobby decision",
+      "closed_by": "0341aec1 (double answers the typed 404 UDB_RETAINED_REVIEW_NOT_CONFIGURED; specs allow exactly that URL); execution-preview spec 2/2 pass"
     }
-  ],
-  "closed": []
+  ]
 }

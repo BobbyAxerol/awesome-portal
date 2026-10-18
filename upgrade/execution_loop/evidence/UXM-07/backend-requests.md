@@ -12,6 +12,22 @@ Chủ: Claude · 2026-10-18 · Lane: FIXTURE_LAB. Cách đọc: mỗi dòng có 
 | FE-042 | P2 | Operations queue item cần liên kết tới incident | `OperationalQueueItemV2` chỉ có `target.type` ACCOUNT/PORTFOLIO/DEPLOYMENT, không có `incident_id`; Incident drawer chỉ mở được bằng route (`/execution/operations/incidents/:id`), không từ hàng | Thêm `incident_id` (nullable) hoặc quan hệ operation→incident vào item V2 | Drawer mở từ route; hàng không có liên kết | OPEN |
 | FE-043 | P3 | Số đếm theo trạng thái cho KPI Operations (Unknown outcomes, Pending receipts, Display catching up) | V2 queue chỉ có `total_count`/`filtered_count`/`read_truth`; hi-fi cần 4 ô KPI theo trạng thái | `status_counts` (server-counted trên toàn bộ filter) hoặc quyết định "không có" | Chỉ 4 ô In scope / Matching / Loaded / Read; không tự đếm từ trang đã tải | OPEN |
 
+## S2 và S1e: yêu cầu mới từ lát màn hình (2026-10-18)
+Mã FE-044…055 tiếp ledger gốc; mỗi dòng nêu locator, hiện trạng, mong muốn nhỏ nhất, và FE đang làm gì khi chờ. Các câu hỏi chi tiết của từng gói nằm trong báo cáo gói (không lặp ở đây).
+| ID | Pri | Yêu cầu | Locator / hiện trạng | Mong muốn nhỏ nhất | FE làm khi chờ | Trạng thái |
+| --- | --- | --- | --- | --- | --- | --- |
+| FE-044 | P2 | `/portfolios` có cursor + `q` server, tách `allocated_by_currency` theo environment | `listPortfolios()` không nhận query, không cursor; một số cho mọi environment (book live+paper lẫn nhau) | cursor, `q`, mảng theo environment | "Load more" tắt kèm lý do; cờ "Real-funded and Simulated books together" | OPEN |
+| FE-045 | P2 | Approvals gắn portfolio | `ApprovalRow` chỉ có subject string | `portfolio_id` trên row hoặc read theo portfolio | Panel nói không lọc theo portfolio, link tới hàng đợi | OPEN |
+| FE-046 | P2 | Capital ledger: `seq`, `command_id`, `receipt_ref`, cursor | ledger có giới hạn, không trang cũ | thêm 3 trường + cursor (gắn FE-032) | hiện N mục, "returned entries could not be read" | OPEN |
+| FE-048 | P3 | `stage_counts` bỏ stage = 0 hay bỏ stage chưa publish? | FE in "0" cho stage vắng (có thể số 0 bịa) | ghi rõ ngữ nghĩa | chờ; `it.fails` D4 giữ | OPEN |
+| FE-049 | P2 | Schema: `Decimal` có `maxLength`, id duy nhất trong trang, enum đóng, MetricState vocabulary (AVAILABLE/EMPTY/UNAVAILABLE vs AVAILABLE/PARTIAL/UNAVAILABLE/DENIED/NOT_APPLICABLE) | reader tay chấp nhận 115/478 payload sai schema (fleet), 250/288 (inbox) | quyết định 9.8.2 (reader tay hay ajv) + ràng buộc schema | reader tự chặn (độ dài, pattern, trùng id) | OPEN |
+| FE-050 | P2 | Bindings/Account: `GET /broker-bindings` không có environment trả gì; nguồn sibling sleeves của binding chung; `as_of_ms`/`read_at_ms`; `broker_sync` có `buying_power`/`synced_at`? | FE luôn gửi env; sleeves suy từ `venue_accounts` cùng `binding_id` | xác nhận hoặc cấp field/route | fallback ISO, nhãn "Not available" | OPEN |
+| FE-051 | P3 | Account: long/short/gross theo side (A360-1), margin ratio (A360-2), credential alias/scopes/expiry (A360-3), product/margin/position mode (A360-4) | không publish | thêm field | "Not published (A360-n)" | OPEN |
+| FE-052 | P2 | Blotter: `deployment_id`, filled qty, giá TB, slippage, fee từng đơn; lọc stage/deployment/account/alpha trong `BlotterQuery`; bracket legs có `order_id` | relation orders thiếu; scope chips chỉ lọc "loaded pages" | thêm field + lọc server | caption "loaded pages" | OPEN |
+| FE-053 | P3 | Users: last sign-in; `accountApi.roster` trả rỗng khi body sai dạng | không publish | field + lỗi có kiểu | "Not published (chưa có id)" | OPEN |
+| FE-054 | P2 | Alpha: `getStageDrift` trả decimal string (hiện JSON number); observed timeline thiếu status/outcome; route riêng cho replay | tab `?tab=replay` thay route | decimal string, thêm outcome, chốt route | stage-drift chỉ là fallback "Daily close" partial | OPEN |
+| FE-055 | P3 | Command-center stream: double trả `profile-realtime.v1`, stream CC cần `manager-realtime-snapshot.v2` | không khớp | chốt schema | biến thể `stream:"published"` trong double | OPEN |
+
 Ghi chú không phải yêu cầu: `--f-attention` chọn hue cam (#ffa51f); đây là quyết định thiết kế chờ Bobby xác nhận, không cần Codex.
 
 ## Nợ liên quan, không thuộc Codex
