@@ -1,6 +1,11 @@
 /** Pure ELP2-06 component proofs. Authority, topology, money and source receipts
  * are TEST_ONLY fixtures, not TS/Edge commissioning or product acceptance. */
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { rejectManagerAsOf, resolveManagerWindow, managerFactsForWindow,
+  managerPublicationsForWindow, managerQueryOptions } from "../src/execution-v2/manager-query-p1";
+import { managerDatasetResponse } from "../src/execution-v2/manager-model.contract";
 import { accessDigest } from "../src/execution-v2/access-policy";
 import { BUSINESS_READ_FIELDS } from "../src/execution-v2/read-fields";
 import { scopeReadPopulation } from "../src/execution-v2/read-scope";
@@ -390,5 +395,119 @@ describe("ELP2-06 Manager qualified preparation contract (TEST_ONLY)", () => {
       { sort: [{ field: "name", direction: "asc" }, { field: "name", direction: "desc" }] }, { limit: 201 }, { unknown: true }])
       expect(managerModelQuery.safeParse({ environment: "paper", ...query }).success).toBe(false);
     expect(managerModelDocument.safeParse({ arbitrary_source_column: "not-accepted" }).success).toBe(false);
+  });
+});
+
+describe("C4 current-only exact-window queries (TEST_ONLY, not commissioning)", () => {
+  it("applies name search before count/group/page with no hidden-name oracle", async () => {
+    const own = await fixture(), full = await fixture({full:true});
+    const hidden = own.read({q:"Alpha peer",q_mode:"PREFIX",group_by:["portfolio_id"]});
+    expect(hidden.page.authorized_filtered_count).toBe(0); expect(hidden.groups).toEqual([]);
+    expect(JSON.stringify(hidden)).not.toContain("900001");
+    const visible=full.read({q:"OWN",q_mode:"CONTAINS",limit:1,group_by:["venue"]});
+    expect(visible.page).toMatchObject({returned_count:1,authorized_filtered_count:2});
+    expect(visible.groups[0].unique_row_count).toBe(2);
+    expect(full.read({q:"zULu",q_mode:"PREFIX"}).items.map(r=>r.name)).toEqual(["Zulu own"]);
+  });
+  it("does not advertise or allow name search without the current name field", async () => {
+    const f=await fixture({fields:BUSINESS_READ_FIELDS.filter(k=>k!=="name")});
+    const result=f.read({sort:[{field:"alpha_id",direction:"asc"}]});
+    expect(result.query_options.search).toMatchObject({fields:[],modes:[]});
+    expect(result.query_options.sort_fields).not.toContain("name");
+    expect(()=>f.read({q:"own",sort:[{field:"alpha_id",direction:"asc"}]})).toThrow();
+  });
+  it("keeps authorized keysets exact, including stock options on a restricted reader", async () => {
+    const f=await fixture({fields:BUSINESS_READ_FIELDS.filter(k=>!["allocation","balance_total"].includes(k))});
+    const result=f.read();
+    expect(result.query_options.metric_keys).not.toContain("allocation");
+    expect(result.query_options.window.independent_metrics).not.toContain("balance_total");
+    for(const row of result.items)expect(Object.keys(row.metrics).sort()).toEqual([...result.query_options.metric_keys].sort());
+    const missing=structuredClone(result);delete missing.items[0].metrics.net_pnl;
+    expect(managerDatasetResponse.safeParse(missing).success).toBe(false);
+    const extra=structuredClone(result);extra.items[0].metrics.allocation=extra.items[0].metrics.net_pnl;
+    expect(managerDatasetResponse.safeParse(extra).success).toBe(false);
+  });
+  it("selects exact fact windows, preserving stocks, census, grouped absence and original statements",async()=>{
+    const f=await fixture({full:true});
+    const asOf=f.doc.as_of_ms, w30={from_ms:asOf-30*86_400_000,to_ms:asOf};
+    f.doc.facts.forEach(value=>{value.metric.window={...w30};});
+    const allocation=fact(OWN,"TEST_ONLY:allocation","10",{kind:"allocation"});
+    f.doc.facts.push(allocation);
+    const before=f.read({economic_partition:partition()});
+    const exact=f.read({window:"30D",economic_partition:partition()});
+    expect(exact.items[0].metrics.net_pnl.value).not.toBeNull();
+    expect(exact.query_options.window.presets.find(p=>p.value==="30D")?.data_state).toBe("METRIC_SPECIFIC");
+    const missing=f.read({window:"7D",economic_partition:partition(),group_by:["venue"]});
+    expect(missing.page.authorized_filtered_count).toBe(before.page.authorized_filtered_count);
+    expect(missing.items.every(row=>row.metrics.net_pnl.value===null)).toBe(true);
+    expect(missing.groups[0].economic_partitions[0].metrics.net_pnl.reason_code).toBe("EXACT_METRIC_WINDOW_NOT_PUBLISHED");
+    const own=missing.items.find(row=>row.alpha_id===OWN.alpha_id && row.portfolio_id===OWN.portfolio_id)!;
+    expect(own.metrics.allocation.value).toBe("10");
+    expect(missing.capital_statements).toEqual(before.capital_statements);
+    // No accepted Score publication exists here: do not misname a policy/source gap as a window mismatch.
+    expect(missing.scores.raw).toEqual({value:null,status:"policy_pending"});
+  });
+  it("keeps original authorized ownership conflicts visible despite selected-window masking (C4-R03)",async()=>{
+    const f=await fixture({full:true}), w30={from_ms:f.doc.as_of_ms-30*86_400_000,to_ms:f.doc.as_of_ms};
+    f.doc.facts=[
+      fact(OWN,"TEST_ONLY:conflict-a","100",{kind:"equity_30d_end_value",
+        economic_account_ref:"TEST_ONLY:shared-economic",ownership_partition_ref:"TEST_ONLY:shared-owner",metric:money("100",{window:w30})}),
+      fact(PRIVATE,"TEST_ONLY:conflict-b","101",{kind:"equity_30d_end_value",
+        economic_account_ref:"TEST_ONLY:shared-economic",ownership_partition_ref:"TEST_ONLY:shared-owner",metric:money("101",{window:w30})}),
+    ];
+    for(const query of [{},{window:"7D"},{window:"7D",group_by:["venue"]},{window:"ALL"}])
+      expect(()=>f.read(query)).toThrowError(expect.objectContaining({code:"EXECUTION_READ_AUTHORITY_UNAVAILABLE",status:503}));
+  });
+  it("keeps canonical no-facts TEST_ONLY options aligned with the actual projection helper",()=>{
+    const contracts=process.env.PORTAL_CONTRACTS_DIR??resolve(__dirname,"../../../packages/contracts");
+    const sample=JSON.parse(readFileSync(resolve(contracts,"fixtures/execution-manager-dataset.rows.synthetic.valid.json"),"utf8")).value;
+    const options=sample.query_options;
+    expect(managerQueryOptions({asOf:sample.as_of_ms,canSearchName:options.search.fields.includes("name"),
+      sortFields:options.sort_fields,groupFields:options.group_fields,metricKeys:options.metric_keys,facts:[]})).toEqual(options);
+  });
+  it("never relabels a fixed 30D field even if a malformed producer labels its metric 7D",async()=>{
+    const f=await fixture(), selected=resolveManagerWindow(f.doc.as_of_ms,"7D")!;
+    const invalidSource=fact(OWN,"TEST_ONLY:fixed-30d","2",{kind:"return_30d_pct",
+      metric:money("2",{unit:"PERCENT",currency:null,window:selected.resolved})});
+    const result=managerFactsForWindow([invalidSource],selected);
+    expect(result[0].metric).toMatchObject({value:null,reason_code:"EXACT_METRIC_WINDOW_NOT_PUBLISHED"});
+    expect(invalidSource.metric.value).toBe("2"); // source bytes not mutated
+  });
+  it("uses explicit ALL absence rather than calibration copy, and preserves omitted-window legacy semantics",async()=>{
+    const f=await fixture();
+    expect(f.read().selected_window).toBeNull();
+    expect(f.read().scores.raw).toEqual({value:null,status:"policy_pending"});
+    const all=f.read({window:"ALL"});
+    expect(all.scores.raw).toEqual({value:null,status:"window_not_published",reason_code:"ALL_HISTORY_WINDOW_NOT_PUBLISHED"});
+    expect(all.scores.reason_code).toBe("ALL_HISTORY_WINDOW_NOT_PUBLISHED");
+    expect(all.query_options.window.presets.find(p=>p.value==="ALL")).toMatchObject({resolved:null,data_state:"NOT_PUBLISHED"});
+    expect(managerDatasetResponse.safeParse({...all,scores:{...all.scores,reason_code:"RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED"}}).success).toBe(false);
+  });
+  it("filters only already-qualified publications and never restores a conflict-rejected set",()=>{
+    const selected=resolveManagerWindow(NOW,"7D")!;
+    const accepted=[{provenance:{binding:{window_start_ms:selected.resolved!.from_ms,window_end_ms:selected.resolved!.to_ms}}}];
+    expect(managerPublicationsForWindow(accepted,selected)).toEqual(accepted);
+    expect(managerPublicationsForWindow([],selected)).toEqual([]);
+    expect(managerPublicationsForWindow(accepted,resolveManagerWindow(NOW,"ALL"))).toEqual([]);
+    // Existing selector conflict tests must remain unchanged; this helper cannot receive an unvalidated document.
+  });
+  it("binds q/window into cursors and sorts the stage set without inventing a singular current stage",async()=>{
+    const f=await fixture({full:true}), first=f.read({q:"o",limit:1});
+    expect(first.page.next_cursor).not.toBeNull();
+    expect(()=>f.read({q:"zulu",limit:1,after:first.page.next_cursor!})).toThrow();
+    expect(()=>f.read({q:"o",window:"30D",limit:1,after:first.page.next_cursor!})).toThrow();
+    const live=await fixture({full:true,environment:"live",secondOwn:true});
+    live.doc.members.at(-1)!.stage="CANARY";
+    const result=live.read({sort:[{field:"stage_presence",direction:"asc"}]});
+    expect(result.items[0].stage_presence).toEqual(["CANARY","LIVE"]);
+    expect(result.query_options.unavailable_fields.map(f=>f.field)).toEqual(["current_stage","days_in_stage"]);
+    const bad=structuredClone(live.doc);bad.members[0].stage="PAPER";
+    expect(managerModelDocument.safeParse(bad).success).toBe(false);
+    expect(managerModelQuery.safeParse({environment:"paper",stage_filter:["LIVE"]}).success).toBe(false);
+    expect(managerModelQuery.safeParse({environment:"live",stage_filter:["CANARY","LIVE"]}).success).toBe(true);
+  });
+  it.each([undefined,null,"",0,[],{},NOW])("rejects any supplied as_of_ms (%j) as CURRENT_ONLY",value=>{
+    expect(()=>rejectManagerAsOf({as_of_ms:value})).toThrowError(expect.objectContaining({code:"EXECUTION_READ_CURRENT_ONLY",status:400}));
+    expect(()=>rejectManagerAsOf({})).not.toThrow();
   });
 });

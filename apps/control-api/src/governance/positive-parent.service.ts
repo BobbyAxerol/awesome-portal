@@ -6,6 +6,7 @@ import { CurrentOperationalReads, OperationalReadError, operationalHttpCall, typ
 import { IdentifierSchema } from "../operations/contracts";
 import { PositiveParentRepository, PositiveParentRepositoryError,
   type PositiveParentFamily, type PositiveParentSnapshot } from "./positive-parent.repository";
+import type { ParentReadOptions } from "./positive-parent.repository";
 import { ParentFieldPurposeError, qualifyPositiveParent, positiveParentSections } from "./positive-parent.authority";
 import { mapPositiveParent, mapPositiveParentOperation, type PositiveParentRead } from "./positive-parent.mapper";
 import type { PositiveParentOperationRead } from "./positive-parent.contract";
@@ -53,7 +54,7 @@ export class PositiveParentReads {
       const candidate = await this.repository.identityCandidate(principal.workspaceId, family, id);
       if (!candidate) throw new OperationalReadError("OPERATIONAL_READ_NOT_FOUND", 404);
       let snapshot: PositiveParentSnapshot | undefined;
-      let includeCurrency = false;
+      const options: ParentReadOptions = {includeCurrency:false};
       return {
         target: { resource: { kind: "DEPLOYMENT" as const, id: candidate.deploymentId }, environment: "paper" as const },
         authorize: context => qualifyPositiveParent(context, candidate),
@@ -61,12 +62,18 @@ export class PositiveParentReads {
           // The issuer-bound flight has just qualified root purpose and BOTH
           // audit anchors. Transient hash preimages never leave the repository.
           const sections = positiveParentSections(context, candidate);
-          includeCurrency = candidate.family === "R2" && sections.lineage;
-          snapshot = await this.repository.protectedDetails(candidate, undefined, { includeCurrency });
-          return mapPositiveParent(snapshot.raw, sections, Math.max(context.now_ms, Date.now()));
+          options.includeCurrency = candidate.family === "R2" && sections.lineage;
+          if (candidate.family === "PAPER_EXIT" && "criteria" in sections && sections.criteria)
+            options.includeCriteria = true;
+          if (sections.actors) options.includeActors = true;
+          if (sections.latestOperation) options.includeLatestOperation = true;
+          if (sections.recordedActivity) options.includeRecordedActivity = true;
+          if ("recordedVerdicts" in sections && sections.recordedVerdicts) options.includeRecordedVerdicts = true;
+          snapshot = await this.repository.protectedDetails(candidate, undefined, options);
+          return mapPositiveParent(snapshot.raw, sections, Math.max(context.now_ms, Date.now()), context.principal_id);
         },
         beforeFinal: async () => {
-          if (snapshot && !await this.repository.isUnchanged(candidate, snapshot.revision, undefined, { includeCurrency }))
+          if (snapshot && !await this.repository.isUnchanged(candidate, snapshot.revision, undefined, options))
             throw new OperationalReadError("OPERATIONAL_READ_CHANGED", 409);
         },
       };

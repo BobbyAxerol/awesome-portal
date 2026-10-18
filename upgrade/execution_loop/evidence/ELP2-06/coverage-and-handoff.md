@@ -202,3 +202,11 @@ component receipts without rerunning unrelated gates; installed-source and
 consumer acceptance remain separate. No new FE field or Claude ACK in this
 intake; consumer owner-held/AWAITING_CONSUMER_REVIEW under7.3.
 
+### C4/P1 follow-through —2026-10-18
+
+Selected-window/query-options, authorized name filters/grouping, true metric
+keys and point-in-time stock versus exact-window flow semantics are integrated
+WIP. [Producer packet](../ELP2-10/manager-intake-2026-10-18.md) names actual
+generated contracts and examples; ALL without source inception stays typed
+unavailable. No financial publication/calibration or consumer ACK inferred.
+

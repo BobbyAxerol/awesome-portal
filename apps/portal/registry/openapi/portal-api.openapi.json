@@ -88,6 +88,13 @@
             ],
             "title": "Data Start"
           },
+          "embargo_bars": {
+            "default": 0,
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Embargo Bars",
+            "type": "integer"
+          },
           "fill_value": {
             "default": 0.0,
             "title": "Fill Value",
@@ -98,6 +105,64 @@
             "default": "carry",
             "title": "Fold Boundary Position Policy",
             "type": "string"
+          },
+          "inner_min_folds": {
+            "default": 2,
+            "maximum": 16.0,
+            "minimum": 2.0,
+            "title": "Inner Min Folds",
+            "type": "integer"
+          },
+          "inner_split_frequency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "weekly",
+                  "monthly",
+                  "quarterly"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inner Split Frequency"
+          },
+          "inner_train_window": {
+            "anyOf": [
+              {
+                "maxLength": 8,
+                "pattern": "^[1-9][0-9]{0,4}(D|h)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inner Train Window"
+          },
+          "inner_window_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "expanding",
+                  "rolling"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inner Window Mode"
+          },
+          "label_horizon_bars": {
+            "default": 0,
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Label Horizon Bars",
+            "type": "integer"
           },
           "min_test_bars": {
             "default": 1,
@@ -176,6 +241,13 @@
             "default": 0,
             "minimum": 0.0,
             "title": "Optuna Trials",
+            "type": "integer"
+          },
+          "purge_bars": {
+            "default": 0,
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Purge Bars",
             "type": "integer"
           },
           "random_seed": {
@@ -1982,6 +2054,16 @@
             "title": "Order",
             "type": "integer"
           },
+          "scoped_v2_replacement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScopedV2NavigationReplacement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "show_in_command_palette": {
             "title": "Show In Command Palette",
             "type": "boolean"
@@ -2411,6 +2493,153 @@
           "kind"
         ],
         "title": "ParameterSpec",
+        "type": "object"
+      },
+      "PinnedSelectionAuditTarget": {
+        "additionalProperties": false,
+        "description": "All-time frozen global selection: no new optimizer/default knobs.\n\nPer-fold causal selections require their own individually pinned target\nsequence. Refuse that source here instead of taking the last fold map.",
+        "properties": {
+          "adapter_contract_digest": {
+            "const": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+            "title": "Adapter Contract Digest",
+            "type": "string"
+          },
+          "alpha_version_id": {
+            "pattern": "^av_[A-Za-z0-9_.-]{1,155}$",
+            "title": "Alpha Version Id",
+            "type": "string"
+          },
+          "dataset_binding_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Dataset Binding Digest",
+            "type": "string"
+          },
+          "engine_release_id": {
+            "const": "er_quantbt_111",
+            "title": "Engine Release Id",
+            "type": "string"
+          },
+          "engine_version": {
+            "const": "1.1.1",
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "execution_adapter_id": {
+            "const": "p04.delta-rsi.v1",
+            "title": "Execution Adapter Id",
+            "type": "string"
+          },
+          "parent_artifact_id": {
+            "pattern": "^rart_[A-Za-z0-9_.-]{1,155}$",
+            "title": "Parent Artifact Id",
+            "type": "string"
+          },
+          "parent_artifact_revision": {
+            "minimum": 1.0,
+            "title": "Parent Artifact Revision",
+            "type": "integer"
+          },
+          "parent_manifest_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Parent Manifest Digest",
+            "type": "string"
+          },
+          "parent_run_id": {
+            "pattern": "^rrun_[A-Za-z0-9_.-]{1,155}$",
+            "title": "Parent Run Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "research.pinned-selection-audit-target.v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "snapshot_content_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Snapshot Content Hash",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "pattern": "^dss_[a-f0-9]{32}$",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "source_config_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Source Config Digest",
+            "type": "string"
+          },
+          "source_config_raw": {
+            "maxLength": 65536,
+            "minLength": 1,
+            "title": "Source Config Raw",
+            "type": "string"
+          },
+          "source_selection_digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Source Selection Digest",
+            "type": "string"
+          },
+          "source_selection_kind": {
+            "enum": [
+              "ENGINE_SELECTED_PARAMS_DOCUMENT",
+              "P05_SELECTION_PARAMETERS_JSON"
+            ],
+            "title": "Source Selection Kind",
+            "type": "string"
+          },
+          "source_selection_part_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Selection Part Digest"
+          },
+          "source_selection_part_relative_path": {
+            "anyOf": [
+              {
+                "pattern": "^tables/selection/part-[0-9]{6}\\.parquet$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Selection Part Relative Path"
+          },
+          "source_selection_raw": {
+            "maxLength": 16384,
+            "minLength": 1,
+            "title": "Source Selection Raw",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "parent_run_id",
+          "parent_artifact_id",
+          "parent_artifact_revision",
+          "parent_manifest_digest",
+          "dataset_binding_digest",
+          "snapshot_id",
+          "snapshot_content_hash",
+          "engine_release_id",
+          "engine_version",
+          "alpha_version_id",
+          "execution_adapter_id",
+          "adapter_contract_digest",
+          "source_config_digest",
+          "source_config_raw",
+          "source_selection_digest",
+          "source_selection_raw",
+          "source_selection_kind"
+        ],
+        "title": "PinnedSelectionAuditTarget",
         "type": "object"
       },
       "PlanningSummaryDependency": {
@@ -3529,7 +3758,8 @@
           "execution_adapter_id": {
             "enum": [
               "p04.delta-rsi.v1",
-              "p17.imported-signal-notional.v1"
+              "p17.imported-signal-notional.v1",
+              "full03.delta-rsi.v1"
             ],
             "title": "Execution Adapter Id",
             "type": "string"
@@ -3548,14 +3778,32 @@
           },
           "execution_profile_id": {
             "default": "p04.fixed-qualification.v1",
-            "enum": [
-              "p04.fixed-qualification.v1",
-              "p10.delta-signal-notional-wfo.v1",
-              "p16.delta-whatif-grid.v1",
-              "p17.imported-signal-notional.v1"
-            ],
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
             "title": "Execution Profile Id",
             "type": "string"
+          },
+          "final_audit_target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PinnedSelectionAuditTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "final_audit_target_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Audit Target Digest"
           },
           "imported_entrypoint": {
             "anyOf": [
@@ -3596,6 +3844,19 @@
               }
             ],
             "title": "Imported Parameters"
+          },
+          "imported_search_binding": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "maxProperties": 7,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported Search Binding"
           },
           "imported_source_digest": {
             "anyOf": [
@@ -3651,6 +3912,19 @@
             "title": "Preflight Token",
             "type": "string"
           },
+          "qualification_binding": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "maxProperties": 16,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qualification Binding"
+          },
           "requested_spec": {
             "additionalProperties": true,
             "maxProperties": 64,
@@ -3677,6 +3951,16 @@
             "pattern": "^dss_[0-9a-f]{32}$",
             "title": "Snapshot Id",
             "type": "string"
+          },
+          "source_observation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VnSourceObservation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "whatif": {
             "anyOf": [
@@ -3860,6 +4144,28 @@
         ],
         "title": "RunProtocol",
         "type": "string"
+      },
+      "ScopedV2NavigationReplacement": {
+        "additionalProperties": false,
+        "description": "Presentation metadata only; never an entitlement or policy selector.\n\nConsumers may suppress the old entry only when the V2 shell is enabled,\nthe replacement is visible, and the server has selected SCOPED_V2 for the\nsame current Core workspace. Unknown mode preserves legacy navigation.\nExisting routes remain addressable and retain their own authorization.",
+        "properties": {
+          "feature_id": {
+            "const": "EXECUTION_APPROVALS",
+            "title": "Feature Id",
+            "type": "string"
+          },
+          "read_mode": {
+            "const": "SCOPED_V2",
+            "title": "Read Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "read_mode",
+          "feature_id"
+        ],
+        "title": "ScopedV2NavigationReplacement",
+        "type": "object"
       },
       "ScreenContract": {
         "additionalProperties": false,
@@ -4372,6 +4678,78 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VnSourceObservation": {
+        "additionalProperties": false,
+        "description": "Private, immutable observed-date metadata; not calendar/venue authority.",
+        "properties": {
+          "clock_basis": {
+            "const": "OBSERVED_SOURCE_LOCAL_DATE_V1",
+            "title": "Clock Basis",
+            "type": "string"
+          },
+          "dataset_id": {
+            "const": "vn-stock-daily",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "metadata_index_as_of_utc_ms": {
+            "maximum": 8640000000000000.0,
+            "minimum": 0.0,
+            "title": "Metadata Index As Of Utc Ms",
+            "type": "integer"
+          },
+          "metadata_index_revision": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Metadata Index Revision",
+            "type": "string"
+          },
+          "metadata_index_source_manifest_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Metadata Index Source Manifest Digest",
+            "type": "string"
+          },
+          "source_timezone": {
+            "const": "Asia/Ho_Chi_Minh",
+            "title": "Source Timezone",
+            "type": "string"
+          },
+          "symbol": {
+            "const": "FPT",
+            "title": "Symbol",
+            "type": "string"
+          },
+          "timeframe": {
+            "const": "1d",
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "warmup_semantics": {
+            "const": "LAST_N_OBSERVED_PREDECESSORS_V1",
+            "title": "Warmup Semantics",
+            "type": "string"
+          },
+          "warmup_start_utc_ms": {
+            "maximum": 8640000000000000.0,
+            "minimum": 0.0,
+            "title": "Warmup Start Utc Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "symbol",
+          "timeframe",
+          "clock_basis",
+          "source_timezone",
+          "metadata_index_revision",
+          "metadata_index_source_manifest_digest",
+          "metadata_index_as_of_utc_ms",
+          "warmup_semantics",
+          "warmup_start_utc_ms"
+        ],
+        "title": "VnSourceObservation",
         "type": "object"
       },
       "WhatIfEvaluation": {
@@ -5036,6 +5414,45 @@
           }
         },
         "summary": "Run Export"
+      },
+      "post": {
+        "operationId": "prepare_run_export_api_runs__run_id__export_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Prepare Run Export Api Runs  Run Id  Export Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prepare Run Export"
       }
     },
     "/api/runs/{run_id}/fold-plan": {

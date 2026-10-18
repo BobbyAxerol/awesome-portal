@@ -201,3 +201,10 @@ Read-only HK repin in this window: PM R2 worktree remains clean at
 `d16aa2b5f251596e469807f57e81fe14cdc7e763`; its current guide SHA-256 remains
 `7d79d8de84eab19d0d2de3dce2b4c9278a691277b0b8b4379a7db0000dfc8945`.
 This confirms source alignment only, not deployed trust, schema or TS acceptance.
+
+## C3 follow-through —2026-10-18
+
+Own eligibility/navigation current-session and LAST-Core/physical-lease fences
+are integrated with03, not yet qualified or delivered at this note. See
+[shared producer packet](../ELP2-10/manager-intake-2026-10-18.md). No owner-all
+capability alias, login privilege escalation or runtime provider installation.

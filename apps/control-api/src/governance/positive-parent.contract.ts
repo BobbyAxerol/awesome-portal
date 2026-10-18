@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { parentActorSection, latestPortalOperationSection, r2StoredDecisionContextSection } from "./parent-followthrough.contract";
+import { recordedPortalActivitySection, r2RecordedVerdictSection } from "./parent-recorded-facts.contract";
 
 const id = z.string().min(1).max(191).regex(/^[A-Za-z0-9._:-]+$/);
 // Match JSON Schema maxLength: Unicode code points, not UTF-16 code units.
@@ -42,7 +44,22 @@ const r2Lineage = z.object({ availability: z.literal("AVAILABLE"),
   observed_risk_grant_id: id, currency: text }).strict();
 export const r2ParentRead = z.object({ ...base, family: z.literal("R2"),
   lineage: z.union([r2Lineage, absent]),
-}).strict().refine(value => value.approval.gate === "R2", "PARENT_GATE_MISMATCH");
+  actors: parentActorSection, latest_operation: latestPortalOperationSection, decision_context: r2StoredDecisionContextSection,
+  recorded_activity: recordedPortalActivitySection, recorded_verdicts: r2RecordedVerdictSection,
+}).strict().superRefine((value, context) => {
+  // Keep one object refinement layer: the workflow capsules deliberately
+  // reuse the exact public nested schemas via innerType().shape.
+  if (value.approval.gate !== "R2")
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "PARENT_GATE_MISMATCH" });
+  if (value.latest_operation.availability === "AVAILABLE" && value.latest_operation.command_type !== "GOVERNANCE_R2_DECISION" ||
+    value.decision_context.availability === "AVAILABLE" && (value.decision_context.workspace_id !== value.workspace_id ||
+      value.decision_context.approval_id !== value.approval.approval_id ||
+      value.decision_context.expected_approval_version !== value.approval.approval_version))
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "PARENT_FOLLOWTHROUGH_IDENTITY_INVALID" });
+  if (value.recorded_activity.availability === "AVAILABLE" && value.recorded_activity.items.some(item=>item.kind!=="R2_DECISION_RECORDED") ||
+    value.recorded_verdicts.availability === "AVAILABLE" && value.recorded_verdicts.items.some(item=>item.source_ref.approval_id!==value.approval.approval_id))
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "PARENT_RECORDED_IDENTITY_INVALID" });
+});
 
 const panelKind = z.enum(["OBSERVATION_COVERAGE", "DRIFT", "LIMITS_HEALTH", "PORTFOLIO_FIT"]);
 const panel = z.object({ panel_id: id, ordinal: count, panel_kind: panelKind,
@@ -61,9 +78,64 @@ const finding = z.object({ finding_id: id, panel_id: id, ordinal: count,
   outcome: z.enum(["PASS", "WATCH", "FAIL", "INSUFFICIENT"]),
   blocking: z.boolean(), required: z.boolean(), as_of_ms: ms.nullable() }).strict();
 
-// All prose/URLs/actors and exact monetary values stay OUT of this finite
-// publication. A future financial/evidence expansion needs its OWN field
-// purpose; a similarly named generic scalar is not a permission alias.
+/** Separate PAPER_EXIT_CRITERIA disclosure. Do not add these paths to REVIEW
+ * or ROOT, and do not expose arbitrary stored labels/source URLs as copy. */
+export const paperCriterionLabels = {
+  OBSERVATION_COVERAGE:"paper_exit.observation_coverage",
+  DRIFT:"paper_exit.drift", LIMITS_HEALTH:"paper_exit.limits_health",
+  PORTFOLIO_FIT:"paper_exit.portfolio_fit",
+} as const;
+export const paperCriterionKey = z.enum(["OBSERVATION_COVERAGE","DRIFT","LIMITS_HEALTH","PORTFOLIO_FIT"]);
+const criterionLabelKey = z.enum(["paper_exit.observation_coverage","paper_exit.drift","paper_exit.limits_health","paper_exit.portfolio_fit"]);
+// Whole-value checks reject terminal LF; no shared parser/field grammar change.
+export const paperCriterionDecimal = z.string().max(128).regex(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/)
+  .refine(value=>!/[^\d.\-]/u.test(value));
+export const paperCriterionText = text.refine(value=>!/[A-Za-z][A-Za-z0-9+.-]*:\/\/|^(?:[Jj][Aa][Vv][Aa][Ss][Cc][Rr][Ii][Pp][Tt]|[Dd][Aa][Tt][Aa]|[Ff][Ii][Ll][Ee]):|^[/\\]/u.test(value));
+const missingScalar = <T extends string>(reason:T)=>z.object({availability:z.literal("NOT_PUBLISHED"),
+  value:z.null(),reason_code:z.literal(reason)}).strict();
+const presentScalar = <T extends z.ZodTypeAny>(value:T)=>z.object({availability:z.literal("AVAILABLE"),
+  value,reason_code:z.null()}).strict();
+const decimalScalar = z.union([presentScalar(paperCriterionDecimal),missingScalar("SOURCE_VALUE_NOT_RECORDED"),
+  missingScalar("SOURCE_VALUE_NOT_DECIMAL")]);
+const textScalar = z.union([presentScalar(paperCriterionText),missingScalar("SOURCE_TEXT_NOT_RECORDED"),
+  missingScalar("SOURCE_TEXT_NOT_PUBLIC_SAFE")]);
+const paperCriterion = z.object({
+  original:finding,
+  criterion_key:z.union([presentScalar(paperCriterionKey),missingScalar("SOURCE_METRIC_NOT_REGISTERED")]),
+  label_key:z.union([presentScalar(criterionLabelKey),missingScalar("SOURCE_METRIC_NOT_REGISTERED")]),
+  observed:decimalScalar,limit:decimalScalar,
+  op:missingScalar("SOURCE_COMPARATOR_FIELD_NOT_RECORDED"),
+  unit:textScalar,currency:textScalar,
+  evidence:z.union([presentScalar(digest),missingScalar("SOURCE_EVIDENCE_HASH_NOT_RECORDED")]),
+  finding_formula_version:textScalar,
+  source_time:z.union([presentScalar(ms),missingScalar("SOURCE_TIME_NOT_RECORDED")]),
+  source_ref:z.object({kind:z.literal("PORTAL_STORED_PAPER_EXIT_FINDING"),review_id:id,panel_id:id,finding_id:id,
+    basis:z.literal("STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE")}).strict(),
+}).strict().superRefine((value,context)=>{
+  if(value.criterion_key.availability==="AVAILABLE"
+    ? value.label_key.availability!=="AVAILABLE"||value.label_key.value!==paperCriterionLabels[value.criterion_key.value]
+    : value.label_key.availability!=="NOT_PUBLISHED")
+    context.addIssue({code:z.ZodIssueCode.custom,message:"CRITERION_PUBLIC_LABEL_INVALID"});
+  if(value.source_ref.panel_id!==value.original.panel_id||value.source_ref.finding_id!==value.original.finding_id||
+    value.source_time.value!==value.original.as_of_ms)
+    context.addIssue({code:z.ZodIssueCode.custom,message:"CRITERION_PUBLIC_REFERENCE_INVALID"});
+});
+const paperCriteriaFacts = z.object({availability:z.literal("AVAILABLE"),
+  basis:z.literal("VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE"),
+  evaluation_policy_version:text,evaluation_formula_version:text,
+  panels:z.array(panel).max(4),items:z.array(paperCriterion).max(256),
+}).strict().superRefine((value,context)=>{
+  const ids=new Set(value.panels.map(item=>item.panel_id));
+  if(ids.size!==value.panels.length||
+    new Set(value.panels.map(item=>item.panel_kind)).size!==value.panels.length||
+    new Set(value.panels.map(item=>item.ordinal)).size!==value.panels.length||
+    new Set(value.items.map(item=>item.original.finding_id)).size!==value.items.length||
+    value.items.some(item=>!ids.has(item.original.panel_id)))
+    context.addIssue({code:z.ZodIssueCode.custom,message:"CRITERION_PUBLIC_IDENTITY_INVALID"});
+});
+
+// The OLD REVIEW purpose keeps prose/URLs/actors and exact monetary values OUT.
+// Rich criteria require the separate purpose above; no generic scalar alias.
 const exitFacts = z.object({ availability: z.literal("AVAILABLE"),
   evaluation_policy_version: text, evaluation_formula_version: text,
   panels: z.array(panel).max(4), findings: z.array(finding).max(256),
@@ -94,8 +166,19 @@ export const paperExitParentRead = z.object({ ...base, family: z.literal("PAPER_
       context.addIssue({ code: z.ZodIssueCode.custom, message: "PARENT_REVIEW_STATE_INVALID" });
   }),
   evaluation: z.union([exitFacts, absent]), lineage: z.union([exitLineage, absent]),
-}).strict().refine(value => value.approval.gate === "PAPER_EXIT" &&
-  value.review.review_id === value.approval.approval_id, "PARENT_GATE_IDENTITY_MISMATCH");
+  criteria: z.union([paperCriteriaFacts, absent]),
+  actors: parentActorSection, latest_operation: latestPortalOperationSection,
+  recorded_activity: recordedPortalActivitySection,
+}).strict().superRefine((value,context)=>{
+  if(value.recorded_activity.availability==="AVAILABLE"&&value.recorded_activity.items.some(item=>item.kind!=="PAPER_EXIT_DECISION_RECORDED"))
+    context.addIssue({code:z.ZodIssueCode.custom,message:"PARENT_RECORDED_IDENTITY_INVALID"});
+  if(value.latest_operation.availability === "AVAILABLE" && value.latest_operation.command_type !== "GOVERNANCE_PAPER_EXIT_DECISION")
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "PARENT_FOLLOWTHROUGH_FAMILY_INVALID" });
+  if(value.approval.gate!=="PAPER_EXIT"||value.review.review_id!==value.approval.approval_id)
+    context.addIssue({code:z.ZodIssueCode.custom,message:"PARENT_GATE_IDENTITY_MISMATCH"});
+  if(value.criteria.availability==="AVAILABLE"&&value.criteria.items.some(item=>item.source_ref.review_id!==value.review.review_id))
+    context.addIssue({code:z.ZodIssueCode.custom,message:"CRITERION_PARENT_IDENTITY_INVALID"});
+});
 
 /** Selected Portal plan metadata, NOT apply eligibility, native settlement,
  * receipt verification or a history list. ROOT + DECISION_OPERATION purposes

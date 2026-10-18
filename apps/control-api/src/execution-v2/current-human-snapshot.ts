@@ -1,7 +1,7 @@
 import type { PoolClient } from "pg";
 import { types } from "node:util";
 import { AccessPolicyError, reviewedAccessPolicy, managerDomainReadInput, type ManagerDomainReadInput,
-  type ManagerDomainReadDecision, type AccessActor } from "./access.contract";
+  type ManagerDomainReadDecision, type ManagerDomainStreamDecision, type AccessActor } from "./access.contract";
 import { accessDigest, managerDomainReadValidUntil, selectManagerDomainGrant, unqualifiedAccessRelations } from "./access-policy";
 import { UsersRepository } from "../repos/users";
 import { SessionsRepository } from "../repos/sessions";
@@ -121,6 +121,12 @@ function captureManagerDomainReadInput(value:unknown):ManagerDomainReadInput {
 export async function evaluateManagerDomainRead(db:PoolClient,input:ManagerDomainReadInput):Promise<ManagerDomainReadDecision> {
   const request=captureManagerDomainReadInput(input);
   const current=await lockCurrentHumanSnapshot(db,request.actor,request.workspace_id);
+  return managerDomainReadDecision(current,request);
+}
+/** Pure reduction of the already held SAME snapshot; preserves historical READ
+ * digest bytes and performs no transport, nested pool or second authority I/O. */
+function managerDomainReadDecision(current:Awaited<ReturnType<typeof lockCurrentHumanSnapshot>>,
+  request:ManagerDomainReadInput):ManagerDomainReadDecision {
   const context={principal_id:request.actor.user_id,workspace_id:request.workspace_id,
     now_ms:current.now,actor_current:true,policy:current.policy,grants:current.grants,
     active_principals:new Set(current.active),relationsFor:unqualifiedAccessRelations};
@@ -136,4 +142,26 @@ export async function evaluateManagerDomainRead(db:PoolClient,input:ManagerDomai
   return {authority_fingerprint:current.authority_fingerprint,scope_digest,field_policy_sha256:request.domain.field_policy_sha256,
     field_policy_ref:selected.seal.field_policy_ref,valid_until_ms,now_ms:current.now,policy_revision:current.policy!.revision,grant_id:selected.grant.grant_id,
     grant_revision:selected.grant.revision,actor:{...request.actor}};
+}
+
+/** Explicit independent app STREAM permission intersected with READ. The input
+ * API has no caller-selected action; both selections use this one locked snapshot.
+ * Native/opaque scope/final frame transport remain independently mandatory. */
+export async function evaluateManagerDomainStream(db:PoolClient,input:ManagerDomainReadInput):Promise<ManagerDomainStreamDecision> {
+  const request=captureManagerDomainReadInput(input);
+  const current=await lockCurrentHumanSnapshot(db,request.actor,request.workspace_id);
+  const read=managerDomainReadDecision(current,request);
+  const context={principal_id:request.actor.user_id,workspace_id:request.workspace_id,
+    now_ms:current.now,actor_current:true,policy:current.policy,grants:current.grants,
+    active_principals:new Set(current.active),relationsFor:unqualifiedAccessRelations};
+  const stream=selectManagerDomainGrant(context,current.manager_domain_grants,request.environment,request.domain,"stream.subscribe");
+  const valid_until_ms=Math.min(read.valid_until_ms,
+    managerDomainReadValidUntil(context,current.manager_domain_grants,stream,current.lease_until_ms));
+  if(valid_until_ms<=current.now)throw new AccessPolicyError("ACCESS_DENIED");
+  const stream_scope_digest=accessDigest({schema_version:"portal.manager-domain-stream-scope.v1",
+    action:"stream.subscribe",read_scope_digest:read.scope_digest,authority_fingerprint:current.authority_fingerprint,
+    stream_grant_id:stream.grant.grant_id,stream_grant_revision:stream.grant.revision,
+    field_seal:stream.seal,valid_until_ms});
+  return {...read,valid_until_ms,stream_scope_digest,stream_grant_id:stream.grant.grant_id,
+    stream_grant_revision:stream.grant.revision};
 }

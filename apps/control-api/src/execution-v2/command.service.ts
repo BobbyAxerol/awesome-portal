@@ -9,10 +9,10 @@ import { AccessPolicyError } from "./access.contract";
 import { accessDigest,evaluateAccess,type AccessEvaluationContext } from "./access-policy";
 import { ExecutionAccessService } from "./access.service";
 import { assertAmountPartition } from "./foundation.contract";
-import { CommandError,commandIntent,commandPreview,commandStatus,type CommandIntent,type CommandStatus } from "./command.contract";
+import { CommandError,commandIntent,commandPreview,commandStatus,publicCommandStatus,type CommandIntent,type CommandStatus,type PublicCommandStatus } from "./command.contract";
 import { CommandStore,type CommandRecord } from "./command.store";
 import { capitalWorkflow } from "./workflow";
-import { workflowCommandRecord,workflowCommandTarget } from "./capital-workflow-record";
+import { publicCommandRecord,workflowCommandRecord,workflowCommandTarget } from "./capital-workflow-record";
 import { commandMembershipCurrent } from "./command-current-authority";
 import { requireCurrentTsAuditRead } from "./current-audit-read";
 import { commandAuthorization,sourceCommandResult,unqualifiedCommandTrust,type CommandAuthorization,type CommandTrust,type SourceCommandResult } from "./command-trust";
@@ -125,7 +125,7 @@ export class ExecutionCommandService {
     catch(e){if(!(e instanceof CommandError))throw e;return commandPreview.parse({schema_version:"portal.execution.command-preview.v1",allowed:false,
       reason_code:e.code,preview_digest:null,expires_at_ms:null,profile_ref:null,approval_required:null,approval_gate:null,business_applied:false,reserved:false});}
   }
-  async submit(actor:AccessActor,raw:CommandIntent,digest:string):Promise<CommandStatus> {
+  async submit(actor:AccessActor,raw:CommandIntent,digest:string):Promise<PublicCommandStatus> {
     const i=commandIntent.parse(raw),hash=intentHash(actor,i),c=await this.access.readContext(actor,i.workspace_id);this.permit(c,i);
     // A known intent returns its durable status even after new-send activation
     // is withdrawn. Current exact mutation authority is still required here.
@@ -154,13 +154,19 @@ export class ExecutionCommandService {
       {...old.status,delivery:"DELIVERY_UNKNOWN",next_action:"QUERY_SAME_INTENT"});}
     catch {result=await this.store.update(i.workspace_id,claimed.record.id,claimed.attempt,old=>({...old.status,delivery:"DELIVERY_UNKNOWN",next_action:"QUERY_SAME_INTENT"}));}
     const current=await this.access.confirmReadContext(actor,i.workspace_id,c);this.permit(current,i);
-    return result.status;
+    return this.publishRecord(result,i);
+  }
+  /** Current mutation authority is checked by the caller; immutable stored
+   * provenance still must agree before its currency can be disclosed. */
+  private publishRecord(record:CommandRecord,intent:CommandIntent):PublicCommandStatus {
+    return publicCommandRecord({id:record.id,workspace:intent.workspace_id,actor:record.actor,hash:record.hash,
+      intent:record.intent,authorization:record.authorization,status:record.status},intent.workspace_id,record.id,intent);
   }
   private async mutationStatus(actor:AccessActor,i:CommandIntent,expected:AccessEvaluationContext,id:string) {
     const old=await this.store.get(i.workspace_id,id);
     const current=await this.access.confirmReadContext(actor,i.workspace_id,expected);this.permit(current,i);
     if(!old)throw new CommandError("COMMAND_RESOURCE_NOT_FOUND",404);
-    return old.status;
+    return this.publishRecord(old,i);
   }
   private readError(error:unknown):Error {
     if(error instanceof CommandError||error instanceof AccessPolicyError||error instanceof CommandCollectionError)return error;
@@ -180,7 +186,8 @@ export class ExecutionCommandService {
     return this.reads.finish(prepared);
   }
   async status(actor:AccessActor,workspace:string,id:string) {
-    return this.storedReport(actor,workspace,id,({status})=>status);
+    return this.storedReport(actor,workspace,id,({intent,status})=>
+      publicCommandStatus.parse({...status,currency:intent.business_payload.currency}));
   }
   /** Current-authorized local presentation only. No command/provider dispatch,
    * recovery, status update, event or audit write. The original author may differ
@@ -212,21 +219,17 @@ export class ExecutionCommandService {
       return {target,decode:(current,decision)=>{
         if(candidates.length>1024)throw new CommandCollectionError("COMMAND_COLLECTION_OVERFLOW",503);
         const rows=candidates.map(row=>{
-          const rowTarget=commandStatus.shape.resource.parse(row.resource);
-          const env=commandStatus.shape.environment.parse(row.environment);
+          const {resource:rowTarget,environment:env}=workflowCommandTarget(row);
           // Every immutable intent tuple must equal the exact scope authorized
           // before SQL and again before decode. No status can create scope.
           if(rowTarget.kind!==resource.kind||rowTarget.id!==resource.id||env!==q.environment)
             throw new CommandError("COMMAND_STATUS_UNVERIFIED",503);
-          const status=commandStatus.parse(row.status);
-          if(status.command_id!==row.id||status.resource.kind!==rowTarget.kind||
-            status.resource.id!==rowTarget.id||status.environment!==env)
-            throw new CommandError("COMMAND_STATUS_UNVERIFIED",503);
-          return status;
+          return publicCommandRecord(row,q.workspace_id,row.id,{resource:rowTarget,environment:env});
         }).sort((a,b)=>b.created_at_ms-a.created_at_ms||
           (a.command_id<b.command_id?-1:a.command_id>b.command_id?1:0));
         const query={workspace_id:q.workspace_id,resource,environment:q.environment,limit:q.limit};
-        // Status-only collection: no claim of private actor/hash/CAS validation.
+        // Verified original-intent currency is public; private author/hash/CAS
+        // remain internal. No source I/O, recovery, writes or authority change.
         const fingerprint=accessDigest({domain:"portal.execution.command-collection.v1",actor,query,
           core_authority:current.authority_fingerprint,policy_revision:decision.policy_revision,
           scope_revision:decision.scope_revision,field_policy_ref:decision.field_policy_ref,

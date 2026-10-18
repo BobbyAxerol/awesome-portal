@@ -15,6 +15,8 @@ const COMPLETENESS = new Set([
 ]);
 
 export interface SharedReadScope {
+  /** Server-only correlation, not a grant or source/currentness permit. */
+  readonly nativeEpochDigest?: string;
   sourceId: string;
   profileId: string;
   workspaceId: string;
@@ -745,10 +747,13 @@ export class ExecutionSharedReadRepository {
 
 export function sharedReadIdentity(scope: SharedReadScope): SharedReadIdentity {
   validateScope(scope);
-  const principalDigest = `sha256:${sha256(`${scope.principalId}\0${scope.principalRole}`)}`;
+  const principalDigest = `sha256:${sha256(scope.nativeEpochDigest === undefined
+    ? `${scope.principalId}\0${scope.principalRole}`
+    : `NATIVE_MANAGER_CACHE_V1\0${scope.principalId}\0${scope.principalRole}\0${scope.nativeEpochDigest}`)}`;
   const requestDigest = `sha256:${sha256(scope.requestPath)}`;
   const cacheKey = `sha256:${sha256([
-    "N21", scope.sourceId, scope.profileId, scope.workspaceId, principalDigest,
+    scope.nativeEpochDigest === undefined ? "N21" : "N21_NATIVE_MANAGER_EPOCH_V1",
+    scope.sourceId, scope.profileId, scope.workspaceId, principalDigest,
     scope.adapterRevision, requestDigest,
   ].join("\0"))}`;
   return { cacheKey, requestDigest, principalDigest };
@@ -780,6 +785,7 @@ function validateScope(scope: SharedReadScope): void {
     !IDENTIFIER.test(scope.workspaceId) || !IDENTIFIER.test(scope.principalId) ||
     !IDENTIFIER.test(scope.principalRole) || !IDENTIFIER.test(scope.adapterRevision) ||
     scope.requestPath.length < 1 || Buffer.byteLength(scope.requestPath, "utf8") > 8_192 ||
+    (scope.nativeEpochDigest !== undefined && (typeof scope.nativeEpochDigest !== "string" || scope.nativeEpochDigest.length !== 71 || !/^sha256:[a-f0-9]{64}$/.test(scope.nativeEpochDigest))) ||
     (scope.admission !== undefined && (
       !Number.isInteger(scope.admission.sourceMaximumConcurrency) ||
       !Number.isInteger(scope.admission.profileMaximumConcurrency) ||

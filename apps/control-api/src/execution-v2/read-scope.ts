@@ -9,7 +9,11 @@ import type { AuthSession, PortalUser } from "../domain";
 import type { Pool,PoolClient } from "pg";
 import { createHash } from "node:crypto";
 import { types } from "node:util";
-import { lockCurrentHumanSnapshot } from "./current-human-snapshot";
+import { lockCurrentHumanSnapshot,evaluateManagerDomainStream } from "./current-human-snapshot";
+import type { ManagerDomainStreamDecision } from "./access.contract";
+import { withTransaction } from "../db/pool";
+import { selectedNativeBusinessReadSelection,selectedNativeBusinessReadInstallationExpiresAtMs,
+  type SelectedNativeBusinessReadSource } from "./native-business-read-selected-source";
 import { scopedReplayBinding,scopedRealtimeFrame } from "./realtime.contract";
 import { ScopedReplayCursorCodec,decodeScopedReplayContinuation } from "./scoped-replay-cursor";
 import { retainedReview } from "../execution/retained-read-profile";
@@ -26,7 +30,7 @@ export interface ReadScopeRequirement {
   requireWholePopulation?:boolean;
 }
 export type ReadScopeErrorCode="EXECUTION_READ_SCOPE_REQUIRED"|"EXECUTION_READ_ACCESS_CHANGED"|
-  "EXECUTION_READ_QUERY_INVALID"|"EXECUTION_READ_CURSOR_INVALID"|
+  "EXECUTION_READ_QUERY_INVALID"|"EXECUTION_READ_CURRENT_ONLY"|"EXECUTION_READ_CURSOR_INVALID"|
   "EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED"|
   "EXECUTION_READ_NOT_AVAILABLE"|"EXECUTION_READ_POLICY_PENDING"|"EXECUTION_READ_PUBLICATION_NOT_QUALIFIED"|
   "EXECUTION_READ_FIELD_POLICY_PENDING"|"EXECUTION_READ_SCOPE_LIMIT"|"EXECUTION_READ_AUTHORITY_UNAVAILABLE";
@@ -58,7 +62,14 @@ type PortfolioPurposeState={issuer:ExecutionReadScopes;principal:ReadScopePrinci
   binding:ReadScopeBinding;requirement:ReadScopeRequirement;context:AccessEvaluationContext;
   publication:ExecutionReadPublication;proof:string;};
 const portfolioPurposes=new WeakMap<object,PortfolioPurposeState>();
-type ScopeState={issuer:ExecutionReadScopes;principal:ReadScopePrincipal;binding:ReadScopeBinding;
+declare const managerNativeScopeBrand:unique symbol;
+/** Manager observation capability, deliberately NOT an entity/census scope. */
+export interface AuthorizedManagerNativeNoticeScope {readonly [managerNativeScopeBrand]:true;}
+export type NativeExecutionReadScope=AuthorizedExecutionReadScope|AuthorizedManagerNativeNoticeScope;
+type ManagerNativeState={source:SelectedNativeBusinessReadSource;
+  domain:Readonly<{profile_id:string;catalogue_sha256:string;profile_sha256:string;field_policy_sha256:string}>;
+  source_identity_digest:string;decision:Readonly<ManagerDomainStreamDecision>;fingerprint:string;};
+type ScopeState={kind:"ENTITY"|"MANAGER";manager?:ManagerNativeState;issuer:ExecutionReadScopes;principal:ReadScopePrincipal;binding:ReadScopeBinding;
   requirement:ReadScopeRequirement;tuples:ExecutionReadPublication["tuples"];resources:AccessResource[];
   population:ExecutionReadPublication["tuples"];fields:readonly string[];context:AccessEvaluationContext|null;
   strategyPairs:readonly {strategy_id:string;alpha_id:string}[];
@@ -89,8 +100,26 @@ function rethrowReadScopeError(error:unknown):never {
   throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
 }
 
+function nativeScopeState(scope:unknown):ScopeState {
+  const state=scope&&typeof scope==="object"?minted.get(scope):undefined;
+  if(!state)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  return state;
+}
+function managerScopeState(scope:unknown):ScopeState & {manager:ManagerNativeState} {
+  const state=nativeScopeState(scope);
+  if(state.kind!=="MANAGER"||!state.manager)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  return state as ScopeState & {manager:ManagerNativeState};
+}
+/** Server-only detached adapter context, NOT a transferable permission. */
+export function managerNativeReplayContext(scope:AuthorizedManagerNativeNoticeScope) {
+  const state=managerScopeState(scope),manager=state.manager;
+  return Object.freeze({workspace_id:state.principal.workspaceId,environment:state.binding.environment,
+    profile_id:manager.domain.profile_id,domain:manager.domain,source_identity_digest:manager.source_identity_digest,
+    principal_scope_digest:manager.fingerprint,policy_revision:manager.decision.policy_revision,
+    field_policy_ref:manager.decision.field_policy_ref,read_scope_digest:manager.decision.scope_digest});
+}
 export function assertExecutionReadScope(scope:AuthorizedExecutionReadScope):void {
-  if(!scope||!minted.has(scope))fail("EXECUTION_READ_SCOPE_REQUIRED");
+  if(nativeScopeState(scope).kind!=="ENTITY")fail("EXECUTION_READ_SCOPE_REQUIRED");
 }
 export function scopeResources(scope:AuthorizedExecutionReadScope):readonly AccessResource[] {
   assertExecutionReadScope(scope);return minted.get(scope)!.resources.map(r=>({...r}));
@@ -139,8 +168,12 @@ export function scopeAllowsFullAccountingPopulation(scope:AuthorizedExecutionRea
  * fingerprint it excludes a document's changing source revision. It retains
  * current visible tuples, fields, actor/session, policy, lineage and generation;
  * hidden source offsets/population counts are never returned to the browser. */
-export function scopeRealtimeIdentity(scope:AuthorizedExecutionReadScope):string {
-  assertExecutionReadScope(scope);const s=minted.get(scope)!;
+export function scopeRealtimeIdentity(scope:NativeExecutionReadScope):string {
+  const state=nativeScopeState(scope);
+  if(state.kind==="MANAGER")return managerScopeState(scope).manager.fingerprint;
+  const entity=scope as AuthorizedExecutionReadScope;
+  assertExecutionReadScope(entity);const s=state;
+  scope=entity;
   const dataset=s.requirement.dataset;
   return accessDigest({mode:scope.mode,actor:s.principal.user.userId,session:s.principal.session.sessionId,
     session_generation:s.principal.session.sessionVersion,workspace:scope.workspaceId,viewer:scope.viewerWorkspaceId,
@@ -166,26 +199,66 @@ type NativeNoticeIntent={schema_version:"pma.manager-read-intent.v2";action:"sco
   projection_generation:string;source_cursor_digest:string;frame_sha256:string;stream_scope_digest:string;};
 export type NativeExecutionNoticeView=Readonly<{actor:Readonly<{user_id:string;session_id:string;session_generation:number}>;
   workspace_id:string;environment:ReadEnvironment;profile_id:string;scope_digest:string;
-  intent:Readonly<NativeNoticeIntent>;payload:Buffer;}>;
-type NativeNoticeState={scope:AuthorizedExecutionReadScope;resource:AccessResource;
+  intent:Readonly<NativeNoticeIntent>;payload:Buffer;
+  manager?:Readonly<{domain:ManagerNativeState["domain"];source_identity_digest:string;read_scope_digest:string}>;}>;
+type NativeNoticeState={scope:NativeExecutionReadScope;resource:AccessResource|null;
   issuer:ExecutionReadScopes;pool:Pool;view:Omit<NativeExecutionNoticeView,"payload">;payload:Buffer;};
 const nativeNotices=new WeakMap<object,NativeNoticeState>();
 /** Effective served-field revision, not a researcher or PM policy receipt.
  * Full-domain business reads have no researcher fieldPolicyRef by design.
  * Bind their actual installed field set instead of inventing a source ref. */
-export function scopeReplayFieldPolicyRevision(scope:AuthorizedExecutionReadScope):string {
-  assertExecutionReadScope(scope);const state=minted.get(scope)!;
+export function scopeReplayFieldPolicyRevision(scope:NativeExecutionReadScope):string {
+  const state=nativeScopeState(scope);
+  if(state.kind==="MANAGER")return managerScopeState(scope).manager.decision.field_policy_ref;
+  scope=scope as AuthorizedExecutionReadScope;
+  assertExecutionReadScope(scope);
   if(scope.fieldPolicyRef!==null)return scope.fieldPolicyRef;
   if(scope.mode!=="SCOPED_V2"||!scope.wholePopulation||
     state.requirement.action!=="business.read_all"||state.requirement.resource?.kind!=="ROOT")
     fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
   return `portal.execution.full-business-fields.v1:${accessDigest([...state.fields].sort())}`;
 }
+type NativeNoticeInput={delivery_json:string;replay_binding_json:string;source_cursor:string;frame_json:string;};
+function captureNativeNoticeInput(input:NativeNoticeInput) {
+  if(!input||typeof input!=="object"||types.isProxy(input)||
+    ![Object.prototype,null].includes(Object.getPrototypeOf(input)))fail("EXECUTION_READ_SCOPE_REQUIRED");
+  const wanted=["delivery_json","replay_binding_json","source_cursor","frame_json"];
+  const keys=Reflect.ownKeys(input),values:Record<string,string>=Object.create(null);
+  if(keys.length!==wanted.length||keys.some(key=>typeof key!=="string"||!wanted.includes(key)))fail("EXECUTION_READ_SCOPE_REQUIRED");
+  for(const key of wanted){
+    const field=Object.getOwnPropertyDescriptor(input,key);
+    if(!field?.enumerable||!Object.hasOwn(field,"value")||typeof field.value!=="string")fail("EXECUTION_READ_SCOPE_REQUIRED");
+    values[key]=field.value;
+  }
+  // Bound every JSON parse before work or adapter awaits. Original private
+  // source token is never returned in the view, wire Base or browser frame.
+  if(Buffer.byteLength(values.delivery_json)>256||Buffer.byteLength(values.replay_binding_json)>16384||
+    Buffer.byteLength(values.frame_json)>1048576||Buffer.byteLength(values.source_cursor)>2048||
+    !/^[A-Za-z0-9._~-]+$(?![\s\S])/.test(values.source_cursor))fail("EXECUTION_READ_SCOPE_REQUIRED");
+  let delivery:{kind:string;stream_id:string;frame_ordinal:string},binding:ReturnType<typeof scopedReplayBinding.parse>,
+    frame:ReturnType<typeof scopedRealtimeFrame.parse>;
+  try{
+    delivery=JSON.parse(values.delivery_json);
+    binding=scopedReplayBinding.parse(JSON.parse(values.replay_binding_json));
+    frame=scopedRealtimeFrame.parse(JSON.parse(values.frame_json));
+    if(!delivery||typeof delivery!=="object"||Object.keys(delivery).sort().join()!=="frame_ordinal,kind,stream_id"||
+      delivery.kind!=="SSE_FRAME"||typeof delivery.stream_id!=="string"||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$(?![\s\S])/.test(delivery.stream_id)||
+      typeof delivery.frame_ordinal!=="string"||!/^[1-9][0-9]{0,18}$(?![\s\S])/.test(delivery.frame_ordinal)||
+      BigInt(delivery.frame_ordinal)>=(1n<<63n)||JSON.stringify(delivery)!==values.delivery_json||
+      JSON.stringify(frame)!==values.frame_json)throw new Error();
+  }catch{fail("EXECUTION_READ_SCOPE_REQUIRED");}
+  return {values,delivery,binding,frame};
+}
+function nativeNoticePayload(frame:ReturnType<typeof scopedRealtimeFrame.parse>):Buffer {
+  const payload=Buffer.from(`id: ${frame.resume_cursor}\nevent: ${frame.event_type}\ndata: ${JSON.stringify(frame)}\n\n`,"utf8");
+  if(payload.length>1048576)fail("EXECUTION_READ_SCOPE_LIMIT",503);
+  return payload;
+}
 function nativeNoticeState(input:unknown):NativeNoticeState {
   const state=input&&typeof input==="object"?nativeNotices.get(input):undefined;
   if(!state)fail("EXECUTION_READ_SCOPE_REQUIRED");
-  assertExecutionReadScope(state.scope);
-  if(minted.get(state.scope)!.issuer!==state.issuer)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  if(nativeScopeState(state.scope).issuer!==state.issuer)fail("EXECUTION_READ_SCOPE_REQUIRED");
   return state;
 }
 /** Exact registered proof only. A JSON/cast/Proxy/clone has no registry entry.
@@ -196,7 +269,8 @@ export function nativeExecutionNoticeView(input:PreparedExecutionNativeNotice):N
 }
 export async function revalidateNativeExecutionNotice(input:PreparedExecutionNativeNotice):Promise<void> {
   const state=nativeNoticeState(input);
-  await state.issuer.revalidate(state.scope);
+  if(nativeScopeState(state.scope).kind==="MANAGER")await state.issuer.revalidateManagerNativeStream(state.scope as AuthorizedManagerNativeNoticeScope);
+  else await state.issuer.revalidate(state.scope as AuthorizedExecutionReadScope);
 }
 /** Purely temporal ceiling over the SAME complete evaluator graph. Conservative
  * unrelated transitions can shorten a private frame but never widen a grant.
@@ -237,11 +311,26 @@ export function nativeNoticeValidUntil(context:AccessEvaluationContext,environme
  * Current physical send is protected only once the SAME durable native frame
  * obligation exists; this returned DTO alone is NOT a held/send permit. */
 export async function assertNativeExecutionNoticeCurrent(db:PoolClient,input:PreparedExecutionNativeNotice,
-  pool:Pool):Promise<{authority_fingerprint:string;now_ms:number;valid_until_ms:number;scope_digest:string}> {
-  const state=nativeNoticeState(input),scopeState=minted.get(state.scope)!;
-  if(state.pool!==pool||!scopeState.context)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  pool:Pool):Promise<{authority_fingerprint:string;now_ms:number;valid_until_ms:number;scope_digest:string;
+    manager_read_decision?:ManagerDomainStreamDecision}> {
+  const state=nativeNoticeState(input),scopeState=nativeScopeState(state.scope);
+  if(state.pool!==pool)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  if(scopeState.kind==="MANAGER"){
+    const manager=managerScopeState(state.scope).manager;
+    const d=await evaluateManagerDomainStream(db,{actor:state.view.actor,workspace_id:state.view.workspace_id,
+      environment:state.view.environment,domain:manager.domain,expected_scope_digest:manager.decision.scope_digest});
+    if(d.stream_scope_digest!==manager.decision.stream_scope_digest||
+      d.authority_fingerprint!==manager.decision.authority_fingerprint||
+      Math.max(d.now_ms,Date.now())>=d.valid_until_ms||
+      Date.now()>=selectedNativeBusinessReadInstallationExpiresAtMs(manager.source))
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    return {authority_fingerprint:d.authority_fingerprint,now_ms:d.now_ms,valid_until_ms:Math.min(d.valid_until_ms,selectedNativeBusinessReadInstallationExpiresAtMs(manager.source)),
+      scope_digest:manager.fingerprint,manager_read_decision:d};
+  }
+  const scope=state.scope as AuthorizedExecutionReadScope;
+  if(!scopeState.context||!state.resource)fail("EXECUTION_READ_SCOPE_REQUIRED");
   const expected=scopeState.context,actor=state.view.actor;
-  const current=await lockCurrentHumanSnapshot(db,actor,state.scope.workspaceId);
+  const current=await lockCurrentHumanSnapshot(db,actor,scope.workspaceId);
   if(current.authority_fingerprint!==expected.authority_fingerprint||current.actor_role!==scopeState.principal.user.role)
     fail("EXECUTION_READ_ACCESS_CHANGED",409);
   const now=Math.max(current.now,Date.now());
@@ -251,17 +340,17 @@ export async function assertNativeExecutionNoticeCurrent(db:PoolClient,input:Pre
   // their adapter again after this boundary; NC01 covers Core-owned changes.
   const context:AccessEvaluationContext={...expected,now_ms:now,actor_current:true,actor_role:current.actor_role};
   const resources=[...scopeState.resources,...(scopeState.requirement.resource?[scopeState.requirement.resource]:[])];
-  if(accessDigest(contextProof(context,state.scope.environment,resources))!==
-      accessDigest(contextProof(expected,state.scope.environment,resources))||
-    !evaluateAccess(context,"stream.subscribe",state.resource,state.scope.environment).allowed)
+  if(accessDigest(contextProof(context,scope.environment,resources))!==
+      accessDigest(contextProof(expected,scope.environment,resources))||
+    !evaluateAccess(context,"stream.subscribe",state.resource,scope.environment).allowed)
     fail("EXECUTION_READ_ACCESS_CHANGED",409);
   // Complete lineage remains present in context; an independent future DENY
   // cannot be filtered out merely because an older ALLOW supplied this scope.
-  if(scopeState.requirement.resource&&businessReadDenied(context,scopeState.requirement.resource,state.scope.environment)||
-    scopeState.tuples.some(tuple=>tupleLineage(tuple).some(resource=>businessReadDenied(context,resource,state.scope.environment))))
+  if(scopeState.requirement.resource&&businessReadDenied(context,scopeState.requirement.resource,scope.environment)||
+    scopeState.tuples.some(tuple=>tupleLineage(tuple).some(resource=>businessReadDenied(context,resource,scope.environment))))
     fail("EXECUTION_READ_ACCESS_CHANGED",409);
   return {authority_fingerprint:current.authority_fingerprint,now_ms:now,
-    valid_until_ms:nativeNoticeValidUntil(context,state.scope.environment,current.lease_until_ms),
+    valid_until_ms:nativeNoticeValidUntil(context,scope.environment,current.lease_until_ms),
     scope_digest:state.view.scope_digest};
 }
 
@@ -551,6 +640,82 @@ export class ExecutionReadScopes {
     return result;
   }
 
+  /** Genuine selected source + ONE DB snapshot's READ and independent STREAM.
+   * This mints no entity ROOT, publication census, PM grant or send permit. */
+  async authorizeManagerNativeStream(principal:ReadScopePrincipal,binding:ReadScopeBinding,
+    source:SelectedNativeBusinessReadSource):Promise<AuthorizedManagerNativeNoticeScope> {
+    try {
+      const {p,b,r}=captureReadScopeInputs(principal,binding,{action:"business.read_all"});
+      const selected=selectedNativeBusinessReadSelection(source);
+      if(selected.binding.subject!==p.user.userId||selected.binding.workspace_id!==p.workspaceId||
+        selected.binding.environment!==b.environment||selected.domain.profile_id!==b.profileId||
+        Date.now()>=selectedNativeBusinessReadInstallationExpiresAtMs(source))
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const domain=Object.freeze({...selected.domain});
+      const decision=await withTransaction(this.pool,db=>evaluateManagerDomainStream(db,{
+        actor:{user_id:p.user.userId,session_id:p.session.sessionId,session_generation:p.session.sessionVersion},
+        workspace_id:p.workspaceId,environment:b.environment,domain}));
+      if(Math.max(decision.now_ms,Date.now())>=decision.valid_until_ms||
+        Date.now()>=selectedNativeBusinessReadInstallationExpiresAtMs(source))
+        fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      const fingerprint=accessDigest({schema:"portal.manager-native-notice-scope.v1",domain,
+        source_identity_digest:selected.source_identity_digest,read_scope_digest:decision.scope_digest,
+        stream_scope_digest:decision.stream_scope_digest,viewer_workspace_id:p.viewerWorkspaceId});
+      const scope=Object.freeze({}) as AuthorizedManagerNativeNoticeScope;
+      minted.set(scope,{kind:"MANAGER",issuer:this,principal:p,binding:b,requirement:r,
+        resources:[],tuples:[],population:[],fields:[],context:null,strategyPairs:[],bindingPairs:[],
+        manager:{source,domain,source_identity_digest:selected.source_identity_digest,fingerprint,
+          decision:Object.freeze({...decision,actor:Object.freeze({...decision.actor})})}});
+      return scope;
+    }catch(error){return rethrowReadScopeError(error);}
+  }
+
+  async revalidateManagerNativeStream(scope:AuthorizedManagerNativeNoticeScope):Promise<void> {
+    const state=managerScopeState(scope);
+    if(state.issuer!==this)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const fresh=await this.authorizeManagerNativeStream(state.principal,state.binding,state.manager.source);
+    if(managerScopeState(fresh).manager.fingerprint!==state.manager.fingerprint)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+  }
+
+  async prepareManagerNativeNotice(scope:AuthorizedManagerNativeNoticeScope,codec:ScopedReplayCursorCodec,
+    input:NativeNoticeInput):Promise<PreparedExecutionNativeNotice> {
+    const original=managerScopeState(scope);
+    if(original.issuer!==this)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const {values,delivery,binding,frame}=captureNativeNoticeInput(input);
+    const current=await this.authorizeManagerNativeStream(original.principal,original.binding,original.manager.source),
+      fresh=managerScopeState(current),manager=fresh.manager,identity=manager.fingerprint;
+    if(manager.fingerprint!==original.manager.fingerprint||
+      binding.principal_scope_digest!==identity||binding.workspace_id!==fresh.principal.workspaceId||
+      binding.environment!==fresh.binding.environment||binding.profile_id!==manager.domain.profile_id||
+      binding.app_policy_revision!==manager.decision.policy_revision||
+      binding.field_policy_revision!==manager.decision.field_policy_ref||
+      binding.dataset!=="execution_profile_observation"||binding.window!==null||
+      frame.terminal||!frame.resume_cursor||frame.projection_generation!==binding.projection_generation||
+      frame.quality&&(frame.quality.coverage!=="CURRENT_PAGE_ONLY"||frame.quality.confidence==="VERIFIED")||
+      decodeScopedReplayContinuation(codec,frame.resume_cursor,binding)!==values.source_cursor)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    const rawDigest=(value:string)=>{
+      if(/^[a-f0-9]{64}$(?![\s\S])/.test(value))return value;
+      if(/^sha256:[a-f0-9]{64}$(?![\s\S])/.test(value))return value.slice(7);
+      return fail("EXECUTION_READ_SCOPE_REQUIRED");
+    };
+    const payload=nativeNoticePayload(frame);
+    const intent:Readonly<NativeNoticeIntent>=Object.freeze({schema_version:"pma.manager-read-intent.v2",action:"scoped_notice",
+      stream_id:delivery.stream_id,frame_ordinal:delivery.frame_ordinal,dataset_id:binding.dataset,
+      query_digest:rawDigest(binding.query_digest),field_set_digest:rawDigest(manager.domain.field_policy_sha256),
+      projection_generation:binding.projection_generation,
+      source_cursor_digest:createHash("sha256").update(values.source_cursor,"utf8").digest("hex"),
+      frame_sha256:createHash("sha256").update(payload).digest("hex"),stream_scope_digest:rawDigest(identity)});
+    const view=Object.freeze({actor:Object.freeze({...manager.decision.actor}),workspace_id:fresh.principal.workspaceId,
+      environment:fresh.binding.environment,profile_id:manager.domain.profile_id,scope_digest:identity,intent,
+      manager:Object.freeze({domain:manager.domain,source_identity_digest:manager.source_identity_digest,
+        read_scope_digest:manager.decision.scope_digest})});
+    const prepared=Object.freeze({}) as PreparedExecutionNativeNotice;
+    nativeNotices.set(prepared,{scope:current,resource:null,issuer:this,pool:this.pool,view,payload});
+    return prepared;
+  }
+
   async prepareNativeNotice(scope:AuthorizedExecutionReadScope,resource:AccessResource,codec:ScopedReplayCursorCodec,input:{
     delivery_json:string;replay_binding_json:string;source_cursor:string;frame_json:string;
   }):Promise<PreparedExecutionNativeNotice> {
@@ -559,34 +724,7 @@ export class ExecutionReadScopes {
       original.requirement.action!=="business.read_all"||original.requirement.resource?.kind!=="ROOT"||
       !original.requirement.dataset)
       fail("EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED",503);
-    if(!input||typeof input!=="object"||types.isProxy(input)||
-      ![Object.prototype,null].includes(Object.getPrototypeOf(input)))fail("EXECUTION_READ_SCOPE_REQUIRED");
-    const wanted=["delivery_json","replay_binding_json","source_cursor","frame_json"];
-    const keys=Reflect.ownKeys(input),values:Record<string,string>=Object.create(null);
-    if(keys.length!==wanted.length||keys.some(key=>typeof key!=="string"||!wanted.includes(key)))fail("EXECUTION_READ_SCOPE_REQUIRED");
-    for(const key of wanted){
-      const field=Object.getOwnPropertyDescriptor(input,key);
-      if(!field?.enumerable||!Object.hasOwn(field,"value")||typeof field.value!=="string")fail("EXECUTION_READ_SCOPE_REQUIRED");
-      values[key]=field.value;
-    }
-    // Bound every JSON parse before work or adapter awaits. Original private
-    // source token is never returned in the view, wire Base or browser frame.
-    if(Buffer.byteLength(values.delivery_json)>256||Buffer.byteLength(values.replay_binding_json)>16384||
-      Buffer.byteLength(values.frame_json)>1048576||Buffer.byteLength(values.source_cursor)>2048||
-      !/^[A-Za-z0-9._~-]+$(?![\s\S])/.test(values.source_cursor))fail("EXECUTION_READ_SCOPE_REQUIRED");
-    let delivery:{kind:string;stream_id:string;frame_ordinal:string},binding:ReturnType<typeof scopedReplayBinding.parse>,
-      frame:ReturnType<typeof scopedRealtimeFrame.parse>;
-    try{
-      delivery=JSON.parse(values.delivery_json);
-      binding=scopedReplayBinding.parse(JSON.parse(values.replay_binding_json));
-      frame=scopedRealtimeFrame.parse(JSON.parse(values.frame_json));
-      if(!delivery||typeof delivery!=="object"||Object.keys(delivery).sort().join()!=="frame_ordinal,kind,stream_id"||
-        delivery.kind!=="SSE_FRAME"||typeof delivery.stream_id!=="string"||
-        !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$(?![\s\S])/.test(delivery.stream_id)||
-        typeof delivery.frame_ordinal!=="string"||!/^[1-9][0-9]{0,18}$(?![\s\S])/.test(delivery.frame_ordinal)||
-        BigInt(delivery.frame_ordinal)>=(1n<<63n)||JSON.stringify(delivery)!==values.delivery_json||
-        JSON.stringify(frame)!==values.frame_json)throw new Error();
-    }catch{fail("EXECUTION_READ_SCOPE_REQUIRED");}
+    const {values,delivery,binding,frame}=captureNativeNoticeInput(input);
     // Resource must be a genuine captured resource, not a caller's inherited
     // accessor. Use the existing closed resource schema on detached JSON only.
     if(!resource||typeof resource!=="object"||types.isProxy(resource))fail("EXECUTION_READ_SCOPE_REQUIRED");
@@ -628,8 +766,7 @@ export class ExecutionReadScopes {
       if(/^sha256:[a-f0-9]{64}$(?![\s\S])/.test(value))return value.slice(7);
       return fail("EXECUTION_READ_SCOPE_REQUIRED");
     };
-    const payload=Buffer.from(`id: ${frame.resume_cursor}\nevent: ${frame.event_type}\ndata: ${JSON.stringify(frame)}\n\n`,"utf8");
-    if(payload.length>1048576)fail("EXECUTION_READ_SCOPE_LIMIT",503);
+    const payload=nativeNoticePayload(frame);
     const intent:Readonly<NativeNoticeIntent>=Object.freeze({schema_version:"pma.manager-read-intent.v2",action:"scoped_notice",
       stream_id:delivery.stream_id,frame_ordinal:delivery.frame_ordinal,dataset_id:dataset.dataset_id,
       query_digest:rawDigest(binding.query_digest),field_set_digest:rawDigest(accessDigest([...fresh.fields].sort())),
@@ -920,7 +1057,7 @@ export class ExecutionReadScopes {
       fields,resources,tuples});
     const scope=Object.freeze({mode,fingerprint,workspaceId:p.workspaceId,viewerWorkspaceId:p.viewerWorkspaceId!,
       environment:b.environment,profileId:b.profileId,policyRevision,fieldPolicyRef,wholePopulation:whole}) as AuthorizedExecutionReadScope;
-    minted.set(scope,{issuer:this,principal:p,binding:b,requirement:r,resources,tuples,
+    minted.set(scope,{kind:"ENTITY",issuer:this,principal:p,binding:b,requirement:r,resources,tuples,
       population:publication?.tuples??[],fields,context,bindingPairs,
       strategyPairs:publication?.strategy_lineage&&(publication.strategy_lineage.qualification==="SOURCE_VERIFIED"||
         context?.allow_test_only&&publication.strategy_lineage.qualification==="TEST_ONLY")?publication.strategy_lineage.pairs:[]});

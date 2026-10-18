@@ -94,10 +94,13 @@ export const managerDomainFieldSeal=z.object({environment:executionEnvironment,d
   field_policy_ref:managerText,valid_from_ms:utcMilliseconds,valid_until_ms:utcMilliseconds}).strict()
   .refine(v=>v.valid_until_ms>v.valid_from_ms,"INVALID_INTERVAL");
 export type ManagerDomainFieldSeal=z.infer<typeof managerDomainFieldSeal>;
+/** Private app-domain action, not an entity/resource selector or source grant. */
+export const managerDomainAction=z.enum(["business.read_all","stream.subscribe"]);
+export type ManagerDomainAction=z.infer<typeof managerDomainAction>;
 export const managerDomainGrant=z.object({schema_version:z.literal("portal.manager-domain-grant.v1"),
   grant_id:accessText,workspace_id:accessText,subject_user_id:accessText,issued_by:accessText,
   parent_grant_id:z.null(),revision:opaqueRevision,policy_revision:opaqueRevision,
-  action:z.literal("business.read_all"),effect:z.enum(["ALLOW","DENY"]),environment:executionEnvironment,
+  action:managerDomainAction,effect:z.enum(["ALLOW","DENY"]),environment:executionEnvironment,
   domain:managerReadDomain,field_policy_ref:managerText,valid_from_ms:utcMilliseconds,
   valid_until_ms:utcMilliseconds,revoked_at_ms:utcMilliseconds.nullable()}).strict()
   .refine(v=>v.valid_until_ms>v.valid_from_ms,"INVALID_INTERVAL");
@@ -112,6 +115,13 @@ export type ManagerDomainReadInput=z.infer<typeof managerDomainReadInput>;
 export interface ManagerDomainReadDecision {
   authority_fingerprint:string;scope_digest:string;field_policy_sha256:string;field_policy_ref:string;
   valid_until_ms:number;now_ms:number;policy_revision:string;grant_id:string;grant_revision:string;actor:AccessActor;
+}
+
+
+/** DB-only intersection; neither a native held handle nor an egress permit.
+ * scope_digest retains the exact ordinary READ digest for Candidate parity. */
+export interface ManagerDomainStreamDecision extends ManagerDomainReadDecision {
+  stream_scope_digest:string;stream_grant_id:string;stream_grant_revision:string;
 }
 
 

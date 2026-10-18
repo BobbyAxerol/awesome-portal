@@ -1,7 +1,7 @@
 {
   "schema_version": "portal.registry.v1",
   "registry_id": "portal-default",
-  "revision": 6,
+  "revision": 7,
   "feature_groups": [
     {
       "id": "command",
@@ -493,7 +493,11 @@
         "order": 10,
         "icon_key": "shield-check",
         "show_in_sidebar": true,
-        "show_in_command_palette": true
+        "show_in_command_palette": true,
+        "scoped_v2_replacement": {
+          "read_mode": "SCOPED_V2",
+          "feature_id": "EXECUTION_APPROVALS"
+        }
       }
     },
     {

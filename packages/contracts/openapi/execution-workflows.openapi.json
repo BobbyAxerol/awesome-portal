@@ -3231,6 +3231,13 @@
               "OWNER_VERIFIED",
               "TEST_ONLY"
             ]
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+            "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
           }
         },
         "required": [
@@ -3247,8 +3254,10 @@
           "next_action",
           "created_at_ms",
           "updated_at_ms",
-          "authority"
-        ]
+          "authority",
+          "currency"
+        ],
+        "description": "Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema."
       },
       "WorkflowContext": {
         "type": "object",
@@ -6557,6 +6566,5648 @@
           "source_qualified",
           "consumer_status"
         ]
+      },
+      "WorkflowPaperCriterion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "gate": {
+            "const": "PAPER_EXIT"
+          },
+          "original": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "finding_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "panel_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "ordinal": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "PASS",
+                  "WATCH",
+                  "FAIL",
+                  "INSUFFICIENT"
+                ]
+              },
+              "blocking": {
+                "type": "boolean"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "as_of_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "finding_id",
+              "panel_id",
+              "ordinal",
+              "outcome",
+              "blocking",
+              "required",
+              "as_of_ms"
+            ]
+          },
+          "display_class": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "CAUTION",
+              "FAIL",
+              "STALE",
+              "NO_VERDICT"
+            ]
+          },
+          "observed_value": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "threshold_value": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "comparator": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "unit": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "currency": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "finding_formula_version": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          }
+        },
+        "required": [
+          "gate",
+          "original",
+          "display_class",
+          "observed_value",
+          "threshold_value",
+          "comparator",
+          "unit",
+          "currency",
+          "evidence",
+          "finding_formula_version"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "original": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {
+                      "const": "PASS"
+                    }
+                  },
+                  "required": [
+                    "outcome"
+                  ]
+                }
+              },
+              "required": [
+                "original"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "display_class": {
+                  "const": "PASS"
+                }
+              },
+              "required": [
+                "display_class"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "original": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {
+                      "const": "WATCH"
+                    }
+                  },
+                  "required": [
+                    "outcome"
+                  ]
+                }
+              },
+              "required": [
+                "original"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "display_class": {
+                  "const": "CAUTION"
+                }
+              },
+              "required": [
+                "display_class"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "original": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {
+                      "const": "FAIL"
+                    }
+                  },
+                  "required": [
+                    "outcome"
+                  ]
+                }
+              },
+              "required": [
+                "original"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "display_class": {
+                  "const": "FAIL"
+                }
+              },
+              "required": [
+                "display_class"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "original": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {
+                      "const": "INSUFFICIENT"
+                    }
+                  },
+                  "required": [
+                    "outcome"
+                  ]
+                }
+              },
+              "required": [
+                "original"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "display_class": {
+                  "const": "NO_VERDICT"
+                }
+              },
+              "required": [
+                "display_class"
+              ]
+            }
+          }
+        ],
+        "description": "Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged.",
+        "$comment": "Runtime additionally enforces Paper panel/finding identity joins and uniqueness; exact Sandbox evidence-ID equality; Paper review-ID equality; and original approval/review/certification timestamp ordering. Ordinary JSON Schema cannot compare arbitrary sibling values. Consumer must validate the exact original parent before projection, and must not treat schema validation as current authority."
+      },
+      "WorkflowSandboxCriterion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "gate": {
+            "const": "SANDBOX"
+          },
+          "original": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "step_key": {
+                "type": "string",
+                "enum": [
+                  "CONNECT",
+                  "SYNC",
+                  "ORDER_TYPES",
+                  "RECONCILIATION",
+                  "TIMEBOXED_RUN",
+                  "CLEANUP",
+                  "EXIT_REVIEW"
+                ]
+              },
+              "availability": {
+                "type": "string",
+                "enum": [
+                  "AVAILABLE",
+                  "NOT_RECORDED"
+                ]
+              },
+              "evidence_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "stored_evaluation_state": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "PASS",
+                      "FAIL",
+                      "STALE",
+                      "UNAVAILABLE"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source_authority": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "PORTAL",
+                      "EXECUTION",
+                      "BROKER",
+                      "DERIVED"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source_verification_state": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "VERIFIED",
+                      "UNAVAILABLE"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "as_of_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "expires_at_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "step_key",
+              "availability",
+              "evidence_id",
+              "stored_evaluation_state",
+              "source_authority",
+              "source_verification_state",
+              "as_of_ms",
+              "expires_at_ms"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "type": "object",
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_RECORDED"
+                    }
+                  },
+                  "required": [
+                    "availability"
+                  ]
+                },
+                "then": {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "evidence_id": {
+                          "type": "null"
+                        }
+                      },
+                      "required": [
+                        "evidence_id"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "stored_evaluation_state": {
+                          "type": "null"
+                        }
+                      },
+                      "required": [
+                        "stored_evaluation_state"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "source_authority": {
+                          "type": "null"
+                        }
+                      },
+                      "required": [
+                        "source_authority"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "source_verification_state": {
+                          "type": "null"
+                        }
+                      },
+                      "required": [
+                        "source_verification_state"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "as_of_ms": {
+                          "type": "null"
+                        }
+                      },
+                      "required": [
+                        "as_of_ms"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "expires_at_ms": {
+                          "type": "null"
+                        }
+                      },
+                      "required": [
+                        "expires_at_ms"
+                      ]
+                    }
+                  ]
+                },
+                "else": {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "evidence_id": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "evidence_id"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "stored_evaluation_state": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "stored_evaluation_state"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "source_authority": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "source_authority"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "source_verification_state": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "source_verification_state"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "display_class": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "CAUTION",
+              "FAIL",
+              "STALE",
+              "NO_VERDICT"
+            ]
+          },
+          "required": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "blocking": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "observed_value": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "threshold_value": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "comparator": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "unit": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "currency": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "const": null
+              },
+              "reason_code": {
+                "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+              }
+            },
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ]
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "AVAILABLE"
+                  },
+                  "kind": {
+                    "const": "PORTAL_EVIDENCE_ID"
+                  },
+                  "value": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "reason_code": {
+                    "const": null
+                  }
+                },
+                "required": [
+                  "availability",
+                  "kind",
+                  "value",
+                  "reason_code"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "const": null
+                  },
+                  "reason_code": {
+                    "const": "EVIDENCE_NOT_RECORDED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "gate",
+          "original",
+          "display_class",
+          "required",
+          "blocking",
+          "observed_value",
+          "threshold_value",
+          "comparator",
+          "unit",
+          "currency",
+          "evidence"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "original": {
+                  "type": "object",
+                  "properties": {
+                    "stored_evaluation_state": {
+                      "const": "PASS"
+                    }
+                  },
+                  "required": [
+                    "stored_evaluation_state"
+                  ]
+                }
+              },
+              "required": [
+                "original"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "display_class": {
+                  "const": "PASS"
+                }
+              },
+              "required": [
+                "display_class"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "original": {
+                  "type": "object",
+                  "properties": {
+                    "stored_evaluation_state": {
+                      "const": "FAIL"
+                    }
+                  },
+                  "required": [
+                    "stored_evaluation_state"
+                  ]
+                }
+              },
+              "required": [
+                "original"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "display_class": {
+                  "const": "FAIL"
+                }
+              },
+              "required": [
+                "display_class"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "original": {
+                  "type": "object",
+                  "properties": {
+                    "stored_evaluation_state": {
+                      "const": "STALE"
+                    }
+                  },
+                  "required": [
+                    "stored_evaluation_state"
+                  ]
+                }
+              },
+              "required": [
+                "original"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "display_class": {
+                  "const": "STALE"
+                }
+              },
+              "required": [
+                "display_class"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "original": {
+                  "type": "object",
+                  "properties": {
+                    "stored_evaluation_state": {
+                      "const": "UNAVAILABLE"
+                    }
+                  },
+                  "required": [
+                    "stored_evaluation_state"
+                  ]
+                }
+              },
+              "required": [
+                "original"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "display_class": {
+                  "const": "NO_VERDICT"
+                }
+              },
+              "required": [
+                "display_class"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "original": {
+                  "type": "object",
+                  "properties": {
+                    "stored_evaluation_state": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "stored_evaluation_state"
+                  ]
+                }
+              },
+              "required": [
+                "original"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "display_class": {
+                  "const": "NO_VERDICT"
+                }
+              },
+              "required": [
+                "display_class"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "original": {
+                  "type": "object",
+                  "properties": {
+                    "evidence_id": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "evidence_id"
+                  ]
+                }
+              },
+              "required": [
+                "original"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "evidence": {
+                  "type": "object",
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    }
+                  },
+                  "required": [
+                    "availability"
+                  ]
+                }
+              },
+              "required": [
+                "evidence"
+              ]
+            },
+            "else": {
+              "type": "object",
+              "properties": {
+                "evidence": {
+                  "type": "object",
+                  "properties": {
+                    "availability": {
+                      "const": "AVAILABLE"
+                    }
+                  },
+                  "required": [
+                    "availability"
+                  ]
+                }
+              },
+              "required": [
+                "evidence"
+              ]
+            }
+          }
+        ],
+        "description": "Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged.",
+        "$comment": "Runtime additionally enforces Paper panel/finding identity joins and uniqueness; exact Sandbox evidence-ID equality; Paper review-ID equality; and original approval/review/certification timestamp ordering. Ordinary JSON Schema cannot compare arbitrary sibling values. Consumer must validate the exact original parent before projection, and must not treat schema validation as current authority."
+      },
+      "WorkflowPaperCriteria": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.criteria-capsules.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 96
+          },
+          "record_authority": {
+            "const": "PORTAL"
+          },
+          "source_verdict": {
+            "const": "NOT_ASSERTED"
+          },
+          "basis": {
+            "const": "ALREADY_AUTHORIZED_PUBLIC_PARENT_ONLY"
+          },
+          "readiness": {
+            "const": "NOT_EVALUATED"
+          },
+          "universal_denominator": {
+            "const": null
+          },
+          "gate": {
+            "const": "PAPER_EXIT"
+          },
+          "parent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "availability": {
+            "const": "AVAILABLE"
+          },
+          "evaluation_policy_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "evaluation_formula_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "panels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "panel_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "pattern": "^[A-Za-z0-9._:-]+$"
+                },
+                "ordinal": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "panel_kind": {
+                  "type": "string",
+                  "enum": [
+                    "OBSERVATION_COVERAGE",
+                    "DRIFT",
+                    "LIMITS_HEALTH",
+                    "PORTFOLIO_FIT"
+                  ]
+                },
+                "source_authority": {
+                  "type": "string",
+                  "enum": [
+                    "RESEARCH",
+                    "EXECUTION",
+                    "BROKER",
+                    "DERIVED"
+                  ]
+                },
+                "panel_state": {
+                  "type": "string",
+                  "enum": [
+                    "OK",
+                    "PARTIAL",
+                    "STALE",
+                    "UNAVAILABLE",
+                    "ERROR"
+                  ]
+                },
+                "as_of_ms": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "freshness_state": {
+                  "type": "string",
+                  "enum": [
+                    "OK",
+                    "STALE",
+                    "UNKNOWN"
+                  ]
+                },
+                "source_completeness": {
+                  "type": "string",
+                  "enum": [
+                    "EVENT_SOURCED",
+                    "POLL_BOUNDED",
+                    "UNKNOWN"
+                  ]
+                },
+                "poll_interval_ms": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 100,
+                      "maximum": 3600000
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "formula_version": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 191,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "panel_id",
+                "ordinal",
+                "panel_kind",
+                "source_authority",
+                "panel_state",
+                "as_of_ms",
+                "freshness_state",
+                "source_completeness",
+                "poll_interval_ms",
+                "formula_version"
+              ],
+              "allOf": [
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "freshness_state": {
+                        "const": "OK"
+                      }
+                    },
+                    "required": [
+                      "freshness_state"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "as_of_ms": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "as_of_ms"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "source_completeness": {
+                        "const": "POLL_BOUNDED"
+                      }
+                    },
+                    "required": [
+                      "source_completeness"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "poll_interval_ms": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "poll_interval_ms"
+                    ]
+                  },
+                  "else": {
+                    "type": "object",
+                    "properties": {
+                      "poll_interval_ms": {
+                        "type": "null"
+                      }
+                    },
+                    "required": [
+                      "poll_interval_ms"
+                    ]
+                  }
+                }
+              ]
+            },
+            "maxItems": 4
+          },
+          "criteria": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "gate": {
+                  "const": "PAPER_EXIT"
+                },
+                "original": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "finding_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 191,
+                      "pattern": "^[A-Za-z0-9._:-]+$"
+                    },
+                    "panel_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 191,
+                      "pattern": "^[A-Za-z0-9._:-]+$"
+                    },
+                    "ordinal": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "enum": [
+                        "PASS",
+                        "WATCH",
+                        "FAIL",
+                        "INSUFFICIENT"
+                      ]
+                    },
+                    "blocking": {
+                      "type": "boolean"
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "as_of_ms": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "finding_id",
+                    "panel_id",
+                    "ordinal",
+                    "outcome",
+                    "blocking",
+                    "required",
+                    "as_of_ms"
+                  ]
+                },
+                "display_class": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "CAUTION",
+                    "FAIL",
+                    "STALE",
+                    "NO_VERDICT"
+                  ]
+                },
+                "observed_value": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "threshold_value": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "comparator": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "unit": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "currency": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "evidence": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "finding_formula_version": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                }
+              },
+              "required": [
+                "gate",
+                "original",
+                "display_class",
+                "observed_value",
+                "threshold_value",
+                "comparator",
+                "unit",
+                "currency",
+                "evidence",
+                "finding_formula_version"
+              ],
+              "allOf": [
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "original": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "const": "PASS"
+                          }
+                        },
+                        "required": [
+                          "outcome"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "original"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "display_class": {
+                        "const": "PASS"
+                      }
+                    },
+                    "required": [
+                      "display_class"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "original": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "const": "WATCH"
+                          }
+                        },
+                        "required": [
+                          "outcome"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "original"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "display_class": {
+                        "const": "CAUTION"
+                      }
+                    },
+                    "required": [
+                      "display_class"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "original": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "const": "FAIL"
+                          }
+                        },
+                        "required": [
+                          "outcome"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "original"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "display_class": {
+                        "const": "FAIL"
+                      }
+                    },
+                    "required": [
+                      "display_class"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "original": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "const": "INSUFFICIENT"
+                          }
+                        },
+                        "required": [
+                          "outcome"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "original"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "display_class": {
+                        "const": "NO_VERDICT"
+                      }
+                    },
+                    "required": [
+                      "display_class"
+                    ]
+                  }
+                }
+              ]
+            },
+            "maxItems": 256
+          }
+        },
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "record_authority",
+          "source_verdict",
+          "basis",
+          "readiness",
+          "universal_denominator",
+          "gate",
+          "parent_id",
+          "availability",
+          "evaluation_policy_version",
+          "evaluation_formula_version",
+          "panels",
+          "criteria"
+        ],
+        "description": "Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged.",
+        "$comment": "Runtime additionally enforces Paper panel/finding identity joins and uniqueness; exact Sandbox evidence-ID equality; Paper review-ID equality; and original approval/review/certification timestamp ordering. Ordinary JSON Schema cannot compare arbitrary sibling values. Consumer must validate the exact original parent before projection, and must not treat schema validation as current authority."
+      },
+      "WorkflowSandboxCriteria": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.criteria-capsules.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 96
+          },
+          "record_authority": {
+            "const": "PORTAL"
+          },
+          "source_verdict": {
+            "const": "NOT_ASSERTED"
+          },
+          "basis": {
+            "const": "ALREADY_AUTHORIZED_PUBLIC_PARENT_ONLY"
+          },
+          "readiness": {
+            "const": "NOT_EVALUATED"
+          },
+          "universal_denominator": {
+            "const": null
+          },
+          "gate": {
+            "const": "SANDBOX"
+          },
+          "parent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "availability": {
+            "const": "AVAILABLE"
+          },
+          "source_basis": {
+            "const": "CURRENT_LATEST_STORED"
+          },
+          "policy_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "formula_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "criteria": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "gate": {
+                  "const": "SANDBOX"
+                },
+                "original": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "step_key": {
+                      "type": "string",
+                      "enum": [
+                        "CONNECT",
+                        "SYNC",
+                        "ORDER_TYPES",
+                        "RECONCILIATION",
+                        "TIMEBOXED_RUN",
+                        "CLEANUP",
+                        "EXIT_REVIEW"
+                      ]
+                    },
+                    "availability": {
+                      "type": "string",
+                      "enum": [
+                        "AVAILABLE",
+                        "NOT_RECORDED"
+                      ]
+                    },
+                    "evidence_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 191,
+                          "pattern": "^[A-Za-z0-9._:-]+$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "stored_evaluation_state": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "PASS",
+                            "FAIL",
+                            "STALE",
+                            "UNAVAILABLE"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "source_authority": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "PORTAL",
+                            "EXECUTION",
+                            "BROKER",
+                            "DERIVED"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "source_verification_state": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "VERIFIED",
+                            "UNAVAILABLE"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "as_of_ms": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "expires_at_ms": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "step_key",
+                    "availability",
+                    "evidence_id",
+                    "stored_evaluation_state",
+                    "source_authority",
+                    "source_verification_state",
+                    "as_of_ms",
+                    "expires_at_ms"
+                  ],
+                  "allOf": [
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "availability": {
+                            "const": "NOT_RECORDED"
+                          }
+                        },
+                        "required": [
+                          "availability"
+                        ]
+                      },
+                      "then": {
+                        "allOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "evidence_id": {
+                                "type": "null"
+                              }
+                            },
+                            "required": [
+                              "evidence_id"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "stored_evaluation_state": {
+                                "type": "null"
+                              }
+                            },
+                            "required": [
+                              "stored_evaluation_state"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "source_authority": {
+                                "type": "null"
+                              }
+                            },
+                            "required": [
+                              "source_authority"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "source_verification_state": {
+                                "type": "null"
+                              }
+                            },
+                            "required": [
+                              "source_verification_state"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "as_of_ms": {
+                                "type": "null"
+                              }
+                            },
+                            "required": [
+                              "as_of_ms"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "expires_at_ms": {
+                                "type": "null"
+                              }
+                            },
+                            "required": [
+                              "expires_at_ms"
+                            ]
+                          }
+                        ]
+                      },
+                      "else": {
+                        "allOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "evidence_id": {
+                                "not": {
+                                  "type": "null"
+                                }
+                              }
+                            },
+                            "required": [
+                              "evidence_id"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "stored_evaluation_state": {
+                                "not": {
+                                  "type": "null"
+                                }
+                              }
+                            },
+                            "required": [
+                              "stored_evaluation_state"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "source_authority": {
+                                "not": {
+                                  "type": "null"
+                                }
+                              }
+                            },
+                            "required": [
+                              "source_authority"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "source_verification_state": {
+                                "not": {
+                                  "type": "null"
+                                }
+                              }
+                            },
+                            "required": [
+                              "source_verification_state"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "display_class": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "CAUTION",
+                    "FAIL",
+                    "STALE",
+                    "NO_VERDICT"
+                  ]
+                },
+                "required": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "blocking": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "observed_value": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "threshold_value": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "comparator": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "unit": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "currency": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    },
+                    "value": {
+                      "const": null
+                    },
+                    "reason_code": {
+                      "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                    }
+                  },
+                  "required": [
+                    "availability",
+                    "value",
+                    "reason_code"
+                  ]
+                },
+                "evidence": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "AVAILABLE"
+                        },
+                        "kind": {
+                          "const": "PORTAL_EVIDENCE_ID"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 191,
+                          "pattern": "^[A-Za-z0-9._:-]+$"
+                        },
+                        "reason_code": {
+                          "const": null
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "kind",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "EVIDENCE_NOT_RECORDED"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "gate",
+                "original",
+                "display_class",
+                "required",
+                "blocking",
+                "observed_value",
+                "threshold_value",
+                "comparator",
+                "unit",
+                "currency",
+                "evidence"
+              ],
+              "allOf": [
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "original": {
+                        "type": "object",
+                        "properties": {
+                          "stored_evaluation_state": {
+                            "const": "PASS"
+                          }
+                        },
+                        "required": [
+                          "stored_evaluation_state"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "original"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "display_class": {
+                        "const": "PASS"
+                      }
+                    },
+                    "required": [
+                      "display_class"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "original": {
+                        "type": "object",
+                        "properties": {
+                          "stored_evaluation_state": {
+                            "const": "FAIL"
+                          }
+                        },
+                        "required": [
+                          "stored_evaluation_state"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "original"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "display_class": {
+                        "const": "FAIL"
+                      }
+                    },
+                    "required": [
+                      "display_class"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "original": {
+                        "type": "object",
+                        "properties": {
+                          "stored_evaluation_state": {
+                            "const": "STALE"
+                          }
+                        },
+                        "required": [
+                          "stored_evaluation_state"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "original"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "display_class": {
+                        "const": "STALE"
+                      }
+                    },
+                    "required": [
+                      "display_class"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "original": {
+                        "type": "object",
+                        "properties": {
+                          "stored_evaluation_state": {
+                            "const": "UNAVAILABLE"
+                          }
+                        },
+                        "required": [
+                          "stored_evaluation_state"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "original"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "display_class": {
+                        "const": "NO_VERDICT"
+                      }
+                    },
+                    "required": [
+                      "display_class"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "original": {
+                        "type": "object",
+                        "properties": {
+                          "stored_evaluation_state": {
+                            "type": "null"
+                          }
+                        },
+                        "required": [
+                          "stored_evaluation_state"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "original"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "display_class": {
+                        "const": "NO_VERDICT"
+                      }
+                    },
+                    "required": [
+                      "display_class"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "original": {
+                        "type": "object",
+                        "properties": {
+                          "evidence_id": {
+                            "type": "null"
+                          }
+                        },
+                        "required": [
+                          "evidence_id"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "original"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "evidence": {
+                        "type": "object",
+                        "properties": {
+                          "availability": {
+                            "const": "NOT_PUBLISHED"
+                          }
+                        },
+                        "required": [
+                          "availability"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "evidence"
+                    ]
+                  },
+                  "else": {
+                    "type": "object",
+                    "properties": {
+                      "evidence": {
+                        "type": "object",
+                        "properties": {
+                          "availability": {
+                            "const": "AVAILABLE"
+                          }
+                        },
+                        "required": [
+                          "availability"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "evidence"
+                    ]
+                  }
+                }
+              ]
+            },
+            "minItems": 7,
+            "maxItems": 7,
+            "allOf": [
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "original": {
+                      "type": "object",
+                      "properties": {
+                        "step_key": {
+                          "const": "CONNECT"
+                        }
+                      },
+                      "required": [
+                        "step_key"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "original"
+                  ]
+                },
+                "minContains": 1,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "original": {
+                      "type": "object",
+                      "properties": {
+                        "step_key": {
+                          "const": "SYNC"
+                        }
+                      },
+                      "required": [
+                        "step_key"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "original"
+                  ]
+                },
+                "minContains": 1,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "original": {
+                      "type": "object",
+                      "properties": {
+                        "step_key": {
+                          "const": "ORDER_TYPES"
+                        }
+                      },
+                      "required": [
+                        "step_key"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "original"
+                  ]
+                },
+                "minContains": 1,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "original": {
+                      "type": "object",
+                      "properties": {
+                        "step_key": {
+                          "const": "RECONCILIATION"
+                        }
+                      },
+                      "required": [
+                        "step_key"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "original"
+                  ]
+                },
+                "minContains": 1,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "original": {
+                      "type": "object",
+                      "properties": {
+                        "step_key": {
+                          "const": "TIMEBOXED_RUN"
+                        }
+                      },
+                      "required": [
+                        "step_key"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "original"
+                  ]
+                },
+                "minContains": 1,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "original": {
+                      "type": "object",
+                      "properties": {
+                        "step_key": {
+                          "const": "CLEANUP"
+                        }
+                      },
+                      "required": [
+                        "step_key"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "original"
+                  ]
+                },
+                "minContains": 1,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "original": {
+                      "type": "object",
+                      "properties": {
+                        "step_key": {
+                          "const": "EXIT_REVIEW"
+                        }
+                      },
+                      "required": [
+                        "step_key"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "original"
+                  ]
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "record_authority",
+          "source_verdict",
+          "basis",
+          "readiness",
+          "universal_denominator",
+          "gate",
+          "parent_id",
+          "availability",
+          "source_basis",
+          "policy_version",
+          "formula_version",
+          "criteria"
+        ],
+        "description": "Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged.",
+        "$comment": "Runtime additionally enforces Paper panel/finding identity joins and uniqueness; exact Sandbox evidence-ID equality; Paper review-ID equality; and original approval/review/certification timestamp ordering. Ordinary JSON Schema cannot compare arbitrary sibling values. Consumer must validate the exact original parent before projection, and must not treat schema validation as current authority."
+      },
+      "WorkflowCriteriaCapsules": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": "portal.execution.criteria-capsules.v1"
+              },
+              "workspace_id": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 96
+              },
+              "record_authority": {
+                "const": "PORTAL"
+              },
+              "source_verdict": {
+                "const": "NOT_ASSERTED"
+              },
+              "basis": {
+                "const": "ALREADY_AUTHORIZED_PUBLIC_PARENT_ONLY"
+              },
+              "readiness": {
+                "const": "NOT_EVALUATED"
+              },
+              "universal_denominator": {
+                "const": null
+              },
+              "gate": {
+                "const": "PAPER_EXIT"
+              },
+              "parent_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "availability": {
+                "const": "AVAILABLE"
+              },
+              "evaluation_policy_version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "evaluation_formula_version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "panels": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "panel_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 191,
+                      "pattern": "^[A-Za-z0-9._:-]+$"
+                    },
+                    "ordinal": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "panel_kind": {
+                      "type": "string",
+                      "enum": [
+                        "OBSERVATION_COVERAGE",
+                        "DRIFT",
+                        "LIMITS_HEALTH",
+                        "PORTFOLIO_FIT"
+                      ]
+                    },
+                    "source_authority": {
+                      "type": "string",
+                      "enum": [
+                        "RESEARCH",
+                        "EXECUTION",
+                        "BROKER",
+                        "DERIVED"
+                      ]
+                    },
+                    "panel_state": {
+                      "type": "string",
+                      "enum": [
+                        "OK",
+                        "PARTIAL",
+                        "STALE",
+                        "UNAVAILABLE",
+                        "ERROR"
+                      ]
+                    },
+                    "as_of_ms": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "freshness_state": {
+                      "type": "string",
+                      "enum": [
+                        "OK",
+                        "STALE",
+                        "UNKNOWN"
+                      ]
+                    },
+                    "source_completeness": {
+                      "type": "string",
+                      "enum": [
+                        "EVENT_SOURCED",
+                        "POLL_BOUNDED",
+                        "UNKNOWN"
+                      ]
+                    },
+                    "poll_interval_ms": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 100,
+                          "maximum": 3600000
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "formula_version": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 191,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "panel_id",
+                    "ordinal",
+                    "panel_kind",
+                    "source_authority",
+                    "panel_state",
+                    "as_of_ms",
+                    "freshness_state",
+                    "source_completeness",
+                    "poll_interval_ms",
+                    "formula_version"
+                  ],
+                  "allOf": [
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "freshness_state": {
+                            "const": "OK"
+                          }
+                        },
+                        "required": [
+                          "freshness_state"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "as_of_ms": {
+                            "not": {
+                              "type": "null"
+                            }
+                          }
+                        },
+                        "required": [
+                          "as_of_ms"
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "source_completeness": {
+                            "const": "POLL_BOUNDED"
+                          }
+                        },
+                        "required": [
+                          "source_completeness"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "poll_interval_ms": {
+                            "not": {
+                              "type": "null"
+                            }
+                          }
+                        },
+                        "required": [
+                          "poll_interval_ms"
+                        ]
+                      },
+                      "else": {
+                        "type": "object",
+                        "properties": {
+                          "poll_interval_ms": {
+                            "type": "null"
+                          }
+                        },
+                        "required": [
+                          "poll_interval_ms"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "maxItems": 4
+              },
+              "criteria": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "gate": {
+                      "const": "PAPER_EXIT"
+                    },
+                    "original": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "finding_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 191,
+                          "pattern": "^[A-Za-z0-9._:-]+$"
+                        },
+                        "panel_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 191,
+                          "pattern": "^[A-Za-z0-9._:-]+$"
+                        },
+                        "ordinal": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "outcome": {
+                          "type": "string",
+                          "enum": [
+                            "PASS",
+                            "WATCH",
+                            "FAIL",
+                            "INSUFFICIENT"
+                          ]
+                        },
+                        "blocking": {
+                          "type": "boolean"
+                        },
+                        "required": {
+                          "type": "boolean"
+                        },
+                        "as_of_ms": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "finding_id",
+                        "panel_id",
+                        "ordinal",
+                        "outcome",
+                        "blocking",
+                        "required",
+                        "as_of_ms"
+                      ]
+                    },
+                    "display_class": {
+                      "type": "string",
+                      "enum": [
+                        "PASS",
+                        "CAUTION",
+                        "FAIL",
+                        "STALE",
+                        "NO_VERDICT"
+                      ]
+                    },
+                    "observed_value": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "threshold_value": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "comparator": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "unit": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "currency": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "evidence": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "finding_formula_version": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "gate",
+                    "original",
+                    "display_class",
+                    "observed_value",
+                    "threshold_value",
+                    "comparator",
+                    "unit",
+                    "currency",
+                    "evidence",
+                    "finding_formula_version"
+                  ],
+                  "allOf": [
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "original": {
+                            "type": "object",
+                            "properties": {
+                              "outcome": {
+                                "const": "PASS"
+                              }
+                            },
+                            "required": [
+                              "outcome"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "original"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "display_class": {
+                            "const": "PASS"
+                          }
+                        },
+                        "required": [
+                          "display_class"
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "original": {
+                            "type": "object",
+                            "properties": {
+                              "outcome": {
+                                "const": "WATCH"
+                              }
+                            },
+                            "required": [
+                              "outcome"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "original"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "display_class": {
+                            "const": "CAUTION"
+                          }
+                        },
+                        "required": [
+                          "display_class"
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "original": {
+                            "type": "object",
+                            "properties": {
+                              "outcome": {
+                                "const": "FAIL"
+                              }
+                            },
+                            "required": [
+                              "outcome"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "original"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "display_class": {
+                            "const": "FAIL"
+                          }
+                        },
+                        "required": [
+                          "display_class"
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "original": {
+                            "type": "object",
+                            "properties": {
+                              "outcome": {
+                                "const": "INSUFFICIENT"
+                              }
+                            },
+                            "required": [
+                              "outcome"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "original"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "display_class": {
+                            "const": "NO_VERDICT"
+                          }
+                        },
+                        "required": [
+                          "display_class"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "maxItems": 256
+              }
+            },
+            "required": [
+              "schema_version",
+              "workspace_id",
+              "record_authority",
+              "source_verdict",
+              "basis",
+              "readiness",
+              "universal_denominator",
+              "gate",
+              "parent_id",
+              "availability",
+              "evaluation_policy_version",
+              "evaluation_formula_version",
+              "panels",
+              "criteria"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": "portal.execution.criteria-capsules.v1"
+              },
+              "workspace_id": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 96
+              },
+              "record_authority": {
+                "const": "PORTAL"
+              },
+              "source_verdict": {
+                "const": "NOT_ASSERTED"
+              },
+              "basis": {
+                "const": "ALREADY_AUTHORIZED_PUBLIC_PARENT_ONLY"
+              },
+              "readiness": {
+                "const": "NOT_EVALUATED"
+              },
+              "universal_denominator": {
+                "const": null
+              },
+              "gate": {
+                "const": "SANDBOX"
+              },
+              "parent_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "availability": {
+                "const": "AVAILABLE"
+              },
+              "source_basis": {
+                "const": "CURRENT_LATEST_STORED"
+              },
+              "policy_version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "formula_version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "criteria": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "gate": {
+                      "const": "SANDBOX"
+                    },
+                    "original": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "step_key": {
+                          "type": "string",
+                          "enum": [
+                            "CONNECT",
+                            "SYNC",
+                            "ORDER_TYPES",
+                            "RECONCILIATION",
+                            "TIMEBOXED_RUN",
+                            "CLEANUP",
+                            "EXIT_REVIEW"
+                          ]
+                        },
+                        "availability": {
+                          "type": "string",
+                          "enum": [
+                            "AVAILABLE",
+                            "NOT_RECORDED"
+                          ]
+                        },
+                        "evidence_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 191,
+                              "pattern": "^[A-Za-z0-9._:-]+$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "stored_evaluation_state": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "PASS",
+                                "FAIL",
+                                "STALE",
+                                "UNAVAILABLE"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "source_authority": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "PORTAL",
+                                "EXECUTION",
+                                "BROKER",
+                                "DERIVED"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "source_verification_state": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "VERIFIED",
+                                "UNAVAILABLE"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "as_of_ms": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "expires_at_ms": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "step_key",
+                        "availability",
+                        "evidence_id",
+                        "stored_evaluation_state",
+                        "source_authority",
+                        "source_verification_state",
+                        "as_of_ms",
+                        "expires_at_ms"
+                      ],
+                      "allOf": [
+                        {
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_RECORDED"
+                              }
+                            },
+                            "required": [
+                              "availability"
+                            ]
+                          },
+                          "then": {
+                            "allOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "evidence_id": {
+                                    "type": "null"
+                                  }
+                                },
+                                "required": [
+                                  "evidence_id"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "stored_evaluation_state": {
+                                    "type": "null"
+                                  }
+                                },
+                                "required": [
+                                  "stored_evaluation_state"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "source_authority": {
+                                    "type": "null"
+                                  }
+                                },
+                                "required": [
+                                  "source_authority"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "source_verification_state": {
+                                    "type": "null"
+                                  }
+                                },
+                                "required": [
+                                  "source_verification_state"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "as_of_ms": {
+                                    "type": "null"
+                                  }
+                                },
+                                "required": [
+                                  "as_of_ms"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "expires_at_ms": {
+                                    "type": "null"
+                                  }
+                                },
+                                "required": [
+                                  "expires_at_ms"
+                                ]
+                              }
+                            ]
+                          },
+                          "else": {
+                            "allOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "evidence_id": {
+                                    "not": {
+                                      "type": "null"
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "evidence_id"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "stored_evaluation_state": {
+                                    "not": {
+                                      "type": "null"
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "stored_evaluation_state"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "source_authority": {
+                                    "not": {
+                                      "type": "null"
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "source_authority"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "source_verification_state": {
+                                    "not": {
+                                      "type": "null"
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "source_verification_state"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "display_class": {
+                      "type": "string",
+                      "enum": [
+                        "PASS",
+                        "CAUTION",
+                        "FAIL",
+                        "STALE",
+                        "NO_VERDICT"
+                      ]
+                    },
+                    "required": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "blocking": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "observed_value": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "threshold_value": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "comparator": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "unit": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "currency": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "const": null
+                        },
+                        "reason_code": {
+                          "const": "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT"
+                        }
+                      },
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ]
+                    },
+                    "evidence": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "const": "AVAILABLE"
+                            },
+                            "kind": {
+                              "const": "PORTAL_EVIDENCE_ID"
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 191,
+                              "pattern": "^[A-Za-z0-9._:-]+$"
+                            },
+                            "reason_code": {
+                              "const": null
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "kind",
+                            "value",
+                            "reason_code"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "availability": {
+                              "const": "NOT_PUBLISHED"
+                            },
+                            "value": {
+                              "const": null
+                            },
+                            "reason_code": {
+                              "const": "EVIDENCE_NOT_RECORDED"
+                            }
+                          },
+                          "required": [
+                            "availability",
+                            "value",
+                            "reason_code"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "gate",
+                    "original",
+                    "display_class",
+                    "required",
+                    "blocking",
+                    "observed_value",
+                    "threshold_value",
+                    "comparator",
+                    "unit",
+                    "currency",
+                    "evidence"
+                  ],
+                  "allOf": [
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "original": {
+                            "type": "object",
+                            "properties": {
+                              "stored_evaluation_state": {
+                                "const": "PASS"
+                              }
+                            },
+                            "required": [
+                              "stored_evaluation_state"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "original"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "display_class": {
+                            "const": "PASS"
+                          }
+                        },
+                        "required": [
+                          "display_class"
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "original": {
+                            "type": "object",
+                            "properties": {
+                              "stored_evaluation_state": {
+                                "const": "FAIL"
+                              }
+                            },
+                            "required": [
+                              "stored_evaluation_state"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "original"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "display_class": {
+                            "const": "FAIL"
+                          }
+                        },
+                        "required": [
+                          "display_class"
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "original": {
+                            "type": "object",
+                            "properties": {
+                              "stored_evaluation_state": {
+                                "const": "STALE"
+                              }
+                            },
+                            "required": [
+                              "stored_evaluation_state"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "original"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "display_class": {
+                            "const": "STALE"
+                          }
+                        },
+                        "required": [
+                          "display_class"
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "original": {
+                            "type": "object",
+                            "properties": {
+                              "stored_evaluation_state": {
+                                "const": "UNAVAILABLE"
+                              }
+                            },
+                            "required": [
+                              "stored_evaluation_state"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "original"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "display_class": {
+                            "const": "NO_VERDICT"
+                          }
+                        },
+                        "required": [
+                          "display_class"
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "original": {
+                            "type": "object",
+                            "properties": {
+                              "stored_evaluation_state": {
+                                "type": "null"
+                              }
+                            },
+                            "required": [
+                              "stored_evaluation_state"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "original"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "display_class": {
+                            "const": "NO_VERDICT"
+                          }
+                        },
+                        "required": [
+                          "display_class"
+                        ]
+                      }
+                    },
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "original": {
+                            "type": "object",
+                            "properties": {
+                              "evidence_id": {
+                                "type": "null"
+                              }
+                            },
+                            "required": [
+                              "evidence_id"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "original"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "evidence": {
+                            "type": "object",
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              }
+                            },
+                            "required": [
+                              "availability"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "evidence"
+                        ]
+                      },
+                      "else": {
+                        "type": "object",
+                        "properties": {
+                          "evidence": {
+                            "type": "object",
+                            "properties": {
+                              "availability": {
+                                "const": "AVAILABLE"
+                              }
+                            },
+                            "required": [
+                              "availability"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "evidence"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "minItems": 7,
+                "maxItems": 7,
+                "allOf": [
+                  {
+                    "contains": {
+                      "type": "object",
+                      "properties": {
+                        "original": {
+                          "type": "object",
+                          "properties": {
+                            "step_key": {
+                              "const": "CONNECT"
+                            }
+                          },
+                          "required": [
+                            "step_key"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "original"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "type": "object",
+                      "properties": {
+                        "original": {
+                          "type": "object",
+                          "properties": {
+                            "step_key": {
+                              "const": "SYNC"
+                            }
+                          },
+                          "required": [
+                            "step_key"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "original"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "type": "object",
+                      "properties": {
+                        "original": {
+                          "type": "object",
+                          "properties": {
+                            "step_key": {
+                              "const": "ORDER_TYPES"
+                            }
+                          },
+                          "required": [
+                            "step_key"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "original"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "type": "object",
+                      "properties": {
+                        "original": {
+                          "type": "object",
+                          "properties": {
+                            "step_key": {
+                              "const": "RECONCILIATION"
+                            }
+                          },
+                          "required": [
+                            "step_key"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "original"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "type": "object",
+                      "properties": {
+                        "original": {
+                          "type": "object",
+                          "properties": {
+                            "step_key": {
+                              "const": "TIMEBOXED_RUN"
+                            }
+                          },
+                          "required": [
+                            "step_key"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "original"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "type": "object",
+                      "properties": {
+                        "original": {
+                          "type": "object",
+                          "properties": {
+                            "step_key": {
+                              "const": "CLEANUP"
+                            }
+                          },
+                          "required": [
+                            "step_key"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "original"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  },
+                  {
+                    "contains": {
+                      "type": "object",
+                      "properties": {
+                        "original": {
+                          "type": "object",
+                          "properties": {
+                            "step_key": {
+                              "const": "EXIT_REVIEW"
+                            }
+                          },
+                          "required": [
+                            "step_key"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "original"
+                      ]
+                    },
+                    "minContains": 1,
+                    "maxContains": 1
+                  }
+                ]
+              }
+            },
+            "required": [
+              "schema_version",
+              "workspace_id",
+              "record_authority",
+              "source_verdict",
+              "basis",
+              "readiness",
+              "universal_denominator",
+              "gate",
+              "parent_id",
+              "availability",
+              "source_basis",
+              "policy_version",
+              "formula_version",
+              "criteria"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": "portal.execution.criteria-capsules.v1"
+              },
+              "workspace_id": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 96
+              },
+              "record_authority": {
+                "const": "PORTAL"
+              },
+              "source_verdict": {
+                "const": "NOT_ASSERTED"
+              },
+              "basis": {
+                "const": "ALREADY_AUTHORIZED_PUBLIC_PARENT_ONLY"
+              },
+              "readiness": {
+                "const": "NOT_EVALUATED"
+              },
+              "universal_denominator": {
+                "const": null
+              },
+              "gate": {
+                "type": "string",
+                "enum": [
+                  "R2",
+                  "PAPER_EXIT",
+                  "SANDBOX",
+                  "CANARY",
+                  "LIVE_GATE"
+                ]
+              },
+              "parent_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "reason_code": {
+                "type": "string",
+                "enum": [
+                  "PARENT_FIELD_PURPOSE_NOT_QUALIFIED",
+                  "CURRENT_PUBLIC_PARENT_HAS_NO_CRITERIA"
+                ]
+              },
+              "criteria": {
+                "const": null
+              }
+            },
+            "required": [
+              "schema_version",
+              "workspace_id",
+              "record_authority",
+              "source_verdict",
+              "basis",
+              "readiness",
+              "universal_denominator",
+              "gate",
+              "parent_id",
+              "availability",
+              "reason_code",
+              "criteria"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "type": "object",
+                  "properties": {
+                    "gate": {
+                      "enum": [
+                        "PAPER_EXIT",
+                        "SANDBOX"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "gate"
+                  ]
+                },
+                "then": {
+                  "type": "object",
+                  "properties": {
+                    "reason_code": {
+                      "const": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+                    }
+                  },
+                  "required": [
+                    "reason_code"
+                  ]
+                },
+                "else": {
+                  "type": "object",
+                  "properties": {
+                    "reason_code": {
+                      "const": "CURRENT_PUBLIC_PARENT_HAS_NO_CRITERIA"
+                    }
+                  },
+                  "required": [
+                    "reason_code"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "description": "Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged.",
+        "$comment": "Runtime additionally enforces Paper panel/finding identity joins and uniqueness; exact Sandbox evidence-ID equality; Paper review-ID equality; and original approval/review/certification timestamp ordering. Ordinary JSON Schema cannot compare arbitrary sibling values. Consumer must validate the exact original parent before projection, and must not treat schema validation as current authority."
+      },
+      "WorkflowRecordedPortal": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": "portal.execution.recorded-portal-workflow.v1"
+              },
+              "workspace_id": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 96
+              },
+              "record_authority": {
+                "const": "PORTAL"
+              },
+              "source_verdict": {
+                "const": "NOT_ASSERTED"
+              },
+              "observed_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "coverage": {
+                "const": "SELECTED_CURRENT_PORTAL_RECORD_NOT_EVENT_JOURNAL"
+              },
+              "effective_stage": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "const": null
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ]
+              },
+              "days_in_stage": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "const": null
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ]
+              },
+              "dispatch_enabled": {
+                "const": false
+              },
+              "family": {
+                "const": "R2"
+              },
+              "anchors": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "deployment_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "portfolio_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "environment": {
+                    "const": "PAPER"
+                  }
+                },
+                "required": [
+                  "deployment_id",
+                  "portfolio_id",
+                  "environment"
+                ]
+              },
+              "approval": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "approval_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "gate": {
+                    "type": "string",
+                    "enum": [
+                      "R2",
+                      "PAPER_EXIT"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "APPROVED",
+                      "APPROVED_WITH_CONDITION",
+                      "DENIED",
+                      "CHANGES_REQUESTED",
+                      "EXPIRED"
+                    ]
+                  },
+                  "approval_version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "policy_version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                  },
+                  "quorum_required": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "quorum_met": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "evidence_complete": {
+                    "type": "boolean"
+                  },
+                  "created_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "updated_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sla_due_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "expires_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "decided_at_ms": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "approval_id",
+                  "gate",
+                  "status",
+                  "approval_version",
+                  "policy_version",
+                  "quorum_required",
+                  "quorum_met",
+                  "evidence_complete",
+                  "created_at_ms",
+                  "updated_at_ms",
+                  "sla_due_at_ms",
+                  "expires_at_ms",
+                  "decided_at_ms"
+                ]
+              }
+            },
+            "required": [
+              "schema_version",
+              "workspace_id",
+              "record_authority",
+              "source_verdict",
+              "observed_at_ms",
+              "coverage",
+              "effective_stage",
+              "days_in_stage",
+              "dispatch_enabled",
+              "family",
+              "anchors",
+              "approval"
+            ],
+            "allOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "approval": {
+                    "type": "object",
+                    "properties": {
+                      "gate": {
+                        "const": "R2"
+                      }
+                    },
+                    "required": [
+                      "gate"
+                    ]
+                  }
+                },
+                "required": [
+                  "approval"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": "portal.execution.recorded-portal-workflow.v1"
+              },
+              "workspace_id": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 96
+              },
+              "record_authority": {
+                "const": "PORTAL"
+              },
+              "source_verdict": {
+                "const": "NOT_ASSERTED"
+              },
+              "observed_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "coverage": {
+                "const": "SELECTED_CURRENT_PORTAL_RECORD_NOT_EVENT_JOURNAL"
+              },
+              "effective_stage": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "const": null
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ]
+              },
+              "days_in_stage": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "const": null
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ]
+              },
+              "dispatch_enabled": {
+                "const": false
+              },
+              "family": {
+                "const": "PAPER_EXIT"
+              },
+              "anchors": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "deployment_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "portfolio_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "environment": {
+                    "const": "PAPER"
+                  }
+                },
+                "required": [
+                  "deployment_id",
+                  "portfolio_id",
+                  "environment"
+                ]
+              },
+              "approval": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "approval_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "gate": {
+                    "type": "string",
+                    "enum": [
+                      "R2",
+                      "PAPER_EXIT"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "APPROVED",
+                      "APPROVED_WITH_CONDITION",
+                      "DENIED",
+                      "CHANGES_REQUESTED",
+                      "EXPIRED"
+                    ]
+                  },
+                  "approval_version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "policy_version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                  },
+                  "quorum_required": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "quorum_met": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "evidence_complete": {
+                    "type": "boolean"
+                  },
+                  "created_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "updated_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sla_due_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "expires_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "decided_at_ms": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "approval_id",
+                  "gate",
+                  "status",
+                  "approval_version",
+                  "policy_version",
+                  "quorum_required",
+                  "quorum_met",
+                  "evidence_complete",
+                  "created_at_ms",
+                  "updated_at_ms",
+                  "sla_due_at_ms",
+                  "expires_at_ms",
+                  "decided_at_ms"
+                ]
+              },
+              "review": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "review_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "review_state": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "EXTENDED",
+                      "REJECTED_TO_PAPER_HELD",
+                      "PROMOTION_AUTHORIZED"
+                    ]
+                  },
+                  "review_version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "promote_to": {
+                    "const": "SANDBOX_VALIDATION"
+                  },
+                  "extension_days": {
+                    "anyOf": [
+                      {
+                        "const": 14
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "extended_until_ms": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "created_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "updated_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "review_id",
+                  "review_state",
+                  "review_version",
+                  "promote_to",
+                  "extension_days",
+                  "extended_until_ms",
+                  "created_at_ms",
+                  "updated_at_ms"
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "type": "object",
+                      "properties": {
+                        "review_state": {
+                          "const": "EXTENDED"
+                        }
+                      },
+                      "required": [
+                        "review_state"
+                      ]
+                    },
+                    "then": {
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "extension_days": {
+                              "const": 14
+                            }
+                          },
+                          "required": [
+                            "extension_days"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "extended_until_ms": {
+                              "not": {
+                                "type": "null"
+                              }
+                            }
+                          },
+                          "required": [
+                            "extended_until_ms"
+                          ]
+                        }
+                      ]
+                    },
+                    "else": {
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "extension_days": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "extension_days"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "extended_until_ms": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "extended_until_ms"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            "required": [
+              "schema_version",
+              "workspace_id",
+              "record_authority",
+              "source_verdict",
+              "observed_at_ms",
+              "coverage",
+              "effective_stage",
+              "days_in_stage",
+              "dispatch_enabled",
+              "family",
+              "anchors",
+              "approval",
+              "review"
+            ],
+            "allOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "approval": {
+                    "type": "object",
+                    "properties": {
+                      "gate": {
+                        "const": "PAPER_EXIT"
+                      }
+                    },
+                    "required": [
+                      "gate"
+                    ]
+                  }
+                },
+                "required": [
+                  "approval"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": "portal.execution.recorded-portal-workflow.v1"
+              },
+              "workspace_id": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 96
+              },
+              "record_authority": {
+                "const": "PORTAL"
+              },
+              "source_verdict": {
+                "const": "NOT_ASSERTED"
+              },
+              "observed_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "coverage": {
+                "const": "SELECTED_CURRENT_PORTAL_RECORD_NOT_EVENT_JOURNAL"
+              },
+              "effective_stage": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "const": null
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ]
+              },
+              "days_in_stage": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "const": null
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ]
+              },
+              "dispatch_enabled": {
+                "const": false
+              },
+              "family": {
+                "const": "SANDBOX"
+              },
+              "anchors": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "deployment_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "portfolio_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "environment": {
+                    "const": "SANDBOX"
+                  },
+                  "association_basis": {
+                    "const": "CURRENT_NATIVE_TARGET_CORRESPONDENCE"
+                  },
+                  "captured_environment_attested": {
+                    "const": false
+                  }
+                },
+                "required": [
+                  "deployment_id",
+                  "portfolio_id",
+                  "environment",
+                  "association_basis",
+                  "captured_environment_attested"
+                ]
+              },
+              "certification": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "certification_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "workflow_state": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "IN_REVIEW",
+                      "APPROVED",
+                      "DENIED"
+                    ]
+                  },
+                  "workflow_version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "policy_version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                  },
+                  "formula_version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                  },
+                  "created_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "updated_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "submitted_at_ms": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "decided_at_ms": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "source_integration_state": {
+                    "type": "string",
+                    "enum": [
+                      "UNAVAILABLE",
+                      "SHADOW"
+                    ]
+                  },
+                  "delivery_profile": {
+                    "type": "string",
+                    "enum": [
+                      "fixture",
+                      "shadow"
+                    ]
+                  }
+                },
+                "required": [
+                  "certification_id",
+                  "workflow_state",
+                  "workflow_version",
+                  "policy_version",
+                  "formula_version",
+                  "created_at_ms",
+                  "updated_at_ms",
+                  "submitted_at_ms",
+                  "decided_at_ms",
+                  "source_integration_state",
+                  "delivery_profile"
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "type": "object",
+                      "properties": {
+                        "workflow_state": {
+                          "const": "DRAFT"
+                        }
+                      },
+                      "required": [
+                        "workflow_state"
+                      ]
+                    },
+                    "then": {
+                      "type": "object",
+                      "properties": {
+                        "submitted_at_ms": {
+                          "type": "null"
+                        }
+                      },
+                      "required": [
+                        "submitted_at_ms"
+                      ]
+                    },
+                    "else": {
+                      "type": "object",
+                      "properties": {
+                        "submitted_at_ms": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "submitted_at_ms"
+                      ]
+                    }
+                  },
+                  {
+                    "if": {
+                      "type": "object",
+                      "properties": {
+                        "workflow_state": {
+                          "enum": [
+                            "APPROVED",
+                            "DENIED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "workflow_state"
+                      ]
+                    },
+                    "then": {
+                      "type": "object",
+                      "properties": {
+                        "decided_at_ms": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "decided_at_ms"
+                      ]
+                    },
+                    "else": {
+                      "type": "object",
+                      "properties": {
+                        "decided_at_ms": {
+                          "type": "null"
+                        }
+                      },
+                      "required": [
+                        "decided_at_ms"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            "required": [
+              "schema_version",
+              "workspace_id",
+              "record_authority",
+              "source_verdict",
+              "observed_at_ms",
+              "coverage",
+              "effective_stage",
+              "days_in_stage",
+              "dispatch_enabled",
+              "family",
+              "anchors",
+              "certification"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": "portal.execution.recorded-portal-workflow.v1"
+              },
+              "workspace_id": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 96
+              },
+              "record_authority": {
+                "const": "PORTAL"
+              },
+              "source_verdict": {
+                "const": "NOT_ASSERTED"
+              },
+              "observed_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "coverage": {
+                "const": "SELECTED_CURRENT_PORTAL_RECORD_NOT_EVENT_JOURNAL"
+              },
+              "effective_stage": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "const": null
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ]
+              },
+              "days_in_stage": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "const": null
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ]
+              },
+              "dispatch_enabled": {
+                "const": false
+              },
+              "family": {
+                "const": "CANARY"
+              },
+              "anchors": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "deployment_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "portfolio_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "environment": {
+                    "const": "LIVE"
+                  },
+                  "association_basis": {
+                    "const": "CURRENT_NATIVE_TARGET_CORRESPONDENCE"
+                  },
+                  "captured_environment_attested": {
+                    "const": false
+                  }
+                },
+                "required": [
+                  "deployment_id",
+                  "portfolio_id",
+                  "environment",
+                  "association_basis",
+                  "captured_environment_attested"
+                ]
+              },
+              "envelope": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "envelope_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$"
+                  },
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "previous_envelope_id": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 191,
+                        "pattern": "^[A-Za-z0-9._:-]+$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "status": {
+                    "const": "DRAFT"
+                  },
+                  "expected_certification_version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "created_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "source_integration_state": {
+                    "const": "UNAVAILABLE"
+                  },
+                  "delivery_profile": {
+                    "const": "fixture"
+                  },
+                  "production_command_active": {
+                    "const": false
+                  }
+                },
+                "required": [
+                  "envelope_id",
+                  "revision",
+                  "previous_envelope_id",
+                  "status",
+                  "expected_certification_version",
+                  "created_at_ms",
+                  "source_integration_state",
+                  "delivery_profile",
+                  "production_command_active"
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "type": "object",
+                      "properties": {
+                        "revision": {
+                          "const": 1
+                        }
+                      },
+                      "required": [
+                        "revision"
+                      ]
+                    },
+                    "then": {
+                      "type": "object",
+                      "properties": {
+                        "previous_envelope_id": {
+                          "type": "null"
+                        }
+                      },
+                      "required": [
+                        "previous_envelope_id"
+                      ]
+                    },
+                    "else": {
+                      "type": "object",
+                      "properties": {
+                        "previous_envelope_id": {
+                          "not": {
+                            "type": "null"
+                          }
+                        }
+                      },
+                      "required": [
+                        "previous_envelope_id"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            "required": [
+              "schema_version",
+              "workspace_id",
+              "record_authority",
+              "source_verdict",
+              "observed_at_ms",
+              "coverage",
+              "effective_stage",
+              "days_in_stage",
+              "dispatch_enabled",
+              "family",
+              "anchors",
+              "envelope"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": "portal.execution.recorded-portal-workflow.v1"
+              },
+              "workspace_id": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 96
+              },
+              "record_authority": {
+                "const": "PORTAL"
+              },
+              "source_verdict": {
+                "const": "NOT_ASSERTED"
+              },
+              "observed_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "coverage": {
+                "const": "SELECTED_CURRENT_PORTAL_RECORD_NOT_EVENT_JOURNAL"
+              },
+              "effective_stage": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "const": null
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ]
+              },
+              "days_in_stage": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "const": null
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ]
+              },
+              "dispatch_enabled": {
+                "const": false
+              },
+              "family": {
+                "const": "LIVE_GATE"
+              },
+              "anchors": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "deployment_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+                  },
+                  "environment": {
+                    "const": "LIVE"
+                  }
+                },
+                "required": [
+                  "deployment_id",
+                  "environment"
+                ]
+              },
+              "approval": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "approval_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+                  },
+                  "gate": {
+                    "const": "LIVE_GATE"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "APPROVED",
+                      "APPROVED_WITH_CONDITION",
+                      "DENIED",
+                      "CHANGES_REQUESTED",
+                      "EXPIRED"
+                    ]
+                  },
+                  "approval_version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "policy_version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                  },
+                  "quorum_required": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "quorum_met": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "evidence_complete": {
+                    "type": "boolean"
+                  },
+                  "created_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "updated_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sla_due_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "expires_at_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "decided_at_ms": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "approval_id",
+                  "gate",
+                  "status",
+                  "approval_version",
+                  "policy_version",
+                  "quorum_required",
+                  "quorum_met",
+                  "evidence_complete",
+                  "created_at_ms",
+                  "updated_at_ms",
+                  "sla_due_at_ms",
+                  "expires_at_ms",
+                  "decided_at_ms"
+                ]
+              }
+            },
+            "required": [
+              "schema_version",
+              "workspace_id",
+              "record_authority",
+              "source_verdict",
+              "observed_at_ms",
+              "coverage",
+              "effective_stage",
+              "days_in_stage",
+              "dispatch_enabled",
+              "family",
+              "anchors",
+              "approval"
+            ]
+          }
+        ],
+        "description": "Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged.",
+        "$comment": "Runtime additionally enforces Paper panel/finding identity joins and uniqueness; exact Sandbox evidence-ID equality; Paper review-ID equality; and original approval/review/certification timestamp ordering. Ordinary JSON Schema cannot compare arbitrary sibling values. Consumer must validate the exact original parent before projection, and must not treat schema validation as current authority."
       },
       "WorkflowScorePresentation": {
         "type": "object",

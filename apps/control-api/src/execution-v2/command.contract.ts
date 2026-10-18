@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { browserCapitalIntent, pmCounter, unsignedDecimal, utcMilliseconds } from "./foundation.contract";
+import { browserCapitalIntent, pmCounter, pmText, unsignedDecimal, utcMilliseconds } from "./foundation.contract";
 
 const text=z.string().min(1).max(256);
 export const commandIntent=browserCapitalIntent.superRefine((i,c)=>{
@@ -35,6 +35,11 @@ export const commandStatus=z.object({schema_version:z.literal("portal.execution.
   created_at_ms:utcMilliseconds,updated_at_ms:utcMilliseconds,
   authority:z.enum(["OWNER_VERIFIED","TEST_ONLY"])}).strict();
 export type CommandStatus=z.infer<typeof commandStatus>;
+/** Public read/mutation projection only. Persisted commandStatus/events retain
+ * their original closed grammar. Currency is the verified original intent's
+ * unit, not a receipt guess, exchange quote, implicit USD or execution fact. */
+export const publicCommandStatus=commandStatus.extend({currency:pmText});
+export type PublicCommandStatus=z.infer<typeof publicCommandStatus>;
 export const commandPreview=z.object({schema_version:z.literal("portal.execution.command-preview.v1"),
   allowed:z.boolean(),reason_code:commandReasons.nullable(),preview_digest:z.string().regex(/^sha256:[a-f0-9]{64}$/).nullable(),
   expires_at_ms:utcMilliseconds.nullable(),profile_ref:text.nullable(),approval_required:z.boolean().nullable(),

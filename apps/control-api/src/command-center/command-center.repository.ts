@@ -3,7 +3,7 @@ import { ExecutionProfileProjectionRepository } from "../execution/profile-proje
 import { retainedReview } from "../execution/retained-read-profile";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { OwnerAccessService } from "../auth/owner-access.service";
-import { approvalReadGates } from "../governance/governance.service";
+import { commandCenterGovernanceActionableSql, commandCenterGovernanceGates } from "./governance-actionability";
 import { ExecutionReadScopes, ExecutionReadScopeError, scopeAllowsField, type ReadScopePrincipal,
   type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
 import { projectionRowVisible, redactProjectionFields } from "../execution-v2/read-projection";
@@ -266,13 +266,15 @@ export class CommandCenterRepository {
           this.reconciliationTriage(projection, readAt)],
         todaySources: [unavailableSource("PORTAL_GOVERNANCE", "PORTAL", unknown), this.journalToday(projection, readAt)] };
     }
-    const visibleGates=approvalReadGates(actor,await this.ownerAccess.effectiveAccess(actor.userId),workspaceId);
+    const gates = commandCenterGovernanceGates(actor, await this.ownerAccess.effectiveAccess(actor.userId), workspaceId);
+    const visibleGates = gates.readable;
     const client = await this.pool.connect();
+    let inputs: CommandCenterInputs;
     try {
       await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
       await client.query("SET LOCAL statement_timeout = '1000ms'");
       await client.query("SET LOCAL idle_in_transaction_session_timeout = '2000ms'");
-      const governance = await this.governanceTriage(client, workspaceId, actor, readAt,visibleGates);
+      const governance = await this.governanceTriage(client, workspaceId, actor, readAt, gates.actionable);
       const today = await this.governanceToday(client, workspaceId, readAt,visibleGates);
       const incidents = await this.incidentTriage(client, workspaceId, readAt);
       const operations = await this.operationTriage(client, workspaceId, readAt);
@@ -284,7 +286,7 @@ export class CommandCenterRepository {
       const reconciliation = this.reconciliationTriage(projection, readAt);
       const journal = this.journalToday(projection, readAt);
       await client.query("COMMIT");
-      return {
+      inputs = {
         workspaceId,
         actor,
         readAt,
@@ -307,6 +309,13 @@ export class CommandCenterRepository {
     } finally {
       client.release();
     }
+    // Re-evaluate current delegated grants/owner anchor after all awaited reads.
+    // Release the Core connection first: authority evaluation uses its own pool
+    // and must not starve twenty concurrent mounts behind their held clients.
+    const current = commandCenterGovernanceGates(actor, await this.ownerAccess.effectiveAccess(actor.userId), workspaceId);
+    if (JSON.stringify(current) !== JSON.stringify(gates))
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return inputs;
   }
 
   private async incidentTriage(
@@ -620,11 +629,12 @@ export class CommandCenterRepository {
     workspaceId: string,
     actor: PortalUser,
     readAt: Date,
-    visibleGates: string[],
+    actionableGates: string[],
   ): Promise<ExactSourceSlice<TriageCandidate>> {
     const result = await client.query<GovernanceTriageRow>(
       `WITH actionable AS (
-         SELECT request.*,
+         SELECT request.approval_id, request.gate, request.subject_label, request.target_label,
+                request.created_at, request.updated_at, request.sla_due_at,
                 CASE
                   WHEN request.sla_due_at <= $3 THEN 'OVERDUE'
                   WHEN request.sla_due_at <= $3 + interval '8 hours' THEN 'DUE_SOON'
@@ -635,30 +645,22 @@ export class CommandCenterRepository {
                   WHEN request.sla_due_at <= $3 + interval '8 hours' THEN 2
                   ELSE 3
                 END AS severity_rank
-           FROM governance_approval_requests request
-          WHERE request.workspace_id = $1
-            AND request.gate=ANY($4::text[])
-            AND request.status = 'PENDING'
-            AND request.expires_at > $3
-            AND request.requester_user_id <> $2
-            AND request.artifact_creator_user_id <> $2
-            AND NOT ($2 = ANY(request.decision_actor_ids))
-            AND request.evidence_complete = true
-            AND request.blocker_count = 0
+           FROM governance_approval_decision_inbox request
+          WHERE ${commandCenterGovernanceActionableSql}
        )
        SELECT approval_id, gate, subject_label, target_label, created_at,
               updated_at, sla_due_at, sla_state, count(*) OVER() AS total_count
          FROM actionable
         ORDER BY severity_rank, sla_due_at, created_at, approval_id
         LIMIT 10`,
-      [workspaceId, actor.userId, readAt,visibleGates],
+      [workspaceId, actor.userId, readAt, actionableGates],
     );
     const total = result.rows[0] ? Number(result.rows[0].total_count) : await this.actionableCount(
       client,
       workspaceId,
       actor.userId,
       readAt,
-      visibleGates,
+      actionableGates,
     );
     const asOf = result.rows.reduce<Date | null>(
       (latest, row) => latest === null || row.updated_at > latest ? row.updated_at : latest,
@@ -690,21 +692,13 @@ export class CommandCenterRepository {
     workspaceId: string,
     actorId: string,
     readAt: Date,
-    visibleGates: string[],
+    actionableGates: string[],
   ): Promise<number> {
     const result = await client.query<{ total_count: string }>(
       `SELECT count(*) AS total_count
-         FROM governance_approval_requests request
-        WHERE request.workspace_id = $1
-          AND request.gate=ANY($4::text[])
-          AND request.status = 'PENDING'
-          AND request.expires_at > $3
-          AND request.requester_user_id <> $2
-          AND request.artifact_creator_user_id <> $2
-          AND NOT ($2 = ANY(request.decision_actor_ids))
-          AND request.evidence_complete = true
-          AND request.blocker_count = 0`,
-      [workspaceId, actorId, readAt,visibleGates],
+         FROM governance_approval_decision_inbox request
+        WHERE ${commandCenterGovernanceActionableSql}`,
+      [workspaceId, actorId, readAt, actionableGates],
     );
     return Number(result.rows[0]?.total_count ?? 0);
   }

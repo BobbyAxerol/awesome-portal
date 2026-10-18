@@ -112,7 +112,7 @@ def test_registry_fixture_is_the_public_document_with_computed_digest() -> None:
 
 def test_registry_fixture_exposes_revision_6_delivery_contract() -> None:
     document = _fixture("registry.public.json")
-    assert document["revision"] == 6
+    assert document["revision"] == 7
     execution_screens = [
         screen
         for screen in document["screens"]

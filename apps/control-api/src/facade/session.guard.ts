@@ -47,7 +47,9 @@ export class SessionGuard implements CanActivate {
     // Current actor/grant/source fences also protect negative responses.
     // Neither scoped nor legacy Execution payloads may be shared by HTTP caches.
     const executionRead = (request.url ?? "").split("?")[0].startsWith("/api/v1/execution/");
-    if (executionRead) context.switchToHttp().getResponse().header("Cache-Control", "private, no-store");
+    const ownAccessRead = ["/api/admin/profile-access/v2/eligibility", "/api/admin/profile-access/v2/self-navigation"]
+      .includes((request.url ?? "").split("?")[0]);
+    if (executionRead || ownAccessRead) context.switchToHttp().getResponse().header("Cache-Control", "private, no-store");
     const token = sessionTokenFrom(request);
     if (!token) {
       throw new UnauthorizedException("Invalid session.");

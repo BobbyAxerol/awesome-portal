@@ -11,7 +11,8 @@ import { commandMembershipCurrent } from "./command-current-authority";
 import { currentAccessRelations } from "./access-current-relations";
 import { nativeNoticeValidUntil } from "./read-scope";
 import { PendingControlError, pendingControlIntent, pendingControlPreview, pendingControlStatus,
-  type PendingControlIntent, type PendingControlStatus, type PendingPrediction } from "./pending-control.contract";
+  publishPendingControlStatus, type PendingControlIntent, type PendingControlStatus,
+  type PublicPendingControlStatus, type PendingPrediction } from "./pending-control.contract";
 import { PendingControlStore, pendingRecord, pendingTarget, type PendingRecord } from "./pending-control.store";
 import { pendingControlAuthorization, assertPendingAuthorizationIdentity, assertPendingPreview,
   boundedPendingJson, mergePendingSource, pendingIntentHash, pendingPreviewHash,
@@ -163,7 +164,7 @@ export class PendingControlService {
       return a?.expires_at_ms;
     });
   }
-  async submit(actor: AccessActor, raw: PendingControlIntent, digest: string): Promise<PendingControlStatus> {
+  async submit(actor: AccessActor, raw: PendingControlIntent, digest: string): Promise<PublicPendingControlStatus> {
     const intent = pendingControlIntent.parse(raw); boundedPendingJson(intent);
     const captured = await this.access.readContext(actor, intent.workspace_id);
     const fingerprint = mutationFingerprint(captured, actor, intent), hash = pendingIntentHash(actor, intent);
@@ -213,7 +214,7 @@ export class PendingControlService {
           await this.sendClaimed(actor, intent, fingerprint, a, claimed.record.id, claimed.attempt) : claimed.record.status };
       }
     } catch (error) { outcome = { error: fixed(error) }; }
-    return this.finishMutation(actor, intent, captured, fingerprint, outcome);
+    return publishPendingControlStatus(intent, await this.finishMutation(actor, intent, captured, fingerprint, outcome));
   }
   private async sendClaimed(actor: AccessActor, intent: PendingControlIntent, fingerprint: string,
     a: PendingControlAuthorization, id: string, attempt: string): Promise<PendingControlStatus> {
@@ -244,8 +245,8 @@ export class PendingControlService {
       throw fixed(error);
     }
   }
-  private async storedStatus(actor: AccessActor, workspace: string, id: string, heldError?: Error): Promise<PendingControlStatus> {
-    const prepared = await this.reads.prepareExact<PendingControlStatus>(actor, workspace, async () => {
+  private async storedStatus(actor: AccessActor, workspace: string, id: string, heldError?: Error): Promise<PublicPendingControlStatus> {
+    const prepared = await this.reads.prepareExact<PublicPendingControlStatus>(actor, workspace, async () => {
       const row = await this.store.candidate(workspace, id);
       if (!row) throw new PendingControlError("PENDING_CONTROL_NOT_FOUND", 404);
       const target = pendingTarget(row);
@@ -257,15 +258,15 @@ export class PendingControlService {
       }, decode: () => {
         const old = pendingRecord(row, workspace, id, target);
         if (heldError) throw heldError;
-        return old.status;
+        return publishPendingControlStatus(old.intent, old.status);
       } };
     }, fixed);
     return this.reads.finish(prepared);
   }
-  async status(actor: AccessActor, workspace: string, id: string): Promise<PendingControlStatus> {
+  async status(actor: AccessActor, workspace: string, id: string): Promise<PublicPendingControlStatus> {
     return this.storedStatus(actor, workspace, id);
   }
-  async reconcile(actor: AccessActor, workspace: string, id: string): Promise<PendingControlStatus> {
+  async reconcile(actor: AccessActor, workspace: string, id: string): Promise<PublicPendingControlStatus> {
     await this.status(actor, workspace, id);
     let error: Error | undefined;
     try { await this.recover(workspace, id); } catch (failure) { error = fixed(failure); }

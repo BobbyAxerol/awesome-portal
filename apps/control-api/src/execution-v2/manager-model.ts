@@ -1,3 +1,5 @@
+import { resolveManagerWindow, managerFactsForWindow, managerPublicationsForWindow,
+  matchesManagerName, managerQueryOptions, managerMissingScoreWindow } from "./manager-query-p1";
 import { accessDigest } from "./access-policy";
 import { assertExecutionReadScope, ExecutionReadScopeError, scopeAllowsField, scopeReadPopulation, scopeAllowsFullAccountingPopulation,
   type AuthorizedExecutionReadScope } from "./read-scope";
@@ -49,6 +51,7 @@ function validateQuery(scope: AuthorizedExecutionReadScope, query: ManagerModelQ
   const fields = [...query.sort.map(s => s.field), ...query.filters.map(f => f.field), ...query.group_by];
   if (query.stage_filter.length) fields.push("stage_presence");
   if (query.lifecycle_filter !== undefined) fields.push("lifecycle");
+  if (query.q !== undefined) fields.push("name");
   for (const field of fields) if (!scopeAllowsField(scope, fieldPolicy(field))) fail("EXECUTION_READ_NOT_AVAILABLE", 400);
   for (const field of [...query.sort.map(s => s.field), ...query.filters.filter(f => f.op !== "IS_NULL").map(f => f.field)])
     if (managerMoneyFields.includes(field as typeof managerMoneyFields[number]) && !query.economic_partition)
@@ -71,6 +74,10 @@ export function dedupeManagerFacts(facts: readonly ManagerFact[]): ManagerFact[]
 function sumMetric(facts: ManagerFact[]): ManagerMetric {
   const first = facts[0]?.metric;
   if (!first) return absent("SOURCE_FACTS_NOT_PUBLISHED");
+  // A requested exact window missing on any contributing fact is not a
+  // subtotal. Preserve its explicit query-level absence before aggregation.
+  const missingWindow = facts.find(f => ["EXACT_METRIC_WINDOW_NOT_PUBLISHED", "ALL_HISTORY_WINDOW_NOT_PUBLISHED"].includes(f.metric.reason_code ?? ""));
+  if (missingWindow) return absent(missingWindow.metric.reason_code!, missingWindow.metric);
   // Performance facts need their own methodology; capital/fees/budgets remain
   // independently readable. Missing methodology is not source-zero or PnL.
   if (["return_30d_pct", "net_pnl", "realized_pnl", "unrealized_pnl"].includes(facts[0].kind) &&
@@ -163,7 +170,8 @@ function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerM
   });
 }
 const scalar = (row: ManagerDatasetRow, field: keyof typeof MANAGER_SCALARS): string | null =>
-  field in row.metrics ? row.metrics[field].value : (row as unknown as Record<string, string | null>)[field] ?? null;
+  field === "stage_presence" ? JSON.stringify(row.stage_presence) :
+    field in row.metrics ? row.metrics[field].value : (row as unknown as Record<string, string | null>)[field] ?? null;
 function filtered(row: ManagerDatasetRow, q: ManagerModelQuery) {
   if (q.stage_filter.length && !q.stage_filter.some(stage => row.stage_presence.includes(stage))) return false;
   if (q.lifecycle_filter && row.lifecycle !== q.lifecycle_filter) return false;
@@ -203,6 +211,7 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
   assertExecutionReadScope(scope);
   if (scope.mode !== "SCOPED_V2") fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED");
   const doc = managerModelDocument.parse(input), query = managerModelQuery.parse(rawQuery);
+  const selectedWindow = resolveManagerWindow(doc.as_of_ms, query.window);
   if (doc.workspace_id !== scope.workspaceId || doc.environment !== scope.environment || doc.profile_id !== scope.profileId ||
     query.environment !== scope.environment || query.workspace_id && query.workspace_id !== scope.workspaceId)
     fail("EXECUTION_READ_ACCESS_CHANGED", 409);
@@ -223,15 +232,19 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     scopeAllowsField(scope, fieldPolicy(f.kind))));
   if (facts.length && ["currency", "profile_id", "provenance_ref"].some(field => !scopeAllowsField(scope, field)))
     fail("EXECUTION_READ_FIELD_POLICY_PENDING");
-  const allRows = rowsFor(members, facts, query, scope);
+  const selectedFacts = managerFactsForWindow(facts, selectedWindow);
+  const allRows = rowsFor(members, selectedFacts, query, scope);
   // No score computation on this read path. Exact authorized population and
   // economic partition must match a separately precomputed, current-policy result.
   if (scopeAllowsField(scope, "score")) for (const row of allRows) {
     const rowMembers = members.filter(m => managerRowKey(m) === row.row_key);
     const partition = query.economic_partition ?? (row.economic_partitions.length === 1 ? row.economic_partitions[0].partition : null);
     if (!partition) continue;
-    const values = selectManagerScorePublications(doc, rowMembers, { type: "alpha", id: row.alpha_id }, accessDigest(partition), scoreFence)
+    const accepted = selectManagerScorePublications(doc, rowMembers, { type: "alpha", id: row.alpha_id }, accessDigest(partition), scoreFence)
       .filter(s => s.slot === "RAW");
+    const values = managerPublicationsForWindow(accepted, selectedWindow);
+    if (selectedWindow !== null && (selectedWindow.requested === "ALL" || accepted.length === 1 && values.length === 0))
+      row.metrics.score = absent(selectedWindow.reason_code ?? "EXACT_METRIC_WINDOW_NOT_PUBLISHED");
     if (values.length === 1) {
       const s = values[0], ready = s.quality.value !== null;
       const reason = s.quality.reason_codes[0] ?? `SCORE_${s.quality.status.toUpperCase()}`;
@@ -247,13 +260,15 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
   }
   const subjectType = ({ FUND:"manager_book", PORTFOLIO:"portfolio", ALPHA:"alpha", ACCOUNT:"account", DEPLOYMENT:"deployment" } as const)[surface as Exclude<ManagerSurface,"FLEET">];
   const partitionsForScore = [...new Set(facts.map(f => accessDigest(f.partition)))];
-  const details = scopeAllowsField(scope,"score") && subjectType && partitionsForScore.length === 1 ?
+  const acceptedDetails = scopeAllowsField(scope,"score") && subjectType && partitionsForScore.length === 1 ?
     selectManagerScorePublications(doc,members,{type:subjectType,id:resourceId ?? scope.workspaceId},
       query.economic_partition ? accessDigest(query.economic_partition) : partitionsForScore[0],scoreFence) : [];
+  const details = managerPublicationsForWindow(acceptedDetails, selectedWindow);
   const summary = (slot:"RAW"|"DIRECT_NAV") => {
     const s = details.filter(s => s.slot === slot);
     return s.length === 1 ? {value:s[0].quality.value,status:s[0].quality.status} :
-      {value:null,status:"policy_pending" as const};
+      selectedWindow !== null && (selectedWindow.requested === "ALL" || acceptedDetails.filter(p => p.slot === slot).length === 1) ?
+        managerMissingScoreWindow(selectedWindow) : {value:null,status:"policy_pending" as const};
   };
   const compositionPartition=query.economic_partition?accessDigest(query.economic_partition):
     partitionsForScore.length===1?partitionsForScore[0]:null;
@@ -261,11 +276,12 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     scope.environment==="paper"?["PAPER" as const]:scope.environment==="sandbox"?["SANDBOX" as const]:["CANARY" as const,"LIVE" as const];
   // These complete accounting outputs must never leak through researcher fields,
   // visible-subset totals, table filters or pagination. Direct NAV stays separate.
-  const compositions=(surface==="FUND"||surface==="PORTFOLIO")&&compositionPartition!==null&&
+  const acceptedCompositions=(surface==="FUND"||surface==="PORTFOLIO")&&compositionPartition!==null&&
     ["score","allocation","balance_total","currency","provenance_ref"].every(field=>scopeAllowsField(scope,field))&&
     scopeAllowsFullAccountingPopulation(scope,surface==="PORTFOLIO"?resourceId:undefined)?
     selectManagerCompositionPublications(doc,members,{type:surface==="FUND"?"manager_book":"portfolio",id:resourceId??scope.workspaceId},
       selectedStages,compositionPartition,compositionFence):[];
+  const compositions = managerPublicationsForWindow(acceptedCompositions, selectedWindow);
   // Independent descriptive per-alpha/version evidence, not a financial or Fund score.
   // Scope/reference corpus is exact BEFORE UI filters, groups, totals or pagination.
   const regimes = ["regime", "binding_id", "provenance_ref"].every(field => scopeAllowsField(scope, field)) ?
@@ -274,7 +290,7 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
       { type: surface === "DEPLOYMENT" ? "deployment" : "alpha",
         ...(surface === "ALPHA" || surface === "DEPLOYMENT" ? { id: resourceId } : {}) }, regimeFence) : [];
   const subjectRegime = (surface === "ALPHA" || surface === "DEPLOYMENT") && regimes.length === 1 ? regimes[0] : null;
-  const rows = allRows.filter(row => filtered(row, query));
+  const rows = allRows.filter(row => matchesManagerName(row, query) && filtered(row, query));
   rows.sort((a, b) => {
     for (const order of query.sort) {
       const x = scalar(a, order.field), y = scalar(b, order.field);
@@ -286,7 +302,8 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
   });
   const queryId = accessDigest({ scope: scope.fingerprint, source: doc.revision, generation: doc.projection_generation,
     surface, resourceId: resourceId ?? null, scores:accessDigest({details,compositions,regimes,rows:allRows.map(r => r.metrics.score)}),
-    query: { ...query, after: undefined, before: undefined } });
+    query: { ...query, q_mode: query.q === undefined ? undefined : query.q_mode ?? "CONTAINS",
+      selected_window: selectedWindow, after: undefined, before: undefined } });
   const cursorContext = { resourceId: `manager-model:${surface}`, workspaceId: scope.workspaceId, queryFingerprint: queryId };
   const encode = (row: ManagerDatasetRow, direction: "after" | "before") => codec.encode({ resource_id: cursorContext.resourceId,
     workspace_id: scope.workspaceId, query_fingerprint: queryId, direction, boundary: [row.row_key] });
@@ -314,11 +331,17 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     const keys = new Set(group.rows.map(r => r.row_key));
     const tuples = new Set(members.filter(m => keys.has(managerRowKey(m))).map(m => tupleKey(m.tuple)));
     return { key: group.key, unique_row_count: group.rows.length, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY" as const,
-      economic_partitions: partitions(facts.filter(f => tuples.has(tupleKey(f.tuple))), managerMoneyFields.filter(f => scopeAllowsField(scope, f)), tuples) };
+      economic_partitions: partitions(selectedFacts.filter(f => tuples.has(tupleKey(f.tuple))), managerMoneyFields.filter(f => scopeAllowsField(scope, f)), tuples) };
   });
   const statementFacts = rootFlows(facts, surface);
   const statement = partitions(statementFacts, managerStatementFields.filter(f => scopeAllowsField(scope, f)), memberKeys);
   const response = { schema_version: "portal.execution.manager-dataset.v1" as const, surface, workspace_id: scope.workspaceId,
+    selected_window: selectedWindow,
+    query_options: managerQueryOptions({ asOf: doc.as_of_ms, canSearchName: scopeAllowsField(scope, "name"),
+      sortFields: (Object.keys(MANAGER_SCALARS) as Array<keyof typeof MANAGER_SCALARS>).filter(key => scopeAllowsField(scope, fieldPolicy(key))),
+      groupFields: (["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "venue", "health", "source_state", "lifecycle"] as const)
+        .filter(key => scopeAllowsField(scope, fieldPolicy(key))),
+      metricKeys: ([...managerMoneyFields, "return_30d_pct", "score"] as const).filter(key => scopeAllowsField(scope, fieldPolicy(key))), facts }),
     environment: scope.environment, record_authority: "PORTAL_PROJECTION" as const, source_authority: "TRADING_SYSTEM" as const,
     snapshot_id: accessDigest({ scope: scope.fingerprint, queryId, rows }),
     as_of_ms: doc.as_of_ms, recorded_through_ms: doc.recorded_through_ms, facts_through_ms: doc.facts_through_ms,
@@ -330,12 +353,17 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     items, groups: groupOutput, capital_statements: statement,
     statement_scope: "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS" as const,
     scores: { raw: summary("RAW"), composition: compositions.length===1?
-      {value:compositions[0].result.value,status:compositions[0].result.status}:{ value: null, status: "policy_pending" as const },
+      {value:compositions[0].result.value,status:compositions[0].result.status}:
+        selectedWindow !== null && (selectedWindow.requested === "ALL" || acceptedCompositions.length === 1) ?
+          managerMissingScoreWindow(selectedWindow) : { value: null, status: "policy_pending" as const },
       direct_nav: summary("DIRECT_NAV"), regime: { value: null, status: subjectRegime?.result.status ?? "unavailable" as const,
         ...(doc.precomputed_regimes === undefined ? {} : { reason_code: subjectRegime ? null :
           surface === "ALPHA" || surface === "DEPLOYMENT" ? "REGIME_POLICY_SOURCE_OR_AUTHORIZED_SLICE_NOT_QUALIFIED" as const :
             "REGIME_IS_PER_ALPHA_OR_DEPLOYMENT_ONLY" as const }) },
-      reason_code: details.some(s => s.quality.value !== null)||compositions.some(s=>s.result.value!==null) ? "QUALIFIED_PRECOMPUTED_SCORE" as const : "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED" as const,
+      reason_code: details.some(s => s.quality.value !== null)||compositions.some(s=>s.result.value!==null) ? "QUALIFIED_PRECOMPUTED_SCORE" as const :
+        selectedWindow !== null && summary("RAW").status === "window_not_published" && summary("DIRECT_NAV").status === "window_not_published" &&
+          (selectedWindow.requested === "ALL" || acceptedCompositions.length === 1 && compositions.length === 0) ?
+          selectedWindow.reason_code ?? "EXACT_METRIC_WINDOW_NOT_PUBLISHED" : "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED" as const,
       calculation_path: "PRECOMPUTED_ONLY" as const },
     ...(doc.precomputed_scores !== undefined ? {score_details:details} : {}),
     ...(doc.precomputed_compositions!==undefined?{composition_details:compositions}:{}),

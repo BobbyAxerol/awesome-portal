@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { commandStatus,commandWorkspace } from "./command.contract";
+import { commandStatus,publicCommandStatus,commandWorkspace } from "./command.contract";
 
 /** Separate exact-target capital receipt collection, NOT the mixed operation queue. */
 export const commandCollectionQuery=z.object({
@@ -16,7 +16,7 @@ export const commandCollection=z.object({
   family:z.literal("TRUSTED_CAPITAL_COMMANDS_ONLY"),
   coverage:z.literal("EXACT_AUTHORIZED_RESOURCE_ONLY"),
   resource:commandStatus.shape.resource,environment:commandStatus.shape.environment,
-  items:z.array(commandStatus).max(100),
+  items:z.array(publicCommandStatus).max(100),
   page:z.object({limit:z.number().int().min(1).max(100),
     returned_count:z.number().int().min(0).max(100),has_more:z.boolean(),
     next_cursor:z.string().min(1).max(4096).nullable()}).strict(),

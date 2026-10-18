@@ -28,7 +28,7 @@ import { accessDigest } from "../src/execution-v2/access-policy";
 import { AccessRepository } from "../src/execution-v2/access.repository";
 import { ExecutionAccessService } from "../src/execution-v2/access.service";
 import type { AccessTrustProvider } from "../src/execution-v2/access-trust";
-import { commandStatus, type CommandIntent } from "../src/execution-v2/command.contract";
+import { publicCommandStatus, type CommandIntent } from "../src/execution-v2/command.contract";
 import { ExecutionCommandService, intentHash } from "../src/execution-v2/command.service";
 import { CommandStore } from "../src/execution-v2/command.store";
 import { commandAuthorization, type CommandTrust } from "../src/execution-v2/command-trust";
@@ -176,18 +176,22 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 exact trusted-command p
   }
 
   it("serves exact current audit authority on Core workspace, retaining TEST_ONLY and no-store", async () => {
-    const f = await fixture(), status = vi.spyOn(f.commands, "status");
+    const f = await fixture(), before = await ledger(f), status = vi.spyOn(f.commands, "status");
     await mounted(f, async http => {
       const response = await http.get(); expect(response.statusCode).toBe(200);
       expect(response.headers["cache-control"]).toContain("no-store");
-      const body = commandStatus.parse(response.json());
-      expect(body).toEqual(f.record.status);
+      const body = publicCommandStatus.parse(response.json());
+      // Currency is a served projection of the verified original intent. The
+      // immutable historical status does not acquire a synthetic new field.
+      expect(body).toEqual({ ...f.record.status, currency: f.record.intent.business_payload.currency });
+      expect(f.record.status).not.toHaveProperty("currency");
       expect(body).toMatchObject({ schema_version: "portal.execution.command-status.v1", resource: f.resource,
         environment: "paper", authority: "TEST_ONLY", delivery: "PREPARED", business: { state: "UNKNOWN" } });
       expect(status).toHaveBeenCalledWith(actor, f.workspace, f.record.id);
       expect(response.body).not.toMatch(/ts_user_id|workload_ref|delegation_ref|expected_versions|csrf|JWT/);
       expect(f.legacyRead).not.toHaveBeenCalled(); expect(f.paperRead).not.toHaveBeenCalled(); expect(f.governanceRead).not.toHaveBeenCalled();
     });
+    expect(await ledger(f)).toEqual(before);
   });
 
   it.each(["business-only", "app-only-audit", "wrong-resource", "wrong-environment", "stale-membership"] as const)("hides a financial receipt for %s", async variant => {

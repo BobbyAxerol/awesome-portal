@@ -277,7 +277,7 @@
       "task_ids": []
     }
   ],
-  "content_digest": "sha256:761f85a75d6c349ee800e8168c0e716c560ee4076a83e4dcb6ebf4a3ce47e305",
+  "content_digest": "sha256:0a688b5bbb6c980c3f5acd83c41412d0a1dec2afd6ee6c61605fc7da749b35cd",
   "feature_groups": [
     {
       "id": "command",
@@ -663,6 +663,10 @@
       "navigation": {
         "icon_key": "shield-check",
         "order": 10,
+        "scoped_v2_replacement": {
+          "feature_id": "EXECUTION_APPROVALS",
+          "read_mode": "SCOPED_V2"
+        },
         "show_in_command_palette": true,
         "show_in_sidebar": true
       },
@@ -1419,7 +1423,7 @@
     }
   ],
   "registry_id": "portal-default",
-  "revision": 6,
+  "revision": 7,
   "schema_version": "portal.registry.v1",
   "screens": [
     {

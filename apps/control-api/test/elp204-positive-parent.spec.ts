@@ -52,7 +52,7 @@ import { SessionsRepository } from "../src/repos/sessions";
 import { GovernanceController } from "../src/governance/governance.controller";
 import { GovernanceService } from "../src/governance/governance.service";
 import { GovernanceReviewCaptureService } from "../src/governance/review-capture.service";
-import { PaperExitRepository } from "../src/governance/paper-exit.repository";
+import { PaperExitRepository, type PaperExitFindingRecord } from "../src/governance/paper-exit.repository";
 import { PaperExitService, computePaperExitSourceSnapshotHash } from "../src/governance/paper-exit.service";
 import { GovernanceRepository, type EvidenceRecord } from "../src/governance/governance.repository";
 import { OperationalReadRepository } from "../src/operations/operational-read.repository";
@@ -70,7 +70,7 @@ import { PositiveParentReads } from "../src/governance/positive-parent.service";
 import { r2ParentRead, paperExitParentRead, r2ParentOperationRead, paperExitParentOperationRead } from "../src/governance/positive-parent.contract";
 import { parentFieldSetDigest, type ParentFieldPurpose, type ParentReadFieldSeal } from "../src/execution-v2/parent-read-fields";
 import type { AccessActor, AccessResource, ReviewedAccessPolicy, ScopedAccessGrant } from "../src/execution-v2/access.contract";
-import { accessDigest, canonicalSelector, type AccessRelations } from "../src/execution-v2/access-policy";
+import { accessDigest, canonicalSelector, evaluateAccess, type AccessRelations } from "../src/execution-v2/access-policy";
 import { AccessRepository } from "../src/execution-v2/access.repository";
 import { currentAccessRelations, grantBindingDigest, type CurrentAccessRelations } from "../src/execution-v2/access-current-relations";
 import { type QualifiedRootMembershipReceipt, type TsRootMembershipAcceptance } from "../src/execution-v2/access-root-receipt";
@@ -689,7 +689,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
     await refused(read(f, "R2", id), 503, "OPERATIONAL_READ_RESPONSE_BOUND"); expect(f.held()).toBe(0);
   });
   async function seededPaper(f: Fixture, options: { findingCount?: number; partial?: boolean; foreignPanel?: boolean; wrongHash?: boolean;
-    approvalExtra?: Record<string, unknown> } = {}) {
+    approvalExtra?: Record<string, unknown>; findingOverrides?: readonly Partial<PaperExitFindingRecord>[] } = {}) {
     const stored = (await f.exits.detail(f.workspace, f.paper))!, id = next();
     const entries = stored.evidence.map(item => ({ ...item, evidenceId: next() }));
     const manifest = computeEvidenceManifestHash(entries);
@@ -704,6 +704,9 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
       panelId: options.foreignPanel && index === 0 ? stored.panels[0]!.panelId : panels[index % panels.length]!.panelId,
       ordinal: options.foreignPanel && index === 0 ? foreignOrdinal : Math.floor(index / panels.length),
       metricKey: `TEST_ONLY_metric_${index}`, label: PRIVATE,
+      // TEST_ONLY original immutable values, installed BEFORE the original
+      // source hash and INSERT; never UPDATE historical finding bytes.
+      ...options.findingOverrides?.[index],
     }));
     const lineage = options.partial ? [] : stored.lineage.map(item => ({ ...item, lineageId: next(),
       ...(item.kind === "EVIDENCE_PACK" ? { value: id, digest: manifest } : {}) }));
@@ -732,6 +735,103 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
       source_href: row.sourceHref, evidence_hash: row.evidenceHash, formula_version: row.formulaVersion, as_of: row.asOf });
     return id;
   }
+  it("C5 serves separately sealed exact criteria on the existing GET and SAME composition without REVIEW or writes", async()=>{
+    const f=await fixture({purposes:["PAPER_EXIT_ROOT","PAPER_EXIT_CRITERIA"]});
+    const sourceTime=new Date("2026-10-01T01:02:03.456Z");
+    const id=await seededPaper(f,{findingOverrides:[
+      {metricKey:"OBSERVATION_COVERAGE",exactValue:"1842.000000000000000001",thresholdValue:"6.00",
+        unit:"CURRENCY",currency:"USDC",evidenceHash:accessDigest("TEST_ONLY:evidence"),asOf:sourceTime},
+      {metricKey:"DRIFT",exactValue:"0",thresholdValue:null,unit:"%",currency:null},
+      {metricKey:"TEST_ONLY_unknown",exactValue:"-0.0000",unit:"source-unit",currency:"usd.c"},
+    ]}),before=await businessState(f);
+    await withHttp(f,async(http,legacy)=>{
+      const response=await http.inject({method:"GET",url:path(f,"PAPER_EXIT",id),headers:headers(f)});
+      expect(response.statusCode,response.body).toBe(200);
+      expect(response.headers["cache-control"]).toBe("private, no-store");
+      const body=paperExitParentRead.parse(response.json());finite(body);
+      expect(body.evaluation.availability).toBe("NOT_PUBLISHED");
+      expect(body.criteria.availability).toBe("AVAILABLE");
+      if(body.criteria.availability!=="AVAILABLE")throw Error("TEST_ONLY criteria absent");
+      const coverage=body.criteria.items.find(row=>row.criterion_key.value==="OBSERVATION_COVERAGE")!;
+      expect(coverage.observed).toEqual({availability:"AVAILABLE",value:"1842.000000000000000001",reason_code:null});
+      expect(coverage.limit.value).toBe("6.00");expect(coverage.unit.value).toBe("CURRENCY");
+      expect(coverage.currency.value).toBe("USDC");
+      expect(coverage.source_time.value).toBe(sourceTime.getTime());
+      expect(coverage.source_ref).toMatchObject({review_id:id,finding_id:coverage.original.finding_id,
+        panel_id:coverage.original.panel_id,basis:"STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"});
+      expect(coverage.op).toEqual({availability:"NOT_PUBLISHED",value:null,reason_code:"SOURCE_COMPARATOR_FIELD_NOT_RECORDED"});
+      expect(body.criteria.items.find(row=>row.criterion_key.value==="DRIFT")!.observed.value).toBe("0");
+      const unknown=body.criteria.items.find(row=>row.observed.value==="-0.0000")!;
+      expect(unknown.criterion_key).toEqual({availability:"NOT_PUBLISHED",value:null,reason_code:"SOURCE_METRIC_NOT_REGISTERED"});
+      expect(unknown.label_key).toEqual(unknown.criterion_key);
+      expect(unknown.currency.value).toBe("usd.c");
+      const wrapped=await http.inject({method:"GET",
+        url:"/api/v1/execution/compositions/exit-reviews/"+id+"?workspace_id="+encodeURIComponent(f.workspace),
+        headers:headers(f)});
+      expect(wrapped.statusCode,wrapped.body).toBe(200);
+      expect(wrapped.json().data.exit_review.criteria).toEqual(body.criteria);
+      expect(legacy).not.toHaveBeenCalled();
+    });
+    expect(await businessState(f)).toEqual(before);expect(f.held()).toBe(0);
+  });
+  it("C5 does not export rich internal fields without the NEW purpose and actual captured null stays absent",async()=>{
+    const old=await fixture(),id=await seededPaper(old,{findingOverrides:[{exactValue:"123.456789",currency:"USDC"}]});
+    const load=restore(vi.spyOn(old.repository,"protectedDetails"));
+    const body=await read(old,"PAPER_EXIT",id);
+    expect(body.family==="PAPER_EXIT"&&body.criteria).toEqual({availability:"NOT_PUBLISHED",reason_code:"PARENT_FIELD_PURPOSE_NOT_QUALIFIED"});
+    expect(load.mock.calls[0]![2]).toEqual({includeCurrency:false});
+    const snapshot=await load.mock.results[0]!.value;
+    expect(snapshot.raw.paperExit).not.toHaveProperty("criteria_findings");
+    expect(JSON.stringify(body)).not.toContain("123.456789");finite(body);
+    const qualified=await fixture({purposes:["PAPER_EXIT_ROOT","PAPER_EXIT_CRITERIA"]});
+    const actual=await read(qualified,"PAPER_EXIT");
+    if(actual.family!=="PAPER_EXIT"||actual.criteria.availability!=="AVAILABLE")throw Error("TEST_ONLY criteria absent");
+    expect(actual.criteria.items).toHaveLength(4);
+    for(const row of actual.criteria.items){
+      expect(row.observed).toEqual({availability:"NOT_PUBLISHED",value:null,reason_code:"SOURCE_VALUE_NOT_RECORDED"});
+      expect(row.source_time).toEqual({availability:"NOT_PUBLISHED",value:null,reason_code:"SOURCE_TIME_NOT_RECORDED"});
+    }
+  });
+  it("C5 invalid optional scalars become typed absence without rewriting stored units, zeros or ROOT hash",async()=>{
+    const f=await fixture({purposes:["PAPER_EXIT_ROOT","PAPER_EXIT_CRITERIA"]});
+    const id=await seededPaper(f,{findingOverrides:[
+      {metricKey:"DRIFT",exactValue:"1\n",thresholdValue:"not-a-number",unit:"https://private.example/unit",currency:"USD\n"},
+    ]}),body=await read(f,"PAPER_EXIT",id);
+    if(body.family!=="PAPER_EXIT"||body.criteria.availability!=="AVAILABLE")throw Error("TEST_ONLY criteria absent");
+    const row=body.criteria.items.find(item=>item.criterion_key.value==="DRIFT")!;
+    expect(row.observed).toEqual({availability:"NOT_PUBLISHED",value:null,reason_code:"SOURCE_VALUE_NOT_DECIMAL"});
+    expect(row.limit).toEqual(row.observed);
+    expect(row.unit).toEqual({availability:"NOT_PUBLISHED",value:null,reason_code:"SOURCE_TEXT_NOT_PUBLIC_SAFE"});
+    expect(row.currency).toEqual(row.unit);finite(body);
+    expect(JSON.stringify(body)).not.toContain("private.example");
+  });
+  it.each(["DEPLOYMENT","PORTFOLIO"] as const)("C5 one missing current %s criteria leg cannot borrow the valid REVIEW purpose",async anchor=>{
+    const f=await fixture({purposes:["PAPER_EXIT_ROOT","PAPER_EXIT_REVIEW","PAPER_EXIT_CRITERIA"]});
+    const leaf=f.accepted.find(grant=>grant.field_policy_ref==="TEST_ONLY:PAPER_EXIT_CRITERIA"&&
+      grant.selector.kind==="EXPLICIT_RESOURCE_SET"&&grant.selector.resource_kind===anchor)!;
+    expect(leaf).toBeDefined();
+    f.source.grants.find(grant=>grant.grant_id===leaf.grant_id)!.targets=[];
+    const body=await read(f,"PAPER_EXIT");
+    expect(body.family==="PAPER_EXIT"&&body.criteria.availability).toBe("NOT_PUBLISHED");
+    expect(body.family==="PAPER_EXIT"&&body.evaluation.availability).toBe("AVAILABLE");finite(body);
+  });
+  it.each([false,true])("C5 criteria-only revoke fences body and held corruption error (corrupt=%s)",async corrupt=>{
+    const f=await fixture({purposes:["PAPER_EXIT_ROOT","PAPER_EXIT_REVIEW","PAPER_EXIT_CRITERIA"]});
+    const id=await seededPaper(f,{wrongHash:corrupt}),prepared=await f.service.prepare(f.principal,"PAPER_EXIT",id);
+    const criteria=f.accepted.filter(grant=>grant.field_policy_ref==="TEST_ONLY:PAPER_EXIT_CRITERIA");
+    expect(criteria).toHaveLength(2);
+    for(const grant of criteria)await f.grants.saveGrant({...grant,revision:next(),revoked_at_ms:await dbNow()});
+    await refused(f.service.finish(prepared),409,"OPERATIONAL_READ_CHANGED");
+    // A new request can read ROOT/REVIEW with criteria absent. A corrupt
+    // original still refuses; never rewrite it to manufacture a positive.
+    if(!corrupt){
+      const body=await read(f,"PAPER_EXIT",id);
+      expect(body.family==="PAPER_EXIT"&&body.criteria.availability).toBe("NOT_PUBLISHED");
+      expect(body.family==="PAPER_EXIT"&&body.evaluation.availability).toBe("AVAILABLE");
+    }
+    expect(f.held()).toBe(0);
+  });
+
   it.each([256, 257])("Paper finding cap %i uses genuine constrained rows and an initially matching complete source hash", async count => {
     const f = await fixture(), id = await seededPaper(f, { findingCount: count });
     if (count === 256) {
@@ -776,6 +876,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
     "/api/v1/execution/operations/"+encodeURIComponent(id)+"?workspace_id="+encodeURIComponent(f.workspace);
   async function seedOperation(f: Fixture, family: PositiveParentFamily, options: {
     id?: string; status?: "PLANNED" | "APPLIED" | "EXPIRED"; expired?: boolean; wrongHash?: boolean; wrongSource?: boolean;
+    createdAt?: string; expiresAt?: string; commandType?: "GOVERNANCE_R1_DECISION" | "GOVERNANCE_R2_DECISION";
   } = {}) {
     const id = options.id ?? next(), status = options.status ?? "PLANNED", now = await dbNow();
     const a = (await ctx.pool.query("SELECT evidence_set_hash FROM governance_approval_requests WHERE approval_id=$1", [idFor(f,family)])).rows[0];
@@ -783,11 +884,13 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
       command_version:1,payload_hash:accessDigest(PRIVATE),reason:PRIVATE,evidence_set_hash:options.wrongHash ? accessDigest(next()) : a.evidence_set_hash,
       evidence_hashes:[],blocker_codes:["TEST_ONLY_BLOCKED"],warning_codes:[],apply_key_id:PRIVATE,
       apply_token_hash:"1".repeat(64),status,response_json:status === "APPLIED" ? { TEST_ONLY_PRIVATE:PRIVATE } : null,
-      created_at:new Date(now-120_000),expires_at:new Date(options.expired ? now-60_000 : now+60_000),
+      // Native PG timestamp strings preserve six digits on the INITIAL INSERT.
+      // Never rewrite the immutable captured creation time for a paging test.
+      created_at:options.createdAt ?? new Date(now-120_000),expires_at:options.expiresAt ?? new Date(options.expired ? now-60_000 : now+60_000),
       applied_at:status === "APPLIED" ? new Date(now-90_000) : null };
     if (family === "R2") {
       const parent = (await ctx.pool.query("SELECT evidence_set_hash FROM governance_approval_requests WHERE approval_id=$1", [f.r1])).rows[0];
-      await insert("governance_decision_plans", { ...common,approval_id:f.r2,command_type:"GOVERNANCE_R2_DECISION",decision:"DENY",
+      await insert("governance_decision_plans", { ...common,approval_id:f.r2,command_type:options.commandType ?? "GOVERNANCE_R2_DECISION",decision:"DENY",
         expected_approval_version:2,quorum_required:1,policy_version:"TEST_ONLY-operation-policy",
         parent_approval_id:f.r1,parent_approval_version:1,parent_evidence_set_hash:parent.evidence_set_hash });
     } else {
@@ -804,6 +907,303 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
       payloadHash:accessDigest(next()),planDigest:accessDigest(next()),conditions:[],riskTier:"R2_SANDBOX",
       blockerCodes:["COMMAND_RELAY_DISABLED"],warningCodes:[],expiresAt:new Date(await dbNow()+60_000),requestId:next(),auditEventId:next() })).record;
   }
+  // C5: installed TEST_ONLY per-purpose/current native leaves, not a source
+  // commissioning receipt and not an expansion of the old default fixture.
+  const followPurposes: ParentFieldPurpose[] = ["R2_ROOT", "PAPER_EXIT_ROOT", "DECISION_OPERATION",
+    "DECISION_ACTORS", "DECISION_LATEST_OPERATION", "R2_DECISION_CONTEXT"];
+  const recordedPurposes: ParentFieldPurpose[] = ["R2_ROOT","PAPER_EXIT_ROOT","DECISION_OPERATION",
+    "RECORDED_PORTAL_ACTIVITY","R2_RECORDED_VERDICTS"];
+  // Constraint-valid initial immutable history, not evidence of a real source
+  // command, plan/apply execution or economic-stage transition. No UPDATE.
+  async function seedRecordedDecision(f:Fixture,family:PositiveParentFamily,options:{
+    decisionId?:string;operationId?:string;at?:string;before?:number;actor?:string;
+    badOriginalHash?:boolean;commandType?:"GOVERNANCE_R1_DECISION"|"GOVERNANCE_R2_DECISION";
+  }={}){
+    const operationId=options.operationId??next(),decisionId=options.decisionId??next();
+    const at=options.at??"2026-01-02T03:04:05.123456Z",before=options.before??1;
+    const originalHash=accessDigest(["TEST_ONLY:original-recorded-history",operationId]);
+    const sourceHash=accessDigest(["TEST_ONLY:original-paper-history",operationId]);
+    const actor=options.actor??owner.user.userId;
+    const common={operation_id:operationId,workspace_id:f.workspace,actor_user_id:actor,
+      request_key:next(),command_version:1,payload_hash:accessDigest(PRIVATE),reason:PRIVATE,
+      evidence_set_hash:originalHash,evidence_hashes:[],blocker_codes:[],warning_codes:[],
+      apply_key_id:PRIVATE,apply_token_hash:"1".repeat(64),status:"APPLIED",response_json:{TEST_ONLY_PRIVATE:PRIVATE},
+      created_at:"2026-01-01T00:00:00Z",expires_at:"2026-01-03T00:00:00Z",applied_at:at};
+    if(family==="R2"){
+      await insert("governance_decision_plans",{...common,approval_id:f.r2,
+        command_type:options.commandType??"GOVERNANCE_R2_DECISION",decision:"DENY",expected_approval_version:before,
+        quorum_required:1,policy_version:"TEST_ONLY-recorded-policy"});
+      await insert("governance_approval_decisions",{decision_id:decisionId,operation_id:operationId,
+        workspace_id:f.workspace,approval_id:f.r2,actor_user_id:actor,actor_username:PRIVATE,decision:"DENY",reason:PRIVATE,
+        evidence_set_hash:options.badOriginalHash?accessDigest(next()):originalHash,
+        approval_version_before:before,approval_version_after:before+1,decided_at:at});
+    }else{
+      await insert("governance_paper_exit_decision_plans",{...common,review_id:f.paper,
+        command_type:"GOVERNANCE_PAPER_EXIT_DECISION",decision:"REJECT",extension_days:null,
+        expected_review_version:before,evaluation_state:"UNAVAILABLE",source_snapshot_hash:sourceHash});
+      await insert("governance_paper_exit_decisions",{decision_id:decisionId,operation_id:operationId,
+        workspace_id:f.workspace,review_id:f.paper,actor_user_id:actor,actor_username:PRIVATE,
+        decision:"REJECT",reason:PRIVATE,extension_days:null,evidence_set_hash:originalHash,
+        source_snapshot_hash:options.badOriginalHash?accessDigest(next()):sourceHash,
+        review_version_before:before,review_version_after:before+1,resulting_state:"REJECTED_TO_PAPER_HELD",decided_at:at});
+    }
+    return {decisionId,operationId,at,originalHash};
+  }
+  async function seedRecordedFinding(f:Fixture,ordinal:number,at="2026-01-02T03:04:05.123456Z"){
+    const id=next();await insert("governance_approval_findings",{finding_id:id,approval_id:f.r2,ordinal,
+      label:PRIVATE,outcome:ordinal%2?"INSUFFICIENT":"WATCH",suggestion:PRIVATE,blocking:ordinal%2===1,
+      policy_version:PRIVATE,formula_version:PRIVATE,basis_hashes:[accessDigest(PRIVATE)],evaluated_at:at});return id;
+  }
+  it.each(families)("C5 recorded %s decisions use original immutable plan pins on GET/composition, never current version/hash",async family=>{
+    const f=await fixture({purposes:recordedPurposes}),event=await seedRecordedDecision(f,family),before=await businessState(f);
+    const original=(await ctx.pool.query("SELECT evidence_set_hash FROM governance_approval_requests WHERE approval_id=$1",[idFor(f,family)])).rows[0];
+    expect(event.originalHash).not.toBe(original.evidence_set_hash);
+    await withHttp(f,async(http,legacy)=>{
+      const urls=[path(f,family),`/api/v1/execution/compositions/${family==="R2"?`approvals/${f.r2}?workspace_id=${encodeURIComponent(f.workspace)}&view=r2`:`exit-reviews/${f.paper}?workspace_id=${encodeURIComponent(f.workspace)}`}`];
+      for(const [index,url] of urls.entries()){
+        const response=await http.inject({method:"GET",url,headers:headers(f)});expect(response.statusCode,response.body).toBe(200);
+        expect(response.headers["cache-control"]).toBe("private, no-store");
+        const envelope=response.json(),body=index===0?envelope:family==="R2"?envelope.data.governance:envelope.data.exit_review;
+        expect(body.recorded_activity).toMatchObject({availability:"AVAILABLE",limit:32,has_more:false,
+          coverage:"BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY",items:[{decision_id:event.decisionId,
+            operation_id:event.operationId,decision:family==="R2"?"DENY":"REJECT",version_before:1,version_after:2,
+            decided_at_ms:Date.parse(event.at)}]});
+        expect(body.actors).toEqual(purposeMissing);expect(body.latest_operation).toEqual(purposeMissing);
+        finite(envelope);
+      }
+      expect(legacy).not.toHaveBeenCalled();
+    });
+    expect(await businessState(f)).toEqual(before);expect(f.held()).toBe(0);
+    const activitySql=f.sql.filter(sql=>sql.includes(`FROM ${family==="R2"?"governance_approval_decisions":"governance_paper_exit_decisions"} c JOIN root`));
+    expect(activitySql.length).toBeGreaterThan(0);
+    expect(activitySql.every(sql=>sql.includes("workspace_id=r.workspace_id")&&sql.includes("LIMIT 33"))).toBe(true);
+    expect(f.sql.join("\n")).not.toMatch(/(?:FROM|JOIN)\s+(?:portal_users|auth_users)\b/i);
+  });
+  it("C5 new optional purposes require BOTH current anchor leaves and activity also needs independent operation purpose",async()=>{
+    const captured=await fixture({purposes:recordedPurposes}),f={...captured,r2:await seededR2(captured)};
+    await seedRecordedDecision(f,"R2");await seedRecordedFinding(f,0);
+    for(const purpose of ["RECORDED_PORTAL_ACTIVITY","R2_RECORDED_VERDICTS","DECISION_OPERATION"] as const){
+      for(const anchor of ["DEPLOYMENT","PORTFOLIO"] as const){
+        const leaf=f.accepted.find(g=>g.field_policy_ref===`TEST_ONLY:${purpose}`&&g.selector.kind==="EXPLICIT_RESOURCE_SET"&&g.selector.resource_kind===anchor)!;
+        const entry=f.source.grants.find(g=>g.grant_id===leaf.grant_id)!,saved=entry.targets,start=f.sql.length;entry.targets=[];
+        try{const body=r2ParentRead.parse(await read(f,"R2"));
+          if(purpose!=="R2_RECORDED_VERDICTS"){
+            expect(body.recorded_activity).toEqual(purposeMissing);
+            expect(f.sql.slice(start).filter(sql=>sql.includes("FROM governance_approval_decisions c JOIN root"))).toEqual([]);
+          }else{
+            expect(body.recorded_verdicts).toEqual(purposeMissing);
+            expect(f.sql.slice(start).filter(sql=>sql.includes("FROM governance_approval_findings"))).toEqual([]);
+          }
+        }finally{entry.targets=saved;}
+      }
+    }
+    const old=await fixture(),body=r2ParentRead.parse(await read(old,"R2"));
+    expect(body.recorded_activity).toEqual(purposeMissing);expect(body.recorded_verdicts).toEqual(purposeMissing);
+    expect(old.sql.join("\n")).not.toMatch(/recent AS MATERIALIZED|FROM governance_approval_findings/);
+  });
+  it("C5 activity preserves original PG microseconds and refuses an unreadable newest cohort without fallback",async()=>{
+    const f=await fixture({purposes:recordedPurposes}),prefix=`TEST_ONLY:${randomUUID()}:`;
+    // UNIQUE(approval,actor) remains active. Two genuine historical actor rows.
+    const older=await seedRecordedDecision(f,"R2",{decisionId:prefix+"a",at:"2026-01-02T03:04:05.123100Z",actor:owner.user.userId});
+    const newer=await seedRecordedDecision(f,"R2",{decisionId:prefix+"z",at:"2026-01-02T03:04:05.123900Z",actor:reader.user.userId,before:2});
+    const body=r2ParentRead.parse(await read(f,"R2"));expect(body.recorded_activity.availability).toBe("AVAILABLE");
+    if(body.recorded_activity.availability!=="AVAILABLE")throw Error("TEST_ONLY absent");
+    expect(body.recorded_activity.items.map(row=>row.decision_id)).toEqual([newer.decisionId,older.decisionId]);
+    expect(new Set(body.recorded_activity.items.map(row=>row.decided_at_ms)).size).toBe(1);
+    const selected=(await f.repository.identityCandidate(f.workspace,"R2",f.r2))!;
+    const before=await f.repository.protectedDetails(selected,undefined,{includeCurrency:false,includeRecordedActivity:true});
+    await actualF0(f,newer.operationId);
+    const changed=r2ParentRead.parse(await read(f,"R2"));
+    expect(changed.recorded_activity).toEqual({availability:"NOT_PUBLISHED",reason_code:"RECORDED_ACTIVITY_NOT_PUBLIC"});
+    expect(JSON.stringify(changed.recorded_activity)).not.toContain(older.decisionId);
+    expect(await f.repository.isUnchanged(selected,before.revision,undefined,{includeCurrency:false,includeRecordedActivity:true})).toBe(false);
+  });
+  it("C5 optional activity bad original hash is fixed absence, while source/Core revocation still replaces a held result",async()=>{
+    const f=await fixture({purposes:recordedPurposes});await seedRecordedDecision(f,"R2",{badOriginalHash:true});
+    expect((await read(f,"R2")).recorded_activity).toEqual({availability:"NOT_PUBLISHED",reason_code:"RECORDED_ACTIVITY_NOT_PUBLIC"});
+    const original=f.repository.protectedDetails.bind(f.repository);let revoked=false;
+    restore(vi.spyOn(f.repository,"protectedDetails").mockImplementation(async(...args)=>{
+      const result=await original(...args);if(!revoked){revoked=true;await revoke(f,"PORTFOLIO");}return result;
+    }));
+    await refused(read(f,"R2"),409,"OPERATIONAL_READ_CHANGED");
+    expect(revoked).toBe(true);expect(f.held()).toBe(0);
+  });
+  it("C5 R2 verdicts are actual bounded findings with unstructured facts explicitly absent, not current admission",async()=>{
+    // createR2() already captures its ordinal-0 finding. Start another valid
+    // own immutable root with no findings, never delete/rewrite that capture.
+    const captured=await fixture({purposes:recordedPurposes}),f={...captured,r2:await seededR2(captured)};
+    const ids=[];for(let ordinal=0;ordinal<66;ordinal++)ids.push(await seedRecordedFinding(f,ordinal));
+    const before=await businessState(f),body=r2ParentRead.parse(await read(f,"R2"));
+    expect(body.recorded_verdicts.availability).toBe("AVAILABLE");
+    if(body.recorded_verdicts.availability!=="AVAILABLE")throw Error("TEST_ONLY absent");
+    expect(body.recorded_verdicts).toMatchObject({limit:64,has_more:true,admission:{state:"NOT_EVALUATED"}});
+    expect(body.recorded_verdicts.items.map(row=>row.finding_id)).toEqual(ids.slice(0,64));
+    for(const item of body.recorded_verdicts.items){
+      expect(item.source_ref).toMatchObject({approval_id:f.r2,finding_id:item.finding_id});
+      for(const key of ["criterion_key","label_key","observed","limit","op","unit","currency"] as const)
+        expect(item[key]).toEqual({availability:"NOT_PUBLISHED",value:null,reason_code:"SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"});
+    }
+    finite(body);expect(await businessState(f)).toEqual(before);expect(f.held()).toBe(0);
+    expect(f.sql.filter(sql=>sql.includes("FROM governance_approval_findings")).every(sql=>sql.includes("LIMIT 65")&&
+      !/c\.(?:label|suggestion|policy_version|formula_version|basis_hashes)/.test(sql))).toBe(true);
+  });
+  const purposeMissing = { availability:"NOT_PUBLISHED", reason_code:"PARENT_FIELD_PURPOSE_NOT_QUALIFIED" } as const;
+  function followPrivacy(value: unknown) {
+    // The old finite() rejects the word requester wholesale; stable requester
+    // IDs are now explicitly sealed facts. Keep all old PRIVATE/prose checks.
+    expect(JSON.stringify(value)).not.toMatch(new RegExp(`${PRIVATE}|username|email|actor_user_id|ts_user_id|apply_token|response_json|request_key|source_href|decision_actor_ids|can_decide|current_decision_allowed`));
+  }
+  it("C5 old purposes keep all new sections absent and never select actor IDs or latest-plan discovery",async()=>{
+    const f=await fixture();
+    for(const family of families){
+      const body=await read(f,family);
+      expect(body.actors).toEqual(purposeMissing);expect(body.latest_operation).toEqual(purposeMissing);
+      if(body.family==="R2")expect(body.decision_context).toEqual(purposeMissing);
+    }
+    expect(f.sql.join("\n")).not.toMatch(/a\.(?:requester_user_id|artifact_creator_user_id|decided_by_user_id)|latest AS MATERIALIZED/);
+    expect(f.held()).toBe(0);
+  });
+  it.each(families.flatMap(family=>(["other-reader","original-actor"] as const).map(viewer=>({family,viewer}))))(
+    "C5 $family/$viewer HTTP and composition expose stable actor IDs, not user lookups or decision authority",async({family,viewer})=>{
+      const f=await fixture({purposes:followPurposes,account:viewer==="original-actor"?owner:reader});
+      const row=(await ctx.pool.query("SELECT requester_user_id,artifact_creator_user_id,decided_by_user_id FROM governance_approval_requests WHERE approval_id=$1",[idFor(f,family)])).rows[0];
+      const before=await businessState(f),confirm=restore(vi.spyOn(f.access,"confirmReadContext"));
+      await withHttp(f,async(http,legacy)=>{
+        const urls=[path(f,family),`/api/v1/execution/compositions/${family==="R2"?`approvals/${f.r2}?workspace_id=${encodeURIComponent(f.workspace)}&view=r2`:`exit-reviews/${f.paper}?workspace_id=${encodeURIComponent(f.workspace)}`}`];
+        for(const [index,url] of urls.entries()){
+          const response=await http.inject({method:"GET",url,headers:headers(f)});
+          expect(response.statusCode,response.body).toBe(200);expect(response.headers["cache-control"]).toBe("private, no-store");
+          const envelope=response.json(),body=index===0?envelope:family==="R2"?envelope.data.governance:envelope.data.exit_review;
+          (family==="R2"?r2ParentRead:paperExitParentRead).parse(body);
+          expect(body.actors).toEqual({availability:"AVAILABLE",basis:"STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION",...row,
+            viewer_is_requester:row.requester_user_id===f.account.user.userId,
+            viewer_is_artifact_creator:row.artifact_creator_user_id===f.account.user.userId,
+            viewer_is_decided_by:row.decided_by_user_id===null?null:row.decided_by_user_id===f.account.user.userId});
+          expect(body.latest_operation).toEqual({availability:"NOT_PUBLISHED",reason_code:"NO_RECORDED_PORTAL_OPERATION"});
+          followPrivacy(envelope);
+        }
+        expect(legacy).not.toHaveBeenCalled();
+      });
+      expect(confirm).toHaveBeenCalledTimes(2);expect(await businessState(f)).toEqual(before);
+      expect(f.sql.join("\n")).not.toMatch(/(?:FROM|JOIN)\s+(?:portal_users|auth_users|auth_sessions)\b/i);
+      expect(f.forbidden).not.toHaveBeenCalled();expect(f.held()).toBe(0);
+    });
+  it("C5 each optional purpose needs its own current field leaf on BOTH anchors despite other accepted audit leaves",async()=>{
+    const f=await fixture({purposes:followPurposes});
+    for(const purpose of ["DECISION_ACTORS","DECISION_LATEST_OPERATION","R2_DECISION_CONTEXT"] as const){
+      for(const anchor of ["DEPLOYMENT","PORTFOLIO"] as const){
+        const leaf=f.accepted.find(g=>g.field_policy_ref===`TEST_ONLY:${purpose}`&&g.selector.kind==="EXPLICIT_RESOURCE_SET"&&g.selector.resource_kind===anchor)!;
+        expect(leaf).toBeDefined();const entry=f.source.grants.find(g=>g.grant_id===leaf.grant_id)!,original=entry.targets,sqlStart=f.sql.length;
+        entry.targets=[];
+        try{
+          const body=r2ParentRead.parse(await read(f,"R2"));
+          expect(body[purpose==="DECISION_ACTORS"?"actors":purpose==="DECISION_LATEST_OPERATION"?"latest_operation":"decision_context"]).toEqual(purposeMissing);
+          if(purpose==="DECISION_LATEST_OPERATION")expect(f.sql.slice(sqlStart).filter(sql=>sql.includes("latest AS MATERIALIZED"))).toEqual([]);
+          else expect(body.latest_operation).toEqual({availability:"NOT_PUBLISHED",reason_code:"NO_RECORDED_PORTAL_OPERATION"});
+          if(purpose!=="DECISION_ACTORS")expect(body.actors.availability).toBe("AVAILABLE");
+          if(purpose!=="R2_DECISION_CONTEXT")expect(body.decision_context.availability).toBe("AVAILABLE");
+          followPrivacy(body);
+        }finally{entry.targets=original;}
+      }
+    }
+  });
+  it.each(["DECISION_OPERATION","DECISION_LATEST_OPERATION"] as const)(
+    "C5 missing %s cannot borrow the other latest/detail purpose or query a plan ID",async missing=>{
+      const f=await fixture({purposes:followPurposes.filter(p=>p!==missing)}),id=await seedOperation(f,"R2");
+      const body=await read(f,"R2");expect(body.latest_operation).toEqual(purposeMissing);
+      expect(JSON.stringify(body)).not.toContain(id);expect(f.sql.join("\n")).not.toContain("latest AS MATERIALIZED");
+    });
+  it.each(families)("C5 %s latest order is native microsecond DESC then C ID ASC, with stored expired status and no GET write",async family=>{
+    const f=await fixture({purposes:followPurposes});
+    const prefix=`TEST_ONLY:${randomUUID()}:`,low=prefix+"a",high=prefix+"z";
+    await seedOperation(f,family,{id:low,createdAt:"2026-01-02T03:04:05.123100Z",expired:true});
+    await seedOperation(f,family,{id:high,createdAt:"2026-01-02T03:04:05.123900Z",expired:true});
+    const first=await read(f,family);
+    expect(first.latest_operation).toMatchObject({availability:"AVAILABLE",operation_id:high,stored_status:"PLANNED",
+      created_at_ms:Date.parse("2026-01-02T03:04:05.123Z"),order_basis:"POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"});
+    const tie=prefix+"b";await seedOperation(f,family,{id:tie,createdAt:"2026-01-02T03:04:05.123900Z",expired:true});
+    const before=await businessState(f),body=await read(f,family);
+    expect(body.latest_operation).toMatchObject({operation_id:tie,stored_status:"PLANNED",
+      basis:"LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY"});
+    const table=family==="R2"?"governance_decision_plans":"governance_paper_exit_decision_plans";
+    const times=(await ctx.pool.query(`SELECT operation_id,to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS exact FROM ${table} WHERE workspace_id=$1 ORDER BY created_at DESC,operation_id COLLATE "C" ASC`,[f.workspace])).rows;
+    expect(times.slice(0,3)).toEqual([{operation_id:tie,exact:"2026-01-02T03:04:05.123900Z"},
+      {operation_id:high,exact:"2026-01-02T03:04:05.123900Z"},{operation_id:low,exact:"2026-01-02T03:04:05.123100Z"}]);
+    const queries=f.sql.filter(sql=>sql.includes("latest AS MATERIALIZED"));expect(queries).toHaveLength(4);
+    for(const sql of queries){
+      const selection=sql.slice(sql.indexOf("latest AS MATERIALIZED"),sql.indexOf(") SELECT c.operation_id"));
+      expect(selection).toContain("c.workspace_id=r.workspace_id");expect(selection).toContain(family==="R2"?"c.approval_id=r.approval_id":"c.review_id=r.approval_id");
+      expect(selection).toContain('ORDER BY c.created_at DESC,c.operation_id COLLATE "C" ASC LIMIT 1');
+      expect(selection).not.toMatch(/command_type\s*=|command_version\s*=|NOT EXISTS/);
+    }
+    followPrivacy(body);expect(await businessState(f)).toEqual(before);expect(f.held()).toBe(0);
+  });
+  it.each(["unsupported-newest","same-workspace-collision"] as const)(
+    "C5 %s is fixed absence, never the older readable plan",async variant=>{
+      const f=await fixture({purposes:followPurposes}),older=await seedOperation(f,"R2",{createdAt:"2026-01-02T03:04:05.123100Z"});
+      const latest=await seedOperation(f,"R2",{createdAt:"2026-01-02T03:04:05.123900Z",
+        ...(variant==="unsupported-newest"?{commandType:"GOVERNANCE_R1_DECISION" as const}:{})});
+      // Migration133 expressly permits R1/R2/LIVE command types. This is a
+      // legal initial mismatched type, not a disabled CHECK/immutable UPDATE.
+      if(variant==="same-workspace-collision")await actualF0(f,latest);
+      const body=await read(f,"R2");
+      expect(body.latest_operation).toEqual({availability:"NOT_PUBLISHED",reason_code:"LATEST_RECORDED_OPERATION_NOT_PUBLIC"});
+      expect(JSON.stringify(body)).not.toContain(older);expect(JSON.stringify(body)).not.toContain(latest);followPrivacy(body);
+    });
+  it.each([
+    {created:"1969-01-02T03:04:05.123456Z",expires:"1969-01-03T03:04:05.123456Z",older:false},
+    {created:"10000-01-02T03:04:05.123456Z",expires:"10000-01-03T03:04:05.123456Z",older:true},
+  ])("C5 legal SQL time outside the public UTC-ms domain ($created) is fixed latest absence, not a whole-parent failure",async({created,expires,older})=>{
+    const f=await fixture({purposes:followPurposes});
+    const previous=older?await seedOperation(f,"R2",{createdAt:"2026-01-02T03:04:05.123456Z"}):undefined;
+    const id=await seedOperation(f,"R2",{createdAt:created,expiresAt:expires});
+    const before=await businessState(f),body=await read(f,"R2");
+    expect(body.latest_operation).toEqual({availability:"NOT_PUBLISHED",reason_code:"LATEST_RECORDED_OPERATION_NOT_PUBLIC"});
+    expect(body.actors.availability).toBe("AVAILABLE");expect(JSON.stringify(body)).not.toContain(id);
+    if(previous)expect(JSON.stringify(body)).not.toContain(previous);
+    followPrivacy(body);expect(await businessState(f)).toEqual(before);
+  });
+  it("C5 foreign opposite-family plans do not shadow the authorized latest; a new own same-ms plan invalidates the flight",async()=>{
+    const f=await fixture({purposes:followPurposes}),foreign=await fixture({purposes:operationPurposes});
+    const first=await seedOperation(f,"R2",{createdAt:"2026-01-02T03:04:05.123100Z"});
+    await seedOperation(foreign,"PAPER_EXIT",{id:first,createdAt:"2026-01-02T03:04:05.123900Z"});
+    expect((await read(f,"R2")).latest_operation).toMatchObject({availability:"AVAILABLE",operation_id:first});
+    const prepared=await f.service.prepare(f.principal,"R2",f.r2);
+    await seedOperation(f,"R2",{createdAt:"2026-01-02T03:04:05.123900Z"});
+    await refused(f.service.finish(prepared),409,"OPERATIONAL_READ_CHANGED");expect(f.held()).toBe(0);
+  });
+  it.each([128,129])("C5 verified own R2 manifest%i publishes bounded stored pins with admission NOT_EVALUATED",async count=>{
+    const f=await fixture({purposes:followPurposes}),id=await seededR2(f,{count});
+    const before=await businessState(f),body=r2ParentRead.parse(await read(f,"R2",id));
+    const original=(await ctx.pool.query("SELECT evidence_set_hash,approval_version FROM governance_approval_requests WHERE approval_id=$1",[id])).rows[0];
+    const ownHashes=(await ctx.pool.query("SELECT sha256 FROM governance_approval_evidence WHERE approval_id=$1 ORDER BY sha256 COLLATE \"C\"",[id])).rows.map(row=>row.sha256);
+    const context=body.decision_context;if(context.availability!=="AVAILABLE")throw Error("TEST_ONLY context missing");
+    expect(context).toMatchObject({workspace_id:f.workspace,approval_id:id,expected_approval_version:original.approval_version,
+      evidence_set_hash:original.evidence_set_hash,source_side_effect_requested:false,
+      admission:{state:"NOT_EVALUATED",reason_code:"CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"}});
+    expect(context.evidence_hashes).toEqual(count===128?{availability:"AVAILABLE",value:[...new Set(ownHashes)].sort(),reason_code:null}:
+      {availability:"NOT_PUBLISHED",value:null,reason_code:"EVIDENCE_HASH_LIMIT_EXCEEDED"});
+    const authority=await f.access.readContext(f.account.actor,f.workspace);
+    expect(evaluateAccess(authority,"governance.r2.decide",{kind:"DEPLOYMENT",id:f.deployment},"paper").allowed).toBe(false);
+    expect(JSON.stringify(context)).not.toMatch(/READY|BLOCKED|capital|raw_manifest|r1_approval_id|can_decide/);
+    followPrivacy(body);expect(await businessState(f)).toEqual(before);
+  });
+  it.each(["decoded-body-core-revoke","held-integrity-session-revoke","decoded-body-source-revoke"] as const)(
+    "C5 %s never releases optional actor/hash/operation facts or a private error",async variant=>{
+      const account=variant==="held-integrity-session-revoke"?await activated("USER"):reader;
+      const f=await fixture({purposes:followPurposes,account});await seedOperation(f,"R2");
+      const id=variant==="held-integrity-session-revoke"?await seededR2(f,{extra:{evidence_set_hash:accessDigest("TEST_ONLY bad initial hash")}}):f.r2;
+      const prepared=await f.service.prepare(f.principal,"R2",id);
+      if(variant==="decoded-body-core-revoke"){
+        const leaf=f.accepted.find(g=>g.field_policy_ref==="TEST_ONLY:DECISION_ACTORS")!;
+        await f.grants.saveGrant({...leaf,revision:next(),revoked_at_ms:await dbNow()});
+      }else if(variant==="held-integrity-session-revoke")await ctx.pool.query(
+        "UPDATE auth_sessions SET state='REVOKED',revoked_at=clock_timestamp(),revoke_reason='TEST_ONLY C5' WHERE session_id=$1",[account.session.sessionId]);
+      else for(const entry of f.source.grants)entry.targets=entry.targets.filter(target=>target.resource.kind!=="PORTFOLIO");
+      const status=variant==="held-integrity-session-revoke"?403:variant==="decoded-body-core-revoke"?409:404;
+      const code=variant==="held-integrity-session-revoke"?"OPERATIONAL_READ_AUTHORITY_REQUIRED":variant==="decoded-body-core-revoke"?"OPERATIONAL_READ_CHANGED":"OPERATIONAL_READ_NOT_FOUND";
+      await refused(f.service.finish(prepared),status,code);expect(f.held()).toBe(0);
+    });
   it("bounded operation identity preserves the nested selected JSON for parents, F0 and absent IDs",async()=>{
     const f=await fixture({purposes:operationPurposes});
     for(const family of families){

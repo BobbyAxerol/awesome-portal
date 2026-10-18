@@ -22,7 +22,8 @@ documents.forEach((api,index)=>ajv.addSchema(api,base+"openapi/"+names[index]+".
 ajv.addSchema(load("openapi/execution-canary.openapi.json"),base+"openapi/execution-canary.openapi.json");
 const pointer="/paths/~1api~1v1~1execution~1operations~1{operation_id}/get/responses/200/content/application~1json/schema";
 const validators=names.map(name=>ajv.compile({$ref:base+"openapi/"+name+".openapi.json#"+pointer}));
-const trusted=load("fixtures/execution-trusted-commands.synthetic.valid.json");
+const trusted={...load("fixtures/execution-trusted-commands.synthetic.valid.json"),
+  ack_only:load("fixtures/execution-command-currency.synthetic.valid.json").public_status};
 const old=load("fixtures/execution-command-operation.valid.json");
 describe("ELP2-04 one named operation reader across historical documents",()=>{
   it("preserves operationIds and all seven existing variants while adding two finite selected plans",()=>{

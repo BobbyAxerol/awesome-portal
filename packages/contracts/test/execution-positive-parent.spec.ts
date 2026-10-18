@@ -36,12 +36,61 @@ const runtime={R2ParentReadV2:r2ParentRead,PaperExitParentReadV2:paperExitParent
 const pairs=[
   ["r2","R2ParentReadV2"],["r2_absent","R2ParentReadV2"],
   ["paper_exit","PaperExitParentReadV2"],["paper_exit_absent","PaperExitParentReadV2"],
-  ["paper_exit_extended","PaperExitParentReadV2"],
+  ["paper_exit_extended","PaperExitParentReadV2"],["paper_exit_criteria","PaperExitParentReadV2"],
 ] as const;
 const checkBoth=(name:keyof typeof runtime,value:unknown,expected:boolean)=>{
   expect(validate(name,value),name+" JSON Schema").toBe(expected);
   expect(runtime[name].safeParse(value).success,name+" canonical Zod").toBe(expected);
 };
+
+describe("C5 separately sealed rich stored Paper Exit criteria",()=>{
+  it("publishes exact strings, source absence and registered labels without authority installation",()=>{
+    const value=clone(fixture.paper_exit_criteria);
+    checkBoth("PaperExitParentReadV2",value,true);
+    expect(value.criteria.items[0].observed.value).toBe("1842.000000000000000001");
+    expect(value.criteria.items[1].observed.value).toBe("0");
+    expect(value.criteria.items[0].op).toEqual({availability:"NOT_PUBLISHED",value:null,
+      reason_code:"SOURCE_COMPARATOR_FIELD_NOT_RECORDED"});
+    expect(fixture.paper_exit.criteria).toEqual({availability:"NOT_PUBLISHED",reason_code:"PARENT_FIELD_PURPOSE_NOT_QUALIFIED"});
+    const generated:GovernanceTypes["schemas"]["PaperExitParentReadV2"]=value;
+    expect(generated.criteria).toEqual(value.criteria);
+  });
+  it("rejects private/unknown fields and representable label, scalar and comparator contradictions in both validators",()=>{
+    for(const mutate of [
+      (row:any)=>{row.label_key.value="paper_exit.drift";},
+      (row:any)=>{row.criterion_key.value="not-registered";},
+      (row:any)=>{row.observed.value="1\n";},
+      (row:any)=>{row.observed.value=1;},
+      (row:any)=>{row.observed={availability:"AVAILABLE",value:null,reason_code:null};},
+      (row:any)=>{row.unit.value="https://private.example/";},
+      (row:any)=>{row.currency.value="USD\n";},
+      (row:any)=>{row.op={availability:"AVAILABLE",value:"<=",reason_code:null};},
+      (row:any)=>{row.source_ref.href="https://private.example/";},
+      (row:any)=>{row.label="PRIVATE_PROSE";},
+      (row:any)=>{row.source_label="PRIVATE_PROSE";},
+    ]){
+      const value=clone(fixture.paper_exit_criteria);mutate(value.criteria.items[0]);
+      checkBoth("PaperExitParentReadV2",value,false);
+    }
+    const unknown=clone(fixture.paper_exit_criteria),missing={availability:"NOT_PUBLISHED",value:null,
+      reason_code:"SOURCE_METRIC_NOT_REGISTERED"};
+    unknown.criteria.items[0].criterion_key=missing;unknown.criteria.items[0].label_key=missing;
+    checkBoth("PaperExitParentReadV2",unknown,true);
+    unknown.criteria.items[0].label_key={availability:"AVAILABLE",value:"paper_exit.drift",reason_code:null};
+    checkBoth("PaperExitParentReadV2",unknown,false);
+  });
+  it("keeps arbitrary parent/child equality and clock correlation runtime-only, never a JSON comparison keyword",()=>{
+    for(const mutate of [
+      (row:any)=>{row.source_ref.review_id="TEST_ONLY:other";},
+      (row:any)=>{row.source_ref.finding_id="TEST_ONLY:other";},
+      (row:any)=>{row.source_time.value++;},
+    ]){
+      const value=clone(fixture.paper_exit_criteria);mutate(value.criteria.items[0]);
+      expect(validate("PaperExitParentReadV2",value)).toBe(true);
+      expect(paperExitParentRead.safeParse(value).success).toBe(false);
+    }
+  });
+});
 
 describe("ELP2-04 independent finite stored Live approval",()=>{
   it("publishes the original profile-read GET only, without touching legacy mutations or source screen",()=>{
@@ -81,7 +130,8 @@ describe("ELP2-04 finite current-authorized R2/Paper Exit contracts",()=>{
       field_set_sha256:parentFieldSetDigest(purpose),valid_from_ms:0,valid_until_ms:1})));
     expect(parentReadFieldSeals.safeParse(seals).success).toBe(true);
     expect(new Set(seals.map(seal=>seal.field_set_sha256)).size).toBe(parentFieldPurpose.options.length);
-    expect(PARENT_FIELD_SEAL_CAP).toBe(25);expect(seals.length).toBe(24+(parentFieldPurpose.options.some(p=>p.startsWith("LIVE_"))?1:0));
+    expect(parentFieldPurpose.options).toHaveLength(23);
+    expect(PARENT_FIELD_SEAL_CAP).toBe(31);expect(seals).toHaveLength(31);
     const first=seals[0]!;
     for(const values of [
       [...seals,first],Array(17).fill(first),
@@ -401,7 +451,14 @@ describe("ELP2-04 finite Sandbox/Canary roots, never effective source verdicts",
     }
   });
   it("purpose/environment pairs are exact; old PAPER purposes do not acquire SANDBOX/LIVE authority",()=>{
-    expect(parentFieldPurpose.options.filter(p=>!p.startsWith("ACTIVATION_")&&!p.startsWith("LIVE_"))).toHaveLength(12);
+    expect(parentFieldPurpose.options.filter(p=>!p.startsWith("ACTIVATION_")&&!p.startsWith("LIVE_"))).toEqual([
+      "R2_ROOT","R2_LINEAGE","PAPER_EXIT_ROOT","PAPER_EXIT_REVIEW","PAPER_EXIT_LINEAGE",
+      "DECISION_OPERATION","SANDBOX_ROOT","SANDBOX_STEPS","SANDBOX_LINEAGE",
+      "CANARY_ROOT","CANARY_PROPOSAL","CANARY_LINEAGE","PAPER_EXIT_CRITERIA",
+      "DECISION_ACTORS","DECISION_LATEST_OPERATION","R2_DECISION_CONTEXT",
+      "RECORDED_PORTAL_ACTIVITY","R2_RECORDED_VERDICTS",
+    ]);
+    expect(parentPurposeEnvironments("PAPER_EXIT_CRITERIA")).toEqual(["paper"]);
     for(const purpose of parentFieldPurpose.options){
       for(const environment of parentPurposeEnvironments(purpose)){
       const seal={purpose,environment,contract_revision:"portal.execution.parent-fields.v1",
@@ -439,6 +496,124 @@ describe("ELP2-04 finite Sandbox/Canary roots, never effective source verdicts",
     }
     expect(()=>updateFollowingParentPaths({paths:{}},"execution-canary")).toThrow("Missing existing following-parent GET");
     expect(()=>updateFollowingParentPaths({paths:{}},"made-up")).toThrow("Unsupported following-parent document");
+  });
+});
+
+describe("C5 separately sealed bounded immutable Portal decisions and R2 verdicts",()=>{
+  const purposeAbsent={availability:"NOT_PUBLISHED",reason_code:"PARENT_FIELD_PURPOSE_NOT_QUALIFIED"};
+  const r2=()=>clone(fixture.r2_recorded),paper=()=>clone(fixture.paper_exit_recorded);
+  it("publishes exact canonical synthetic available vectors and required default absence, not installed authority",()=>{
+    checkBoth("R2ParentReadV2",r2(),true);checkBoth("PaperExitParentReadV2",paper(),true);
+    const r2Generated:GovernanceTypes["schemas"]["R2ParentReadV2"]=r2();
+    const paperGenerated:GovernanceTypes["schemas"]["PaperExitParentReadV2"]=paper();
+    expect(r2Generated.recorded_verdicts).toEqual(r2().recorded_verdicts);
+    expect(paperGenerated.recorded_activity).toEqual(paper().recorded_activity);
+    for(const [key,name]of pairs){const body=clone(fixture[key]);
+      expect(body.recorded_activity).toEqual(purposeAbsent);
+      if(key.startsWith("r2"))expect(body.recorded_verdicts).toEqual(purposeAbsent);
+      for(const field of ["recorded_activity",...(key.startsWith("r2")?["recorded_verdicts"]:[])]){
+        const missing=clone(body);delete missing[field];checkBoth(name,missing,false);
+      }
+    }
+    expect(parentPurposeEnvironments("RECORDED_PORTAL_ACTIVITY")).toEqual(["paper"]);
+    expect(parentPurposeEnvironments("R2_RECORDED_VERDICTS")).toEqual(["paper"]);
+    expect(parentFieldPurpose.options.filter(p=>!p.startsWith("ACTIVATION_")&&!p.startsWith("LIVE_"))).toHaveLength(18);
+    expect(fixture.authority_installed).toBe(false);expect(fixture.runtime_qualified).toBe(false);
+    // The selected-operation body is unchanged; only the current parent has
+    // these separately sealed sections. No implicit selected-plan expansion.
+    expect(fixture.r2_operation.recorded_activity).toBeUndefined();
+    expect(fixture.paper_exit_operation.recorded_activity).toBeUndefined();
+  });
+  it.each(["r2","paper_exit"] as const)("%s has finite family-specific activity and no prose, receipt, hash or source stage",key=>{
+    const get=key==="r2"?r2:paper,name=key==="r2"?"R2ParentReadV2":"PaperExitParentReadV2";
+    for(const mutate of [
+      (body:any)=>{body.recorded_activity.items[0].kind=key==="r2"?"PAPER_EXIT_DECISION_RECORDED":"R2_DECISION_RECORDED";},
+      (body:any)=>{body.recorded_activity.items[0].decision=key==="r2"?"PROMOTE":"APPROVE";},
+      (body:any)=>{body.recorded_activity.items[0].decision="APPLIED";},
+      (body:any)=>{body.recorded_activity.items[0].decision="REQUEST_CHANGES";},
+      (body:any)=>{body.recorded_activity.items[0].operation_id+="\n";},
+      (body:any)=>{body.recorded_activity.items[0].decision_id="https://private.example/";},
+      (body:any)=>{body.recorded_activity.items[0].actor_user_id="TEST_ONLY:not-public";},
+      (body:any)=>{body.recorded_activity.items[0].reason="PRIVATE_PROSE";},
+      (body:any)=>{body.recorded_activity.items[0].evidence_set_hash="sha256:"+"a".repeat(64);},
+      (body:any)=>{body.recorded_activity.items[0].source_receipt={state:"APPLIED"};},
+      (body:any)=>{body.recorded_activity.items[0].effective_stage="LIVE";},
+      (body:any)=>{body.recorded_activity.limit=33;},
+      (body:any)=>{body.recorded_activity.coverage="FULL_HISTORY";},
+      (body:any)=>{body.recorded_activity.basis="SOURCE_ACCEPTED";},
+      (body:any)=>{body.source.source_verdict="ACCEPTED";},
+      (body:any)=>{body.source.source_side_effect_requested=true;},
+      (body:any)=>{body.anchors.environment="LIVE";},
+    ]){const body=get();mutate(body);checkBoth(name,body,false);}
+    const noRows=get();noRows.recorded_activity.items=[];checkBoth(name,noRows,true);
+    noRows.recorded_activity.has_more=true;checkBoth(name,noRows,false);
+    const wrongAbsence=get();wrongAbsence.recorded_activity={availability:"NOT_PUBLISHED",reason_code:"RECORDED_VERDICTS_NOT_PUBLIC"};
+    checkBoth(name,wrongAbsence,false);
+    for(const absence of [purposeAbsent,{availability:"NOT_PUBLISHED",reason_code:"RECORDED_ACTIVITY_NOT_PUBLIC"}]){
+      const body=get();body.recorded_activity=absence;checkBoth(name,body,true);
+      const leak=get();leak.recorded_activity={...absence,items:[]};checkBoth(name,leak,false);
+    }
+  });
+  it("applies finite 32/64 row bounds and a full-page requirement only when has_more is true",()=>{
+    const body=r2(),activity=body.recorded_activity.items[0],verdict=body.recorded_verdicts.items[0];
+    body.recorded_activity.items=Array.from({length:32},(_,i)=>({...activity,decision_id:"TEST_ONLY:d"+i,
+      operation_id:"TEST_ONLY:o"+i,decided_at_ms:activity.decided_at_ms-i}));body.recorded_activity.has_more=true;
+    body.recorded_verdicts.items=Array.from({length:64},(_,i)=>({...verdict,finding_id:"TEST_ONLY:f"+i,ordinal:i,
+      source_ref:{...verdict.source_ref,finding_id:"TEST_ONLY:f"+i}}));body.recorded_verdicts.has_more=true;
+    checkBoth("R2ParentReadV2",body,true);
+    const activityOverflow=clone(body);activityOverflow.recorded_activity.items.push({...activity,decision_id:"TEST_ONLY:overflow",operation_id:"TEST_ONLY:overflow"});
+    checkBoth("R2ParentReadV2",activityOverflow,false);
+    const verdictOverflow=clone(body);verdictOverflow.recorded_verdicts.items.push({...verdict,finding_id:"TEST_ONLY:overflow",ordinal:64,
+      source_ref:{...verdict.source_ref,finding_id:"TEST_ONLY:overflow"}});checkBoth("R2ParentReadV2",verdictOverflow,false);
+    const shortActivity=clone(body);shortActivity.recorded_activity.items.pop();checkBoth("R2ParentReadV2",shortActivity,false);
+    const shortVerdict=clone(body);shortVerdict.recorded_verdicts.items.pop();checkBoth("R2ParentReadV2",shortVerdict,false);
+  });
+  it("does not mistake rounded public-millisecond ties for the private PostgreSQL microsecond/id order",()=>{
+    const body=r2(),items=body.recorded_activity.items;
+    items[0].decided_at_ms=items[1].decided_at_ms;
+    items[0].decision_id="TEST_ONLY:z";items[1].decision_id="TEST_ONLY:a";
+    checkBoth("R2ParentReadV2",body,true);
+  });
+  it("keeps structured R2 criterion values absent, finite outcomes honest and admission unevaluated",()=>{
+    const body=r2();
+    for(const item of body.recorded_verdicts.items){for(const key of ["criterion_key","label_key","observed","limit","op","unit","currency"])
+      expect(item[key]).toEqual({availability:"NOT_PUBLISHED",value:null,reason_code:"SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"});}
+    for(const mutate of [
+      (row:any)=>{row.outcome="APPROVED";},(row:any)=>{row.blocking=true;},
+      (row:any)=>{row.ordinal=-1;},(row:any)=>{row.evaluated_at_ms=-1;},
+      (row:any)=>{row.finding_id+="\n";},(row:any)=>{row.source_ref.approval_id+="\n";},
+      (row:any)=>{row.source_ref.kind="PORTAL_STORED_PAPER_EXIT_FINDING";},
+      (row:any)=>{row.source_ref.basis="SOURCE_ACCEPTED";},
+      (row:any)=>{row.source_ref.evidence_hash="sha256:"+"1".repeat(64);},
+      (row:any)=>{row.observed={availability:"AVAILABLE",value:"0",reason_code:null};},
+      (row:any)=>{row.limit={availability:"NOT_PUBLISHED",value:0,reason_code:"SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"};},
+      (row:any)=>{row.op={availability:"NOT_PUBLISHED",value:null,reason_code:"SOURCE_COMPARATOR_FIELD_NOT_RECORDED"};},
+      (row:any)=>{row.label="PRIVATE_PROSE";},(row:any)=>{row.source_receipt={verified:true};},
+    ]){const bad=r2();mutate(bad.recorded_verdicts.items[0]);checkBoth("R2ParentReadV2",bad,false);}
+    for(const patch of [{limit:65},{admission:{state:"READY",reason_code:null}},{coverage:"FULL_CRITERIA_HISTORY"},
+      {source_accepted:true},{reason:"PRIVATE_PROSE"}]){const bad=r2();Object.assign(bad.recorded_verdicts,patch);checkBoth("R2ParentReadV2",bad,false);}
+    const noRows=r2();noRows.recorded_verdicts.items=[];checkBoth("R2ParentReadV2",noRows,true);
+    const paperVerdicts=paper();paperVerdicts.recorded_verdicts=body.recorded_verdicts;checkBoth("PaperExitParentReadV2",paperVerdicts,false);
+    for(const absence of [purposeAbsent,{availability:"NOT_PUBLISHED",reason_code:"RECORDED_VERDICTS_NOT_PUBLIC"}]){
+      const bad=r2();bad.recorded_verdicts=absence;checkBoth("R2ParentReadV2",bad,true);
+      bad.recorded_verdicts={...absence,value:null};checkBoth("R2ParentReadV2",bad,false);
+    }
+  });
+  it("documents sibling identities, scalar arithmetic and cohort-key order as runtime-only constraints",()=>{
+    // JSON Schema cannot compare arbitrary sibling values, infer id-key
+    // uniqueness, lexical object-key order or a previous row's ordinal.
+    for(const mutate of [
+      (body:any)=>{body.recorded_activity.items[0].version_after++;},
+      (body:any)=>{body.recorded_activity.items[1].decision_id=body.recorded_activity.items[0].decision_id;},
+      (body:any)=>{body.recorded_activity.items[1].operation_id=body.recorded_activity.items[0].operation_id;},
+      (body:any)=>{body.recorded_activity.items.reverse();},
+      (body:any)=>{body.recorded_verdicts.items[0].source_ref.finding_id="TEST_ONLY:other";},
+      (body:any)=>{body.recorded_verdicts.items[0].source_ref.approval_id="TEST_ONLY:other";},
+      (body:any)=>{body.recorded_verdicts.items[1].finding_id=body.recorded_verdicts.items[0].finding_id;
+        body.recorded_verdicts.items[1].source_ref.finding_id=body.recorded_verdicts.items[0].finding_id;},
+      (body:any)=>{body.recorded_verdicts.items.reverse();},
+    ]){const body=r2();mutate(body);expect(validate("R2ParentReadV2",body)).toBe(true);
+      expect(r2ParentRead.safeParse(body).success).toBe(false);}
   });
 });
 
@@ -607,4 +782,97 @@ describe("ELP2-04 finite current ROOT Activation metadata contracts",()=>{
     expect(reviewedParentAuditRoot({...grant,selector:{kind:"EXPLICIT_RESOURCE_SET",resource_kind:"DEPLOYMENT",ids:["TEST_ONLY:dep"]}},oldPolicy,100)).toBe(true);
   });
 
+});
+
+describe("C5 stored actors, latest Portal operation and R2 plan inputs",()=>{
+  // Construct finite TEST_ONLY values from canonical roots, never a claimed
+  // installed authority. Main owns fixture/schema emitter and generation.
+  const missing={availability:"NOT_PUBLISHED",reason_code:"PARENT_FIELD_PURPOSE_NOT_QUALIFIED"} as const;
+  function available(key:"r2"|"paper_exit"):any{
+    const base=clone(fixture[key]),r2=key==="r2";
+    base.actors={availability:"AVAILABLE",basis:"STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION",
+      requester_user_id:"TEST_ONLY:requester",artifact_creator_user_id:"TEST_ONLY:creator",decided_by_user_id:null,
+      viewer_is_requester:false,viewer_is_artifact_creator:false,viewer_is_decided_by:null};
+    base.latest_operation={availability:"AVAILABLE",basis:"LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY",
+      operation_id:"TEST_ONLY:latest",command_version:1,command_type:r2?"GOVERNANCE_R2_DECISION":"GOVERNANCE_PAPER_EXIT_DECISION",
+      stored_status:"PLANNED",created_at_ms:base.approval.created_at_ms,
+      order_basis:"POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"};
+    if(r2)base.decision_context={availability:"AVAILABLE",basis:"VERIFIED_STORED_R2_INPUTS_NOT_ACTION_AUTHORIZATION",
+      gate:"R2",workspace_id:base.workspace_id,approval_id:base.approval.approval_id,
+      expected_approval_version:base.approval.approval_version,evidence_set_hash:"sha256:"+"c".repeat(64),
+      evidence_hashes:{availability:"AVAILABLE",value:["sha256:"+"a".repeat(64),"sha256:"+"b".repeat(64)],reason_code:null},
+      command_type:"GOVERNANCE_R2_DECISION",request_schema_version:"governance.r2-decision-plan-request.v1",
+      plan_path:"/api/v1/execution/commands/plans",admission:{state:"NOT_EVALUATED",reason_code:"CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"},
+      source_side_effect_requested:false};
+    return base;
+  }
+  it.each(["r2","paper_exit"] as const)("%s publishes both available and independently purpose-absent sections",key=>{
+    const name=key==="r2"?"R2ParentReadV2":"PaperExitParentReadV2",body=available(key);
+    checkBoth(name,body,true);
+    const generated:GovernanceTypes["schemas"]["R2ParentReadV2"]|GovernanceTypes["schemas"]["PaperExitParentReadV2"]=body;
+    expect(generated.actors).toEqual(body.actors);expect(generated.latest_operation).toEqual(body.latest_operation);
+    body.actors=missing;body.latest_operation=missing;if(key==="r2")body.decision_context=missing;
+    checkBoth(name,body,true);
+    for(const field of ["actors","latest_operation",...(key==="r2"?["decision_context"]:[])]){
+      const absent=clone(body);delete absent[field];checkBoth(name,absent,false);
+    }
+  });
+  it.each(["r2","paper_exit"] as const)("%s rejects actor private fields, invalid IDs and null/boolean contradiction in both validators",key=>{
+    const name=key==="r2"?"R2ParentReadV2":"PaperExitParentReadV2";
+    for(const mutate of [
+      (row:any)=>{row.requester_username="TEST_ONLY:private";},
+      (row:any)=>{row.requester_user_id+="\n";},
+      (row:any)=>{row.artifact_creator_user_id="https://private.example/";},
+      (row:any)=>{row.decided_by_user_id=null;row.viewer_is_decided_by=false;},
+      (row:any)=>{row.decided_by_user_id="TEST_ONLY:decider";row.viewer_is_decided_by=null;},
+      (row:any)=>{row.can_decide=true;},
+    ]){const body=available(key);mutate(body.actors);checkBoth(name,body,false);}
+    const exactFalse=available(key);exactFalse.actors.decided_by_user_id="TEST_ONLY:decider";
+    exactFalse.actors.viewer_is_decided_by=false;checkBoth(name,exactFalse,true);
+  });
+  it.each(["r2","paper_exit"] as const)("%s latest family, finite status and fixed absence are not action permission or private receipt",key=>{
+    const name=key==="r2"?"R2ParentReadV2":"PaperExitParentReadV2";
+    for(const status of ["PLANNED","APPLIED","EXPIRED"]){const body=available(key);body.latest_operation.stored_status=status;checkBoth(name,body,true);}
+    for(const reason of ["NO_RECORDED_PORTAL_OPERATION","LATEST_RECORDED_OPERATION_NOT_PUBLIC"]){
+      const body=available(key);body.latest_operation={availability:"NOT_PUBLISHED",reason_code:reason};checkBoth(name,body,true);
+    }
+    for(const patch of [
+      {command_type:key==="r2"?"GOVERNANCE_PAPER_EXIT_DECISION":"GOVERNANCE_R2_DECISION"},
+      {command_version:2},{stored_status:"READY"},{operation_id:"TEST_ONLY:latest\n"},{created_at_ms:-1},
+      {order_basis:"JS_DATE_SORT"},{apply_token:"PRIVATE"},{response_json:{}},{can_apply:true},
+    ]){const body=available(key);Object.assign(body.latest_operation,patch);checkBoth(name,body,false);}
+    const leaked=available(key);leaked.latest_operation={availability:"NOT_PUBLISHED",reason_code:"LATEST_RECORDED_OPERATION_NOT_PUBLIC",operation_id:"PRIVATE"};
+    checkBoth(name,leaked,false);
+  });
+  it("R2 request pins never claim admission, capital or a TS verdict; hash absence differs from empty",()=>{
+    const body=available("r2");checkBoth("R2ParentReadV2",body,true);
+    for(const patch of [
+      {admission:{state:"READY",reason_code:null}},{source_side_effect_requested:true},{command_type:"GOVERNANCE_R1_DECISION"},
+      {request_schema_version:"governance.r1-decision-plan-request.v1"},{plan_path:"/api/v1/other"},
+      {economic_backing:"0"},{can_decide:true},{receipt:{state:"APPLIED"}},
+      {evidence_hashes:{availability:"AVAILABLE",value:null,reason_code:null}},
+      {evidence_hashes:{availability:"NOT_PUBLISHED",value:[],reason_code:"EVIDENCE_HASH_LIMIT_EXCEEDED"}},
+      {evidence_hashes:{availability:"AVAILABLE",value:["sha256:"+"a".repeat(64),"sha256:"+"a".repeat(64)],reason_code:null}},
+      {evidence_hashes:{availability:"AVAILABLE",value:Array.from({length:129},(_,i)=>"sha256:"+i.toString(16).padStart(64,"0")),reason_code:null}},
+    ]){const changed=clone(body);Object.assign(changed.decision_context,patch);checkBoth("R2ParentReadV2",changed,false);}
+    for(const hashes of [
+      {availability:"AVAILABLE",value:[],reason_code:null},
+      {availability:"NOT_PUBLISHED",value:null,reason_code:"EVIDENCE_HASH_LIMIT_EXCEEDED"},
+    ]){const changed=clone(body);changed.decision_context.evidence_hashes=hashes;checkBoth("R2ParentReadV2",changed,true);}
+  });
+  it("keeps arbitrary context/parent equality and hash lexical sorting runtime-only",()=>{
+    // Ordinary JSON Schema can express the family/admission/null invariants
+    // above, not sibling-value equality or lexical array order. Do not add a
+    // custom comparison vocabulary or claim AJV rejects these by itself.
+    for(const mutate of [
+      (row:any)=>{row.workspace_id="TEST_ONLY:other-workspace";},
+      (row:any)=>{row.approval_id="TEST_ONLY:other-approval";},
+      (row:any)=>{row.expected_approval_version++;},
+      (row:any)=>{row.evidence_hashes.value.reverse();},
+    ]){const body=available("r2");mutate(body.decision_context);
+      expect(validate("R2ParentReadV2",body)).toBe(true);expect(r2ParentRead.safeParse(body).success).toBe(false);}
+    // Public approval deliberately omits evidence_set_hash. Its context hash
+    // is verified against the private OWN manifest by the actual PG tests,
+    // never against an invented public approval.evidence_set_hash sibling.
+  });
 });

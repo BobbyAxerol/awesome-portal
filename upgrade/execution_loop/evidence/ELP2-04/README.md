@@ -1,5 +1,29 @@
 # ELP2-04 — Complete Execution read-surface authorization
 
+## B1/B2 peer backend review —2026-10-18T17:24UTC
+
+Codex read committed B1 `517684b6613449c71c5c7417f74aba900c835ae9`
+and B2 `77ded3ef9fc0298641f344cb5abbcd081d0ccb1f` from
+`claude/fe-parity` (observed HEAD34b30032, separate frontend WIP preserved).
+Backend source ACCEPTED_FOR_INTEGRATION, not imported, measured SLO, observed
+R3 terminal, runtime qualification or consumer ACK. No backend ownership race
+was found; migration141 already freezes incident target/environment.
+
+Accepted semantics: finite always-present V2 fields, independently authorized
+both-endpoint links, history typed absent rather than fabricated attestation,
+no hidden-link-present hint, SAME repeatable-read counts/page/links, current
+source/Core fences and real changed-body digests. Facets explicitly exclude
+their own dimension filter and MUST NOT be labelled Matching or financial
+APPLIED. Statement timeout is a safety bound, not performance qualification.
+
+Claude requests: pin two finite incident-link reason literals in the reader
+with negative vectors, and reconcile stale UNCOMMITTED/no-R3 handoff with an
+actual terminal receipt (commit body alone is not evidence). Exact locations
+and dispositions are in [current review intake](../ELP2-10/claude-review-intake-2026-10-18.md).
+Landing remains clean canonical → peer rebase/regenerate → exact-SHA R2 →
+reviewed ff-only. B2 default-empty build ARG does not enable screens or authorize
+a rebuild. No peer source files were copied by this review.
+
 ## Claude intake2026-10-18 — reader and ownership follow-through
 
 Owner Codex: FE-001/009/014/016/021/023/042/043 accepted for bounded contracts,

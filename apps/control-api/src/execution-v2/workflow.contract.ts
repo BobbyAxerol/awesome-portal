@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { assertAmountPartition, executionEnvironment, financialStage, opaqueRevision, unsignedDecimal, utcMilliseconds } from "./foundation.contract";
-import { commandIntent, commandPreview, commandStatus } from "./command.contract";
+import { commandIntent, commandPreview, publicCommandStatus } from "./command.contract";
+export { paperCriterionCapsule, sandboxCriterionCapsule, workflowPaperCriteria, workflowSandboxCriteria,
+  workflowCriteriaCapsules, workflowRecordedPortal } from "./workflow-criteria.contract";
 
 const text = z.string().min(1).max(256);
 export const workflowResource = z.object({ kind: z.enum(["ROOT", "PORTFOLIO", "ALPHA", "DEPLOYMENT", "ACCOUNT", "BINDING"]), id: text }).strict();
@@ -57,14 +59,14 @@ export const workflowCreate = z.object({ schema_version: z.literal("portal.execu
 });
 
 export const workflowCapital = z.object({ schema_version: z.literal("portal.execution.capital-workflow.v1"), context: workflowContext,
-  currency: text, status: commandStatus,
+  currency: text, status: publicCommandStatus,
   effect_kind: z.enum(["ECONOMIC_ASSIGNMENT", "MANAGEMENT_BUDGET", "NOMINAL_ROOT_CAP"]),
   physical_transfer_performed: z.literal(false), form_cancel: z.literal("DISCARD_LOCAL_DRAFT_ONLY"),
   after_submit_cancel: z.literal("SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED"),
   refresh: z.literal("GET_ORIGINAL_COMMAND_NO_RESUBMIT"), public_copy_key: z.enum(["QUERY_SAME_INTENT", "REVIEW_RECEIPT",
     "PARTIAL_REMAINDER_PENDING", "APPLIED_PART_RETAINED", "SOURCE_REJECTED"]),
   automatic_resend: z.literal(false) }).strict().superRefine((v, c) => {
-  if (v.context.environment !== v.status.environment || v.context.resource.kind !== v.status.resource.kind || v.context.resource.id !== v.status.resource.id)
+  if (v.currency !== v.status.currency || v.context.environment !== v.status.environment || v.context.resource.kind !== v.status.resource.kind || v.context.resource.id !== v.status.resource.id)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "WORKFLOW_COMMAND_CONTEXT_MISMATCH" });
   const b = v.status.business;
   try { if (b.amounts) assertAmountPartition(b.amounts); }

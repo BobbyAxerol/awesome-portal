@@ -3,8 +3,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
-import { ACCESS_ACTIONS, accessAction, accessPreview, accessProposal, accessRevoke,
+import { ACCESS_ACTIONS, accessAction, accessText, accessPreview, accessProposal, accessRevoke,
   grantChange, resourceSelector } from "../../../apps/control-api/src/execution-v2/access.contract";
+import { ROW_ACTIONS, RULES, eligibilityQuery, eligibilityResult, navigationInput, navigationResult,
+  scopedText } from "../../../apps/control-api/src/execution-v2/self-eligibility";
 
 const root = resolve(__dirname, "..");
 const load = (path: string) => JSON.parse(readFileSync(resolve(root, path), "utf8"));
@@ -36,6 +38,8 @@ const revokeRequest = () => ({ workspace_id: "ws_TEST_ONLY", expected_policy_rev
 const prefix = "/api/admin/profile-access/v2";
 const routes = [
   { path: `${prefix}/effective`, method: "get", operation: "portalScopedAccessEffectiveGetV1", output: "AccessEffective", status: "200" },
+  { path: prefix + "/eligibility", method: "get", operation: "portalScopedAccessEligibilityGetV1", output: "AccessEligibility", status: "200" },
+  { path: prefix + "/self-navigation", method: "get", operation: "portalScopedAccessSelfNavigationGetV1", output: "AccessSelfNavigation", status: "200" },
   { path: `${prefix}/preview`, method: "post", operation: "portalScopedAccessPreviewPostV1", input: "AccessPreviewRequest", output: "AccessPreview", status: "200" },
   { path: `${prefix}/proposals`, method: "post", operation: "portalScopedAccessProposalPostV1", input: "AccessProposalRequest", output: "AccessResult", status: "201" },
   { path: `${prefix}/proposals/{id}`, method: "get", operation: "portalScopedAccessProposalGetV1", output: "AccessProposal", status: "200" },
@@ -55,7 +59,7 @@ describe("ELP2-03 canonical TEST_ONLY access fixtures", () => {
 
   it("covers pending policy, pending researcher disclosure and every immutable operation outcome", () => {
     expect(new Set(fixtures.cases.map((entry: { type: string }) => entry.type)))
-      .toEqual(new Set(["AccessEffective", "AccessPreviewRequest", "AccessPreview", "AccessRevokePreview", "AccessReceipt"]));
+      .toEqual(new Set(["AccessEffective", "AccessPreviewRequest", "AccessPreview", "AccessRevokePreview", "AccessReceipt", "AccessEligibility", "AccessSelfNavigation"]));
     const effective = fixture("AccessEffective");
     expect(effective).toMatchObject({ availability: "POLICY_PENDING", policy_revision: null, grants: [],
       researcher_field_policy: { state: "PENDING", policy_ref: null },
@@ -309,13 +313,13 @@ describe("ELP2-03 browser intents have no policy, actor or TS authority input", 
   });
 });
 
-describe("ELP2-03 eight named public operations and generated mapping", () => {
-  it("publishes exactly eight paths and eight unique operationIds, with no public install/TS receipt route", () => {
+describe("ELP2-03 eight unchanged legacy operations plus two C3 self reads and generated mapping", () => {
+  it("publishes exactly ten paths and ten unique operationIds, with no public install/TS receipt route", () => {
     expect(spec.openapi).toBe("3.1.0");
     expect(Object.keys(spec.paths).sort()).toEqual(routes.map(route => route.path).sort());
     const operations = routes.map(route => spec.paths[route.path][route.method].operationId);
     expect(operations).toEqual(routes.map(route => route.operation));
-    expect(new Set(operations).size).toBe(8);
+    expect(new Set(operations).size).toBe(10);
     for (const route of routes) expect(Object.keys(spec.paths[route.path])).toEqual([route.method]);
     expect(Object.keys(spec.paths).join("\n")).not.toMatch(/install|bootstrap|acceptance|ts[-_/]?receipt|trust-profile/iu);
     for (const internal of ["ReviewedAccessPolicy", "TsMembershipAcceptance", "AccessPolicyInstallRequest", "AccessReceiptAcceptRequest"])
@@ -384,12 +388,258 @@ describe("ELP2-03 eight named public operations and generated mapping", () => {
     expect(verifier).toContain("generate_and_compare openapi/execution-access.openapi.json generated/execution-access.d.ts");
   });
 
-  it("generated declarations expose all eight operationIds, paths and canonical component names", () => {
+  it("generated declarations expose all ten operationIds, paths and canonical component names", () => {
     const generated = readFileSync(resolve(root, "generated/execution-access.d.ts"), "utf8");
     for (const route of routes) {
       expect(generated).toContain(`"${route.path}"`);
       expect(generated).toContain(`${route.operation}:`);
     }
     for (const name of Object.keys(spec.components.schemas)) expect(generated).toContain(`${name}:`);
+  });
+});
+
+
+describe("C3 current self projection — canonical TEST_ONLY schemas, never installed authority", () => {
+  const pairs = [
+    ["AccessEligibility", eligibilityResult],
+    ["AccessSelfNavigation", navigationResult],
+  ] as const;
+  function parity(name: typeof pairs[number][0], value: unknown, expected: boolean) {
+    const zod = name === "AccessEligibility" ? eligibilityResult : navigationResult;
+    expect(validates(name, value), name + " AJV").toBe(expected);
+    expect(zod.safeParse(value).success, name + " Zod").toBe(expected);
+  }
+  const ownQuery = () => ({ workspace_id: "ws_TEST_ONLY", environment: "paper",
+    resource_kind: "PORTFOLIO", resource_id: "portfolio_TEST_ONLY", actions: "portfolio.read,capital.top_up" });
+  const featureIds = ["EXECUTION_PORTFOLIOS", "EXECUTION_ACCOUNTS_BINDINGS", "EXECUTION_OPERATIONS", "EXECUTION_BLOTTER"];
+
+  it("both positive and absent synthetic output types have canonical examples and exact Zod parity", () => {
+    for (const [name, zod] of pairs) {
+      const cases = fixtures.cases.filter((entry: { type: string }) => entry.type === name);
+      const expected = name === "AccessEligibility"
+        ? ["POSITIVE_SHAPE_NOT_INSTALLED_AUTHORITY", "ABSENT_PERMISSION"]
+        : ["APP_ONLY_NOT_SOURCE_AUTHORITY", "ABSENT_PERMISSION",
+          "ROUTING_LEGACY_COMPATIBILITY_NOT_A_GRANT", "ROUTING_SCOPED_V2_NOT_A_GRANT"];
+      expect(cases.map((entry: { case_name: string }) => entry.case_name)).toEqual(expected);
+      expect(spec.components.schemas[name].examples).toEqual(cases.map((entry: { value: unknown }) => entry.value));
+      for (const entry of cases) {
+        expect(fixtures.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+        expect(zod.safeParse(entry.value).success).toBe(true);
+        parity(name, entry.value, true);
+        parity(name, { ...entry.value, installed_authority: true }, false);
+        expect(JSON.stringify(entry.value)).not.toMatch(/manager_domain_grants|catalogue_sha256|profile_sha256|field_policy_sha256/);
+      }
+    }
+    expect(fixtures.cases.filter((entry: { type: string; case_name?: string }) =>
+      entry.type === "AccessEligibility").map((entry: { case_name: string }) => entry.case_name))
+      .toEqual(["POSITIVE_SHAPE_NOT_INSTALLED_AUTHORITY", "ABSENT_PERMISSION"]);
+    const nav = fixture("AccessSelfNavigation");
+    expect(nav.features.map((row: { feature: string }) => row.feature)).toEqual(featureIds);
+    expect(nav.features.find((row: { feature: string }) => row.feature === "EXECUTION_OPERATIONS"))
+      .toMatchObject({ state: "HIDDEN", authority_mode: "NOT_ESTABLISHED" });
+    for (const row of nav.features) expect(row).toMatchObject({
+      family_check: "NOT_CHECKED", source_readiness: "NOT_CHECKED",
+      field_readiness: "NOT_CHECKED", command_readiness: "NOT_CHECKED",
+    });
+  });
+
+  it("publishes the exact finite row whitelist without widening the existing global action grammar", () => {
+    expect(spec.components.schemas.AccessEligibilityAction.enum).toEqual([...ROW_ACTIONS]);
+    expect(spec.components.schemas.AccessAction.enum).toEqual([...ACCESS_ACTIONS]);
+    const good = fixture("AccessEligibility");
+    for (const action of ROW_ACTIONS)
+      parity("AccessEligibility", { ...good, actions: [{ ...good.actions[0], action,
+        family_check: RULES[action].family, step_up_required: RULES[action].stepUp }] }, true);
+    for (const action of ["*", "capital.*", "owner.recovery", "capital.return_capital", "report.export", "execution.accounts.read"])
+      parity("AccessEligibility", { ...good, actions: [{ ...good.actions[0], action }] }, false);
+    for (const actions of [[], Array.from({ length: 17 }, () => good.actions[0])])
+      parity("AccessEligibility", { ...good, actions }, false);
+  });
+
+  it("each action publishes exactly its existing family and step-up prerequisite, never a generic family alias", () => {
+    const good = fixture("AccessEligibility");
+    for (const action of ROW_ACTIONS) {
+      const rule = RULES[action];
+      const row = { ...good.actions[0], action, family_check: rule.family, step_up_required: rule.stepUp };
+      parity("AccessEligibility", { ...good, actions: [row] }, true);
+      const otherFamily = rule.family === "BUSINESS_READ_SCOPE" ? "CURRENT_AUDIT_READ" : "BUSINESS_READ_SCOPE";
+      parity("AccessEligibility", { ...good, actions: [{ ...row, family_check: otherFamily }] }, false);
+      for (const step_up_required of [true, false, null]) if (step_up_required !== rule.stepUp)
+        parity("AccessEligibility", { ...good, actions: [{ ...row, step_up_required }] }, false);
+    }
+  });
+
+  it("rejects repeated output actions even when their advisory rows differ", () => {
+    const good = fixture("AccessEligibility");
+    const first = good.actions[0];
+    const other = { ...first, permission: "UNAVAILABLE", reason_class: "NO_CURRENT_PERMISSION",
+      public_copy_key: "NO_CURRENT_PERMISSION", grant_ref: null, authority_mode: "NOT_ESTABLISHED" };
+    parity("AccessEligibility", { ...good, actions: [first, first] }, false);
+    parity("AccessEligibility", { ...good, actions: [first, other] }, false);
+  });
+
+  it("JSON and Zod enforce the complete permission/reason/copy/grant/mode truth table", () => {
+    const good = fixture("AccessEligibility");
+    const reasons = ["FAMILY_CHECK_REQUIRED", "NO_CURRENT_PERMISSION", "POLICY_PENDING",
+      "FIELD_POLICY_PENDING", "ACTION_TARGET_UNSUPPORTED"];
+    for (const permission of ["ALLOWED", "UNAVAILABLE"])
+      for (const reason_class of reasons)
+        for (const public_copy_key of reasons)
+          for (const authority_mode of ["VERSIONED_CURRENT", "LEGACY_COMPATIBILITY", "APP_ONLY", "NOT_ESTABLISHED"])
+            for (const grant_ref of [null, "acg_TEST_ONLY_OWN"]) {
+              const expected = public_copy_key === reason_class && (permission === "ALLOWED" ?
+                reason_class === "FAMILY_CHECK_REQUIRED" && grant_ref !== null && authority_mode !== "NOT_ESTABLISHED" :
+                reason_class !== "FAMILY_CHECK_REQUIRED" && grant_ref === null && authority_mode === "NOT_ESTABLISHED");
+              parity("AccessEligibility", { ...good, actions: [{ ...good.actions[0], permission, reason_class,
+                public_copy_key, authority_mode, grant_ref }] }, expected);
+            }
+  });
+
+  it("opaque own grant refs preserve canonical codepoints rather than caller-selector UTF8 bytes", () => {
+    const good = fixture("AccessEligibility");
+    for (const id of ["界".repeat(86), "😀".repeat(256)]) {
+      expect(accessText.safeParse(id).success).toBe(true);
+      expect(scopedText.safeParse(id).success).toBe(false);
+      const value = { ...good, actions: [{ ...good.actions[0], grant_ref: id }] };
+      parity("AccessEligibility", value, true);
+      expect(eligibilityResult.parse(value).actions[0].grant_ref).toBe(id);
+      // These are still NEW caller selectors, not existing opaque grant IDs.
+      expect(eligibilityQuery.safeParse({ ...ownQuery(), resource_id: id }).success).toBe(false);
+    }
+    for (const id of ["界".repeat(257), "😀".repeat(257)]) {
+      expect(accessText.safeParse(id).success).toBe(false);
+      parity("AccessEligibility", { ...good, actions: [{ ...good.actions[0], grant_ref: id }] }, false);
+    }
+    const description = spec.components.schemas.AccessEligibilityRow.properties.grant_ref.description;
+    expect(description).toContain("256 Unicode codepoints");
+    expect(description).toContain("Returned unchanged without normalization");
+  });
+
+  it("output objects are strict at every public nesting level and never accept source/actor readiness injection", () => {
+    const row = fixture("AccessEligibility");
+    const nav = fixture("AccessSelfNavigation");
+    for (const key of ["actor", "subject_user_id", "role", "allow_test_only", "as_of_ms", "source_url", "manager_domain_grants", "qualified"]) {
+      parity("AccessEligibility", { ...row, [key]: "TEST_ONLY_SPOOF" }, false);
+      parity("AccessEligibility", { ...row, resource: { ...row.resource, [key]: "TEST_ONLY_SPOOF" } }, false);
+      parity("AccessEligibility", { ...row, actions: [{ ...row.actions[0], [key]: "TEST_ONLY_SPOOF" }] }, false);
+      parity("AccessSelfNavigation", { ...nav, [key]: "TEST_ONLY_SPOOF" }, false);
+      parity("AccessSelfNavigation", { ...nav, self_entry: { ...nav.self_entry, [key]: "TEST_ONLY_SPOOF" } }, false);
+      parity("AccessSelfNavigation", { ...nav, features: nav.features.map((item: object, i: number) =>
+        i ? item : { ...item, [key]: "TEST_ONLY_SPOOF" }) }, false);
+    }
+    for (const patch of [{ schema_version: "portal.self-eligibility.v2" }, { current_only: false }, { advisory_only: false }])
+      parity("AccessEligibility", { ...row, ...patch }, false);
+    for (const patch of [{ schema_version: "portal.self-navigation.v2" }, { current_only: false }, { advisory_only: false }])
+      parity("AccessSelfNavigation", { ...nav, ...patch }, false);
+    parity("AccessSelfNavigation", { ...nav, self_entry: { ...nav.self_entry, route: "/admin/profile-access" } }, false);
+    for (const key of ["source_readiness", "field_readiness", "command_readiness", "family_check"])
+      parity("AccessSelfNavigation", { ...nav, features: nav.features.map((item: object, i: number) =>
+        i ? item : { ...item, [key]: "AVAILABLE" }) }, false);
+  });
+
+  it("publishes finite current routing independently of feature permission", () => {
+    const good = fixture("AccessSelfNavigation");
+    for (const mode of ["LEGACY_COMPATIBILITY", "SCOPED_V2", "NOT_ESTABLISHED"])
+      parity("AccessSelfNavigation", { ...good, current_read_mode: mode }, true);
+    for (const mode of [undefined, null, "SCOPED_CURRENT", "AVAILABLE", true])
+      parity("AccessSelfNavigation", { ...good, current_read_mode: mode }, false);
+    expect(spec.components.schemas.AccessSelfNavigation.required).toContain("current_read_mode");
+    expect(spec.components.schemas.AccessSelfNavigation.properties.current_read_mode.description).toContain("not a grant");
+    expect(navigationInput.safeParse({ workspace_id: "ws_TEST_ONLY", environment: "paper", current_read_mode: "SCOPED_V2" }).success).toBe(false);
+  });
+
+  it("has exactly four ordered feature slots with correct state/authority semantics", () => {
+    const good = fixture("AccessSelfNavigation");
+    parity("AccessSelfNavigation", { ...good, features: [...good.features].reverse() }, false);
+    parity("AccessSelfNavigation", { ...good, features: [...good.features.slice(1), good.features[0]] }, false);
+    parity("AccessSelfNavigation", { ...good, features: [good.features[0], ...good.features.slice(0, 3)] }, false);
+    parity("AccessSelfNavigation", { ...good, features: good.features.slice(0, 3) }, false);
+    parity("AccessSelfNavigation", { ...good, features: [...good.features, good.features[0]] }, false);
+    for (const state of ["ENTERABLE", "HIDDEN"])
+      for (const authority_mode of ["SCOPED_CURRENT", "APP_ONLY", "NOT_ESTABLISHED"]) {
+        const allowed = state === "HIDDEN" ? authority_mode === "NOT_ESTABLISHED" : authority_mode !== "NOT_ESTABLISHED";
+        parity("AccessSelfNavigation", { ...good, features: good.features.map((item: object, index: number) =>
+          index ? item : { ...item, state, authority_mode }) }, allowed);
+        const operationsAllowed = allowed && authority_mode !== "APP_ONLY";
+        parity("AccessSelfNavigation", { ...good, features: good.features.map((item: object, index: number) =>
+          index === 2 ? { ...item, state, authority_mode } : item) }, operationsAllowed);
+      }
+  });
+
+  it("publishes only finite raw CSV eligibility and own navigation query grammars", () => {
+    const good = ownQuery();
+    expect(validates("AccessEligibilityQuery", good)).toBe(true);
+    expect(eligibilityQuery.safeParse(good).success).toBe(true);
+    const normalized = eligibilityQuery.parse(good);
+    expect(normalized.actions).toEqual(["portfolio.read", "capital.top_up"]);
+    for (const actions of ["", "*", "portfolio.read,", "portfolio.read,portfolio.read",
+      "portfolio.read,capital.top_up,portfolio.read", "portfolio.read, capital.top_up", "portfolio.read\n",
+      "capital.return_capital", "execution.accounts.read", ROW_ACTIONS.slice(0, 17).join(","),
+      ["portfolio.read", "capital.top_up"]]) {
+      const value = { ...good, actions };
+      expect(validates("AccessEligibilityQuery", value), JSON.stringify(actions)).toBe(false);
+      expect(eligibilityQuery.safeParse(value).success, JSON.stringify(actions)).toBe(false);
+    }
+    for (const action of ROW_ACTIONS) {
+      expect(validates("AccessEligibilityQuery", { ...good, actions: action }), action).toBe(true);
+      expect(eligibilityQuery.safeParse({ ...good, actions: action }).success, action).toBe(true);
+    }
+    const ownNav = { workspace_id: good.workspace_id, environment: good.environment };
+    expect(validates("AccessSelfNavigationQuery", ownNav)).toBe(true);
+    expect(navigationInput.safeParse(ownNav).success).toBe(true);
+    for (const key of ["as_of_ms", "subject_user_id", "actor", "role", "profile_id", "catalogue_sha256"]) {
+      expect(validates("AccessEligibilityQuery", { ...good, [key]: "TEST_ONLY_SPOOF" }), key).toBe(false);
+      expect(eligibilityQuery.safeParse({ ...good, [key]: "TEST_ONLY_SPOOF" }).success, key).toBe(false);
+      expect(validates("AccessSelfNavigationQuery", { ...ownNav, [key]: "TEST_ONLY_SPOOF" }), key).toBe(false);
+      expect(navigationInput.safeParse({ ...ownNav, [key]: "TEST_ONLY_SPOOF" }).success, key).toBe(false);
+    }
+    for (const environment of ["all", "CANARY", "LIVE", null]) {
+      expect(validates("AccessEligibilityQuery", { ...good, environment })).toBe(false);
+      expect(eligibilityQuery.safeParse({ ...good, environment }).success).toBe(false);
+      expect(validates("AccessSelfNavigationQuery", { ...ownNav, environment })).toBe(false);
+      expect(navigationInput.safeParse({ ...ownNav, environment }).success).toBe(false);
+    }
+  });
+
+  it("C3 scoped text matches representable controls/ASCII length while documenting extra runtime UTF8 checks", () => {
+    for (const resource_id of ["a".repeat(256), "TEST_ONLY:/@ id", "😀".repeat(64)]) {
+      const value = { ...ownQuery(), resource_id };
+      expect(validates("AccessEligibilityQuery", value)).toBe(true);
+      expect(eligibilityQuery.safeParse(value).success).toBe(true);
+    }
+    for (const resource_id of ["", "a".repeat(257), "TEST_ONLY\n", "bad\u0000id", "bad\u007fid"]) {
+      const value = { ...ownQuery(), resource_id };
+      expect(validates("AccessEligibilityQuery", value)).toBe(false);
+      expect(eligibilityQuery.safeParse(value).success).toBe(false);
+    }
+    const description = spec.components.schemas.AccessEligibilityQuery.properties.resource_id.description;
+    expect(description).toContain("UTF8 byte length");
+    expect(description).toContain("malformed UTF-16");
+    // Standard JSON Schema maxLength is codepoint-based; this extra runtime
+    // boundary is stated, not a claim of identical byte validation in AJV.
+    const multibyte = "界".repeat(86);
+    expect(validates("AccessEligibilityQuery", { ...ownQuery(), resource_id: multibyte })).toBe(true);
+    expect(eligibilityQuery.safeParse({ ...ownQuery(), resource_id: multibyte }).success).toBe(false);
+    expect(scopedText.safeParse("\ud800").success).toBe(false);
+  });
+
+  it("C3 paths publish exact query parameters and private no-store on success and finite refusals", () => {
+    const eligibility = spec.paths[prefix + "/eligibility"].get;
+    const nav = spec.paths[prefix + "/self-navigation"].get;
+    expect(eligibility.parameters.map((item: { name: string }) => item.name))
+      .toEqual(["workspace_id", "environment", "resource_kind", "resource_id", "actions"]);
+    expect(nav.parameters.map((item: { name: string }) => item.name)).toEqual(["workspace_id", "environment"]);
+    const csv = eligibility.parameters.find((item: { name: string }) => item.name === "actions");
+    expect(csv).toMatchObject({ in: "query", required: true, style: "form", explode: false });
+    expect(csv.schema).toEqual(spec.components.schemas.AccessEligibilityQuery.properties.actions);
+    for (const operation of [eligibility, nav]) {
+      expect(operation.description).toContain("Current-only");
+      expect(operation.description).toContain("reject unknown query keys");
+      for (const status of ["200", "400", "401", "403", "404", "409", "503"])
+        expect(operation.responses[status].headers["Cache-Control"])
+          .toEqual({ required: true, schema: { type: "string", const: "private, no-store" } });
+      expect(operation).not.toHaveProperty("requestBody");
+      expect(operation.parameters.every((item: { in: string }) => item.in === "query")).toBe(true);
+    }
   });
 });

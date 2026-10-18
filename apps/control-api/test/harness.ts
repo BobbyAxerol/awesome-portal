@@ -240,6 +240,13 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_research_split_source_guard: boolean;
       has_research_split_projection_guard: boolean;
       has_research_compare_cache: boolean;
+      has_research_report_manifests: boolean;
+      has_research_report_annotations: boolean;
+      has_research_report_export_jobs: boolean;
+      has_research_report_manifest_guard: boolean;
+      has_research_report_export_guard: boolean;
+      research_role_can_write_reports: boolean;
+      research_role_can_update_report_exports: boolean;
       has_research_compare_cache_expiry_index: boolean;
       has_research_release_candidate_plane: boolean;
       research_role_can_read_legacy_run_models: boolean;

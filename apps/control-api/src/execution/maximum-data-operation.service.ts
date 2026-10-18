@@ -1,7 +1,14 @@
 import { createHash } from "node:crypto";
+import type { Pool } from "pg";
+import { withTransaction } from "../db/pool";
+import { accessDigest } from "../execution-v2/access-policy";
+import { AccessPolicyError, type AccessActor, type ManagerDomainReadDecision } from "../execution-v2/access.contract";
+import { evaluateManagerDomainRead } from "../execution-v2/current-human-snapshot";
+import { selectedNativeBusinessReadSelection, selectedNativeBusinessReadInstallationExpiresAtMs,
+  type SelectedNativeBusinessReadSource } from "../execution-v2/native-business-read-selected-source";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import type { ControlApiConfig } from "../config";
-import { CONTROL_API_CONFIG } from "../tokens";
+import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
 import { ExecutionProfileProjectionRepository } from "./profile-projection.repository";
 import { retainedReview } from "./retained-read-profile";
 import { retainedOperationPage, authorizeNamedRetainedRelation, retainedConfiguredProfile, retainedRelationAction } from "./retained-operation-page";
@@ -41,6 +48,8 @@ const SOURCE_COMPLETENESS = new Set([
 ]);
 
 export interface MaximumDataOperationPrincipal {
+  /** Server-only cache/cursor correlation after current native READ, not authority. */
+  readonly nativeEpochDigest?: string;
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
@@ -54,6 +63,22 @@ export interface MaximumDataDeploymentQuery {
 }
 
 export interface MaximumDataRelationQuery extends MaximumDataDeploymentQuery {}
+
+export type NativeManagerOperation = { kind:"DEPLOYMENTS" } | { kind:"RELATION"; route_id:string };
+
+/** Server-only correlation after current READ, never an authority grant. */
+export function nativeManagerDataEpoch(input:{
+  actor:AccessActor;workspace_id:string;environment:"paper"|"sandbox"|"live";
+  decision:ManagerDomainReadDecision;source:ReturnType<typeof selectedNativeBusinessReadSelection>;
+  operation_id:string;base_query:Readonly<{limit:number}>;
+}):string {
+  return accessDigest({schema_version:"portal.native-manager-data-epoch.v1",
+    actor:input.actor,workspace_id:input.workspace_id,environment:input.environment,
+    authority_fingerprint:input.decision.authority_fingerprint,
+    scope_digest:input.decision.scope_digest,field_policy_sha256:input.decision.field_policy_sha256,
+    source_identity_digest:input.source.source_identity_digest,domain:input.source.domain,
+    operation_id:input.operation_id,base_query:input.base_query});
+}
 
 export class MaximumDataOperationError extends Error {
   constructor(readonly code: string, readonly status: number) {
@@ -76,6 +101,7 @@ export class MaximumDataOperationService {
     @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig,
     @Optional() @Inject(ExecutionProfileProjectionRepository) private readonly projection?: ExecutionProfileProjectionRepository,
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
+    @Optional() @Inject(CONTROL_API_POOL) private readonly nativeCorePool?: Pool,
   ) {}
 
   async deploymentPage(
@@ -95,6 +121,14 @@ export class MaximumDataOperationService {
         publication_revision: operation.publicationRevision, logical_operation_id: operation.logicalOperationId,
         field_id: operation.fieldId, records: page.records.map(row => row.values) };
     }
+    return this.prepareDeploymentData(principal,query);
+    };
+    return operationScope && this.readScopes ? this.readScopes.deliver(operationScope, read) : read();
+  }
+
+  /** Same safe DTO/source/cache path, authority is resolved by the caller above. */
+  private async prepareDeploymentData(principal:MaximumDataOperationPrincipal,query:MaximumDataDeploymentQuery){
+    const operation=MAXIMUM_DATA_DEPLOYMENT_OPERATION;
     const binding = maximumDataDeploymentBinding(query.environment);
     const scope = continuationScope(principal, query.environment);
     const sourceCursor = query.cursor
@@ -102,7 +136,8 @@ export class MaximumDataOperationService {
       : undefined;
 
     const response = await this.currentSource.relationForNamedOperation(
-      { user: principal.user, session: principal.session, workspaceId: principal.workspaceId },
+      { user: principal.user, session: principal.session, workspaceId: principal.workspaceId,
+        ...(principal.nativeEpochDigest !== undefined ? { nativeEpochDigest: principal.nativeEpochDigest } : {}) },
       query.environment,
       binding.screenId,
       operation.sourceId,
@@ -111,8 +146,6 @@ export class MaximumDataOperationService {
       maximumDataDeploymentPolicy(query.environment),
     );
     return this.translateDeploymentPage(response, query, scope);
-    };
-    return operationScope && this.readScopes ? this.readScopes.deliver(operationScope, read) : read();
   }
 
   /**
@@ -134,20 +167,78 @@ export class MaximumDataOperationService {
     const read = async () => {
     if (retainedReview(this.config) || operationScope?.mode === "SCOPED_V2")
       return retainedOperationPage(this.config!, this.projection!, principal, operation, query, this.readScopes);
+    return this.prepareRelationData(principal,operation,query);
+    };
+    return operationScope && this.readScopes ? this.readScopes.deliver(operationScope, read) : read();
+  }
+
+  private async prepareRelationData(principal:MaximumDataOperationPrincipal,operation:ManagerRelationOperation,
+    query:MaximumDataRelationQuery){
     const binding = managerRelationProfileBinding(query.environment);
     const scope = relationContinuationScope(principal, query.environment, operation);
     const sourceCursor = query.cursor
       ? await this.continuations.resolve(scope, query.cursor)
       : undefined;
     const response = await this.currentSource.relationForCataloguedOperation(
-      { user: principal.user, session: principal.session, workspaceId: principal.workspaceId },
+      { user: principal.user, session: principal.session, workspaceId: principal.workspaceId,
+        ...(principal.nativeEpochDigest !== undefined ? { nativeEpochDigest: principal.nativeEpochDigest } : {}) },
       query.environment,
       managerRelationOperationPolicy(operation, query.environment),
       { limit: query.limit, ...(sourceCursor ? { cursor: sourceCursor } : {}) },
     );
     return this.translateRelationPage(response, operation, query, scope, binding.profileId);
-    };
-    return operationScope && this.readScopes ? this.readScopes.deliver(operationScope, read) : read();
+  }
+
+  /** PRIVATE selected consumer preparation. Genuine selected source and actual
+   * current Core domain READ are mandatory; no ENTITY/ROOT inference or switch
+   * on epoch JSON. Existing public methods keep their full readScopes behavior.
+   * This returns private bytes only; Candidate still owns final authorization
+   * and physical send after the last source/cache await. */
+  async prepareNativeManagerPage(expectedPool:Pool,principal:MaximumDataOperationPrincipal,
+    operation:NativeManagerOperation,query:MaximumDataDeploymentQuery,source:SelectedNativeBusinessReadSource){
+    if(!this.nativeCorePool||this.nativeCorePool!==expectedPool)
+      throw new MaximumDataOperationError("NATIVE_MANAGER_READ_UNAVAILABLE",503);
+    const selected=selectedNativeBusinessReadSelection(source);
+    const relation=operation.kind==="RELATION"?managerRelationOperationByRoute(operation.route_id):undefined;
+    if(operation.kind!=="DEPLOYMENTS"&&!relation||!Number.isInteger(query.limit)||query.limit<1||query.limit>200||
+      !["paper","sandbox","live"].includes(query.environment)||
+      query.cursor!==undefined&&(typeof query.cursor!=="string"||query.cursor.length<1||query.cursor.length>128))
+      throw new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403);
+    const profile=operation.kind==="DEPLOYMENTS"?maximumDataDeploymentBinding(query.environment).profileId:
+      managerRelationProfileBinding(query.environment).profileId;
+    const catalogue=operation.kind==="DEPLOYMENTS"?MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256:
+      MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
+    if(selected.binding.subject!==principal.user.userId||selected.human.portal_user_id!==principal.user.userId||
+      selected.binding.workspace_id!==principal.workspaceId||selected.binding.environment!==query.environment||
+      selected.domain.profile_id!==profile||selected.domain.catalogue_sha256!==catalogue.slice(7)||
+      Date.now()>=selectedNativeBusinessReadInstallationExpiresAtMs(source))
+      throw new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403);
+    const actor:AccessActor={user_id:principal.user.userId,session_id:principal.session.sessionId,
+      session_generation:principal.session.sessionVersion};
+    let decision:ManagerDomainReadDecision;
+    try {
+      decision=await withTransaction(this.nativeCorePool,db=>evaluateManagerDomainRead(db,{
+        actor,workspace_id:principal.workspaceId,environment:query.environment,domain:selected.domain}));
+    } catch(error) {
+      // The existing HTTP filter handles MaximumDataOperationError, not the
+      // private policy exception. Preserve its finite public reason/status;
+      // a genuine current revoke must not become an opaque500 or legacy read.
+      // Unexpected exceptions remain unexpected; never serialize their text.
+      if(error instanceof AccessPolicyError) throw new MaximumDataOperationError(error.code,error.status);
+      throw error;
+    }
+    if(decision.actor.user_id!==actor.user_id||decision.actor.session_id!==actor.session_id||
+      decision.actor.session_generation!==actor.session_generation||
+      decision.field_policy_sha256!==selected.domain.field_policy_sha256||Date.now()>=decision.valid_until_ms)
+      throw new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403);
+    const nativeEpochDigest=nativeManagerDataEpoch({actor,workspace_id:principal.workspaceId,
+      environment:query.environment,decision,source:selected,
+      operation_id:operation.kind==="DEPLOYMENTS"?MAXIMUM_DATA_DEPLOYMENT_OPERATION.logicalOperationId:relation!.operationId,
+      base_query:{limit:query.limit}});
+    const privatePrincipal={...principal,nativeEpochDigest};
+    const dto=operation.kind==="DEPLOYMENTS"?await this.prepareDeploymentData(privatePrincipal,query):
+      await this.prepareRelationData(privatePrincipal,relation!,query);
+    return {decision,dto,nativeEpochDigest};
   }
 
   private async authorizeOperation(principal: MaximumDataOperationPrincipal, operation: ManagerRelationOperation,
@@ -379,6 +470,7 @@ function continuationScope(
     workspaceId: principal.workspaceId,
     principalId: principal.user.userId,
     principalRole: principal.user.role,
+    ...(principal.nativeEpochDigest !== undefined ? { nativeEpochDigest: principal.nativeEpochDigest } : {}),
     environment,
     profileId: maximumDataDeploymentBinding(environment).profileId,
     sourceContractRevision: operation.sourceContractRevision,
@@ -396,6 +488,7 @@ function relationContinuationScope(
     workspaceId: principal.workspaceId,
     principalId: principal.user.userId,
     principalRole: principal.user.role,
+    ...(principal.nativeEpochDigest !== undefined ? { nativeEpochDigest: principal.nativeEpochDigest } : {}),
     environment,
     profileId: managerRelationProfileBinding(environment).profileId,
     sourceContractRevision: MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision,

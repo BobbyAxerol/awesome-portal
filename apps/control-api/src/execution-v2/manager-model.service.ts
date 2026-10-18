@@ -1,3 +1,4 @@
+import { rejectManagerAsOf } from "./manager-query-p1";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool } from "pg";
 import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
@@ -27,9 +28,13 @@ export class ManagerModelService {
   }
 
   async read(principal: ReadScopePrincipal, surface: ManagerSurface, raw: unknown, id?: string) {
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) rejectManagerAsOf(raw as Record<string, unknown>);
     const parsed = managerModelQuery.safeParse(raw);
     if (!parsed.success) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 400);
     const q = parsed.data, env = q.environment;
+    const allowedStages = env === "paper" ? ["PAPER"] : env === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
+    if (q.stage_filter.some(stage => !allowedStages.includes(stage)))
+      throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
     if (q.workspace_id && q.workspace_id !== principal.workspaceId) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
     const profile = env === "paper" ? this.config.EXECUTION_EDGE_PAPER_PROFILE_ID : env === "sandbox" ?
       this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID : this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;

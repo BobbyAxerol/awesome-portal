@@ -293,7 +293,9 @@ export class CurrentHumanCandidate {
     if(this.nativeHTTP)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_CUSTODY_PURPOSE_REQUIRED");
     return this.nativeAttempt(await this.nativeAdmission(untrustedActor,input,false));
   }
-  private async nativeAdmission(untrustedActor:AccessActor,input:unknown,http:boolean):Promise<NativeRow>{
+  private async nativeAdmission(untrustedActor:AccessActor,input:unknown,http:boolean,expectedScopeDigest?:string):Promise<NativeRow>{
+    if(expectedScopeDigest!==undefined&&(!http||!digest.safeParse(expectedScopeDigest).success))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
     const actor=nativeActor(untrustedActor),captured=nativeBase(input),base=captured.base,selected=this.config.native_read_custody;
     if(!selected)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_CUSTODY_NOT_SELECTED");
     if(base.binding.human_issuer!==this.config.issuer||base.binding.subject!==actor.user_id
@@ -307,7 +309,7 @@ export class CurrentHumanCandidate {
     return this.transaction(async(db,authority)=>{
       if(authority.drain_id)throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAINING");
       const decision=http?await evaluateManagerDomainRead(db,{actor,workspace_id:selected.workspace_id,
-        environment:selected.environment,domain:base.domain}):null;
+        environment:selected.environment,domain:base.domain,expected_scope_digest:expectedScopeDigest}):null;
       const current=decision?{now:decision.now_ms,lease_until_ms:decision.valid_until_ms,
         authority_fingerprint:decision.authority_fingerprint}:await captureCurrentHumanSnapshot(db,actor,selected.workspace_id);
       if(decision&&decision.field_policy_sha256!==base.domain.field_policy_sha256)
@@ -340,7 +342,7 @@ export class CurrentHumanCandidate {
     });
   }
   /** One immutable native-family admission, never custody-then-upgrade. */
-  async prepareNativeRead(untrustedActor:AccessActor,input:unknown):Promise<PreparedCurrentHumanNativeHTTP>{
+  async prepareNativeRead(untrustedActor:AccessActor,input:unknown,expectedScopeDigest?:string):Promise<PreparedCurrentHumanNativeHTTP>{
     const c=this.nativeConfig(),actor=nativeActor(untrustedActor);
     if(this.nativeById.size>=c.limits.maximum_unresolved){
       // A different replica can finish the existing shared recovery queue. Only
@@ -354,7 +356,7 @@ export class CurrentHumanCandidate {
         if(local)local.settled=true;this.nativeById.delete(row.lease_id);}
     }
     if(this.nativeById.size>=c.limits.maximum_unresolved)throw new CurrentHumanLeaseError("CURRENT_HUMAN_CAPACITY_EXHAUSTED");
-    const row=await this.nativeAdmission(actor,input,true) as NativeHTTPRow;
+    const row=await this.nativeAdmission(actor,input,true,expectedScopeDigest) as NativeHTTPRow;
     const context=this.selectedNativeRow(row),handle=Object.freeze({}) as PreparedCurrentHumanNativeHTTP;
     const state:NativeHTTPState={actor,context,base_body:row.base_body,binding_digest:row.binding_digest,
       stable_core_digest:row.stable_core_digest,scope_digest:row.scope_digest,valid_until_ms:Number(row.expires_at_ms),
@@ -441,8 +443,8 @@ export class CurrentHumanCandidate {
     });
     s.source_digest=actual.lease.source_digest;s.source_fingerprint=actual.lease.source_fingerprint;s.valid_until_ms=validUntil;
   }
-  async acquireNativeRead(actor:AccessActor,input:unknown):Promise<PreparedCurrentHumanNativeHTTP>{
-    const handle=await this.prepareNativeRead(actor,input);
+  async acquireNativeRead(actor:AccessActor,input:unknown,expectedScopeDigest?:string):Promise<PreparedCurrentHumanNativeHTTP>{
+    const handle=await this.prepareNativeRead(actor,input,expectedScopeDigest);
     await this.acquirePreparedNativeRead(handle);return handle;
   }
   private async acquirePreparedNativeRead(handle:NativeHandle):Promise<void>{
@@ -734,6 +736,10 @@ export class CurrentHumanCandidate {
   async prepareNativeFrame(stream:NativeReadEgressStream,notice:PreparedExecutionNativeNotice):Promise<PreparedCurrentHumanNativeFrame>{
     const c=this.nativeConfig(),view=nativeExecutionNoticeView(notice),
       delivery=this.nextNativeNoticeDelivery(stream),actor=nativeActor(view.actor);
+    if(view.manager&&(accessDigest(view.manager.domain)!==accessDigest(c.selection.domain)||
+      view.manager.source_identity_digest!==c.selection.source_identity_digest||
+      !digest.safeParse(view.manager.read_scope_digest).success))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
     if(view.workspace_id!==c.selection.workspace_id||view.environment!==c.selection.environment||
       view.profile_id!==c.selection.domain.profile_id||view.intent.stream_id!==delivery.stream_id||
       view.intent.frame_ordinal!==delivery.frame_ordinal||view.scope_digest!=="sha256:"+view.intent.stream_scope_digest||
@@ -749,9 +755,12 @@ export class CurrentHumanCandidate {
       await revalidateNativeExecutionNotice(notice); // actual qualified adapter, no Core lock
       const row=await this.transaction(async(db,authority)=>{
         if(authority.drain_id)throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAINING");
-        const d=await evaluateManagerDomainRead(db,{actor,workspace_id:view.workspace_id,
-          environment:view.environment,domain:c.selection.domain});
         const n=await assertNativeExecutionNoticeCurrent(db,notice,this.pool);
+        const d=n.manager_read_decision??await evaluateManagerDomainRead(db,{actor,workspace_id:view.workspace_id,
+          environment:view.environment,domain:c.selection.domain});
+        if(Boolean(view.manager)!==Boolean(n.manager_read_decision)||
+          view.manager&&view.manager.read_scope_digest!==d.scope_digest)
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
         if(d.authority_fingerprint!==n.authority_fingerprint||n.scope_digest!==view.scope_digest||
           d.field_policy_sha256!==c.selection.domain.field_policy_sha256)
           throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
@@ -971,12 +980,15 @@ export class CurrentHumanCandidate {
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
   }
   private async nativeDecision(db:PoolClient,s:NativeHTTPState){
-    const d=await evaluateManagerDomainRead(db,{actor:s.actor,workspace_id:s.context.binding.workspace_id,
+    const notice=s.frame?await assertNativeExecutionNoticeCurrent(db,s.frame.notice,this.pool):undefined;
+    const d=notice?.manager_read_decision??await evaluateManagerDomainRead(db,{actor:s.actor,workspace_id:s.context.binding.workspace_id,
       environment:s.context.binding.environment,domain:s.context.domain,expected_scope_digest:s.frame?.domain_scope_digest??s.scope_digest});
+    if(d.scope_digest!==(s.frame?.domain_scope_digest??s.scope_digest))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
     if(d.field_policy_sha256!==s.context.domain.field_policy_sha256||d.valid_until_ms<s.valid_until_ms)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
     if(!s.frame)return d;
-    const notice=await assertNativeExecutionNoticeCurrent(db,s.frame.notice,this.pool);
+    if(!notice)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
     if(notice.authority_fingerprint!==d.authority_fingerprint||notice.scope_digest!==s.frame.notice_scope_digest||
       s.scope_digest!==accessDigest({schema:"portal.native-frame-scope.v1",
         domain_scope_digest:d.scope_digest,notice_scope_digest:notice.scope_digest})||

@@ -354,7 +354,7 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
       if (metadata.projectionEpoch !== group.epoch || metadata.projectionSequence < group.sequence) {
         this.terminate(group, "N31_PROJECTION_EPOCH_CHANGED"); return;
       }
-      let snapshot = { ...group.snapshot, ...metadata };
+      let snapshot: ProfileProjectionSnapshot = { ...group.snapshot, ...metadata };
       if (Date.now() >= group.nextHealthCheckAt) {
         group.health = await localRead(this.repository.refreshHealth(group.workspaceId, group.environment, group.profileId));
         group.nextHealthCheckAt = Date.now() + HEALTH_CHECK_MS;

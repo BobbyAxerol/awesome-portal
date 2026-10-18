@@ -483,6 +483,7 @@ export interface components {
             /** @constant */
             reserved: false;
         };
+        /** @description Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema. */
         CommandStatus: {
             /** @constant */
             schema_version: "portal.execution.command-status.v1";
@@ -523,6 +524,7 @@ export interface components {
             updated_at_ms: number;
             /** @enum {string} */
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
+            currency: string;
         };
         WorkflowContext: {
             workspace_id: string;
@@ -748,6 +750,943 @@ export interface components {
             source_qualified: false;
             /** @constant */
             consumer_status: "AWAITING_CONSUMER_REVIEW";
+        };
+        /** @description Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged. */
+        WorkflowPaperCriterion: {
+            /** @constant */
+            gate: "PAPER_EXIT";
+            original: {
+                finding_id: string;
+                panel_id: string;
+                ordinal: number;
+                /** @enum {string} */
+                outcome: "PASS" | "WATCH" | "FAIL" | "INSUFFICIENT";
+                blocking: boolean;
+                required: boolean;
+                as_of_ms: number | null;
+            };
+            /** @enum {string} */
+            display_class: "PASS" | "CAUTION" | "FAIL" | "STALE" | "NO_VERDICT";
+            observed_value: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+            };
+            threshold_value: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+            };
+            comparator: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "SOURCE_COMPARATOR_FIELD_NOT_RECORDED";
+            };
+            unit: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+            };
+            currency: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+            };
+            evidence: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+            };
+            finding_formula_version: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+            };
+        } & (unknown & unknown & unknown & unknown);
+        /** @description Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged. */
+        WorkflowSandboxCriterion: {
+            /** @constant */
+            gate: "SANDBOX";
+            original: {
+                /** @enum {string} */
+                step_key: "CONNECT" | "SYNC" | "ORDER_TYPES" | "RECONCILIATION" | "TIMEBOXED_RUN" | "CLEANUP" | "EXIT_REVIEW";
+                /** @enum {string} */
+                availability: "AVAILABLE" | "NOT_RECORDED";
+                evidence_id: string | null;
+                stored_evaluation_state: ("PASS" | "FAIL" | "STALE" | "UNAVAILABLE") | null;
+                source_authority: ("PORTAL" | "EXECUTION" | "BROKER" | "DERIVED") | null;
+                source_verification_state: ("VERIFIED" | "UNAVAILABLE") | null;
+                as_of_ms: number | null;
+                expires_at_ms: number | null;
+            } & unknown;
+            /** @enum {string} */
+            display_class: "PASS" | "CAUTION" | "FAIL" | "STALE" | "NO_VERDICT";
+            required: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+            };
+            blocking: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+            };
+            observed_value: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+            };
+            threshold_value: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+            };
+            comparator: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+            };
+            unit: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+            };
+            currency: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+            };
+            evidence: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                kind: "PORTAL_EVIDENCE_ID";
+                value: string;
+                /** @constant */
+                reason_code: unknown;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "EVIDENCE_NOT_RECORDED";
+            };
+        } & (unknown & unknown & unknown & unknown & unknown & unknown);
+        /** @description Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged. */
+        WorkflowPaperCriteria: {
+            /** @constant */
+            schema_version: "portal.execution.criteria-capsules.v1";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            /** @constant */
+            basis: "ALREADY_AUTHORIZED_PUBLIC_PARENT_ONLY";
+            /** @constant */
+            readiness: "NOT_EVALUATED";
+            /** @constant */
+            universal_denominator: unknown;
+            /** @constant */
+            gate: "PAPER_EXIT";
+            parent_id: string;
+            /** @constant */
+            availability: "AVAILABLE";
+            evaluation_policy_version: string;
+            evaluation_formula_version: string;
+            panels: ({
+                panel_id: string;
+                ordinal: number;
+                /** @enum {string} */
+                panel_kind: "OBSERVATION_COVERAGE" | "DRIFT" | "LIMITS_HEALTH" | "PORTFOLIO_FIT";
+                /** @enum {string} */
+                source_authority: "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED";
+                /** @enum {string} */
+                panel_state: "OK" | "PARTIAL" | "STALE" | "UNAVAILABLE" | "ERROR";
+                as_of_ms: number | null;
+                /** @enum {string} */
+                freshness_state: "OK" | "STALE" | "UNKNOWN";
+                /** @enum {string} */
+                source_completeness: "EVENT_SOURCED" | "POLL_BOUNDED" | "UNKNOWN";
+                poll_interval_ms: number | null;
+                formula_version: string | null;
+            } & (unknown & unknown))[];
+            criteria: ({
+                /** @constant */
+                gate: "PAPER_EXIT";
+                original: {
+                    finding_id: string;
+                    panel_id: string;
+                    ordinal: number;
+                    /** @enum {string} */
+                    outcome: "PASS" | "WATCH" | "FAIL" | "INSUFFICIENT";
+                    blocking: boolean;
+                    required: boolean;
+                    as_of_ms: number | null;
+                };
+                /** @enum {string} */
+                display_class: "PASS" | "CAUTION" | "FAIL" | "STALE" | "NO_VERDICT";
+                observed_value: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+                threshold_value: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+                comparator: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "SOURCE_COMPARATOR_FIELD_NOT_RECORDED";
+                };
+                unit: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+                currency: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+                evidence: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+                finding_formula_version: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+            } & (unknown & unknown & unknown & unknown))[];
+        };
+        /** @description Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged. */
+        WorkflowSandboxCriteria: {
+            /** @constant */
+            schema_version: "portal.execution.criteria-capsules.v1";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            /** @constant */
+            basis: "ALREADY_AUTHORIZED_PUBLIC_PARENT_ONLY";
+            /** @constant */
+            readiness: "NOT_EVALUATED";
+            /** @constant */
+            universal_denominator: unknown;
+            /** @constant */
+            gate: "SANDBOX";
+            parent_id: string;
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @constant */
+            source_basis: "CURRENT_LATEST_STORED";
+            policy_version: string;
+            formula_version: string;
+            criteria: ({
+                /** @constant */
+                gate: "SANDBOX";
+                original: {
+                    /** @enum {string} */
+                    step_key: "CONNECT" | "SYNC" | "ORDER_TYPES" | "RECONCILIATION" | "TIMEBOXED_RUN" | "CLEANUP" | "EXIT_REVIEW";
+                    /** @enum {string} */
+                    availability: "AVAILABLE" | "NOT_RECORDED";
+                    evidence_id: string | null;
+                    stored_evaluation_state: ("PASS" | "FAIL" | "STALE" | "UNAVAILABLE") | null;
+                    source_authority: ("PORTAL" | "EXECUTION" | "BROKER" | "DERIVED") | null;
+                    source_verification_state: ("VERIFIED" | "UNAVAILABLE") | null;
+                    as_of_ms: number | null;
+                    expires_at_ms: number | null;
+                } & unknown;
+                /** @enum {string} */
+                display_class: "PASS" | "CAUTION" | "FAIL" | "STALE" | "NO_VERDICT";
+                required: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                blocking: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                observed_value: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                threshold_value: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                comparator: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                unit: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                currency: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                evidence: {
+                    /** @constant */
+                    availability: "AVAILABLE";
+                    /** @constant */
+                    kind: "PORTAL_EVIDENCE_ID";
+                    value: string;
+                    /** @constant */
+                    reason_code: unknown;
+                } | {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "EVIDENCE_NOT_RECORDED";
+                };
+            } & (unknown & unknown & unknown & unknown & unknown & unknown))[] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        };
+        /** @description Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged. */
+        WorkflowCriteriaCapsules: {
+            /** @constant */
+            schema_version: "portal.execution.criteria-capsules.v1";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            /** @constant */
+            basis: "ALREADY_AUTHORIZED_PUBLIC_PARENT_ONLY";
+            /** @constant */
+            readiness: "NOT_EVALUATED";
+            /** @constant */
+            universal_denominator: unknown;
+            /** @constant */
+            gate: "PAPER_EXIT";
+            parent_id: string;
+            /** @constant */
+            availability: "AVAILABLE";
+            evaluation_policy_version: string;
+            evaluation_formula_version: string;
+            panels: ({
+                panel_id: string;
+                ordinal: number;
+                /** @enum {string} */
+                panel_kind: "OBSERVATION_COVERAGE" | "DRIFT" | "LIMITS_HEALTH" | "PORTFOLIO_FIT";
+                /** @enum {string} */
+                source_authority: "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED";
+                /** @enum {string} */
+                panel_state: "OK" | "PARTIAL" | "STALE" | "UNAVAILABLE" | "ERROR";
+                as_of_ms: number | null;
+                /** @enum {string} */
+                freshness_state: "OK" | "STALE" | "UNKNOWN";
+                /** @enum {string} */
+                source_completeness: "EVENT_SOURCED" | "POLL_BOUNDED" | "UNKNOWN";
+                poll_interval_ms: number | null;
+                formula_version: string | null;
+            } & (unknown & unknown))[];
+            criteria: ({
+                /** @constant */
+                gate: "PAPER_EXIT";
+                original: {
+                    finding_id: string;
+                    panel_id: string;
+                    ordinal: number;
+                    /** @enum {string} */
+                    outcome: "PASS" | "WATCH" | "FAIL" | "INSUFFICIENT";
+                    blocking: boolean;
+                    required: boolean;
+                    as_of_ms: number | null;
+                };
+                /** @enum {string} */
+                display_class: "PASS" | "CAUTION" | "FAIL" | "STALE" | "NO_VERDICT";
+                observed_value: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+                threshold_value: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+                comparator: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "SOURCE_COMPARATOR_FIELD_NOT_RECORDED";
+                };
+                unit: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+                currency: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+                evidence: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+                finding_formula_version: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_PUBLISHED_BY_CURRENT_PARENT_PURPOSE";
+                };
+            } & (unknown & unknown & unknown & unknown))[];
+        } | {
+            /** @constant */
+            schema_version: "portal.execution.criteria-capsules.v1";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            /** @constant */
+            basis: "ALREADY_AUTHORIZED_PUBLIC_PARENT_ONLY";
+            /** @constant */
+            readiness: "NOT_EVALUATED";
+            /** @constant */
+            universal_denominator: unknown;
+            /** @constant */
+            gate: "SANDBOX";
+            parent_id: string;
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @constant */
+            source_basis: "CURRENT_LATEST_STORED";
+            policy_version: string;
+            formula_version: string;
+            criteria: ({
+                /** @constant */
+                gate: "SANDBOX";
+                original: {
+                    /** @enum {string} */
+                    step_key: "CONNECT" | "SYNC" | "ORDER_TYPES" | "RECONCILIATION" | "TIMEBOXED_RUN" | "CLEANUP" | "EXIT_REVIEW";
+                    /** @enum {string} */
+                    availability: "AVAILABLE" | "NOT_RECORDED";
+                    evidence_id: string | null;
+                    stored_evaluation_state: ("PASS" | "FAIL" | "STALE" | "UNAVAILABLE") | null;
+                    source_authority: ("PORTAL" | "EXECUTION" | "BROKER" | "DERIVED") | null;
+                    source_verification_state: ("VERIFIED" | "UNAVAILABLE") | null;
+                    as_of_ms: number | null;
+                    expires_at_ms: number | null;
+                } & unknown;
+                /** @enum {string} */
+                display_class: "PASS" | "CAUTION" | "FAIL" | "STALE" | "NO_VERDICT";
+                required: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                blocking: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                observed_value: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                threshold_value: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                comparator: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                unit: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                currency: {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "FIELD_NOT_IN_PUBLIC_STEP_CONTRACT";
+                };
+                evidence: {
+                    /** @constant */
+                    availability: "AVAILABLE";
+                    /** @constant */
+                    kind: "PORTAL_EVIDENCE_ID";
+                    value: string;
+                    /** @constant */
+                    reason_code: unknown;
+                } | {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    /** @constant */
+                    value: unknown;
+                    /** @constant */
+                    reason_code: "EVIDENCE_NOT_RECORDED";
+                };
+            } & (unknown & unknown & unknown & unknown & unknown & unknown))[] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        } | ({
+            /** @constant */
+            schema_version: "portal.execution.criteria-capsules.v1";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            /** @constant */
+            basis: "ALREADY_AUTHORIZED_PUBLIC_PARENT_ONLY";
+            /** @constant */
+            readiness: "NOT_EVALUATED";
+            /** @constant */
+            universal_denominator: unknown;
+            /** @enum {string} */
+            gate: "R2" | "PAPER_EXIT" | "SANDBOX" | "CANARY" | "LIVE_GATE";
+            parent_id: string;
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            /** @enum {string} */
+            reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" | "CURRENT_PUBLIC_PARENT_HAS_NO_CRITERIA";
+            /** @constant */
+            criteria: unknown;
+        } & unknown);
+        /** @description Schema-only projection of an already-authorized finite public Portal parent. Does not grant access, qualify a command, load private metrics, recalculate stored verdicts or assert source stage/history. Existing parent HTTP responses and reviewed field-purpose digests are unchanged. */
+        WorkflowRecordedPortal: ({
+            /** @constant */
+            schema_version: "portal.execution.recorded-portal-workflow.v1";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            observed_at_ms: number;
+            /** @constant */
+            coverage: "SELECTED_CURRENT_PORTAL_RECORD_NOT_EVENT_JOURNAL";
+            effective_stage: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED";
+            };
+            days_in_stage: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED";
+            };
+            /** @constant */
+            dispatch_enabled: false;
+            /** @constant */
+            family: "R2";
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "PAPER";
+            };
+            approval: {
+                approval_id: string;
+                /** @enum {string} */
+                gate: "R2" | "PAPER_EXIT";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+        } & {
+            approval: {
+                /** @constant */
+                gate: "R2";
+            };
+        }) | ({
+            /** @constant */
+            schema_version: "portal.execution.recorded-portal-workflow.v1";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            observed_at_ms: number;
+            /** @constant */
+            coverage: "SELECTED_CURRENT_PORTAL_RECORD_NOT_EVENT_JOURNAL";
+            effective_stage: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED";
+            };
+            days_in_stage: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED";
+            };
+            /** @constant */
+            dispatch_enabled: false;
+            /** @constant */
+            family: "PAPER_EXIT";
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "PAPER";
+            };
+            approval: {
+                approval_id: string;
+                /** @enum {string} */
+                gate: "R2" | "PAPER_EXIT";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            review: {
+                review_id: string;
+                /** @enum {string} */
+                review_state: "PENDING" | "EXTENDED" | "REJECTED_TO_PAPER_HELD" | "PROMOTION_AUTHORIZED";
+                review_version: number;
+                /** @constant */
+                promote_to: "SANDBOX_VALIDATION";
+                extension_days: 14 | null;
+                extended_until_ms: number | null;
+                created_at_ms: number;
+                updated_at_ms: number;
+            } & unknown;
+        } & {
+            approval: {
+                /** @constant */
+                gate: "PAPER_EXIT";
+            };
+        }) | {
+            /** @constant */
+            schema_version: "portal.execution.recorded-portal-workflow.v1";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            observed_at_ms: number;
+            /** @constant */
+            coverage: "SELECTED_CURRENT_PORTAL_RECORD_NOT_EVENT_JOURNAL";
+            effective_stage: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED";
+            };
+            days_in_stage: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED";
+            };
+            /** @constant */
+            dispatch_enabled: false;
+            /** @constant */
+            family: "SANDBOX";
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "SANDBOX";
+                /** @constant */
+                association_basis: "CURRENT_NATIVE_TARGET_CORRESPONDENCE";
+                /** @constant */
+                captured_environment_attested: false;
+            };
+            certification: {
+                certification_id: string;
+                /** @enum {string} */
+                workflow_state: "DRAFT" | "IN_REVIEW" | "APPROVED" | "DENIED";
+                workflow_version: number;
+                policy_version: string;
+                formula_version: string;
+                created_at_ms: number;
+                updated_at_ms: number;
+                submitted_at_ms: number | null;
+                decided_at_ms: number | null;
+                /** @enum {string} */
+                source_integration_state: "UNAVAILABLE" | "SHADOW";
+                /** @enum {string} */
+                delivery_profile: "fixture" | "shadow";
+            } & (unknown & unknown);
+        } | {
+            /** @constant */
+            schema_version: "portal.execution.recorded-portal-workflow.v1";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            observed_at_ms: number;
+            /** @constant */
+            coverage: "SELECTED_CURRENT_PORTAL_RECORD_NOT_EVENT_JOURNAL";
+            effective_stage: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED";
+            };
+            days_in_stage: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED";
+            };
+            /** @constant */
+            dispatch_enabled: false;
+            /** @constant */
+            family: "CANARY";
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "LIVE";
+                /** @constant */
+                association_basis: "CURRENT_NATIVE_TARGET_CORRESPONDENCE";
+                /** @constant */
+                captured_environment_attested: false;
+            };
+            envelope: {
+                envelope_id: string;
+                revision: number;
+                previous_envelope_id: string | null;
+                /** @constant */
+                status: "DRAFT";
+                expected_certification_version: number;
+                created_at_ms: number;
+                /** @constant */
+                source_integration_state: "UNAVAILABLE";
+                /** @constant */
+                delivery_profile: "fixture";
+                /** @constant */
+                production_command_active: false;
+            } & unknown;
+        } | {
+            /** @constant */
+            schema_version: "portal.execution.recorded-portal-workflow.v1";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            observed_at_ms: number;
+            /** @constant */
+            coverage: "SELECTED_CURRENT_PORTAL_RECORD_NOT_EVENT_JOURNAL";
+            effective_stage: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED";
+            };
+            days_in_stage: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                value: unknown;
+                /** @constant */
+                reason_code: "SOURCE_EFFECTIVE_STAGE_TRANSITION_NOT_PUBLISHED";
+            };
+            /** @constant */
+            dispatch_enabled: false;
+            /** @constant */
+            family: "LIVE_GATE";
+            anchors: {
+                deployment_id: string;
+                /** @constant */
+                environment: "LIVE";
+            };
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "LIVE_GATE";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
         };
         /** @description Reuses the canonical ScoreCapsule. No calculator, policy defaults, hidden denominator or quality band for contribution is introduced. Diagnostic facets never replace actual headlines. Source/action authorization remains independent. */
         WorkflowScorePresentation: {

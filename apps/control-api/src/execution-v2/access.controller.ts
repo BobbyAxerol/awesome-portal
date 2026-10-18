@@ -7,6 +7,7 @@ import { PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { AccessActor, AccessPolicyError, accessAuditQuery, accessPreview, accessProposal, accessRevoke, accessWorkspaceQuery, accessText } from "./access.contract";
 import { ExecutionAccessService } from "./access.service";
+import { eligibilityQuery, navigationInput } from "./self-eligibility";
 
 type AccessRequest=FastifyRequest&{portalUser:PortalUser;portalSession:{sessionId:string;csrfSecretHash:string}};
 const stepUpBody=z.object({workspace_id:accessText,password:z.string().min(1).max(256)}).strict();
@@ -37,6 +38,18 @@ export class ExecutionAccessController {
       if(error instanceof AccessPolicyError)throw new AuthError(error.code,"The requested access is not available.",error.status);
       throw error;
     }
+  }
+  @Get("/eligibility")
+  @Header("Cache-Control","private, no-store")
+  async eligibility(@Req()req:AccessRequest,@Query()query:unknown) {
+    const input=this.parse(eligibilityQuery,query);
+    return this.call(()=>this.service.eligibility(this.actor(req),input));
+  }
+  @Get("/self-navigation")
+  @Header("Cache-Control","private, no-store")
+  async selfNavigation(@Req()req:AccessRequest,@Query()query:unknown) {
+    const input=this.parse(navigationInput,query);
+    return this.call(()=>this.service.selfNavigation(this.actor(req),input));
   }
   @Get("/effective")
   @Header("Cache-Control","private, no-store")

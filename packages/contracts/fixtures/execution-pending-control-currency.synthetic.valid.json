@@ -1,0 +1,376 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "statuses": {
+    "unknown": {
+      "schema_version": "portal.execution.pending-recall-status.v1",
+      "family": "PENDING_RECALL_CONTROL",
+      "command_id": "ecm_00000000000000000000000000000031",
+      "operation": "APPLY_PENDING",
+      "original_recall_id": "TEST_ONLY:original-recall",
+      "resource": {
+        "kind": "PORTFOLIO",
+        "id": "TEST_ONLY:portfolio"
+      },
+      "environment": "paper",
+      "profile_ref": "TEST_ONLY:pending-paper",
+      "delivery": "DELIVERY_UNKNOWN",
+      "business": {
+        "state": "UNKNOWN",
+        "business_applied": null,
+        "amounts": null,
+        "receipt": null,
+        "blockers": []
+      },
+      "economic_cash_changed": false,
+      "physical_transfer_performed": false,
+      "projection": "UNKNOWN",
+      "venue": "NOT_APPLICABLE",
+      "next_action": "QUERY_SAME_INTENT",
+      "authority": "TEST_ONLY",
+      "created_at_ms": 1792300000000,
+      "updated_at_ms": 1792300000000,
+      "currency": "USDT"
+    },
+    "failed_before_send": {
+      "schema_version": "portal.execution.pending-recall-status.v1",
+      "family": "PENDING_RECALL_CONTROL",
+      "command_id": "ecm_00000000000000000000000000000031",
+      "operation": "APPLY_PENDING",
+      "original_recall_id": "TEST_ONLY:original-recall",
+      "resource": {
+        "kind": "PORTFOLIO",
+        "id": "TEST_ONLY:portfolio"
+      },
+      "environment": "paper",
+      "profile_ref": "TEST_ONLY:pending-paper",
+      "delivery": "FAILED_BEFORE_SEND",
+      "business": {
+        "state": "UNKNOWN",
+        "business_applied": null,
+        "amounts": null,
+        "receipt": null,
+        "blockers": []
+      },
+      "economic_cash_changed": false,
+      "physical_transfer_performed": false,
+      "projection": "UNKNOWN",
+      "venue": "NOT_APPLICABLE",
+      "next_action": "REVIEW_BLOCKER",
+      "authority": "TEST_ONLY",
+      "created_at_ms": 1792300000000,
+      "updated_at_ms": 1792300000000,
+      "currency": "USDT"
+    },
+    "waiting": {
+      "schema_version": "portal.execution.pending-recall-status.v1",
+      "family": "PENDING_RECALL_CONTROL",
+      "command_id": "ecm_00000000000000000000000000000031",
+      "operation": "APPLY_PENDING",
+      "original_recall_id": "TEST_ONLY:original-recall",
+      "resource": {
+        "kind": "PORTFOLIO",
+        "id": "TEST_ONLY:portfolio"
+      },
+      "environment": "paper",
+      "profile_ref": "TEST_ONLY:pending-paper",
+      "delivery": "ACKNOWLEDGED",
+      "business": {
+        "state": "WAITING_ENCUMBRANCE",
+        "business_applied": false,
+        "amounts": {
+          "requested": "100",
+          "applied": "25",
+          "pending": "75",
+          "cancelled": "0",
+          "rejected": "0"
+        },
+        "receipt": {
+          "control_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_operation": "APPLY_PENDING",
+          "latest_operation_availability": "AVAILABLE",
+          "latest_operation_reason": null,
+          "source_event_id": "TEST_ONLY:pm:event:1",
+          "original_payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "versions": {
+            "budget": "9007199254740993",
+            "source": "11",
+            "parent": "12",
+            "book": "13",
+            "command": "14"
+          }
+        },
+        "blockers": [
+          "TEST_ONLY:encumbrance-open"
+        ]
+      },
+      "economic_cash_changed": false,
+      "physical_transfer_performed": false,
+      "projection": "UNKNOWN",
+      "venue": "NOT_APPLICABLE",
+      "next_action": "QUERY_SAME_INTENT",
+      "authority": "TEST_ONLY",
+      "created_at_ms": 1792300000000,
+      "updated_at_ms": 1792300000000,
+      "currency": "USDT"
+    },
+    "applied": {
+      "schema_version": "portal.execution.pending-recall-status.v1",
+      "family": "PENDING_RECALL_CONTROL",
+      "command_id": "ecm_00000000000000000000000000000031",
+      "operation": "APPLY_PENDING",
+      "original_recall_id": "TEST_ONLY:original-recall",
+      "resource": {
+        "kind": "PORTFOLIO",
+        "id": "TEST_ONLY:portfolio"
+      },
+      "environment": "paper",
+      "profile_ref": "TEST_ONLY:pending-paper",
+      "delivery": "ACKNOWLEDGED",
+      "business": {
+        "state": "APPLIED",
+        "business_applied": true,
+        "amounts": {
+          "requested": "100",
+          "applied": "100",
+          "pending": "0",
+          "cancelled": "0",
+          "rejected": "0"
+        },
+        "receipt": {
+          "control_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_operation": "APPLY_PENDING",
+          "latest_operation_availability": "AVAILABLE",
+          "latest_operation_reason": null,
+          "source_event_id": "TEST_ONLY:pm:event:1",
+          "original_payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "versions": {
+            "budget": "9007199254740993",
+            "source": "11",
+            "parent": "12",
+            "book": "13",
+            "command": "14"
+          }
+        },
+        "blockers": []
+      },
+      "economic_cash_changed": false,
+      "physical_transfer_performed": false,
+      "projection": "UNKNOWN",
+      "venue": "NOT_APPLICABLE",
+      "next_action": "REVIEW_RECEIPT",
+      "authority": "TEST_ONLY",
+      "created_at_ms": 1792300000000,
+      "updated_at_ms": 1792300000000,
+      "currency": "USDT"
+    },
+    "cancelled": {
+      "schema_version": "portal.execution.pending-recall-status.v1",
+      "family": "PENDING_RECALL_CONTROL",
+      "command_id": "ecm_00000000000000000000000000000031",
+      "operation": "CANCEL_REMAINING",
+      "original_recall_id": "TEST_ONLY:original-recall",
+      "resource": {
+        "kind": "PORTFOLIO",
+        "id": "TEST_ONLY:portfolio"
+      },
+      "environment": "paper",
+      "profile_ref": "TEST_ONLY:pending-paper",
+      "delivery": "ACKNOWLEDGED",
+      "business": {
+        "state": "CANCELLED",
+        "business_applied": false,
+        "amounts": {
+          "requested": "100",
+          "applied": "0",
+          "pending": "0",
+          "cancelled": "100",
+          "rejected": "0"
+        },
+        "receipt": {
+          "control_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_operation": "CANCEL_REMAINING",
+          "latest_operation_availability": "AVAILABLE",
+          "latest_operation_reason": null,
+          "source_event_id": "TEST_ONLY:pm:event:1",
+          "original_payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "versions": {
+            "budget": "9007199254740993",
+            "source": "11",
+            "parent": "12",
+            "book": "13",
+            "command": "14"
+          }
+        },
+        "blockers": []
+      },
+      "economic_cash_changed": false,
+      "physical_transfer_performed": false,
+      "projection": "UNKNOWN",
+      "venue": "NOT_APPLICABLE",
+      "next_action": "REVIEW_RECEIPT",
+      "authority": "TEST_ONLY",
+      "created_at_ms": 1792300000000,
+      "updated_at_ms": 1792300000000,
+      "currency": "USDT"
+    },
+    "partially_applied_cancelled": {
+      "schema_version": "portal.execution.pending-recall-status.v1",
+      "family": "PENDING_RECALL_CONTROL",
+      "command_id": "ecm_00000000000000000000000000000031",
+      "operation": "CANCEL_REMAINING",
+      "original_recall_id": "TEST_ONLY:original-recall",
+      "resource": {
+        "kind": "PORTFOLIO",
+        "id": "TEST_ONLY:portfolio"
+      },
+      "environment": "paper",
+      "profile_ref": "TEST_ONLY:pending-paper",
+      "delivery": "ACKNOWLEDGED",
+      "business": {
+        "state": "PARTIALLY_APPLIED_CANCELLED",
+        "business_applied": false,
+        "amounts": {
+          "requested": "100",
+          "applied": "25",
+          "pending": "0",
+          "cancelled": "75",
+          "rejected": "0"
+        },
+        "receipt": {
+          "control_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_operation": "CANCEL_REMAINING",
+          "latest_operation_availability": "AVAILABLE",
+          "latest_operation_reason": null,
+          "source_event_id": "TEST_ONLY:pm:event:1",
+          "original_payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "versions": {
+            "budget": "9007199254740993",
+            "source": "11",
+            "parent": "12",
+            "book": "13",
+            "command": "14"
+          }
+        },
+        "blockers": []
+      },
+      "economic_cash_changed": false,
+      "physical_transfer_performed": false,
+      "projection": "UNKNOWN",
+      "venue": "NOT_APPLICABLE",
+      "next_action": "REVIEW_RECEIPT",
+      "authority": "TEST_ONLY",
+      "created_at_ms": 1792300000000,
+      "updated_at_ms": 1792300000000,
+      "currency": "USDT"
+    },
+    "rejected": {
+      "schema_version": "portal.execution.pending-recall-status.v1",
+      "family": "PENDING_RECALL_CONTROL",
+      "command_id": "ecm_00000000000000000000000000000031",
+      "operation": "APPLY_PENDING",
+      "original_recall_id": "TEST_ONLY:original-recall",
+      "resource": {
+        "kind": "PORTFOLIO",
+        "id": "TEST_ONLY:portfolio"
+      },
+      "environment": "paper",
+      "profile_ref": "TEST_ONLY:pending-paper",
+      "delivery": "ACKNOWLEDGED",
+      "business": {
+        "state": "REJECTED",
+        "business_applied": false,
+        "amounts": {
+          "requested": "100",
+          "applied": "0",
+          "pending": "0",
+          "cancelled": "0",
+          "rejected": "100"
+        },
+        "receipt": {
+          "control_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_operation": "APPLY_PENDING",
+          "latest_operation_availability": "AVAILABLE",
+          "latest_operation_reason": null,
+          "source_event_id": "TEST_ONLY:pm:event:1",
+          "original_payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "versions": {
+            "budget": "9007199254740993",
+            "source": "11",
+            "parent": "12",
+            "book": "13",
+            "command": "14"
+          }
+        },
+        "blockers": []
+      },
+      "economic_cash_changed": false,
+      "physical_transfer_performed": false,
+      "projection": "UNKNOWN",
+      "venue": "NOT_APPLICABLE",
+      "next_action": "REVIEW_RECEIPT",
+      "authority": "TEST_ONLY",
+      "created_at_ms": 1792300000000,
+      "updated_at_ms": 1792300000000,
+      "currency": "USDT"
+    },
+    "linked_operation_not_published": {
+      "schema_version": "portal.execution.pending-recall-status.v1",
+      "family": "PENDING_RECALL_CONTROL",
+      "command_id": "ecm_00000000000000000000000000000031",
+      "operation": "APPLY_PENDING",
+      "original_recall_id": "TEST_ONLY:original-recall",
+      "resource": {
+        "kind": "PORTFOLIO",
+        "id": "TEST_ONLY:portfolio"
+      },
+      "environment": "paper",
+      "profile_ref": "TEST_ONLY:pending-paper",
+      "delivery": "ACKNOWLEDGED",
+      "business": {
+        "state": "WAITING_ENCUMBRANCE",
+        "business_applied": false,
+        "amounts": {
+          "requested": "100",
+          "applied": "25",
+          "pending": "75",
+          "cancelled": "0",
+          "rejected": "0"
+        },
+        "receipt": {
+          "control_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_receipt_id": "TEST_ONLY:pm:owning-recall-receipt:2",
+          "latest_operation": null,
+          "latest_operation_availability": "NOT_PUBLISHED",
+          "latest_operation_reason": "SOURCE_OPERATION_NOT_PUBLISHED",
+          "source_event_id": "TEST_ONLY:pm:event:2",
+          "original_payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "versions": {
+            "budget": "9007199254740993",
+            "source": "11",
+            "parent": "12",
+            "book": "13",
+            "command": "15"
+          }
+        },
+        "blockers": [
+          "TEST_ONLY:encumbrance-open"
+        ]
+      },
+      "economic_cash_changed": false,
+      "physical_transfer_performed": false,
+      "projection": "UNKNOWN",
+      "venue": "NOT_APPLICABLE",
+      "next_action": "QUERY_SAME_INTENT",
+      "authority": "TEST_ONLY",
+      "created_at_ms": 1792300000000,
+      "updated_at_ms": 1792300000000,
+      "currency": "USDT"
+    }
+  }
+}

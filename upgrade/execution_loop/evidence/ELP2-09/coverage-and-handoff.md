@@ -147,3 +147,11 @@ Public contract, fixtures and this consumer prompt are unchanged. No route,
 source factory or STREAM grant was commissioned; browser remains NOT_RUN and
 Claude NOT_STARTED_BY_OWNER_DIRECTION / AWAITING_CONSUMER_REVIEW. Do not create
 a frontend endpoint or enable a stream merely because the coordinator exists.
+
+### C7 source-only composition —2026-10-18
+
+Dependency-closed native Manager preparation, separate READ/STREAM current
+domain facts and authenticated observation resume coordinates are integrated
+WIP. [Exact boundary and source checkpoint](../ELP2-10/manager-intake-2026-10-18.md).
+No transport/listener/provider, grant, installer or stream was activated;
+connected two-human/current-COMMIT/continuity proof remains separate and open.

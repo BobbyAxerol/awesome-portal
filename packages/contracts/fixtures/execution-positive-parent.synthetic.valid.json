@@ -42,6 +42,26 @@
       "r1_approval_id": "apr_TEST_ONLY_r1",
       "observed_risk_grant_id": "grant_TEST_ONLY_historical",
       "currency": "TEST_ONLY:USD"
+    },
+    "actors": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "latest_operation": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "decision_context": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "recorded_activity": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "recorded_verdicts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
     }
   },
   "r2_absent": {
@@ -78,6 +98,26 @@
       "decided_at_ms": null
     },
     "lineage": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "actors": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "latest_operation": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "decision_context": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "recorded_activity": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "recorded_verdicts": {
       "availability": "NOT_PUBLISHED",
       "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
     }
@@ -218,6 +258,10 @@
         }
       ]
     },
+    "criteria": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
     "lineage": {
       "availability": "AVAILABLE",
       "basis": "VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE",
@@ -225,6 +269,18 @@
       "r2_approval_id": "apr_TEST_ONLY_r2",
       "source_snapshot_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
       "evidence_set_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "actors": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "latest_operation": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "recorded_activity": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
     }
   },
   "paper_exit_absent": {
@@ -274,7 +330,23 @@
       "availability": "NOT_PUBLISHED",
       "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
     },
+    "criteria": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
     "lineage": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "actors": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "latest_operation": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "recorded_activity": {
       "availability": "NOT_PUBLISHED",
       "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
     }
@@ -415,6 +487,10 @@
         }
       ]
     },
+    "criteria": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
     "lineage": {
       "availability": "AVAILABLE",
       "basis": "VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE",
@@ -422,6 +498,505 @@
       "r2_approval_id": "apr_TEST_ONLY_r2",
       "source_snapshot_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
       "evidence_set_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "actors": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "latest_operation": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "recorded_activity": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    }
+  },
+  "paper_exit_criteria": {
+    "schema_version": "portal.execution.governance-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "PAPER_EXIT",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_exit",
+      "gate": "PAPER_EXIT",
+      "status": "PENDING",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "review": {
+      "review_id": "apr_TEST_ONLY_exit",
+      "review_state": "PENDING",
+      "review_version": 1,
+      "promote_to": "SANDBOX_VALIDATION",
+      "extension_days": null,
+      "extended_until_ms": null,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000
+    },
+    "evaluation": {
+      "availability": "AVAILABLE",
+      "evaluation_policy_version": "TEST_ONLY:exit-policy",
+      "evaluation_formula_version": "TEST_ONLY:exit-formula",
+      "panels": [
+        {
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "panel_kind": "OBSERVATION_COVERAGE",
+          "source_authority": "RESEARCH",
+          "panel_state": "OK",
+          "as_of_ms": 1790812800000,
+          "freshness_state": "OK",
+          "source_completeness": "POLL_BOUNDED",
+          "poll_interval_ms": 1000,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "panel_kind": "DRIFT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "panel_kind": "LIMITS_HEALTH",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "panel_kind": "PORTFOLIO_FIT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        }
+      ],
+      "findings": [
+        {
+          "finding_id": "finding_TEST_ONLY_0",
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "outcome": "PASS",
+          "blocking": false,
+          "required": true,
+          "as_of_ms": 1790812800000
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_1",
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_2",
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_3",
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        }
+      ]
+    },
+    "criteria": {
+      "availability": "AVAILABLE",
+      "basis": "VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE",
+      "evaluation_policy_version": "TEST_ONLY:exit-policy",
+      "evaluation_formula_version": "TEST_ONLY:exit-formula",
+      "panels": [
+        {
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "panel_kind": "OBSERVATION_COVERAGE",
+          "source_authority": "RESEARCH",
+          "panel_state": "OK",
+          "as_of_ms": 1790812800000,
+          "freshness_state": "OK",
+          "source_completeness": "POLL_BOUNDED",
+          "poll_interval_ms": 1000,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "panel_kind": "DRIFT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "panel_kind": "LIMITS_HEALTH",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "panel_kind": "PORTFOLIO_FIT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        }
+      ],
+      "items": [
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_0",
+            "panel_id": "panel_TEST_ONLY_0",
+            "ordinal": 0,
+            "outcome": "PASS",
+            "blocking": false,
+            "required": true,
+            "as_of_ms": 1790812800000
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "OBSERVATION_COVERAGE",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.observation_coverage",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "AVAILABLE",
+            "value": "1842.000000000000000001",
+            "reason_code": null
+          },
+          "limit": {
+            "availability": "AVAILABLE",
+            "value": "6.00",
+            "reason_code": null
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "AVAILABLE",
+            "value": "CURRENCY",
+            "reason_code": null
+          },
+          "currency": {
+            "availability": "AVAILABLE",
+            "value": "USDC",
+            "reason_code": null
+          },
+          "evidence": {
+            "availability": "AVAILABLE",
+            "value": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+            "reason_code": null
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "AVAILABLE",
+            "value": 1790812800000,
+            "reason_code": null
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_0",
+            "finding_id": "finding_TEST_ONLY_0",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_1",
+            "panel_id": "panel_TEST_ONLY_1",
+            "ordinal": 1,
+            "outcome": "INSUFFICIENT",
+            "blocking": true,
+            "required": true,
+            "as_of_ms": null
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "DRIFT",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.drift",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "AVAILABLE",
+            "value": "0",
+            "reason_code": null
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "evidence": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_EVIDENCE_HASH_NOT_RECORDED"
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TIME_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_1",
+            "finding_id": "finding_TEST_ONLY_1",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_2",
+            "panel_id": "panel_TEST_ONLY_2",
+            "ordinal": 2,
+            "outcome": "INSUFFICIENT",
+            "blocking": true,
+            "required": true,
+            "as_of_ms": null
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "LIMITS_HEALTH",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.limits_health",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "evidence": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_EVIDENCE_HASH_NOT_RECORDED"
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TIME_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_2",
+            "finding_id": "finding_TEST_ONLY_2",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_3",
+            "panel_id": "panel_TEST_ONLY_3",
+            "ordinal": 3,
+            "outcome": "INSUFFICIENT",
+            "blocking": true,
+            "required": true,
+            "as_of_ms": null
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "PORTFOLIO_FIT",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.portfolio_fit",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "evidence": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_EVIDENCE_HASH_NOT_RECORDED"
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TIME_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_3",
+            "finding_id": "finding_TEST_ONLY_3",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        }
+      ]
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "r2_approval_id": "apr_TEST_ONLY_r2",
+      "source_snapshot_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "evidence_set_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "actors": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "latest_operation": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "recorded_activity": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
     }
   },
   "r2_composition": {
@@ -432,7 +1007,7 @@
     "workspace_id": "ws_TEST_ONLY_parent",
     "read_at_ms": 1792281600000,
     "read_at": "2026-10-18T00:00:00.000Z",
-    "composite_revision": "sha256:9f1741d7cc1ad1e8c88f1dab44224ee895145ba97b9a45ccfdd950d7f0b14ea5",
+    "composite_revision": "sha256:4854e2e1195589d04d0c948673a1a61306accad060556cee6b74bc93f5ca5920",
     "source_health": {
       "input_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
       "state": "UNAVAILABLE",
@@ -457,7 +1032,7 @@
     "lineage": {
       "source_health_input_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
       "command_journal_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
-      "workflow_digest": "sha256:07341aeb202c922be02529cd735c9642719713df2333ea8c4f08dd8818a960cd",
+      "workflow_digest": "sha256:52c075a2648ef0c6e3d92b9028123637ea7a0da2128467f3b5733e49dd7333ce",
       "formula_version": "execution.operational-composition.v1"
     },
     "data": {
@@ -500,6 +1075,26 @@
           "r1_approval_id": "apr_TEST_ONLY_r1",
           "observed_risk_grant_id": "grant_TEST_ONLY_historical",
           "currency": "TEST_ONLY:USD"
+        },
+        "actors": {
+          "availability": "NOT_PUBLISHED",
+          "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+        },
+        "latest_operation": {
+          "availability": "NOT_PUBLISHED",
+          "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+        },
+        "decision_context": {
+          "availability": "NOT_PUBLISHED",
+          "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+        },
+        "recorded_activity": {
+          "availability": "NOT_PUBLISHED",
+          "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+        },
+        "recorded_verdicts": {
+          "availability": "NOT_PUBLISHED",
+          "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
         }
       },
       "accepted_manager_facts": null
@@ -513,7 +1108,7 @@
     "workspace_id": "ws_TEST_ONLY_parent",
     "read_at_ms": 1792281600000,
     "read_at": "2026-10-18T00:00:00.000Z",
-    "composite_revision": "sha256:656a1cf2a47af44759a3a00420b8bbbe76b4c69cdd3b23a3a4f5a33a9dacbd74",
+    "composite_revision": "sha256:52b9cf8bc9ae5d51dc0f6b1f1ea18874a747c88d2ea6b4a870e76e4d26174e94",
     "source_health": {
       "input_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
       "state": "UNAVAILABLE",
@@ -538,7 +1133,7 @@
     "lineage": {
       "source_health_input_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
       "command_journal_digest": "sha256:6c3b3a464be216f09771c6dd670dff566d69c23173f4296eea63674bd0906e84",
-      "workflow_digest": "sha256:329628729d7b8180718eca933d923d3828016fd0f6dd7ee4807252cb510362e3",
+      "workflow_digest": "sha256:31eadaf68688716feee18ca199ee28af49e6497035ff60cff9f19b0f1bb204fd",
       "formula_version": "execution.operational-composition.v1"
     },
     "data": {
@@ -678,6 +1273,10 @@
             }
           ]
         },
+        "criteria": {
+          "availability": "NOT_PUBLISHED",
+          "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+        },
         "lineage": {
           "availability": "AVAILABLE",
           "basis": "VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE",
@@ -685,6 +1284,18 @@
           "r2_approval_id": "apr_TEST_ONLY_r2",
           "source_snapshot_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
           "evidence_set_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        "actors": {
+          "availability": "NOT_PUBLISHED",
+          "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+        },
+        "latest_operation": {
+          "availability": "NOT_PUBLISHED",
+          "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+        },
+        "recorded_activity": {
+          "availability": "NOT_PUBLISHED",
+          "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
         }
       }
     }
@@ -1510,6 +2121,1524 @@
         "availability": "NOT_PUBLISHED",
         "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
       }
+    }
+  },
+  "r2_followthrough": {
+    "schema_version": "portal.execution.governance-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "R2",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_r2",
+      "gate": "R2",
+      "status": "EXPIRED",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_IMMUTABLE_REFERENCE",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "observed_risk_grant_id": "grant_TEST_ONLY_historical",
+      "currency": "TEST_ONLY:USD"
+    },
+    "actors": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION",
+      "requester_user_id": "user_TEST_ONLY_requester",
+      "artifact_creator_user_id": "user_TEST_ONLY_creator",
+      "decided_by_user_id": null,
+      "viewer_is_requester": false,
+      "viewer_is_artifact_creator": true,
+      "viewer_is_decided_by": null
+    },
+    "latest_operation": {
+      "availability": "AVAILABLE",
+      "basis": "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY",
+      "operation_id": "op_TEST_ONLY_R2_EXPIRED",
+      "command_version": 1,
+      "command_type": "GOVERNANCE_R2_DECISION",
+      "stored_status": "EXPIRED",
+      "created_at_ms": 1790812800000,
+      "order_basis": "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"
+    },
+    "decision_context": {
+      "availability": "AVAILABLE",
+      "basis": "VERIFIED_STORED_R2_INPUTS_NOT_ACTION_AUTHORIZATION",
+      "gate": "R2",
+      "workspace_id": "ws_TEST_ONLY_parent",
+      "approval_id": "apr_TEST_ONLY_r2",
+      "expected_approval_version": 1,
+      "evidence_set_hash": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "evidence_hashes": {
+        "availability": "AVAILABLE",
+        "value": [
+          "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+        ],
+        "reason_code": null
+      },
+      "command_type": "GOVERNANCE_R2_DECISION",
+      "request_schema_version": "governance.r2-decision-plan-request.v1",
+      "plan_path": "/api/v1/execution/commands/plans",
+      "admission": {
+        "state": "NOT_EVALUATED",
+        "reason_code": "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"
+      },
+      "source_side_effect_requested": false
+    },
+    "recorded_activity": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "recorded_verdicts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    }
+  },
+  "r2_followthrough_hashes_absent": {
+    "schema_version": "portal.execution.governance-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "R2",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_r2",
+      "gate": "R2",
+      "status": "EXPIRED",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_IMMUTABLE_REFERENCE",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "observed_risk_grant_id": "grant_TEST_ONLY_historical",
+      "currency": "TEST_ONLY:USD"
+    },
+    "actors": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION",
+      "requester_user_id": "user_TEST_ONLY_requester",
+      "artifact_creator_user_id": "user_TEST_ONLY_creator",
+      "decided_by_user_id": null,
+      "viewer_is_requester": false,
+      "viewer_is_artifact_creator": true,
+      "viewer_is_decided_by": null
+    },
+    "latest_operation": {
+      "availability": "AVAILABLE",
+      "basis": "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY",
+      "operation_id": "op_TEST_ONLY_R2_EXPIRED",
+      "command_version": 1,
+      "command_type": "GOVERNANCE_R2_DECISION",
+      "stored_status": "EXPIRED",
+      "created_at_ms": 1790812800000,
+      "order_basis": "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"
+    },
+    "decision_context": {
+      "availability": "AVAILABLE",
+      "basis": "VERIFIED_STORED_R2_INPUTS_NOT_ACTION_AUTHORIZATION",
+      "gate": "R2",
+      "workspace_id": "ws_TEST_ONLY_parent",
+      "approval_id": "apr_TEST_ONLY_r2",
+      "expected_approval_version": 1,
+      "evidence_set_hash": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "evidence_hashes": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "EVIDENCE_HASH_LIMIT_EXCEEDED"
+      },
+      "command_type": "GOVERNANCE_R2_DECISION",
+      "request_schema_version": "governance.r2-decision-plan-request.v1",
+      "plan_path": "/api/v1/execution/commands/plans",
+      "admission": {
+        "state": "NOT_EVALUATED",
+        "reason_code": "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"
+      },
+      "source_side_effect_requested": false
+    },
+    "recorded_activity": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "recorded_verdicts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    }
+  },
+  "paper_exit_followthrough": {
+    "schema_version": "portal.execution.governance-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "PAPER_EXIT",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_exit",
+      "gate": "PAPER_EXIT",
+      "status": "DENIED",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812801000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": 1790812801000
+    },
+    "review": {
+      "review_id": "apr_TEST_ONLY_exit",
+      "review_state": "REJECTED_TO_PAPER_HELD",
+      "review_version": 1,
+      "promote_to": "SANDBOX_VALIDATION",
+      "extension_days": null,
+      "extended_until_ms": null,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812801000
+    },
+    "evaluation": {
+      "availability": "AVAILABLE",
+      "evaluation_policy_version": "TEST_ONLY:exit-policy",
+      "evaluation_formula_version": "TEST_ONLY:exit-formula",
+      "panels": [
+        {
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "panel_kind": "OBSERVATION_COVERAGE",
+          "source_authority": "RESEARCH",
+          "panel_state": "OK",
+          "as_of_ms": 1790812800000,
+          "freshness_state": "OK",
+          "source_completeness": "POLL_BOUNDED",
+          "poll_interval_ms": 1000,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "panel_kind": "DRIFT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "panel_kind": "LIMITS_HEALTH",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "panel_kind": "PORTFOLIO_FIT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        }
+      ],
+      "findings": [
+        {
+          "finding_id": "finding_TEST_ONLY_0",
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "outcome": "PASS",
+          "blocking": false,
+          "required": true,
+          "as_of_ms": 1790812800000
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_1",
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_2",
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_3",
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        }
+      ]
+    },
+    "criteria": {
+      "availability": "AVAILABLE",
+      "basis": "VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE",
+      "evaluation_policy_version": "TEST_ONLY:exit-policy",
+      "evaluation_formula_version": "TEST_ONLY:exit-formula",
+      "panels": [
+        {
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "panel_kind": "OBSERVATION_COVERAGE",
+          "source_authority": "RESEARCH",
+          "panel_state": "OK",
+          "as_of_ms": 1790812800000,
+          "freshness_state": "OK",
+          "source_completeness": "POLL_BOUNDED",
+          "poll_interval_ms": 1000,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "panel_kind": "DRIFT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "panel_kind": "LIMITS_HEALTH",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "panel_kind": "PORTFOLIO_FIT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        }
+      ],
+      "items": [
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_0",
+            "panel_id": "panel_TEST_ONLY_0",
+            "ordinal": 0,
+            "outcome": "PASS",
+            "blocking": false,
+            "required": true,
+            "as_of_ms": 1790812800000
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "OBSERVATION_COVERAGE",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.observation_coverage",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "AVAILABLE",
+            "value": "1842.000000000000000001",
+            "reason_code": null
+          },
+          "limit": {
+            "availability": "AVAILABLE",
+            "value": "6.00",
+            "reason_code": null
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "AVAILABLE",
+            "value": "CURRENCY",
+            "reason_code": null
+          },
+          "currency": {
+            "availability": "AVAILABLE",
+            "value": "USDC",
+            "reason_code": null
+          },
+          "evidence": {
+            "availability": "AVAILABLE",
+            "value": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+            "reason_code": null
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "AVAILABLE",
+            "value": 1790812800000,
+            "reason_code": null
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_0",
+            "finding_id": "finding_TEST_ONLY_0",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_1",
+            "panel_id": "panel_TEST_ONLY_1",
+            "ordinal": 1,
+            "outcome": "INSUFFICIENT",
+            "blocking": true,
+            "required": true,
+            "as_of_ms": null
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "DRIFT",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.drift",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "AVAILABLE",
+            "value": "0",
+            "reason_code": null
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "evidence": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_EVIDENCE_HASH_NOT_RECORDED"
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TIME_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_1",
+            "finding_id": "finding_TEST_ONLY_1",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_2",
+            "panel_id": "panel_TEST_ONLY_2",
+            "ordinal": 2,
+            "outcome": "INSUFFICIENT",
+            "blocking": true,
+            "required": true,
+            "as_of_ms": null
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "LIMITS_HEALTH",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.limits_health",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "evidence": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_EVIDENCE_HASH_NOT_RECORDED"
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TIME_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_2",
+            "finding_id": "finding_TEST_ONLY_2",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_3",
+            "panel_id": "panel_TEST_ONLY_3",
+            "ordinal": 3,
+            "outcome": "INSUFFICIENT",
+            "blocking": true,
+            "required": true,
+            "as_of_ms": null
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "PORTFOLIO_FIT",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.portfolio_fit",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "evidence": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_EVIDENCE_HASH_NOT_RECORDED"
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TIME_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_3",
+            "finding_id": "finding_TEST_ONLY_3",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        }
+      ]
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "r2_approval_id": "apr_TEST_ONLY_r2",
+      "source_snapshot_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "evidence_set_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "actors": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION",
+      "requester_user_id": "user_TEST_ONLY_requester",
+      "artifact_creator_user_id": "user_TEST_ONLY_creator",
+      "decided_by_user_id": "user_TEST_ONLY_reviewer",
+      "viewer_is_requester": false,
+      "viewer_is_artifact_creator": false,
+      "viewer_is_decided_by": true
+    },
+    "latest_operation": {
+      "availability": "AVAILABLE",
+      "basis": "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY",
+      "operation_id": "op_TEST_ONLY_PAPER_EXIT_APPLIED",
+      "command_version": 1,
+      "command_type": "GOVERNANCE_PAPER_EXIT_DECISION",
+      "stored_status": "APPLIED",
+      "created_at_ms": 1790812800000,
+      "order_basis": "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"
+    },
+    "recorded_activity": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    }
+  },
+  "r2_recorded": {
+    "schema_version": "portal.execution.governance-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "R2",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_r2",
+      "gate": "R2",
+      "status": "DENIED",
+      "approval_version": 3,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812802000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": 1790812802000
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_IMMUTABLE_REFERENCE",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "observed_risk_grant_id": "grant_TEST_ONLY_historical",
+      "currency": "TEST_ONLY:USD"
+    },
+    "actors": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION",
+      "requester_user_id": "user_TEST_ONLY_requester",
+      "artifact_creator_user_id": "user_TEST_ONLY_creator",
+      "decided_by_user_id": "user_TEST_ONLY_reviewer",
+      "viewer_is_requester": false,
+      "viewer_is_artifact_creator": true,
+      "viewer_is_decided_by": false
+    },
+    "latest_operation": {
+      "availability": "AVAILABLE",
+      "basis": "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY",
+      "operation_id": "op_TEST_ONLY_R2_APPLIED",
+      "command_version": 1,
+      "command_type": "GOVERNANCE_R2_DECISION",
+      "stored_status": "APPLIED",
+      "created_at_ms": 1790812800000,
+      "order_basis": "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"
+    },
+    "decision_context": {
+      "availability": "AVAILABLE",
+      "basis": "VERIFIED_STORED_R2_INPUTS_NOT_ACTION_AUTHORIZATION",
+      "gate": "R2",
+      "workspace_id": "ws_TEST_ONLY_parent",
+      "approval_id": "apr_TEST_ONLY_r2",
+      "expected_approval_version": 3,
+      "evidence_set_hash": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "evidence_hashes": {
+        "availability": "AVAILABLE",
+        "value": [
+          "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+        ],
+        "reason_code": null
+      },
+      "command_type": "GOVERNANCE_R2_DECISION",
+      "request_schema_version": "governance.r2-decision-plan-request.v1",
+      "plan_path": "/api/v1/execution/commands/plans",
+      "admission": {
+        "state": "NOT_EVALUATED",
+        "reason_code": "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"
+      },
+      "source_side_effect_requested": false
+    },
+    "recorded_activity": {
+      "availability": "AVAILABLE",
+      "basis": "IMMUTABLE_PORTAL_DECISION_ROWS_NOT_SOURCE_OR_STAGE_HISTORY",
+      "order_basis": "POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC",
+      "coverage": "BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY",
+      "limit": 32,
+      "has_more": false,
+      "items": [
+        {
+          "decision_id": "decision_TEST_ONLY_r2_2",
+          "operation_id": "op_TEST_ONLY_R2_APPLIED",
+          "decision": "DENY",
+          "version_before": 2,
+          "version_after": 3,
+          "decided_at_ms": 1790812802000,
+          "kind": "R2_DECISION_RECORDED"
+        },
+        {
+          "decision_id": "decision_TEST_ONLY_r2_1",
+          "operation_id": "op_TEST_ONLY_R2_CONDITION",
+          "decision": "APPROVE_WITH_CONDITION",
+          "version_before": 1,
+          "version_after": 2,
+          "decided_at_ms": 1790812801000,
+          "kind": "R2_DECISION_RECORDED"
+        }
+      ]
+    },
+    "recorded_verdicts": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_PORTAL_R2_FINDINGS_NOT_CURRENT_GATE_READINESS",
+      "order_basis": "POSTGRES_ORDINAL_ASC_FINDING_ID_C_ASC",
+      "coverage": "BOUNDED_RECORDED_FINDINGS_NOT_FULL_CRITERIA_HISTORY",
+      "limit": 64,
+      "has_more": false,
+      "admission": {
+        "state": "NOT_EVALUATED",
+        "reason_code": "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"
+      },
+      "items": [
+        {
+          "finding_id": "finding_TEST_ONLY_r2_0",
+          "ordinal": 0,
+          "outcome": "PASS",
+          "blocking": false,
+          "evaluated_at_ms": 1790812800500,
+          "criterion_key": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "label_key": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "observed": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_R2_FINDING",
+            "approval_id": "apr_TEST_ONLY_r2",
+            "finding_id": "finding_TEST_ONLY_r2_0",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_r2_1",
+          "ordinal": 1,
+          "outcome": "WATCH",
+          "blocking": false,
+          "evaluated_at_ms": 1790812800500,
+          "criterion_key": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "label_key": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "observed": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_R2_FINDING",
+            "approval_id": "apr_TEST_ONLY_r2",
+            "finding_id": "finding_TEST_ONLY_r2_1",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_r2_2",
+          "ordinal": 2,
+          "outcome": "FAIL",
+          "blocking": true,
+          "evaluated_at_ms": 1790812800500,
+          "criterion_key": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "label_key": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "observed": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_R2_FINDING",
+            "approval_id": "apr_TEST_ONLY_r2",
+            "finding_id": "finding_TEST_ONLY_r2_2",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_r2_3",
+          "ordinal": 3,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "evaluated_at_ms": 1790812800500,
+          "criterion_key": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "label_key": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "observed": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_R2_FINDING",
+            "approval_id": "apr_TEST_ONLY_r2",
+            "finding_id": "finding_TEST_ONLY_r2_3",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        }
+      ]
+    }
+  },
+  "paper_exit_recorded": {
+    "schema_version": "portal.execution.governance-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false
+    },
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "PAPER"
+    },
+    "family": "PAPER_EXIT",
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_exit",
+      "gate": "PAPER_EXIT",
+      "status": "DENIED",
+      "approval_version": 2,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812801000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": 1790812801000
+    },
+    "review": {
+      "review_id": "apr_TEST_ONLY_exit",
+      "review_state": "REJECTED_TO_PAPER_HELD",
+      "review_version": 2,
+      "promote_to": "SANDBOX_VALIDATION",
+      "extension_days": null,
+      "extended_until_ms": null,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812801000
+    },
+    "evaluation": {
+      "availability": "AVAILABLE",
+      "evaluation_policy_version": "TEST_ONLY:exit-policy",
+      "evaluation_formula_version": "TEST_ONLY:exit-formula",
+      "panels": [
+        {
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "panel_kind": "OBSERVATION_COVERAGE",
+          "source_authority": "RESEARCH",
+          "panel_state": "OK",
+          "as_of_ms": 1790812800000,
+          "freshness_state": "OK",
+          "source_completeness": "POLL_BOUNDED",
+          "poll_interval_ms": 1000,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "panel_kind": "DRIFT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "panel_kind": "LIMITS_HEALTH",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "panel_kind": "PORTFOLIO_FIT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        }
+      ],
+      "findings": [
+        {
+          "finding_id": "finding_TEST_ONLY_0",
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "outcome": "PASS",
+          "blocking": false,
+          "required": true,
+          "as_of_ms": 1790812800000
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_1",
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_2",
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        },
+        {
+          "finding_id": "finding_TEST_ONLY_3",
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "outcome": "INSUFFICIENT",
+          "blocking": true,
+          "required": true,
+          "as_of_ms": null
+        }
+      ]
+    },
+    "criteria": {
+      "availability": "AVAILABLE",
+      "basis": "VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE",
+      "evaluation_policy_version": "TEST_ONLY:exit-policy",
+      "evaluation_formula_version": "TEST_ONLY:exit-formula",
+      "panels": [
+        {
+          "panel_id": "panel_TEST_ONLY_0",
+          "ordinal": 0,
+          "panel_kind": "OBSERVATION_COVERAGE",
+          "source_authority": "RESEARCH",
+          "panel_state": "OK",
+          "as_of_ms": 1790812800000,
+          "freshness_state": "OK",
+          "source_completeness": "POLL_BOUNDED",
+          "poll_interval_ms": 1000,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_1",
+          "ordinal": 1,
+          "panel_kind": "DRIFT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_2",
+          "ordinal": 2,
+          "panel_kind": "LIMITS_HEALTH",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        },
+        {
+          "panel_id": "panel_TEST_ONLY_3",
+          "ordinal": 3,
+          "panel_kind": "PORTFOLIO_FIT",
+          "source_authority": "EXECUTION",
+          "panel_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "freshness_state": "UNKNOWN",
+          "source_completeness": "UNKNOWN",
+          "poll_interval_ms": null,
+          "formula_version": null
+        }
+      ],
+      "items": [
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_0",
+            "panel_id": "panel_TEST_ONLY_0",
+            "ordinal": 0,
+            "outcome": "PASS",
+            "blocking": false,
+            "required": true,
+            "as_of_ms": 1790812800000
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "OBSERVATION_COVERAGE",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.observation_coverage",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "AVAILABLE",
+            "value": "1842.000000000000000001",
+            "reason_code": null
+          },
+          "limit": {
+            "availability": "AVAILABLE",
+            "value": "6.00",
+            "reason_code": null
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "AVAILABLE",
+            "value": "CURRENCY",
+            "reason_code": null
+          },
+          "currency": {
+            "availability": "AVAILABLE",
+            "value": "USDC",
+            "reason_code": null
+          },
+          "evidence": {
+            "availability": "AVAILABLE",
+            "value": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+            "reason_code": null
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "AVAILABLE",
+            "value": 1790812800000,
+            "reason_code": null
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_0",
+            "finding_id": "finding_TEST_ONLY_0",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_1",
+            "panel_id": "panel_TEST_ONLY_1",
+            "ordinal": 1,
+            "outcome": "INSUFFICIENT",
+            "blocking": true,
+            "required": true,
+            "as_of_ms": null
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "DRIFT",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.drift",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "AVAILABLE",
+            "value": "0",
+            "reason_code": null
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "evidence": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_EVIDENCE_HASH_NOT_RECORDED"
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TIME_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_1",
+            "finding_id": "finding_TEST_ONLY_1",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_2",
+            "panel_id": "panel_TEST_ONLY_2",
+            "ordinal": 2,
+            "outcome": "INSUFFICIENT",
+            "blocking": true,
+            "required": true,
+            "as_of_ms": null
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "LIMITS_HEALTH",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.limits_health",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "evidence": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_EVIDENCE_HASH_NOT_RECORDED"
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TIME_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_2",
+            "finding_id": "finding_TEST_ONLY_2",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        },
+        {
+          "original": {
+            "finding_id": "finding_TEST_ONLY_3",
+            "panel_id": "panel_TEST_ONLY_3",
+            "ordinal": 3,
+            "outcome": "INSUFFICIENT",
+            "blocking": true,
+            "required": true,
+            "as_of_ms": null
+          },
+          "criterion_key": {
+            "availability": "AVAILABLE",
+            "value": "PORTFOLIO_FIT",
+            "reason_code": null
+          },
+          "label_key": {
+            "availability": "AVAILABLE",
+            "value": "paper_exit.portfolio_fit",
+            "reason_code": null
+          },
+          "observed": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "limit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_VALUE_NOT_RECORDED"
+          },
+          "op": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+          },
+          "unit": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "currency": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "evidence": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_EVIDENCE_HASH_NOT_RECORDED"
+          },
+          "finding_formula_version": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TEXT_NOT_RECORDED"
+          },
+          "source_time": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "SOURCE_TIME_NOT_RECORDED"
+          },
+          "source_ref": {
+            "kind": "PORTAL_STORED_PAPER_EXIT_FINDING",
+            "review_id": "apr_TEST_ONLY_exit",
+            "panel_id": "panel_TEST_ONLY_3",
+            "finding_id": "finding_TEST_ONLY_3",
+            "basis": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+          }
+        }
+      ]
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "r2_approval_id": "apr_TEST_ONLY_r2",
+      "source_snapshot_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "evidence_set_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "actors": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION",
+      "requester_user_id": "user_TEST_ONLY_requester",
+      "artifact_creator_user_id": "user_TEST_ONLY_creator",
+      "decided_by_user_id": "user_TEST_ONLY_reviewer",
+      "viewer_is_requester": false,
+      "viewer_is_artifact_creator": false,
+      "viewer_is_decided_by": true
+    },
+    "latest_operation": {
+      "availability": "AVAILABLE",
+      "basis": "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY",
+      "operation_id": "op_TEST_ONLY_PAPER_EXIT_APPLIED",
+      "command_version": 1,
+      "command_type": "GOVERNANCE_PAPER_EXIT_DECISION",
+      "stored_status": "APPLIED",
+      "created_at_ms": 1790812800000,
+      "order_basis": "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"
+    },
+    "recorded_activity": {
+      "availability": "AVAILABLE",
+      "basis": "IMMUTABLE_PORTAL_DECISION_ROWS_NOT_SOURCE_OR_STAGE_HISTORY",
+      "order_basis": "POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC",
+      "coverage": "BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY",
+      "limit": 32,
+      "has_more": false,
+      "items": [
+        {
+          "decision_id": "decision_TEST_ONLY_exit_1",
+          "operation_id": "op_TEST_ONLY_PAPER_EXIT_APPLIED",
+          "decision": "REJECT",
+          "version_before": 1,
+          "version_after": 2,
+          "decided_at_ms": 1790812801000,
+          "kind": "PAPER_EXIT_DECISION_RECORDED"
+        }
+      ]
     }
   }
 }

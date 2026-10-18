@@ -9,6 +9,7 @@ import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
 import { AuthService } from "../src/auth/auth.service";
+import { SESSION_COOKIE } from "../src/auth/cookies";
 import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { SessionsRepository } from "../src/repos/sessions";
 import { ExecutionAccessService } from "../src/execution-v2/access.service";
@@ -146,6 +147,27 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 scoped Manager raw read
           finally { await adminPool.end(); }
         }
       }
+    }
+  });
+
+  it("publishes CURRENT_ONLY through mounted session HTTP without consulting Manager source",async()=>{
+    // Actual Core/session and mounted controller; the existing identity fixture
+    // remains TEST_ONLY. This is a query-refusal test, not source qualification.
+    const session=await auth.login({assertion:researcher.username,username:researcher.username,
+      credential:"manager-elp204-correct-horse-test-only-2026"});
+    const source=vi.spyOn(ctx.app.get(ManagerModelService),"read");
+    try{
+      const response=await ctx.app.getHttpAdapter().getInstance().inject({method:"GET",
+        url:"/api/v1/execution/manager/fleet?environment=paper&as_of_ms=0",
+        headers:{cookie:SESSION_COOKIE+"="+session.token,"x-request-id":"TEST_ONLY-c4-current-only"}});
+      expect(response.statusCode).toBe(400);
+      expect(response.headers["cache-control"]).toBe("private, no-store");
+      expect(response.json()).toEqual({error:{code:"EXECUTION_READ_CURRENT_ONLY",
+        message:"The requested Execution read is not available."},request_id:"TEST_ONLY-c4-current-only"});
+      expect(source).not.toHaveBeenCalled();
+    }finally{
+      source.mockRestore();
+      await auth.sessions.revokeSession(session.sessionId,"TEST_ONLY_C4_HTTP_CLEANUP");
     }
   });
 

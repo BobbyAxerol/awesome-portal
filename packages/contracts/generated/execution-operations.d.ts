@@ -1303,6 +1303,7 @@ export interface components {
             /** @constant */
             external_side_effect_requested: false;
         };
+        /** @description Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema. */
         CommandStatus: {
             /** @constant */
             schema_version: "portal.execution.command-status.v1";
@@ -1343,6 +1344,7 @@ export interface components {
             updated_at_ms: number;
             /** @enum {string} */
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
+            currency: string;
         };
         /** @description Exact selected Portal plan with current-authorized ROOT metadata. APPLIED is stored Portal state, NOT TS acceptance/settlement/verification. Original expiry is historical metadata, not current read TTL; no status rewrite. Runtime additionally checks expires_at_ms>=created_at_ms and nonnull applied_at_ms>=created_at_ms, plus ROOT timestamp relations. Public millisecond equality is valid for a strictly positive sub-ms stored interval. No private intent, actor, token, response, receipt, prose or optional parent section. R2 captured parent pins are all-null or all-present; they are NOT today's R1 version or current permission. */
         R2ParentOperationReadV2: {

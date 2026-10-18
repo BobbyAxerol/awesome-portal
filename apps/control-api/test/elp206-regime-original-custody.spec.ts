@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import * as calculator from "../src/execution-v2/manager-regime";
 import { accessDigest } from "../src/execution-v2/access-policy";
-import type { ManagerModelDocument } from "../src/execution-v2/manager-model.contract";
+import { managerModelDocument, type ManagerModelDocument } from "../src/execution-v2/manager-model.contract";
 import { captureManagerRegimeOriginal, managerRegimeCapturedOriginal, restoreManagerRegimeOriginal, managerRegimeRetainedInputs,
   loadApprovedManagerRegimePolicy, loadVerifiedManagerRegimeEvidence, ManagerRegimeRuntime, managerRegimePublicationCurrent,
   revokeApprovedManagerRegimePolicy, revokeVerifiedManagerRegimeEvidence,
@@ -114,16 +114,26 @@ describe("ELP2-06 original Regime private custody (SYNTHETIC, no source/runtime 
   it("binds final FULL135 source metadata and exact publication, not a summary-only or different revision document",async()=>{
     const h=await calculate(),d=documentFor(h),request=captureRequest(h,d);
     for(const change of [(x:ManagerModelDocument)=>{x.workspace_id="TEST_ONLY:other-workspace";},
-      (x:ManagerModelDocument)=>{x.environment="paper";},(x:ManagerModelDocument)=>{x.profile_id="TEST_ONLY:other-profile";},
+      (x:ManagerModelDocument)=>{x.environment="paper";x.members.forEach(m=>{m.stage="PAPER";});},
+      (x:ManagerModelDocument)=>{x.profile_id="TEST_ONLY:other-profile";},
       (x:ManagerModelDocument)=>{x.catalogue_digest=digest("other-catalogue");},(x:ManagerModelDocument)=>{x.revision="TEST_ONLY:r2";},
       (x:ManagerModelDocument)=>{x.projection_generation="TEST_ONLY:g2";},(x:ManagerModelDocument)=>{x.source_set_digest=digest("other-set");},
       (x:ManagerModelDocument)=>{x.as_of_ms=999;x.facts_through_ms=999;}]){
-      const wrong=clone(d);change(wrong);reason(captureManagerRegimeOriginal({...request,document:wrong},()=>1002),"REGIME_ORIGINAL_CUSTODY_SOURCE_MISMATCH");}
+      const wrong=clone(d);change(wrong);
+      // Source-binding vectors must first be structurally valid. A mismatched
+      // environment/stage is a separate ingress refusal, not a source check.
+      expect(managerModelDocument.safeParse(wrong).success).toBe(true);
+      reason(captureManagerRegimeOriginal({...request,document:wrong},()=>1002),"REGIME_ORIGINAL_CUSTODY_SOURCE_MISMATCH");}
     for(const publications of [[],[clone(h.publication),clone(h.publication)]]){
       const wrong=clone(d);wrong.precomputed_regimes=publications;
       reason(captureManagerRegimeOriginal({...request,document:wrong},()=>1002),"REGIME_ORIGINAL_CUSTODY_PUBLICATION_MISMATCH");}
     const wrong=clone(h.publication);wrong.provenance.calculation_revision="TEST_ONLY:other-worker";
     reason(captureManagerRegimeOriginal({...request,publication:wrong},()=>1002),"REGIME_ORIGINAL_CUSTODY_PUBLICATION_MISMATCH");
+  });
+  it("rejects a structurally inconsistent environment/stage before source custody matching",async()=>{
+    const h=await calculate(),d=documentFor(h),wrong=clone(d);wrong.environment="paper";
+    expect(managerModelDocument.safeParse(wrong).success).toBe(false);
+    reason(captureManagerRegimeOriginal({...captureRequest(h,d),document:wrong},()=>1002),"REGIME_ORIGINAL_CUSTODY_INVALID");
   });
   it("requires each exact accepted tuple/stage once; unrelated final-document slots remain digest-bound",async()=>{
     const h=await calculate(),d=documentFor(h),request=captureRequest(h,d);

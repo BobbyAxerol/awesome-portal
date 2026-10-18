@@ -20,6 +20,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/profile-access/v2/eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Current-only self projection; reject unknown query keys, repeated/ambiguous values, subjects, roles, as_of_ms and browser profile/hash tuples. Advisory, never an execution permit. */
+        get: operations["portalScopedAccessEligibilityGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/profile-access/v2/self-navigation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Current-only self projection; reject unknown query keys, repeated/ambiguous values, subjects, roles, as_of_ms and browser profile/hash tuples. Advisory, never an execution permit. */
+        get: operations["portalScopedAccessSelfNavigationGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/profile-access/v2/preview": {
         parameters: {
             query?: never;
@@ -173,6 +207,399 @@ export interface components {
             expected_ts_membership_revision: string | null;
             reason: string;
         } & unknown;
+        /** @enum {string} */
+        AccessEligibilityAction: "alpha.read" | "portfolio.read" | "portfolio.read_restricted" | "portfolio.discover_linked" | "account.read" | "binding.read" | "audit.read" | "governance.r1.read" | "governance.r2.read" | "governance.canary.read" | "governance.live.read" | "governance.r1.decide" | "governance.r2.decide" | "governance.canary.decide" | "governance.live.decide" | "maintenance.read" | "development.read" | "capital.fund" | "capital.initial_grant" | "capital.top_up" | "capital.immediate_decrease" | "capital.recall_partial" | "capital.recall_full" | "capital.adjust_target_budget" | "capital.set_root_limit" | "capital.apply_pending" | "capital.cancel_remaining" | "deployment.register";
+        AccessEligibilityQuery: {
+            /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
+            workspace_id: string;
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+            /** @enum {unknown} */
+            resource_kind: "ROOT" | "PORTFOLIO" | "ALPHA" | "ALPHA_VERSION" | "DEPLOYMENT" | "ACCOUNT" | "BINDING" | "USER";
+            /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
+            resource_id: string;
+            /** @description One exact CSV string,1–16 unique finite actions. No whitespace normalization, repeated query keys, JSON, wildcards or actor/as-of selectors. */
+            actions: string & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        };
+        AccessSelfNavigationQuery: {
+            /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
+            workspace_id: string;
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+        };
+        AccessEligibilityRow: {
+            action: components["schemas"]["AccessEligibilityAction"];
+            /** @enum {unknown} */
+            permission: "ALLOWED" | "UNAVAILABLE";
+            /** @enum {unknown} */
+            reason_class: "FAMILY_CHECK_REQUIRED" | "NO_CURRENT_PERMISSION" | "POLICY_PENDING" | "FIELD_POLICY_PENDING" | "ACTION_TARGET_UNSUPPORTED";
+            /** @enum {unknown} */
+            public_copy_key: "FAMILY_CHECK_REQUIRED" | "NO_CURRENT_PERMISSION" | "POLICY_PENDING" | "FIELD_POLICY_PENDING" | "ACTION_TARGET_UNSUPPORTED";
+            /** @description Opaque existing own matched grant ID: canonical accessText, at most 256 Unicode codepoints, not the new caller-selector UTF8 byte limit. Returned unchanged without normalization. */
+            grant_ref: string | null;
+            /** @enum {unknown} */
+            authority_mode: "VERSIONED_CURRENT" | "LEGACY_COMPATIBILITY" | "APP_ONLY" | "NOT_ESTABLISHED";
+            step_up_required: boolean | null;
+            /** @constant */
+            step_up_freshness: "NOT_CHECKED";
+            /** @constant */
+            challenge_availability: "NOT_CHECKED";
+            /** @constant */
+            command_readiness: "NOT_CHECKED";
+            /** @enum {unknown} */
+            family_check: "BUSINESS_READ_SCOPE" | "CURRENT_AUDIT_READ" | "GOVERNANCE_READER" | "GOVERNANCE_PLAN" | "TECHNICAL_READ_SCOPE" | "CAPITAL_PREVIEW" | "PENDING_CONTROL_PREVIEW" | "INSTANCE_REGISTRATION_PREVIEW";
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        /**
+         * @description Current own application permission facts only; target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Not a permit or TS activation.
+         * @example {
+         *       "schema_version": "portal.self-eligibility.v1",
+         *       "workspace_id": "ws_TEST_ONLY",
+         *       "environment": "paper",
+         *       "resource": {
+         *         "kind": "PORTFOLIO",
+         *         "id": "portfolio_TEST_ONLY"
+         *       },
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "actions": [
+         *         {
+         *           "action": "portfolio.read",
+         *           "permission": "ALLOWED",
+         *           "reason_class": "FAMILY_CHECK_REQUIRED",
+         *           "public_copy_key": "FAMILY_CHECK_REQUIRED",
+         *           "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC",
+         *           "authority_mode": "VERSIONED_CURRENT",
+         *           "step_up_required": false,
+         *           "step_up_freshness": "NOT_CHECKED",
+         *           "challenge_availability": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED",
+         *           "family_check": "BUSINESS_READ_SCOPE"
+         *         }
+         *       ]
+         *     }
+         * @example {
+         *       "schema_version": "portal.self-eligibility.v1",
+         *       "workspace_id": "ws_TEST_ONLY",
+         *       "environment": "paper",
+         *       "resource": {
+         *         "kind": "PORTFOLIO",
+         *         "id": "portfolio_TEST_ONLY"
+         *       },
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "actions": [
+         *         {
+         *           "action": "portfolio.read",
+         *           "permission": "UNAVAILABLE",
+         *           "reason_class": "NO_CURRENT_PERMISSION",
+         *           "public_copy_key": "NO_CURRENT_PERMISSION",
+         *           "grant_ref": null,
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "step_up_required": false,
+         *           "step_up_freshness": "NOT_CHECKED",
+         *           "challenge_availability": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED",
+         *           "family_check": "BUSINESS_READ_SCOPE"
+         *         }
+         *       ]
+         *     }
+         */
+        AccessEligibility: {
+            /** @constant */
+            schema_version: "portal.self-eligibility.v1";
+            /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
+            workspace_id: string;
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+            resource: {
+                /** @enum {unknown} */
+                kind: "ROOT" | "PORTFOLIO" | "ALPHA" | "ALPHA_VERSION" | "DEPLOYMENT" | "ACCOUNT" | "BINDING" | "USER";
+                /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
+                id: string;
+            };
+            /** @constant */
+            current_only: true;
+            /** @constant */
+            advisory_only: true;
+            actions: components["schemas"]["AccessEligibilityRow"][] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        };
+        AccessSelfNavigationItem: {
+            /** @enum {unknown} */
+            feature: "EXECUTION_PORTFOLIOS" | "EXECUTION_ACCOUNTS_BINDINGS" | "EXECUTION_OPERATIONS" | "EXECUTION_BLOTTER";
+            /** @enum {unknown} */
+            state: "ENTERABLE" | "HIDDEN";
+            /** @enum {unknown} */
+            authority_mode: "SCOPED_CURRENT" | "APP_ONLY" | "NOT_ESTABLISHED";
+            /** @constant */
+            family_check: "NOT_CHECKED";
+            /** @constant */
+            source_readiness: "NOT_CHECKED";
+            /** @constant */
+            field_readiness: "NOT_CHECKED";
+            /** @constant */
+            command_readiness: "NOT_CHECKED";
+        } & (unknown & unknown);
+        /**
+         * @description Exactly four ordered own menu facts. APP_ONLY is exact reviewed Portal Manager domain permission, never source/field/economic/native/command readiness and never Operations audit. No target IDs, domain digests, peer grants or synthetic capability aliases.
+         * @example {
+         *       "schema_version": "portal.self-navigation.v1",
+         *       "workspace_id": "ws_TEST_ONLY",
+         *       "environment": "paper",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "current_read_mode": "NOT_ESTABLISHED",
+         *       "self_entry": {
+         *         "feature": "PROFILE_ACCESS",
+         *         "mode": "SELF_ONLY",
+         *         "permission": "ALLOWED",
+         *         "route": null,
+         *         "consumer_state": "AWAITING_CONSUMER_ROUTER"
+         *       },
+         *       "features": [
+         *         {
+         *           "feature": "EXECUTION_PORTFOLIOS",
+         *           "state": "ENTERABLE",
+         *           "authority_mode": "APP_ONLY",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+         *           "state": "ENTERABLE",
+         *           "authority_mode": "APP_ONLY",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_OPERATIONS",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_BLOTTER",
+         *           "state": "ENTERABLE",
+         *           "authority_mode": "APP_ONLY",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         }
+         *       ]
+         *     }
+         * @example {
+         *       "schema_version": "portal.self-navigation.v1",
+         *       "workspace_id": "ws_TEST_ONLY",
+         *       "environment": "paper",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "current_read_mode": "NOT_ESTABLISHED",
+         *       "self_entry": {
+         *         "feature": "PROFILE_ACCESS",
+         *         "mode": "SELF_ONLY",
+         *         "permission": "ALLOWED",
+         *         "route": null,
+         *         "consumer_state": "AWAITING_CONSUMER_ROUTER"
+         *       },
+         *       "features": [
+         *         {
+         *           "feature": "EXECUTION_PORTFOLIOS",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_OPERATIONS",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_BLOTTER",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         }
+         *       ]
+         *     }
+         * @example {
+         *       "schema_version": "portal.self-navigation.v1",
+         *       "workspace_id": "ws_TEST_ONLY",
+         *       "environment": "paper",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "current_read_mode": "LEGACY_COMPATIBILITY",
+         *       "self_entry": {
+         *         "feature": "PROFILE_ACCESS",
+         *         "mode": "SELF_ONLY",
+         *         "permission": "ALLOWED",
+         *         "route": null,
+         *         "consumer_state": "AWAITING_CONSUMER_ROUTER"
+         *       },
+         *       "features": [
+         *         {
+         *           "feature": "EXECUTION_PORTFOLIOS",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_OPERATIONS",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_BLOTTER",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         }
+         *       ]
+         *     }
+         * @example {
+         *       "schema_version": "portal.self-navigation.v1",
+         *       "workspace_id": "ws_TEST_ONLY",
+         *       "environment": "paper",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "current_read_mode": "SCOPED_V2",
+         *       "self_entry": {
+         *         "feature": "PROFILE_ACCESS",
+         *         "mode": "SELF_ONLY",
+         *         "permission": "ALLOWED",
+         *         "route": null,
+         *         "consumer_state": "AWAITING_CONSUMER_ROUTER"
+         *       },
+         *       "features": [
+         *         {
+         *           "feature": "EXECUTION_PORTFOLIOS",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_OPERATIONS",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         },
+         *         {
+         *           "feature": "EXECUTION_BLOTTER",
+         *           "state": "HIDDEN",
+         *           "authority_mode": "NOT_ESTABLISHED",
+         *           "family_check": "NOT_CHECKED",
+         *           "source_readiness": "NOT_CHECKED",
+         *           "field_readiness": "NOT_CHECKED",
+         *           "command_readiness": "NOT_CHECKED"
+         *         }
+         *       ]
+         *     }
+         */
+        AccessSelfNavigation: {
+            /** @constant */
+            schema_version: "portal.self-navigation.v1";
+            /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
+            workspace_id: string;
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+            /** @constant */
+            current_only: true;
+            /** @constant */
+            advisory_only: true;
+            /**
+             * @description Current Core-workspace reader routing metadata only; not a grant, source readiness or command permit.
+             * @enum {unknown}
+             */
+            current_read_mode: "LEGACY_COMPATIBILITY" | "SCOPED_V2" | "NOT_ESTABLISHED";
+            features: [
+                components["schemas"]["AccessSelfNavigationItem"] & {
+                    /** @constant */
+                    feature: "EXECUTION_PORTFOLIOS";
+                },
+                components["schemas"]["AccessSelfNavigationItem"] & {
+                    /** @constant */
+                    feature: "EXECUTION_ACCOUNTS_BINDINGS";
+                },
+                components["schemas"]["AccessSelfNavigationItem"] & {
+                    /** @constant */
+                    feature: "EXECUTION_OPERATIONS";
+                },
+                components["schemas"]["AccessSelfNavigationItem"] & {
+                    /** @constant */
+                    feature: "EXECUTION_BLOTTER";
+                }
+            ];
+            self_entry: {
+                /** @constant */
+                feature: "PROFILE_ACCESS";
+                /** @constant */
+                mode: "SELF_ONLY";
+                /** @constant */
+                permission: "ALLOWED";
+                route: null;
+                /** @constant */
+                consumer_state: "AWAITING_CONSUMER_ROUTER";
+            };
+        };
         AccessPreviewRequest: {
             workspace_id: string;
             change: components["schemas"]["AccessChange"];
@@ -386,6 +813,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -395,6 +823,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -404,6 +833,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             403: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -413,6 +843,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -422,6 +853,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -431,6 +863,178 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+        };
+    };
+    portalScopedAccessEligibilityGetV1: {
+        parameters: {
+            query: {
+                workspace_id: string;
+                environment: "paper" | "sandbox" | "live";
+                resource_kind: "ROOT" | "PORTFOLIO" | "ALPHA" | "ALPHA_VERSION" | "DEPLOYMENT" | "ACCOUNT" | "BINDING" | "USER";
+                resource_id: string;
+                actions: string & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private,no-store; Portal application authority, not TS business activation. */
+            200: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessEligibility"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            400: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            401: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            403: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            404: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            409: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            503: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+        };
+    };
+    portalScopedAccessSelfNavigationGetV1: {
+        parameters: {
+            query: {
+                workspace_id: string;
+                environment: "paper" | "sandbox" | "live";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private,no-store; Portal application authority, not TS business activation. */
+            200: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessSelfNavigation"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            400: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            401: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            403: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            404: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            409: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            503: {
+                headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -468,6 +1072,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -477,6 +1082,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -486,6 +1092,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             403: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -495,6 +1102,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -504,6 +1112,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -513,6 +1122,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -550,6 +1160,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -559,6 +1170,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -568,6 +1180,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             403: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -577,6 +1190,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -586,6 +1200,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -595,6 +1210,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -628,6 +1244,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -637,6 +1254,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -646,6 +1264,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             403: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -655,6 +1274,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -664,6 +1284,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -673,6 +1294,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -712,6 +1334,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -721,6 +1344,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -730,6 +1354,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             403: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -739,6 +1364,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -748,6 +1374,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -757,6 +1384,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -796,6 +1424,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -805,6 +1434,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -814,6 +1444,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             403: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -823,6 +1454,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -832,6 +1464,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -841,6 +1474,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -878,6 +1512,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -887,6 +1522,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -896,6 +1532,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             403: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -905,6 +1542,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -914,6 +1552,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -923,6 +1562,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -957,6 +1597,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -966,6 +1607,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -975,6 +1617,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             403: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -984,6 +1627,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -993,6 +1637,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -1002,6 +1647,7 @@ export interface operations {
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {

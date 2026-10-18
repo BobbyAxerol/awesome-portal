@@ -1,7 +1,7 @@
 /** One local, already-authorized stored command. No new-send authorization,
  * source I/O, authority installation or financial state inference. */
 import { accessDigest } from "./access-policy";
-import { commandIntent, commandStatus, CommandError, type CommandIntent, type CommandStatus } from "./command.contract";
+import { commandIntent, commandStatus, publicCommandStatus, CommandError, type CommandIntent, type CommandStatus } from "./command.contract";
 import { commandAuthorization } from "./command-trust";
 import type { WorkflowCommandCandidate } from "./command.store";
 
@@ -63,4 +63,12 @@ export function workflowCommandRecord(row: WorkflowCommandCandidate, workspace: 
     if (normalize(requested) !== normalize(amounts.requested)) return bad();
   }
   return { intent, status };
+}
+
+/** Call only behind the same current exact-resource report/mutation fence as
+ * workflowCommandRecord. No persisted row/event is mutated or rehashed. */
+export function publicCommandRecord(row: WorkflowCommandCandidate, workspace: string, id: string,
+  target: WorkflowCommandTarget) {
+  const { intent, status } = workflowCommandRecord(row, workspace, id, target);
+  return publicCommandStatus.parse({ ...status, currency: intent.business_payload.currency });
 }

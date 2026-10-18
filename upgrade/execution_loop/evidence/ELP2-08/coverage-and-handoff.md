@@ -335,3 +335,32 @@ requests/review follow recurring7.3 in their original phase packet, no parallel
 queue and no silent UI/state change. Remaining command families and installed
 source/trust/budgets/calibration/coexistence/P184G2/browser stay OPEN.
 
+### C5/F8 follow-through —2026-10-18
+
+The existing Paper Exit GET/composition gains exact independently authorized
+rich criteria; pure workflow capsules preserve stored criteria/steps without
+inventing gate readiness. Public command/pending/nested workflow status gains
+currency from verified original intent, with old immutable stored bytes intact.
+[Types, fixtures, reviewed-purpose limits and remaining cockpit facts](../ELP2-10/manager-intake-2026-10-18.md).
+Integrated WIP is not qualification, installed purpose or consumer acceptance.
+
+Further C5 parent followthrough adds `actors` / `latest_operation` to R2 and
+Paper Exit, plus R2 `decision_context`. Exact types/fixtures and independent
+three-purpose/seal cap29 boundary are in the linked intake. Actor equality is
+NOT current decide/SoD eligibility; latest stored plan is NOT source settlement;
+context admission is deliberately NOT_EVALUATED until actual plan. Existing
+routes/components are reused, no legacy ROOT widening or policy installation.
+Claude consumer/parser work starts from the eventual landed SHA and must record
+ACCEPTED/CHANGES_REQUESTED separately. Final normal-hook qualification pending.
+
+C5 bounded-recorded followthrough additionally integrates `recorded_activity`
+on R2/Paper Exit and `recorded_verdicts` on R2. Two independent PAPER-only
+BOTH-anchor purposes increase the precise seal cap29→31; no old-purpose or
+policy/grant widening. Actual immutable decisions are original-plan correlated,
+latest32+lookahead, not full TS/stage/subject history. Stored findings are
+first64+lookahead with typed absent quantitative scalars and admission
+NOT_EVALUATED. Claude uses the existing generated parent types and exact fixture
+states, not raw server strings, inferred actor permission or x/7 readiness.
+[Detailed caps, same-flight guards, review findings and remaining scope](../ELP2-10/manager-intake-2026-10-18.md#bounded-recorded-facts--additional-c5-local-completion).
+Final normal-hook and consumer review remain separate pending gates.
+

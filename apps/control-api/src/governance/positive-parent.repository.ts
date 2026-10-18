@@ -5,6 +5,8 @@ import { CONTROL_API_POOL } from "../tokens";
 import { IdentifierSchema } from "../operations/contracts";
 import { computeEvidenceManifestHash } from "./evidence-manifest";
 import type { EvidenceRecord } from "./governance.repository";
+import { recordedParentFacts, type RawRecordedActivity, type RawRecordedActivityItem,
+  type RawRecordedVerdicts, type RawRecordedVerdictItem } from "./parent-recorded-facts.contract";
 import { computePaperExitSourceSnapshotHash, type PaperExitSourceSnapshotInput } from "./paper-exit.service";
 
 export type PositiveParentFamily = "R2" | "PAPER_EXIT";
@@ -51,6 +53,13 @@ export interface RawDecisionOperationMetadata {
   parent_evidence_set_hash: string | null;
   created_at: string; expires_at: string; applied_at: string | null;
 }
+export interface RawParentActors { requester_user_id: string; artifact_creator_user_id: string; decided_by_user_id: string | null; }
+export type RawLatestPortalOperation = { state: "EMPTY" | "NOT_PUBLIC" } | {
+  state: "AVAILABLE"; operation_id: string; command_type: "GOVERNANCE_R2_DECISION" | "GOVERNANCE_PAPER_EXIT_DECISION";
+  command_version: 1; status: "PLANNED" | "APPLIED" | "EXPIRED"; created_at: string;
+};
+export interface ParentReadOptions { includeCurrency: boolean; includeCriteria?: boolean; includeActors?: boolean; includeLatestOperation?: boolean;
+  includeRecordedActivity?: boolean; includeRecordedVerdicts?: boolean; }
 export interface RawPaperReviewMetadata {
   review_id: string; review_state: string; review_version: number;
   promote_to: string; extension_days: number | null; extended_until: string | null;
@@ -73,6 +82,12 @@ export interface RawPaperFindingMetadata {
   blocking: boolean; required: boolean; evidence_hash: string | null;
   formula_version: string | null; as_of: string | null;
 }
+/** Only deliberately reviewed criterion facts; never label/prose/href or the
+ * full private hash preimage. It is not returned without the separate purpose. */
+export interface RawPaperCriterionMetadata extends RawPaperFindingMetadata {
+  metric_key: string; exact_value: string | null; threshold_value: string | null;
+  unit: string | null; currency: string | null;
+}
 export interface RawPositiveParent {
   identity: PositiveParentCandidate;
   recordBasis: "CURRENT_CORE_BASELINE";
@@ -81,9 +96,14 @@ export interface RawPositiveParent {
   lineage: { r1_approval_id: string; r2_approval_id: string; historical_risk_grant_id: string | null };
   evidence: readonly RawEvidenceMetadata[];
   operations: readonly RawDecisionOperationMetadata[];
+  actors?: RawParentActors;
+  latestOperation?: RawLatestPortalOperation;
+  recordedActivity?: RawRecordedActivity;
+  recordedVerdicts?: RawRecordedVerdicts;
   paperExit: null | {
     review: RawPaperReviewMetadata; lineage: readonly RawPaperLineageMetadata[];
     panels: readonly RawPaperPanelMetadata[]; findings: readonly RawPaperFindingMetadata[];
+    criteria_findings?: readonly RawPaperCriterionMetadata[];
   };
   /** No R1 content/manifest is returned. These are local consistency checks,
    * NOT accepted Research/native facts or a current approval-live requirement. */
@@ -104,6 +124,7 @@ export class PositiveParentRepositoryError extends Error {
 const fail = (code: PositiveParentRepositoryError["code"]): never => { throw new PositiveParentRepositoryError(code); };
 type Row = Record<string, unknown>;
 type RootRow = RawApprovalMetadata & {
+  requester_user_id?: string; artifact_creator_user_id?: string; decided_by_user_id?: string | null;
   portfolio_id: string; currency: string | null; r1_manifest_hash: string; r2_manifest_hash: string;
   historical_risk_grant_id: string | null;
 };
@@ -158,7 +179,8 @@ const boundedIds = (family: PositiveParentFamily) =>
 const approvalColumns = `a.approval_id,a.status,a.policy_version,a.approval_version,
   a.quorum_required,a.quorum_met,a.evidence_complete,a.evidence_set_hash,
   a.sla_due_at,a.expires_at,a.created_at,a.updated_at,a.decided_at`;
-const rootSelect = (family: PositiveParentFamily, includeCurrency: boolean) => `SELECT ${approvalColumns},s.portfolio_id,
+const rootSelect = (family: PositiveParentFamily, includeCurrency: boolean, includeActors = false) => `SELECT ${approvalColumns},s.portfolio_id,
+  ${includeActors ? "a.requester_user_id,a.artifact_creator_user_id,a.decided_by_user_id," : ""}
   ${includeCurrency && family === "R2" ? "s.currency" : "NULL::text"} AS currency,
   ${includeCurrency && family === "R2" ? "l.grant_id" : "NULL::text"} AS historical_risk_grant_id,
   r1.evidence_set_hash AS r1_manifest_hash,
@@ -195,6 +217,15 @@ function date(value: unknown): Date {
   return result;
 }
 const optionalDate = (value: string | null) => value === null ? null : date(value);
+// Discovery chooses the true newest row first. An SQL-legal timestamp outside
+// the public UTC-ms domain makes ONLY that optional section unavailable; it
+// must not fail the whole parent, select an older row or swallow a DB error.
+function publicOperationTime(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|\+00:00)$(?![\s\S])/.test(value))
+    return false;
+  const at = Date.parse(value);
+  return Number.isSafeInteger(at) && at >= 0;
+}
 function validateTimes(row: Row, keys: readonly string[]): void {
   for (const key of keys) if (row[key] !== null) date(row[key]);
 }
@@ -338,9 +369,9 @@ export class PositiveParentRepository {
    * before ANY native/relation/Core await in the shared delivery coordinator.
    */
   async protectedDetails(selected: PositiveParentCandidate, operationId?: string,
-    options: { includeCurrency: boolean } = { includeCurrency: false }): Promise<PositiveParentSnapshot> {
+    options: ParentReadOptions = { includeCurrency: false }): Promise<PositiveParentSnapshot> {
     if (operationId !== undefined && !IdentifierSchema.safeParse(operationId).success) return fail("PARENT_IDENTITY_INVALID");
-    const p = candidate(selected), values = identityValues(p), exact = rootSelect(p.family, options.includeCurrency);
+    const p = candidate(selected), values = identityValues(p), exact = rootSelect(p.family, options.includeCurrency, options.includeActors);
     return this.read(async (db,budget) => {
       const roots = await this.rows<RootRow>(db,budget,exact,values,1), root = roots[0];
       if (!root) return fail("PARENT_NOT_FOUND");
@@ -458,6 +489,15 @@ export class PositiveParentRepository {
             outcome:item.outcome,blocking:item.blocking,required:item.required,evidence_hash:item.evidence_hash,
             formula_version:item.formula_version,as_of:item.as_of})),item => `${item.panel_id}:${ordinalKey(item.ordinal,item.finding_id)}`),
         };
+        // The unchanged source hash above still consumes private values. This
+        // separate explicit copy is permitted only by the NEW optional purpose.
+        // Old ROOT/REVIEW-only snapshots keep exactly their previous shape.
+        if (options.includeCriteria) paperExit.criteria_findings = by(paperFindings.map(item => ({
+          finding_id:item.finding_id,panel_id:item.panel_id,ordinal:item.ordinal,outcome:item.outcome,
+          blocking:item.blocking,required:item.required,metric_key:item.metric_key,
+          exact_value:item.exact_value,threshold_value:item.threshold_value,unit:item.unit,currency:item.currency,
+          evidence_hash:item.evidence_hash,formula_version:item.formula_version,as_of:item.as_of,
+        })),item => item.panel_id+":"+ordinalKey(item.ordinal,item.finding_id));
         validateTimes(paperExit.review as unknown as Row,["created_at","updated_at","extended_until"]);
       }
       // Finite immutable intent metadata; no actor filter, original apply token,
@@ -506,6 +546,108 @@ export class PositiveParentRepository {
         paperExit,integrity:{ownManifest:"MATCH",referencedManifests:"MATCH",
           paperSourceSnapshot:p.family === "PAPER_EXIT" ? "MATCH" : "NOT_APPLICABLE"},
       };
+      // Actor values are selected in the existing root SQL only after the
+      // separate BOTH-anchor actor purpose; never join auth_users/display names.
+      if (options.includeActors) {
+        const actorIds = [root.requester_user_id, root.artifact_creator_user_id];
+        if (actorIds.some(value => typeof value !== "string" || !IdentifierSchema.safeParse(value).success || /[^A-Za-z0-9._:-]/u.test(value)) ||
+          root.decided_by_user_id === undefined || root.decided_by_user_id !== null &&
+            (!IdentifierSchema.safeParse(root.decided_by_user_id).success || /[^A-Za-z0-9._:-]/u.test(root.decided_by_user_id)))
+          return fail("PARENT_RECORD_INVALID");
+        raw.actors = { requester_user_id: root.requester_user_id!, artifact_creator_user_id: root.artifact_creator_user_id!,
+          decided_by_user_id: root.decided_by_user_id };
+      }
+      if (options.includeLatestOperation) {
+        // Exact parent/workspace FIRST, then newest record FIRST; do not put
+        // supported type/version/collision predicates inside latest selection.
+        // A bad/unreadable latest becomes one fixed absence, NEVER an older ID.
+        const rows = await this.rows<{
+          operation_id: string; command_type: string; command_version: number; status: string; created_at: string; unambiguous: boolean;
+        }>(db,budget,`WITH root AS MATERIALIZED (${exact}), latest AS MATERIALIZED (
+          SELECT c.operation_id,c.command_type,c.command_version,c.status,c.created_at
+          FROM ${opTable} c JOIN root r ON c.${parentColumn}=r.approval_id AND c.workspace_id=r.workspace_id
+          ORDER BY c.created_at DESC,c.operation_id COLLATE "C" ASC LIMIT 1
+        ) SELECT c.operation_id,c.command_type,c.command_version,c.status,c.created_at,
+          NOT EXISTS (SELECT 1 FROM ${opposite} other WHERE other.workspace_id=$1 AND other.operation_id=c.operation_id)
+          AND NOT EXISTS (SELECT 1 FROM execution_command_plans_f0 f WHERE f.workspace_id=$1 AND f.operation_id=c.operation_id)
+          AND NOT EXISTS (SELECT 1 FROM execution_operation_queue_items q WHERE q.workspace_id=$1 AND q.operation_id=c.operation_id)
+          AS unambiguous FROM latest c`,values,1);
+        const latest = rows[0];
+        raw.latestOperation = !latest ? { state: "EMPTY" } : { state: "NOT_PUBLIC" };
+        if (latest && latest.unambiguous === true && latest.command_type === command && latest.command_version === 1 &&
+          IdentifierSchema.safeParse(latest.operation_id).success && !/[^A-Za-z0-9._:-]/u.test(latest.operation_id) &&
+          publicOperationTime(latest.created_at) &&
+          (latest.status === "PLANNED" || latest.status === "APPLIED" || latest.status === "EXPIRED")) {
+          raw.latestOperation = { state: "AVAILABLE", operation_id: latest.operation_id,
+            command_type: p.family === "R2" ? "GOVERNANCE_R2_DECISION" : "GOVERNANCE_PAPER_EXIT_DECISION",
+            command_version: 1, status: latest.status, created_at: latest.created_at };
+        }
+      }
+      if (Buffer.byteLength(JSON.stringify(raw),"utf8") > OUTPUT_BYTES) return fail("PARENT_READ_BOUND");
+      // New optional purposes ONLY. Select exact own immutable decisions before
+      // validating original plan linkage; never skip an unreadable recent row.
+      // The 33rd row is an authorized lookahead, not a hidden/global census.
+      if (options.includeRecordedActivity) {
+        const decisions = p.family === "R2" ? "governance_approval_decisions" : "governance_paper_exit_decisions";
+        const before = p.family === "R2" ? "approval_version_before" : "review_version_before";
+        const after = p.family === "R2" ? "approval_version_after" : "review_version_after";
+        const rows = await this.rows<RawRecordedActivityItem & { coherent: boolean }>(db,budget,
+          `WITH root AS MATERIALIZED (${exact}), recent AS MATERIALIZED (
+            SELECT c.decision_id,c.operation_id,c.workspace_id,c.${parentColumn} AS parent_id,
+              c.decision,c.${before} AS version_before,c.${after} AS version_after,c.decided_at
+            FROM ${decisions} c JOIN root r ON c.${parentColumn}=r.approval_id AND c.workspace_id=r.workspace_id
+            ORDER BY c.decided_at DESC,c.decision_id COLLATE "C" ASC LIMIT 33
+          ) SELECT c.decision_id,c.operation_id,c.decision,c.version_before,c.version_after,c.decided_at,
+            (plan.operation_id IS NOT NULL AND plan.command_type='${command}' AND plan.command_version=1
+              AND plan.status='APPLIED' AND plan.applied_at=c.decided_at AND plan.created_at<=c.decided_at
+              AND plan.expires_at>plan.created_at AND plan.${expectedColumn}=c.version_before
+              AND plan.decision=c.decision
+              AND EXISTS (SELECT 1 FROM ${decisions} original
+                WHERE original.workspace_id=c.workspace_id AND original.${parentColumn}=c.parent_id
+                  AND original.decision_id=c.decision_id AND original.operation_id=c.operation_id
+                  AND original.actor_user_id=plan.actor_user_id AND original.evidence_set_hash=plan.evidence_set_hash
+                  ${p.family === "PAPER_EXIT" ? "AND original.source_snapshot_hash=plan.source_snapshot_hash" : ""})
+              AND NOT EXISTS (SELECT 1 FROM ${opposite} other WHERE other.workspace_id=c.workspace_id AND other.operation_id=c.operation_id)
+              AND NOT EXISTS (SELECT 1 FROM execution_command_plans_f0 f WHERE f.workspace_id=c.workspace_id AND f.operation_id=c.operation_id)
+              AND NOT EXISTS (SELECT 1 FROM execution_operation_queue_items q WHERE q.workspace_id=c.workspace_id AND q.operation_id=c.operation_id)
+            ) AS coherent
+          FROM recent c LEFT JOIN ${opTable} plan ON plan.workspace_id=c.workspace_id
+            AND plan.${parentColumn}=c.parent_id AND plan.operation_id=c.operation_id
+          ORDER BY c.decided_at DESC,c.decision_id COLLATE "C" ASC`,values,33);
+        let publicRows = true;
+        for (const row of rows) {
+          if (row.coherent !== true) { publicRows = false; break; }
+          // Only pure validation errors become the fixed optional absence.
+          // SQL/timeout/row-byte/cap errors above remain held hard failures.
+          try { recordedParentFacts(p.family,p.approvalId,{recordedActivity:true},
+            {state:"AVAILABLE",has_more:false,items:[row]}); }
+          catch { publicRows = false; break; }
+        }
+        raw.recordedActivity = publicRows ? {state:"AVAILABLE",has_more:rows.length>32,
+          items:rows.slice(0,32).map(row=>({decision_id:row.decision_id,operation_id:row.operation_id,
+            decision:row.decision,version_before:row.version_before,version_after:row.version_after,decided_at:row.decided_at}))}
+          : {state:"NOT_PUBLIC"};
+      }
+      if (options.includeRecordedVerdicts) {
+        if (p.family !== "R2") return fail("PARENT_IDENTITY_INVALID");
+        const rows = await this.rows<RawRecordedVerdictItem>(db,budget,
+          `WITH root AS MATERIALIZED (${exact}), recent AS MATERIALIZED (
+             SELECT c.finding_id,c.ordinal,c.outcome,c.blocking,c.evaluated_at
+             FROM governance_approval_findings c JOIN root r ON c.approval_id=r.approval_id
+             ORDER BY c.ordinal ASC,c.finding_id COLLATE "C" ASC LIMIT 65
+           ) SELECT c.finding_id,c.ordinal,c.outcome,c.blocking,c.evaluated_at FROM recent c
+           ORDER BY c.ordinal ASC,c.finding_id COLLATE "C" ASC`,values,65);
+        let publicRows = true;
+        for (const row of rows) {
+          try { recordedParentFacts(p.family,p.approvalId,{recordedVerdicts:true},undefined,
+            {state:"AVAILABLE",has_more:false,items:[row]}); }
+          catch { publicRows = false; break; }
+        }
+        raw.recordedVerdicts = publicRows ? {state:"AVAILABLE",has_more:rows.length>64,items:rows.slice(0,64)}
+          : {state:"NOT_PUBLIC"};
+      }
+      // Preserve UTC microseconds in the private exact SAME-flight witness.
+      // The old unqualified shapes/digests remain untouched.
       if (Buffer.byteLength(JSON.stringify(raw),"utf8") > OUTPUT_BYTES) return fail("PARENT_READ_BOUND");
       return Object.freeze({raw,revision:`sha256:${createHash("sha256").update(canonical(raw),"utf8").digest("hex")}`});
     });
@@ -516,7 +658,7 @@ export class PositiveParentRepository {
    * performs its LAST genuine Core confirmation. Errors remain held there.
    */
   async isUnchanged(parent: PositiveParentCandidate, revision: string, operationId?: string,
-    options: { includeCurrency: boolean } = { includeCurrency: false }): Promise<boolean> {
+    options: ParentReadOptions = { includeCurrency: false }): Promise<boolean> {
     return (await this.protectedDetails(parent,operationId,options)).revision === revision;
   }
 }

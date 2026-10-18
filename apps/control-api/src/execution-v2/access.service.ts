@@ -8,7 +8,7 @@ import { AccountLifecycleRepository } from "../repos/account-lifecycle";
 import { CredentialsRepository } from "../repos/credentials";
 import { AuditRepository } from "../repos/audit";
 import { AccessAction, AccessResource, AccessActor, AccessPolicyError, AccessRefusal, GrantChange, ReviewedAccessPolicy, ScopedAccessGrant,
-  TsMembershipAcceptance, tsBusinessAction, reviewedAccessPolicy, scopedAccessGrant, tsMembershipAcceptance } from "./access.contract";
+  TsMembershipAcceptance, tsBusinessAction, reviewedAccessPolicy, scopedAccessGrant, tsMembershipAcceptance, managerDomainGrant } from "./access.contract";
 import { AccessEvaluationContext, AccessRelations, accessDigest, canonicalChange, canonicalSelector,
   evaluateAccess, grantCurrent, policyReady, resolvedResources, validateDelegation } from "./access-policy";
 import { AccessEvent, AccessReceipt, AccessRepository } from "./access.repository";
@@ -23,6 +23,8 @@ import { CurrentHumanLeaseError } from "./current-human-candidate";
 import { CurrentHumanMutations, type CurrentHumanMutationBinding, type CurrentHumanMutationHooks } from "./current-human-mutations";
 import { currentAcceptanceMatches, currentAccessRelations } from "./access-current-relations";
 import { reviewedParentAuditRoot } from "./parent-read-fields";
+import { eligibilityInput, navigationInput, projectEligibility, projectNavigation,
+  selfProjectionPrincipalIds, NAVIGATION_ACTIONS, type RowAction, type SelfEligibilityContext } from "./self-eligibility";
 
 type Tx={db:PoolClient;repo:AccessRepository;context:AccessEvaluationContext;recheck:(check:()=>void)=>void};
 type OperationResult={receipt:AccessReceipt;replayed:boolean};
@@ -37,12 +39,36 @@ export class ExecutionAccessService {
     if(authorityMutations&&!authorityMutations.usesPool(pool))throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
   }
 
+  usesPool(pool:Pool):boolean{return this.pool===pool;}
+
   /** Short consistent capture; no adapter I/O or mutation locks. */
   private async captureReadContext(actor:AccessActor,workspace:string) {
     return withTransaction(this.pool,async db=>{
       await db.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
       await db.query("SET LOCAL statement_timeout='5000ms'");
       return captureCurrentHumanSnapshot(db,actor,workspace);
+    });
+  }
+
+  /** Self-projection routing metadata only. Keep this auxiliary identity OUT
+   * of the shared/historical authority fingerprint and generic read methods.
+   * The sticky workspace mode matches ExecutionReadScopes.coreSelectionMode.
+   * Both queries use one short RR snapshot; no connection crosses source I/O. */
+  private async captureSelfProjectionContext(actor:AccessActor,workspace:string) {
+    return withTransaction(this.pool,async db=>{
+      await db.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
+      await db.query("SET LOCAL statement_timeout='5000ms'");
+      const captured=await captureCurrentHumanSnapshot(db,actor,workspace);
+      const history=await db.query(`SELECT
+        (EXISTS(SELECT 1 FROM portal_access_policy_events e WHERE e.workspace_id=$1)
+         OR EXISTS(SELECT 1 FROM portal_access_grants_v2 g WHERE g.workspace_id=$1)) AS policy_seen`,[workspace]);
+      if(history.rowCount!==1||typeof history.rows[0]?.policy_seen!=="boolean")
+        throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
+      const current_read_mode:"LEGACY_COMPATIBILITY"|"SCOPED_V2"=
+        captured.policy!==null||history.rows[0].policy_seen?"SCOPED_V2":"LEGACY_COMPATIBILITY";
+      return {...captured,current_read_mode,self_projection_fingerprint:accessDigest({
+        schema_version:"portal.self-projection-fingerprint.v1",
+        authority_fingerprint:captured.authority_fingerprint,current_read_mode})};
     });
   }
 
@@ -67,7 +93,7 @@ export class ExecutionAccessService {
     return {principal_id:actor.user_id,workspace_id:workspace,now_ms:current.now,actor_current:true,
       authority_fingerprint:current.authority_fingerprint,actor_lease_until_ms:current.lease_until_ms,actor_role:current.actor_role,
       actor_member:current.actor_member,
-      policy:current.policy,grants:current.grants,active_principals:new Set(current.active),
+      policy:current.policy,grants:current.grants,manager_domain_grants:current.manager_domain_grants,active_principals:new Set(current.active),
       allow_test_only:this.allowTestOnly,relationsFor:id=>relationMap.get(id)??{
         qualified:false,revision:"UNQUALIFIED",own_alpha_ids:[],member_portfolio_ids:[],roots:{},membership:null}};
   }
@@ -82,7 +108,60 @@ export class ExecutionAccessService {
     if(current.authority_fingerprint!==expected.authority_fingerprint)
       throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
     return {...expected,now_ms:current.now,actor_lease_until_ms:current.lease_until_ms,actor_role:current.actor_role,
-      actor_member:current.actor_member,actor_current:true};
+      actor_member:current.actor_member,manager_domain_grants:current.manager_domain_grants,actor_current:true};
+  }
+
+  /** Full Core graph; only dependency-closed source reads. Count is bounded,
+   * but provider MUST settle/transport deadline is a separate C7 qualification.
+   * No timer race, detached provider promise or DB connection across source I/O. */
+  private async selfProjectionContext(actor:AccessActor,workspace:string,
+    environment:"paper"|"sandbox"|"live",actions:readonly RowAction[]):Promise<SelfEligibilityContext> {
+    const captured=await this.captureSelfProjectionContext(actor,workspace);
+    if(!captured.actor_member)throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
+    const relations=new Map<string,AccessRelations>();
+    const absent:AccessRelations={qualified:false,revision:"UNQUALIFIED",own_alpha_ids:[],
+      member_portfolio_ids:[],roots:{},membership:null};
+    const contextFor=(fact:typeof captured):SelfEligibilityContext=>({
+      principal_id:actor.user_id,workspace_id:workspace,now_ms:Math.max(captured.now,fact.now),actor_current:true,
+      authority_fingerprint:fact.authority_fingerprint,actor_lease_until_ms:fact.lease_until_ms,
+      current_read_mode:fact.current_read_mode,
+      actor_role:fact.actor_role,actor_member:fact.actor_member,policy:fact.policy,grants:fact.grants,
+      manager_domain_grants:fact.manager_domain_grants,active_principals:new Set(fact.active),
+      allow_test_only:this.allowTestOnly,relationsFor:id=>relations.get(id)??absent});
+    let ids:readonly string[]=[];
+    let failure:{error:unknown}|null=null;
+    try {
+      // Complete the count/closure check BEFORE calling any provider. Overflow
+      // produces a held typed refusal, never a partial/first-64 authority graph.
+      ids=selfProjectionPrincipalIds(contextFor(captured),environment,actions);
+      for(const id of ids)relations.set(id,structuredClone(await this.trust.relations(id,workspace)));
+    } catch(error) { failure={error}; }
+    const current=await this.captureSelfProjectionContext(actor,workspace);
+    // Same O(1) terminal actor check for a held SOURCE error as for a body.
+    // Use the renewed genuine Core lease, never the original lease clock.
+    const now=Math.max(current.now,Date.now());
+    if(!Number.isSafeInteger(now)||!Number.isSafeInteger(current.lease_until_ms)||
+      current.lease_until_ms<=0||now>=current.lease_until_ms)
+      throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED",403);
+    if(!current.actor_member)throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
+    if(current.authority_fingerprint!==captured.authority_fingerprint||
+      current.self_projection_fingerprint!==captured.self_projection_fingerprint)
+      throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
+    if(failure)throw failure.error instanceof AccessPolicyError?failure.error:
+      new AccessPolicyError("SOURCE_RELATION_NOT_QUALIFIED",503);
+    return {...contextFor(current),source_principal_ids:new Set(ids)};
+  }
+
+  async eligibility(actor:AccessActor,input:ReturnType<typeof eligibilityInput.parse>) {
+    const context=await this.selfProjectionContext(actor,input.workspace_id,input.environment,input.actions);
+    return projectEligibility(context,input);
+  }
+
+  async selfNavigation(actor:AccessActor,input:ReturnType<typeof navigationInput.parse>) {
+    const context=await this.selfProjectionContext(actor,input.workspace_id,input.environment,NAVIGATION_ACTIONS);
+    const profile={paper:this.auth.config.EXECUTION_EDGE_PAPER_PROFILE_ID,
+      sandbox:this.auth.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID,live:this.auth.config.EXECUTION_EDGE_LIVE_PROFILE_ID}[input.environment];
+    return projectNavigation(context,input,profile);
   }
 
   /** Internal producer port; no HTTP endpoint or fallback authority. */
@@ -500,6 +579,115 @@ export class ExecutionAccessService {
     }
   }
 
+  /** PRIVATE fresh native Manager intake. No route, role inference or legacy
+   * fallback. Same trust, coordinator, immutable event and SQL repository.
+   * Domain READ is NOT stream.subscribe or membership/financial authority. */
+  async installReviewedManagerDomainPolicy(input:unknown):Promise<void>{
+    const verified=await this.trust.verifyPolicy(input);
+    if(!verified||verified.policy.state!=="REVIEWED"||verified.policy.qualification!=="OWNER_VERIFIED"||
+      !verified.policy.approval_ref||!verified.provenance_ref||!this.authorityMutations)
+      throw new AccessPolicyError("RECEIPT_NOT_QUALIFIED",503);
+    const artifact=structuredClone(verified);
+    if(!reviewedAccessPolicy.safeParse(artifact.policy).success||artifact.root_grants.length!==0||
+      !Array.isArray(artifact.manager_domain_grants)||artifact.manager_domain_grants.length===0||
+      artifact.manager_domain_grants.length>64||!artifact.manager_commissioning_target)
+      throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
+    const t=artifact.manager_commissioning_target;
+    if(t.workspace_id!==artifact.policy.workspace_id||t.protected_owner_user_id!==artifact.policy.protected_owner_user_id||
+      !/^[0-9]{1,20}$/.test(t.database_system_identifier)||!t.database_name||!t.role_name||
+      !Array.isArray(t.principal_workspace_pins)||t.principal_workspace_pins.length===0||
+      t.principal_workspace_pins.length>65||new Set(t.principal_workspace_pins.map(p=>p.user_id)).size!==t.principal_workspace_pins.length)
+      throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
+    const ids=new Set<string>();
+    for(const value of artifact.manager_domain_grants){
+      const parsed=managerDomainGrant.safeParse(value);
+      if(!parsed.success)throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
+      const g=parsed.data;
+      if(ids.has(g.grant_id)||g.workspace_id!==t.workspace_id||g.issued_by!==t.protected_owner_user_id||
+        g.policy_revision!==artifact.policy.revision||g.revoked_at_ms!==null||
+        !t.principal_workspace_pins.some(p=>p.user_id===g.subject_user_id&&p.workspace_id===t.workspace_id)||
+        !artifact.policy.manager_read_domains?.some(s=>s.environment===g.environment&&
+          accessDigest(s.domain)===accessDigest(g.domain)&&s.field_policy_ref===g.field_policy_ref&&
+          s.valid_from_ms<=g.valid_from_ms&&s.valid_until_ms>=g.valid_until_ms))
+        throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
+      ids.add(g.grant_id);
+    }
+    const original=await withTransaction(this.pool,async db=>{
+      await db.query("SET TRANSACTION READ ONLY");
+      await this.assertManagerCommissioningTarget(db,artifact);
+      return new AccessRepository(db).policyInstall(t.workspace_id,artifact.policy.revision);
+    });
+    if(original){
+      if(original.request_digest!==accessDigest(artifact))throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
+      return; // immutable historical ACK, not a grant repair/restore
+    }
+    try{
+      await this.authorityMutations.executeVerified({family:"REVIEWED_POLICY",operation:"INSTALL_POLICY",
+        key_digest:accessDigest(["REVIEWED_POLICY",t.workspace_id,artifact.policy.revision]),
+        request_digest:accessDigest(artifact),target_id:t.workspace_id},{
+        retain_after_application_rollback:true,
+        authorize:async db=>{await this.installReviewedManagerDomainOn(db,artifact,false);},
+        apply:db=>this.installReviewedManagerDomainOn(db,artifact,true),
+        terminal:receipt=>({outcome:"APPLIED",receipt_ref:receipt!.operation_id,reason_code:null}),
+      });
+    }catch(error){
+      if(error instanceof CurrentHumanLeaseError)throw new AccessPolicyError(
+        error.code==="CURRENT_HUMAN_MUTATION_KEY_CONFLICT"?"POLICY_REVISION_CONFLICT":"ACCESS_RETRY_REQUIRED",
+        error.code==="CURRENT_HUMAN_MUTATION_KEY_CONFLICT"?409:503);
+      throw error;
+    }
+  }
+
+  private async installReviewedManagerDomainOn(db:PoolClient,artifact:ReviewedPolicyArtifact,write:boolean):Promise<AccessReceipt|null>{
+    const t=artifact.manager_commissioning_target!;
+    await db.query("SET LOCAL lock_timeout='1500ms'");
+    await db.query("SET LOCAL statement_timeout='5000ms'");
+    await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`portal-access-v2:${t.workspace_id}`]);
+    await this.assertManagerCommissioningTarget(db,artifact);
+    const repo=new AccessRepository(db),original=await repo.policyInstall(t.workspace_id,artifact.policy.revision);
+    if(original){
+      if(original.request_digest!==accessDigest(artifact))throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
+      return original.receipt;
+    }
+    const anchor=(await db.query("SELECT user_id FROM portal_owner_anchor WHERE anchor_id='PORTAL_OWNER' FOR SHARE NOWAIT")).rows[0]?.user_id;
+    if(anchor!==t.protected_owner_user_id)throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
+    const old=await repo.policy(t.workspace_id,true);
+    if(old!==null||(await repo.storedGrants(t.workspace_id)).length!==0)
+      throw new AccessPolicyError("POLICY_REVISION_CONFLICT",409);
+    // Exact real IDs/workspaces, not username or application-role inference.
+    const principalIds=[...new Set([anchor,...t.principal_workspace_pins.map(p=>p.user_id)])].sort();
+    const users=await db.query(`SELECT user_id,status,must_change_password,archived_at FROM portal_users
+      WHERE user_id=ANY($1::text[]) ORDER BY user_id FOR SHARE NOWAIT`,[principalIds]);
+    if(users.rows.length!==principalIds.length||users.rows.some(u=>u.status!=="ACTIVE"||u.must_change_password||u.archived_at))
+      throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
+    for(const pin of t.principal_workspace_pins){
+      const workspace=await db.query("SELECT workspace_id FROM workspaces WHERE workspace_id=$1 FOR SHARE NOWAIT",[pin.workspace_id]);
+      const member=await db.query("SELECT user_id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2 FOR SHARE NOWAIT",[pin.workspace_id,pin.user_id]);
+      if(workspace.rowCount!==1||member.rowCount!==1)throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
+    }
+    if(!write)return null;
+    await repo.putPolicy(artifact.policy);
+    for(const g of artifact.manager_domain_grants!)await repo.saveManagerDomainGrant(g,true);
+    const receipt:AccessReceipt={schema_version:"portal.access-operation.v1",operation_id:randomId("ace"),proposal_id:null,grant_id:null,
+      outcome:"APP_APPLIED",http_status:200,reason_code:null,policy_revision:artifact.policy.revision,grant_revision:null,
+      decided_at_ms:await this.now(db),ts_authority:"NOT_REQUIRED"};
+    await repo.event({event_id:receipt.operation_id,workspace_id:t.workspace_id,actor_user_id:anchor,subject_user_id:null,
+      operation:"POLICY_INSTALL",key_digest:null,request_digest:accessDigest(artifact),policy_revision:artifact.policy.revision,
+      grant_id:null,proposal_id:null,source:null,source_receipt_id:null,before_fact:null,
+      after_fact:{policy:artifact.policy,provenance_ref:artifact.provenance_ref,
+        manager_grant_digests:artifact.manager_domain_grants!.map(g=>({grant_id:g.grant_id,grant_digest:accessDigest(g)}))},receipt});
+    return receipt;
+  }
+
+  /** A historical ACK must still originate from the exact reviewed database/login. */
+  private async assertManagerCommissioningTarget(db:PoolClient,artifact:ReviewedPolicyArtifact):Promise<void>{
+    const t=artifact.manager_commissioning_target!;
+    const target=(await db.query(`SELECT current_database() AS db,session_user AS login,current_user AS role,
+      (pg_control_system()).system_identifier::text AS system_identifier`)).rows[0];
+    if(!target||target.db!==t.database_name||target.login!==t.role_name||target.role!==t.role_name||
+      target.system_identifier!==t.database_system_identifier)throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
+  }
+
   /** No public writer. Install only a verified owner-reviewed artifact, never a migration default. */
   async installReviewedPolicy(input:unknown):Promise<void> {
     const verified=await this.trust.verifyPolicy(input);
@@ -509,6 +697,8 @@ export class ExecutionAccessService {
     // Detach the verified artifact before any Core await; verifier-owned JS
     // objects are not mutable authority inside an installation transaction.
     const artifact=structuredClone(verified);
+    if(Object.hasOwn(artifact,"manager_domain_grants")||Object.hasOwn(artifact,"manager_commissioning_target"))
+      throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
     if(!reviewedAccessPolicy.safeParse(artifact.policy).success||artifact.root_grants.length>10000||
       artifact.root_grants.some(g=>!scopedAccessGrant.safeParse(g).success))throw new AccessPolicyError("RECEIPT_BINDING_MISMATCH",409);
     if(this.authorityMutations){

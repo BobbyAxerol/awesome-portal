@@ -1,5 +1,11 @@
 # C6 — source inventory for the twelve peer-board families
 
+Main integration note: the original delegate report and its pins below are
+historical inputs preserved verbatim. Main has now integrated the twelve source
+columns into SOURCE_TRUTH_BOARD.md. The latest read-only checkpoint is §18;
+neither that source integration nor any original delegate wording is a runtime
+mount/consumer acceptance claim.
+
 2026-10-18 UTC · SOURCE_ONLY / NOT_RUN · private delegate return to Main.
 
 This is a proposed source-column fill, not a board update, consumer receipt,
@@ -667,3 +673,447 @@ The late peer row12 historical source-status text was: `WIP staged-uncommitted;
 It is preserved here as a peer-reported earlier result, not erased or promoted
 to this task's test receipt. The newer Main-reported PG34PASS/fullR3RUNNING and
 eventual actual terminal must be attached to their distinct source/run pins.
+
+## 9. Fresh upstream checkpoint —2026-10-18T16:16:00Z
+
+Read-only SSH to the assigned worktrees; no source/DB/runtime write. Edge HEAD
+`8b7eb0c1b5a1a4f4b717cd96799df658e1981a42`, tracked diff SHA256
+`49282f153b8602582ca8bb5182507f13d968ca402bd934f687f5f18d22e2e0a9`;
+PM HEAD `91ca9dfaf36a5c4ccedfa78209d38deafff29c72`, tracked diff SHA256
+`9e6634989eaef7f65bc68d6bbc4e74fcfe11afe27c3b2e928508ac37da4b9208`.
+These hashes cover tracked bytes only, not untracked files or deployment state.
+
+PM discovery now has an **additive prepared eighteenth dataset**,
+`pma11-13-research-monitor-history-dataset.json`, explicitly PREPARED_NOT_RUN.
+Discovery SHA256 is now
+`82ba7f833fe0a8d080fe76c67292e39f4613d135f50aa3bf5ce23d31be38c06a`.
+The original seventeen-dataset qualified input digest remains
+`128f429d05987e13158fbc00aa68e09f979ee3cfb063eddd68140f5212a15886`;
+prepared eighteen-dataset digest
+`792b311cc586b0e5b51ff199e303d53dae6c327152c42d8944f3ba442ab0704e`
+is NOT covered by that historical receipt. `runtime_enabled=false`, explicit
+opt-in/unmounted and UNAVAILABLE remain; no new history/census/financial facts
+are inferred. Selected-history and command-handoff SHA256 remain respectively
+`6b78bfe784a29c917fdc40c5c31839c296f052b503c2e4e31225dda5ce1e9814`
+and `7b62d7e17198347c85adc5267a319a175733adc2cb3b540d167a35135ed04a0b`.
+
+Edge Unified's16:08–16:15 updates preserve failed focused HTTP receipts and
+identify owned policy-error translation/test completion-join repairs. Its
+current-Core5291 packet is being assembled separately from the historical
+213-case qualification; structural patch generation is still under repair.
+Do not replace our reviewed source-dark integration with this moving WIP, or
+claim its current-source qualification PASS. Original source results, current
+packet, selected provider and connected acceptance stay distinct. ELP2-11 is
+NOT_ENTRY_READY; no mounted source or consumer ACK was established here.
+
+## 10. Fresh four-source checkpoint —2026-10-18T16:37:34Z
+
+Read-only SSH, correct assigned worktrees. Combined tracked binary diff means
+`git diff --binary HEAD`; the untracked hash covers the NUL-separated pathname
+manifest ONLY, not those files' contents. The snapshots are sequential, not an
+atomic multi-repository capture. No remote DB/Docker/build/write was performed.
+
+| Worktree | Current full HEAD | Tracked diff SHA256 | Untracked pathname manifest SHA256 |
+|---|---|---|---|
+| Edge upgrade | `8b7eb0c1b5a1a4f4b717cd96799df658e1981a42` | `d6f8fddd82ec80d4c17e3c38b984a90b890780db0cab80392e25f41eaa2b5903` | `7901c256a953bb49d6d3609e63517ab291e41a7d7d47783c4093dd52874163f8` |
+| PM v1.1 | `699c70d2b8dd8afd9c958b11e8467411b19dbbc5` | `6b6601555d4f39a5a5aa727efc6d0249706d9a1eb7c0c7561ad100e5bddd3671` | `88c218c09f5b4896e70b2708e2b5051f3f170c092c54042108ff9c64e63771ef` |
+| TS next | `8e2849dd31cdca706b0f5548b1759b4e4416eec5` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | `0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2` |
+| DL closure | `97c9ecb6d1916707cebc0d0664b425a5b27afeeb` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | `3c536ec8b81359c72477b0c956bcaffb9cf963f133cff6b374dafeedd27ddc6c` |
+
+PM discovery/selected-history/command-handoff hashes are unchanged from §9.
+The prepared eighteenth dataset is not covered by the old seventeen-dataset
+receipt. PM's current owning journal is the ROOT
+`TRADING_SYSTEM_UNIFIED_IMPLEMENTATION_PLAN.md` (not an upgrade/ copy).
+It now records separately qualified original provenance/monitor source and an
+actual Manager joint attempt16:27:51–16:31:34:10 PASS/6 FAIL. The latter still
+needs corrected fixtures/resource diagnostics and a new exact-source receipt;
+its cleanup is not qualification. Do not sum those different source profiles.
+
+Edge owning journal16:23/16:34 describes a new disjoint native SSE draft and a
+frozen32-file finite HTTP packet. New-file publication metadata is repaired,
+but compiler/PG/HTTP/current-source qualification is still pending. Source
+drafts and old213-case receipts do not commission the Portal provider. Core's
+current C7 integration deliberately adds no controller/AppModule/listener or
+poller; reconcile the producer's newly qualified successor only after exact
+source/dependency and affected-test review. All current mount/budget/calibration/
+coexistence/G2/browser gates remain as previously recorded;11NOT_ENTRY_READY.
+
+Read failures were not capability evidence: first lookup of PM journal under
+upgrade/ was wrong; the root journal was then read. Remote rg was unavailable;
+no conclusion was derived from that failed optional search.
+
+## 11. Four-source refresh —2026-10-18T17:00:21Z
+
+Same approved read-only worktrees and sequential observation limits as §10;
+untracked hashes are pathname manifests, not content/deployment proof.
+
+| Worktree | Full HEAD | Tracked diff SHA256 | Untracked pathname manifest SHA256 |
+|---|---|---|---|
+| Edge upgrade | `8b7eb0c1b5a1a4f4b717cd96799df658e1981a42` | `e6befe2d65ff3cb34ae1a463da8ff1a4519fb19b372549b3ba28ef1fab82e186` | `7901c256a953bb49d6d3609e63517ab291e41a7d7d47783c4093dd52874163f8` |
+| PM v1.1 | `699c70d2b8dd8afd9c958b11e8467411b19dbbc5` | `1fa4722b988bb9184967f8c5547ef769c04ce6de2ac9adee3a337175ab8208e2` | `5c9c51b424b6716132feee263d5851f013fdcd406cade2e7f79bf36fc8b19fe2` |
+| TS next | `8e2849dd31cdca706b0f5548b1759b4e4416eec5` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | `0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2` |
+| DL closure | `f2094a298ad987019223f21530eb960bd17d645f` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+
+Edge journal describes12 native SSE draft source/test files,29 pure plus5
+PG/HTTP/SSE test definitions, all NOT_RUN for that draft. Its shutdown fix joins
+actual source completion with a drain promise when abort is ignored; that WIP
+is not blindly copied into Core or treated as provider qualification. Frozen
+32-file finite packet and old213-case receipt remain separate scopes.
+PM reports247 unique case dispositions as241 reused plus6 fresh, not a single
+247-test run. Native profile/Paper composition and final SQL callback/lease
+guards remain under construction; genuine human/egress and approved mixed-load
+budgets remain uncommissioned. No source result closes current mount, Score
+calibration, coexistence/G2 or browser gates. ELP2-11 remains NOT_ENTRY_READY.
+
+## 12. Parallel-source delta —2026-10-18T17:17:54Z
+
+Read-only SSH to the same four explicit worktrees; sequential metadata
+17:16:36–17:17:32UTC and bounded journal reads through17:17:54UTC, not an
+atomic/deployed snapshot. Untracked digests cover pathnames only. No remote
+writes, tests/builds, Docker/runtime inspection, DB reads or credentials.
+
+| Worktree | Full HEAD | Tracked diff SHA256 | Untracked pathname SHA256 |
+|---|---|---|---|
+| Edge upgrade | `8b7eb0c1b5a1a4f4b717cd96799df658e1981a42` | `6d83ff91d82e7c50bb003de8cded867a2b2e7b73953286683d431a334d9eb2f1` | `7901c256a953bb49d6d3609e63517ab291e41a7d7d47783c4093dd52874163f8` |
+| PM v1.1 | `68d165f082a92d75575fdcaff945f4b30aaefcbd` | `0884da56819074d29faab4c0aee7299fbac32165e595621a0108e2236bfdd45b` | `0a3ab22a5f04494df70644187982843f9fe0a4bcbd682445af8b27b8b254f422` |
+| TS next | `8e2849dd31cdca706b0f5548b1759b4e4416eec5` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | `0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2` |
+| DL closure | `f2094a298ad987019223f21530eb960bd17d645f` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+
+PM journal `TRADING_SYSTEM_UNIFIED_IMPLEMENTATION_PLAN.md@68d165f0+WIP:79647–79655`
+reports16PASS against its original697-file TEST_ONLY Manager profile; not
+Core5291/WIP qualification. Later history14 cases9PASS/5FAIL and native/Paper117
+cases78PASS/39FAIL (`:79683,79743–79747`) remain failed attempts. Source corrections
+and mixed-population driver (`:79750–79764`) are preparation, not PASS. PM WIP
+changed during observation; final tracked digest above is the later sample.
+
+Edge owning Unified `@8b7eb0c1+WIP:20032–20089` records new native READ/SSE
+availability/replay corrections. Finite32-file attempt was RUNNING, SSE
+corrections NOT_RUN. Old213-case receipt is a different frozen packet.
+Discovery/selected-history/command-handoff hashes remain the values in §9;
+catalogue registry `9257ebb0a3935bf58e6fe4858298bf4536cca2081e61f9c4543a82645a4f8c67`
+and field dictionary `aca5c54cce66becbf47ef32d30799e9dfe75a4f3d51df4e3ade0e89c53cbec7e`
+also remain unchanged. No publication of an eighteenth dataset, full history,
+current provider mount, source financial authority or consumer ACK follows.
+
+Private audit `c6-audit/upstream-delta-20261018T171754Z.md` SHA256
+`641cabba51eac3d813ca21b64f58fc178420248d5b241b7bad0bf883454fe09c`.
+These source observations do not close ELP2-10/11 runtime, budget/calibration,
+current-human COMMIT, coexistence/G2 or Claude browser gates.
+
+## 13. Parallel-source delta —2026-10-18T17:36:42Z
+
+One read-only refresh, metadata17:35:41–42UTC and bounded changed journal/
+descriptor reads ending17:36:42UTC. Sequential WIP observations, not atomic
+capture or deployed identity; untracked digests still cover PATHNAMES ONLY.
+
+| Worktree | Full HEAD | Tracked diff SHA256 | Untracked pathname SHA256 |
+|---|---|---|---|
+| Edge upgrade | `8b7eb0c1b5a1a4f4b717cd96799df658e1981a42` | `0bbecd2e2e506391197a93dc40b278c2eb2261b0af820110e33f01526e6c0a72` | `90244eded857720199658e8f903ab9781ec546e774248973590012355594970c` |
+| PM v1.1 | `1c803ddb038ace1518a3396452845aedceb8de0f` | `e23aca4d2e224d82453c860a0eb9b3655700e7456523d156fab14ee44134af0f` | `1e5d749f1acc45aa05ca70a3cabba1ab2e4eddc88d7707d4e32a37a582c97fe2` |
+| TS next | `8e2849dd31cdca706b0f5548b1759b4e4416eec5` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | `0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2` |
+| DL closure | `f2094a298ad987019223f21530eb960bd17d645f` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+
+Edge owning Unified `@8b7eb0c1+WIP:20121–20162` supersedes the finite RUNNING
+observation in §12 with publisher-reported233actual/uniquePASS across seven
+suites and both strict gates. Exact current-core-profile qualification hash
+`3a26472c6d5d97bedf6b8f4084af2ecdda6811e36d59c49f47b35a72d879d44b`
+binds32files against frozen Core5291, NOT this Core WIP. The same package says
+NOT_INSTALLED, no SSE/provider/deployment and full connected acceptance NOT_MET.
+Its separate42pure+7PG SSE definitions remain NOT_RUN at this read.
+
+PM ROOT journal `@1c803ddb+WIP:79733–79737,79768–79772` reports corrected
+117pytest+26offline isolatedPASS in the exact profile receipt
+`22ea3d82b5abd1a446dd34be63a341317b1295a073e428f931d3420c17459118`.
+Do not count sibling evidence as an additional143tests. First persistent mixed
+attempt remains29=24PASS/5FAIL; corrected30-case successor only prepared.
+Concurrency-readiness changed during the refresh (`23ba59d6…`→`ed5f640b…`),
+and remains IN_PROGRESS_DEPENDENCIES_PENDING. No measured production budget or
+current user-row/COMMIT fence equivalence follows from its TEST_ONLY lease.
+
+Previously pinned catalogue/dictionary/PM discovery/history/command descriptors
+remain unchanged. No 42-family→42-endpoint,17dataset→full-history or mounted/
+financial/consumer authority expansion. Private read receipt
+`c6-audit/upstream-delta-after-173345.md` SHA256
+`483fc25b91fba407e039963eaed2f8f0b45feb8391cecd0132eeb980a44e0fd9`.
+No remote write, runtime/process/Docker/DB inspection, source test/build or
+credential operation. These owner claims do not close Core's pending hook,
+current provider/trust, calibration/coexistence/G2 or ELP2-11 entry gates.
+
+## 14. Fresh upstream delta —2026-10-18T18:03:11Z to18:04:33Z
+
+One bounded read-only SSH source refresh, not an atomic/deployed snapshot.
+Edge branch unchanged, HEAD `8204eeea9752af731f2049fb01964491fe5cac46`;
+tracked diff empty, untracked pathname SHA256
+`f50e6eed7b290af53267819749759c4e2990c5824ce6fa9f0fdfec6978b8bfd9`.
+PM branch unchanged, HEAD `c889872d2ffdd5f736c40578f333131c2d41c48c`;
+tracked diff SHA256 `5e950164d22efd69e270158ab8d2dbb281b20bb16218f77e779bab045b264b32`,
+untracked pathname SHA256 `f99eee8defaf9ca72cde3a002e59c0c60aac6ef35fdbad5d5914626ff2794ce9`.
+TS-next and DL HEAD/branch/tracked/pathname pins unchanged versus§13.
+
+Edge Unified@8204eeea:20164–20174 records actual SSE270 executed =251PASS/19FAIL,
+plus3 suite-load errors. Corrected successor at20208–20218 remains NOT_RUN.
+Separate finite233-case receipt still binds frozen Core5291/32-file source,
+not this Core WIP; new source commit does not prove normal hook, mount or provider.
+Current qualification SHA256
+`8fee91806226ee7b0b79d62e11ea5785a9c3df9978063b3db613de3ec68d778b`
+keeps identity/provider/deployed=false and full connected NOT_MET.
+
+PM current ROOT@c889872d+WIP:79788–79796 reports30 mixed functional PASS
+(22unit+8PG), plus26 separate offline; frozen699c70d2/selected-source TEST_ONLY
+receipt is not production/SLO/capacity. ROOT79667–79675 and current history
+receipt report162 fresh unique PASS(141unit+17historyPG+4wirePG), plus26 offline,
+preserving previous failures. Eighteenth history dataset source now matches
+`1824a1973124b283f969f1f53f1d9c3876aba72f5e5a52d178b91b238d9f482e`;
+UNAVAILABLE/env[]/runtime=false/route=null/provider uncertified remain.
+Current R2 guide in THIS PM worktree adds those pointers; no stale Library
+guide substituted. ROOT79823–79828 current32/Core5291 joint is PREPARED,
+not a new result; old697/0d5ceaba/16PASS descriptor remains historical.
+
+Catalogue/dictionary, Edge guide/RustDTO/maximum-return and PM discovery/export/
+command descriptors retain previous pins. No42logical→42live endpoint or
+17datasets→complete event stream. No remote writes, DB/business APIs, build,
+tests, credential or runtime operation. Full private delta receipt
+`c6-audit/upstream-delta-after-175337.md`, SHA256
+`8816151721dea99a616970c82c5b91662b9c4651a866c6788e51553acce2bc8f`.
+No current-human/COMMIT trust, approved budget/calibration/coexistence/G2,
+consumer/browser or ELP2-11 gate closes from owner-reported source evidence.
+
+## 15. Fresh peer/source delta —2026-10-18T18:44:48Z–18:44:49Z
+
+Read-only SSH to the exact Edge/PM/TS/DL upgrade worktrees Bobby supplied.
+Edge remains8204eeea9752af731f2049fb01964491fe5cac46; PM remains
+c889872d2ffdd5f736c40578f333131c2d41c48c, both with newer tracked working
+bytes. TS remains8e2849dd31cdca706b0f5548b1759b4e4416eec5; DL advances to
+24bb43c4fff4b5d4eec46b534ed26b6e43e7e10b with WIP. Full dirty/pathname and
+contract/descriptor hashes are preserved in private `c6-audit/upstream-delta-184448.md`,
+SHA256 `e23d5d2a30844cfe78e6c9c77b3749f6bd1fa121d715a5d60317801ae3988c3a`.
+Raw tool display was truncated: only recorded metadata/visible excerpts count,
+not a claimed full reread or runtime inspection. No HK write/test/DB/service.
+
+Edge newly reports fixed5 ten-spec strict exit0 at18:36:06 and one focused
+resume PASS, preserving real deadlines and original failures. Full360 unique
+cases on SAME source still required before current realtime publication;
+neither the earlier finite233 nor focused1 replaces that gate. Current checked
+qualification artifact remains8fee9180 with no genuine provider/identity mount.
+PM raw mixed36=33PASS/3FAIL and RETURN366=349PASS/17FAIL remain owned corrections.
+Its section58.171 prepares eight genuine mounted Core BFF TEST_ONLY empty-source
+cases, not runtime/census/financial acceptance. Original Edge eight-operation
+wire and supplied discovery/export/command descriptor hashes are unchanged.
+DL qualification impact is UNKNOWN because its new journal/runtime was not
+read. All12 source-family mount/authority states and ELP2-11 NOT_ENTRY_READY
+remain unchanged; no logical-family/dataset count becomes live endpoint/history.
+
+## 16. Fresh source-only follow-through —2026-10-18T19:11:53Z–19:11:55Z
+
+Bounded read-only SSH to Bobby's exact Edge and PM upgrade worktrees; no
+remote source/test/build/DB/runtime/credential change. Edge branch stays
+`feat/execution-edge-upgrade-v1_2`, HEAD
+`8204eeea9752af731f2049fb01964491fe5cac46`; tracked diff SHA256
+`bb43bd57f84d88f0200f4eb8b4913dda8136d4749b98320908d8a55d0b2ea705`,
+untracked pathname SHA256
+`f50e6eed7b290af53267819749759c4e2990c5824ce6fa9f0fdfec6978b8bfd9`.
+PM branch stays `feat/portfolio-account-v1_1-parallel`, HEAD
+`cc06f13e2da489c8f18866de336324ad070f4efe`; tracked diff SHA256
+`2a146d80fcd54b4ff02efd76850a19b45e59c1134f9f9c17daf7e2f5d79437fb`,
+untracked pathname SHA256
+`8f6283849ae2dfe973cbdf4a3d89574e06b53f934b84591db91ec6c679e51585`.
+These are sequential observations with dirty source, not atomic deployed pins.
+
+Edge catalogue SHA256 `9257ebb0a3935bf58e6fe4858298bf4536cca2081e61f9c4543a82645a4f8c67`
+and current-core qualification `8fee9180` retain their previous bytes. PM
+discovery `82ba7f83`, selected-history `6b78bfe7`, command `7b62d7e1` also
+retain their previous complete descriptor pins. Journals advance: Edge records
+fixed5 source/public transfer finished19:02 but SAME-source360 behavioral run
+still waiting; runtime33/PG15golden NOT_RUN. PM corrected RETURN366 remains
+355PASS/11FAIL; actual mounted-current-BFF eight-case qualification is still
+preparation. Those are owner-reported results, not tests run by this reader.
+Original Edge eight-operation wire, new financial/current-human authority,
+provider mounting, full08/connected09 and Core ELP2-11 are not commissioned.
+
+Complete bounded private source receipt: `c6-audit/upstream-delta-191153.md`,
+SHA256 `67f55e7b750d81ffc6701818996ca7cab33bb642671324837ae507f62e848aac`.
+Two prior shell-quoting read invocations exited127; only corrected exit0 reads
+support this observation. Do not give the failed reads qualification credit.
+All twelve current mounted/authority statuses remain unchanged. TS/DL were not
+freshly reread in this two-worktree follow-through; their last observations
+remain explicitly historical at section15.
+
+## 17. Fresh Edge runtime-profile publication —2026-10-18T21:03:41Z
+
+Read-only SSH to the same exact Edge/PM worktrees; Git/files only. No patch
+application, remote source edit, build/test, DB query, credential or runtime
+operation. The additional untracked-pathname reads followed immediately;
+these sequential observations are not an atomic deployment attestation.
+
+| Pin | Edge | PM |
+|---|---|---|
+| Branch | feat/execution-edge-upgrade-v1_2 | feat/portfolio-account-v1_1-parallel |
+| HEAD | 9d9d0950d1a0892f4cedff8f6439c1391b45339e | 2d166ec6d955560ab22b69d76994794f37d93fd3 |
+| Tracked diff SHA256 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 | 7121ec3cf6fa790be63bcc5ffca0a4e3b00583d0acc8ac638765936786194b22 |
+| Untracked pathname SHA256 (not file-content qualification) | 1a4ecde9d7da120e9f1ba20a07a03a04b05ec63ccb018b32479d7f3c1e0662e7 | dab85c1698a7e3b2f397628c5ecfe8f682f152cfeb609ca872aab58e1a2d9b56 |
+| Unified file SHA256 | e730f1bbd7faed45c85de15a285e02a9806eceb0c458ba7c22eda0d55059a0bf | 0953ffee8095907ffa00d487fdcbe394dff0cb1ebb211e10acc152b836e79548 |
+
+Edge's newly committed
+`upgrade/integration/execution-native-read-v1/current-core-runtime-profile/README.md@9d9d0950:1`
+explicitly declares SOURCE_QUALIFIED, not installed/connected acceptance. Its
+43-file profile targets immutable Core5291a80f, not the current uncommitted
+C3–C7 implementation. Fresh HK owner receipts record389unique behavioral
+cases and a separate4-case PostgreSQL rollback run,393distinct across two runs;
+13 loader cases mock composition/filesystem, PG15 schema reference installs
+no authority. These are upstream receipt claims read here, not local tests or
+current Core/provider qualification. Retain prior failed/tainted attempts.
+
+Exact new profile artifact SHA256:
+
+- manifest.json: `24c8200ce43ed64c6207d48a2982a4597f0531851075df0e73cd457c62ab673c`.
+- qualification.json: `a9a16957326c0277b7fa2596ccf0e58c25ee0cb0ccd59ea5c32ad0b2eee2ce0b`.
+- qualified-source-pins.json: `b3a6675d069fc79ef547b97dd0818fbbd576c90fd5c8795eb9c5233328d1f09f`.
+
+Do not force-apply the historical patch over overlapping current Core files.
+Review/port against the newly landed Core dependency first, then qualify the
+actual same-pool/provider/identity/factory. READ and STREAM remain separate;
+observation cursors are not global TS event history. Full connected08 remains
+NOT_MET in the artifact; no source/SSE/financial runtime is enabled here.
+
+The catalogue registry retains SHA2569257ebb0 and earlier current-core profile
+qualification8fee9180. PM discovery82ba7f83, selected-history6b78bfe7 and
+command7b62d7e1 retain their full earlier pins. PM journal still distinguishes
+actual cold1 failure/profile24 error from prepared corrected successors; no
+eight-case mounted PASS or current-user/COMMIT qualification is inferred.
+Twelve mounted/authority statuses stay unchanged. Logical families and selected
+datasets are not live endpoint/full event-history coverage. TS/DL were not
+freshly read in this two-worktree delta; do not advance their historical pins.
+
+## 18. Fresh four-source factory checkpoint —2026-10-18T21:41–21:49UTC
+
+Bounded read-only SSH metadata/journals/contract files in the same approved
+worktrees. Delegate metadata cut21:44:48Z and exact Edge commit check21:45:06Z;
+Main independently reread the complete factory README, exact HEAD and matching
+qualification hash after the local focus completed. No remote write, DB/API,
+runtime inspection, credential, test/build or provider activation. Sequential
+source cuts are not an atomic deployed-state attestation.
+
+| Source | Inspected full HEAD | Tracked `git diff --binary HEAD` SHA256 | Untracked pathname SHA256 (not file bytes) |
+|---|---|---|---|
+| Edge | ea620d9b01f5755f131ba997a246758abb2bac22 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 | f50e6eed7b290af53267819749759c4e2990c5824ce6fa9f0fdfec6978b8bfd9 |
+| PM | f5ee331fc2b8334cb203ea406df7ed6f466920b7 | 98a4cfa584234d327801844df504c1e0002815ac23e1ad8398ac5d45d3ccb3b3 | 2b661510cf8c92d3d0fe8e09d09e5b2af5d584163e17f9e065193b12a478df65 |
+| TS-next | f2229d7a6f32c512be5f5a4ec0bd83b7710e9e31 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 | 0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2 |
+| DL | d74f9fc4a85b5a67589dcbcf41fa02e284b78f94 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |
+
+Edge newly commits
+`upgrade/integration/execution-native-read-v1/current-core-runtime-factory/README.md@ea620d9b:1–54`.
+Its source qualification records7 genuine inert-factory PASS plus a separate
+schema-export1PASS, retaining original setup failure/seven skips. Genuine
+filesystem/key loading, SAME pool/composition and AppModule are exercised, but
+selected PM is deliberately an **unserved loopback**. Provider/current person/
+runtime commissioning/capacity remain false, full08 NOT_MET. Qualification SHA256
+`4deacabd37315699d47c034b0de42671d04d1de2aadcdfb66e4ce82ff17f871c`;
+helper source `c2429fab2833dbb7b72d132232e4ad5f79b53725bb360f546a5aa28ed7e21fe9`.
+The39-name stable migration specimen and independent schema golden are not
+the current composite's target ledger/authority and must not auto-run at boot.
+Original43-file profile manifest24c8200c and registry9257ebb0 remain unchanged.
+Do not add393/7/1 as connected coverage or acceptance of current Core WIP.
+
+PM newly records populated TEST_ONLY capital migration/reapply, same-key replay,
+dump/restore and exact cleanup, receipt SHA256
+`930d43abbc5aefff3e34fb15e1c8cb6b32a81b9d415611f2189ec9482f7f98f9`;
+separate pure39 receipt is not a financial/provider census. Mounted descriptor
+remains `UNQUALIFIED_AFTER_PREMATURE_TERMINAL_OBSERVATION`: cold1 observedHTTP200
+but immediately sampled unresolved1. Physical HTTP precedes awaited durable
+settlement, so that sample proves neither successful closure nor a missing hook.
+Eight-case current mounted/provider acceptance still needs its bounded durable
+terminal receipt. Do not resend or install authority to make the sample green.
+Discovery82ba7f83/history6b78bfe7/command7b62d7e1 wire descriptors are unchanged.
+
+TS delta is journal-only; DL has source/image-attribution/journal changes, no
+Portal wire change in the exact inspected deltas. Owner journals report M1–M4
+rustls rollout/HOLD; Kafka stepK failed and rolled back. Q/I/R/G12/G13/final100
+not run; rebaselining is an owner/coordinator question. No Portal coexistence,
+capacity or P184G2 PASS follows from these source-journal observations.
+
+Next local C7 semantic intake must keep both existing actual-I/O
+`ScopedReplayHub.settleSourceReads()` (ManagerRuntime already calls it) and new
+pending subscribe/poll drain; preserve C1, C3 self-mode, C4 q/window/current-only
+and Core/domain-pool separation. Historical43-file patch cannot be force-applied
+over17 diverged current files. Factory/consumer/DI/optional private loader/pool
+profile deltas and overlap tests are a coherent next local source slice, not
+automatic source/runtime activation. Actual provider/trust/COMMIT, financial
+publication, approved budgets/calibration/coexistence/G2 and Claude acceptance
+remain open in their owning phases. All12 mounted-state cells remain unchanged.
+
+Complete private source report `c6-audit/upstream-delta-214137.md`, SHA256
+`3e8bb5ce520f097c550d3e47e5d5a056ce88febbeb07572cbdb49a615647b611`;
+updated compatibility note SHA256
+`04fbc1b0d3232ac88ee8e8a2828a35f383e72333ed2aff66c28d515c96451e1e`.
+
+## 19. Fresh four-source follow-through —2026-10-18T22:17–22:18UTC
+
+Read-only SSH to the same four exact worktrees on `bobby@16.163.212.33`.
+Sequential Git/source reads, not an atomic checkout snapshot or direct
+DB/runtime observation. No writes, tests, provider/credential/policy/grant
+installation or serving activation were performed by this refresh. This
+checkpoint succeeds, rather than overwrites, historical §18 above.
+
+| Worktree basename under /home/bobby/.worktrees | HEAD | Tracked HEAD-diff SHA256 | Untracked path-list SHA256 (not file contents) |
+| --- | --- | --- | --- |
+| portal-execution-edge-upgrade-v1_2 | ea620d9b01f5755f131ba997a246758abb2bac22 | 558cfb9bfedb1acf094ead5098a60fa8f3553c76315dc43d26cc3f2ffe8a226e | 1a4ecde9d7da120e9f1ba20a07a03a04b05ec63ccb018b32479d7f3c1e0662e7 |
+| trading-system-pm-v1_1 | 908169aaef3f64a7b0cefa8263d4c106d826a811 | a711eb0789d9fd3a7e2ea62133d0dc53f714fb977bf12369e9af47a90870361b | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |
+| trading-system-next-upgrade | f2229d7a6f32c512be5f5a4ec0bd83b7710e9e31 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 | b5b9433a17437c5e4c2525c2e29d67e64e957ce91ef34b94f56ad0a17f7eaae2 |
+| data-layer-p184-closure | d74f9fc4a85b5a67589dcbcf41fa02e284b78f94 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |
+
+### PM: accept the exact scoped successor, not a new product mount
+
+`contracts/baseline/portfolio-account-v1_1/pma11-16-current-core-mounted-evidence.json`
+at committed PM908169aa is
+`TEST_ONLY_COMPOSED_EIGHT_FROM_FOUR_RUNS_FULL_GATES_OPEN`, SHA256
+`3da5cf0c182d50c5d99ab2672bab47e0ba0038937e7dd8d15cb620085e2b481d`.
+Eight distinct finite32 cases PASS through four serialized1+2+2+3 jobs with
+four independent terminal collectors/cleanups. It is not one fresh eight-case
+run. The26 offline checks repeated in all four jobs remain26 unique checks,
+not104 new functional cases. Preserve the original descriptor's unqualified
+bytes and failure history; this explicit successor closes only fresh execution
+in that bounded specimen. Do not continue calling those eight cases NOT_RUN.
+
+Core reviewed the public test definitions: real finite HTTP/body/source digest,
+resolved original obligation and native receipt are asserted; bounded readonly
+observation does not drive recovery. Terminal ACK loss separately proves UNKNOWN
+then explicit same-key reconciliation, without a resend. Raw private controllers
+were not fetched/re-executed. The tested specimen is immutable Core5291+finite32
+with TEST_ONLY identities/grants/typed-empty source, not today's C3–C7 composite,
+runtime43, a commissioned real human/business provider or mounted SSE transport.
+
+The three public PM descriptors remain unchanged: discovery82ba7f83,
+selected-history6b78bfe7, command-handoff7b62d7e1 (full hashes in §18).
+Thus no generated business schema rewrite follows from this evidence commit.
+Seventeen selected datasets are not a complete event/history/valuation stream.
+
+### Edge: preserve UNKNOWN preparation and independent expected pins
+
+The public Edge Unified journal reports an additive native installation which
+returned UNKNOWN at22:13. Readonly diagnosis reports PREPARED with zero writer
+guards and a new-only `ts_users.user_id` default rendering mismatch caused by
+existing pgcrypto. The owner's isolated PG15/pgcrypto reproduction at22:16
+restored the original independent prepared/guarded hashes by qualifying only
+that new default as `pg_catalog.gen_random_uuid()`. This is reported source
+evidence, not a direct Core DB observation or provider acceptance. The original
+transaction may have committed: do not claim no DB write, completed rights or
+a listener. Do not bless live observed hashes, alter unrelated schema/identity
+rows, copy private inputs or deploy Core from intermediate maintenance state.
+Journal hash at the later22:18 cut is
+`9e7050ed3fd91fea44c475a09f3d29eecb60ba0fcec0e41d84e9dc4bdbfee63d`;
+concurrent source cuts must be repinned before use. Original08 remains NOT_MET.
+
+### Core impact, next work and evidence
+
+Record this successor without repeating its already-qualified isolated run.
+All12 current mount/authority states and Claude's consumer columns stay intact.
+Genuine current-human/trust/held authority through COMMIT, runtime43/finite/stream
+composition, financial normalization, approved budgets/calibration/coexistence/
+G2 and browser acceptance remain independent gates; ELP2-11 NOT_ENTRY_READY.
+The private pool/loader/drain and four real-PG fault proposals remain
+NOT_APPLIED/NOT_RUN, not a producer delivery or commissioning claim.
+
+Private independent PM review `c6-audit/pm-delta-2205.md` SHA256
+`824609d5699d33acaa866a48a710f54fbdc6ed65e08445edbb4bb5acfbba7f30`;
+Main follow-through `c6-audit/source-followthrough-221744.md`. Both are under
+the existing local evidence root; no raw private owner inputs were accessed.

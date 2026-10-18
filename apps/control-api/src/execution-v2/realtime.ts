@@ -3,7 +3,7 @@ import type { ServerResponse } from "node:http";
 import { accessDigest } from "./access-policy";
 import { edgeScopedNoticeBatch,scopedReplayBinding,scopedRealtimeFrame,
   type ScopedReplayBinding,type EdgeScopedNoticeBatch,type ScopedRealtimeFrame } from "./realtime.contract";
-import { scopeRealtimeIdentity,ExecutionReadScopes,type AuthorizedExecutionReadScope } from "./read-scope";
+import { scopeRealtimeIdentity,ExecutionReadScopes,type AuthorizedExecutionReadScope,type AuthorizedManagerNativeNoticeScope } from "./read-scope";
 import { accessResource,type AccessResource } from "./access.contract";
 import { CurrentHumanCandidate } from "./current-human-candidate";
 import type { NativeReadEgressStream } from "./native-read-egress";
@@ -22,6 +22,7 @@ const nativeCandidateMethods=Object.freeze({
   cancel:CurrentHumanCandidate.prototype.cancelNativeFrame,
 });
 const prepareNativeNotice=ExecutionReadScopes.prototype.prepareNativeNotice;
+const prepareManagerNativeNotice=ExecutionReadScopes.prototype.prepareManagerNativeNotice;
 
 /** Private source port. Its adapter MUST verify dense local-journal receipt
  * coverage/digests, current scope and source continuity before returning. This
@@ -63,15 +64,24 @@ type QueuedFrame={frame:ScopedRealtimeFrame;bytes:number;
   native?:{frameJson:string;sourceCursor:string};};
 type ClientBase={id:string;binding:ScopedReplayBinding;sourceCursor:string;
   queue:QueuedFrame[];bytes:number;closed:boolean;busy:boolean;};
-type NativeDelivery={stream:NativeReadEgressStream;resource:AccessResource;
-  current:()=>Promise<AuthorizedExecutionReadScope>;bindingJson:string;};
+type NativeDelivery={readonly candidate:CurrentHumanCandidate;stream:NativeReadEgressStream;bindingJson:string;} & (
+  {kind:"ENTITY";resource:AccessResource;current:()=>Promise<AuthorizedExecutionReadScope>}|
+  {kind:"MANAGER";current:()=>Promise<AuthorizedManagerNativeNoticeScope>});
+type NativeSubscription={binding:ScopedReplayBinding;response:ServerResponse;baselineCursor:string;lastEventId?:string;} & (
+  {kind?:"ENTITY";resource:AccessResource;current:()=>Promise<AuthorizedExecutionReadScope>}|
+  {kind:"MANAGER";current:()=>Promise<AuthorizedManagerNativeNoticeScope>});
 type LegacyClient=ClientBase & {native?:undefined;guard:ReplayDeliveryGuard;write:(frame:ScopedRealtimeFrame)=>boolean;};
 type NativeClient=ClientBase & {native:NativeDelivery;guard?:never;write?:never;};
 type Client=LegacyClient|NativeClient;
 /** Private fixed dependencies; not a public controller DTO, arbitrary delivery
  * callback or runtime commissioning switch. Both must be the actual instances
  * from the SAME reviewed Candidate/Core/source installation. */
-export interface NativeScopedReplayDependencies {candidate:CurrentHumanCandidate;scopes:ExecutionReadScopes;}
+export interface NativeScopedReplayDependencies {
+  candidate:CurrentHumanCandidate;scopes:ExecutionReadScopes;
+  /** Trusted composition lookup from the SAME genuine Manager scope. Never
+   * a request selector or mutable current Candidate. Captured once per stream. */
+  selectManagerCandidate?:(scope:AuthorizedManagerNativeNoticeScope)=>CurrentHumanCandidate;
+}
 
 /** No timer/public listener/upstream setup. A commissioned server coordinator
  * calls poll once per bounded cadence, not once per browser or synchronous UI
@@ -79,6 +89,8 @@ export interface NativeScopedReplayDependencies {candidate:CurrentHumanCandidate
 export class ScopedReplayHub {
   private readonly clients=new Map<string,Client>();
   private readonly flights=new Map<string,Promise<EdgeScopedNoticeBatch>>();
+  /** Original source promises, never the timeout/abort race returned to pollers. */
+  private readonly sourceSettlements=new Set<Promise<EdgeScopedNoticeBatch>>();
   private readonly cancellations=new Map<string,AbortController>();
   private readonly timedOutFlights=new Set<string>();
   private queuedBytes=0;
@@ -90,7 +102,8 @@ export class ScopedReplayHub {
   constructor(private readonly source:ScopedNoticeSource,private readonly codec:ScopedReplayCursorCodec,
     limits:ScopedReplayLimits,native?:NativeScopedReplayDependencies){
     const captured={...limits};validateLimits(captured);this.limits=Object.freeze(captured);
-    this.native=native?Object.freeze({candidate:native.candidate,scopes:native.scopes}):undefined;
+    this.native=native?Object.freeze({candidate:native.candidate,scopes:native.scopes,
+      ...(native.selectManagerCandidate?{selectManagerCandidate:native.selectManagerCandidate}:{})}):undefined;
   }
   async subscribe(input:{binding:ScopedReplayBinding;guard:ReplayDeliveryGuard;write:LegacyClient["write"];
     baselineCursor:string;lastEventId?:string}):Promise<{id:string;close:()=>void}>{
@@ -114,29 +127,33 @@ export class ScopedReplayHub {
   /** Opt-in original08 physical path. No guard.write/raw write callback is
    * accepted. HTTP transport ownership belongs exclusively to SAME Candidate.
    * current() is a trusted mint factory; a shaped scope fails the real issuer. */
-  async subscribeNative(input:{binding:ScopedReplayBinding;resource:AccessResource;response:ServerResponse;
-    current:()=>Promise<AuthorizedExecutionReadScope>;baselineCursor:string;lastEventId?:string;
-  }):Promise<{id:string;close:()=>void}>{
+  async subscribeNative(input:NativeSubscription):Promise<{id:string;close:()=>void}>{
     const dependencies=this.native;
     if(!dependencies)throw new ScopedReplayError("SOURCE_UNAVAILABLE");
     if(this.stopped)throw new ScopedReplayError("STOPPED");
     if(this.clients.size+this.pending>=this.limits.maximumClients)throw new ScopedReplayError("RECONNECT_LIMIT");
     this.pending++;
     let stream:NativeReadEgressStream|undefined,registered=false;
-    const candidate=dependencies.candidate;
+    let candidate=dependencies.candidate;
     try{
-      const binding=structuredClone(scopedReplayBinding.parse(input.binding)),resource=accessResource.parse(input.resource),
-        current=input.current,response=input.response,baseline=input.baselineCursor,last=input.lastEventId;
+      const binding=structuredClone(scopedReplayBinding.parse(input.binding)),
+        current=input.current,response=input.response,baseline=input.baselineCursor,last=input.lastEventId,
+        manager=input.kind==="MANAGER",resource=manager?undefined:accessResource.parse(input.resource);
       if(typeof current!=="function")throw new ScopedReplayError("SCOPE_CHANGED");
       const scope=await current();
       if(scopeRealtimeIdentity(scope)!==binding.principal_scope_digest)throw new ScopedReplayError("SCOPE_CHANGED");
+      if(manager&&dependencies.selectManagerCandidate)
+        candidate=dependencies.selectManagerCandidate(scope as AuthorizedManagerNativeNoticeScope);
       if(this.stopped)throw new ScopedReplayError("STOPPED");
       if(!baseline)throw new ScopedReplayError("SNAPSHOT_REQUIRED");
       const cursor=last?decodeScopedReplayContinuation(this.codec,last,binding):baseline;
       encodeScopedReplayContinuation(this.codec,binding,cursor); // genuine codec + bounded original source token
       stream=nativeCandidateMethods.open.call(candidate,response);
       const client:NativeClient={id:randomBytes(16).toString("hex"),binding,sourceCursor:cursor,queue:[],bytes:0,closed:false,busy:false,
-        native:{stream,resource,current,bindingJson:JSON.stringify(binding)}};
+        native:manager?{kind:"MANAGER",candidate,stream,current:current as ()=>Promise<AuthorizedManagerNativeNoticeScope>,
+          bindingJson:JSON.stringify(binding)}:
+          {kind:"ENTITY",candidate,stream,resource:resource!,current:current as ()=>Promise<AuthorizedExecutionReadScope>,
+            bindingJson:JSON.stringify(binding)}};
       this.clients.set(client.id,client);registered=true;
       return{id:client.id,close:()=>this.close(client)};
     }finally{
@@ -158,11 +175,19 @@ export class ScopedReplayHub {
     for(const c of this.clients.values())this.terminate(c,"unavailable","STOPPED");
     for(const controller of this.cancellations.values())controller.abort();
   }
+  /** Private lifecycle join only. Stop remains synchronous and pollers settle
+   * promptly, but source teardown/pool shutdown must wait for the original
+   * source calls, including providers that ignored abort. This is not a source
+   * ACK or a native-custody/transport settlement proof. No timeout frees slots. */
+  async settleSourceReads():Promise<void>{
+    if(!this.stopped)throw new Error("REPLAY_SOURCE_SETTLE_REQUIRES_STOP");
+    await Promise.allSettled([...this.sourceSettlements]);
+  }
   diagnostics(){return{clients:this.clients.size,queued_bytes:this.queuedBytes,source_flights:this.flights.size,
     pending_subscriptions:this.pending,timed_out_flights:this.timedOutFlights.size,browser_source_calls:0,semantics:"NOTIFICATION_ONLY" as const};}
   private close(c:Client){
     if(c.closed)return;c.closed=true;this.queuedBytes-=c.bytes;c.bytes=0;c.queue=[];this.clients.delete(c.id);
-    if(c.native)try{nativeCandidateMethods.close.call(this.native!.candidate,c.native.stream);}catch{/* no fake closure/settlement */}
+    if(c.native)try{nativeCandidateMethods.close.call(c.native.candidate,c.native.stream);}catch{/* no fake closure/settlement */}
   }
   private terminate(c:Client,event:ScopedRealtimeFrame["event_type"],reason:NonNullable<ScopedRealtimeFrame["reason_code"]>){
     if(c.closed)return;
@@ -195,14 +220,16 @@ export class ScopedReplayHub {
    * SAME actual Candidate/Egress must have advanced its own opaque stream. */
   private async deliverNative(c:NativeClient,item:QueuedFrame):Promise<boolean>{
     if(!this.native||!item.native)throw new ScopedReplayError("SOURCE_UNAVAILABLE");
-    const candidate=this.native.candidate,stream=c.native.stream;
+    const candidate=c.native.candidate,stream=c.native.stream;
     const scope=await c.native.current();
     if(c.closed)return false;
     if(scopeRealtimeIdentity(scope)!==c.binding.principal_scope_digest)throw new ScopedReplayError("SCOPE_CHANGED");
     const delivery=nativeCandidateMethods.next.call(candidate,stream);
-    const notice=await prepareNativeNotice.call(this.native.scopes,scope,c.native.resource,this.codec,{
-      delivery_json:JSON.stringify(delivery),replay_binding_json:c.native.bindingJson,
-      source_cursor:item.native.sourceCursor,frame_json:item.native.frameJson});
+    const input={delivery_json:JSON.stringify(delivery),replay_binding_json:c.native.bindingJson,
+      source_cursor:item.native.sourceCursor,frame_json:item.native.frameJson};
+    const notice=c.native.kind==="MANAGER"?
+      await prepareManagerNativeNotice.call(this.native.scopes,scope as AuthorizedManagerNativeNoticeScope,this.codec,input):
+      await prepareNativeNotice.call(this.native.scopes,scope as AuthorizedExecutionReadScope,c.native.resource,this.codec,input);
     if(c.closed)return false; // no native custody exists yet
     const handle=await nativeCandidateMethods.acquire.call(candidate,stream,notice);
     try{
@@ -242,9 +269,11 @@ export class ScopedReplayHub {
     const result=Promise.race([source,cancelled]);
     this.cancellations.set(key,controller);
     this.flights.set(key,result);
+    this.sourceSettlements.add(source);
     void source.finally(()=>{
       clearTimeout(timer);controller.signal.removeEventListener("abort",abort);
       this.flights.delete(key);this.timedOutFlights.delete(key);this.cancellations.delete(key);
+      this.sourceSettlements.delete(source);
     }).catch(()=>undefined);
     return result;
   }

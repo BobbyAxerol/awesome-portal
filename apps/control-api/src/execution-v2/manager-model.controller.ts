@@ -6,6 +6,7 @@ import { WorkspacesRepository } from "../repos/workspaces";
 import { ExecutionReadScopeError } from "./read-scope";
 import { ManagerModelService } from "./manager-model.service";
 import type { ManagerSurface } from "./manager-model";
+import { rejectManagerAsOf } from "./manager-query-p1";
 
 interface ManagerRequest extends FastifyRequest { portalUser: PortalUser; portalSession: AuthSession;
   portalWorkspaceId: string; portalViewerWorkspaceId?: string; }
@@ -33,6 +34,11 @@ export class ManagerModelController {
       if (!raw || typeof raw !== "object" || Array.isArray(raw) || id !== undefined && (!id || id.length > 256))
         throw new Error("INVALID_QUERY");
       const query: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+      rejectManagerAsOf(query);
+      if (typeof query.window === "string" && !["7D", "30D", "90D", "ALL"].includes(query.window)) {
+        if (query.window.length > 256) throw new Error("QUERY_LIMIT");
+        query.window = JSON.parse(query.window);
+      }
       for (const field of ["filters", "sort", "economic_partition"]) if (typeof query[field] === "string") {
         if ((query[field] as string).length > 4096) throw new Error("QUERY_LIMIT");
         query[field] = JSON.parse(query[field] as string);

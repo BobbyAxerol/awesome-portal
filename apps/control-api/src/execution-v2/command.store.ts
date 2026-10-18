@@ -34,24 +34,26 @@ export class CommandStore {
     const row=(await this.pool.query("SELECT * FROM execution_trusted_commands WHERE workspace_id=$1 AND command_id=$2",[workspace,id])).rows[0];
     return row?record(row):null;
   }
-  /** Read-only exact immutable target; no intent body, authority, key or actor selected.
+  /** Read-only exact immutable target; private provenance is decoded only after
+   * current exact-target authority, and never serialized. A bare status is not
+   * sufficient evidence of the original monetary unit.
    * Existing intake caps total workspace intents at1024; one sentinel row makes
    * an inconsistent oversized target explicit rather than silently incomplete.
    */
   async statusCandidates(workspace:string,resource:{kind:string;id:string},environment:string):
-    Promise<Array<{id:string;resource:unknown;environment:unknown;status:unknown}>> {
+    Promise<WorkflowCommandCandidate[]> {
     const db=await this.pool.connect();
     try {
       await db.query("BEGIN READ ONLY");
       await db.query("SET LOCAL statement_timeout='5000ms'");
-      const result=await db.query(`SELECT command_id,intent->'resource' AS resource,
-        intent->>'environment' AS environment,status FROM execution_trusted_commands
+      const result=await db.query(`SELECT command_id,workspace_id,actor_user_id,intent_hash,
+        intent,authorization_fact,status FROM execution_trusted_commands
         WHERE workspace_id=$1 AND intent->'resource'->>'kind'=$2
           AND intent->'resource'->>'id'=$3 AND intent->>'environment'=$4
         LIMIT 1025`,[workspace,resource.kind,resource.id,environment]);
       await db.query("COMMIT");
-      return result.rows.map(row=>({id:row.command_id,resource:row.resource,
-        environment:row.environment,status:row.status}));
+      return result.rows.map(row=>({id:row.command_id,workspace:row.workspace_id,actor:row.actor_user_id,
+        hash:row.intent_hash,intent:row.intent,authorization:row.authorization_fact,status:row.status}));
     } catch(error) {
       try{await db.query("ROLLBACK");}catch{/* Preserve only the original failure. */}
       throw error;

@@ -138,6 +138,9 @@ export interface ProfileProjectionJournalEntry {
   payload: Record<string, unknown>;
 }
 
+/** Scalar-only observation continuity; never fetches or decodes source JSONB. */
+export type ProfileProjectionJournalMetadata = Omit<ProfileProjectionJournalEntry, "payload">;
+
 export interface ProjectionCommitReceipt {
   outcome: "COMMITTED" | "QUARANTINED";
   changed: boolean;
@@ -1083,7 +1086,7 @@ export class ExecutionProfileProjectionRepository {
   async snapshotMetadata(workspaceId: string, environment: ProjectionEnvironment, profileId: string, reader?: PoolClient) {
     const query = {
       text: `SELECT source_as_of,received_at,last_successful_refresh_at,completeness,
-        projection_epoch::text,projection_sequence::text,payload_digest,source_catalogue_sha256
+        projection_epoch::text,projection_sequence::text,payload_digest,source_catalogue_sha256,source_epoch,source_contract_revision
         FROM execution_profile_projection_snapshots
         WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`,
       values: [workspaceId,environment,profileId], query_timeout: 2_000,
@@ -1091,12 +1094,62 @@ export class ExecutionProfileProjectionRepository {
     const result = await (reader ?? this.pool).query(query);
     const row = result.rows[0];
     return row ? {
+      sourceEpoch: row.source_epoch as string,
+      sourceContractRevision: row.source_contract_revision as string,
       sourceAsOf: row.source_as_of as Date | null, receivedAt: row.received_at as Date,
       lastSuccessfulRefreshAt: row.last_successful_refresh_at as Date,
       completeness: row.completeness as ProjectionCompleteness,
       projectionEpoch: row.projection_epoch as string, projectionSequence: Number(row.projection_sequence),
       payloadDigest: row.payload_digest as string, sourceCatalogueSha256: row.source_catalogue_sha256 as string | null,
     } : null;
+  }
+
+  /** Bounded scalar journal tail for native notices. Legacy payload readers
+   * keep their existing API; this method must not select/decode payload. */
+  async journalMetadataAfter(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    projectionEpoch: string,
+    sequence: number,
+    limit: number,
+  ): Promise<ProfileProjectionJournalMetadata[]> {
+    if (!Number.isSafeInteger(sequence) || sequence < 0 ||
+        !Number.isSafeInteger(limit) || limit < 1 || limit > 200) {
+      throw new Error("EDS09B_OBSERVATION_JOURNAL_BOUND_INVALID");
+    }
+    return withTransaction(this.pool, async reader => {
+      await reader.query("SET TRANSACTION READ ONLY");
+      // Server-side cancellation, not a client timeout that leaves SQL running.
+      await reader.query("SET LOCAL statement_timeout='2000ms'");
+      const result = await reader.query<{
+        workspace_id: string; environment: ProjectionEnvironment; profile_id: string;
+        projection_epoch: string; projection_sequence: string; source_as_of: Date | null;
+        received_at: Date; completeness: ProjectionCompleteness; payload_digest: string;
+        observation_authority: "PORTAL_OBSERVATION"; observation_semantics: "BOUNDED_CURRENT_PAGE";
+        source_contract_revision: string | null; source_catalogue_sha256: string | null;
+      }>(
+        `SELECT workspace_id,environment,profile_id,projection_epoch::text,
+                projection_sequence::text,source_as_of,received_at,completeness,
+                payload_digest,observation_authority,observation_semantics,
+                source_contract_revision,source_catalogue_sha256
+           FROM execution_profile_projection_journal
+          WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3
+            AND projection_epoch=$4 AND projection_sequence>$5
+          ORDER BY projection_sequence ASC LIMIT $6`,
+        [workspaceId, environment, profileId, projectionEpoch, sequence, limit],
+      );
+      return result.rows.map(row => ({
+        workspaceId: row.workspace_id, environment: row.environment, profileId: row.profile_id,
+        projectionEpoch: row.projection_epoch, projectionSequence: Number(row.projection_sequence),
+        sourceAsOf: row.source_as_of, receivedAt: row.received_at,
+        completeness: row.completeness, payloadDigest: row.payload_digest,
+        observationAuthority: row.observation_authority,
+        observationSemantics: row.observation_semantics,
+        sourceContractRevision: row.source_contract_revision,
+        sourceCatalogueSha256: row.source_catalogue_sha256,
+      }));
+    });
   }
 
   async journalAfter(

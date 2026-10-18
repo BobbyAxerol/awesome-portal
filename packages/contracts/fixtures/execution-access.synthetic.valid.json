@@ -2,6 +2,294 @@
   "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
   "cases": [
     {
+      "type": "AccessEligibility",
+      "case_name": "POSITIVE_SHAPE_NOT_INSTALLED_AUTHORITY",
+      "value": {
+        "schema_version": "portal.self-eligibility.v1",
+        "workspace_id": "ws_TEST_ONLY",
+        "environment": "paper",
+        "resource": {
+          "kind": "PORTFOLIO",
+          "id": "portfolio_TEST_ONLY"
+        },
+        "current_only": true,
+        "advisory_only": true,
+        "actions": [
+          {
+            "action": "portfolio.read",
+            "permission": "ALLOWED",
+            "reason_class": "FAMILY_CHECK_REQUIRED",
+            "public_copy_key": "FAMILY_CHECK_REQUIRED",
+            "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC",
+            "authority_mode": "VERSIONED_CURRENT",
+            "step_up_required": false,
+            "step_up_freshness": "NOT_CHECKED",
+            "challenge_availability": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED",
+            "family_check": "BUSINESS_READ_SCOPE"
+          }
+        ]
+      }
+    },
+    {
+      "type": "AccessEligibility",
+      "case_name": "ABSENT_PERMISSION",
+      "value": {
+        "schema_version": "portal.self-eligibility.v1",
+        "workspace_id": "ws_TEST_ONLY",
+        "environment": "paper",
+        "resource": {
+          "kind": "PORTFOLIO",
+          "id": "portfolio_TEST_ONLY"
+        },
+        "current_only": true,
+        "advisory_only": true,
+        "actions": [
+          {
+            "action": "portfolio.read",
+            "permission": "UNAVAILABLE",
+            "reason_class": "NO_CURRENT_PERMISSION",
+            "public_copy_key": "NO_CURRENT_PERMISSION",
+            "grant_ref": null,
+            "authority_mode": "NOT_ESTABLISHED",
+            "step_up_required": false,
+            "step_up_freshness": "NOT_CHECKED",
+            "challenge_availability": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED",
+            "family_check": "BUSINESS_READ_SCOPE"
+          }
+        ]
+      }
+    },
+    {
+      "type": "AccessSelfNavigation",
+      "case_name": "APP_ONLY_NOT_SOURCE_AUTHORITY",
+      "value": {
+        "schema_version": "portal.self-navigation.v1",
+        "workspace_id": "ws_TEST_ONLY",
+        "environment": "paper",
+        "current_only": true,
+        "advisory_only": true,
+        "current_read_mode": "NOT_ESTABLISHED",
+        "self_entry": {
+          "feature": "PROFILE_ACCESS",
+          "mode": "SELF_ONLY",
+          "permission": "ALLOWED",
+          "route": null,
+          "consumer_state": "AWAITING_CONSUMER_ROUTER"
+        },
+        "features": [
+          {
+            "feature": "EXECUTION_PORTFOLIOS",
+            "state": "ENTERABLE",
+            "authority_mode": "APP_ONLY",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+            "state": "ENTERABLE",
+            "authority_mode": "APP_ONLY",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_OPERATIONS",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_BLOTTER",
+            "state": "ENTERABLE",
+            "authority_mode": "APP_ONLY",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          }
+        ]
+      }
+    },
+    {
+      "type": "AccessSelfNavigation",
+      "case_name": "ABSENT_PERMISSION",
+      "value": {
+        "schema_version": "portal.self-navigation.v1",
+        "workspace_id": "ws_TEST_ONLY",
+        "environment": "paper",
+        "current_only": true,
+        "advisory_only": true,
+        "current_read_mode": "NOT_ESTABLISHED",
+        "self_entry": {
+          "feature": "PROFILE_ACCESS",
+          "mode": "SELF_ONLY",
+          "permission": "ALLOWED",
+          "route": null,
+          "consumer_state": "AWAITING_CONSUMER_ROUTER"
+        },
+        "features": [
+          {
+            "feature": "EXECUTION_PORTFOLIOS",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_OPERATIONS",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_BLOTTER",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          }
+        ]
+      }
+    },
+    {
+      "type": "AccessSelfNavigation",
+      "case_name": "ROUTING_LEGACY_COMPATIBILITY_NOT_A_GRANT",
+      "value": {
+        "schema_version": "portal.self-navigation.v1",
+        "workspace_id": "ws_TEST_ONLY",
+        "environment": "paper",
+        "current_only": true,
+        "advisory_only": true,
+        "current_read_mode": "LEGACY_COMPATIBILITY",
+        "self_entry": {
+          "feature": "PROFILE_ACCESS",
+          "mode": "SELF_ONLY",
+          "permission": "ALLOWED",
+          "route": null,
+          "consumer_state": "AWAITING_CONSUMER_ROUTER"
+        },
+        "features": [
+          {
+            "feature": "EXECUTION_PORTFOLIOS",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_OPERATIONS",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_BLOTTER",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          }
+        ]
+      }
+    },
+    {
+      "type": "AccessSelfNavigation",
+      "case_name": "ROUTING_SCOPED_V2_NOT_A_GRANT",
+      "value": {
+        "schema_version": "portal.self-navigation.v1",
+        "workspace_id": "ws_TEST_ONLY",
+        "environment": "paper",
+        "current_only": true,
+        "advisory_only": true,
+        "current_read_mode": "SCOPED_V2",
+        "self_entry": {
+          "feature": "PROFILE_ACCESS",
+          "mode": "SELF_ONLY",
+          "permission": "ALLOWED",
+          "route": null,
+          "consumer_state": "AWAITING_CONSUMER_ROUTER"
+        },
+        "features": [
+          {
+            "feature": "EXECUTION_PORTFOLIOS",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_OPERATIONS",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          },
+          {
+            "feature": "EXECUTION_BLOTTER",
+            "state": "HIDDEN",
+            "authority_mode": "NOT_ESTABLISHED",
+            "family_check": "NOT_CHECKED",
+            "source_readiness": "NOT_CHECKED",
+            "field_readiness": "NOT_CHECKED",
+            "command_readiness": "NOT_CHECKED"
+          }
+        ]
+      }
+    },
+    {
       "type": "AccessEffective",
       "value": {
         "schema_version": "portal.access-effective.v1",

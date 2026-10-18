@@ -235,6 +235,25 @@ describe("Phase 1 SGP-local profile projection", () => {
     }
   },90_000);
 
+  it("reads exact ordered scalar journal metadata without a source payload", async () => {
+    const first=await commit(document("metadata-one"),"metadata-one");
+    await commit(document("metadata-two"),"metadata-two");
+    const rows=await repository.journalMetadataAfter(workspaceId,"paper",profileId,first.projectionEpoch,0,2);
+    expect(rows.map(row=>row.projectionSequence)).toEqual([1,2]);
+    expect(rows.every(row=>row.workspaceId===workspaceId&&row.environment==="paper"&&
+      row.profileId===profileId&&row.projectionEpoch===first.projectionEpoch)).toBe(true);
+    expect(rows.every(row=>!Object.hasOwn(row,"payload"))).toBe(true);
+    expect((await repository.journalMetadataAfter(workspaceId,"paper",profileId,first.projectionEpoch,1,1))
+      .map(row=>row.projectionSequence)).toEqual([2]);
+    expect(await repository.journalMetadataAfter("TEST_ONLY-other-workspace","paper",profileId,first.projectionEpoch,0,2)).toEqual([]);
+    expect(await repository.journalMetadataAfter(workspaceId,"live",profileId,first.projectionEpoch,0,2)).toEqual([]);
+    expect(await repository.journalMetadataAfter(workspaceId,"paper","TEST_ONLY-other-profile",first.projectionEpoch,0,2)).toEqual([]);
+    expect(await repository.journalMetadataAfter(workspaceId,"paper",profileId,"22345678-1234-1234-1234-123456789abc",0,2)).toEqual([]);
+    expect(await repository.journalMetadataAfter(workspaceId,"paper",profileId,first.projectionEpoch,2,2)).toEqual([]);
+    // The preexisting payload reader remains available to its legacy callers.
+    expect((await repository.journalAfter(workspaceId,"paper",profileId,first.projectionEpoch,0,1))[0]).toHaveProperty("payload");
+  });
+
   it("allows only one active writer lease per workspace/profile", async () => {
     expect(await repository.tryAcquireLease(workspaceId, "paper", profileId, "replica-a", 60_000))
       .toBe(true);

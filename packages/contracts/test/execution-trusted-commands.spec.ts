@@ -2,14 +2,30 @@ import {readFileSync} from "node:fs";
 import {resolve} from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import {describe,expect,it} from "vitest";
-import {commandIntent,commandPreview,commandStatus} from "../../../apps/control-api/src/execution-v2/command.contract";
+import {commandIntent,commandPreview,publicCommandStatus as commandStatus,commandStatus as storedCommandStatus} from "../../../apps/control-api/src/execution-v2/command.contract";
 import {commandCollection,commandCollectionQuery} from "../../../apps/control-api/src/execution-v2/command-collection.contract";
 const root=resolve(__dirname,".."),load=(p:string)=>JSON.parse(readFileSync(resolve(root,p),"utf8"));
-const api=load("openapi/execution-trusted-commands.openapi.json"),fixture=load("fixtures/execution-trusted-commands.synthetic.valid.json");
+const currencyFixture=load("fixtures/execution-command-currency.synthetic.valid.json");
+const api=load("openapi/execution-trusted-commands.openapi.json"),fixture={...load("fixtures/execution-trusted-commands.synthetic.valid.json"),ack_only:currencyFixture.public_status};
 const collectionFixture=load("fixtures/execution-trusted-command-collection.synthetic.valid.json");
 const ajv=new Ajv2020({strict:false});
 const compile=(name:string)=>ajv.compile(JSON.parse(JSON.stringify({$ref:"#/components/schemas/"+name,components:{schemas:api.components.schemas}})));
 describe("ELP2-07 generated command contract",()=>{
+  it("publishes verified intent currency while retaining exact historical storage grammar",()=>{
+    expect(currencyFixture.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    expect(currencyFixture.runtime_qualified).toBe(false);
+    expect(storedCommandStatus.safeParse(currencyFixture.stored_status).success).toBe(true);
+    expect(storedCommandStatus.safeParse(currencyFixture.public_status).success).toBe(false);
+    expect(commandStatus.safeParse(currencyFixture.stored_status).success).toBe(false);
+    const validate=compile("CommandStatus");
+    expect(validate(currencyFixture.stored_status)).toBe(false);
+    expect(validate(currencyFixture.public_status)).toBe(true);
+    expect(currencyFixture.public_status).toEqual({...currencyFixture.stored_status,currency:fixture.intent.business_payload.currency});
+    for(const currency of [null,""," USDT","USDT ","USDT\n"]){
+      expect(commandStatus.safeParse({...fixture.ack_only,currency}).success).toBe(false);
+      expect(validate({...fixture.ack_only,currency})).toBe(false);
+    }
+  });
   it("publishes six named operations on five paths without replacing submit",()=>{
     expect(Object.keys(api.paths)).toHaveLength(5);
     const entries=Object.values(api.paths).flatMap((path)=>Object.values(path as Record<string,unknown>));

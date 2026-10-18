@@ -12,7 +12,7 @@ export const edgeScopedNoticeBatch=z.object({notices:z.array(edgeScopedNotice).m
  * accepted by a public controller. Every revision participates in cursor scope. */
 export const scopedReplayBinding=z.object({workspace_id:text,environment:executionEnvironment,profile_id:text,
   principal_scope_digest:text,app_policy_revision:text,field_policy_revision:text,model_revision:text,
-  schema_revision:z.literal("portal.execution.scoped-realtime.v1"),dataset:z.literal("alpha_fleet_overview"),
+  schema_revision:z.literal("portal.execution.scoped-realtime.v1"),dataset:z.enum(["alpha_fleet_overview","execution_profile_observation"]),
   query_digest:text,source_set_digest:text,source_continuity_epoch:text,projection_generation:text,
   snapshot_id:text,window:z.object({from_ms:utcMilliseconds,to_ms:utcMilliseconds}).strict()
     .refine(w=>w.from_ms<w.to_ms,"REPLAY_WINDOW_INVALID").nullable()}).strict();

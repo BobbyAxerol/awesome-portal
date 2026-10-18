@@ -1,6 +1,6 @@
 import { AccessAction, AccessPolicyError, AccessResource, AccessRefusal, GrantChange,
   ReviewedAccessPolicy, ResourceSelector, ScopedAccessGrant, tsBusinessAction,
-  type ManagerDomainGrant, type ManagerDomainFieldSeal, type ManagerReadDomain } from "./access.contract";
+  type ManagerDomainGrant, type ManagerDomainFieldSeal, type ManagerReadDomain, type ManagerDomainAction } from "./access.contract";
 import { currentAccessRelations, currentGrantProof, currentResources,
   type CurrentAccessRelations, type AccessEnvironment } from "./access-current-relations";
 import { accessDigest, canonicalSelector } from "./access-digest";
@@ -111,6 +111,8 @@ export interface AccessEvaluationContext {
   actor_role?: "ADMIN"|"USER";
   /** Genuine Core membership; the protected-owner exception is not membership. */
   actor_member?: boolean;
+  /** Core-stored app domains, never browser input or native financial authority. */
+  manager_domain_grants?: readonly ManagerDomainGrant[];
 }
 export function policyReady(context: AccessEvaluationContext): boolean {
   const policy = context.policy;
@@ -255,6 +257,17 @@ export function currentGrantAllows(context:AccessEvaluationContext,action:Access
     .some(grant=>grant.effect==="ALLOW"&&grant.grant_id===grantId);
 }
 
+/** Internal synchronous reduction of the SAME complete current graph. The
+ * returned IDs are calculation data, NOT a permit or a source/receipt cache.
+ * An exact selected leaf is eligible iff currentGrantAllows would return true
+ * at this context/time. Callers must discard the set before any await. */
+export function currentAllowedGrantIds(context:AccessEvaluationContext,action:AccessAction,resource:AccessResource,
+  environment:"paper"|"sandbox"|"live"):ReadonlySet<string> {
+  if(!evaluateAccess(context,action,resource,environment).allowed)return new Set();
+  return new Set(matchingGrants(context,action,resource,environment)
+    .filter(grant=>grant.effect==="ALLOW").map(grant=>grant.grant_id));
+}
+
 /** Exact independent Alpha/Portfolio sharing, using the same canonical full
  * current graph as receipt-selected grants. Check all matching originals in
  * one selected-resource check (two canonical matching passes), not once per
@@ -336,18 +349,19 @@ export function validateDelegation(context: AccessEvaluationContext, change: Gra
  * fabricated from this selection; a genuine held native proof is still needed.
  * Roots only: no union of entity ceilings, delegated selectors or TS receipts. */
 export function selectManagerDomainGrant(context:AccessEvaluationContext,domains:readonly ManagerDomainGrant[],
-  environment:AccessEnvironment,domain:ManagerReadDomain) {
+  environment:AccessEnvironment,domain:ManagerReadDomain,requestedAction:ManagerDomainAction="business.read_all") {
   if(!context.actor_current||!context.active_principals.has(context.principal_id))
     throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
   if(!policyReady(context)||context.policy!.qualification!=="OWNER_VERIFIED")
     throw new AccessPolicyError("POLICY_PENDING",503);
   const policy=context.policy!,same=(value:ManagerReadDomain)=>accessDigest(value)===accessDigest(domain);
   const current=(g:ManagerDomainGrant)=>g.workspace_id===context.workspace_id&&g.policy_revision===policy.revision&&
-    g.subject_user_id===context.principal_id&&g.issued_by===policy.protected_owner_user_id&&g.parent_grant_id===null&&
+    g.action===requestedAction&&g.subject_user_id===context.principal_id&&g.issued_by===policy.protected_owner_user_id&&g.parent_grant_id===null&&
     context.active_principals.has(g.issued_by)&&g.revoked_at_ms===null&&g.valid_from_ms<=context.now_ms&&g.valid_until_ms>context.now_ms&&
     g.environment===environment&&same(g.domain);
   const relevant=new Set<AccessAction>(["business.read_all","alpha.read","portfolio.read","portfolio.read_restricted",
     "portfolio.discover_linked","account.read","binding.read"]);
+  if(requestedAction==="stream.subscribe")relevant.add("stream.subscribe");
   // A resource DENY cannot be proved disjoint without the real entity source.
   // Never drop it or resolve an entity census while holding this Core TX.
   if(context.grants.some(g=>g.subject_user_id===context.principal_id&&g.workspace_id===context.workspace_id&&

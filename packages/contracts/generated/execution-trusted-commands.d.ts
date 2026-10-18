@@ -442,6 +442,7 @@ export interface components {
             /** @constant */
             reserved: false;
         };
+        /** @description Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema. */
         CommandStatus: {
             /** @constant */
             schema_version: "portal.execution.command-status.v1";
@@ -482,6 +483,7 @@ export interface components {
             updated_at_ms: number;
             /** @enum {string} */
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
+            currency: string;
         };
         CommandCollectionQuery: {
             workspace_id: string;

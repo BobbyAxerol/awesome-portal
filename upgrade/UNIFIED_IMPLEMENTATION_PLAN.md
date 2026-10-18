@@ -12302,3 +12302,124 @@ Actual corrected qualification21:06:16.131619–21:07:29.428425UTC:348PASS (278u
   metadata. Neither is mounted-runtime proof. No consumer ACK/source activation
   is inferred from these source-only changes; original failed receipts retained.
 
+### C1/C2 landed; C3–C7 current handoff —2026-10-18T16:10UTC
+
+- C1/C2 normal R3 terminal PASS at `5291a80f68a11cbccad879d1e99bb6282634f636`:
+  contracts996PASS/API7503PASS/3skip, supported build, source/runtime/index
+  preservation and exact teardown PASS. [Actual terminal, no source activation](execution_loop/evidence/ELP2-07/pending-control.md#actual-corrected-normal-r3-terminal--2026-10-18t160456utc).
+- C3 own eligibility/navigation, C4 Manager P1, C5 finite stored criteria and
+  C7 source-dark native Manager composition are in the approved integration
+  lane. [Implementation/contract/test matrix and F8 dispositions](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md)
+  records actual gate status; INTEGRATED_UNCOMMITTED is not DELIVERED/PASS.
+- [FE-026 finite own-researcher proposal](execution_loop/evidence/ELP2-03/researcher-field-policy-proposal-2026-10-18.md)
+  awaits Bobby review; no field policy/grant is installed. Claude keeps B1/B2,
+  frontend and consumer acceptance; no peer WIP merge. ELP2-11 NOT_ENTRY_READY.
+
+- Follow-through17:13UTC: failed normal-hook receipt is preserved; corrected
+  custody reason/username setup passed256/256 focused actual-PG tests plus
+  supported Node22 build and scoped restore. The subsequent true-source-I/O
+  shutdown join is a new change and awaits final R3, not covered retroactively.
+  [Exact scopes, hashes, C3–C7 delivery and open gates](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md).
+  HK sources were refreshed17:00:21UTC; no catalogue/provider/runtime promotion.
+
+- C5 further intake: same existing parent GET/composition now integrates
+  independently sealed stored actors/latest-plan and R2 stored request context;
+  actual decision admission remains NOT_EVALUATED and legacy ROOT purposes
+  unchanged. Generated contracts/fixtures are published in the existing pipeline;
+  final R3 and Claude consumer acceptance remain separate pending gates.
+  HK read17:17:54UTC records PM68d165f0 plus parallel WIP/failed source attempts,
+  not current source qualification. [Full contract and fresh-source limits](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md).
+
+- C5 bounded-recorded addition: existing R2/Paper reads/compositions now include
+  opt-in immutable decision activity; R2 adds stored verdicts, never inferred
+  numeric criteria/current admission. New finite purposes/seal cap31, original
+  scope/hash/current-authority guards preserved; final R3 pending. HK source
+  refresh17:36:42UTC pins PM1c803ddb and Edge's finite233-case owner receipt;
+  neither commissions current Core WIP/provider/SSE. [Implementation, review
+  findings and remaining local/source/Claude requests](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md#bounded-recorded-facts--additional-c5-local-completion).
+
+- C3–C7 gate update18:26UTC: contracts1084/Node22build PASS, parent API298/15FAIL;
+  stopped known-red full run, preserved failure/teardown receipts. Focus5cases:
+  activity1PASS, four actor20000ms timeouts; no API/fullphase PASS. Current
+  private synchronous full-graph reduction/parity fix stays within the approved
+  batch, no guard/SLO relaxation. [Exact diagnosis and next gate](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md#r3-failure-and-bounded-diagnosis-2026-10-18t1826utc).
+  Source refresh18:03UTC pins Edge8204eeea/PMc889872d, with corrected SSE still
+  NOT_RUN; neither claims runtime/trust/calibration or ELP2-11 readiness.
+
+- C3–C7 follow-through18:49UTC: affected Node22/actual-PG C5 focus49PASS,
+  429 intentionally unselected; build/restore/cleanup and protected runtimes
+  unchanged. This is not the final normal R3. Registryrev7 optional replacement
+  metadata plus old absent/null digest compatibility and closed typed OpenAPI:
+  67focused Python tests PASS. [Exact scope/consumer conditions](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md#c5-focused-correction-and-registry-rev7-2026-10-18t1849utc).
+  Fresh HK18:44 pins retain provider/authority/financial/coexistence gaps;
+  latest Claude FE-044…055 source intake does not imply consumer acceptance.
+
+- Final C3–C7 input: genuine same-workspace Core read mode now fences self-nav,
+  registryrev7 preserves old routes/digests; Cockpit separates read from decide
+  and uses one current page/count predicate. Normal R3 pending, no source or
+  consumer PASS inferred. [Producer/consumer handoff](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md#c3-routing-and-c5-current-actionability-final-gate-input).
+  [Fresh FE-044…055 per-ID triage](execution_loop/evidence/ELP2-10/claude-new-requests-2026-10-18.md)
+  records partial existing delivery, true local gaps and source/privacy needs;
+  no FE-047, no silent backlog closure. ELP2-11 remains NOT_ENTRY_READY.
+
+- C3–C7 current qualification update19:35UTC: normal R3 contracts1087/buildPASS,
+  parent298/298PASS; one new access fixture used an invalid audit operation.
+  Corrected exactly that fixture to existing DENIED, no schema/authority change;
+  full API/restore is NOT_PASS until retake. The next focused job started no
+  cell because Claude's visual held the shared heavy lock. [Failure, ownership,
+  quiet-wait and terminal-delivery pointer](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md).
+  [Fresh Edge/PM source pins](execution_loop/evidence/ELP2-10/source-truth-2026-10-18.md#16-fresh-source-only-follow-through-2026-10-18t191153z191155z)
+  preserve current source/provider/financial/budget/calibration gaps. No peer
+  frontend edit/merge, runtime activation, push or ELP2-11 entry.
+
+- C3–C7 qualification update20:20UTC: stopped the known-red normal API suite
+  after one newly authored Manager test used a host-only contract fixture path.
+  Corrected the test to honor the cell's existing PORTAL_CONTRACTS_DIR, without
+  changing producer, isolation, authority or test ceilings. Contracts1087/build
+  PASS is not an unfinished API/restore PASS. [Preserved log/hash/cleanup and
+  retake plan](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md).
+
+- C3–C7 qualification update20:58UTC: normal R3 remains FAIL_OR_INCOMPLETE;
+  actual Manager66PASS confirms the path correction, but two other files found
+  a masked pending-field reason and an obsolete Regime environment/stage test
+  expectation. Fixes preserve permissions, current DENY precedence, source
+  identity and strict stage/environment validation; bounded pure diagnostics
+  precede the next normal hook. [Exact failure/hash, changes and limits](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md#r3-follow-through2058utc--two-affected-regressions-no-permission-relaxation).
+
+- C3–C7 focused follow-through21:04UTC:12pure files/413tests PASS on host Node20,
+  no build/DB/source acceptance; next gate is the mandatory normal R3. Fresh
+  [Edge/PM checkpoint17](execution_loop/evidence/ELP2-10/source-truth-2026-10-18.md#17-fresh-edge-runtime-profile-publication-2026-10-18t210341z)
+  records Edge9d9d0950's separately source-qualified runtime profile and its
+  immutable Core5291 target. No automatic patch/mount/stream, no current Core
+  qualification from393upstream cases; ELP2-11 remains NOT_ENTRY_READY.
+
+- C3–C7 qualification update21:38UTC: actual Node22/cell confirms self92 and
+  Regime26, but the operation-parent old equality omitted the newly served
+  immutable-intent currency. Correct the assertion and explicitly verify GET
+  leaves stored status/audit/events unchanged; no producer/authority relaxation.
+  [Actual failed terminal and bounded retake](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md#r3-follow-through2138utc--immutable-versus-served-command-status).
+  Full R3/restore and consumer acceptance remain pending; no runtime/push.
+
+- C3–C7 corrected mounted diagnostic21:47UTC:Node22build,16HTTP/PGcases and
+  scoped-access restorePASS, source/index/eight runtimes unchanged, own cleanup0.
+  Normal R3 remains the coherent landing gate; this receipt alone is not it.
+  [Actual diagnostic/handoff](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md#r3-follow-through2138utc--immutable-versus-served-command-status).
+  [Four-source checkpoint18](execution_loop/evidence/ELP2-10/source-truth-2026-10-18.md#18-fresh-four-source-factory-checkpoint-2026-10-18t21412149utc)
+  pins the newly committed inert Edge factory, PM durable-settlement gap and
+  TS/DL rollback honestly; no provider/runtime/consumer or ELP2-11 entryPASS.
+
+- C3–C7 normal-hook queue22:04UTC: the15minute shared-resource wait expired
+  before hook/cell startup; **NOT_STARTED**, not a new test failure or PASS.
+  Preserve peer API/PM resources and retry the same coherent batch when quiet.
+  Bounded C7 private proposals are source-reviewed only, not applied/delivered;
+  [wait terminal, next seams and remaining authority gates](execution_loop/evidence/ELP2-10/manager-intake-2026-10-18.md#quiet-lane-wait-terminal2204utc--no-hook-started).
+
+- C3–C7 queue/source update22:20UTC: second shared-lane wait ended before hook
+  startup, NOT_STARTED (no new test failure). Preserve the active peer cell;
+  same corrected source awaits normal R3. [Checkpoint19](execution_loop/evidence/ELP2-10/source-truth-2026-10-18.md#19-fresh-four-source-follow-through-2026-10-18t22172218utc)
+  records committed PM908169aa's scoped eight-case successor and unchanged wire;
+  Edge native preparation remains owner-reported UNKNOWN/PREPARED. Private
+  C7 pool/loader/drain/PG-fault proposals stay NOT_APPLIED/NOT_RUN. Current
+  provider/authority/financial/SSE/budget/calibration/coexistence/G2 and consumer
+  gates remain open; no ELP2-11, runtime activation, merge or push.
+

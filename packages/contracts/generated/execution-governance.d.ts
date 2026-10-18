@@ -795,7 +795,7 @@ export interface components {
             /** @constant */
             source_side_effect_requested: false;
         };
-        /** @description Finite current-authorized Portal R2 parent. Stored lineage is historical reference, never an effective TS grant, current R1 permission, source acceptance or dispatch. No prose, actors or monetary values. */
+        /** @description Finite current-authorized Portal R2 parent. Stored lineage is historical reference, never an effective TS grant, current R1 permission, source acceptance or dispatch. Actor IDs/latest plan/stored request inputs each require their own exact current reviewed purposes; they assert no decision eligibility. No prose, private manifest or monetary values. */
         R2ParentReadV2: {
             /** @constant */
             schema_version: "portal.execution.governance-parent.v2";
@@ -854,6 +854,225 @@ export interface components {
                 availability: "NOT_PUBLISHED";
                 /** @constant */
                 reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+            actors: ({
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION";
+                requester_user_id: string;
+                artifact_creator_user_id: string;
+                decided_by_user_id: string | null;
+                viewer_is_requester: boolean;
+                viewer_is_artifact_creator: boolean;
+                viewer_is_decided_by: boolean | null;
+            } & unknown) | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+            /** @description One latest recorded Portal plan under independent latest+detail purposes. Runtime selects newest before public type/version/collision checks; an unreadable latest is typed absent, never an older ID. Stored status is neither apply eligibility nor source settlement. */
+            latest_operation: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY";
+                operation_id: string;
+                /** @constant */
+                command_version: 1;
+                /** @constant */
+                command_type: "GOVERNANCE_R2_DECISION";
+                /** @enum {string} */
+                stored_status: "PLANNED" | "APPLIED" | "EXPIRED";
+                created_at_ms: number;
+                /** @constant */
+                order_basis: "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC";
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @enum {string} */
+                reason_code: "NO_RECORDED_PORTAL_OPERATION" | "LATEST_RECORDED_OPERATION_NOT_PUBLIC";
+            };
+            /** @description Stored verified R2 inputs only, never READY/action authorization or a native source acceptance. Actual plan rechecks current decide/role/SoD/quorum/R1 rules. Runtime correlates workspace/approval/version with the parent; workspace length counts Unicode code points. No private manifest/preimage is disclosed. */
+            decision_context: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "VERIFIED_STORED_R2_INPUTS_NOT_ACTION_AUTHORIZATION";
+                /** @constant */
+                gate: "R2";
+                workspace_id: string;
+                approval_id: string;
+                expected_approval_version: number;
+                evidence_set_hash: string;
+                /** @description Unique own immutable evidence hashes. Runtime additionally requires strictly ascending lexical order; standard JSON Schema does not compare arbitrary array elements. More than128 hashes publishes null+typed absence, never a truncated list or fake empty list. */
+                evidence_hashes: {
+                    /** @constant */
+                    availability: "AVAILABLE";
+                    value: string[];
+                    reason_code: null;
+                } | {
+                    /** @constant */
+                    availability: "NOT_PUBLISHED";
+                    value: null;
+                    /** @constant */
+                    reason_code: "EVIDENCE_HASH_LIMIT_EXCEEDED";
+                };
+                /** @constant */
+                command_type: "GOVERNANCE_R2_DECISION";
+                /** @constant */
+                request_schema_version: "governance.r2-decision-plan-request.v1";
+                /** @constant */
+                plan_path: "/api/v1/execution/commands/plans";
+                admission: {
+                    /** @constant */
+                    state: "NOT_EVALUATED";
+                    /** @constant */
+                    reason_code: "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN";
+                };
+                /** @constant */
+                source_side_effect_requested: false;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+            /** @description Separately sealed RECORDED_PORTAL_ACTIVITY plus DECISION_OPERATION on BOTH PAPER anchors. Actual bounded immutable Portal decisions only, not source/order/stage history, action eligibility or full history. Runtime additionally checks version_after=version_before+1, unique decision/operation IDs and nonincreasing public decided_at_ms. Exact PostgreSQL microsecond timestamp plus ID ordering is private/query-tested: equal public milliseconds need not have ID lexical order. Standard JSON Schema cannot compare arbitrary scalar siblings or object-key values. */
+            recorded_activity: ({
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "IMMUTABLE_PORTAL_DECISION_ROWS_NOT_SOURCE_OR_STAGE_HISTORY";
+                /** @constant */
+                order_basis: "POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC";
+                /** @constant */
+                coverage: "BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY";
+                /** @constant */
+                limit: 32;
+                has_more: boolean;
+                items: {
+                    decision_id: string;
+                    operation_id: string;
+                    version_before: number;
+                    version_after: number;
+                    decided_at_ms: number;
+                    /** @constant */
+                    kind: "R2_DECISION_RECORDED";
+                    /** @enum {string} */
+                    decision: "APPROVE" | "APPROVE_WITH_CONDITION" | "DENY";
+                }[];
+            } & unknown) | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "RECORDED_ACTIVITY_NOT_PUBLIC";
+            };
+            /** @description Independently sealed R2_RECORDED_VERDICTS on BOTH PAPER anchors. Stored R2 verdicts are not current readiness or source criterion acceptance. All structured criterion fields remain null+typed absence, not prose-derived thresholds or metrics. Runtime additionally enforces source_ref finding/parent identity, unique finding IDs and strictly ascending ordinals; these arbitrary sibling/key relations are not standard JSON Schema constraints. */
+            recorded_verdicts: ({
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "STORED_PORTAL_R2_FINDINGS_NOT_CURRENT_GATE_READINESS";
+                /** @constant */
+                order_basis: "POSTGRES_ORDINAL_ASC_FINDING_ID_C_ASC";
+                /** @constant */
+                coverage: "BOUNDED_RECORDED_FINDINGS_NOT_FULL_CRITERIA_HISTORY";
+                /** @constant */
+                limit: 64;
+                has_more: boolean;
+                items: ({
+                    finding_id: string;
+                    ordinal: number;
+                    /** @enum {string} */
+                    outcome: "PASS" | "WATCH" | "FAIL" | "INSUFFICIENT";
+                    blocking: boolean;
+                    evaluated_at_ms: number;
+                    criterion_key: {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED";
+                    };
+                    label_key: {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED";
+                    };
+                    observed: {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED";
+                    };
+                    limit: {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED";
+                    };
+                    op: {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED";
+                    };
+                    unit: {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED";
+                    };
+                    currency: {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED";
+                    };
+                    source_ref: {
+                        /** @constant */
+                        kind: "PORTAL_STORED_R2_FINDING";
+                        approval_id: string;
+                        finding_id: string;
+                        /** @constant */
+                        basis: "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE";
+                    };
+                } & unknown)[];
+                admission: {
+                    /** @constant */
+                    state: "NOT_EVALUATED";
+                    /** @constant */
+                    reason_code: "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN";
+                };
+            } & unknown) | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "RECORDED_VERDICTS_NOT_PUBLIC";
             };
         };
         /** @description Finite current-authorized Paper Exit. Current stored bytes verified for integrity, not historical source acceptance. Optional sections require their own exact current reviewed field purposes. No raw capture/preimage/private intent/prose is returned. */
@@ -953,6 +1172,204 @@ export interface components {
                 /** @constant */
                 reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
             };
+            criteria: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE";
+                evaluation_policy_version: string;
+                evaluation_formula_version: string;
+                panels: ({
+                    panel_id: string;
+                    ordinal: number;
+                    /** @enum {string} */
+                    panel_kind: "OBSERVATION_COVERAGE" | "DRIFT" | "LIMITS_HEALTH" | "PORTFOLIO_FIT";
+                    /** @enum {string} */
+                    source_authority: "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED";
+                    /** @enum {string} */
+                    panel_state: "OK" | "PARTIAL" | "STALE" | "UNAVAILABLE" | "ERROR";
+                    as_of_ms: number | null;
+                    /** @enum {string} */
+                    freshness_state: "OK" | "STALE" | "UNKNOWN";
+                    /** @enum {string} */
+                    source_completeness: "EVENT_SOURCED" | "POLL_BOUNDED" | "UNKNOWN";
+                    poll_interval_ms: number | null;
+                    formula_version: string | null;
+                } & (unknown & unknown))[];
+                items: ({
+                    original: {
+                        finding_id: string;
+                        panel_id: string;
+                        ordinal: number;
+                        /** @enum {string} */
+                        outcome: "PASS" | "WATCH" | "FAIL" | "INSUFFICIENT";
+                        blocking: boolean;
+                        required: boolean;
+                        as_of_ms: number | null;
+                    };
+                    criterion_key: {
+                        /** @constant */
+                        availability: "AVAILABLE";
+                        /** @enum {string} */
+                        value: "OBSERVATION_COVERAGE" | "DRIFT" | "LIMITS_HEALTH" | "PORTFOLIO_FIT";
+                        reason_code: null;
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_METRIC_NOT_REGISTERED";
+                    };
+                    label_key: {
+                        /** @constant */
+                        availability: "AVAILABLE";
+                        /** @enum {string} */
+                        value: "paper_exit.observation_coverage" | "paper_exit.drift" | "paper_exit.limits_health" | "paper_exit.portfolio_fit";
+                        reason_code: null;
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_METRIC_NOT_REGISTERED";
+                    };
+                    observed: {
+                        /** @constant */
+                        availability: "AVAILABLE";
+                        value: string;
+                        reason_code: null;
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_VALUE_NOT_RECORDED";
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_VALUE_NOT_DECIMAL";
+                    };
+                    limit: {
+                        /** @constant */
+                        availability: "AVAILABLE";
+                        value: string;
+                        reason_code: null;
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_VALUE_NOT_RECORDED";
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_VALUE_NOT_DECIMAL";
+                    };
+                    op: {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_COMPARATOR_FIELD_NOT_RECORDED";
+                    };
+                    unit: {
+                        /** @constant */
+                        availability: "AVAILABLE";
+                        value: string & unknown;
+                        reason_code: null;
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_TEXT_NOT_RECORDED";
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_TEXT_NOT_PUBLIC_SAFE";
+                    };
+                    currency: {
+                        /** @constant */
+                        availability: "AVAILABLE";
+                        value: string & unknown;
+                        reason_code: null;
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_TEXT_NOT_RECORDED";
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_TEXT_NOT_PUBLIC_SAFE";
+                    };
+                    evidence: {
+                        /** @constant */
+                        availability: "AVAILABLE";
+                        value: string;
+                        reason_code: null;
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_EVIDENCE_HASH_NOT_RECORDED";
+                    };
+                    finding_formula_version: {
+                        /** @constant */
+                        availability: "AVAILABLE";
+                        value: string & unknown;
+                        reason_code: null;
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_TEXT_NOT_RECORDED";
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_TEXT_NOT_PUBLIC_SAFE";
+                    };
+                    source_time: {
+                        /** @constant */
+                        availability: "AVAILABLE";
+                        value: number;
+                        reason_code: null;
+                    } | {
+                        /** @constant */
+                        availability: "NOT_PUBLISHED";
+                        value: null;
+                        /** @constant */
+                        reason_code: "SOURCE_TIME_NOT_RECORDED";
+                    };
+                    source_ref: {
+                        /** @constant */
+                        kind: "PORTAL_STORED_PAPER_EXIT_FINDING";
+                        review_id: string;
+                        panel_id: string;
+                        finding_id: string;
+                        /** @constant */
+                        basis: "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE";
+                    };
+                } & (unknown & unknown & unknown & unknown & unknown))[];
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
             lineage: {
                 /** @constant */
                 availability: "AVAILABLE";
@@ -967,6 +1384,85 @@ export interface components {
                 availability: "NOT_PUBLISHED";
                 /** @constant */
                 reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+            actors: ({
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION";
+                requester_user_id: string;
+                artifact_creator_user_id: string;
+                decided_by_user_id: string | null;
+                viewer_is_requester: boolean;
+                viewer_is_artifact_creator: boolean;
+                viewer_is_decided_by: boolean | null;
+            } & unknown) | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            };
+            /** @description One latest recorded Portal plan under independent latest+detail purposes. Runtime selects newest before public type/version/collision checks; an unreadable latest is typed absent, never an older ID. Stored status is neither apply eligibility nor source settlement. */
+            latest_operation: {
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY";
+                operation_id: string;
+                /** @constant */
+                command_version: 1;
+                /** @constant */
+                command_type: "GOVERNANCE_PAPER_EXIT_DECISION";
+                /** @enum {string} */
+                stored_status: "PLANNED" | "APPLIED" | "EXPIRED";
+                created_at_ms: number;
+                /** @constant */
+                order_basis: "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC";
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @enum {string} */
+                reason_code: "NO_RECORDED_PORTAL_OPERATION" | "LATEST_RECORDED_OPERATION_NOT_PUBLIC";
+            };
+            /** @description Separately sealed RECORDED_PORTAL_ACTIVITY plus DECISION_OPERATION on BOTH PAPER anchors. Actual bounded immutable Portal decisions only, not source/order/stage history, action eligibility or full history. Runtime additionally checks version_after=version_before+1, unique decision/operation IDs and nonincreasing public decided_at_ms. Exact PostgreSQL microsecond timestamp plus ID ordering is private/query-tested: equal public milliseconds need not have ID lexical order. Standard JSON Schema cannot compare arbitrary scalar siblings or object-key values. */
+            recorded_activity: ({
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "IMMUTABLE_PORTAL_DECISION_ROWS_NOT_SOURCE_OR_STAGE_HISTORY";
+                /** @constant */
+                order_basis: "POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC";
+                /** @constant */
+                coverage: "BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY";
+                /** @constant */
+                limit: 32;
+                has_more: boolean;
+                items: {
+                    decision_id: string;
+                    operation_id: string;
+                    version_before: number;
+                    version_after: number;
+                    decided_at_ms: number;
+                    /** @constant */
+                    kind: "PAPER_EXIT_DECISION_RECORDED";
+                    /** @enum {string} */
+                    decision: "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
+                }[];
+            } & unknown) | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "RECORDED_ACTIVITY_NOT_PUBLIC";
             };
         };
         OperationalR2ParentCompositionV2: {
@@ -2456,6 +2952,7 @@ export interface components {
             /** @constant */
             external_side_effect_requested: false;
         };
+        /** @description Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema. */
         CommandStatus: {
             /** @constant */
             schema_version: "portal.execution.command-status.v1";
@@ -2496,6 +2993,7 @@ export interface components {
             updated_at_ms: number;
             /** @enum {string} */
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
+            currency: string;
         };
         /** @description Finite immutable Portal labels plus current local triage, not TS execution. Runtime additionally enforces nonnegative finite dates, updated>=created and the existing triage/timestamp shape. SQL retains six fractional UTC digits for exact keyset boundaries. */
         OperationalQueueItemV2: {

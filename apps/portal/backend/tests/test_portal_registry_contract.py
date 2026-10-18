@@ -342,9 +342,9 @@ def test_canonical_registry_source_and_public_document_validate() -> None:
     _assert_valid("public", public_document)
 
 
-def test_revision_6_commissions_execution_routes_with_bounded_shadow_policy() -> None:
+def test_revision_7_retains_revision_6_routes_and_bounded_shadow_policy() -> None:
     source = _load_json(SOURCE_PATH)
-    assert source["revision"] == 6
+    assert source["revision"] == 7
     assert [group["id"] for group in source["feature_groups"][:4]] == [
         "command",
         "governance",

@@ -558,11 +558,11 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-10 installed worker/Score/
     const shutdown=h.runtime.beforeApplicationShutdown();let stopped=false;
     void shutdown.then(()=>{stopped=true;});
     try {
-      // There is no financial/DB work on this path: settle only the finite
-      // promise cancellation chain, without resolving the ignoring provider.
+      // Poll cancellation is prompt, but lifecycle completion must not claim
+      // the abort-ignoring source call has released its actual resources.
       await new Promise<void>(resolve=>setImmediate(resolve));
-      expect(stopped).toBe(true);expect(signal.aborted).toBe(true);
-      expect(h.runtime.status()).toEqual({state:"STOPPED",partitions:1,automatic_loop:false});
+      expect(stopped).toBe(false);expect(signal.aborted).toBe(true);
+      expect(h.runtime.status().state).not.toBe("STOPPED");
       expect(h.read).not.toHaveBeenCalled();
       expect(h.hub.diagnostics()).toMatchObject({clients:0,source_flights:1,queued_bytes:0});
       expect(h.frames).toHaveLength(1);expect(h.frames[0]).toMatchObject({event_type:"unavailable",reason_code:"STOPPED",terminal:true});
@@ -844,8 +844,11 @@ describe("ELP2-06 original Composition custody — synthetic pure/runtime inputs
       if(kind==="missing-publication")document.precomputed_compositions=[];
       if(kind==="duplicate-publication")document.precomputed_compositions!.push(structuredClone(f.publication));
       if(kind==="raw-digest")document.precomputed_scores![0].provenance.calculation_revision="SYNTHETIC:substituted";
-      const suffix=kind==="revision"||kind==="qualification"?"SOURCE_MISMATCH":
-        ["missing-member","duplicate-member","changed-stage"].includes(kind)?"POPULATION_MISMATCH":"PUBLICATION_MISMATCH";
+      // A SANDBOX member in a Paper document now fails the stricter source
+      // grammar before custody census comparison. Both paths must refuse;
+      // do not relax the environment/stage guard to preserve the old reason.
+      const suffix=kind==="changed-stage"?"INVALID":kind==="revision"||kind==="qualification"?"SOURCE_MISMATCH":
+        ["missing-member","duplicate-member"].includes(kind)?"POPULATION_MISMATCH":"PUBLICATION_MISMATCH";
       expect(captureManagerCompositionOriginalAllocation({...f.request,document},()=>now),kind).toEqual(originalAbsence(suffix));
     }
   });

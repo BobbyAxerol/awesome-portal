@@ -11,61 +11,337 @@
     "as_of_ms": 1000,
     "recorded_through_ms": 1100,
     "facts_through_ms": 1000,
-    "quality": { "completeness": "PARTIAL", "freshness": "STALE", "reasons": ["TEST_ONLY_SOURCE_NOT_QUALIFIED"] },
+    "quality": {
+      "completeness": "PARTIAL",
+      "freshness": "STALE",
+      "reasons": [
+        "TEST_ONLY_SOURCE_NOT_QUALIFIED"
+      ]
+    },
     "coverage": "AUTHORIZED_ONLY",
     "economic_aggregation": "PARTITIONED_ONLY",
-    "query_policy": { "null_order": "LAST_BOTH_DIRECTIONS", "stage_order": "LEXICAL_SET_NOT_RISK_RANK", "maximum_response_bytes": 1048576 },
-    "page": { "limit": 100, "returned_count": 1, "authorized_filtered_count": 1, "next_cursor": null, "previous_cursor": null },
-    "items": [{
-      "row_key": "[\"TEST_ONLY:alpha\",\"TEST_ONLY:av\",\"TEST_ONLY:portfolio\"]",
-      "alpha_id": "TEST_ONLY:alpha", "alpha_version_id": "TEST_ONLY:av", "portfolio_id": "TEST_ONLY:portfolio",
-      "name": "TEST_ONLY · declared fixture", "owner_user_id": "TEST_ONLY:research-owner", "lifecycle": "ACTIVE",
-      "venue": "TEST_ONLY:venue", "health": null, "source_state": "STALE", "stage_presence": ["PAPER"],
-      "children": [{ "alpha_id": "TEST_ONLY:alpha", "alpha_version_id": "TEST_ONLY:av", "portfolio_id": "TEST_ONLY:portfolio",
-        "deployment_id": "TEST_ONLY:deployment", "account_id": "TEST_ONLY:account", "stage": "PAPER", "binding_ref": null }],
-      "metrics": {
-        "unrealized_pnl": { "value": null, "unit": "MONEY", "currency": "USDT", "basis": "TEST_ONLY:net-ledger", "window": null,
-          "denominator": null, "methodology_ref": null, "availability": "UNAVAILABLE", "reason_code": "METHODOLOGY_NOT_PUBLISHED",
-          "quality": { "completeness": "UNRESOLVED", "freshness": "STALE", "reasons": ["METHODOLOGY_NOT_PUBLISHED"] },
-          "source_confidence": "UNKNOWN", "provenance_refs": ["TEST_ONLY:source-receipt"], "calculation_revision": "manager-model.v1", "policy_revision": "TEST_ONLY:policy" },
-        "net_pnl": { "value": "0", "unit": "MONEY", "currency": "USDT", "basis": "TEST_ONLY:net-ledger", "window": null,
-          "denominator": null, "methodology_ref": "TEST_ONLY:method", "availability": "AVAILABLE", "reason_code": null,
-          "quality": { "completeness": "COMPLETE", "freshness": "STALE", "reasons": ["TEST_ONLY:old-source-cut"] },
-          "source_confidence": "PROVISIONAL", "provenance_refs": ["TEST_ONLY:source-receipt"], "calculation_revision": "manager-model.v1", "policy_revision": "TEST_ONLY:policy" },
-        "allocation": { "value": null, "unit": "NOT_PUBLISHED", "currency": null, "basis": "NOT_PUBLISHED", "window": null,
-          "denominator": null, "methodology_ref": null, "availability": "UNAVAILABLE", "reason_code": "SOURCE_FACTS_NOT_PUBLISHED",
-          "quality": { "completeness": "UNRESOLVED", "freshness": "UNKNOWN", "reasons": ["SOURCE_FACTS_NOT_PUBLISHED"] },
-          "source_confidence": "UNKNOWN", "provenance_refs": ["SOURCE_NOT_PUBLISHED"], "calculation_revision": "manager-model.v1", "policy_revision": "NOT_PUBLISHED" }
-      },
-      "economic_partitions": [{
-        "partition": { "economic_domain": "PAPER", "currency": "USDT", "basis": "TEST_ONLY:net-ledger",
-          "native_profile_ref": "TEST_ONLY:paper-ledger", "domain_proof_ref": "TEST_ONLY:not-economic-authority" },
+    "query_policy": {
+      "null_order": "LAST_BOTH_DIRECTIONS",
+      "stage_order": "LEXICAL_SET_NOT_RISK_RANK",
+      "maximum_response_bytes": 1048576
+    },
+    "page": {
+      "limit": 100,
+      "returned_count": 1,
+      "authorized_filtered_count": 1,
+      "next_cursor": null,
+      "previous_cursor": null
+    },
+    "items": [
+      {
+        "row_key": "[\"TEST_ONLY:alpha\",\"TEST_ONLY:av\",\"TEST_ONLY:portfolio\"]",
+        "alpha_id": "TEST_ONLY:alpha",
+        "alpha_version_id": "TEST_ONLY:av",
+        "portfolio_id": "TEST_ONLY:portfolio",
+        "name": "TEST_ONLY · declared fixture",
+        "owner_user_id": "TEST_ONLY:research-owner",
+        "lifecycle": "ACTIVE",
+        "venue": "TEST_ONLY:venue",
+        "health": null,
+        "source_state": "STALE",
+        "stage_presence": [
+          "PAPER"
+        ],
+        "children": [
+          {
+            "alpha_id": "TEST_ONLY:alpha",
+            "alpha_version_id": "TEST_ONLY:av",
+            "portfolio_id": "TEST_ONLY:portfolio",
+            "deployment_id": "TEST_ONLY:deployment",
+            "account_id": "TEST_ONLY:account",
+            "stage": "PAPER",
+            "binding_ref": null
+          }
+        ],
         "metrics": {
-          "unrealized_pnl": { "value": null, "unit": "MONEY", "currency": "USDT", "basis": "TEST_ONLY:net-ledger", "window": null,
-            "denominator": null, "methodology_ref": null, "availability": "UNAVAILABLE", "reason_code": "METHODOLOGY_NOT_PUBLISHED",
-            "quality": { "completeness": "UNRESOLVED", "freshness": "STALE", "reasons": ["METHODOLOGY_NOT_PUBLISHED"] },
-            "source_confidence": "UNKNOWN", "provenance_refs": ["TEST_ONLY:source-receipt"], "calculation_revision": "manager-model.v1", "policy_revision": "TEST_ONLY:policy" },
-          "net_pnl": { "value": "0", "unit": "MONEY", "currency": "USDT", "basis": "TEST_ONLY:net-ledger", "window": null,
-            "denominator": null, "methodology_ref": "TEST_ONLY:method", "availability": "AVAILABLE", "reason_code": null,
-            "quality": { "completeness": "COMPLETE", "freshness": "STALE", "reasons": ["TEST_ONLY:old-source-cut"] },
-            "source_confidence": "PROVISIONAL", "provenance_refs": ["TEST_ONLY:source-receipt"], "calculation_revision": "manager-model.v1", "policy_revision": "TEST_ONLY:policy" }
-        }
-      }]
-    }],
+          "unrealized_pnl": {
+            "value": null,
+            "unit": "MONEY",
+            "currency": "USDT",
+            "basis": "TEST_ONLY:net-ledger",
+            "window": null,
+            "denominator": null,
+            "methodology_ref": null,
+            "availability": "UNAVAILABLE",
+            "reason_code": "METHODOLOGY_NOT_PUBLISHED",
+            "quality": {
+              "completeness": "UNRESOLVED",
+              "freshness": "STALE",
+              "reasons": [
+                "METHODOLOGY_NOT_PUBLISHED"
+              ]
+            },
+            "source_confidence": "UNKNOWN",
+            "provenance_refs": [
+              "TEST_ONLY:source-receipt"
+            ],
+            "calculation_revision": "manager-model.v1",
+            "policy_revision": "TEST_ONLY:policy"
+          },
+          "net_pnl": {
+            "value": "0",
+            "unit": "MONEY",
+            "currency": "USDT",
+            "basis": "TEST_ONLY:net-ledger",
+            "window": null,
+            "denominator": null,
+            "methodology_ref": "TEST_ONLY:method",
+            "availability": "AVAILABLE",
+            "reason_code": null,
+            "quality": {
+              "completeness": "COMPLETE",
+              "freshness": "STALE",
+              "reasons": [
+                "TEST_ONLY:old-source-cut"
+              ]
+            },
+            "source_confidence": "PROVISIONAL",
+            "provenance_refs": [
+              "TEST_ONLY:source-receipt"
+            ],
+            "calculation_revision": "manager-model.v1",
+            "policy_revision": "TEST_ONLY:policy"
+          },
+          "allocation": {
+            "value": null,
+            "unit": "NOT_PUBLISHED",
+            "currency": null,
+            "basis": "NOT_PUBLISHED",
+            "window": null,
+            "denominator": null,
+            "methodology_ref": null,
+            "availability": "UNAVAILABLE",
+            "reason_code": "SOURCE_FACTS_NOT_PUBLISHED",
+            "quality": {
+              "completeness": "UNRESOLVED",
+              "freshness": "UNKNOWN",
+              "reasons": [
+                "SOURCE_FACTS_NOT_PUBLISHED"
+              ]
+            },
+            "source_confidence": "UNKNOWN",
+            "provenance_refs": [
+              "SOURCE_NOT_PUBLISHED"
+            ],
+            "calculation_revision": "manager-model.v1",
+            "policy_revision": "NOT_PUBLISHED"
+          }
+        },
+        "economic_partitions": [
+          {
+            "partition": {
+              "economic_domain": "PAPER",
+              "currency": "USDT",
+              "basis": "TEST_ONLY:net-ledger",
+              "native_profile_ref": "TEST_ONLY:paper-ledger",
+              "domain_proof_ref": "TEST_ONLY:not-economic-authority"
+            },
+            "metrics": {
+              "unrealized_pnl": {
+                "value": null,
+                "unit": "MONEY",
+                "currency": "USDT",
+                "basis": "TEST_ONLY:net-ledger",
+                "window": null,
+                "denominator": null,
+                "methodology_ref": null,
+                "availability": "UNAVAILABLE",
+                "reason_code": "METHODOLOGY_NOT_PUBLISHED",
+                "quality": {
+                  "completeness": "UNRESOLVED",
+                  "freshness": "STALE",
+                  "reasons": [
+                    "METHODOLOGY_NOT_PUBLISHED"
+                  ]
+                },
+                "source_confidence": "UNKNOWN",
+                "provenance_refs": [
+                  "TEST_ONLY:source-receipt"
+                ],
+                "calculation_revision": "manager-model.v1",
+                "policy_revision": "TEST_ONLY:policy"
+              },
+              "net_pnl": {
+                "value": "0",
+                "unit": "MONEY",
+                "currency": "USDT",
+                "basis": "TEST_ONLY:net-ledger",
+                "window": null,
+                "denominator": null,
+                "methodology_ref": "TEST_ONLY:method",
+                "availability": "AVAILABLE",
+                "reason_code": null,
+                "quality": {
+                  "completeness": "COMPLETE",
+                  "freshness": "STALE",
+                  "reasons": [
+                    "TEST_ONLY:old-source-cut"
+                  ]
+                },
+                "source_confidence": "PROVISIONAL",
+                "provenance_refs": [
+                  "TEST_ONLY:source-receipt"
+                ],
+                "calculation_revision": "manager-model.v1",
+                "policy_revision": "TEST_ONLY:policy"
+              }
+            }
+          }
+        ]
+      }
+    ],
     "groups": [],
     "capital_statements": [],
     "statement_scope": "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS",
     "scores": {
-      "raw": { "value": null, "status": "policy_pending" },
-      "composition": { "value": null, "status": "policy_pending" },
-      "direct_nav": { "value": null, "status": "policy_pending" },
-      "regime": { "value": null, "status": "unavailable" },
+      "raw": {
+        "value": null,
+        "status": "policy_pending"
+      },
+      "composition": {
+        "value": null,
+        "status": "policy_pending"
+      },
+      "direct_nav": {
+        "value": null,
+        "status": "policy_pending"
+      },
+      "regime": {
+        "value": null,
+        "status": "unavailable"
+      },
       "reason_code": "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED",
       "calculation_path": "PRECOMPUTED_ONLY"
     },
-    "funding_bucket_pnl": { "value": null, "reason_code": "LOT_ATTRIBUTION_METHOD_NOT_APPROVED" },
-    "lineage": { "reducer_revision": "manager-model.v1",
+    "funding_bucket_pnl": {
+      "value": null,
+      "reason_code": "LOT_ATTRIBUTION_METHOD_NOT_APPROVED"
+    },
+    "lineage": {
+      "reducer_revision": "manager-model.v1",
       "source_set_ref": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-      "revision": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "supersedes_revision": null }
+      "revision": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "supersedes_revision": null
+    },
+    "selected_window": null,
+    "query_options": {
+      "temporal_mode": "CURRENT_ONLY",
+      "search": {
+        "fields": [
+          "name"
+        ],
+        "modes": [
+          "PREFIX",
+          "CONTAINS"
+        ],
+        "maximum_text_length": 160,
+        "normalization": "JS_TO_LOWER_CASE_NO_UNICODE_NORMALIZATION"
+      },
+      "sort_fields": [
+        "alpha_id",
+        "alpha_version_id",
+        "name",
+        "owner_user_id",
+        "portfolio_id",
+        "lifecycle",
+        "venue",
+        "health",
+        "source_state",
+        "allocation",
+        "net_pnl",
+        "unrealized_pnl",
+        "stage_presence"
+      ],
+      "group_fields": [
+        "portfolio_id",
+        "owner_user_id",
+        "alpha_id",
+        "stage_presence",
+        "venue",
+        "health",
+        "source_state",
+        "lifecycle"
+      ],
+      "metric_keys": [
+        "unrealized_pnl",
+        "net_pnl",
+        "allocation"
+      ],
+      "economic_partition_required_for": [
+        "unrealized_pnl",
+        "net_pnl",
+        "allocation"
+      ],
+      "window": {
+        "custom_supported": true,
+        "interpretation": "MATCH_ONLY_NO_READ_TIME_CALCULATION",
+        "independent_metrics": [
+          "unrealized_pnl",
+          "allocation"
+        ],
+        "presets": [
+          {
+            "value": "7D",
+            "resolved": null,
+            "data_state": "NOT_PUBLISHED",
+            "reason_code": "EXACT_METRIC_WINDOW_NOT_PUBLISHED"
+          },
+          {
+            "value": "30D",
+            "resolved": null,
+            "data_state": "NOT_PUBLISHED",
+            "reason_code": "EXACT_METRIC_WINDOW_NOT_PUBLISHED"
+          },
+          {
+            "value": "90D",
+            "resolved": null,
+            "data_state": "NOT_PUBLISHED",
+            "reason_code": "EXACT_METRIC_WINDOW_NOT_PUBLISHED"
+          },
+          {
+            "value": "ALL",
+            "resolved": null,
+            "data_state": "NOT_PUBLISHED",
+            "reason_code": "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+          }
+        ]
+      },
+      "stage_environment": [
+        {
+          "environment": "paper",
+          "stages": [
+            "PAPER"
+          ]
+        },
+        {
+          "environment": "sandbox",
+          "stages": [
+            "SANDBOX"
+          ]
+        },
+        {
+          "environment": "live",
+          "stages": [
+            "CANARY",
+            "LIVE"
+          ]
+        }
+      ],
+      "unavailable_fields": [
+        {
+          "field": "current_stage",
+          "reason_code": "CURRENT_STAGE_GRAIN_NOT_PUBLISHED"
+        },
+        {
+          "field": "days_in_stage",
+          "reason_code": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+        }
+      ]
+    }
   }
 }

@@ -36,6 +36,27 @@ describe("ELP2-06 service admission and final authority fences (synthetic adapte
       await expect(f.model.read(f.principal,"FLEET",query)).rejects.toMatchObject({code:"EXECUTION_READ_NOT_AVAILABLE"});
     expect(f.repository.head).not.toHaveBeenCalled();expect(f.repository.document).not.toHaveBeenCalled();
   });
+  it.each([undefined,null,"",0,[],{}])("rejects supplied as_of_ms=%j before source metadata",async value=>{
+    const f=fixture(true);
+    await expect(f.model.read(f.principal,"FLEET",{environment:"paper",as_of_ms:value}))
+      .rejects.toMatchObject({code:"EXECUTION_READ_CURRENT_ONLY",status:400});
+    expect(f.repository.head).not.toHaveBeenCalled();expect(f.repository.document).not.toHaveBeenCalled();
+  });
+  it("accepts raw/JSON presets and bounded custom JSON through the existing controller",async()=>{
+    const f=fixture(true);f.repository.document.mockResolvedValue(emptyProjection(f));
+    const workspace={canReadExecution:vi.fn(async()=>true)}, controller=new ManagerModelController(f.model,workspace as any);
+    const request={portalUser:f.principal.user,portalSession:f.principal.session,portalWorkspaceId:f.principal.workspaceId} as any;
+    for(const window of ["ALL",JSON.stringify("ALL"),JSON.stringify({from_ms:0,to_ms:900})]){
+      const response=await controller.fleet(request,{environment:"paper",window});
+      expect(response.selected_window?.requested).toEqual(window.includes("from_ms")?{from_ms:0,to_ms:900}:"ALL");
+    }
+    f.repository.head.mockClear();f.repository.document.mockClear();
+    for(const window of ["{","x".repeat(257),["ALL"]])
+      await expect(controller.fleet(request,{environment:"paper",window})).rejects.toMatchObject({status:400});
+    await expect(controller.fleet(request,{environment:"paper",as_of_ms:""}))
+      .rejects.toMatchObject({code:"EXECUTION_READ_CURRENT_ONLY",status:400});
+    expect(f.repository.head).not.toHaveBeenCalled();expect(f.repository.document).not.toHaveBeenCalled();
+  });
   it("Fund requires whole-population authority before a projection is read",async()=>{
     const f=fixture();
     await expect(f.model.read(f.principal,"FUND",{environment:"paper"})).rejects.toMatchObject({status:404});

@@ -7,7 +7,7 @@ import { tsRootMembershipAcceptance } from "../src/execution-v2/access.contract"
 import { currentAcceptanceMatches, currentAccessRelations, currentGrantProof, grantBindingDigest,
   type CurrentAccessRelations } from "../src/execution-v2/access-current-relations";
 import { accessDigest, canonicalSelector, currentBoundaryProof, environmentRelations, evaluateAccess,
-  grantCurrent, resolvedResources, validateDelegation, type AccessEvaluationContext, type AccessRelations } from "../src/execution-v2/access-policy";
+  grantCurrent, currentGrantAllows, currentAllowedGrantIds, resolvedResources, validateDelegation, type AccessEvaluationContext, type AccessRelations } from "../src/execution-v2/access-policy";
 import { detachDelegatedReceiptSource } from "../src/execution-v2/access-delegated-receipt";
 import { ExecutionReadScopes, scopeRealtimeIdentity, type ReadScopePrincipal } from "../src/execution-v2/read-scope";
 import type { ExecutionAccessService } from "../src/execution-v2/access.service";
@@ -68,6 +68,53 @@ function removeLeg(s:CurrentAccessRelations,resource=P,env:typeof ENV[number]="p
 }
 
 describe("original08 current native/Core grant compatibility (TEST_ONLY)",()=>{
+  // The unchanged single-ID predicate is the independent compatibility oracle.
+  // No real source/DB/native authority is installed by these pure vectors.
+  it.each(["base","direct-deny","disjoint-deny","revoked","expired","present-invalid","removed-leg"] as const)(
+    "synchronous eligible-ID reduction preserves complete-graph parity (%s)",mode=>{
+      const gs=[grant("TEST_ONLY:first"),grant("TEST_ONLY:second")],s=source(gs),c=context(gs,s);
+      if(mode==="direct-deny"||mode==="disjoint-deny")c.grants=[...gs,grant("TEST_ONLY:deny",{effect:"DENY",
+        selector:{kind:"EXPLICIT_RESOURCE_SET",resource_kind:"PORTFOLIO",ids:[mode==="direct-deny"?P.id:Q.id]},
+        requires_ts_acceptance:false,ts_receipt:null})];
+      if(mode==="revoked")gs[0].revoked_at_ms=NOW-1;
+      if(mode==="expired")gs[0].valid_until_ms=NOW;
+      if(mode==="present-invalid")(s as unknown as Record<string,unknown>).schema_version="TEST_ONLY:invalid";
+      if(mode==="removed-leg")removeLeg(s,P,"paper",gs[0].grant_id);
+      for(const environment of ENV)for(const resource of [P,Q,R]){
+        const ids=currentAllowedGrantIds(c,"business.read_all",resource,environment);
+        for(const id of [...c.grants.map(value=>value.grant_id),"TEST_ONLY:unknown"])
+          expect(ids.has(id),`${mode}/${environment}/${resource.id}/${id}`)
+            .toBe(currentGrantAllows(c,"business.read_all",resource,environment,id));
+      }
+    });
+  it.each(["issuer-native-revoke","ancestor-deny"] as const)("eligible IDs retain delegated %s",mode=>{
+    const parent=grant("TEST_ONLY:ceiling",{action:"access.grant",delegable_actions:["business.read_all"]});
+    const child=grant("TEST_ONLY:child-grant",{subject_user_id:"TEST_ONLY:child",issued_by:parent.subject_user_id,parent_grant_id:parent.grant_id});
+    const issuer=source([parent]),subject=source([child]),c=context([parent,child],issuer);c.principal_id=child.subject_user_id;
+    c.relationsFor=id=>relations(id===child.subject_user_id?subject:issuer);
+    expect(currentAllowedGrantIds(c,"business.read_all",P,"paper").has(child.grant_id)).toBe(true);
+    if(mode==="issuer-native-revoke")removeLeg(issuer,P,"paper");
+    else{
+      issuer.resources[0].roots=[];
+      c.grants=[...c.grants,grant("TEST_ONLY:issuer-deny",{action:"access.grant",effect:"DENY",
+        selector:{kind:"ROOT_SCOPE",root_id:R.id},requires_ts_acceptance:false,ts_receipt:null})];
+    }
+    for(const environment of ENV)for(const resource of [P,Q]){
+      const ids=currentAllowedGrantIds(c,"business.read_all",resource,environment);
+      for(const id of c.grants.map(value=>value.grant_id))
+        expect(ids.has(id)).toBe(currentGrantAllows(c,"business.read_all",resource,environment,id));
+    }
+    expect(currentAllowedGrantIds(c,"business.read_all",P,"paper").size).toBe(0);
+  });
+  it("eligible IDs never persist source/grant decisions across calls on the same context object",()=>{
+    const gs=[grant()],s=source(gs),c=context(gs,s);
+    expect(currentAllowedGrantIds(c,"business.read_all",P,"paper").has(gs[0].grant_id)).toBe(true);
+    removeLeg(s,P,"paper");
+    expect(currentAllowedGrantIds(c,"business.read_all",P,"paper").size).toBe(0);
+    expect(currentAllowedGrantIds(c,"business.read_all",Q,"paper").has(gs[0].grant_id)).toBe(true);
+    c.now_ms=NOW+5000;
+    expect(currentAllowedGrantIds(c,"business.read_all",Q,"paper").size).toBe(0);
+  });
   it.each(ENV.flatMap(env=>[P,Q].map(resource=>({env,resource}))))("one accepted grant can cover many independent legs: $env $resource.id",({env,resource})=>{
     const c=context(); expect(decide(c,resource,env).allowed).toBe(true);expect(grantCurrent(c.grants[0],c)).toBe(true);
   });

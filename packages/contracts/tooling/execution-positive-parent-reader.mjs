@@ -32,19 +32,91 @@ export const liveParentReadRoute="/api/v1/execution/governance/approvals/{approv
  * than claiming standard JSON Schema can compare arbitrary sibling values.
  */
 export function parentCurrentSchemas(){
+  // Additive separately sealed stored facts. These sections are required in
+  // the public body, with typed absence unless their own purposes qualify.
+  // Preserve the old route/$defs order and the ROOT field-purpose semantics.
+  const followthroughId={...id,pattern:"^[A-Za-z0-9._:-]+$(?![\\s\\S])"};
+  const followthroughHash={...digest,pattern:"^sha256:[0-9a-f]{64}$(?![\\s\\S])"};
+  const actors={oneOf:[{...object({availability:{const:"AVAILABLE"},
+    basis:{const:"STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION"},
+    requester_user_id:followthroughId,artifact_creator_user_id:followthroughId,
+    decided_by_user_id:nullable(followthroughId),viewer_is_requester:{type:"boolean"},
+    viewer_is_artifact_creator:{type:"boolean"},viewer_is_decided_by:nullable({type:"boolean"})}),
+    allOf:[{if:{properties:{decided_by_user_id:{type:"null"}},required:["decided_by_user_id"]},
+      then:{properties:{viewer_is_decided_by:{type:"null"}}},
+      else:{properties:{viewer_is_decided_by:{type:"boolean"}}}}],
+    description:"Exact stored Portal actor IDs plus equality with the current viewer, not role/SoD/current decision eligibility. Null decided_by requires null viewer_is_decided_by, and only then. No names, emails or identity lookup."},absence()]};
+  const latestOperation=commandType=>({oneOf:[object({availability:{const:"AVAILABLE"},
+    basis:{const:"LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY"},operation_id:followthroughId,
+    command_version:{const:1},command_type:{const:commandType},stored_status:enumeration(["PLANNED","APPLIED","EXPIRED"]),
+    created_at_ms:count,order_basis:{const:"POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"}}),absence(),
+    object({availability:{const:"NOT_PUBLISHED"},reason_code:enumeration([
+      "NO_RECORDED_PORTAL_OPERATION","LATEST_RECORDED_OPERATION_NOT_PUBLIC"])})],
+    description:"One latest recorded Portal plan under independent latest+detail purposes. Runtime selects newest before public type/version/collision checks; an unreadable latest is typed absent, never an older ID. Stored status is neither apply eligibility nor source settlement."});
+  const evidenceHashes={oneOf:[object({availability:{const:"AVAILABLE"},
+    value:{type:"array",maxItems:128,uniqueItems:true,items:followthroughHash},reason_code:{type:"null"}}),
+    object({availability:{const:"NOT_PUBLISHED"},value:{type:"null"},reason_code:{const:"EVIDENCE_HASH_LIMIT_EXCEEDED"}})],
+    description:"Unique own immutable evidence hashes. Runtime additionally requires strictly ascending lexical order; standard JSON Schema does not compare arbitrary array elements. More than128 hashes publishes null+typed absence, never a truncated list or fake empty list."};
+  const decisionContext={oneOf:[object({availability:{const:"AVAILABLE"},
+    basis:{const:"VERIFIED_STORED_R2_INPUTS_NOT_ACTION_AUTHORIZATION"},gate:{const:"R2"},
+    workspace_id:{type:"string",minLength:3,maxLength:96},approval_id:followthroughId,
+    expected_approval_version:version,evidence_set_hash:followthroughHash,evidence_hashes:evidenceHashes,
+    command_type:{const:"GOVERNANCE_R2_DECISION"},request_schema_version:{const:"governance.r2-decision-plan-request.v1"},
+    plan_path:{const:"/api/v1/execution/commands/plans"},
+    admission:object({state:{const:"NOT_EVALUATED"},reason_code:{const:"CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"}}),
+    source_side_effect_requested:{const:false}}),absence()],
+    description:"Stored verified R2 inputs only, never READY/action authorization or a native source acceptance. Actual plan rechecks current decide/role/SoD/quorum/R1 rules. Runtime correlates workspace/approval/version with the parent; workspace length counts Unicode code points. No private manifest/preimage is disclosed."};
   const approval=gate=>({...object({approval_id:id,gate:{const:gate},
     status:enumeration(["PENDING","APPROVED","APPROVED_WITH_CONDITION","DENIED","CHANGES_REQUESTED","EXPIRED"]),
     approval_version:version,policy_version:text,quorum_required:version,quorum_met:count,evidence_complete:{type:"boolean"},
     created_at_ms:count,updated_at_ms:count,sla_due_at_ms:count,expires_at_ms:count,decided_at_ms:nullable(count)}),
     description:"Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read."});
+  const recordedActivity=family=>{
+    const item=object({decision_id:followthroughId,operation_id:followthroughId,
+      version_before:version,version_after:version,decided_at_ms:count,
+      kind:{const:family==="R2"?"R2_DECISION_RECORDED":"PAPER_EXIT_DECISION_RECORDED"},
+      decision:enumeration(family==="R2"?["APPROVE","APPROVE_WITH_CONDITION","DENY"]:
+        ["PROMOTE","EXTEND_OBSERVATION","REJECT"])});
+    return {oneOf:[{...object({availability:{const:"AVAILABLE"},
+      basis:{const:"IMMUTABLE_PORTAL_DECISION_ROWS_NOT_SOURCE_OR_STAGE_HISTORY"},
+      order_basis:{const:"POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC"},
+      coverage:{const:"BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY"},limit:{const:32},has_more:{type:"boolean"},
+      items:{type:"array",maxItems:32,uniqueItems:true,items:item}}),
+      allOf:[{if:{properties:{has_more:{const:true}},required:["has_more"]},
+        then:{properties:{items:{type:"array",minItems:32}}}}]},absence(),
+      object({availability:{const:"NOT_PUBLISHED"},reason_code:{const:"RECORDED_ACTIVITY_NOT_PUBLIC"}})],
+      description:"Separately sealed RECORDED_PORTAL_ACTIVITY plus DECISION_OPERATION on BOTH PAPER anchors. Actual bounded immutable Portal decisions only, not source/order/stage history, action eligibility or full history. Runtime additionally checks version_after=version_before+1, unique decision/operation IDs and nonincreasing public decided_at_ms. Exact PostgreSQL microsecond timestamp plus ID ordering is private/query-tested: equal public milliseconds need not have ID lexical order. Standard JSON Schema cannot compare arbitrary scalar siblings or object-key values."};
+  };
+  const noRecordedMetric=object({availability:{const:"NOT_PUBLISHED"},value:{type:"null"},
+    reason_code:{const:"SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"}});
+  const recordedFinding={...object({finding_id:followthroughId,ordinal:count,
+    outcome:enumeration(["PASS","WATCH","FAIL","INSUFFICIENT"]),blocking:{type:"boolean"},evaluated_at_ms:count,
+    criterion_key:noRecordedMetric,label_key:noRecordedMetric,observed:noRecordedMetric,limit:noRecordedMetric,
+    op:noRecordedMetric,unit:noRecordedMetric,currency:noRecordedMetric,
+    source_ref:object({kind:{const:"PORTAL_STORED_R2_FINDING"},approval_id:followthroughId,finding_id:followthroughId,
+      basis:{const:"STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"}})}),
+    allOf:[{if:{properties:{blocking:{const:true}},required:["blocking"]},
+      then:{properties:{outcome:enumeration(["FAIL","INSUFFICIENT"])}}}]};
+  const recordedVerdicts={oneOf:[{...object({availability:{const:"AVAILABLE"},
+    basis:{const:"STORED_PORTAL_R2_FINDINGS_NOT_CURRENT_GATE_READINESS"},
+    order_basis:{const:"POSTGRES_ORDINAL_ASC_FINDING_ID_C_ASC"},
+    coverage:{const:"BOUNDED_RECORDED_FINDINGS_NOT_FULL_CRITERIA_HISTORY"},limit:{const:64},has_more:{type:"boolean"},
+    items:{type:"array",maxItems:64,uniqueItems:true,items:recordedFinding},
+    admission:object({state:{const:"NOT_EVALUATED"},reason_code:{const:"CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"}})}),
+    allOf:[{if:{properties:{has_more:{const:true}},required:["has_more"]},
+      then:{properties:{items:{type:"array",minItems:64}}}}]},absence(),
+    object({availability:{const:"NOT_PUBLISHED"},reason_code:{const:"RECORDED_VERDICTS_NOT_PUBLIC"}})],
+    description:"Independently sealed R2_RECORDED_VERDICTS on BOTH PAPER anchors. Stored R2 verdicts are not current readiness or source criterion acceptance. All structured criterion fields remain null+typed absence, not prose-derived thresholds or metrics. Runtime additionally enforces source_ref finding/parent identity, unique finding IDs and strictly ascending ordinals; these arbitrary sibling/key relations are not standard JSON Schema constraints."};
   const base=gate=>({schema_version:{const:"portal.execution.governance-parent.v2"},workspace_id:{type:"string",minLength:3,maxLength:96},
     record_authority:{const:"PORTAL"},provenance_basis:{const:"CURRENT_CORE_BASELINE"},
     field_contract_revision:{const:"portal.execution.parent-fields.v1"},observed_at_ms:count,
     source:object({authority:{const:"PORTAL"},source_verdict:{const:"NOT_ASSERTED"},source_side_effect_requested:{const:false}}),
     anchors:object({deployment_id:id,portfolio_id:id,environment:{const:"PAPER"}}),approval:approval(gate)});
   const R2ParentReadV2={...object({...base("R2"),family:{const:"R2"},lineage:{oneOf:[object({availability:{const:"AVAILABLE"},
-    basis:{const:"STORED_IMMUTABLE_REFERENCE"},r1_approval_id:id,observed_risk_grant_id:id,currency:text}),absence()]}}),
-    description:"Finite current-authorized Portal R2 parent. Stored lineage is historical reference, never an effective TS grant, current R1 permission, source acceptance or dispatch. No prose, actors or monetary values."};
+    basis:{const:"STORED_IMMUTABLE_REFERENCE"},r1_approval_id:id,observed_risk_grant_id:id,currency:text}),absence()]},
+    actors,latest_operation:latestOperation("GOVERNANCE_R2_DECISION"),decision_context:decisionContext,
+    recorded_activity:recordedActivity("R2"),recorded_verdicts:recordedVerdicts}),
+    description:"Finite current-authorized Portal R2 parent. Stored lineage is historical reference, never an effective TS grant, current R1 permission, source acceptance or dispatch. Actor IDs/latest plan/stored request inputs each require their own exact current reviewed purposes; they assert no decision eligibility. No prose, private manifest or monetary values."};
   const panel={...object({panel_id:id,ordinal:count,
     panel_kind:enumeration(["OBSERVATION_COVERAGE","DRIFT","LIMITS_HEALTH","PORTFOLIO_FIT"]),
     source_authority:enumeration(["RESEARCH","EXECUTION","BROKER","DERIVED"]),
@@ -59,6 +131,37 @@ export function parentCurrentSchemas(){
     ]};
   const finding=object({finding_id:id,panel_id:id,ordinal:count,outcome:enumeration(["PASS","WATCH","FAIL","INSUFFICIENT"]),
     blocking:{type:"boolean"},required:{type:"boolean"},as_of_ms:nullable(count)});
+  const missing=reason=>object({availability:{const:"NOT_PUBLISHED"},value:{type:"null"},reason_code:{const:reason}});
+  const present=value=>object({availability:{const:"AVAILABLE"},value,reason_code:{type:"null"}});
+  const labels={OBSERVATION_COVERAGE:"paper_exit.observation_coverage",DRIFT:"paper_exit.drift",
+    LIMITS_HEALTH:"paper_exit.limits_health",PORTFOLIO_FIT:"paper_exit.portfolio_fit"};
+  const publicText={...text,allOf:[{not:{pattern:"[A-Za-z][A-Za-z0-9+.-]*://|^(?:[Jj][Aa][Vv][Aa][Ss][Cc][Rr][Ii][Pp][Tt]|[Dd][Aa][Tt][Aa]|[Ff][Ii][Ll][Ee]):|^[/\\\\]"}}]};
+  const numberValue={type:"string",maxLength:128,pattern:"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"};
+  const decimalScalar={oneOf:[present(numberValue),missing("SOURCE_VALUE_NOT_RECORDED"),missing("SOURCE_VALUE_NOT_DECIMAL")]};
+  const textScalar={oneOf:[present(publicText),missing("SOURCE_TEXT_NOT_RECORDED"),missing("SOURCE_TEXT_NOT_PUBLIC_SAFE")]};
+  const criterion={...object({original:finding,
+    criterion_key:{oneOf:[present(enumeration(Object.keys(labels))),missing("SOURCE_METRIC_NOT_REGISTERED")]},
+    label_key:{oneOf:[present(enumeration(Object.values(labels))),missing("SOURCE_METRIC_NOT_REGISTERED")]},
+    observed:decimalScalar,limit:decimalScalar,op:missing("SOURCE_COMPARATOR_FIELD_NOT_RECORDED"),
+    unit:textScalar,currency:textScalar,evidence:{oneOf:[present(digest),missing("SOURCE_EVIDENCE_HASH_NOT_RECORDED")]},
+    finding_formula_version:textScalar,source_time:{oneOf:[present(count),missing("SOURCE_TIME_NOT_RECORDED")]},
+    source_ref:object({kind:{const:"PORTAL_STORED_PAPER_EXIT_FINDING"},review_id:id,panel_id:id,finding_id:id,
+      basis:{const:"STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"}})}),
+    allOf:[
+      ...Object.entries(labels).map(([key,label])=>({
+        if:{properties:{criterion_key:{type:"object",required:["availability","value"],properties:{
+          availability:{const:"AVAILABLE"},value:{const:key}}}},required:["criterion_key"]},
+        then:{properties:{label_key:present({const:label})}},
+      })),
+      {if:{properties:{criterion_key:{type:"object",required:["availability"],properties:{availability:{const:"NOT_PUBLISHED"}}}},
+        required:["criterion_key"]},then:{properties:{label_key:missing("SOURCE_METRIC_NOT_REGISTERED")}}},
+    ],
+    description:"Exact stored finding facts under NEW separately reviewed PAPER_EXIT_CRITERIA on BOTH anchors. Unknown metric means typed absent key/label, not a generic invented criterion. Comparator is always source-absent; no PASS recomputation, prose, URL or floating-point conversion. Runtime additionally correlates source_ref IDs and source_time.value with original finding."};
+  const criteria={...object({availability:{const:"AVAILABLE"},
+    basis:{const:"VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE"},
+    evaluation_policy_version:text,evaluation_formula_version:text,
+    panels:{type:"array",maxItems:4,items:panel},items:{type:"array",maxItems:256,items:criterion}}),
+    description:"Finite local stored-byte disclosure, never source acceptance/current economic authority. Runtime checks unique panel/finding identities, panel membership and exact parent review reference. Existing millisecond source clocks only; missing stays null/typed absent."};
   const evaluation={...object({availability:{const:"AVAILABLE"},evaluation_policy_version:text,evaluation_formula_version:text,
     panels:{type:"array",maxItems:4,items:panel},findings:{type:"array",maxItems:256,items:finding}}),
     description:"Runtime additionally checks unique panel_id/panel_kind/panel ordinal/finding_id and finding.panel_id membership. Empty retained arrays do not assert source completeness. No prose/URLs/actors/financial values or private integrity preimages."};
@@ -70,9 +173,10 @@ export function parentCurrentSchemas(){
         else:{properties:{extension_days:{type:"null"},extended_until_ms:{type:"null"}}}},
     ],description:"Runtime additionally checks updated>=created and review_id===approval.approval_id. Review disposition is Portal-only, never upstream promotion."};
   const PaperExitParentReadV2={...object({...base("PAPER_EXIT"),family:{const:"PAPER_EXIT"},review,
-    evaluation:{oneOf:[evaluation,absence()]},lineage:{oneOf:[object({availability:{const:"AVAILABLE"},
+    evaluation:{oneOf:[evaluation,absence()]},criteria:{oneOf:[criteria,absence()]},lineage:{oneOf:[object({availability:{const:"AVAILABLE"},
       basis:{const:"VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE"},r1_approval_id:id,r2_approval_id:id,
-      source_snapshot_hash:digest,evidence_set_hash:digest}),absence()]}}),
+      source_snapshot_hash:digest,evidence_set_hash:digest}),absence()]},
+    actors,latest_operation:latestOperation("GOVERNANCE_PAPER_EXIT_DECISION"),recorded_activity:recordedActivity("PAPER_EXIT")}),
     description:"Finite current-authorized Paper Exit. Current stored bytes verified for integrity, not historical source acceptance. Optional sections require their own exact current reviewed field purposes. No raw capture/preimage/private intent/prose is returned."};
   const composition=(surface,data)=>object({schema_version:{const:"execution.operational-composition.v1"},
     logical_operation_id:{const:"executionOperational"+surface+"V1"},record_authority:{const:"PORTAL_CONTROL"},source_authority:{const:"PORTAL_CONTROL_ONLY"},
@@ -84,7 +188,8 @@ export function parentCurrentSchemas(){
     lineage:object({source_health_input_digest:digest,command_journal_digest:digest,workflow_digest:digest,
       formula_version:{const:"execution.operational-composition.v1"}}),data:object(data)});
   // Selected stored Portal plan, never source acceptance/apply permission.
-  // ROOT schemas above and their semantic digests remain unchanged.
+  // ROOT field-purpose semantics stay unchanged. New parent sections above
+  // have separate purposes and do not change the selected operation DTO.
   const selectedOperation={schema_version:{const:"portal.execution.governance-parent-operation.v2"},
     operation_id:id,command_version:{const:1},expected_version:version,
     status:enumeration(["PLANNED","APPLIED","EXPIRED"]),parent_approval_id:nullable(id),
@@ -296,7 +401,9 @@ export function parentCurrentFixture(){
   const absent={availability:"NOT_PUBLISHED",reason_code:"PARENT_FIELD_PURPOSE_NOT_QUALIFIED"};
   const r2={...base,family:"R2",approval:{...approval("apr_TEST_ONLY_r2","R2"),status:"EXPIRED"},
     lineage:{availability:"AVAILABLE",basis:"STORED_IMMUTABLE_REFERENCE",r1_approval_id:"apr_TEST_ONLY_r1",
-      observed_risk_grant_id:"grant_TEST_ONLY_historical",currency:"TEST_ONLY:USD"}};
+      observed_risk_grant_id:"grant_TEST_ONLY_historical",currency:"TEST_ONLY:USD"},
+    actors:{...absent},latest_operation:{...absent},decision_context:{...absent},
+    recorded_activity:{...absent},recorded_verdicts:{...absent}};
   const paperExit={...base,family:"PAPER_EXIT",approval:approval("apr_TEST_ONLY_exit","PAPER_EXIT"),
     review:{review_id:"apr_TEST_ONLY_exit",review_state:"PENDING",review_version:1,promote_to:"SANDBOX_VALIDATION",
       extension_days:null,extended_until_ms:null,created_at_ms:created,updated_at_ms:created},
@@ -307,14 +414,91 @@ export function parentCurrentFixture(){
         poll_interval_ms:index===0?1000:null,formula_version:null})),
       findings:[0,1,2,3].map(index=>({finding_id:"finding_TEST_ONLY_"+index,panel_id:"panel_TEST_ONLY_"+index,ordinal:index,
         outcome:index===0?"PASS":"INSUFFICIENT",blocking:index!==0,required:true,as_of_ms:index===0?created:null}))},
+    criteria:{...absent},
     lineage:{availability:"AVAILABLE",basis:"VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE",r1_approval_id:"apr_TEST_ONLY_r1",
-      r2_approval_id:"apr_TEST_ONLY_r2",source_snapshot_hash:"sha256:"+"1".repeat(64),evidence_set_hash:"sha256:"+"2".repeat(64)}};
+      r2_approval_id:"apr_TEST_ONLY_r2",source_snapshot_hash:"sha256:"+"1".repeat(64),evidence_set_hash:"sha256:"+"2".repeat(64)},
+    actors:{...absent},latest_operation:{...absent},recorded_activity:{...absent}};
   const r2Absent={...r2,lineage:{...absent}};
   const paperExitAbsent={...paperExit,evaluation:{...absent},lineage:{...absent}};
   const paperExitExtended={...paperExit,review:{...paperExit.review,review_state:"EXTENDED",review_version:2,
     extension_days:14,extended_until_ms:created+14*86400000,updated_at_ms:created+86400000}};
+  const available=value=>({availability:"AVAILABLE",value,reason_code:null});
+  const missing=reason_code=>({availability:"NOT_PUBLISHED",value:null,reason_code});
+  const metricKeys=["OBSERVATION_COVERAGE","DRIFT","LIMITS_HEALTH","PORTFOLIO_FIT"];
+  const metricLabels=["paper_exit.observation_coverage","paper_exit.drift","paper_exit.limits_health","paper_exit.portfolio_fit"];
+  const paperExitCriteria={...paperExit,criteria:{availability:"AVAILABLE",
+    basis:"VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE",
+    evaluation_policy_version:paperExit.evaluation.evaluation_policy_version,
+    evaluation_formula_version:paperExit.evaluation.evaluation_formula_version,panels:paperExit.evaluation.panels,
+    items:paperExit.evaluation.findings.map((original,index)=>({original,
+      criterion_key:available(metricKeys[index]),label_key:available(metricLabels[index]),
+      observed:index===0?available("1842.000000000000000001"):index===1?available("0"):missing("SOURCE_VALUE_NOT_RECORDED"),
+      limit:index===0?available("6.00"):missing("SOURCE_VALUE_NOT_RECORDED"),
+      op:missing("SOURCE_COMPARATOR_FIELD_NOT_RECORDED"),
+      unit:index===0?available("CURRENCY"):missing("SOURCE_TEXT_NOT_RECORDED"),
+      currency:index===0?available("USDC"):missing("SOURCE_TEXT_NOT_RECORDED"),
+      evidence:index===0?available("sha256:"+"4".repeat(64)):missing("SOURCE_EVIDENCE_HASH_NOT_RECORDED"),
+      finding_formula_version:missing("SOURCE_TEXT_NOT_RECORDED"),
+      source_time:original.as_of_ms===null?missing("SOURCE_TIME_NOT_RECORDED"):available(original.as_of_ms),
+      source_ref:{kind:"PORTAL_STORED_PAPER_EXIT_FINDING",review_id:paperExit.review.review_id,
+        panel_id:original.panel_id,finding_id:original.finding_id,basis:"STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"}}))}};
+  // Independently synthetic followthrough vectors, not installed actor grants,
+  // plan admission, source authority or proof of a real recorded operation.
+  const actorFacts={availability:"AVAILABLE",basis:"STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION",
+    requester_user_id:"user_TEST_ONLY_requester",artifact_creator_user_id:"user_TEST_ONLY_creator",
+    decided_by_user_id:null,viewer_is_requester:false,viewer_is_artifact_creator:true,viewer_is_decided_by:null};
+  const latestFacts=(commandType,status)=>({availability:"AVAILABLE",
+    basis:"LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY",
+    operation_id:"op_TEST_ONLY_"+(commandType==="GOVERNANCE_R2_DECISION"?"R2":"PAPER_EXIT")+"_"+status,
+    command_version:1,command_type:commandType,stored_status:status,created_at_ms:created,
+    order_basis:"POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"});
+  const r2Followthrough={...r2,actors:{...actorFacts},latest_operation:latestFacts("GOVERNANCE_R2_DECISION","EXPIRED"),
+    decision_context:{availability:"AVAILABLE",basis:"VERIFIED_STORED_R2_INPUTS_NOT_ACTION_AUTHORIZATION",
+      gate:"R2",workspace_id:r2.workspace_id,approval_id:r2.approval.approval_id,
+      expected_approval_version:r2.approval.approval_version,evidence_set_hash:"sha256:"+"5".repeat(64),
+      evidence_hashes:available(["sha256:"+"3".repeat(64),"sha256:"+"4".repeat(64)]),
+      command_type:"GOVERNANCE_R2_DECISION",request_schema_version:"governance.r2-decision-plan-request.v1",
+      plan_path:"/api/v1/execution/commands/plans",admission:{state:"NOT_EVALUATED",
+        reason_code:"CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"},source_side_effect_requested:false}};
+  const r2FollowthroughHashesAbsent={...r2Followthrough,decision_context:{...r2Followthrough.decision_context,
+    evidence_hashes:missing("EVIDENCE_HASH_LIMIT_EXCEEDED")}};
+  const paperExitFollowthrough={...paperExitCriteria,
+    approval:{...paperExit.approval,status:"DENIED",updated_at_ms:created+1000,decided_at_ms:created+1000},
+    review:{...paperExit.review,review_state:"REJECTED_TO_PAPER_HELD",updated_at_ms:created+1000},
+    actors:{...actorFacts,decided_by_user_id:"user_TEST_ONLY_reviewer",viewer_is_artifact_creator:false,viewer_is_decided_by:true},
+    latest_operation:latestFacts("GOVERNANCE_PAPER_EXIT_DECISION","APPLIED")};
   // Canonical synthetic examples only. No policy/source installation or
   // operation receipt is implied; past expiry does not rewrite stored state.
+  const activity=(family,items)=>({availability:"AVAILABLE",
+    basis:"IMMUTABLE_PORTAL_DECISION_ROWS_NOT_SOURCE_OR_STAGE_HISTORY",
+    order_basis:"POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC",coverage:"BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY",
+    limit:32,has_more:false,items:items.map(row=>({...row,kind:family==="R2"?"R2_DECISION_RECORDED":"PAPER_EXIT_DECISION_RECORDED"}))});
+  const absentCriterion=()=>missing("SOURCE_STRUCTURED_CRITERION_NOT_RECORDED");
+  const r2Recorded={...r2Followthrough,
+    approval:{...r2Followthrough.approval,status:"DENIED",approval_version:3,
+      updated_at_ms:created+2000,decided_at_ms:created+2000},
+    decision_context:{...r2Followthrough.decision_context,expected_approval_version:3},
+    actors:{...actorFacts,decided_by_user_id:"user_TEST_ONLY_reviewer",viewer_is_decided_by:false},
+    latest_operation:latestFacts("GOVERNANCE_R2_DECISION","APPLIED"),
+    recorded_activity:activity("R2",[
+      {decision_id:"decision_TEST_ONLY_r2_2",operation_id:"op_TEST_ONLY_R2_APPLIED",decision:"DENY",
+        version_before:2,version_after:3,decided_at_ms:created+2000},
+      {decision_id:"decision_TEST_ONLY_r2_1",operation_id:"op_TEST_ONLY_R2_CONDITION",decision:"APPROVE_WITH_CONDITION",
+        version_before:1,version_after:2,decided_at_ms:created+1000}]),
+    recorded_verdicts:{availability:"AVAILABLE",basis:"STORED_PORTAL_R2_FINDINGS_NOT_CURRENT_GATE_READINESS",
+      order_basis:"POSTGRES_ORDINAL_ASC_FINDING_ID_C_ASC",coverage:"BOUNDED_RECORDED_FINDINGS_NOT_FULL_CRITERIA_HISTORY",
+      limit:64,has_more:false,admission:{state:"NOT_EVALUATED",reason_code:"CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"},
+      items:["PASS","WATCH","FAIL","INSUFFICIENT"].map((outcome,index)=>({finding_id:"finding_TEST_ONLY_r2_"+index,
+        ordinal:index,outcome,blocking:index>=2,evaluated_at_ms:created+500,
+        criterion_key:absentCriterion(),label_key:absentCriterion(),observed:absentCriterion(),limit:absentCriterion(),
+        op:absentCriterion(),unit:absentCriterion(),currency:absentCriterion(),
+        source_ref:{kind:"PORTAL_STORED_R2_FINDING",approval_id:r2.approval.approval_id,
+          finding_id:"finding_TEST_ONLY_r2_"+index,basis:"STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"}}))}};
+  const paperExitRecorded={...paperExitFollowthrough,
+    approval:{...paperExitFollowthrough.approval,approval_version:2},
+    review:{...paperExitFollowthrough.review,review_version:2},
+    recorded_activity:activity("PAPER_EXIT",[{decision_id:"decision_TEST_ONLY_exit_1",
+      operation_id:"op_TEST_ONLY_PAPER_EXIT_APPLIED",decision:"REJECT",version_before:1,version_after:2,decided_at_ms:created+1000}])};
   const operation=(family,status,captured=true)=>({...base,
     schema_version:"portal.execution.governance-parent-operation.v2",family,
     approval:family==="R2"?r2.approval:paperExit.approval,
@@ -375,6 +559,7 @@ export function parentCurrentFixture(){
     accepted_manager_facts:{availability:"NOT_PUBLISHED",reason_code:"PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"}};
   return {lane:"TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",runtime_qualified:false,production_config:false,
     authority_installed:false,r2,r2_absent:r2Absent,paper_exit:paperExit,paper_exit_absent:paperExitAbsent,paper_exit_extended:paperExitExtended,
+    paper_exit_criteria:paperExitCriteria,
     r2_composition:parentCompositionFixture("approval_r2",{governance:r2,accepted_manager_facts:null},base.workspace_id,observed),
     paper_exit_composition:parentCompositionFixture("paper_exit_review",{exit_review:paperExit},base.workspace_id,observed),
     r2_operation:operation("R2","PLANNED"),r2_operation_uncaptured:operation("R2","PLANNED",false),
@@ -384,7 +569,9 @@ export function parentCurrentFixture(){
     sandbox,sandbox_absent:sandboxAbsent,sandbox_draft:sandboxDraft,
     canary,canary_absent:canaryAbsent,canary_revision:canaryRevision,live,
     live_composition:parentCompositionFixture("live_review",{governance:live,
-      accepted_manager_facts:live.accepted_manager_facts},base.workspace_id,observed)};
+      accepted_manager_facts:live.accepted_manager_facts},base.workspace_id,observed),
+    r2_followthrough:r2Followthrough,r2_followthrough_hashes_absent:r2FollowthroughHashesAbsent,
+    paper_exit_followthrough:paperExitFollowthrough,r2_recorded:r2Recorded,paper_exit_recorded:paperExitRecorded};
 }
 
 /** Called by existing operation-reader synchronizer after finite member updates.

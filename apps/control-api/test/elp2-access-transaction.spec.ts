@@ -2070,4 +2070,358 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
       ]);
     });
   });
+  // C3 actual Nest/Fastify + isolated PostgreSQL. Add within existing describe,
+  // reusing its real auth/workspace/TEST_ONLY trust fixture. NOT_RUN draft.
+  async function c3AcceptedPortfolioRead(f: Fixture, by: Account) {
+    const submitted = await f.submit(f.change({subject_user_id:by.user.userId,action:"portfolio.read",
+      selector:{kind:"EXPLICIT_RESOURCE_SET",resource_kind:"PORTFOLIO",ids:["TEST_ONLY-portfolio-1"]}}));
+    await f.service.acceptTsReceipt(f.trust.seal(await tsFact(f, submitted)));
+    return submitted;
+  }
+  it("C3 own non-admin row eligibility is current/advisory, not a family or command permit", async () => {
+    const f = await fixture(), { submitted } = await business(f);
+    await f.service.acceptTsReceipt(f.trust.seal(await tsFact(f, submitted)));
+    const before = await state(f);
+    await withHttp(f.service, async app => {
+      const http = app.getHttpAdapter().getInstance();
+      const query = new URLSearchParams({ workspace_id: f.workspace, environment: "paper",
+        resource_kind: "PORTFOLIO", resource_id: "TEST_ONLY-portfolio-1", actions: "portfolio.read,capital.top_up,audit.read" });
+      const response = await http.inject({ method: "GET", url: `${BASE}/eligibility?${query}`,
+        headers: { cookie: cookie(researcher.session) } });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["cache-control"]).toContain("no-store");
+      expect(response.json()).toMatchObject({ schema_version: "portal.self-eligibility.v1", current_only: true, advisory_only: true,
+        actions: [ { action: "portfolio.read", permission: "ALLOWED", authority_mode: "LEGACY_COMPATIBILITY",
+          grant_ref: submitted.receipt.grant_id, reason_class: "FAMILY_CHECK_REQUIRED", command_readiness: "NOT_CHECKED" },
+        { action: "capital.top_up", permission: "UNAVAILABLE", grant_ref: null },
+        { action: "audit.read", permission: "UNAVAILABLE", grant_ref: null } ] });
+      const navigation = await http.inject({ method: "GET", url: `${BASE}/self-navigation?workspace_id=${f.workspace}&environment=paper`,
+        headers: { cookie: cookie(researcher.session) } });
+      expect(navigation.statusCode).toBe(200);
+      expect(navigation.json()).toMatchObject({ self_entry: { permission: "ALLOWED", mode: "SELF_ONLY", route: null,
+        consumer_state: "AWAITING_CONSUMER_ROUTER" }, features: [ { feature: "EXECUTION_PORTFOLIOS", state: "ENTERABLE" },
+        { feature: "EXECUTION_ACCOUNTS_BINDINGS", state: "HIDDEN" }, { feature: "EXECUTION_OPERATIONS", state: "HIDDEN" },
+        { feature: "EXECUTION_BLOTTER", state: "HIDDEN" } ] });
+      expect(JSON.stringify(navigation.json())).not.toContain(submitted.receipt.grant_id);
+      for (const id of ["TEST_ONLY-portfolio-2", "TEST_ONLY-no-row"]) {
+        query.set("resource_id", id); query.set("actions", "portfolio.read");
+        const unavailable = await http.inject({ method: "GET", url: `${BASE}/eligibility?${query}`, headers: { cookie: cookie(researcher.session) } });
+        expect(unavailable.statusCode).toBe(200);
+        expect(unavailable.json().actions).toEqual([expect.objectContaining({ permission: "UNAVAILABLE", grant_ref: null,
+          reason_class: "NO_CURRENT_PERMISSION" })]);
+      }
+      query.set("resource_id", "TEST_ONLY-portfolio-1");
+      const byAdmin = await http.inject({ method: "GET", url: `${BASE}/eligibility?${query}`, headers: { cookie: cookie(peer.session) } });
+      expect(byAdmin.statusCode).toBe(200);
+      expect(byAdmin.json().actions[0].permission).toBe("UNAVAILABLE");
+    });
+    expect(await state(f)).toEqual(before);
+  });
+
+  it("C3 own entry remains available when policy is pending, without widening the owner administration page", async () => {
+    const f = await fixture(), defaultService = new ExecutionAccessService(ctx.pool, auth);
+    await withHttp(defaultService, async app => {
+      const http = app.getHttpAdapter().getInstance();
+      const headers = { cookie: cookie(researcher.session) };
+      const nav = await http.inject({ method: "GET", url: `${BASE}/self-navigation?workspace_id=${f.workspace}&environment=paper`, headers });
+      expect(nav.statusCode).toBe(200);
+      expect(nav.json().self_entry).toMatchObject({ permission: "ALLOWED", mode: "SELF_ONLY", route: null });
+      expect(nav.json().features.every((row: {state:string}) => row.state === "HIDDEN")).toBe(true);
+      const read = await http.inject({ method: "GET", url: `${BASE}/eligibility?workspace_id=${f.workspace}&environment=paper&resource_kind=PORTFOLIO&resource_id=TEST_ONLY-portfolio-1&actions=portfolio.read`, headers });
+      expect(read.json().actions[0]).toMatchObject({ permission: "UNAVAILABLE", reason_class: "POLICY_PENDING" });
+    });
+  });
+
+  it("C3 GET schemas reject actor, as-of, repeated and ambiguous query fields; missing session still denies", async () => {
+    const f = await fixture(), before = await state(f);
+    await withHttp(f.service, async app => {
+      const http = app.getHttpAdapter().getInstance();
+      const base = `${BASE}/eligibility?workspace_id=${f.workspace}&environment=paper&resource_kind=PORTFOLIO&resource_id=TEST_ONLY-portfolio-1&actions=portfolio.read`;
+      const unauthenticated = await http.inject({ method: "GET", url: base });
+      expect(unauthenticated.statusCode).toBe(401);
+      expect(unauthenticated.headers["cache-control"]).toBe("private, no-store");
+      for (const suffix of ["&actor_user_id=TEST_ONLY-spoof", "&subject_user_id=TEST_ONLY-spoof", "&as_of_ms=", "&environment=live",
+        "&actions=capital.top_up", "&resource_id=other", "&policy=REVIEWED", "&actions[]=portfolio.read"]) {
+        const response = await http.inject({ method: "GET", url: base + suffix, headers: { cookie: cookie(researcher.session) } });
+        expect(response.statusCode, suffix).toBe(400);
+        expect(response.headers["cache-control"]).toBe("private, no-store");
+        expect(response.json().error.code).toBe("ACCESS_INPUT_INVALID");
+      }
+      const invalid = await http.inject({ method: "GET", url: base.replace("actions=portfolio.read", "actions=*"), headers: { cookie: cookie(researcher.session) } });
+      expect(invalid.statusCode).toBe(400);
+    });
+    expect(await state(f)).toEqual(before);
+  });
+
+  it.each(["revoke", "membership", "disable", "generation"] as const)("C3 %s during source await cannot expose stale eligibility", async fault => {
+    const by = fault === "disable" || fault === "generation" ? await active("c3-ephemeral") : researcher;
+    const f = await fixture();
+    if (by !== researcher) await ctx.pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,'MEMBER')", [f.workspace, by.user.userId]);
+    const submitted = await c3AcceptedPortfolioRead(f, by);
+    const original = f.trust.relations.bind(f.trust); let changed = false;
+    vi.spyOn(f.trust, "relations").mockImplementation(async (id, ws) => {
+      const value = await original(id, ws);
+      if (!changed) {
+        changed = true;
+        if (fault === "revoke") {
+          const grant = await storedGrant(submitted.receipt.grant_id!);
+          await new AccessRepository(ctx.pool).saveGrant({ ...grant, revoked_at_ms: Date.now(), revision: next("C3-revoked") });
+        } else if (fault === "membership") await ctx.pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [f.workspace, by.user.userId]);
+        else if (fault === "disable") await ctx.pool.query("UPDATE portal_users SET status='DISABLED' WHERE user_id=$1", [by.user.userId]);
+        else await ctx.pool.query("UPDATE portal_users SET session_version=session_version+1 WHERE user_id=$1", [by.user.userId]);
+      }
+      return value;
+    });
+    try {
+      await withHttp(f.service, async app => {
+        const response = await app.getHttpAdapter().getInstance().inject({ method: "GET",
+          url: `${BASE}/eligibility?workspace_id=${f.workspace}&environment=paper&resource_kind=PORTFOLIO&resource_id=TEST_ONLY-portfolio-1&actions=portfolio.read`,
+          headers: { cookie: cookie(by.session) } });
+        expect(response.statusCode).toBe(fault === "revoke" ? 409 : fault === "membership" ? 404 : 403);
+        expect(changed).toBe(true); // The real source-await mutation was reached.
+        expect(response.headers["cache-control"]).toBe("private, no-store");
+        expect(response.json()).not.toHaveProperty("actions");
+      });
+    } finally { vi.mocked(f.trust.relations).mockRestore(); }
+  });
+
+  it("C3 source refusal is redacted and membership loss wins over its held error", async () => {
+    const f = await fixture();
+    await c3AcceptedPortfolioRead(f, researcher);
+    vi.spyOn(f.trust, "relations").mockImplementation(async () => { throw new Error("TEST_ONLY-private-adapter-detail"); });
+    try {
+      await withHttp(f.service, async app => {
+        const http = app.getHttpAdapter().getInstance();
+        const url = `${BASE}/self-navigation?workspace_id=${f.workspace}&environment=paper`;
+        const initial = await http.inject({ method: "GET", url, headers: { cookie: cookie(researcher.session) } });
+        expect(initial.statusCode).toBe(503);
+        expect(initial.json().error.code).toBe("SOURCE_RELATION_NOT_QUALIFIED");
+        expect(initial.body).not.toContain("private-adapter");
+        vi.mocked(f.trust.relations).mockImplementation(async () => {
+          await ctx.pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [f.workspace, researcher.user.userId]);
+          throw new Error("TEST_ONLY-private-adapter-detail");
+        });
+        const denied = await http.inject({ method: "GET", url, headers: { cookie: cookie(researcher.session) } });
+        expect(denied.statusCode).toBe(404);
+        expect(denied.body).not.toContain("private-adapter");
+      });
+    } finally { vi.mocked(f.trust.relations).mockRestore(); }
+  });
+
+  it("C3 uses the renewed genuine Core lease after its last adapter await", async () => {
+    const by = await active("c3-renewal"), f = await fixture();
+    await ctx.pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,'MEMBER')", [f.workspace, by.user.userId]);
+    await c3AcceptedPortfolioRead(f, by);
+    // Direct service entry avoids the HTTP guard's ordinary idle refresh. The
+    // authority, session, lease and renewal are still actual PostgreSQL rows.
+    await ctx.pool.query("UPDATE auth_sessions SET idle_expires_at=clock_timestamp()+interval '500 milliseconds' WHERE session_id=$1", [by.session.sessionId]);
+    const original = f.trust.relations.bind(f.trust); let renewed = false;
+    vi.spyOn(f.trust, "relations").mockImplementation(async (id, ws) => {
+      if (!renewed) {
+        renewed = true;
+        await ctx.pool.query("UPDATE auth_sessions SET idle_expires_at=clock_timestamp()+interval '30 seconds' WHERE session_id=$1", [by.session.sessionId]);
+        await ctx.pool.query("SELECT pg_sleep(0.6)");
+      }
+      return original(id, ws);
+    });
+    try {
+      const result = await f.service.selfNavigation(actor(by), {workspace_id:f.workspace,environment:"paper"});
+      expect(renewed).toBe(true);
+      expect(result.self_entry.permission).toBe("ALLOWED");
+      const lease = await ctx.pool.query("SELECT idle_expires_at>clock_timestamp() AS valid FROM auth_sessions WHERE session_id=$1", [by.session.sessionId]);
+      expect(lease.rows[0].valid).toBe(true);
+    } finally { vi.mocked(f.trust.relations).mockRestore(); }
+  });
+
+  it("C3 actual grant revocation wins409 over a held private source error", async () => {
+    const f = await fixture(), {submitted} = await business(f);
+    await f.service.acceptTsReceipt(f.trust.seal(await tsFact(f, submitted)));
+    vi.spyOn(f.trust, "relations").mockImplementation(async () => {
+      const grant = await storedGrant(submitted.receipt.grant_id!);
+      await new AccessRepository(ctx.pool).saveGrant({...grant,revoked_at_ms:Date.now(),revision:next("C3-revoked-error")});
+      throw new Error("TEST_ONLY-private-held-error");
+    });
+    try {
+      await expect(f.service.selfNavigation(actor(researcher), {workspace_id:f.workspace,environment:"paper"}))
+        .rejects.toMatchObject({code:"ACCESS_RETRY_REQUIRED",status:409});
+    } finally { vi.mocked(f.trust.relations).mockRestore(); }
+  });
+
+  it("C3 no own entity grant never invokes an unrelated source provider for navigation or eligibility", async () => {
+    const f = await fixture(), before = await state(f);
+    const relations = vi.spyOn(f.trust, "relations").mockImplementation(async () => {
+      throw new Error("TEST_ONLY-unrelated-provider-must-not-run");
+    });
+    try {
+      await withHttp(f.service, async app => {
+        const http = app.getHttpAdapter().getInstance(), headers = { cookie: cookie(researcher.session) };
+        const navigation = await http.inject({ method: "GET",
+          url: `${BASE}/self-navigation?workspace_id=${f.workspace}&environment=paper`, headers });
+        expect(navigation.statusCode).toBe(200);
+        expect(navigation.headers["cache-control"]).toBe("private, no-store");
+        expect(navigation.json().self_entry).toMatchObject({ permission: "ALLOWED", mode: "SELF_ONLY" });
+        expect(navigation.json().features.every((row: {state:string}) => row.state === "HIDDEN")).toBe(true);
+        const eligibility = await http.inject({ method: "GET", headers,
+          url: `${BASE}/eligibility?workspace_id=${f.workspace}&environment=paper&resource_kind=PORTFOLIO&resource_id=TEST_ONLY-no-row&actions=portfolio.read` });
+        expect(eligibility.statusCode).toBe(200);
+        expect(eligibility.headers["cache-control"]).toBe("private, no-store");
+        expect(eligibility.json().actions).toEqual([expect.objectContaining({ permission: "UNAVAILABLE", grant_ref: null })]);
+        expect(relations).not.toHaveBeenCalled();
+      });
+      expect(await state(f)).toEqual(before);
+    } finally { relations.mockRestore(); }
+  });
+
+  it("C3 held source error crosses the genuine final Core actor lease and yields403, never its stale503", async () => {
+    const f = await fixture(); await c3AcceptedPortfolioRead(f, researcher);
+    // Spy wraps the ACTUAL capture: no fabricated positive context, fingerprint,
+    // session or lease. Only physical Date.now crosses AFTER final DB capture.
+    const capturePort = f.service as unknown as { captureSelfProjectionContext(by:ReturnType<typeof actor>,workspace:string):
+      Promise<{now:number;lease_until_ms:number}> };
+    const originalCapture = capturePort.captureSelfProjectionContext.bind(f.service), originalNow = Date.now.bind(Date);
+    let captures = 0, crossed = false, lease = 0;
+    const trace: string[] = [];
+    const capture = vi.spyOn(capturePort, "captureSelfProjectionContext").mockImplementation(async (by, workspace) => {
+      const fact = await originalCapture(by, workspace);
+      captures++; trace.push("core:" + captures);
+      if (captures === 2) { lease = fact.lease_until_ms; crossed = true; }
+      return fact;
+    });
+    const now = vi.spyOn(Date, "now").mockImplementation(() => {
+      if (!crossed) return originalNow();
+      trace.push("terminal-clock"); return lease;
+    });
+    const relations = vi.spyOn(f.trust, "relations").mockImplementation(async () => {
+      trace.push("source-error"); throw new Error("TEST_ONLY-private-held-source-error");
+    });
+    try {
+      await withHttp(f.service, async app => {
+        const response = await app.getHttpAdapter().getInstance().inject({ method: "GET",
+          url: `${BASE}/self-navigation?workspace_id=${f.workspace}&environment=paper`,
+          headers: { cookie: cookie(researcher.session) } });
+        expect(response.statusCode).toBe(403);
+        expect(response.headers["cache-control"]).toBe("private, no-store");
+        expect(response.json().error.code).toBe("CURRENT_ACTOR_AUTHORITY_REQUIRED");
+        expect(response.json()).not.toHaveProperty("features");
+        expect(response.body).not.toContain("private-held-source");
+        expect(relations).toHaveBeenCalledOnce(); expect(captures).toBe(2);
+        expect(trace.indexOf("core:2")).toBeGreaterThan(trace.indexOf("source-error"));
+        expect(trace.indexOf("terminal-clock")).toBeGreaterThan(trace.indexOf("core:2"));
+      });
+    } finally { now.mockRestore(); capture.mockRestore(); relations.mockRestore(); }
+  });
+
+  // Same disposable PG/Nest harness. TEST_ONLY history/grants are explicit
+  // routing vectors only, never installed native/provider authority.
+  async function c3ModeWorkspace() {
+    const workspace = next("mode-workspace");
+    await ctx.pool.query("INSERT INTO workspaces(workspace_id,name,owner_user_id) VALUES($1,$2,$3)",
+      [workspace, "TEST_ONLY mode workspace", owner.user.userId]);
+    for (const account of [owner, researcher]) await ctx.pool.query(
+      "INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,$3)",
+      [workspace, account.user.userId, account === owner ? "OWNER" : "MEMBER"]);
+    return workspace;
+  }
+
+  it("C3 HTTP exposes genuine no-policy LEGACY and installed SCOPED modes without granting a menu", async () => {
+    const f = await fixture(), legacyWorkspace = await c3ModeWorkspace();
+    const relations = vi.spyOn(f.trust, "relations");
+    try {
+      await withHttp(f.service, async app => {
+        for (const [workspace, mode] of [[legacyWorkspace, "LEGACY_COMPATIBILITY"], [f.workspace, "SCOPED_V2"]]) {
+          const response = await app.getHttpAdapter().getInstance().inject({ method:"GET",
+            url:`${BASE}/self-navigation?workspace_id=${workspace}&environment=paper`, headers:{cookie:cookie(researcher.session)} });
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBe("private, no-store");
+          expect(response.json().current_read_mode).toBe(mode);
+          expect(response.json().features.every((row:{state:string})=>row.state==="HIDDEN")).toBe(true);
+        }
+      });
+      expect(relations).not.toHaveBeenCalled();
+    } finally { relations.mockRestore(); }
+  });
+
+  it("C3 deleting an installed policy and its root grants cannot erase sticky event history", async () => {
+    const f = await fixture();
+    await ctx.pool.query("DELETE FROM portal_access_policy_state WHERE workspace_id=$1", [f.workspace]);
+    // Fresh fixture has no delegated children/proposals. Immutable events are
+    // deliberately NOT deleted or disabled, preserving genuine install history.
+    await ctx.pool.query("DELETE FROM portal_access_grants_v2 WHERE workspace_id=$1", [f.workspace]);
+    const rows = await ctx.pool.query("SELECT count(*)::int AS n FROM portal_access_policy_events WHERE workspace_id=$1", [f.workspace]);
+    expect(rows.rows[0].n).toBeGreaterThan(0);
+    const result = await f.service.selfNavigation(actor(researcher), {workspace_id:f.workspace,environment:"paper"});
+    expect(result.current_read_mode).toBe("SCOPED_V2");
+    expect(result.features.every(row=>row.state==="HIDDEN")).toBe(true);
+  });
+
+  it("C3 a stored grant alone pins SCOPED routing without becoming a menu permission", async () => {
+    const f = await fixture(), workspace = await c3ModeWorkspace(), now = Date.now();
+    const grant:ScopedAccessGrant = {grant_id:next("mode-grant"),workspace_id:workspace,subject_user_id:researcher.user.userId,
+      issued_by:owner.user.userId,action:"access.read",effect:"ALLOW",selector:{kind:"EXPLICIT_RESOURCE_SET",resource_kind:"USER",ids:[researcher.user.userId]},
+      environments:["paper"],valid_from_ms:now-1,valid_until_ms:now+60000,parent_grant_id:null,revision:next("mode-revision"),
+      policy_revision:next("non-installed-policy"),revoked_at_ms:null,delegable_actions:[],requires_ts_acceptance:false,ts_receipt:null,field_policy_ref:null};
+    await new AccessRepository(ctx.pool).saveGrant(grant,true);
+    const result = await f.service.selfNavigation(actor(researcher), {workspace_id:workspace,environment:"paper"});
+    expect(result.current_read_mode).toBe("SCOPED_V2");
+    expect(result.features.every(row=>row.state==="HIDDEN")).toBe(true);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM portal_access_policy_events WHERE workspace_id=$1",[workspace])).rows[0].n).toBe(0);
+  });
+
+  it("C3 mode-only history transition fences self projection without changing the shared Core fingerprint", async () => {
+    const f = await fixture(), workspace = await c3ModeWorkspace();
+    type Captured={authority_fingerprint:string;self_projection_fingerprint:string;current_read_mode:string};
+    const capturePort=f.service as unknown as {captureSelfProjectionContext(by:AccessActor,workspace:string):Promise<Captured>};
+    const original=capturePort.captureSelfProjectionContext.bind(f.service), facts:Captured[]=[];
+    const capture=vi.spyOn(capturePort,"captureSelfProjectionContext").mockImplementation(async(by,ws)=>{
+      const fact=await original(by,ws); facts.push(fact);
+      if(facts.length===1){
+        const id=next("TEST_ONLY-mode-event");
+        await new AccessRepository(ctx.pool).event({event_id:id,workspace_id:workspace,actor_user_id:owner.user.userId,
+          subject_user_id:researcher.user.userId,operation:"DENIED",key_digest:null,request_digest:accessDigest(id),
+          policy_revision:null,grant_id:null,proposal_id:null,source:null,source_receipt_id:null,before_fact:null,after_fact:null,
+          receipt:{schema_version:"portal.access-operation.v1",operation_id:id,proposal_id:null,grant_id:null,outcome:"DENIED",
+            http_status:403,reason_code:"TEST_ONLY_NOT_AUTHORITY",policy_revision:null,grant_revision:null,decided_at_ms:Date.now(),ts_authority:"NOT_REQUIRED"}});
+      }
+      return fact;
+    });
+    const relations=vi.spyOn(f.trust,"relations");
+    try {
+      await expect(f.service.selfNavigation(actor(researcher),{workspace_id:workspace,environment:"paper"}))
+        .rejects.toMatchObject({code:"ACCESS_RETRY_REQUIRED",status:409});
+      expect(facts).toHaveLength(2);
+      expect(facts.map(fact=>fact.current_read_mode)).toEqual(["LEGACY_COMPATIBILITY","SCOPED_V2"]);
+      expect(facts[0].authority_fingerprint).toBe(facts[1].authority_fingerprint);
+      expect(facts[0].self_projection_fingerprint).not.toBe(facts[1].self_projection_fingerprint);
+      expect(relations).not.toHaveBeenCalled();
+    } finally {capture.mockRestore();relations.mockRestore();}
+  });
+
+  it.each(["policy-body","policy-error","membership-body","membership-error","actor-body","actor-error"] as const)(
+    "C3 %s across an actual source await releases neither stale navigation nor a held source error",async fault=>{
+      const f=await fixture(),by=await active("mode-fence");
+      await ctx.pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,'MEMBER')",[f.workspace,by.user.userId]);
+      await c3AcceptedPortfolioRead(f,by);
+      const original=f.trust.relations.bind(f.trust);let changed=false;
+      const relations=vi.spyOn(f.trust,"relations").mockImplementation(async(id,ws)=>{
+        const value=await original(id,ws);
+        if(!changed){changed=true;
+          if(fault.startsWith("policy"))await ctx.pool.query("DELETE FROM portal_access_policy_state WHERE workspace_id=$1",[f.workspace]);
+          else if(fault.startsWith("membership"))await ctx.pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",[f.workspace,by.user.userId]);
+          else await ctx.pool.query("UPDATE auth_sessions SET state='REVOKED',revoked_at=clock_timestamp(),revoke_reason='TEST_ONLY_MODE_FENCE' WHERE session_id=$1",[by.session.sessionId]);
+        }
+        if(fault.endsWith("error"))throw new Error("TEST_ONLY-private-mode-provider-error");
+        return value;
+      });
+      try{await withHttp(f.service,async app=>{
+        const response=await app.getHttpAdapter().getInstance().inject({method:"GET",
+          url:`${BASE}/self-navigation?workspace_id=${f.workspace}&environment=paper`,headers:{cookie:cookie(by.session)}});
+        expect(changed).toBe(true);
+        expect(response.statusCode).toBe(fault.startsWith("policy")?409:fault.startsWith("membership")?404:403);
+        expect(response.headers["cache-control"]).toBe("private, no-store");
+        expect(response.json()).not.toHaveProperty("features");
+        expect(response.json()).not.toHaveProperty("current_read_mode");
+        expect(response.body).not.toContain("private-mode-provider");
+      });}finally{relations.mockRestore();}
+    });
+
 });

@@ -92,3 +92,18 @@ export const pendingControlStatus = z.object({ schema_version: z.literal("portal
     c.addIssue({ code: z.ZodIssueCode.custom, message: "PENDING_STATUS_INVALID" });
 });
 export type PendingControlStatus = z.infer<typeof pendingControlStatus>;
+
+/** Additive served projection; the durable/event grammar above is unchanged.
+ * Never feed this DTO into persistence or source receipt comparison. */
+export const publicPendingControlStatus = pendingControlStatus.innerType().extend({ currency: pendingSourceText })
+  .superRefine((value, context) => {
+    const { currency: _currency, ...stored } = value;
+    const result = pendingControlStatus.safeParse(stored);
+    if (!result.success) for (const issue of result.error.issues) context.addIssue(issue);
+  });
+export type PublicPendingControlStatus = z.infer<typeof publicPendingControlStatus>;
+/** Caller must already have validated original provenance via pendingRecord,
+ * or the exact submitted intent + current mutation/COMMIT correlation. */
+export function publishPendingControlStatus(intent: PendingControlIntent, status: PendingControlStatus): PublicPendingControlStatus {
+  return publicPendingControlStatus.parse({ ...status, currency: intent.business_payload.currency });
+}

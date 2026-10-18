@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { managerSearchText, managerSearchMode, managerWindowQuery, managerSelectedWindow,
+  managerP1Options, managerWindowAbsenceReason, validateManagerP1Response } from "./manager-query-p1.contract";
 import { utcMilliseconds, executionEnvironment, financialStage, exactDecimal, opaqueRevision } from "./foundation.contract";
 import { publicationDigest } from "./publication.contract";
 import { managerScorePublication } from "./manager-score-publication.contract";
@@ -11,7 +13,7 @@ export { managerRegimePublication } from "./manager-regime-publication.contract"
 const text = z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$(?![\s\S])/);
 export const MANAGER_SCALARS = {
   alpha_id: "TEXT", alpha_version_id: "TEXT", name: "TEXT", owner_user_id: "TEXT", portfolio_id: "TEXT",
-  lifecycle: "TEXT", venue: "TEXT", health: "TEXT", source_state: "TEXT",
+  lifecycle: "TEXT", venue: "TEXT", health: "TEXT", source_state: "TEXT", stage_presence: "TEXT",
   allocation: "DECIMAL", net_pnl: "DECIMAL", unrealized_pnl: "DECIMAL", balance_total: "DECIMAL",
   equity_30d_end_value: "DECIMAL", return_30d_pct: "DECIMAL", score: "DECIMAL",
 } as const;
@@ -74,9 +76,13 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
     d.recorded_through_ms > d.observed_at_ms || d.members.some(m => m.valid_to_ms !== null && m.valid_to_ms <= m.valid_from_ms) ||
     d.facts.some(f => f.recorded_at_ms > d.recorded_through_ms || f.effective_at_ms > d.as_of_ms))
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_CUTOFF_INVALID" });
+  const allowedStages = d.environment === "paper" ? ["PAPER"] : d.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
+  if (d.members.some(member => !allowedStages.includes(member.stage)))
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ENVIRONMENT_STAGE_MISMATCH" });
 });
 const filter = z.object({ field: managerScalar, op: z.enum(["EQ", "GTE", "LTE", "IS_NULL"]), value: text.optional() }).strict();
 export const managerModelQuery = z.object({ workspace_id: text.optional(), environment: executionEnvironment,
+  q: managerSearchText.optional(), q_mode: managerSearchMode.optional(), window: managerWindowQuery.optional(),
   stage_filter: z.array(financialStage).max(4).default([]), lifecycle_filter: text.optional(),
   filters: z.array(filter).max(16).default([]),
   sort: z.array(z.object({ field: managerScalar, direction: z.enum(["asc", "desc"]) }).strict()).min(1).max(3)
@@ -85,6 +91,11 @@ export const managerModelQuery = z.object({ workspace_id: text.optional(), envir
   economic_partition: managerPartition.optional(), limit: z.number().int().min(1).max(200).default(100),
   after: z.string().min(1).max(4096).optional(), before: z.string().min(1).max(4096).optional(),
 }).strict().superRefine((q, c) => {
+  if (q.q_mode !== undefined && q.q === undefined)
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_SEARCH_QUERY_REQUIRED" });
+  const allowedStages = q.environment === "paper" ? ["PAPER"] : q.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
+  if (q.stage_filter.some(stage => !allowedStages.includes(stage)))
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ENVIRONMENT_STAGE_QUERY_INVALID" });
   if (q.after && q.before || new Set(q.sort.map(s => s.field)).size !== q.sort.length || new Set(q.group_by).size !== q.group_by.length)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_QUERY_INVALID" });
   for (const f of q.filters) {
@@ -100,22 +111,30 @@ export type ManagerMetric = z.infer<typeof managerMetric>;
 export type ManagerModelQuery = z.infer<typeof managerModelQuery>;
 export type ManagerMember = z.infer<typeof managerMember>;
 
-const metricMap = z.record(managerScalar, managerMetric);
+const metricMap = z.record(z.enum([...managerMoneyFields, "return_30d_pct", "score"]), managerMetric);
 const partitionMetrics = z.object({ partition: managerPartition, metrics: z.record(z.string(), managerMetric) }).strict();
 export const managerDatasetRow = z.object({ row_key: z.string().min(1).max(2048), alpha_id: text, alpha_version_id: text, portfolio_id: text,
   name: text.nullable(), owner_user_id: text.nullable(), lifecycle: text.nullable(), venue: text.nullable(), health: text.nullable(), source_state: text.nullable(),
   stage_presence: z.array(financialStage).max(4),
   children: z.array(managerTuple.extend({ stage: financialStage, binding_ref: text.nullable() }).strict()).max(10_000),
   metrics: metricMap, economic_partitions: z.array(partitionMetrics).max(200) }).strict();
-const scorePending = z.object({ value: exactDecimal.nullable(), status: z.enum(["policy_pending", "available", "provisional", "unbound", "invalid_data", "stale", "partial_costs", "partial_components", "insufficient_data"]) }).strict()
+const scorePending = z.object({ value: exactDecimal.nullable(), status: z.enum(["policy_pending", "available", "provisional", "unbound", "invalid_data", "stale", "partial_costs", "partial_components", "insufficient_data", "window_not_published"]),
+  reason_code: managerWindowAbsenceReason.optional() }).strict()
   .superRefine((v,c) => { if (["available","provisional"].includes(v.status) !== (v.value !== null))
-    c.addIssue({code:z.ZodIssueCode.custom,message:"MANAGER_SCORE_SUMMARY_INVALID"}); });
+      c.addIssue({code:z.ZodIssueCode.custom,message:"MANAGER_SCORE_SUMMARY_INVALID"});
+    if ((v.status === "window_not_published") !== (v.reason_code !== undefined))
+      c.addIssue({code:z.ZodIssueCode.custom,message:"MANAGER_SCORE_WINDOW_REASON_REQUIRED"}); });
 const compositionSummary = z.object({value:exactDecimal.nullable(),status:z.enum(["policy_pending","available","provisional",
-  "partial_coverage","incomparable_basis","no_allocation","invalid_data"])}).strict().superRefine((v,c)=>{
+  "partial_coverage","incomparable_basis","no_allocation","invalid_data","window_not_published"]),
+  reason_code:managerWindowAbsenceReason.optional()}).strict().superRefine((v,c)=>{
   if(["available","provisional"].includes(v.status)!==(v.value!==null))
     c.addIssue({code:z.ZodIssueCode.custom,message:"MANAGER_COMPOSITION_SUMMARY_INVALID"});
+  if ((v.status === "window_not_published") !== (v.reason_code !== undefined))
+    c.addIssue({code:z.ZodIssueCode.custom,message:"MANAGER_COMPOSITION_WINDOW_REASON_REQUIRED"});
 });
 export const managerDatasetResponse = z.object({ schema_version: z.literal("portal.execution.manager-dataset.v1"),
+  // Additive fields; old requests retain their original financial semantics.
+  selected_window: managerSelectedWindow.nullable(), query_options: managerP1Options,
   surface: z.enum(["FUND", "FLEET", "PORTFOLIO", "ALPHA", "ACCOUNT", "DEPLOYMENT"]), workspace_id: text,
   environment: executionEnvironment, record_authority: z.literal("PORTAL_PROJECTION"), source_authority: z.literal("TRADING_SYSTEM"),
   snapshot_id: publicationDigest, as_of_ms: utcMilliseconds, recorded_through_ms: utcMilliseconds, facts_through_ms: utcMilliseconds.nullable(),
@@ -130,11 +149,11 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   scores: z.object({ raw: scorePending, composition: compositionSummary, direct_nav: scorePending,
     regime: z.object({ value: z.null(), status: z.enum(["unavailable", "supported", "weak_support", "out_of_support", "insufficient_data", "stale", "unbound"]),
       reason_code: z.enum(["REGIME_POLICY_SOURCE_OR_AUTHORIZED_SLICE_NOT_QUALIFIED", "REGIME_IS_PER_ALPHA_OR_DEPLOYMENT_ONLY"]).nullable().optional() }).strict(),
-    reason_code: z.enum(["RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED", "QUALIFIED_PRECOMPUTED_SCORE"]), calculation_path: z.literal("PRECOMPUTED_ONLY") }).strict(),
+    reason_code: z.enum(["RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED", "QUALIFIED_PRECOMPUTED_SCORE", "EXACT_METRIC_WINDOW_NOT_PUBLISHED", "ALL_HISTORY_WINDOW_NOT_PUBLISHED"]), calculation_path: z.literal("PRECOMPUTED_ONLY") }).strict(),
   score_details: z.array(managerScorePublication).max(128).optional(),
   composition_details: z.array(managerCompositionPublication).max(128).optional(),
   regime_details: z.array(managerRegimePublication).max(128).optional(),
   funding_bucket_pnl: z.object({ value: z.null(), reason_code: z.literal("LOT_ATTRIBUTION_METHOD_NOT_APPROVED") }).strict(),
   lineage: z.object({ reducer_revision: z.literal("manager-model.v1"), source_set_ref: publicationDigest,
     revision: publicationDigest, supersedes_revision: publicationDigest.nullable() }).strict(),
-}).strict();
+}).strict().superRefine(validateManagerP1Response);

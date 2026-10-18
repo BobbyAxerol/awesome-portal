@@ -359,7 +359,16 @@ def validate_br_ex_72(acceptance: dict[str, Any], debt: dict[str, Any]) -> None:
 
     registry = read_json(EVIDENCE_PATHS["br72_registry_source_sha256"])
     public_registry = read_json(EVIDENCE_PATHS["br72_registry_public_sha256"])
-    require(registry.get("revision") == 6 and public_registry.get("revision") == 6, "registry revision 6 drifted")
+    # C5 reviewed revision7 is optional routing metadata, not a delivery flag
+    # or authority migration. Pin the exact reviewed revision and metadata;
+    # do not accept any future registry just because its number is higher.
+    require(registry.get("revision") == 7 and public_registry.get("revision") == 7, "registry revision 7 drifted")
+    require(acceptance["accepted_scope"]["br_ex_72"]["registry_revision"] == 7, "accepted registry revision drifted")
+    replacement = {"read_mode": "SCOPED_V2", "feature_id": "EXECUTION_APPROVALS"}
+    for document in (registry, public_registry):
+        replacements = {row["id"]: row["navigation"]["scoped_v2_replacement"] for row in document["features"]
+                        if row["navigation"].get("scoped_v2_replacement") is not None}
+        require(replacements == {"APPROVALS": replacement}, "registry scoped replacement drifted")
     screens = {row["screen_id"]: row for row in registry["screens"]}
     expected = {
         "EXECUTION_ALPHA_FLEET_LIST_SCREEN": {"query_enabled", "projection_ingestion_enabled"},

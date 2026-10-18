@@ -98,7 +98,7 @@ const nullableRef = name => ({ anyOf: [ref(name), { type: 'null' }] });
 const schemas = Object.fromEntries([
   ['PendingControlIntent', 'pendingControlIntent'], ['PendingControlSubmit', 'pendingControlSubmit'],
   ['PendingControlQuery', 'pendingControlQuery'], ['PendingControlPreview', 'pendingControlPreview'],
-  ['PendingControlStatus', 'pendingControlStatus'], ['PendingControlBody', 'pendingControlBody'],
+  ['PendingControlStatus', 'publicPendingControlStatus'], ['PendingControlBody', 'pendingControlBody'],
   ['PendingControlVersions', 'pendingVersions'], ['PendingControlResource', 'pendingControlResource'],
   ['PendingControlAmounts', 'pendingAmounts'], ['PendingControlPrediction', 'pendingPrediction'],
   ['PendingRecallReceipt', 'pendingRecallReceipt'],
@@ -158,6 +158,7 @@ status.allOf = [{
   ] },
 }];
 status.description = 'Separate PENDING_RECALL_CONTROL family, not a new economic action. ACKNOWLEDGED iff source business is known. WAITING may have cumulative applied > 0 and continues QUERY_SAME_INTENT; terminal known states REVIEW_RECEIPT. UNKNOWN has no receipt/economics/blockers and queries except FAILED_BEFORE_SEND reviews its blocker. Physical transfer and economic cash change are false; no venue/projection confirmation is inferred. Runtime additionally checks chronology, exact source correlation, amount partitions and monotonicity. TEST_ONLY fixtures are not source qualification.';
+status.description += ' Required currency is the exact immutable original intent unit, published only after current authority and original identity/hash validation. Historical stored status bytes remain unchanged and may omit currency; they are not served directly. Corrupt/unverifiable original intent refuses rather than guessing a unit. Pre-upgrade HTTP bodies without currency are incomplete under this public schema.';
 schemas.PendingControlProblem = { type: 'object', additionalProperties: false,
   required: ['error', 'request_id'], properties: {
     error: { type: 'object', additionalProperties: false, required: ['code', 'message'],
@@ -264,6 +265,12 @@ const fixture = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', runtime_quali
       versions: { ...versions, command: '15' } } } }),
 };
 const outputs = {
+  'fixtures/execution-pending-control-currency.synthetic.valid.json': {
+    lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', runtime_qualified: false,
+    statuses: Object.fromEntries(Object.entries(fixture)
+      .filter(([, value]) => value && typeof value === 'object' && value.schema_version === 'portal.execution.pending-recall-status.v1')
+      .map(([key, value]) => [key, contract.publishPendingControlStatus(baseIntent, value)])),
+  },
   'openapi/execution-pending-control.openapi.json': { openapi: '3.1.0',
     info: { title: 'Exact existing pending recall preview, submit and same-key status', version: '1.0.0' },
     paths, components: { securitySchemes: { PortalSession: { type: 'apiKey', in: 'cookie', name: SESSION_COOKIE } }, schemas } },

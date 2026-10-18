@@ -11,7 +11,8 @@ const ajv = new Ajv2020({ strict: false, allErrors: true }); ajv.addSchema(schem
 const validate = (name: string, v: unknown) => ajv.getSchema(`${schema.$id}#/$defs/${name}`)!(v);
 const runtime: Record<string, { safeParse: (v: unknown) => { success: boolean } }> = { WorkflowCreate: c.workflowCreate,
   WorkflowCapital: c.workflowCapital, WorkflowLifecycle: c.workflowLifecycle, WorkflowConfirmation: c.workflowConfirmation,
-  WorkflowNavigation: c.workflowNavigation, WorkflowReadState: c.workflowReadState };
+  WorkflowNavigation: c.workflowNavigation, WorkflowReadState: c.workflowReadState,
+  WorkflowCriteriaCapsules: c.workflowCriteriaCapsules, WorkflowRecordedPortal: c.workflowRecordedPortal };
 const story = (id: string) => structuredClone(fixture.cases.find((v: any) => v.id === id).response);
 
 describe("ELP2-08 generated workflow contract", () => {

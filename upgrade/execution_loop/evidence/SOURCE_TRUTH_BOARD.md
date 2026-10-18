@@ -3,6 +3,15 @@
 Khởi tạo: Claude, 2026-10-18 @ `claude/fe-parity`. Codex điền **cột nguồn** (Edge, TS/PM/DL locator `file@SHA:dòng`, trạng thái mount); Claude điền **cột FE** và **đọc mẫu**. Chưa phải bằng chứng runtime: trạng thái `SOURCE_DARK` nghĩa là contract + code đã vào repo nhưng nguồn thật chưa mount/qualified. Cập nhật mỗi round (Rules §10.1).
 
 Trạng thái: `EXISTS_MOUNTED` (đọc thật có receipt) · `SOURCE_DARK` (contract + code, chưa nguồn thật) · `SYNTHETIC_ONLY` · `MISSING` (chưa có contract/nguồn) · `UNKNOWN`.
+
+Latest four-source cut **2026-10-18T22:17–22:18UTC**:
+[exact source/WIP pins and scoped successor](ELP2-10/source-truth-2026-10-18.md#19-fresh-four-source-follow-through-2026-10-18t22172218utc).
+Edgeea620d9b, PM908169aa, TSf2229d7a and DLd74f9fc4. PM now has eight finite32
+mounted cases PASS across four separate runs; this does not qualify runtime43,
+current Core WIP, real provider authority or SSE. Edge's additive commissioning
+preparation is owner-reported PREPARED/UNKNOWN, not accepted serving. No current
+Portal mount/consumer acceptance follows; twelve FE columns and all historical
+source cuts below are preserved, including the earlier unqualified PM result.
 Đọc mẫu: `NOT_DONE` · `MATCH@pin` · `MISMATCH@pin (ghi lệch)`.
 
 **Nguồn addendum Codex, 2026-10-18 — SOURCE_ONLY / NOT_RUN:** cập nhật cột nguồn/trạng thái dưới đây từ [source truth §1–§7](ELP2-10/source-truth-2026-10-18.md), không thay consumer/sample acceptance của Claude. Snapshot đầu chốt metadata HK ở **14:35:09Z**; source-publication follow-up kết thúc **15:11:38Z**, ghi riêng tại §7 và phần cuối bảng này. Không inspect runtime/provider/applied DB. `SOURCE_DARK` trong bảng không biến current mount `UNKNOWN` thành một lần quan sát “đã tắt”; cũng không phủ nhận receipt retained thật ở pin cũ. Main quản lý trạng thái commit/gate hiện hành, không lấy private audit làm commit hoặc runtime receipt.
@@ -74,3 +83,49 @@ Slug gap check đúng: dùng `portal.access-effective` (slug `access` quá rộn
 - C6's twelve source columns and source history are integrated as source-only
   documentation. C3/C4/C5 are not delivered by this board. C7 actual provider,
   budget/calibration/coexistence/G2 remain open; ELP2-11 NOT_ENTRY_READY.
+
+## Main current delivery update —2026-10-18T16:16UTC
+
+- C1/C2 terminal normal R3 **PASS**, landed `5291a80f`;996contracts and
+  7503API tests PASS/3skip, supported Node22 build PASS. Exact cell teardown and
+  eight protected runtime tuples unchanged. The earlier failure above remains
+  historical, not the current gate status. See [actual terminal](ELP2-07/pending-control.md).
+- C3/C4/C5/C7 and F8-08 currency are integrated WIP, **NOT_RUN** pending the
+  single heavy lane; this updates local source only, not FE/fixture/sample
+  columns or proposed Claude verdicts. Paper Exit rich criteria is a separate
+  purpose on BOTH anchors, not release of ROOT integrity preimages.
+- [Fresh SSH checkpoint](ELP2-10/source-truth-2026-10-18.md#9-fresh-upstream-checkpoint-2026-10-18t161600z):
+  PM now prepares18datasets, NOT_RUN; the previous17-dataset receipt remains
+  historical at its own digest. Edge current5291 integration is still being
+  assembled/qualified. All current mount/provider states above remain unchanged.
+
+**Fresh source follow-through16:37:34UTC:** [four-source checkpoint](ELP2-10/source-truth-2026-10-18.md#10-fresh-four-source-checkpoint-2026-10-18t163734z)
+repins Edge8b7eb0c1, PM699c70d2, TS-next8e2849dd and DL97c9ecb6 with separate
+tracked/untracked-manifest hashes. PM's new Manager joint attempt has6failures;
+Edge's native SSE draft is NOT_RUN. Neither is a current mounted/qualified
+provider. Existing FE cells and historical receipts are not overwritten.
+
+**Fresh source delta18:03–18:04UTC:** [checkpoint14](ELP2-10/source-truth-2026-10-18.md#14-fresh-upstream-delta-2026-10-18t180311z-to180433z)
+pins Edge8204eeea and PMc889872d. Edge SSE270executed251PASS/19FAIL plus3load
+errors; corrected attempt NOT_RUN. PM reports separate30mixed and162history
+TEST_ONLY results, not a commissioned provider or current Core WIP acceptance.
+All12 family mount/authority statuses remain unchanged; old evidence retained.
+
+**Fresh follow-through18:44:48–49UTC:** [checkpoint15](ELP2-10/source-truth-2026-10-18.md#15-fresh-peersource-delta-2026-10-18t184448z184449z)
+repins Edge8204eeea/PMc889872d newer working bytes and DL24bb43c4. Edge reports
+strict/focused fixed5 success, full360 pending; PM mounted eight-case BFF is
+preparation only, raw mixed/RETURN have actual failures. No mounted family,
+financial source, authority or current-human commissioning is inferred.
+
+**Fresh publication21:03:41UTC:** [checkpoint17](ELP2-10/source-truth-2026-10-18.md#17-fresh-edge-runtime-profile-publication-2026-10-18t210341z)
+pins Edge9d9d0950/PM2d166ec6. Edge's new43-file runtime profile has upstream
+389+4 distinct isolated cases but explicitly no installed/connected acceptance;
+it targets historical Core5291, not current C3–C7 WIP. Do not overwrite current
+files or convert upstream receipt counts into mounted family/provider truth.
+The twelve authority/mount states and Claude-owned consumer columns stay intact.
+
+**Fresh scoped successor22:17–22:18UTC:** [checkpoint19](ELP2-10/source-truth-2026-10-18.md#19-fresh-four-source-follow-through-2026-10-18t22172218utc)
+records committed PM908169aa evidence, unchanged discovery/history/command wire,
+and Edge's separate native-only compatibility repair. Stop listing the original
+finite32 eight-case execution as missing; keep every broader source/trust/
+current-runtime/financial/SSE/capacity gate and all12 mount states unchanged.

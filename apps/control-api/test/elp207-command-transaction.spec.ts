@@ -186,11 +186,15 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07 real PostgreSQL transpo
       expect(p.statusCode).toBe(200);expect(p.headers["cache-control"]).toContain("no-store");
       const send=await http.inject({method:"POST",url,headers,payload:{intent:f.intent,preview_digest:p.json().preview_digest}});expect(send.statusCode).toBe(200);
       const id=send.json().command_id;
+      expect(send.json().currency).toBe(f.intent.business_payload.currency);
       const read=await http.inject({method:"GET",url:`${url}/${id}?workspace_id=${encodeURIComponent(f.workspace)}`,headers});expect(read.statusCode).toBe(200);expect(read.json().business.state).toBe("APPLIED");
+      expect(read.json().currency).toBe(f.intent.business_payload.currency);
+      expect((await new CommandStore(ctx.pool).get(f.workspace,id))!.status).not.toHaveProperty("currency");
       expect(f.counts().lookups).toBe(0);expect(JSON.stringify(read.json())).not.toMatch(/ts_user_id|workload_ref|delegation_ref|expected_versions|csrf|JWT/);
       f.trust.lookup=async()=>{throw Error("SELECT secret FROM hidden_table; PRIVATE_KEY");};
       const recovery=await http.inject({method:"POST",url:`${url}/${id}/reconcile`,headers,payload:{workspace_id:f.workspace}});
       expect(recovery.statusCode).toBe(200);expect(recovery.body).not.toContain("hidden_table");
+      expect(recovery.json().currency).toBe(f.intent.business_payload.currency);
       await f.repo.saveGrant({...f.grants[1],revoked_at_ms:Date.now(),revision:next()});
       const hidden=await http.inject({method:"GET",url:`${url}/${id}?workspace_id=${encodeURIComponent(f.workspace)}`,headers});
       const missing=await http.inject({method:"GET",url:`${url}/ecm_00000000000000000000000000000000?workspace_id=${encodeURIComponent(f.workspace)}`,headers});

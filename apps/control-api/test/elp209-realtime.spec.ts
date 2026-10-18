@@ -591,6 +591,35 @@ describe("ELP2-09 bounded ownership — slow clients, reconnects and uncooperati
     expect(h.authority.writes).toBe(0);
     expect(h.hub.diagnostics()).toMatchObject({ source_flights: 0, queued_bytes: 0 });
   });
+  it("joins an abort-ignoring original source after stopped pollers already settled", async () => {
+    const h=harness(),pending=deferred<EdgeScopedNoticeBatch>();
+    h.read.mockReturnValueOnce(pending.promise);await h.subscribe();
+    const polling=h.hub.poll();await flush();h.hub.stop();await polling;
+    let joined=false;
+    const join=h.hub.settleSourceReads().then(()=>{joined=true;});
+    try{
+      await flush();expect(joined).toBe(false);
+      expect(h.hub.diagnostics().source_flights).toBe(1);
+      h.hub.stop();await h.hub.poll();expect(h.read).toHaveBeenCalledOnce();
+    }finally{pending.resolve(batch());await join;}
+    expect(joined).toBe(true);expect(h.hub.diagnostics().source_flights).toBe(0);
+    expect(h.authority.writes).toBe(0);expect(h.frames).toHaveLength(1);
+  });
+  it("joins late source rejection without leaking an unhandled rejection or protected delivery", async () => {
+    const h=harness(),pending=deferred<EdgeScopedNoticeBatch>();
+    h.read.mockReturnValueOnce(pending.promise);await h.subscribe();
+    const polling=h.hub.poll();await flush();h.hub.stop();await polling;
+    const join=h.hub.settleSourceReads();pending.reject(new Error("TEST_ONLY_LATE_PRIVATE_SOURCE_FAILURE"));
+    await expect(join).resolves.toBeUndefined();
+    expect(h.hub.diagnostics().source_flights).toBe(0);expect(h.authority.writes).toBe(0);
+    expect(JSON.stringify(h.frames)).not.toContain("TEST_ONLY_LATE_PRIVATE_SOURCE_FAILURE");
+  });
+  it("requires stop before the source lifecycle join, then settles an empty source set", async () => {
+    const h=harness();
+    await expect(h.hub.settleSourceReads()).rejects.toThrow("REPLAY_SOURCE_SETTLE_REQUIRES_STOP");
+    h.hub.stop();await expect(h.hub.settleSourceReads()).resolves.toBeUndefined();
+    expect(h.read).not.toHaveBeenCalled();
+  });
   it("aborts timed-out providers but retains their bounded slot until an ignored abort really completes", async () => {
     vi.useFakeTimers();
     const h = harness({ maximumClients: 1, readTimeoutMs: 5 });

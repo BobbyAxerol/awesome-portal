@@ -6,13 +6,15 @@ import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 import type { ZodTypeAny } from "zod";
 import { pendingControlIntent, pendingControlSubmit, pendingControlQuery, pendingControlPreview,
-  pendingControlStatus, pendingRecallReceipt, pendingAmounts }
+  publicPendingControlStatus as pendingControlStatus, pendingControlStatus as storedPendingControlStatus, pendingRecallReceipt, pendingAmounts }
   from "../../../apps/control-api/src/execution-v2/pending-control.contract";
 
 const root = resolve(__dirname, "..");
 const load = (path: string) => JSON.parse(readFileSync(resolve(root, path), "utf8"));
 const api = load("openapi/execution-pending-control.openapi.json");
-const fixture = load("fixtures/execution-pending-control.synthetic.valid.json");
+const storedFixture = load("fixtures/execution-pending-control.synthetic.valid.json");
+const currencyFixture = load("fixtures/execution-pending-control-currency.synthetic.valid.json");
+const fixture = { ...storedFixture, ...currencyFixture.statuses };
 const ajv = new Ajv2020({ strict: false });
 const validators = new Map<string, ReturnType<typeof ajv.compile>>();
 function compile(name: string) {
@@ -43,6 +45,21 @@ const validCases: readonly [string, string, ZodTypeAny][] = [
     ["PendingControlStatus", key, pendingControlStatus]),
 ];
 describe("ELP2-07 separate existing pending recall control public contract", () => {
+  it("public currency is explicit while historical durable bytes retain the original schema", () => {
+    expect(currencyFixture.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    expect(currencyFixture.runtime_qualified).toBe(false);
+    const validate = compile("PendingControlStatus");
+    for (const key of Object.keys(currencyFixture.statuses)) {
+      expect(storedPendingControlStatus.safeParse(storedFixture[key]).success).toBe(true);
+      expect(storedPendingControlStatus.safeParse(fixture[key]).success).toBe(false);
+      same("PendingControlStatus", pendingControlStatus, storedFixture[key], false);
+      expect(fixture[key]).toEqual({ ...storedFixture[key], currency: fixture.intent.business_payload.currency });
+      expect(validate(fixture[key])).toBe(true);
+    }
+    for (const currency of [null, "", " USDT", "USDT ", "USDT\n"]) {
+      same("PendingControlStatus", pendingControlStatus, { ...fixture.unknown, currency }, false);
+    }
+  });
   it("publishes exactly four named session-guarded operations with no-store on every declared response", () => {
     expect(Object.keys(api.paths).sort()).toEqual([base, base + "/preview", base + "/{id}", base + "/{id}/reconcile"].sort());
     expect(api.components.securitySchemes.PortalSession).toEqual({ type: "apiKey", in: "cookie", name: "__Host-portal_session" });

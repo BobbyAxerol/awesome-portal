@@ -390,6 +390,28 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07 pending recall real Cor
     } finally { held.release(); }
     expect((await submitted).business.state).toBe("WAITING_ENCUMBRANCE"); expect(f.counts().sends).toBe(1);
   });
+  it("publishes immutable intent currency on submit/read/reconcile but never rewrites historical status bytes", async () => {
+    const f=await fixture(),submitted=await f.submit();
+    expect(submitted.currency).toBe(f.intent.business_payload.currency);
+    const snapshot=async()=>({row:(await ctx.pool.query("SELECT intent,status,authorization_fact,intent_hash FROM execution_pending_recall_commands WHERE command_id=$1",[submitted.command_id])).rows[0],
+      events:(await ctx.pool.query("SELECT count(*)::int AS n FROM execution_pending_recall_events WHERE command_id=$1",[submitted.command_id])).rows[0].n});
+    const before=await snapshot();expect(before.row.status).not.toHaveProperty("currency");
+    expect((await f.service.status(actor,f.workspace,submitted.command_id)).currency).toBe(f.intent.business_payload.currency);
+    expect(await snapshot()).toEqual(before);
+    expect((await f.service.reconcile(actor,f.workspace,submitted.command_id)).currency).toBe(f.intent.business_payload.currency);
+    expect((await f.record(submitted.command_id)).status).not.toHaveProperty("currency");
+    const original=PendingControlStore.prototype.candidate;
+    const fault=vi.spyOn(PendingControlStore.prototype,"candidate").mockImplementation(async function(this:PendingControlStore,...args){
+      const row=await original.apply(this,args);
+      if(!row||row.id!==submitted.command_id)return row;
+      return {...row,intent:{...f.intent,
+        business_payload:{...f.intent.business_payload,currency:"EUR"}}};
+    });
+    try {await expect(f.service.status(actor,f.workspace,submitted.command_id))
+      .rejects.toMatchObject({code:"PENDING_CONTROL_RECEIPT_UNVERIFIED",status:503});}
+    finally {fault.mockRestore();}
+    expect(f.counts().sends).toBe(1);
+  });
   it("lost local COMMIT acknowledgement never sends or clears another attempt", async () => {
     const f = await fixture(), preview = await f.service.preview(actor, f.intent), boundary = f.access.commandBoundary.bind(f.access);
     let calls = 0;
@@ -400,7 +422,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07 pending recall real Cor
       .rejects.toMatchObject({ code: "PENDING_CONTROL_UNAVAILABLE", status: 503 }); } finally { spy.mockRestore(); }
     const row = (await ctx.pool.query("SELECT command_id,status,attempt_id FROM execution_pending_recall_commands WHERE workspace_id=$1", [f.workspace])).rows[0];
     expect(row.status.delivery).toBe("DELIVERY_UNKNOWN"); expect(row.attempt_id).toBeNull();
-    expect(await f.service.submit(actor, f.intent, preview.preview_digest!)).toEqual(row.status);
+    expect(await f.service.submit(actor, f.intent, preview.preview_digest!)).toEqual({...row.status,currency:f.intent.business_payload.currency});
     expect(f.counts().sends).toBe(0);
   });
   it("an authenticated owning lookup settles an in-flight sender, whose late response cannot overwrite it", async () => {

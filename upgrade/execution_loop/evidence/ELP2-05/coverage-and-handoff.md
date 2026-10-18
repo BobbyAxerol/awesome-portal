@@ -135,3 +135,11 @@ unavailable new family beside available authorized legacy page, no hidden
 query/existence signals, opaque cursor errors/revoke. Browser receipts must pin
 bundle/API/policy/source and be distinct from fixtures. Return ACCEPTED or
 CHANGES_REQUESTED with exact fields and receipt; no acknowledgement recorded yet.
+
+### C4/P1 follow-through —2026-10-18
+
+Bounded authorized-name query, true metric keys/stage vocabulary and explicit
+current-only refusal are integrated for the same06 reader. Exact types,
+fixtures and qualified-window limitations are in the
+[shared producer packet](../ELP2-10/manager-intake-2026-10-18.md).
+Qualification/consumer ACK remain pending; no catalogue row becomes mounted.

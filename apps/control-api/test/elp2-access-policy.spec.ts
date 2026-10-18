@@ -3,15 +3,21 @@
  * Every identity, policy approval, membership, relation and receipt below is
  * synthetic TEST_ONLY input. No DB, HTTP app, verifier, TS or runtime proof.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AccessPolicyError, accessAction, accessAuditQuery, accessPreview, accessProposal,
   accessResource, accessRevoke, accessWorkspaceQuery, grantChange, resourceSelector,
   tsBusinessAction } from "../src/execution-v2/access.contract";
 import type { AccessAction, AccessRefusal, AccessResource, GrantChange, ReviewedAccessPolicy,
-  ResourceSelector, ScopedAccessGrant } from "../src/execution-v2/access.contract";
+  ResourceSelector, ScopedAccessGrant, TsMembershipAcceptance } from "../src/execution-v2/access.contract";
 import { accessDigest, canonicalChange, canonicalSelector, evaluateAccess, grantCurrent,
-  policyReady, resolvedResources, unqualifiedAccessRelations, validateDelegation } from "../src/execution-v2/access-policy";
+  currentGrantAllows, policyReady, resolvedResources, unqualifiedAccessRelations, validateDelegation } from "../src/execution-v2/access-policy";
 import type { AccessEvaluationContext, AccessRelations } from "../src/execution-v2/access-policy";
+import { positiveParentSections, qualifyPositiveParent } from "../src/governance/positive-parent.authority";
+import { parentFieldSetDigest, type ParentFieldPurpose } from "../src/execution-v2/parent-read-fields";
+import type { PositiveParentCandidate } from "../src/governance/positive-parent.repository";
+import { requireCurrentTsAuditRead } from "../src/execution-v2/current-audit-read";
+import * as accessPolicyModule from "../src/execution-v2/access-policy";
+import { grantBindingDigest, type CurrentAccessRelations } from "../src/execution-v2/access-current-relations";
 
 const ID = {
   owner: "TEST_ONLY:user:protected-owner", manager: "TEST_ONLY:user:manager",
@@ -81,6 +87,136 @@ function expectRefusal(operation: () => unknown, code: AccessRefusal, status = 4
 }
 const decision = (ctx: AccessEvaluationContext, action: AccessAction = "portfolio.read", resource = P1,
   environment: "paper" | "sandbox" | "live" = "sandbox") => evaluateAccess(ctx, action, resource, environment);
+
+describe("parent field selection — per-invocation synchronous compatibility only / TEST_ONLY",()=>{
+  it.each(["actor-expiry","future-deny","native-expiry","optional-field-expiry","optional-field-start"] as const)(
+    "crossing %s DURING field selection refuses before protected SQL admission",kind=>{
+      const deadline=NOW+100;let wall=NOW;
+      const clock=vi.spyOn(Date,"now").mockImplementation(()=>wall);
+      let restoreEligible:(()=>void)|undefined;
+      try{
+        const deployment:AccessResource={kind:"DEPLOYMENT",id:"TEST_ONLY:deployment"},targets=[deployment,P1];
+        const purposes:ParentFieldPurpose[]=["R2_ROOT","RECORDED_PORTAL_ACTIVITY","DECISION_OPERATION","DECISION_ACTORS","R2_LINEAGE"];
+        const fields=purposes.map(purpose=>({purpose,environment:"paper" as const,
+          contract_revision:"portal.execution.parent-fields.v1" as const,field_policy_ref:`TEST_ONLY:${purpose}`,
+          field_set_sha256:parentFieldSetDigest(purpose),
+          valid_from_ms:kind==="optional-field-start"&&purpose==="R2_LINEAGE"?deadline:NOW-1,
+          valid_until_ms:kind==="optional-field-expiry"&&purpose==="DECISION_ACTORS"?deadline:NOW+5000}));
+        let audits=fields.flatMap(field=>targets.map(target=>grant({grant_id:`${field.field_policy_ref}:${target.kind}`,
+          action:"audit.read",selector:explicit([target.id],target.kind),environments:["paper"],requires_ts_acceptance:true,
+          ts_receipt:receipt(),field_policy_ref:field.field_policy_ref})));
+        const gate=grant({grant_id:"TEST_ONLY:r2-app",action:"governance.r2.read",requires_ts_acceptance:false,ts_receipt:null,
+          environments:["paper"],selector:explicit([deployment.id],"DEPLOYMENT")});
+        const c=context([...audits,gate],{policy:policy({parent_read_fields:fields}),actor_member:true,
+          authority_fingerprint:"TEST_ONLY:context",actor_lease_until_ms:kind==="actor-expiry"?deadline:NOW+20000});
+        if(kind==="future-deny")c.grants=[...c.grants,grant({grant_id:"TEST_ONLY:future-deny",action:"audit.read",effect:"DENY",
+          requires_ts_acceptance:false,ts_receipt:null,environments:["paper"],selector:explicit([P1.id]),valid_from_ms:deadline})];
+        if(kind==="native-expiry"){
+          // Exact existing versioned grammar and full accepted-fact/hash checks,
+          // not a synthetic legacy expiry alias. No source installation occurs.
+          const fact=(g:ScopedAccessGrant):TsMembershipAcceptance=>({source:"TEST_ONLY:PM",source_contract:"TEST_ONLY:contract",
+            trust_profile:"TEST_ONLY:profile",receipt_id:g.ts_receipt!.receipt_id,proposal_id:`${g.grant_id}:proposal`,
+            proposal_digest:accessDigest([g.grant_id,"TEST_ONLY:proposal"]),portal_user_id:g.subject_user_id,
+            ts_user_id:"TEST_ONLY:ts-user",mapping_revision:g.ts_receipt!.mapping_revision,human_requester_user_id:g.issued_by,
+            workspace_id:g.workspace_id,action:g.action,selector_digest:accessDigest(canonicalSelector(g.selector)),
+            environments:[...g.environments],previous_membership_revision:null,membership_revision:g.ts_receipt!.membership_revision,
+            effective_at_ms:g.ts_receipt!.effective_at_ms,expires_at_ms:g.ts_receipt!.expires_at_ms,outcome:"ACCEPTED",
+            payload_digest:accessDigest([g.grant_id,"TEST_ONLY:payload"]),provenance_ref:"TEST_ONLY:NOT_REAL_ACCEPTANCE"});
+          audits=audits.map(g=>({...g,ts_acceptance_digest:accessDigest(fact(g))}));c.grants=[...audits,gate];
+          const source:CurrentAccessRelations={schema_version:"pma.core-current-relations.v1",subject_user_id:ID.manager,
+            workspace_id:ID.workspace,ts_user_id:"TEST_ONLY:ts-user",mapping_revision:receipt().mapping_revision,
+            resources:[{environment:"paper",revision:"TEST_ONLY:cut",own_alpha_ids:[],member_portfolio_ids:[],roots:[]}],
+            grants:audits.map(g=>({grant_id:g.grant_id,binding_digest:grantBindingDigest(g),accepted:fact(g),
+              targets:targets.filter(t=>g.selector.kind==="EXPLICIT_RESOURCE_SET"&&g.selector.resource_kind===t.kind&&g.selector.ids.includes(t.id))
+                .map(resource=>({environment:"paper",resource,revision:`TEST_ONLY:${g.grant_id}:target`,
+                  native_reference_digest:accessDigest([g.grant_id,resource]),valid_from_ms:NOW-1,valid_until_ms:deadline}))}))};
+          c.relationsFor=id=>id===ID.manager?relations({current_authority:source}):relations();
+        }
+        const candidate:PositiveParentCandidate={family:"R2",workspaceId:ID.workspace,approvalId:"TEST_ONLY:r2",
+          r1ApprovalId:"TEST_ONLY:r1",r2ApprovalId:"TEST_ONLY:r2",deploymentId:deployment.id,portfolioId:P1.id,environment:"PAPER"};
+        // Establish both exact anchors and optional sections at the real pure
+        // evaluator's T, BEFORE installing the delayed physical-clock seam.
+        const initial=positiveParentSections(c,candidate);
+        expect(initial.recordedActivity).toBe(true);expect(initial.actors).toBe(true);
+        const original=accessPolicyModule.currentAllowedGrantIds,populated:string[]=[];
+        const eligibleSpy=vi.spyOn(accessPolicyModule,"currentAllowedGrantIds").mockImplementation((...args)=>{
+          const ids=original(...args); // no positive mock result or weaker graph
+          expect(args[0].now_ms).toBe(NOW);expect(ids.size).toBeGreaterThan(0);
+          populated.push(args[2].kind);
+          if(populated.length===2){
+            expect(populated).toEqual(["DEPLOYMENT","PORTFOLIO"]);
+            wall=deadline; // second exact anchor is populated; only time moves
+          }
+          return ids;
+        });
+        restoreEligible=()=>eligibleSpy.mockRestore();
+        const protectedDetails=vi.fn();
+        // Pure ordering witness for positive-parent.service decode: selection
+        // precedes protectedDetails. Not a PG read/custody/runtime receipt.
+        const enterProtectedSql=()=>{const sections=positiveParentSections(c,candidate);protectedDetails(sections);};
+        expect(enterProtectedSql).toThrowError(expect.objectContaining(kind==="actor-expiry"
+          ?{code:"CURRENT_ACTOR_AUTHORITY_REQUIRED",status:403}:{code:"OPERATIONAL_READ_CHANGED",status:409}));
+        expect(populated).toEqual(["DEPLOYMENT","PORTFOLIO"]);
+        expect(eligibleSpy).toHaveBeenCalledTimes(2);expect(protectedDetails).not.toHaveBeenCalled();
+        expect(c.now_ms).toBe(NOW);expect(wall).toBe(deadline);
+      }finally{restoreEligible?.();clock.mockRestore();}
+    });
+  it("matches the old single-leaf predicate, preserves future transition and refreshes between calls",()=>{
+    const clock=vi.spyOn(Date,"now").mockReturnValue(NOW);
+    try{
+      const deployment:AccessResource={kind:"DEPLOYMENT",id:"TEST_ONLY:deployment"},targets=[deployment,P1];
+      const purposes:ParentFieldPurpose[]=["R2_ROOT","R2_LINEAGE","DECISION_ACTORS","DECISION_LATEST_OPERATION",
+        "DECISION_OPERATION","R2_DECISION_CONTEXT","RECORDED_PORTAL_ACTIVITY","R2_RECORDED_VERDICTS"];
+      const fields=purposes.map(purpose=>({purpose,environment:"paper" as const,
+        contract_revision:"portal.execution.parent-fields.v1" as const,field_policy_ref:`TEST_ONLY:${purpose}`,
+        field_set_sha256:parentFieldSetDigest(purpose),valid_from_ms:purpose==="DECISION_ACTORS"?NOW+100:NOW-1,
+        valid_until_ms:NOW+5000}));
+      const audits=fields.flatMap(field=>targets.map(target=>grant({grant_id:`${field.field_policy_ref}:${target.kind}`,
+        action:"audit.read",selector:explicit([target.id],target.kind),environments:["paper"],requires_ts_acceptance:true,
+        ts_receipt:receipt(),field_policy_ref:field.field_policy_ref})));
+      const gate=grant({grant_id:"TEST_ONLY:r2-app",action:"governance.r2.read",requires_ts_acceptance:false,ts_receipt:null,
+        environments:["paper"],selector:explicit([deployment.id],"DEPLOYMENT")});
+      const c=context([...audits,gate],{policy:policy({parent_read_fields:fields}),actor_member:true,
+        authority_fingerprint:"TEST_ONLY:context",actor_lease_until_ms:NOW+20000});
+      const candidate:PositiveParentCandidate={family:"R2",workspaceId:ID.workspace,approvalId:"TEST_ONLY:r2",
+        r1ApprovalId:"TEST_ONLY:r1",r2ApprovalId:"TEST_ONLY:r2",deploymentId:deployment.id,portfolioId:P1.id,environment:"PAPER"};
+      // Exact old predicate at a fixed actual time; not a source fixture or a
+      // reusable authority object. It intentionally calls currentGrantAllows.
+      const old=(purpose:ParentFieldPurpose)=>{
+        const now=Math.max(c.now_ms,Date.now()),seal=c.policy?.parent_read_fields?.find(value=>value.purpose===purpose&&
+          value.environment==="paper"&&value.contract_revision==="portal.execution.parent-fields.v1"&&
+          value.field_set_sha256===parentFieldSetDigest(purpose)&&value.valid_from_ms<=now&&value.valid_until_ms>now);
+        if(!seal)return false;
+        const effective={...c,now_ms:now};
+        return targets.every(target=>{
+          requireCurrentTsAuditRead(effective,target,"paper");
+          return [...effective.grants].sort((a,b)=>a.grant_id<b.grant_id?-1:a.grant_id>b.grant_id?1:0).some(value=>
+            value.subject_user_id===effective.principal_id&&value.workspace_id===effective.workspace_id&&value.action==="audit.read"&&
+            value.effect==="ALLOW"&&value.requires_ts_acceptance===true&&value.field_policy_ref===seal.field_policy_ref&&
+            effective.relationsFor(value.subject_user_id).qualified&&currentGrantAllows(effective,"audit.read",target,"paper",value.grant_id));
+        });
+      };
+      const compare=()=>expect(positiveParentSections(c,candidate)).toEqual({
+        recordedActivity:old("RECORDED_PORTAL_ACTIVITY")&&old("DECISION_OPERATION"),actors:old("DECISION_ACTORS"),
+        latestOperation:old("DECISION_LATEST_OPERATION")&&old("DECISION_OPERATION"),lineage:old("R2_LINEAGE"),
+        decisionContext:old("R2_DECISION_CONTEXT"),recordedVerdicts:old("R2_RECORDED_VERDICTS")});
+      compare();expect(positiveParentSections(c,candidate).actors).toBe(false);
+      expect(qualifyPositiveParent(c,candidate).valid_until_ms).toBe(NOW+100);
+      clock.mockReturnValue(NOW+100);compare();expect(positiveParentSections(c,candidate).actors).toBe(true);
+      // Same object, new invocation: an absent field leg cannot borrow any of
+      // the remaining accepted audit leaves or a previous selected result.
+      const missing=audits.find(value=>value.field_policy_ref==="TEST_ONLY:DECISION_ACTORS"&&
+        value.selector.kind==="EXPLICIT_RESOURCE_SET"&&value.selector.resource_kind==="PORTFOLIO")!;
+      c.grants=c.grants.filter(value=>value.grant_id!==missing.grant_id);compare();
+      expect(positiveParentSections(c,candidate).actors).toBe(false);
+      c.grants=[...c.grants,grant({grant_id:"TEST_ONLY:audit-deny",action:"audit.read",effect:"DENY",
+        requires_ts_acceptance:false,ts_receipt:null,environments:["paper"],selector:explicit([P1.id])})];
+      expect(()=>positiveParentSections(c,candidate)).toThrowError(expect.objectContaining({code:"ACCESS_RESOURCE_NOT_FOUND",status:404}));
+      clock.mockReturnValue(NOW+20000);
+      expect(()=>qualifyPositiveParent(c,candidate)).toThrowError(expect.objectContaining({code:"CURRENT_ACTOR_AUTHORITY_REQUIRED",status:403}));
+    }finally{clock.mockRestore();}
+  });
+});
 
 describe("ELP2-03 TEST_ONLY policy and exact effective scope", () => {
   it("T03-01 denies by default, including the protected owner without an explicit grant", () => {

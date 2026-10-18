@@ -12,7 +12,7 @@ import { AccessPolicyError, classifyStoredAccessGrant, managerDomainGrant, manag
 import { accessDigest, evaluateAccess, grantCurrent, managerDomainReadValidUntil, selectManagerDomainGrant, unqualifiedAccessRelations,
   type AccessEvaluationContext } from "../src/execution-v2/access-policy";
 import { AccessRepository } from "../src/execution-v2/access.repository";
-import { captureCurrentHumanSnapshot, evaluateManagerDomainRead } from "../src/execution-v2/current-human-snapshot";
+import { captureCurrentHumanSnapshot, evaluateManagerDomainRead, evaluateManagerDomainStream } from "../src/execution-v2/current-human-snapshot";
 import { migrateTestDatabase, truncateAll } from "./harness";
 
 const DOMAIN={profile_id:"TEST_ONLY-profile",catalogue_sha256:"1".repeat(64),
@@ -401,5 +401,81 @@ describe.skipIf(!DATABASE)("NC02 real disposable Core transaction locks, SYNTHET
     await expect(new AccessRepository(pool).grants(workspace)).rejects.toMatchObject({code:"RECEIPT_BINDING_MISMATCH"});
     await expect(withTransaction(pool,db=>captureCurrentHumanSnapshot(db,actor,workspace)))
       .rejects.toMatchObject({code:"RECEIPT_BINDING_MISMATCH"});
+  });
+
+  it("Manager STREAM refuses READ alone without consulting a native source",async()=>{
+    await expect(withTransaction(pool,db=>evaluateManagerDomainStream(db,input()))).rejects.toMatchObject({code:"ACCESS_DENIED"});
+  });
+  it("Manager STREAM intersects independent facts on ONE real locked PG snapshot and keeps exact READ digest",async()=>{
+    const repo=new AccessRepository(pool),sg={...f.grant,grant_id:f.grant.grant_id+"-stream",action:"stream.subscribe" as const};
+    await repo.saveManagerDomainGrant(sg,true);
+    let locks=0;
+    const decision=await withTransaction(pool,async db=>{
+      const query=db.query.bind(db),actual={query:async(sql:string,values?:unknown[])=>{
+        if(sql==="SELECT singleton FROM elp210_candidate.authority WHERE singleton FOR UPDATE")locks++;
+        return query(sql,values);
+      }};
+      return evaluateManagerDomainStream(actual as unknown as import("pg").PoolClient,input());
+    });
+    const read=await withTransaction(pool,db=>evaluateManagerDomainRead(db,input()));
+    expect(locks).toBe(1);expect(decision.scope_digest).toBe(read.scope_digest);
+    expect(decision.authority_fingerprint).toBe(read.authority_fingerprint);
+    expect(decision.stream_grant_id).toBe(sg.grant_id);
+    expect(decision.stream_scope_digest).not.toBe(read.scope_digest);
+    expect(decision.actor).toEqual(actor);expect(pool.totalCount-pool.idleCount).toBe(0);
+  });
+  it("Manager STREAM alone never grants READ",async()=>{
+    const repo=new AccessRepository(pool);
+    await repo.saveManagerDomainGrant({...f.grant,grant_id:f.grant.grant_id+"-stream",action:"stream.subscribe"},true);
+    await pool.query("DELETE FROM portal_access_grants_v2 WHERE grant_id=$1",[f.grant.grant_id]);
+    await expect(withTransaction(pool,db=>evaluateManagerDomainRead(db,input()))).rejects.toMatchObject({code:"ACCESS_DENIED"});
+    await expect(withTransaction(pool,db=>evaluateManagerDomainStream(db,input()))).rejects.toMatchObject({code:"ACCESS_DENIED"});
+  });
+  it("Manager STREAM revoke stops STREAM while independent current READ remains allowed",async()=>{
+    const repo=new AccessRepository(pool),sg={...f.grant,grant_id:f.grant.grant_id+"-stream",action:"stream.subscribe" as const};
+    await repo.saveManagerDomainGrant(sg,true);await withTransaction(pool,db=>evaluateManagerDomainStream(db,input()));
+    await repo.saveManagerDomainGrant({...sg,revision:"TEST_ONLY-stream-revoked",revoked_at_ms:Date.now()});
+    await expect(withTransaction(pool,db=>evaluateManagerDomainRead(db,input()))).resolves.toMatchObject({actor});
+    await expect(withTransaction(pool,db=>evaluateManagerDomainStream(db,input()))).rejects.toMatchObject({code:"ACCESS_DENIED"});
+  });
+  it("Manager STREAM explicit domain DENY cannot be bypassed by READ or STREAM ALLOW",async()=>{
+    const repo=new AccessRepository(pool),sg={...f.grant,grant_id:f.grant.grant_id+"-stream",action:"stream.subscribe" as const};
+    await repo.saveManagerDomainGrant(sg,true);
+    await repo.saveManagerDomainGrant({...sg,grant_id:sg.grant_id+"-deny",effect:"DENY"},true);
+    await expect(withTransaction(pool,db=>evaluateManagerDomainRead(db,input()))).resolves.toMatchObject({actor});
+    await expect(withTransaction(pool,db=>evaluateManagerDomainStream(db,input()))).rejects.toMatchObject({code:"ACCESS_DENIED"});
+  });
+  it("Manager STREAM conservatively intersects an existing entity stream DENY",async()=>{
+    const repo=new AccessRepository(pool);
+    await repo.saveManagerDomainGrant({...f.grant,grant_id:f.grant.grant_id+"-stream",action:"stream.subscribe"},true);
+    await repo.saveGrant({...legacy(f,"DENY"),action:"stream.subscribe"},true);
+    await expect(withTransaction(pool,db=>evaluateManagerDomainRead(db,input()))).resolves.toMatchObject({actor});
+    await expect(withTransaction(pool,db=>evaluateManagerDomainStream(db,input()))).rejects.toMatchObject({code:"ACCESS_DENIED"});
+  });
+  it("Manager STREAM cannot borrow permission from another full domain",async()=>{
+    await new AccessRepository(pool).saveManagerDomainGrant({...f.grant,grant_id:f.grant.grant_id+"-stream",
+      action:"stream.subscribe",domain:{...DOMAIN,field_policy_sha256:"4".repeat(64)}},true);
+    await expect(withTransaction(pool,db=>evaluateManagerDomainRead(db,input()))).resolves.toMatchObject({actor});
+    await expect(withTransaction(pool,db=>evaluateManagerDomainStream(db,input()))).rejects.toMatchObject({code:"ACCESS_DENIED"});
+  });
+  it("Manager STREAM expiry is a fixed intersection ceiling, never a sliding TTL",async()=>{
+    const until=Date.now()+5000;
+    await new AccessRepository(pool).saveManagerDomainGrant({...f.grant,grant_id:f.grant.grant_id+"-stream",
+      action:"stream.subscribe",valid_until_ms:until},true);
+    const first=await withTransaction(pool,db=>evaluateManagerDomainStream(db,input()));
+    const next=await withTransaction(pool,db=>evaluateManagerDomainStream(db,{...input(),expected_scope_digest:first.scope_digest}));
+    expect(first.valid_until_ms).toBe(until);expect(next.valid_until_ms).toBe(until);
+    expect(next.scope_digest).toBe(first.scope_digest);expect(next.stream_scope_digest).toBe(first.stream_scope_digest);
+  });
+  it("Manager STREAM refuses an incorrect ordinary READ expected digest",async()=>{
+    await new AccessRepository(pool).saveManagerDomainGrant({...f.grant,grant_id:f.grant.grant_id+"-stream",action:"stream.subscribe"},true);
+    await expect(withTransaction(pool,db=>evaluateManagerDomainStream(db,{...input(),expected_scope_digest:"sha256:"+"9".repeat(64)})))
+      .rejects.toMatchObject({code:"ACCESS_RETRY_REQUIRED"});
+  });
+  it("Manager STREAM cannot reuse a previous real session generation",async()=>{
+    await new AccessRepository(pool).saveManagerDomainGrant({...f.grant,grant_id:f.grant.grant_id+"-stream",action:"stream.subscribe"},true);
+    await withTransaction(pool,db=>evaluateManagerDomainStream(db,input()));
+    await pool.query("UPDATE portal_users SET session_version=session_version+1 WHERE user_id=$1",[actor.user_id]);
+    await expect(withTransaction(pool,db=>evaluateManagerDomainStream(db,input()))).rejects.toMatchObject({code:"CURRENT_ACTOR_AUTHORITY_REQUIRED"});
   });
 });

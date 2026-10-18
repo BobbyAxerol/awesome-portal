@@ -221,6 +221,27 @@
         },
         "show_in_command_palette": {
           "type": "boolean"
+        },
+        "scoped_v2_replacement": {
+          "description": "Presentation only: suppress the legacy entry only with an enabled V2 shell, visible replacement and authentic current server Core SCOPED_V2 selection for this workspace. Missing/null/unknown selection retains legacy navigation. This grants no authority and never redirects or removes routes.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["read_mode", "feature_id"],
+              "properties": {
+                "read_mode": {
+                  "const": "SCOPED_V2"
+                },
+                "feature_id": {
+                  "const": "EXECUTION_APPROVALS"
+                }
+              }
+            }
+          ]
         }
       }
     },

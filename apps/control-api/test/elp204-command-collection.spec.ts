@@ -175,7 +175,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
       ? (await f.commands.workflow(actor, f.workspace, record.id)).status
       : (await f.commands.collection(actor, { workspace_id: f.workspace, resource_kind: f.resource.kind, resource_id: f.resource.id,
         environment: f.environment, limit: 25 })).items[0];
-    expect(await request()).toEqual(record.status);
+    expect(await request()).toEqual({...record.status,currency:record.intent.business_payload.currency});
     const original = f.access.confirmReadContext.bind(f.access); let captured = false;
     const delay = vi.spyOn(f.access, "confirmReadContext").mockImplementation(async (...args) => {
       const row = (await ctx.pool.query(`UPDATE auth_sessions SET idle_expires_at=clock_timestamp()+interval '1500 milliseconds'
@@ -192,7 +192,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
         .rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403 });
       expect(captured).toBe(true);
     } finally { delay.mockRestore(); }
-    expect(await f.commands.status(viewer.actor, f.workspace, record.id)).toEqual(record.status);
+    expect(await f.commands.status(viewer.actor, f.workspace, record.id)).toEqual({...record.status,currency:record.intent.business_payload.currency});
     expect(f.commandTrust.prepare).not.toHaveBeenCalled(); expect(f.commandTrust.lookup).not.toHaveBeenCalled();
     expect(f.commandTrust.send).not.toHaveBeenCalled();
   }, 10_000);
@@ -210,6 +210,30 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
     });
   });
 
+  it("projects currency after original identity validation without rewriting old status/events", async () => {
+    const f=await fixture(),record=await seed(f);
+    const snapshot=async()=>({row:(await ctx.pool.query("SELECT intent,status,authorization_fact,intent_hash FROM execution_trusted_commands WHERE command_id=$1",[record.id])).rows[0],
+      events:(await ctx.pool.query("SELECT count(*)::int AS n FROM execution_trusted_command_events WHERE command_id=$1",[record.id])).rows[0].n});
+    const before=await snapshot();expect(before.row.status).not.toHaveProperty("currency");
+    await mounted(f,async http=>{
+      expect(page(await http.get()).items[0]).toEqual({...record.status,currency:"USDT"});
+      const detail=await http.detail(record.id);expect(detail.statusCode).toBe(200);
+      expect(detail.json()).toEqual({...record.status,currency:"USDT"});
+    });
+    expect(await snapshot()).toEqual(before);
+    expect(f.commandTrust.prepare).not.toHaveBeenCalled();expect(f.commandTrust.send).not.toHaveBeenCalled();expect(f.commandTrust.lookup).not.toHaveBeenCalled();
+    // Corrupt the adapter result AFTER real SQL; immutable DB triggers remain
+    // enabled, and the original intent/status/events never change.
+    const original=CommandStore.prototype.statusCandidates;
+    const fault=vi.spyOn(CommandStore.prototype,"statusCandidates").mockImplementation(async function(this:CommandStore,...args){
+      const rows=await original.apply(this,args);
+      return rows.map(row=>row.id!==record.id?row:{...row,intent:{...record.intent,
+        business_payload:{...record.intent.business_payload,currency:"EUR"}}});
+    });
+    try { await mounted(f,async http=>{error(await http.get(),503,"COMMAND_STATUS_UNVERIFIED");}); }
+    finally {fault.mockRestore();}
+    expect(await snapshot()).toEqual(before);
+  });
   it("returns authorized empty, not a global queue or a grant inferred from zero rows", async () => {
     const f = await fixture();
     await mounted(f, async http => {
@@ -266,7 +290,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
     const f = await fixture(), record = await seed(f);
     await f.repo.saveGrant({ ...f.grant, revoked_at_ms: Date.now(), revision: next() });
     await delegated(f, "ALLOW");
-    await mounted(f, async http => { expect(page(await http.get()).items).toEqual([record.status]);
+    await mounted(f, async http => { expect(page(await http.get()).items).toEqual([{...record.status,currency:record.intent.business_payload.currency}]);
       expect((await http.detail(record.id)).statusCode).toBe(200); });
   });
 
@@ -280,7 +304,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
     // Deliberate TEST_ONLY persistence corruption, NOT an accepted source receipt.
     await ctx.pool.query("UPDATE execution_trusted_commands SET status=$2 WHERE command_id=$1", [record.id, status]);
     await mounted(f, async http => {
-      const response = await http.get(); error(response, 503, variant === "malformed" ? "COMMAND_UNAVAILABLE" : "COMMAND_STATUS_UNVERIFIED");
+      const response = await http.get(); error(response, 503, "COMMAND_STATUS_UNVERIFIED");
       expect(response.body).not.toMatch(/TEST_ONLY_HIDDEN|PRIVATE_SQL/);
     });
   });
@@ -312,7 +336,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
   }
   it("orders timestamp ties by exact id and walks without duplicates, retaining valid delivery/business distinctions", async () => {
     const f = await fixture(), first = await seed(f), added = await bulk(f, first, 3, true);
-    const expected = [first.status, ...added].sort((a, b) => a.command_id < b.command_id ? -1 : 1);
+    const expected = [first.status, ...added].map(status=>({...status,currency:first.intent.business_payload.currency}))
+      .sort((a, b) => a.command_id < b.command_id ? -1 : 1);
     await mounted(f, async http => {
       const one = page(await http.get({ limit: "2" })), two = page(await http.get({ limit: "2", after: one.page.next_cursor! }));
       expect([...one.items, ...two.items]).toEqual(expected); expect(new Set([...one.items, ...two.items].map(x => x.command_id)).size).toBe(4);
@@ -431,7 +456,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
       return rows.map(row => row === oldest ? { ...row, status: { PRIVATE_SQL: "PRIVATE_LOOKAHEAD_DIAGNOSTIC" } } : row);
     });
     try { await mounted(f, async http => {
-      const response = await http.get({ limit: "1" }); error(response, 503, "COMMAND_UNAVAILABLE");
+      const response = await http.get({ limit: "1" }); error(response, 503, "COMMAND_STATUS_UNVERIFIED");
       expect(response.body).not.toMatch(/PRIVATE_LOOKAHEAD_DIAGNOSTIC|PRIVATE_SQL/);
     }); } finally { scan.mockRestore(); }
   });
@@ -467,7 +492,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
       const result = await f.commands.collection(actor, { workspace_id: f.workspace, resource_kind: f.resource.kind,
         resource_id: f.resource.id, environment: f.environment, limit: 25 });
       expect(delayed).toBe(true); expect(Date.now()).toBeGreaterThan(initialDeadline!);
-      expect(result.items).toEqual([record.status]);
+      expect(result.items).toEqual([{...record.status,currency:record.intent.business_payload.currency}]);
     } finally { scan.mockRestore(); capture.mockRestore(); }
     expect(f.commandTrust.prepare).not.toHaveBeenCalled(); expect(f.commandTrust.send).not.toHaveBeenCalled();
     expect(f.commandTrust.lookup).not.toHaveBeenCalled();
@@ -502,7 +527,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
       try { await mounted(f, async http => {
         const response = await http.get(failure === "bad-cursor" ? { after: "TEST_ONLY:not-a-signed-cursor" } : {});
         error(response, failure === "bad-cursor" ? 400 : 503,
-          failure === "bad-cursor" ? "COMMAND_COLLECTION_CURSOR_INVALID" : failure === "overflow" ? "COMMAND_COLLECTION_OVERFLOW" : "COMMAND_UNAVAILABLE");
+          failure === "bad-cursor" ? "COMMAND_COLLECTION_CURSOR_INVALID" : failure === "overflow" ? "COMMAND_COLLECTION_OVERFLOW" :
+          failure === "corrupt-status" ? "COMMAND_STATUS_UNVERIFIED" : "COMMAND_UNAVAILABLE");
         expect(trace).toContain("failure"); expect(trace.at(-1)).toBe("confirmed");
         expect(trace.lastIndexOf("confirmed")).toBeGreaterThan(trace.lastIndexOf("failure"));
         expect(response.body).not.toMatch(/PRIVATE_COLLECTION_DIAGNOSTIC|PRIVATE_SQL|SELECT|SyntaxError|HMAC/);
@@ -539,7 +565,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
       FEATURE_EXECUTION_LOCAL_PROJECTION: "true", EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: source };
     const detail = vi.spyOn(f.commands, "status"), preview = vi.spyOn(f.commands, "preview");
     try { await mounted(f, async http => {
-      expect(page(await http.get()).items).toEqual([record.status]);
+      expect(page(await http.get()).items).toEqual([{...record.status,currency:record.intent.business_payload.currency}]);
       expect((await http.detail(record.id)).statusCode).toBe(404); expect(detail).not.toHaveBeenCalled();
       expect((await http.preview()).statusCode).toBe(403); expect(preview).not.toHaveBeenCalled();
     }, config); } finally { detail.mockRestore(); preview.mockRestore(); }

@@ -20,17 +20,18 @@ const DATASET = "relation:manager.current.service-heartbeats:service_heartbeats"
 type Mode = AuthorizedExecutionReadScope["mode"];
 type Selection = { sourceWorkspaceId: string; binding: ReadScopeBinding; enabled: boolean; localEnabled: boolean };
 type Metadata = Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshotMetadata"]>>;
+type CaptureIdentity = Pick<NonNullable<Metadata>, "payloadDigest" | "projectionEpoch" | "sourceCatalogueSha256"> | null;
 const fail = (code: ConstructorParameters<typeof ExecutionReadScopeError>[0], status = 503): never => {
   throw new ExecutionReadScopeError(code, status);
 };
 const changed = (): never => fail("EXECUTION_READ_ACCESS_CHANGED", 409);
 const identifier = (value: unknown): value is string => typeof value === "string" && value.length > 0 &&
   [...value].length <= 256 && !/[\u0000-\u001f\u007f]/u.test(value);
-const identity = (metadata: Metadata) => metadata === null ? null : {
+const identity = (metadata: CaptureIdentity) => metadata === null ? null : {
   payloadDigest: metadata.payloadDigest, projectionEpoch: metadata.projectionEpoch,
   sourceCatalogueSha256: metadata.sourceCatalogueSha256,
 };
-const same = (left: Metadata, right: Metadata) => accessDigest(identity(left)) === accessDigest(identity(right));
+const same = (left: CaptureIdentity, right: CaptureIdentity) => accessDigest(identity(left)) === accessDigest(identity(right));
 class CaptureMoved extends Error {}
 
 /** One bounded retained technical read. No source send, collector, refresh,

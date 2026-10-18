@@ -235,3 +235,26 @@ Private receipt directory:
 Controller confirms source unchanged during that attempt and no remaining
 owned resources. Preserve the failed log/receipt; do not call the commit or
 restore successful until the corrected normal-hook terminal is authoritative.
+
+### Actual corrected normal R3 terminal — 2026-10-18T16:04:56UTC
+
+`pending-control-land-151825`: **PASS**, commit
+`5291a80f68a11cbccad879d1e99bb6282634f636`,53files,+8451/−19. Normal hook
+contracts73files/996tests PASS; supported clean Node22 build PASS;
+API398files PASS/2skip,7503tests PASS/3skip. API duration2266.65s; no second
+heavy lane. This includes the corrected disposable History/retained fixtures;
+production semantics did not change. Static workspace/tracking/census and
+release-integrity checks PASS with runtime_effect NONE.
+
+Receipt directory
+`/home/bobby/.local/state/portal-execution-elp210/20261018/pending-control/pending-control-land-151825/`;
+log SHA256 `275849cab47c0489bdc960b6c97374156f225eafee024b83e5fb883baeabf6f2`.
+Controller terminal confirms eight protected runtime tuples unchanged, frozen
+source, no foreign staging and no remaining owned resources. Configured bounds
+4CPU/4GiB/8GiB transient; this is not a new financial capacity measurement.
+Cleanup NO_ACTION_NEEDED; no data/image/volume prune or provider installation.
+
+C1/C2 local code delivery complete, not full ELP2-07 source qualification or
+Claude ACK. Pending-control remains a separate family/known-id recovery, never
+a capital collection or a new recall amount. Next backend C3–C7 is approved;
+Claude can now review this actual producer commit and its generated fixtures.

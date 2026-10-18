@@ -446,6 +446,8 @@ export const N17B_CURRENT_EXACT_QUERY_ACCEPTANCE = Object.freeze({
 });
 
 export interface CurrentSourcePrincipal {
+  /** Server-only correlation, NEVER an authorization proof or browser input. */
+  readonly nativeEpochDigest?: string;
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
@@ -530,6 +532,7 @@ const EDS11R_MARKET_CONTEXT_GATEWAY_CONTEXT: CurrentSourceGatewayContext = Objec
 });
 
 interface CurrentSourceIdentity {
+  readonly nativeEpochDigest?: string;
   principalId: string;
   sessionId: string;
   workspaceId: string;
@@ -1019,6 +1022,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       workspaceId: principal.workspaceId,
       principalId: principal.principalId,
       principalRole: principal.role,
+      ...(principal.nativeEpochDigest !== undefined ? { nativeEpochDigest: principal.nativeEpochDigest } : {}),
       adapterRevision: operationPolicy?.adapterRevision ?? (requestedEnvironment === "paper"
         ? N22_PAPER_READ_ACCEPTANCE.adapter
         : N23_PROFILE_READ_ACCEPTANCE.adapter),
@@ -2127,5 +2131,6 @@ function browserIdentity(principal: CurrentSourcePrincipal): CurrentSourceIdenti
     role: principal.user.role,
     authenticationTime: principal.session.authenticationTime,
     authenticationMethods: ["portal_session"],
+    ...(principal.nativeEpochDigest !== undefined ? { nativeEpochDigest: principal.nativeEpochDigest } : {}),
   };
 }

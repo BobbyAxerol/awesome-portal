@@ -422,3 +422,20 @@ the eight generated operations; do not grant rights from UI or TEST_ONLY
 fixtures. No frontend/shared preview/HK/production changes or push occurred.
 This post-commit result journal is awaiting the next coherent normal-hook
 delivery; no second full hook is started solely for Markdown.
+
+## C3 follow-through —2026-10-18
+
+The two own eligibility/navigation GETs are integrated WIP. Their types,
+selectors, source dependency closure and honest advisory limits are in the
+[producer packet](../ELP2-10/manager-intake-2026-10-18.md). The
+[researcher field matrix](researcher-field-policy-proposal-2026-10-18.md)
+is a proposal for Bobby, NOT an installed grant/policy or consumer ACK.
+
+Follow-through: generated self-navigation adds current Core `current_read_mode`
+captured in one genuine policy/sticky-history snapshot. Its self-only auxiliary
+fence does not change historical authority fingerprints or grant permission.
+Registry rev7 replacement metadata is optional; only hide legacy Approvals with
+an enabled shell, visible replacement and same-workspace SCOPED_V2. Route and
+deep-link compatibility remain unchanged. See the owning producer packet for
+actual tests and final R3 state; consumer/router and browser acceptance are not
+asserted by producer definitions. No Operations authorization probe is needed.

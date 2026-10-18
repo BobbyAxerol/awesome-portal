@@ -147,6 +147,109 @@ export interface components {
         ManagerDataset: {
             /** @constant */
             schema_version: "portal.execution.manager-dataset.v1";
+            selected_window: ({
+                requested: ("7D" | "30D" | "90D" | "ALL") | {
+                    from_ms: number;
+                    to_ms: number;
+                };
+                resolved: {
+                    from_ms: number;
+                    to_ms: number;
+                } | null;
+                /** @constant */
+                selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY";
+                reason_code: "ALL_HISTORY_WINDOW_NOT_PUBLISHED" | null;
+            } & unknown) | null;
+            query_options: {
+                /** @constant */
+                temporal_mode: "CURRENT_ONLY";
+                search: {
+                    fields: "name"[];
+                    modes: ("PREFIX" | "CONTAINS")[];
+                    /** @constant */
+                    maximum_text_length: 160;
+                    /** @constant */
+                    normalization: "JS_TO_LOWER_CASE_NO_UNICODE_NORMALIZATION";
+                };
+                sort_fields: ("alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score" | "stage_presence")[];
+                group_fields: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
+                metric_keys: ("allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score")[];
+                economic_partition_required_for: ("allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value")[];
+                window: {
+                    /** @constant */
+                    custom_supported: true;
+                    /** @constant */
+                    interpretation: "MATCH_ONLY_NO_READ_TIME_CALCULATION";
+                    independent_metrics: ("allocation" | "balance_total" | "unrealized_pnl")[];
+                    presets: [
+                        {
+                            /** @constant */
+                            value: "7D";
+                        },
+                        {
+                            /** @constant */
+                            value: "30D";
+                        },
+                        {
+                            /** @constant */
+                            value: "90D";
+                        },
+                        {
+                            /** @constant */
+                            value: "ALL";
+                        }
+                    ] & ({
+                        /** @enum {string} */
+                        value: "7D" | "30D" | "90D" | "ALL";
+                        resolved: {
+                            from_ms: number;
+                            to_ms: number;
+                        } | null;
+                        /** @enum {string} */
+                        data_state: "METRIC_SPECIFIC" | "NOT_PUBLISHED";
+                        reason_code: ("EXACT_METRIC_WINDOW_NOT_PUBLISHED" | "ALL_HISTORY_WINDOW_NOT_PUBLISHED") | null;
+                    } & (unknown & unknown))[];
+                };
+                stage_environment: [
+                    {
+                        environment: "paper";
+                        stages: [
+                            "PAPER"
+                        ];
+                    },
+                    {
+                        environment: "sandbox";
+                        stages: [
+                            "SANDBOX"
+                        ];
+                    },
+                    {
+                        environment: "live";
+                        stages: [
+                            "CANARY",
+                            "LIVE"
+                        ];
+                    }
+                ] & {
+                    /** @enum {string} */
+                    environment: "paper" | "sandbox" | "live";
+                    stages: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                }[];
+                unavailable_fields: [
+                    {
+                        /** @constant */
+                        field: "current_stage";
+                        /** @constant */
+                        reason_code: "CURRENT_STAGE_GRAIN_NOT_PUBLISHED";
+                    },
+                    {
+                        /** @constant */
+                        field: "days_in_stage";
+                        /** @constant */
+                        reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED";
+                    }
+                ];
+            } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
             /** @enum {string} */
             surface: "FUND" | "FLEET" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
             workspace_id: string;
@@ -235,7 +338,7 @@ export interface components {
                         provenance_refs: string[];
                         calculation_revision: string;
                         policy_revision: string;
-                    };
+                    } & (unknown & unknown);
                 };
                 economic_partitions: {
                     partition: {
@@ -273,7 +376,7 @@ export interface components {
                             provenance_refs: string[];
                             calculation_revision: string;
                             policy_revision: string;
-                        };
+                        } & (unknown & unknown);
                     };
                 }[];
             }[];
@@ -321,7 +424,7 @@ export interface components {
                             provenance_refs: string[];
                             calculation_revision: string;
                             policy_revision: string;
-                        };
+                        } & (unknown & unknown);
                     };
                 }[];
             }[];
@@ -361,7 +464,7 @@ export interface components {
                         provenance_refs: string[];
                         calculation_revision: string;
                         policy_revision: string;
-                    };
+                    } & (unknown & unknown);
                 };
             }[];
             /** @constant */
@@ -370,18 +473,24 @@ export interface components {
                 raw: {
                     value: string | null;
                     /** @enum {string} */
-                    status: "policy_pending" | "available" | "provisional" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data";
-                };
+                    status: "policy_pending" | "available" | "provisional" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data" | "window_not_published";
+                    /** @enum {string} */
+                    reason_code?: "EXACT_METRIC_WINDOW_NOT_PUBLISHED" | "ALL_HISTORY_WINDOW_NOT_PUBLISHED";
+                } & (unknown & unknown);
                 composition: {
                     value: string | null;
                     /** @enum {string} */
-                    status: "policy_pending" | "available" | "provisional" | "partial_coverage" | "incomparable_basis" | "no_allocation" | "invalid_data";
-                };
+                    status: "policy_pending" | "available" | "provisional" | "partial_coverage" | "incomparable_basis" | "no_allocation" | "invalid_data" | "window_not_published";
+                    /** @enum {string} */
+                    reason_code?: "EXACT_METRIC_WINDOW_NOT_PUBLISHED" | "ALL_HISTORY_WINDOW_NOT_PUBLISHED";
+                } & (unknown & unknown);
                 direct_nav: {
                     value: string | null;
                     /** @enum {string} */
-                    status: "policy_pending" | "available" | "provisional" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data";
-                };
+                    status: "policy_pending" | "available" | "provisional" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components" | "insufficient_data" | "window_not_published";
+                    /** @enum {string} */
+                    reason_code?: "EXACT_METRIC_WINDOW_NOT_PUBLISHED" | "ALL_HISTORY_WINDOW_NOT_PUBLISHED";
+                } & (unknown & unknown);
                 regime: {
                     value: null;
                     /** @enum {string} */
@@ -389,7 +498,7 @@ export interface components {
                     reason_code?: ("REGIME_POLICY_SOURCE_OR_AUTHORIZED_SLICE_NOT_QUALIFIED" | "REGIME_IS_PER_ALPHA_OR_DEPLOYMENT_ONLY") | null;
                 };
                 /** @enum {string} */
-                reason_code: "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED" | "QUALIFIED_PRECOMPUTED_SCORE";
+                reason_code: "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED" | "QUALIFIED_PRECOMPUTED_SCORE" | "EXACT_METRIC_WINDOW_NOT_PUBLISHED" | "ALL_HISTORY_WINDOW_NOT_PUBLISHED";
                 /** @constant */
                 calculation_path: "PRECOMPUTED_ONLY";
             };
@@ -719,26 +828,33 @@ export interface components {
                 revision: string;
                 supersedes_revision: string | null;
             };
-        };
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerDatasetQuery: {
             workspace_id?: string;
             /** @enum {string} */
             environment: "paper" | "sandbox" | "live";
+            q?: string;
+            /** @enum {string} */
+            q_mode?: "PREFIX" | "CONTAINS";
+            window?: ("7D" | "30D" | "90D" | "ALL") | {
+                from_ms: number;
+                to_ms: number;
+            };
             stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
             lifecycle_filter?: string;
-            filters?: {
+            filters?: ({
                 /** @enum {string} */
-                field: "alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score";
+                field: "alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "stage_presence" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score";
                 /** @enum {string} */
                 op: "EQ" | "GTE" | "LTE" | "IS_NULL";
                 value?: string;
-            }[];
+            } & (unknown & unknown))[];
             sort?: {
                 /** @enum {string} */
-                field: "alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score";
+                field: "alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "stage_presence" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score";
                 /** @enum {string} */
                 direction: "asc" | "desc";
-            }[];
+            }[] & (unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[]);
             group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
             economic_partition?: {
                 /** @enum {string} */
@@ -751,7 +867,7 @@ export interface components {
             limit?: number;
             after?: string;
             before?: string;
-        };
+        } & (unknown & unknown & unknown & unknown & unknown);
         ManagerMetric: {
             value: string | null;
             unit: string;
@@ -778,7 +894,7 @@ export interface components {
             provenance_refs: string[];
             calculation_revision: string;
             policy_revision: string;
-        };
+        } & (unknown & unknown);
         ManagerDatasetRow: {
             row_key: string;
             alpha_id: string;
@@ -828,7 +944,7 @@ export interface components {
                     provenance_refs: string[];
                     calculation_revision: string;
                     policy_revision: string;
-                };
+                } & (unknown & unknown);
             };
             economic_partitions: {
                 partition: {
@@ -866,7 +982,7 @@ export interface components {
                         provenance_refs: string[];
                         calculation_revision: string;
                         policy_revision: string;
-                    };
+                    } & (unknown & unknown);
                 };
             }[];
         };
@@ -1183,6 +1299,118 @@ export interface components {
                 evidence_valid_until_ms: number;
                 evaluation_at_ms: number;
             };
+        };
+        ManagerQueryOptions: {
+            /** @constant */
+            temporal_mode: "CURRENT_ONLY";
+            search: {
+                fields: "name"[];
+                modes: ("PREFIX" | "CONTAINS")[];
+                /** @constant */
+                maximum_text_length: 160;
+                /** @constant */
+                normalization: "JS_TO_LOWER_CASE_NO_UNICODE_NORMALIZATION";
+            };
+            sort_fields: ("alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score" | "stage_presence")[];
+            group_fields: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
+            metric_keys: ("allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score")[];
+            economic_partition_required_for: ("allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value")[];
+            window: {
+                /** @constant */
+                custom_supported: true;
+                /** @constant */
+                interpretation: "MATCH_ONLY_NO_READ_TIME_CALCULATION";
+                independent_metrics: ("allocation" | "balance_total" | "unrealized_pnl")[];
+                presets: [
+                    {
+                        /** @constant */
+                        value: "7D";
+                    },
+                    {
+                        /** @constant */
+                        value: "30D";
+                    },
+                    {
+                        /** @constant */
+                        value: "90D";
+                    },
+                    {
+                        /** @constant */
+                        value: "ALL";
+                    }
+                ] & ({
+                    /** @enum {string} */
+                    value: "7D" | "30D" | "90D" | "ALL";
+                    resolved: {
+                        from_ms: number;
+                        to_ms: number;
+                    } | null;
+                    /** @enum {string} */
+                    data_state: "METRIC_SPECIFIC" | "NOT_PUBLISHED";
+                    reason_code: ("EXACT_METRIC_WINDOW_NOT_PUBLISHED" | "ALL_HISTORY_WINDOW_NOT_PUBLISHED") | null;
+                } & (unknown & unknown))[];
+            };
+            stage_environment: [
+                {
+                    environment: "paper";
+                    stages: [
+                        "PAPER"
+                    ];
+                },
+                {
+                    environment: "sandbox";
+                    stages: [
+                        "SANDBOX"
+                    ];
+                },
+                {
+                    environment: "live";
+                    stages: [
+                        "CANARY",
+                        "LIVE"
+                    ];
+                }
+            ] & {
+                /** @enum {string} */
+                environment: "paper" | "sandbox" | "live";
+                stages: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+            }[];
+            unavailable_fields: [
+                {
+                    /** @constant */
+                    field: "current_stage";
+                    /** @constant */
+                    reason_code: "CURRENT_STAGE_GRAIN_NOT_PUBLISHED";
+                },
+                {
+                    /** @constant */
+                    field: "days_in_stage";
+                    /** @constant */
+                    reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED";
+                }
+            ];
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        ManagerSelectedWindow: {
+            requested: ("7D" | "30D" | "90D" | "ALL") | {
+                from_ms: number;
+                to_ms: number;
+            };
+            resolved: {
+                from_ms: number;
+                to_ms: number;
+            } | null;
+            /** @constant */
+            selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY";
+            reason_code: "ALL_HISTORY_WINDOW_NOT_PUBLISHED" | null;
+        } & unknown;
+        ManagerCurrentOnlyProblem: {
+            error: {
+                /** @constant */
+                code: "EXECUTION_READ_CURRENT_ONLY";
+                /** @constant */
+                message: "The requested Execution read is not available.";
+            };
+            request_id: string;
         };
         ManagerScoreRevisionQuery: {
             workspace_id?: string;
@@ -2629,6 +2857,15 @@ export interface components {
             feature_cutoff_ms: number;
             reference_cutoff_ms: number | null;
         };
+        ManagerQueryProblem: {
+            error: {
+                /** @enum {string} */
+                code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_QUERY_INVALID" | "EXECUTION_READ_CURSOR_INVALID";
+                /** @constant */
+                message: "The requested Execution read is not available.";
+            };
+            request_id: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2643,6 +2880,9 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live";
+                q?: string;
+                q_mode?: "PREFIX" | "CONTAINS";
+                window?: string;
                 stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
                 lifecycle_filter?: string;
                 filters?: string;
@@ -2662,22 +2902,27 @@ export interface operations {
             /** @description Authorized current snapshot; absence and policy-pending remain typed */
             200: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ManagerDataset"];
                 };
             };
-            /** @description Invalid closed query */
+            /** @description Closed query rejected; any supplied as_of_ms is explicitly CURRENT_ONLY */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ManagerCurrentOnlyProblem"] | components["schemas"]["ManagerQueryProblem"];
+                };
             };
             /** @description Session required */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2685,6 +2930,7 @@ export interface operations {
             /** @description Resource or current grant unavailable */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2692,6 +2938,7 @@ export interface operations {
             /** @description Authority, snapshot or cursor changed */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2699,6 +2946,7 @@ export interface operations {
             /** @description Source publication, field policy, projection or bounded capacity unavailable */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2710,6 +2958,9 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live";
+                q?: string;
+                q_mode?: "PREFIX" | "CONTAINS";
+                window?: string;
                 stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
                 lifecycle_filter?: string;
                 filters?: string;
@@ -2729,22 +2980,27 @@ export interface operations {
             /** @description Authorized current snapshot; absence and policy-pending remain typed */
             200: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ManagerDataset"];
                 };
             };
-            /** @description Invalid closed query */
+            /** @description Closed query rejected; any supplied as_of_ms is explicitly CURRENT_ONLY */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ManagerCurrentOnlyProblem"] | components["schemas"]["ManagerQueryProblem"];
+                };
             };
             /** @description Session required */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2752,6 +3008,7 @@ export interface operations {
             /** @description Resource or current grant unavailable */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2759,6 +3016,7 @@ export interface operations {
             /** @description Authority, snapshot or cursor changed */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2766,6 +3024,7 @@ export interface operations {
             /** @description Source publication, field policy, projection or bounded capacity unavailable */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2777,6 +3036,9 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live";
+                q?: string;
+                q_mode?: "PREFIX" | "CONTAINS";
+                window?: string;
                 stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
                 lifecycle_filter?: string;
                 filters?: string;
@@ -2798,22 +3060,27 @@ export interface operations {
             /** @description Authorized current snapshot; absence and policy-pending remain typed */
             200: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ManagerDataset"];
                 };
             };
-            /** @description Invalid closed query */
+            /** @description Closed query rejected; any supplied as_of_ms is explicitly CURRENT_ONLY */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ManagerCurrentOnlyProblem"] | components["schemas"]["ManagerQueryProblem"];
+                };
             };
             /** @description Session required */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2821,6 +3088,7 @@ export interface operations {
             /** @description Resource or current grant unavailable */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2828,6 +3096,7 @@ export interface operations {
             /** @description Authority, snapshot or cursor changed */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2835,6 +3104,7 @@ export interface operations {
             /** @description Source publication, field policy, projection or bounded capacity unavailable */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2846,6 +3116,9 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live";
+                q?: string;
+                q_mode?: "PREFIX" | "CONTAINS";
+                window?: string;
                 stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
                 lifecycle_filter?: string;
                 filters?: string;
@@ -2867,22 +3140,27 @@ export interface operations {
             /** @description Authorized current snapshot; absence and policy-pending remain typed */
             200: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ManagerDataset"];
                 };
             };
-            /** @description Invalid closed query */
+            /** @description Closed query rejected; any supplied as_of_ms is explicitly CURRENT_ONLY */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ManagerCurrentOnlyProblem"] | components["schemas"]["ManagerQueryProblem"];
+                };
             };
             /** @description Session required */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2890,6 +3168,7 @@ export interface operations {
             /** @description Resource or current grant unavailable */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2897,6 +3176,7 @@ export interface operations {
             /** @description Authority, snapshot or cursor changed */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2904,6 +3184,7 @@ export interface operations {
             /** @description Source publication, field policy, projection or bounded capacity unavailable */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2915,6 +3196,9 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live";
+                q?: string;
+                q_mode?: "PREFIX" | "CONTAINS";
+                window?: string;
                 stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
                 lifecycle_filter?: string;
                 filters?: string;
@@ -2936,22 +3220,27 @@ export interface operations {
             /** @description Authorized current snapshot; absence and policy-pending remain typed */
             200: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ManagerDataset"];
                 };
             };
-            /** @description Invalid closed query */
+            /** @description Closed query rejected; any supplied as_of_ms is explicitly CURRENT_ONLY */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ManagerCurrentOnlyProblem"] | components["schemas"]["ManagerQueryProblem"];
+                };
             };
             /** @description Session required */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2959,6 +3248,7 @@ export interface operations {
             /** @description Resource or current grant unavailable */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2966,6 +3256,7 @@ export interface operations {
             /** @description Authority, snapshot or cursor changed */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2973,6 +3264,7 @@ export interface operations {
             /** @description Source publication, field policy, projection or bounded capacity unavailable */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -2984,6 +3276,9 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live";
+                q?: string;
+                q_mode?: "PREFIX" | "CONTAINS";
+                window?: string;
                 stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
                 lifecycle_filter?: string;
                 filters?: string;
@@ -3005,22 +3300,27 @@ export interface operations {
             /** @description Authorized current snapshot; absence and policy-pending remain typed */
             200: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ManagerDataset"];
                 };
             };
-            /** @description Invalid closed query */
+            /** @description Closed query rejected; any supplied as_of_ms is explicitly CURRENT_ONLY */
             400: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ManagerCurrentOnlyProblem"] | components["schemas"]["ManagerQueryProblem"];
+                };
             };
             /** @description Session required */
             401: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -3028,6 +3328,7 @@ export interface operations {
             /** @description Resource or current grant unavailable */
             404: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -3035,6 +3336,7 @@ export interface operations {
             /** @description Authority, snapshot or cursor changed */
             409: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -3042,6 +3344,7 @@ export interface operations {
             /** @description Source publication, field policy, projection or bounded capacity unavailable */
             503: {
                 headers: {
+                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content?: never;

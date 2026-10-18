@@ -1,4 +1,5 @@
 import { createCipheriv,createDecipheriv,createHash,randomBytes } from "node:crypto";
+import { types } from "node:util";
 import { accessDigest } from "./access-policy";
 import { scopedReplayBinding,type ScopedReplayBinding,type ScopedRealtimeFrame } from "./realtime.contract";
 
@@ -46,11 +47,13 @@ export function encodeScopedReplayContinuation(codec:ScopedReplayCursorCodec,bin
   const data=Buffer.concat([cipher.update(payload),cipher.final()]);
   return ["sr1",s.active,iv.toString("base64url"),data.toString("base64url"),cipher.getAuthTag().toString("base64url")].join(".");
 }
-export function decodeScopedReplayContinuation(codec:ScopedReplayCursorCodec,token:string,binding:ScopedReplayBinding):string{
+type AuthenticatedContinuation=Readonly<{binding:string;source:string}>;
+/** Authenticate the SAME padded sr1 envelope before any source-coordinate
+ * interpretation. This helper never exposes an unbound public decrypt API. */
+function authenticateContinuation(codec:ScopedReplayCursorCodec,token:string):AuthenticatedContinuation{
   const s=stateOf(codec);
   try{
-    scopedReplayBinding.parse(binding);
-    if(token.length>4096||!/^[A-Za-z0-9_.-]+$/.test(token))throw Error();
+    if(typeof token!=="string"||token.length>4096||!/^[A-Za-z0-9_.-]+$/.test(token))throw Error();
     const [version,id,iv,ciphertext,tag,...extra]=token.split("."),key=s.keys.get(id);
     if(version!=="sr1"||!key||extra.length)throw Error();
     const nonce=Buffer.from(iv,"base64url"),authTag=Buffer.from(tag,"base64url");
@@ -61,12 +64,44 @@ export function decodeScopedReplayContinuation(codec:ScopedReplayCursorCodec,tok
     decipher.setAAD(Buffer.from(`portal-scoped-replay.v1:${id}`));decipher.setAuthTag(authTag);
     const payload=Buffer.concat([decipher.update(data),decipher.final()]),length=payload.readUInt32BE();
     if(length>2812)throw Error();
-    const raw=JSON.parse(payload.subarray(4,4+length).toString("utf8"));
-    const now=s.now();
-    if(!Number.isSafeInteger(now)||now<0||Object.keys(raw).sort().join()!=="binding,expires,issued,source"||raw.binding!==accessDigest(binding)||
+    const raw=JSON.parse(payload.subarray(4,4+length).toString("utf8")),now=s.now();
+    if(!Number.isSafeInteger(now)||now<0||!raw||typeof raw!=="object"||
+      Object.keys(raw).sort().join()!=="binding,expires,issued,source"||
+      typeof raw.binding!=="string"||!/^sha256:[a-f0-9]{64}$(?![\s\S])/.test(raw.binding)||
       !Number.isSafeInteger(raw.issued)||!Number.isSafeInteger(raw.expires)||raw.issued>now||raw.expires<=now||
       raw.expires-raw.issued<1||raw.expires-raw.issued>300_000||typeof raw.source!=="string"||!raw.source||
       Buffer.byteLength(raw.source)>2048)throw Error();
+    return Object.freeze({binding:raw.binding,source:raw.source});
+  }catch{throw new ScopedReplayError("CURSOR_INVALID_OR_EXPIRED");}
+}
+export function decodeScopedReplayContinuation(codec:ScopedReplayCursorCodec,token:string,binding:ScopedReplayBinding):string{
+  try{
+    scopedReplayBinding.parse(binding);
+    const raw=authenticateContinuation(codec,token);
+    if(raw.binding!==accessDigest(binding))throw Error();
     return raw.source;
+  }catch{throw new ScopedReplayError("CURSOR_INVALID_OR_EXPIRED");}
+}
+/** Internal trusted adapter entry point. The synchronous, pure resolver parses
+ * a CLOSED authenticated coordinate and combines its original snapshot ID
+ * with CURRENT authority. The resolver sees authenticated, not yet caller-bound
+ * source: it MUST NOT log, do I/O or publish it. The return value is released
+ * only after complete equality. Never accept a request-provided resolver or
+ * use the coordinate as an authorization grant. */
+export function decodeScopedReplayContinuationWithBinding(codec:ScopedReplayCursorCodec,token:string,
+  resolveBinding:(source:string)=>ScopedReplayBinding):Readonly<{binding:ScopedReplayBinding;source:string}>{
+  try{
+    const raw=authenticateContinuation(codec,token);
+    const resolved=resolveBinding(raw.source);
+    if(types.isPromise(resolved)){
+      // A mistyped async adapter is refused, never awaited. Consume a native
+      // rejection so a denied request cannot create an unhandled rejection.
+      void Promise.prototype.then.call(resolved,()=>undefined,()=>undefined);
+      throw Error();
+    }
+    const binding=scopedReplayBinding.parse(resolved);
+    if(raw.binding!==accessDigest(binding))throw Error();
+    if(binding.window)Object.freeze(binding.window);
+    return Object.freeze({binding:Object.freeze(binding),source:raw.source});
   }catch{throw new ScopedReplayError("CURSOR_INVALID_OR_EXPIRED");}
 }

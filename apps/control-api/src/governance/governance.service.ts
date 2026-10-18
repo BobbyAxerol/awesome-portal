@@ -1217,7 +1217,7 @@ export class GovernanceService {
  * frozen in A4-1 and does not cover the exit gates; inventing entries for them
  * here would create authority the owner never granted.
  */
-function approvalDecisionPredicate(
+export function approvalDecisionPredicate(
   user: PortalUser,
   access: EffectiveAccess,
   workspaceId: string | null,

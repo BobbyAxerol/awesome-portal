@@ -265,7 +265,8 @@ export interface paths {
         /** Run Export */
         get: operations["run_export_api_runs__run_id__export_get"];
         put?: never;
-        post?: never;
+        /** Prepare Run Export */
+        post: operations["prepare_run_export_api_runs__run_id__export_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -817,6 +818,11 @@ export interface components {
             /** Data Start */
             data_start?: string | null;
             /**
+             * Embargo Bars
+             * @default 0
+             */
+            embargo_bars: number;
+            /**
              * Fill Value
              * @default 0
              */
@@ -827,6 +833,22 @@ export interface components {
              * @constant
              */
             fold_boundary_position_policy: "carry";
+            /**
+             * Inner Min Folds
+             * @default 2
+             */
+            inner_min_folds: number;
+            /** Inner Split Frequency */
+            inner_split_frequency?: ("weekly" | "monthly" | "quarterly") | null;
+            /** Inner Train Window */
+            inner_train_window?: string | null;
+            /** Inner Window Mode */
+            inner_window_mode?: ("expanding" | "rolling") | null;
+            /**
+             * Label Horizon Bars
+             * @default 0
+             */
+            label_horizon_bars: number;
             /**
              * Min Test Bars
              * @default 1
@@ -889,6 +911,11 @@ export interface components {
              * @default 0
              */
             optuna_trials: number;
+            /**
+             * Purge Bars
+             * @default 0
+             */
+            purge_bars: number;
             /**
              * Random Seed
              * @default 42
@@ -1480,6 +1507,7 @@ export interface components {
             icon_key: string;
             /** Order */
             order: number;
+            scoped_v2_replacement?: components["schemas"]["ScopedV2NavigationReplacement"] | null;
             /** Show In Command Palette */
             show_in_command_palette: boolean;
             /** Show In Sidebar */
@@ -1713,6 +1741,73 @@ export interface components {
             value?: unknown | null;
             /** Values */
             values?: unknown[] | null;
+        };
+        /**
+         * PinnedSelectionAuditTarget
+         * @description All-time frozen global selection: no new optimizer/default knobs.
+         *
+         *     Per-fold causal selections require their own individually pinned target
+         *     sequence. Refuse that source here instead of taking the last fold map.
+         */
+        PinnedSelectionAuditTarget: {
+            /**
+             * Adapter Contract Digest
+             * @constant
+             */
+            adapter_contract_digest: "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784";
+            /** Alpha Version Id */
+            alpha_version_id: string;
+            /** Dataset Binding Digest */
+            dataset_binding_digest: string;
+            /**
+             * Engine Release Id
+             * @constant
+             */
+            engine_release_id: "er_quantbt_111";
+            /**
+             * Engine Version
+             * @constant
+             */
+            engine_version: "1.1.1";
+            /**
+             * Execution Adapter Id
+             * @constant
+             */
+            execution_adapter_id: "p04.delta-rsi.v1";
+            /** Parent Artifact Id */
+            parent_artifact_id: string;
+            /** Parent Artifact Revision */
+            parent_artifact_revision: number;
+            /** Parent Manifest Digest */
+            parent_manifest_digest: string;
+            /** Parent Run Id */
+            parent_run_id: string;
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "research.pinned-selection-audit-target.v1";
+            /** Snapshot Content Hash */
+            snapshot_content_hash: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Source Config Digest */
+            source_config_digest: string;
+            /** Source Config Raw */
+            source_config_raw: string;
+            /** Source Selection Digest */
+            source_selection_digest: string;
+            /**
+             * Source Selection Kind
+             * @enum {string}
+             */
+            source_selection_kind: "ENGINE_SELECTED_PARAMS_DOCUMENT" | "P05_SELECTION_PARAMETERS_JSON";
+            /** Source Selection Part Digest */
+            source_selection_part_digest?: string | null;
+            /** Source Selection Part Relative Path */
+            source_selection_part_relative_path?: string | null;
+            /** Source Selection Raw */
+            source_selection_raw: string;
         };
         /** PlanningSummaryDependency */
         PlanningSummaryDependency: {
@@ -2106,20 +2201,26 @@ export interface components {
              * Execution Adapter Id
              * @enum {string}
              */
-            execution_adapter_id: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1";
+            execution_adapter_id: "p04.delta-rsi.v1" | "p17.imported-signal-notional.v1" | "full03.delta-rsi.v1";
             /** Execution Profile Digest */
             execution_profile_digest?: string | null;
             /**
              * Execution Profile Id
              * @default p04.fixed-qualification.v1
-             * @enum {string}
              */
-            execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p16.delta-whatif-grid.v1" | "p17.imported-signal-notional.v1";
+            execution_profile_id: string;
+            final_audit_target?: components["schemas"]["PinnedSelectionAuditTarget"] | null;
+            /** Final Audit Target Digest */
+            final_audit_target_digest?: string | null;
             /** Imported Entrypoint */
             imported_entrypoint?: string | null;
             /** Imported Parameters */
             imported_parameters?: {
                 [key: string]: string | number | boolean;
+            } | null;
+            /** Imported Search Binding */
+            imported_search_binding?: {
+                [key: string]: unknown;
             } | null;
             /** Imported Source Digest */
             imported_source_digest?: string | null;
@@ -2136,6 +2237,10 @@ export interface components {
             } | null;
             /** Preflight Token */
             preflight_token: string;
+            /** Qualification Binding */
+            qualification_binding?: {
+                [key: string]: unknown;
+            } | null;
             /** Requested Spec */
             requested_spec: {
                 [key: string]: unknown;
@@ -2151,6 +2256,7 @@ export interface components {
             snapshot_content_hash: string;
             /** Snapshot Id */
             snapshot_id: string;
+            source_observation?: components["schemas"]["VnSourceObservation"] | null;
             whatif?: components["schemas"]["WhatIfJob"] | null;
             /** Work Digest */
             work_digest: string;
@@ -2216,6 +2322,27 @@ export interface components {
          * @enum {string}
          */
         RunProtocol: "three_window_decay" | "advanced_walk_forward";
+        /**
+         * ScopedV2NavigationReplacement
+         * @description Presentation metadata only; never an entitlement or policy selector.
+         *
+         *     Consumers may suppress the old entry only when the V2 shell is enabled,
+         *     the replacement is visible, and the server has selected SCOPED_V2 for the
+         *     same current Core workspace. Unknown mode preserves legacy navigation.
+         *     Existing routes remain addressable and retain their own authorization.
+         */
+        ScopedV2NavigationReplacement: {
+            /**
+             * Feature Id
+             * @constant
+             */
+            feature_id: "EXECUTION_APPROVALS";
+            /**
+             * Read Mode
+             * @constant
+             */
+            read_mode: "SCOPED_V2";
+        };
         /** ScreenContract */
         ScreenContract: {
             /** Activation Gate */
@@ -2444,6 +2571,50 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * VnSourceObservation
+         * @description Private, immutable observed-date metadata; not calendar/venue authority.
+         */
+        VnSourceObservation: {
+            /**
+             * Clock Basis
+             * @constant
+             */
+            clock_basis: "OBSERVED_SOURCE_LOCAL_DATE_V1";
+            /**
+             * Dataset Id
+             * @constant
+             */
+            dataset_id: "vn-stock-daily";
+            /** Metadata Index As Of Utc Ms */
+            metadata_index_as_of_utc_ms: number;
+            /** Metadata Index Revision */
+            metadata_index_revision: string;
+            /** Metadata Index Source Manifest Digest */
+            metadata_index_source_manifest_digest: string;
+            /**
+             * Source Timezone
+             * @constant
+             */
+            source_timezone: "Asia/Ho_Chi_Minh";
+            /**
+             * Symbol
+             * @constant
+             */
+            symbol: "FPT";
+            /**
+             * Timeframe
+             * @constant
+             */
+            timeframe: "1d";
+            /**
+             * Warmup Semantics
+             * @constant
+             */
+            warmup_semantics: "LAST_N_OBSERVED_PREDECESSORS_V1";
+            /** Warmup Start Utc Ms */
+            warmup_start_utc_ms: number;
         };
         /**
          * WhatIfEvaluation
@@ -2940,6 +3111,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prepare_run_export_api_runs__run_id__export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

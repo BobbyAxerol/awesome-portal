@@ -5,6 +5,9 @@ import { describe, expect, it } from "vitest";
 import { managerDatasetResponse, managerMetric, managerModelQuery, managerQuality, managerScorePublication,managerCompositionPublication } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
 import { managerRegimePublication } from "../../../apps/control-api/src/execution-v2/manager-regime-publication.contract";
 import { managerScoreRevisionView, managerScoreRevisionHistory } from "../../../apps/control-api/src/execution-v2/manager-score-revision.contract";
+import { managerP1Options } from "../../../apps/control-api/src/execution-v2/manager-query-p1.contract";
+import { managerDatasetRow } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
+import { managerP1NoFactsSyntheticOptions } from "../tooling/execution-manager-p1-fixtures.mjs";
 const root = resolve(__dirname,"..");
 const load = (file:string) => JSON.parse(readFileSync(resolve(root,file),"utf8"));
 const api = load("openapi/execution-manager-models.openapi.json");
@@ -70,6 +73,9 @@ describe("ELP2-06 generated named Manager BFF contract",()=>{
       expect(check(metric),JSON.stringify(check.errors)).toBe(count<=64);
       expect(managerMetric.safeParse(metric).success).toBe(count<=64);
       const response=structuredClone(load("fixtures/execution-manager-dataset.rows.synthetic.valid.json").value);
+      // C4-R02: this positive producer vector must declare its extra authorized score key.
+      response.query_options.metric_keys.push("score");
+      response.query_options.sort_fields.push("score");
       response.items[0].metrics.score=metric;
       expect(validate(response),JSON.stringify(validate.errors)).toBe(count<=64);
       expect(managerDatasetResponse.safeParse(response).success).toBe(count<=64);
@@ -194,5 +200,100 @@ describe("ELP2-06 generated named Manager BFF contract",()=>{
     expect(managerMetric.safeParse({...metric,value:null,availability:"UNAVAILABLE",reason_code:"SOURCE_NOT_PUBLISHED"}).success).toBe(true);
     expect(managerMetric.safeParse({...metric,currency:null}).success).toBe(false);
     expect(managerMetric.safeParse({...metric,window:{from_ms:1,to_ms:1}}).success).toBe(false);
+  });
+  it("has runtime/Ajv parity for authorized metric-key equality without requiring hidden money keys",()=>{
+    const sample=load("fixtures/execution-manager-dataset.rows.synthetic.valid.json").value;
+    expect(validate(sample),JSON.stringify(validate.errors)).toBe(true);
+    const key=sample.query_options.metric_keys[0];
+    const missing=structuredClone(sample);delete missing.items[0].metrics[key];
+    const extra=structuredClone(sample);extra.items[0].metrics.score=structuredClone(sample.items[0].metrics.net_pnl);
+    for(const invalid of [missing,extra]){
+      expect(validate(invalid),JSON.stringify(validate.errors)).toBe(false);
+      expect(managerDatasetResponse.safeParse(invalid).success).toBe(false);
+    }
+    const narrowed=structuredClone(sample);delete narrowed.items[0].metrics.allocation;
+    narrowed.query_options.metric_keys=narrowed.query_options.metric_keys.filter((k:string)=>k!=="allocation");
+    narrowed.query_options.sort_fields=narrowed.query_options.sort_fields.filter((k:string)=>k!=="allocation");
+    narrowed.query_options.economic_partition_required_for=narrowed.query_options.economic_partition_required_for.filter((k:string)=>k!=="allocation");
+    narrowed.query_options.window.independent_metrics=narrowed.query_options.window.independent_metrics.filter((k:string)=>k!=="allocation");
+    expect(validate(narrowed),JSON.stringify(validate.errors)).toBe(true);
+    expect(managerDatasetResponse.safeParse(narrowed).success).toBe(true);
+    const nonMetric=structuredClone(sample.items[0]);nonMetric.metrics.name=structuredClone(nonMetric.metrics.net_pnl);
+    expect(ajv.compile(api.components.schemas.ManagerDatasetRow)(nonMetric)).toBe(false);
+    expect(managerDatasetRow.safeParse(nonMetric).success).toBe(false);
+  });
+  it("keeps selected ALL window absence and global summary reason identical in both validators",()=>{
+    const sample=load("fixtures/execution-manager-dataset.all-window.synthetic.valid.json").value;
+    expect(validate(sample),JSON.stringify(validate.errors)).toBe(true);
+    expect(managerDatasetResponse.safeParse(sample).success).toBe(true);
+    for(const patch of [{selected_window:null},{scores:{...sample.scores,raw:{value:"0",status:"window_not_published",reason_code:"ALL_HISTORY_WINDOW_NOT_PUBLISHED"}}},
+      {scores:{...sample.scores,direct_nav:{value:null,status:"window_not_published",reason_code:"EXACT_METRIC_WINDOW_NOT_PUBLISHED"}}},
+      {scores:{...sample.scores,reason_code:"RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED"}}]){
+      const invalid={...sample,...patch};expect(validate(invalid)).toBe(false);
+      expect(managerDatasetResponse.safeParse(invalid).success).toBe(false);
+    }
+  });
+  it("publishes finite options with no duplicate, unauthorized stock or misleading ALL coverage",()=>{
+    const sample=load("fixtures/execution-manager-dataset.rows.synthetic.valid.json").value.query_options;
+    const check=ajv.compile(api.components.schemas.ManagerQueryOptions);
+    expect(check(sample),JSON.stringify(check.errors)).toBe(true);
+    expect(managerP1Options.safeParse(sample).success).toBe(true);
+    const duplicate=structuredClone(sample);duplicate.metric_keys.push(duplicate.metric_keys[0]);
+    const stock=structuredClone(sample);stock.window.independent_metrics.push("balance_total");
+    const all=structuredClone(sample);all.window.presets[3]={...all.window.presets[3],data_state:"METRIC_SPECIFIC",reason_code:null};
+    for(const invalid of [duplicate,stock,all]){
+      expect(check(invalid)).toBe(false);expect(managerP1Options.safeParse(invalid).success).toBe(false);
+    }
+  });
+  it("publishes exact current-only error while preserving six current named routes",()=>{
+    expect(api.components.securitySchemes.PortalSession.name).toBe("__Host-portal_session");
+    const check=ajv.compile(api.components.schemas.ManagerCurrentOnlyProblem);
+    const problem={error:{code:"EXECUTION_READ_CURRENT_ONLY",message:"The requested Execution read is not available."},request_id:"TEST_ONLY:request"};
+    expect(check(problem),JSON.stringify(check.errors)).toBe(true);
+    expect(check({...problem,source_revision:"PRIVATE"})).toBe(false);
+    expect(check({...problem,error:{...problem.error,code:"EXECUTION_READ_QUERY_INVALID"}})).toBe(false);
+  });
+  it("publishes the same exact search grammar in runtime and JSON (C4-R01)",()=>{
+    const check=ajv.compile(api.components.schemas.ManagerDatasetQuery);
+    for(const q of ["Alpha"," alpha ","ß","東京","name:/@"]){
+      const query={environment:"paper",q};
+      expect(check(query),JSON.stringify(check.errors)).toBe(true);
+      expect(managerModelQuery.safeParse(query).success).toBe(true);
+    }
+    for(const q of [""," ","\u00a0","\n","x\n","x\u0000y","x\u007fy"]){
+      const query={environment:"paper",q};
+      expect(check(query),JSON.stringify(check.errors)).toBe(false);
+      expect(managerModelQuery.safeParse(query).success).toBe(false);
+    }
+    for(const query of [{environment:"paper",q_mode:"PREFIX"},{environment:"paper",stage_filter:["LIVE"]},
+      {environment:"paper",q:"Alpha",private_source:"PRIVATE"}]){
+      expect(check(query),JSON.stringify(check.errors)).toBe(false);
+      expect(managerModelQuery.safeParse(query).success).toBe(false);
+    }
+    // UTF-8 roundtrip/JS UTF-16 length and interval arithmetic remain runtime-only checks.
+    expect(managerModelQuery.safeParse({environment:"paper",q:"\ud800"}).success).toBe(false);
+    expect(managerModelQuery.safeParse({environment:"paper",window:{from_ms:1,to_ms:1}}).success).toBe(false);
+    for(const window of ["7D","30D","90D","ALL",{from_ms:0,to_ms:1}]){
+      const query={environment:"paper",window};expect(check(query),JSON.stringify(check.errors)).toBe(true);
+      expect(managerModelQuery.safeParse(query).success).toBe(true);
+    }
+    for(const name of ["q","q_mode","window"])for(const path of [
+      "/api/v1/execution/manager/fund-overview","/api/v1/execution/manager/fleet",
+      "/api/v1/execution/manager/portfolios/{id}/overview","/api/v1/execution/manager/alphas/{id}/overview",
+      "/api/v1/execution/manager/accounts/{id}/overview","/api/v1/execution/manager/deployments/{id}/overview"]){
+      const parameter=api.paths[path].get.parameters.find((p:any)=>p.name===name);
+      expect(parameter).toBeDefined();
+      if(name==="window")expect(parameter.content["application/json"].schema).toEqual(api.components.schemas.ManagerDatasetQuery.properties.window);
+      for(const status of [200,400,401,404,409,503])
+        expect(api.paths[path].get.responses[status].headers["Cache-Control"].schema.const).toBe("private, no-store");
+    }
+  });
+  it("builds canonical TEST_ONLY fixture options from the same explicit synthetic context",()=>{
+    for(const name of ["execution-manager-dataset.synthetic.valid.json","execution-manager-dataset.rows.synthetic.valid.json"]){
+      const sample=load("fixtures/"+name).value,options=sample.query_options;
+      expect(options).toEqual(managerP1NoFactsSyntheticOptions({asOf:sample.as_of_ms,
+        canSearchName:options.search.fields.includes("name"),sortFields:options.sort_fields,
+        groupFields:options.group_fields,metricKeys:options.metric_keys}));
+    }
   });
 });

@@ -5,6 +5,7 @@ import { score, pendingScore } from './execution-v2-fixtures.mjs';
 export function workflowFixtures(f, c) {
   const copy = v => structuredClone(v), hash = `sha256:${'b'.repeat(64)}`;
   const command = JSON.parse(readFileSync(new URL('../fixtures/execution-trusted-commands.synthetic.valid.json', import.meta.url), 'utf8'));
+  const parents = JSON.parse(readFileSync(new URL('../fixtures/execution-positive-parent.synthetic.valid.json', import.meta.url), 'utf8'));
   const status = command.ack_only;
   const context = { workspace_id: 'TEST_ONLY:workspace', environment: status.environment, resource: status.resource,
     policy_revision: 'TEST_ONLY:policy', snapshot_ref: 'TEST_ONLY:snapshot', source_as_of_ms: null, observed_at_ms: 1792100000000 };
@@ -103,6 +104,13 @@ export function workflowFixtures(f, c) {
     observed_duration_ms: 6048000000, actual_duration_ms: 864000000,
     stage_breakdown: [{ financial_stage: 'PAPER', duration_ms: 3456000000 }, { financial_stage: 'SANDBOX', duration_ms: 1728000000 }, { financial_stage: 'LIVE', duration_ms: 864000000 }] }, 'DIAGNOSTIC_ONLY', 'MIXED_OBSERVATION', 'MIXED_NOT_ACTUAL'));
   add('W08-POLICY-PENDING', 'T08-14', 'WorkflowScorePresentation', presentation(pendingScore, 'RAW_QUALITY', 'ACTUAL', 'SCORE_POLICY_PENDING'));
+  // Reuse only checked-in synthetic PUBLIC parents, through the actual pure
+  // adapters. No source/field policy, native acceptance or grant is installed.
+  for (const key of ['r2', 'paper_exit', 'paper_exit_extended', 'paper_exit_absent',
+    'sandbox', 'sandbox_absent', 'sandbox_draft', 'canary', 'canary_revision', 'live']) {
+    add('W08-C5-CRITERIA-' + key, 'T08-C5', 'WorkflowCriteriaCapsules', f.criteriaFromAuthorizedParent(parents[key]));
+    add('W08-C5-RECORDED-' + key, 'T08-C5', 'WorkflowRecordedPortal', f.recordedWorkflowFromAuthorizedParent(parents[key]));
+  }
   const actions = [
     ['CREATE_PORTFOLIO', 'portfolio.manage', 'WorkflowCreate'], ['REGISTER_INSTANCE', 'deployment.register', 'WorkflowCreate'],
     ...['FUND', 'INITIAL_GRANT', 'TOP_UP', 'IMMEDIATE_DECREASE', 'RECALL_PARTIAL', 'RECALL_FULL', 'ADJUST_TARGET_BUDGET', 'SET_ROOT_LIMIT'].map(op => [op, 'capital.' + op.toLowerCase(), 'WorkflowCapital']),

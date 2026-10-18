@@ -7,6 +7,1693 @@
     "schema_version": {
       "const": "portal.execution.manager-dataset.v1"
     },
+    "selected_window": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "requested": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "7D",
+                    "30D",
+                    "90D",
+                    "ALL"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "from_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "to_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "from_ms",
+                    "to_ms"
+                  ]
+                }
+              ]
+            },
+            "resolved": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "from_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "to_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "from_ms",
+                    "to_ms"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "selection_basis": {
+              "const": "EXACT_PUBLISHED_METRIC_WINDOW_ONLY"
+            },
+            "reason_code": {
+              "anyOf": [
+                {
+                  "const": "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "requested",
+            "resolved",
+            "selection_basis",
+            "reason_code"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "type": "object",
+                "properties": {
+                  "requested": {
+                    "const": "ALL"
+                  }
+                },
+                "required": [
+                  "requested"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "properties": {
+                  "resolved": {
+                    "type": "null"
+                  },
+                  "reason_code": {
+                    "const": "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                  }
+                }
+              },
+              "else": {
+                "type": "object",
+                "properties": {
+                  "resolved": {
+                    "type": "object"
+                  },
+                  "reason_code": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "query_options": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "temporal_mode": {
+          "const": "CURRENT_ONLY"
+        },
+        "search": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "type": "array",
+              "items": {
+                "const": "name"
+              },
+              "maxItems": 1
+            },
+            "modes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "PREFIX",
+                  "CONTAINS"
+                ]
+              },
+              "maxItems": 2
+            },
+            "maximum_text_length": {
+              "const": 160
+            },
+            "normalization": {
+              "const": "JS_TO_LOWER_CASE_NO_UNICODE_NORMALIZATION"
+            }
+          },
+          "required": [
+            "fields",
+            "modes",
+            "maximum_text_length",
+            "normalization"
+          ]
+        },
+        "sort_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "alpha_id",
+              "alpha_version_id",
+              "name",
+              "owner_user_id",
+              "portfolio_id",
+              "lifecycle",
+              "venue",
+              "health",
+              "source_state",
+              "allocation",
+              "net_pnl",
+              "unrealized_pnl",
+              "balance_total",
+              "equity_30d_end_value",
+              "return_30d_pct",
+              "score",
+              "stage_presence"
+            ]
+          },
+          "maxItems": 17,
+          "uniqueItems": true
+        },
+        "group_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "portfolio_id",
+              "owner_user_id",
+              "alpha_id",
+              "stage_presence",
+              "venue",
+              "health",
+              "source_state",
+              "lifecycle"
+            ]
+          },
+          "maxItems": 8,
+          "uniqueItems": true
+        },
+        "metric_keys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "allocation",
+              "net_pnl",
+              "unrealized_pnl",
+              "balance_total",
+              "equity_30d_end_value",
+              "return_30d_pct",
+              "score"
+            ]
+          },
+          "maxItems": 7,
+          "uniqueItems": true
+        },
+        "economic_partition_required_for": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "allocation",
+              "net_pnl",
+              "unrealized_pnl",
+              "balance_total",
+              "equity_30d_end_value"
+            ]
+          },
+          "maxItems": 5,
+          "uniqueItems": true
+        },
+        "window": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "custom_supported": {
+              "const": true
+            },
+            "interpretation": {
+              "const": "MATCH_ONLY_NO_READ_TIME_CALCULATION"
+            },
+            "independent_metrics": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "allocation",
+                  "balance_total",
+                  "unrealized_pnl"
+                ]
+              },
+              "maxItems": 3,
+              "uniqueItems": true
+            },
+            "presets": {
+              "type": "array",
+              "items": false,
+              "minItems": 4,
+              "maxItems": 4,
+              "prefixItems": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "const": "7D"
+                    }
+                  },
+                  "required": [
+                    "value"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "const": "30D"
+                    }
+                  },
+                  "required": [
+                    "value"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "const": "90D"
+                    }
+                  },
+                  "required": [
+                    "value"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "const": "ALL"
+                    }
+                  },
+                  "required": [
+                    "value"
+                  ]
+                }
+              ],
+              "allOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "enum": [
+                          "7D",
+                          "30D",
+                          "90D",
+                          "ALL"
+                        ]
+                      },
+                      "resolved": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "from_ms": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "to_ms": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "from_ms",
+                              "to_ms"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "data_state": {
+                        "type": "string",
+                        "enum": [
+                          "METRIC_SPECIFIC",
+                          "NOT_PUBLISHED"
+                        ]
+                      },
+                      "reason_code": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+                              "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "resolved",
+                      "data_state",
+                      "reason_code"
+                    ],
+                    "allOf": [
+                      {
+                        "if": {
+                          "type": "object",
+                          "properties": {
+                            "data_state": {
+                              "const": "METRIC_SPECIFIC"
+                            }
+                          },
+                          "required": [
+                            "data_state"
+                          ]
+                        },
+                        "then": {
+                          "type": "object",
+                          "properties": {
+                            "resolved": {
+                              "type": "object"
+                            },
+                            "reason_code": {
+                              "type": "null"
+                            }
+                          }
+                        },
+                        "else": {
+                          "type": "object",
+                          "properties": {
+                            "reason_code": {
+                              "type": "string",
+                              "enum": [
+                                "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+                                "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "if": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "const": "ALL"
+                            }
+                          },
+                          "required": [
+                            "value"
+                          ]
+                        },
+                        "then": {
+                          "type": "object",
+                          "properties": {
+                            "resolved": {
+                              "type": "null"
+                            },
+                            "reason_code": {
+                              "const": "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "custom_supported",
+            "interpretation",
+            "independent_metrics",
+            "presets"
+          ]
+        },
+        "stage_environment": {
+          "type": "array",
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [
+            {
+              "const": {
+                "environment": "paper",
+                "stages": [
+                  "PAPER"
+                ]
+              }
+            },
+            {
+              "const": {
+                "environment": "sandbox",
+                "stages": [
+                  "SANDBOX"
+                ]
+              }
+            },
+            {
+              "const": {
+                "environment": "live",
+                "stages": [
+                  "CANARY",
+                  "LIVE"
+                ]
+              }
+            }
+          ],
+          "allOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "environment": {
+                    "type": "string",
+                    "enum": [
+                      "paper",
+                      "sandbox",
+                      "live"
+                    ]
+                  },
+                  "stages": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "PAPER",
+                        "SANDBOX",
+                        "CANARY",
+                        "LIVE"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 2
+                  }
+                },
+                "required": [
+                  "environment",
+                  "stages"
+                ]
+              }
+            }
+          ]
+        },
+        "unavailable_fields": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "field": {
+                  "const": "current_stage"
+                },
+                "reason_code": {
+                  "const": "CURRENT_STAGE_GRAIN_NOT_PUBLISHED"
+                }
+              },
+              "required": [
+                "field",
+                "reason_code"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "field": {
+                  "const": "days_in_stage"
+                },
+                "reason_code": {
+                  "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+                }
+              },
+              "required": [
+                "field",
+                "reason_code"
+              ]
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2,
+          "items": false
+        }
+      },
+      "required": [
+        "temporal_mode",
+        "search",
+        "sort_fields",
+        "group_fields",
+        "metric_keys",
+        "economic_partition_required_for",
+        "window",
+        "stage_environment",
+        "unavailable_fields"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "search": {
+                "type": "object",
+                "properties": {
+                  "fields": {
+                    "type": "array",
+                    "maxItems": 0
+                  }
+                },
+                "required": [
+                  "fields"
+                ]
+              }
+            },
+            "required": [
+              "search"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "search": {
+                "type": "object",
+                "properties": {
+                  "modes": {
+                    "type": "array",
+                    "maxItems": 0
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "search": {
+                "type": "object",
+                "properties": {
+                  "modes": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "uniqueItems": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "name"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "search": {
+                "type": "object",
+                "properties": {
+                  "fields": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 1
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "search": {
+                "type": "object",
+                "properties": {
+                  "fields": {
+                    "type": "array",
+                    "maxItems": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "allocation"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "allocation"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "allocation"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "net_pnl"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "net_pnl"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "net_pnl"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "unrealized_pnl"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "unrealized_pnl"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "unrealized_pnl"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "balance_total"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "balance_total"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "balance_total"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "equity_30d_end_value"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "equity_30d_end_value"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "equity_30d_end_value"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "return_30d_pct"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "return_30d_pct"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "return_30d_pct"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "score"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "score"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "portfolio_id"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "portfolio_id"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "portfolio_id"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "owner_user_id"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "owner_user_id"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "owner_user_id"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "alpha_id"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "alpha_id"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "alpha_id"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "stage_presence"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "stage_presence"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "stage_presence"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "venue"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "venue"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "venue"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "health"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "health"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "health"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "source_state"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "source_state"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "source_state"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "lifecycle"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "lifecycle"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "lifecycle"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "allocation"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "economic_partition_required_for": {
+                "type": "array",
+                "contains": {
+                  "const": "allocation"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "economic_partition_required_for": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "allocation"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "net_pnl"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "economic_partition_required_for": {
+                "type": "array",
+                "contains": {
+                  "const": "net_pnl"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "economic_partition_required_for": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "net_pnl"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "unrealized_pnl"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "economic_partition_required_for": {
+                "type": "array",
+                "contains": {
+                  "const": "unrealized_pnl"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "economic_partition_required_for": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "unrealized_pnl"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "balance_total"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "economic_partition_required_for": {
+                "type": "array",
+                "contains": {
+                  "const": "balance_total"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "economic_partition_required_for": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "balance_total"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "equity_30d_end_value"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "economic_partition_required_for": {
+                "type": "array",
+                "contains": {
+                  "const": "equity_30d_end_value"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "economic_partition_required_for": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "equity_30d_end_value"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "allocation"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "window": {
+                "type": "object",
+                "properties": {
+                  "independent_metrics": {
+                    "type": "array",
+                    "contains": {
+                      "const": "allocation"
+                    },
+                    "minContains": 1
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "window": {
+                "type": "object",
+                "properties": {
+                  "independent_metrics": {
+                    "type": "array",
+                    "not": {
+                      "contains": {
+                        "const": "allocation"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "balance_total"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "window": {
+                "type": "object",
+                "properties": {
+                  "independent_metrics": {
+                    "type": "array",
+                    "contains": {
+                      "const": "balance_total"
+                    },
+                    "minContains": 1
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "window": {
+                "type": "object",
+                "properties": {
+                  "independent_metrics": {
+                    "type": "array",
+                    "not": {
+                      "contains": {
+                        "const": "balance_total"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "unrealized_pnl"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "window": {
+                "type": "object",
+                "properties": {
+                  "independent_metrics": {
+                    "type": "array",
+                    "contains": {
+                      "const": "unrealized_pnl"
+                    },
+                    "minContains": 1
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "window": {
+                "type": "object",
+                "properties": {
+                  "independent_metrics": {
+                    "type": "array",
+                    "not": {
+                      "contains": {
+                        "const": "unrealized_pnl"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
     "surface": {
       "type": "string",
       "enum": [
@@ -373,15 +2060,6 @@
             "propertyNames": {
               "type": "string",
               "enum": [
-                "alpha_id",
-                "alpha_version_id",
-                "name",
-                "owner_user_id",
-                "portfolio_id",
-                "lifecycle",
-                "venue",
-                "health",
-                "source_state",
                 "allocation",
                 "net_pnl",
                 "unrealized_pnl",
@@ -590,6 +2268,63 @@
                 "provenance_refs",
                 "calculation_revision",
                 "policy_revision"
+              ],
+              "allOf": [
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "availability": {
+                        "const": "AVAILABLE"
+                      }
+                    },
+                    "required": [
+                      "availability"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      },
+                      "reason_code": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "unit": {
+                        "const": "MONEY"
+                      }
+                    },
+                    "required": [
+                      "unit"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "currency": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
               ]
             }
           },
@@ -848,6 +2583,63 @@
                       "provenance_refs",
                       "calculation_revision",
                       "policy_revision"
+                    ],
+                    "allOf": [
+                      {
+                        "if": {
+                          "type": "object",
+                          "properties": {
+                            "availability": {
+                              "const": "AVAILABLE"
+                            }
+                          },
+                          "required": [
+                            "availability"
+                          ]
+                        },
+                        "then": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "not": {
+                                "type": "null"
+                              }
+                            }
+                          }
+                        },
+                        "else": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "null"
+                            },
+                            "reason_code": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "if": {
+                          "type": "object",
+                          "properties": {
+                            "unit": {
+                              "const": "MONEY"
+                            }
+                          },
+                          "required": [
+                            "unit"
+                          ]
+                        },
+                        "then": {
+                          "type": "object",
+                          "properties": {
+                            "currency": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
                     ]
                   }
                 }
@@ -1181,6 +2973,63 @@
                       "provenance_refs",
                       "calculation_revision",
                       "policy_revision"
+                    ],
+                    "allOf": [
+                      {
+                        "if": {
+                          "type": "object",
+                          "properties": {
+                            "availability": {
+                              "const": "AVAILABLE"
+                            }
+                          },
+                          "required": [
+                            "availability"
+                          ]
+                        },
+                        "then": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "not": {
+                                "type": "null"
+                              }
+                            }
+                          }
+                        },
+                        "else": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "null"
+                            },
+                            "reason_code": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "if": {
+                          "type": "object",
+                          "properties": {
+                            "unit": {
+                              "const": "MONEY"
+                            }
+                          },
+                          "required": [
+                            "unit"
+                          ]
+                        },
+                        "then": {
+                          "type": "object",
+                          "properties": {
+                            "currency": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
                     ]
                   }
                 }
@@ -1457,6 +3306,63 @@
                 "provenance_refs",
                 "calculation_revision",
                 "policy_revision"
+              ],
+              "allOf": [
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "availability": {
+                        "const": "AVAILABLE"
+                      }
+                    },
+                    "required": [
+                      "availability"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      },
+                      "reason_code": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "unit": {
+                        "const": "MONEY"
+                      }
+                    },
+                    "required": [
+                      "unit"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "currency": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
               ]
             }
           }
@@ -1502,13 +3408,95 @@
                 "stale",
                 "partial_costs",
                 "partial_components",
-                "insufficient_data"
+                "insufficient_data",
+                "window_not_published"
+              ]
+            },
+            "reason_code": {
+              "type": "string",
+              "enum": [
+                "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+                "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
               ]
             }
           },
           "required": [
             "value",
             "status"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "available",
+                      "provisional"
+                    ]
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "not": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              "else": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "window_not_published"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "properties": {
+                  "reason_code": {
+                    "enum": [
+                      "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+                      "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                    ]
+                  }
+                },
+                "required": [
+                  "reason_code"
+                ]
+              },
+              "else": {
+                "not": {
+                  "type": "object",
+                  "properties": {
+                    "reason_code": {}
+                  },
+                  "required": [
+                    "reason_code"
+                  ]
+                }
+              }
+            }
           ]
         },
         "composition": {
@@ -1536,13 +3524,95 @@
                 "partial_coverage",
                 "incomparable_basis",
                 "no_allocation",
-                "invalid_data"
+                "invalid_data",
+                "window_not_published"
+              ]
+            },
+            "reason_code": {
+              "type": "string",
+              "enum": [
+                "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+                "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
               ]
             }
           },
           "required": [
             "value",
             "status"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "available",
+                      "provisional"
+                    ]
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "not": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              "else": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "window_not_published"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "properties": {
+                  "reason_code": {
+                    "enum": [
+                      "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+                      "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                    ]
+                  }
+                },
+                "required": [
+                  "reason_code"
+                ]
+              },
+              "else": {
+                "not": {
+                  "type": "object",
+                  "properties": {
+                    "reason_code": {}
+                  },
+                  "required": [
+                    "reason_code"
+                  ]
+                }
+              }
+            }
           ]
         },
         "direct_nav": {
@@ -1572,13 +3642,95 @@
                 "stale",
                 "partial_costs",
                 "partial_components",
-                "insufficient_data"
+                "insufficient_data",
+                "window_not_published"
+              ]
+            },
+            "reason_code": {
+              "type": "string",
+              "enum": [
+                "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+                "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
               ]
             }
           },
           "required": [
             "value",
             "status"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "available",
+                      "provisional"
+                    ]
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "not": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              "else": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "window_not_published"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "properties": {
+                  "reason_code": {
+                    "enum": [
+                      "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+                      "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                    ]
+                  }
+                },
+                "required": [
+                  "reason_code"
+                ]
+              },
+              "else": {
+                "not": {
+                  "type": "object",
+                  "properties": {
+                    "reason_code": {}
+                  },
+                  "required": [
+                    "reason_code"
+                  ]
+                }
+              }
+            }
           ]
         },
         "regime": {
@@ -1624,7 +3776,9 @@
           "type": "string",
           "enum": [
             "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED",
-            "QUALIFIED_PRECOMPUTED_SCORE"
+            "QUALIFIED_PRECOMPUTED_SCORE",
+            "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+            "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
           ]
         },
         "calculation_path": {
@@ -3942,6 +6096,8 @@
   },
   "required": [
     "schema_version",
+    "selected_window",
+    "query_options",
     "surface",
     "workspace_id",
     "environment",
@@ -3963,5 +6119,1603 @@
     "scores",
     "funding_bucket_pnl",
     "lineage"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "query_options": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "allocation"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          }
+        },
+        "required": [
+          "query_options"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "type": "object",
+                  "properties": {
+                    "allocation": {}
+                  },
+                  "required": [
+                    "allocation"
+                  ]
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "not": {
+                    "type": "object",
+                    "properties": {
+                      "allocation": {}
+                    },
+                    "required": [
+                      "allocation"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "query_options": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "net_pnl"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          }
+        },
+        "required": [
+          "query_options"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "type": "object",
+                  "properties": {
+                    "net_pnl": {}
+                  },
+                  "required": [
+                    "net_pnl"
+                  ]
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "not": {
+                    "type": "object",
+                    "properties": {
+                      "net_pnl": {}
+                    },
+                    "required": [
+                      "net_pnl"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "query_options": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "unrealized_pnl"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          }
+        },
+        "required": [
+          "query_options"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "type": "object",
+                  "properties": {
+                    "unrealized_pnl": {}
+                  },
+                  "required": [
+                    "unrealized_pnl"
+                  ]
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "not": {
+                    "type": "object",
+                    "properties": {
+                      "unrealized_pnl": {}
+                    },
+                    "required": [
+                      "unrealized_pnl"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "query_options": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "balance_total"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          }
+        },
+        "required": [
+          "query_options"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "type": "object",
+                  "properties": {
+                    "balance_total": {}
+                  },
+                  "required": [
+                    "balance_total"
+                  ]
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "not": {
+                    "type": "object",
+                    "properties": {
+                      "balance_total": {}
+                    },
+                    "required": [
+                      "balance_total"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "query_options": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "equity_30d_end_value"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          }
+        },
+        "required": [
+          "query_options"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "type": "object",
+                  "properties": {
+                    "equity_30d_end_value": {}
+                  },
+                  "required": [
+                    "equity_30d_end_value"
+                  ]
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "not": {
+                    "type": "object",
+                    "properties": {
+                      "equity_30d_end_value": {}
+                    },
+                    "required": [
+                      "equity_30d_end_value"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "query_options": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "return_30d_pct"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          }
+        },
+        "required": [
+          "query_options"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "type": "object",
+                  "properties": {
+                    "return_30d_pct": {}
+                  },
+                  "required": [
+                    "return_30d_pct"
+                  ]
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "not": {
+                    "type": "object",
+                    "properties": {
+                      "return_30d_pct": {}
+                    },
+                    "required": [
+                      "return_30d_pct"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "query_options": {
+            "type": "object",
+            "properties": {
+              "metric_keys": {
+                "type": "array",
+                "contains": {
+                  "const": "score"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "metric_keys"
+            ]
+          }
+        },
+        "required": [
+          "query_options"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "type": "object",
+                  "properties": {
+                    "score": {}
+                  },
+                  "required": [
+                    "score"
+                  ]
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "not": {
+                    "type": "object",
+                    "properties": {
+                      "score": {}
+                    },
+                    "required": [
+                      "score"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "metrics"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "raw"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "direct_nav": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "direct_nav"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "composition": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "composition"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "selected_window": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "raw"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "direct_nav": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "direct_nav"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "composition": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "composition"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "scores": {
+            "type": "object",
+            "properties": {
+              "reason_code": {
+                "enum": [
+                  "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+                  "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "scores": {
+            "type": "object",
+            "properties": {
+              "reason_code": {
+                "not": {
+                  "enum": [
+                    "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+                    "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "selected_window": {
+                "type": "object",
+                "properties": {
+                  "requested": {
+                    "const": "ALL"
+                  }
+                },
+                "required": [
+                  "requested"
+                ]
+              }
+            },
+            "required": [
+              "selected_window"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "raw"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "scores": {
+            "type": "object",
+            "properties": {
+              "raw": {
+                "type": "object",
+                "properties": {
+                  "reason_code": {
+                    "const": "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "reason_code"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "selected_window": {
+                "type": "object",
+                "properties": {
+                  "requested": {
+                    "const": "ALL"
+                  }
+                },
+                "required": [
+                  "requested"
+                ]
+              }
+            },
+            "required": [
+              "selected_window"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "direct_nav": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "direct_nav"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "scores": {
+            "type": "object",
+            "properties": {
+              "direct_nav": {
+                "type": "object",
+                "properties": {
+                  "reason_code": {
+                    "const": "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "reason_code"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "selected_window": {
+                "type": "object",
+                "properties": {
+                  "requested": {
+                    "const": "ALL"
+                  }
+                },
+                "required": [
+                  "requested"
+                ]
+              }
+            },
+            "required": [
+              "selected_window"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "composition": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "composition"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "scores": {
+            "type": "object",
+            "properties": {
+              "composition": {
+                "type": "object",
+                "properties": {
+                  "reason_code": {
+                    "const": "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "reason_code"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "selected_window": {
+                "type": "object",
+                "properties": {
+                  "requested": {
+                    "const": "ALL"
+                  }
+                },
+                "required": [
+                  "requested"
+                ]
+              }
+            },
+            "required": [
+              "selected_window"
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "scores": {
+                    "type": "object",
+                    "properties": {
+                      "raw": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "const": "window_not_published"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "raw"
+                    ]
+                  }
+                },
+                "required": [
+                  "scores"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "scores": {
+                    "type": "object",
+                    "properties": {
+                      "direct_nav": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "const": "window_not_published"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "direct_nav"
+                    ]
+                  }
+                },
+                "required": [
+                  "scores"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "scores": {
+                    "type": "object",
+                    "properties": {
+                      "composition": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "const": "window_not_published"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "composition"
+                    ]
+                  }
+                },
+                "required": [
+                  "scores"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "scores": {
+            "type": "object",
+            "properties": {
+              "reason_code": {
+                "const": "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "not": {
+              "type": "object",
+              "properties": {
+                "selected_window": {
+                  "type": "object",
+                  "properties": {
+                    "requested": {
+                      "const": "ALL"
+                    }
+                  },
+                  "required": [
+                    "requested"
+                  ]
+                }
+              },
+              "required": [
+                "selected_window"
+              ]
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "raw": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "raw"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "scores": {
+            "type": "object",
+            "properties": {
+              "raw": {
+                "type": "object",
+                "properties": {
+                  "reason_code": {
+                    "const": "EXACT_METRIC_WINDOW_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "reason_code"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "not": {
+              "type": "object",
+              "properties": {
+                "selected_window": {
+                  "type": "object",
+                  "properties": {
+                    "requested": {
+                      "const": "ALL"
+                    }
+                  },
+                  "required": [
+                    "requested"
+                  ]
+                }
+              },
+              "required": [
+                "selected_window"
+              ]
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "direct_nav": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "direct_nav"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "scores": {
+            "type": "object",
+            "properties": {
+              "direct_nav": {
+                "type": "object",
+                "properties": {
+                  "reason_code": {
+                    "const": "EXACT_METRIC_WINDOW_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "reason_code"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "not": {
+              "type": "object",
+              "properties": {
+                "selected_window": {
+                  "type": "object",
+                  "properties": {
+                    "requested": {
+                      "const": "ALL"
+                    }
+                  },
+                  "required": [
+                    "requested"
+                  ]
+                }
+              },
+              "required": [
+                "selected_window"
+              ]
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "object",
+                "properties": {
+                  "composition": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "const": "window_not_published"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  }
+                },
+                "required": [
+                  "composition"
+                ]
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "scores": {
+            "type": "object",
+            "properties": {
+              "composition": {
+                "type": "object",
+                "properties": {
+                  "reason_code": {
+                    "const": "EXACT_METRIC_WINDOW_NOT_PUBLISHED"
+                  }
+                },
+                "required": [
+                  "reason_code"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "not": {
+              "type": "object",
+              "properties": {
+                "selected_window": {
+                  "type": "object",
+                  "properties": {
+                    "requested": {
+                      "const": "ALL"
+                    }
+                  },
+                  "required": [
+                    "requested"
+                  ]
+                }
+              },
+              "required": [
+                "selected_window"
+              ]
+            }
+          },
+          {
+            "allOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "scores": {
+                    "type": "object",
+                    "properties": {
+                      "raw": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "const": "window_not_published"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "raw"
+                    ]
+                  }
+                },
+                "required": [
+                  "scores"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "scores": {
+                    "type": "object",
+                    "properties": {
+                      "direct_nav": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "const": "window_not_published"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "direct_nav"
+                    ]
+                  }
+                },
+                "required": [
+                  "scores"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "scores": {
+                    "type": "object",
+                    "properties": {
+                      "composition": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "const": "window_not_published"
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "composition"
+                    ]
+                  }
+                },
+                "required": [
+                  "scores"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "scores": {
+            "type": "object",
+            "properties": {
+              "reason_code": {
+                "const": "EXACT_METRIC_WINDOW_NOT_PUBLISHED"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "environment": {
+            "const": "paper"
+          }
+        },
+        "required": [
+          "environment"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "stage_presence": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "PAPER"
+                    ]
+                  }
+                },
+                "children": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "stage": {
+                        "type": "string",
+                        "enum": [
+                          "PAPER"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "environment": {
+            "const": "sandbox"
+          }
+        },
+        "required": [
+          "environment"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "stage_presence": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "SANDBOX"
+                    ]
+                  }
+                },
+                "children": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "stage": {
+                        "type": "string",
+                        "enum": [
+                          "SANDBOX"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "environment": {
+            "const": "live"
+          }
+        },
+        "required": [
+          "environment"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "stage_presence": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "CANARY",
+                      "LIVE"
+                    ]
+                  }
+                },
+                "children": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "stage": {
+                        "type": "string",
+                        "enum": [
+                          "CANARY",
+                          "LIVE"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   ]
 }

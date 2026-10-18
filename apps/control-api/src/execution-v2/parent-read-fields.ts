@@ -7,6 +7,9 @@ export const parentFieldPurpose = z.enum([
   "DECISION_OPERATION", "SANDBOX_ROOT", "SANDBOX_STEPS", "SANDBOX_LINEAGE",
   "CANARY_ROOT", "CANARY_PROPOSAL", "CANARY_LINEAGE", "LIVE_ROOT",
   "ACTIVATION_CAPABILITIES","ACTIVATION_PLAN_ROOT","ACTIVATION_PLAN_EVIDENCE","ACTIVATION_PLAN_COMPATIBILITY",
+  "PAPER_EXIT_CRITERIA",
+  "DECISION_ACTORS", "DECISION_LATEST_OPERATION", "R2_DECISION_CONTEXT",
+  "RECORDED_PORTAL_ACTIVITY", "R2_RECORDED_VERDICTS",
 ]);
 export type ParentFieldPurpose = z.infer<typeof parentFieldPurpose>;
 const text = z.string().min(3).max(191).refine(value => !/[\u0000-\u001f\u007f]/u.test(value));
@@ -19,7 +22,7 @@ export const parentPurposeEnvironments=(purpose:ParentFieldPurpose):readonly ("p
   purpose.startsWith("ACTIVATION_")?["paper","sandbox","live"]:[parentPurposeEnvironment(purpose)];
 export const parentPurposeAllowsEnvironment=(purpose:ParentFieldPurpose,environment:"paper"|"sandbox"|"live")=>
   parentPurposeEnvironments(purpose).includes(environment);
-export const PARENT_FIELD_SEAL_CAP=25; //12 existing +1 Live +4 Activation purposes x3 explicit environments.
+export const PARENT_FIELD_SEAL_CAP=31; //29 unchanged pairs +2 distinct paper-only recorded sections; no headroom.
 export const parentReadFieldSeal = z.object({
   purpose: parentFieldPurpose, environment: z.enum(["paper","sandbox","live"]),
   contract_revision: z.literal("portal.execution.parent-fields.v1"),
@@ -53,6 +56,16 @@ const ACTIVATION_PLAN_FIELDS=["plan_id","capability_key","action","from_profile"
   "plan_version","stored_status","expiry_basis","expires_at_ms","applied_at_ms","verified_at_ms","resulting_capability_version",
   "created_at_ms","updated_at_ms","source_side_effect_requested","runtime_activation_requested","owner_artifact_imported"];
 const FIELDS: Record<ParentFieldPurpose, readonly string[]> = {
+  RECORDED_PORTAL_ACTIVITY:["recorded_activity.availability","recorded_activity.reason_code","recorded_activity.basis",
+    "recorded_activity.order_basis","recorded_activity.coverage","recorded_activity.limit","recorded_activity.has_more",
+    ...["kind","decision_id","operation_id","decision","version_before","version_after","decided_at_ms"].map(field=>"recorded_activity.items."+field)],
+  R2_RECORDED_VERDICTS:["recorded_verdicts.availability","recorded_verdicts.reason_code","recorded_verdicts.basis",
+    "recorded_verdicts.order_basis","recorded_verdicts.coverage","recorded_verdicts.limit","recorded_verdicts.has_more",
+    "recorded_verdicts.admission.state","recorded_verdicts.admission.reason_code",
+    ...["finding_id","ordinal","outcome","blocking","evaluated_at_ms"].map(field=>"recorded_verdicts.items."+field),
+    ...["criterion_key","label_key","observed","limit","op","unit","currency"].flatMap(field=>
+      ["availability","value","reason_code"].map(key=>"recorded_verdicts.items."+field+"."+key)),
+    ...["kind","approval_id","finding_id","basis"].map(field=>"recorded_verdicts.items.source_ref."+field)],
   LIVE_ROOT:["schema_version","family",...ROOT.filter(field=>field!=="anchors.portfolio_id"),
     "source.runtime_activation_requested",
     "accepted_manager_facts.availability","accepted_manager_facts.reason_code"],
@@ -90,8 +103,29 @@ const FIELDS: Record<ParentFieldPurpose, readonly string[]> = {
     "evaluation.findings.outcome", "evaluation.findings.blocking", "evaluation.findings.required", "evaluation.findings.as_of_ms"],
   PAPER_EXIT_LINEAGE: ["lineage.availability", "lineage.basis", "lineage.r1_approval_id", "lineage.r2_approval_id",
     "lineage.source_snapshot_hash", "lineage.evidence_set_hash"],
+  PAPER_EXIT_CRITERIA: ["criteria.availability", "criteria.basis", "criteria.evaluation_policy_version",
+    "criteria.evaluation_formula_version",
+    ...["panel_id","ordinal","panel_kind","source_authority","panel_state","as_of_ms","freshness_state",
+      "source_completeness","poll_interval_ms","formula_version"].map(field=>"criteria.panels."+field),
+    ...["finding_id","panel_id","ordinal","outcome","blocking","required","as_of_ms"].map(field=>"criteria.items.original."+field),
+    ...["criterion_key","label_key","observed","limit","op","unit","currency","evidence","finding_formula_version",
+      "source_time"].flatMap(field=>["availability","value","reason_code"].map(key=>"criteria.items."+field+"."+key)),
+    "criteria.items.source_ref.kind","criteria.items.source_ref.review_id","criteria.items.source_ref.panel_id",
+    "criteria.items.source_ref.finding_id","criteria.items.source_ref.basis"],
   DECISION_OPERATION: ["operation_id", "family", "command_type", "command_version", "expected_version", "status", "decision",
     "parent_approval_id", "parent_approval_version", "parent_evidence_set_hash", "created_at_ms", "expires_at_ms", "applied_at_ms"],
+  DECISION_ACTORS: ["actors.availability", "actors.reason_code", "actors.basis", "actors.requester_user_id",
+    "actors.artifact_creator_user_id", "actors.decided_by_user_id", "actors.viewer_is_requester",
+    "actors.viewer_is_artifact_creator", "actors.viewer_is_decided_by"],
+  DECISION_LATEST_OPERATION: ["latest_operation.availability", "latest_operation.reason_code", "latest_operation.basis",
+    "latest_operation.operation_id", "latest_operation.command_version", "latest_operation.command_type",
+    "latest_operation.stored_status", "latest_operation.created_at_ms", "latest_operation.order_basis"],
+  R2_DECISION_CONTEXT: ["decision_context.availability", "decision_context.reason_code", "decision_context.basis",
+    "decision_context.gate", "decision_context.workspace_id", "decision_context.approval_id", "decision_context.expected_approval_version",
+    "decision_context.evidence_set_hash", "decision_context.evidence_hashes.availability", "decision_context.evidence_hashes.value",
+    "decision_context.evidence_hashes.reason_code", "decision_context.command_type", "decision_context.request_schema_version",
+    "decision_context.plan_path", "decision_context.admission.state", "decision_context.admission.reason_code",
+    "decision_context.source_side_effect_requested"],
 };
 // Reviewed ROOT semantics include ONLY the exact bounded local verification
 // footprint. Optional section seals still control disclosure. This does not
@@ -108,7 +142,47 @@ const PAPER_HASH_INPUTS = {
   findings: ["findingId", "panelId", "ordinal", "metricKey", "label", "outcome", "blocking", "required", "carriesTo",
     "exactValue", "unit", "currency", "thresholdValue", "sourceLabel", "sourceHref", "evidenceHash", "formulaVersion", "asOf"],
 };
-const internalInputs = (purpose: ParentFieldPurpose) => purpose==="ACTIVATION_CAPABILITIES"||purpose==="ACTIVATION_PLAN_ROOT"?{
+const internalInputs = (purpose: ParentFieldPurpose) => purpose === "RECORDED_PORTAL_ACTIVITY" ? {
+  use:"EXACT_OWN_IMMUTABLE_PORTAL_DECISION_HISTORY_ONLY", scope:["workspace_id","family","approval_id_or_review_id"],
+  max_returned:32, lookahead:1, order:"POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC",
+  original_plan_integrity:["exact_operation_workspace_parent","supported_type_version","APPLIED_and_same_decided_at",
+    "same_original_actor","same_original_decision","same_original_evidence_hash","same_original_paper_source_hash",
+    "expected_version_equals_before","after_equals_before_plus_one","no_local_family_collision"],
+  old_history_not_compared_to:"CURRENT_PARENT_VERSION_OR_EVIDENCE_HASH",
+  additional_current_detail_purpose:"DECISION_OPERATION", unreadable_selected:"WHOLE_FIXED_TYPED_ABSENCE_NO_FALLBACK",
+  source_or_effective_stage_asserted:false, full_history_asserted:false, actor_prose_hash_preimages_disclosed:false,
+} : purpose === "R2_RECORDED_VERDICTS" ? {
+  use:"EXACT_OWN_STORED_R2_FINDING_VERDICTS_ONLY", scope:["workspace_id","approval_id"], max_returned:64, lookahead:1,
+  fields:["finding_id","ordinal","outcome","blocking","evaluated_at"],
+  order:"POSTGRES_ORDINAL_ASC_FINDING_ID_C_ASC", unstructured_source:"FIXED_TYPED_ABSENT_CRITERION_SCALARS",
+  label_suggestion_basis_hashes_disclosed:false, current_readiness_or_decide_admission:"NOT_EVALUATED",
+  unreadable_selected:"WHOLE_FIXED_TYPED_ABSENCE_NO_FALLBACK", full_history_asserted:false,
+} : purpose === "DECISION_ACTORS" ? {
+  use: "EXACT_APPROVAL_ACTOR_IDS_AND_VIEWER_EQUALITY_ONLY", source: "QUALIFIED_SAME_FLIGHT_APPROVAL_ROW",
+  fields: ["requester_user_id", "artifact_creator_user_id", "decided_by_user_id"],
+  identity_lookup: false, display_names: false, emails: false, decision_eligibility_asserted: false,
+} : purpose === "DECISION_LATEST_OPERATION" ? {
+  use: "EXACT_PARENT_LATEST_RECORDED_PORTAL_PLAN_LINK_ONLY", scope: ["workspace_id", "family", "approval_id_or_review_id"],
+  order: "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC", choose_before: ["supported_type_version", "local_family_collision"],
+  unreadable_latest: "FIXED_TYPED_ABSENCE_NEVER_FALLBACK_TO_OLDER", max_selected_rows: 1,
+  additional_current_detail_purpose: "DECISION_OPERATION", receipt_or_action_eligibility_asserted: false,
+  snapshot_private_precision: "ORIGINAL_POSTGRES_UTC_MICROSECONDS",
+} : purpose === "R2_DECISION_CONTEXT" ? {
+  use: "EXACT_VERIFIED_OWN_R2_MANIFEST_INPUTS_DISCLOSURE_ONLY", anchors: ["DEPLOYMENT", "PORTFOLIO"],
+  public_inputs: ["workspace_id", "approval_id", "approval_version", "evidence_set_hash", "unique_sorted_own_evidence_sha256"],
+  max_evidence_hashes: 128, overflow: "TYPED_ABSENT_ARRAY_NO_TRUNCATION", source_side_effect_requested: false,
+  actor_decide_role_sod_quorum_r1_plan_admission: "NOT_EVALUATED_RECHECKED_AT_ACTUAL_PLAN",
+  private_manifest_preimage_disclosed: false,
+} : purpose==="PAPER_EXIT_CRITERIA"?{
+  use:"EXACT_STORED_FINDING_DISCLOSURE_ONLY",business_compute:false,source_acceptance:false,
+  metric_dictionary:[["OBSERVATION_COVERAGE","paper_exit.observation_coverage"],["DRIFT","paper_exit.drift"],
+    ["LIMITS_HEALTH","paper_exit.limits_health"],["PORTFOLIO_FIT","paper_exit.portfolio_fit"]],
+  unknown_metric:"TYPED_ABSENT_KEY_AND_LABEL_RETAIN_EXACT_AUTHORIZED_FACTS",
+  numeric:"EXACT_DECIMAL_STRING_NO_FLOAT_OR_UNIT_CONVERSION",numeric_max_chars:128,
+  public_text_max_code_points:191,
+  unsafe_or_nondecimal:"TYPED_ABSENT_NO_PROSE_OR_RAW_URL",
+  comparator:"SOURCE_FIELD_NOT_RECORDED",source_time:"EXISTING_AS_OF_MILLISECONDS_OR_TYPED_ABSENT",
+} : purpose==="ACTIVATION_CAPABILITIES"||purpose==="ACTIVATION_PLAN_ROOT"?{
   use:"EXACT_STORED_ACTIVATION_INTEGRITY_ONLY",disclose:false,business_compute:false,log:false,cache:false,
   scope:["workspace_id","capability_key","selected_plan_id_or_collection","explicit_current_environment","unique_published_ROOT"],
   head:["workspace_id","capability_key","last_plan_id","status","resulting_capability_version"],

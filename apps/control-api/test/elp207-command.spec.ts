@@ -114,7 +114,7 @@ describe("ELP2-07 strict command and status component",()=>{
         const projected=capitalWorkflow({workspace_id:nextIntent.workspace_id,environment:nextIntent.environment,resource,
           policy_revision:nextIntent.expected_policy_revision,snapshot_ref:"TEST_ONLY:snapshot",source_as_of_ms:now-1,observed_at_ms:now},
           nextIntent.business_payload.currency,merged);
-        expect(projected.status).toEqual(merged);
+        expect(projected.status).toEqual({...merged,currency:nextIntent.business_payload.currency});
         expect(projected.status.business.amounts).toBeNull();
         expect(projected.public_copy_key).toBe(state==="REJECTED"?"SOURCE_REJECTED":"REVIEW_RECEIPT");
         expect(()=>mergeSource(old,{...raw,business:{...raw.business,receipt_ref:null}})).toThrow("COMMAND_STATUS_UNVERIFIED");

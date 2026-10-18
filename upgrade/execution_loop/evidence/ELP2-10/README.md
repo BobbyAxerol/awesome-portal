@@ -281,3 +281,11 @@ backend/generated/tests/docs. HEAD's actual969contract/7427API PASS is distinct
 from pending-control WIP's failed migration focus. Claude FE-001…043 intake is
 triage/owning-plan work, not43delivered requests or consumer acceptance.
 No new phase/heavy test, push, merge, deploy or runtime activation in packaging.
+
+## Approved C1–C7 current integration
+
+[Current packet](manager-intake-2026-10-18.md) pins C1/C2 landed normal-hook
+terminal `5291a80f`, peer F8 requests, C3/C4/C5/C7 implementation, verification
+and source-dark/consumer limits. The packet is the actual result authority;
+not every phase/request is closed by source integration. [Researcher matrix](../ELP2-03/researcher-field-policy-proposal-2026-10-18.md)
+is a proposal only. No runtime activation, peer WIP merge, push or ELP2-11 entry.

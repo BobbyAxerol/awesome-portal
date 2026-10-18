@@ -6,6 +6,7 @@ import ts from 'typescript';
 import { workflowFixtures } from './execution-workflow-fixtures.mjs';
 import { capitalWorkflowSchemas } from './execution-capital-workflow-schema.mjs';
 import { workflowStructuralRefinements } from './execution-workflow-semantics.mjs';
+import { workflowCriteriaSchemas } from './execution-workflow-criteria-schema.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..'), require = createRequire(import.meta.url), cache = new Map();
 function load(path) {
   if (cache.has(path)) return cache.get(path).exports;
@@ -18,6 +19,7 @@ function json(s) {
   const d = s._def, t = d.typeName;
   if (t === 'ZodEffects') return json(d.schema); // Structural semantics are restored below; relational checks remain runtime-only.
   if (t === 'ZodUnknown') return {}; // Nested PM transform is replaced with the canonical strict CommandIntent ref below.
+  if (t === 'ZodUnion') return { anyOf: d.options.map(json) };
   if (t === 'ZodNullable') return { anyOf: [json(d.innerType), { type: 'null' }] };
   if (t === 'ZodLiteral') return { const: d.value };
   if (t === 'ZodBoolean') return { type: 'boolean' };
@@ -68,6 +70,7 @@ schemas.WorkflowReadState.allOf = [{
 // Decimal partition arithmetic remains a runtime obligation, never target-as-amount.
 Object.assign(schemas, capitalWorkflowSchemas(c, json));
 for (const [name, allOf] of Object.entries(workflowStructuralRefinements(c, json))) schemas[name].allOf = allOf;
+Object.assign(schemas, workflowCriteriaSchemas(c, json));
 schemas.WorkflowScorePresentation = { type: 'object', additionalProperties: false,
   required: ['canonical_score', 'facet', 'headline', 'public_copy_key', 'regime_changes_score', 'analytics_gates_safety_action'],
   properties: { canonical_score: ref('ScoreCapsule'), facet: { enum: ['ACTUAL', 'SIMULATED', 'EARLY', 'MIXED_OBSERVATION'] },

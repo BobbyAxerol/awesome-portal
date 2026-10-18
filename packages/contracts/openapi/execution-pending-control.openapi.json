@@ -1229,6 +1229,21 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "allOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+              },
+              {
+                "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+              }
+            ],
+            "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
           }
         },
         "required": [
@@ -1249,7 +1264,8 @@
           "next_action",
           "authority",
           "created_at_ms",
-          "updated_at_ms"
+          "updated_at_ms",
+          "currency"
         ],
         "allOf": [
           {
@@ -1400,7 +1416,7 @@
             }
           }
         ],
-        "description": "Separate PENDING_RECALL_CONTROL family, not a new economic action. ACKNOWLEDGED iff source business is known. WAITING may have cumulative applied > 0 and continues QUERY_SAME_INTENT; terminal known states REVIEW_RECEIPT. UNKNOWN has no receipt/economics/blockers and queries except FAILED_BEFORE_SEND reviews its blocker. Physical transfer and economic cash change are false; no venue/projection confirmation is inferred. Runtime additionally checks chronology, exact source correlation, amount partitions and monotonicity. TEST_ONLY fixtures are not source qualification."
+        "description": "Separate PENDING_RECALL_CONTROL family, not a new economic action. ACKNOWLEDGED iff source business is known. WAITING may have cumulative applied > 0 and continues QUERY_SAME_INTENT; terminal known states REVIEW_RECEIPT. UNKNOWN has no receipt/economics/blockers and queries except FAILED_BEFORE_SEND reviews its blocker. Physical transfer and economic cash change are false; no venue/projection confirmation is inferred. Runtime additionally checks chronology, exact source correlation, amount partitions and monotonicity. TEST_ONLY fixtures are not source qualification. Required currency is the exact immutable original intent unit, published only after current authority and original identity/hash validation. Historical stored status bytes remain unchanged and may omit currency; they are not served directly. Corrupt/unverifiable original intent refuses rather than guessing a unit. Pre-upgrade HTTP bodies without currency are incomplete under this public schema."
       },
       "PendingControlBody": {
         "oneOf": [

@@ -124,3 +124,41 @@ Corrected fixture awaits the normal-hook terminal. C2 shares that coherent
 R3 landing rather than charging a separate full hook for one metadata row.
 No Claude source merge until canonical is clean, peer rebased on the actual
 landed SHA and Claude's R2 evidence covers that exact SHA. No push/deploy.
+
+### Actual C1/C2 terminal and C3–C7 integration
+
+C1/C2 landed at `5291a80f68a11cbccad879d1e99bb6282634f636` after actual
+normal-hook terminal `pending-control-land-151825` at16:04:56UTC. Contracts
+996PASS, clean supported-Node22 API build PASS, API7503PASS/3skip. All eight
+protected runtime tuples, source/index preservation and exact cell teardown
+PASS. Log SHA256 `275849cab47c0489bdc960b6c97374156f225eafee024b83e5fb883baeabf6f2`.
+Previous failed terminal above is preserved; this is not a source mount.
+
+Peer read refreshed at `128e1cf4d154df17fe1d8d4b16bb538ce5f4471c`; B1 staged
+operations/query/generator changes are owned by Claude and were not copied or
+edited. F8's consumer-review is a request, not an ACK. C3–C7 applied reviewed
+implementation and F8 dispositions are tracked in the owning phase handoffs
+and [current integration/validation packet](manager-intake-2026-10-18.md).
+The [finite researcher proposal](../ELP2-03/researcher-field-policy-proposal-2026-10-18.md)
+is NOT_INSTALLED, awaiting Bobby's field-policy decision; no wildcard grant.
+
+### Committed B1/B2 source review — awaiting exact-source landing gate
+
+Read-only peer HEAD `34b30032957196dad327755fa5cd136691ac7dd6`; B1 producer
+`517684b6613449c71c5c7417f74aba900c835ae9`, B2 `77ded3ef9fc0298641f344cb5abbcd081d0ccb1f`.
+Disposition: backend source **ACCEPTED_FOR_INTEGRATION**, not runtime/SLO or
+observed R3 acceptance. Same-snapshot authorized m:n incident links and finite
+faceted status counts preserve hidden-row non-disclosure; Matching must use
+filtered_count, never the facet count or financial APPLIED semantics. ROOT
+verification and actual schema141 refute the speculative incident-retarget race.
+Current canonical tree has not imported these peer commits.
+
+Two consumer/document requests for Claude before landing: require exact finite
+`ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED` and
+`INCIDENT_LINK_IDENTITY_NOT_REPRESENTABLE` literals in operationalQueue reader
+(and two negative mutations), not arbitrary nonempty strings; update B1's stale
+UNCOMMITTED/no-R3 handoff with actual terminal receipt/source hash. Commit body
+alone does not prove a normal-hook result. Preserve prior focused receipts.
+Canonical must first be green/clean; then Claude rebases/regenerates and takes
+R2 on that exact successor SHA before any ff-only landing. No dirty merge,
+manual generated hunk splice, push, preview activation or dev/main promotion.

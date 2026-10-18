@@ -2633,6 +2633,13 @@
               "OWNER_VERIFIED",
               "TEST_ONLY"
             ]
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+            "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
           }
         },
         "required": [
@@ -2649,8 +2656,10 @@
           "next_action",
           "created_at_ms",
           "updated_at_ms",
-          "authority"
-        ]
+          "authority",
+          "currency"
+        ],
+        "description": "Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema."
       },
       "CommandCollectionQuery": {
         "type": "object",

@@ -115,7 +115,7 @@ export interface components {
             /** @constant */
             reserved: false;
         } & unknown;
-        /** @description Separate PENDING_RECALL_CONTROL family, not a new economic action. ACKNOWLEDGED iff source business is known. WAITING may have cumulative applied > 0 and continues QUERY_SAME_INTENT; terminal known states REVIEW_RECEIPT. UNKNOWN has no receipt/economics/blockers and queries except FAILED_BEFORE_SEND reviews its blocker. Physical transfer and economic cash change are false; no venue/projection confirmation is inferred. Runtime additionally checks chronology, exact source correlation, amount partitions and monotonicity. TEST_ONLY fixtures are not source qualification. */
+        /** @description Separate PENDING_RECALL_CONTROL family, not a new economic action. ACKNOWLEDGED iff source business is known. WAITING may have cumulative applied > 0 and continues QUERY_SAME_INTENT; terminal known states REVIEW_RECEIPT. UNKNOWN has no receipt/economics/blockers and queries except FAILED_BEFORE_SEND reviews its blocker. Physical transfer and economic cash change are false; no venue/projection confirmation is inferred. Runtime additionally checks chronology, exact source correlation, amount partitions and monotonicity. TEST_ONLY fixtures are not source qualification. Required currency is the exact immutable original intent unit, published only after current authority and original identity/hash validation. Historical stored status bytes remain unchanged and may omit currency; they are not served directly. Corrupt/unverifiable original intent refuses rather than guessing a unit. Pre-upgrade HTTP bodies without currency are incomplete under this public schema. */
         PendingControlStatus: {
             /** @constant */
             schema_version: "portal.execution.pending-recall-status.v1";
@@ -155,6 +155,8 @@ export interface components {
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
             created_at_ms: number;
             updated_at_ms: number;
+            /** @description Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee. */
+            currency: string & (string & unknown);
         } & unknown;
         PendingControlBody: {
             /** @constant */

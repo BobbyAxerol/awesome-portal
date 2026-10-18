@@ -239,7 +239,11 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     this.realtime?.stop();
     for(const c of this.publicationCancellations)c.abort(new Error("MANAGER_RUNTIME_STOPPED"));
     await Promise.allSettled([...this.publicationFlights]);
-    await Promise.all(this.consumers.map(c=>c.stop()));await this.flight;this.lastState="STOPPED";
+    await Promise.all(this.consumers.map(c=>c.stop()));await this.flight;
+    // Hub poll may have settled its cancellation race while the underlying
+    // source query still owns resources. Do not declare shutdown complete or
+    // let the owner dispose its pool/source before those actual calls settle.
+    await this.realtime?.settleSourceReads();this.lastState="STOPPED";
   }
   private materializingSource(p: ManagerRuntimePartition,recalculation?:ManagerScoreRecalculation,
     restatement?:ManagerScoreRestatement,originalCustody?:ManagerOriginalCustodyLifecycle): ManagerProjectionSource {

@@ -34,10 +34,15 @@ function json(s){const d=s._def,t=d.typeName;
 // to an untyped object in generated browser types.
 const foundation=JSON.parse(readFileSync(resolve(root,'openapi/execution-v2-foundation.openapi.json'),'utf8'));
 const schemas={...foundation.components.schemas,CommandIntent:json(c.commandIntent),CommandSubmit:json(c.commandSubmit),
-  CommandPreview:json(c.commandPreview),CommandStatus:json(c.commandStatus),
+  CommandPreview:json(c.commandPreview),CommandStatus:json(c.publicCommandStatus),
   CommandCollectionQuery:json(cc.commandCollectionQuery),CommandCollection:json(cc.commandCollection),
   ...capitalWorkflowSchemas(wc,json)};
 schemas.CommandCollection.properties.items.items={$ref:'#/components/schemas/CommandStatus'};
+// Same PM currency grammar as the unchanged intent, including its documented
+// runtime UTF-8 byte bound. No ISO/uppercase/three-letter assumption is added.
+schemas.CommandStatus.properties.currency=structuredClone(
+  foundation.components.schemas.PmaCandidateCapitalCommand.oneOf[0].properties.currency);
+schemas.CommandStatus.description='Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema.';
 schemas.CommandCollection.description='Finite exact-resource/environment trusted-capital statuses only. Not the mixed operation queue. Current TS-accepted audit authorization precedes collection. Runtime also verifies cross-row target and page-count invariants.';
 schemas.CommandProblem={type:'object',additionalProperties:false,required:['error','request_id'],properties:{error:{type:'object',additionalProperties:false,
   required:['code','message'],properties:{code:{type:'string'},message:{type:'string'}}},request_id:{type:'string'},public_copy_key:{type:'string'},
@@ -100,6 +105,15 @@ const context={workspace_id:commandFixture.intent.workspace_id,environment:comma
   resource:commandFixture.ack_only.resource,policy_revision:'TEST_ONLY:policy',snapshot_ref:'TEST_ONLY:scoped-snapshot',
   source_as_of_ms:null,observed_at_ms:1792100000000};
 const outputs={'openapi/execution-trusted-commands.openapi.json':{openapi:'3.1.0',info:{title:'Trusted PM capital command/status bridge',version:'1.0.0'},paths,components:{securitySchemes:{PortalSession:{type:'apiKey',in:'cookie',name:'portal_session'}},schemas:Object.fromEntries(Object.entries(schemas).filter(([name])=>needed.has(name)))}},
+  'fixtures/execution-command-currency.synthetic.valid.json':{lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',runtime_qualified:false,
+    stored_status:commandFixture.ack_only,
+    public_status:c.publicCommandStatus.parse({...commandFixture.ack_only,currency:commandFixture.intent.business_payload.currency})},
+  'fixtures/execution-trusted-command-collection.synthetic.valid.json':{lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',
+    query:{workspace_id:context.workspace_id,resource_kind:context.resource.kind,resource_id:context.resource.id,environment:context.environment},
+    collection:cc.commandCollection.parse({schema_version:'portal.execution.command-collection.v1',family:'TRUSTED_CAPITAL_COMMANDS_ONLY',
+      coverage:'EXACT_AUTHORIZED_RESOURCE_ONLY',resource:context.resource,environment:context.environment,
+      items:[c.publicCommandStatus.parse({...commandFixture.ack_only,currency:commandFixture.intent.business_payload.currency})],
+      page:{limit:25,returned_count:1,has_more:false,next_cursor:null}})},
   'fixtures/execution-capital-workflow.synthetic.valid.json':{lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',runtime_qualified:false,
     command_id:commandFixture.ack_only.command_id,query:{workspace_id:context.workspace_id},
     response:wf.capitalWorkflow(context,commandFixture.intent.business_payload.currency,commandFixture.ack_only)}};

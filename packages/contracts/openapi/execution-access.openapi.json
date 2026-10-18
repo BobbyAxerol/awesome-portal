@@ -45,6 +45,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "401": {
@@ -53,6 +62,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -65,6 +83,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "404": {
@@ -73,6 +100,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -85,6 +121,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "503": {
@@ -95,9 +140,547 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           }
         }
+      }
+    },
+    "/api/admin/profile-access/v2/eligibility": {
+      "get": {
+        "operationId": "portalScopedAccessEligibilityGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+              "description": "Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization."
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "resource_kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "ROOT",
+                "PORTFOLIO",
+                "ALPHA",
+                "ALPHA_VERSION",
+                "DEPLOYMENT",
+                "ACCOUNT",
+                "BINDING",
+                "USER"
+              ]
+            }
+          },
+          {
+            "name": "resource_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+              "description": "Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization."
+            }
+          },
+          {
+            "name": "actions",
+            "in": "query",
+            "required": true,
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024,
+              "pattern": "^(?:alpha\\.read|portfolio\\.read|portfolio\\.read_restricted|portfolio\\.discover_linked|account\\.read|binding\\.read|audit\\.read|governance\\.r1\\.read|governance\\.r2\\.read|governance\\.canary\\.read|governance\\.live\\.read|governance\\.r1\\.decide|governance\\.r2\\.decide|governance\\.canary\\.decide|governance\\.live\\.decide|maintenance\\.read|development\\.read|capital\\.fund|capital\\.initial_grant|capital\\.top_up|capital\\.immediate_decrease|capital\\.recall_partial|capital\\.recall_full|capital\\.adjust_target_budget|capital\\.set_root_limit|capital\\.apply_pending|capital\\.cancel_remaining|deployment\\.register)(?:,(?:alpha\\.read|portfolio\\.read|portfolio\\.read_restricted|portfolio\\.discover_linked|account\\.read|binding\\.read|audit\\.read|governance\\.r1\\.read|governance\\.r2\\.read|governance\\.canary\\.read|governance\\.live\\.read|governance\\.r1\\.decide|governance\\.r2\\.decide|governance\\.canary\\.decide|governance\\.live\\.decide|maintenance\\.read|development\\.read|capital\\.fund|capital\\.initial_grant|capital\\.top_up|capital\\.immediate_decrease|capital\\.recall_partial|capital\\.recall_full|capital\\.adjust_target_budget|capital\\.set_root_limit|capital\\.apply_pending|capital\\.cancel_remaining|deployment\\.register)){0,15}$(?![\\s\\S])",
+              "allOf": [
+                {
+                  "not": {
+                    "pattern": "(?:^|,)alpha\\.read(?:,[^,]+)*,alpha\\.read(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)portfolio\\.read(?:,[^,]+)*,portfolio\\.read(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)portfolio\\.read_restricted(?:,[^,]+)*,portfolio\\.read_restricted(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)portfolio\\.discover_linked(?:,[^,]+)*,portfolio\\.discover_linked(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)account\\.read(?:,[^,]+)*,account\\.read(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)binding\\.read(?:,[^,]+)*,binding\\.read(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)audit\\.read(?:,[^,]+)*,audit\\.read(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)governance\\.r1\\.read(?:,[^,]+)*,governance\\.r1\\.read(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)governance\\.r2\\.read(?:,[^,]+)*,governance\\.r2\\.read(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)governance\\.canary\\.read(?:,[^,]+)*,governance\\.canary\\.read(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)governance\\.live\\.read(?:,[^,]+)*,governance\\.live\\.read(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)governance\\.r1\\.decide(?:,[^,]+)*,governance\\.r1\\.decide(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)governance\\.r2\\.decide(?:,[^,]+)*,governance\\.r2\\.decide(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)governance\\.canary\\.decide(?:,[^,]+)*,governance\\.canary\\.decide(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)governance\\.live\\.decide(?:,[^,]+)*,governance\\.live\\.decide(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)maintenance\\.read(?:,[^,]+)*,maintenance\\.read(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)development\\.read(?:,[^,]+)*,development\\.read(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)capital\\.fund(?:,[^,]+)*,capital\\.fund(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)capital\\.initial_grant(?:,[^,]+)*,capital\\.initial_grant(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)capital\\.top_up(?:,[^,]+)*,capital\\.top_up(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)capital\\.immediate_decrease(?:,[^,]+)*,capital\\.immediate_decrease(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)capital\\.recall_partial(?:,[^,]+)*,capital\\.recall_partial(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)capital\\.recall_full(?:,[^,]+)*,capital\\.recall_full(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)capital\\.adjust_target_budget(?:,[^,]+)*,capital\\.adjust_target_budget(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)capital\\.set_root_limit(?:,[^,]+)*,capital\\.set_root_limit(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)capital\\.apply_pending(?:,[^,]+)*,capital\\.apply_pending(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)capital\\.cancel_remaining(?:,[^,]+)*,capital\\.cancel_remaining(?:,|$)"
+                  }
+                },
+                {
+                  "not": {
+                    "pattern": "(?:^|,)deployment\\.register(?:,[^,]+)*,deployment\\.register(?:,|$)"
+                  }
+                }
+              ],
+              "description": "One exact CSV string,1–16 unique finite actions. No whitespace normalization, repeated query keys, JSON, wildcards or actor/as-of selectors."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private,no-store; Portal application authority, not TS business activation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessEligibility"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          }
+        },
+        "description": "Current-only self projection; reject unknown query keys, repeated/ambiguous values, subjects, roles, as_of_ms and browser profile/hash tuples. Advisory, never an execution permit."
+      }
+    },
+    "/api/admin/profile-access/v2/self-navigation": {
+      "get": {
+        "operationId": "portalScopedAccessSelfNavigationGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+              "description": "Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization."
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private,no-store; Portal application authority, not TS business activation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessSelfNavigation"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          }
+        },
+        "description": "Current-only self projection; reject unknown query keys, repeated/ambiguous values, subjects, roles, as_of_ms and browser profile/hash tuples. Advisory, never an execution permit."
       }
     },
     "/api/admin/profile-access/v2/preview": {
@@ -170,6 +753,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "401": {
@@ -178,6 +770,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -190,6 +791,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "404": {
@@ -198,6 +808,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -210,6 +829,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "503": {
@@ -218,6 +846,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -295,6 +932,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "401": {
@@ -303,6 +949,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -315,6 +970,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "404": {
@@ -323,6 +987,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -335,6 +1008,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "503": {
@@ -343,6 +1025,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -401,6 +1092,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "401": {
@@ -409,6 +1109,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -421,6 +1130,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "404": {
@@ -429,6 +1147,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -441,6 +1168,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "503": {
@@ -449,6 +1185,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -537,6 +1282,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "401": {
@@ -545,6 +1299,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -557,6 +1320,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "404": {
@@ -565,6 +1337,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -577,6 +1358,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "503": {
@@ -585,6 +1375,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -673,6 +1472,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "401": {
@@ -681,6 +1489,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -693,6 +1510,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "404": {
@@ -701,6 +1527,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -713,6 +1548,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "503": {
@@ -721,6 +1565,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -798,6 +1651,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "401": {
@@ -806,6 +1668,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -818,6 +1689,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "404": {
@@ -826,6 +1706,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -838,6 +1727,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "503": {
@@ -846,6 +1744,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -925,6 +1832,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "401": {
@@ -933,6 +1849,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -945,6 +1870,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "404": {
@@ -953,6 +1887,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -965,6 +1908,15 @@
                   "$ref": "#/components/schemas/AccessProblem"
                 }
               }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
             }
           },
           "503": {
@@ -973,6 +1925,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
                 }
               }
             }
@@ -1288,6 +2249,2139 @@
                 }
               }
             }
+          }
+        ]
+      },
+      "AccessEligibilityAction": {
+        "type": "string",
+        "enum": [
+          "alpha.read",
+          "portfolio.read",
+          "portfolio.read_restricted",
+          "portfolio.discover_linked",
+          "account.read",
+          "binding.read",
+          "audit.read",
+          "governance.r1.read",
+          "governance.r2.read",
+          "governance.canary.read",
+          "governance.live.read",
+          "governance.r1.decide",
+          "governance.r2.decide",
+          "governance.canary.decide",
+          "governance.live.decide",
+          "maintenance.read",
+          "development.read",
+          "capital.fund",
+          "capital.initial_grant",
+          "capital.top_up",
+          "capital.immediate_decrease",
+          "capital.recall_partial",
+          "capital.recall_full",
+          "capital.adjust_target_budget",
+          "capital.set_root_limit",
+          "capital.apply_pending",
+          "capital.cancel_remaining",
+          "deployment.register"
+        ]
+      },
+      "AccessEligibilityQuery": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace_id",
+          "environment",
+          "resource_kind",
+          "resource_id",
+          "actions"
+        ],
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+            "description": "Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization."
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "resource_kind": {
+            "enum": [
+              "ROOT",
+              "PORTFOLIO",
+              "ALPHA",
+              "ALPHA_VERSION",
+              "DEPLOYMENT",
+              "ACCOUNT",
+              "BINDING",
+              "USER"
+            ]
+          },
+          "resource_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+            "description": "Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization."
+          },
+          "actions": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "pattern": "^(?:alpha\\.read|portfolio\\.read|portfolio\\.read_restricted|portfolio\\.discover_linked|account\\.read|binding\\.read|audit\\.read|governance\\.r1\\.read|governance\\.r2\\.read|governance\\.canary\\.read|governance\\.live\\.read|governance\\.r1\\.decide|governance\\.r2\\.decide|governance\\.canary\\.decide|governance\\.live\\.decide|maintenance\\.read|development\\.read|capital\\.fund|capital\\.initial_grant|capital\\.top_up|capital\\.immediate_decrease|capital\\.recall_partial|capital\\.recall_full|capital\\.adjust_target_budget|capital\\.set_root_limit|capital\\.apply_pending|capital\\.cancel_remaining|deployment\\.register)(?:,(?:alpha\\.read|portfolio\\.read|portfolio\\.read_restricted|portfolio\\.discover_linked|account\\.read|binding\\.read|audit\\.read|governance\\.r1\\.read|governance\\.r2\\.read|governance\\.canary\\.read|governance\\.live\\.read|governance\\.r1\\.decide|governance\\.r2\\.decide|governance\\.canary\\.decide|governance\\.live\\.decide|maintenance\\.read|development\\.read|capital\\.fund|capital\\.initial_grant|capital\\.top_up|capital\\.immediate_decrease|capital\\.recall_partial|capital\\.recall_full|capital\\.adjust_target_budget|capital\\.set_root_limit|capital\\.apply_pending|capital\\.cancel_remaining|deployment\\.register)){0,15}$(?![\\s\\S])",
+            "allOf": [
+              {
+                "not": {
+                  "pattern": "(?:^|,)alpha\\.read(?:,[^,]+)*,alpha\\.read(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)portfolio\\.read(?:,[^,]+)*,portfolio\\.read(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)portfolio\\.read_restricted(?:,[^,]+)*,portfolio\\.read_restricted(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)portfolio\\.discover_linked(?:,[^,]+)*,portfolio\\.discover_linked(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)account\\.read(?:,[^,]+)*,account\\.read(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)binding\\.read(?:,[^,]+)*,binding\\.read(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)audit\\.read(?:,[^,]+)*,audit\\.read(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)governance\\.r1\\.read(?:,[^,]+)*,governance\\.r1\\.read(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)governance\\.r2\\.read(?:,[^,]+)*,governance\\.r2\\.read(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)governance\\.canary\\.read(?:,[^,]+)*,governance\\.canary\\.read(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)governance\\.live\\.read(?:,[^,]+)*,governance\\.live\\.read(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)governance\\.r1\\.decide(?:,[^,]+)*,governance\\.r1\\.decide(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)governance\\.r2\\.decide(?:,[^,]+)*,governance\\.r2\\.decide(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)governance\\.canary\\.decide(?:,[^,]+)*,governance\\.canary\\.decide(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)governance\\.live\\.decide(?:,[^,]+)*,governance\\.live\\.decide(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)maintenance\\.read(?:,[^,]+)*,maintenance\\.read(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)development\\.read(?:,[^,]+)*,development\\.read(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)capital\\.fund(?:,[^,]+)*,capital\\.fund(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)capital\\.initial_grant(?:,[^,]+)*,capital\\.initial_grant(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)capital\\.top_up(?:,[^,]+)*,capital\\.top_up(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)capital\\.immediate_decrease(?:,[^,]+)*,capital\\.immediate_decrease(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)capital\\.recall_partial(?:,[^,]+)*,capital\\.recall_partial(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)capital\\.recall_full(?:,[^,]+)*,capital\\.recall_full(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)capital\\.adjust_target_budget(?:,[^,]+)*,capital\\.adjust_target_budget(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)capital\\.set_root_limit(?:,[^,]+)*,capital\\.set_root_limit(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)capital\\.apply_pending(?:,[^,]+)*,capital\\.apply_pending(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)capital\\.cancel_remaining(?:,[^,]+)*,capital\\.cancel_remaining(?:,|$)"
+                }
+              },
+              {
+                "not": {
+                  "pattern": "(?:^|,)deployment\\.register(?:,[^,]+)*,deployment\\.register(?:,|$)"
+                }
+              }
+            ],
+            "description": "One exact CSV string,1–16 unique finite actions. No whitespace normalization, repeated query keys, JSON, wildcards or actor/as-of selectors."
+          }
+        }
+      },
+      "AccessSelfNavigationQuery": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace_id",
+          "environment"
+        ],
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+            "description": "Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization."
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          }
+        }
+      },
+      "AccessEligibilityRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "action",
+          "permission",
+          "reason_class",
+          "public_copy_key",
+          "grant_ref",
+          "authority_mode",
+          "step_up_required",
+          "step_up_freshness",
+          "challenge_availability",
+          "command_readiness",
+          "family_check"
+        ],
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/AccessEligibilityAction"
+          },
+          "permission": {
+            "enum": [
+              "ALLOWED",
+              "UNAVAILABLE"
+            ]
+          },
+          "reason_class": {
+            "enum": [
+              "FAMILY_CHECK_REQUIRED",
+              "NO_CURRENT_PERMISSION",
+              "POLICY_PENDING",
+              "FIELD_POLICY_PENDING",
+              "ACTION_TARGET_UNSUPPORTED"
+            ]
+          },
+          "public_copy_key": {
+            "enum": [
+              "FAMILY_CHECK_REQUIRED",
+              "NO_CURRENT_PERMISSION",
+              "POLICY_PENDING",
+              "FIELD_POLICY_PENDING",
+              "ACTION_TARGET_UNSUPPORTED"
+            ]
+          },
+          "grant_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque existing own matched grant ID: canonical accessText, at most 256 Unicode codepoints, not the new caller-selector UTF8 byte limit. Returned unchanged without normalization."
+          },
+          "authority_mode": {
+            "enum": [
+              "VERSIONED_CURRENT",
+              "LEGACY_COMPATIBILITY",
+              "APP_ONLY",
+              "NOT_ESTABLISHED"
+            ]
+          },
+          "step_up_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "step_up_freshness": {
+            "const": "NOT_CHECKED"
+          },
+          "challenge_availability": {
+            "const": "NOT_CHECKED"
+          },
+          "command_readiness": {
+            "const": "NOT_CHECKED"
+          },
+          "family_check": {
+            "enum": [
+              "BUSINESS_READ_SCOPE",
+              "CURRENT_AUDIT_READ",
+              "GOVERNANCE_READER",
+              "GOVERNANCE_PLAN",
+              "TECHNICAL_READ_SCOPE",
+              "CAPITAL_PREVIEW",
+              "PENDING_CONTROL_PREVIEW",
+              "INSTANCE_REGISTRATION_PREVIEW"
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "alpha.read"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "BUSINESS_READ_SCOPE"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "portfolio.read"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "BUSINESS_READ_SCOPE"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "portfolio.read_restricted"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "BUSINESS_READ_SCOPE"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "portfolio.discover_linked"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "BUSINESS_READ_SCOPE"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "account.read"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "BUSINESS_READ_SCOPE"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "binding.read"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "BUSINESS_READ_SCOPE"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "audit.read"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "CURRENT_AUDIT_READ"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "governance.r1.read"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "GOVERNANCE_READER"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "governance.r2.read"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "GOVERNANCE_READER"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "governance.canary.read"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "GOVERNANCE_READER"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "governance.live.read"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "GOVERNANCE_READER"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "governance.r1.decide"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "GOVERNANCE_PLAN"
+                },
+                "step_up_required": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "governance.r2.decide"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "GOVERNANCE_PLAN"
+                },
+                "step_up_required": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "governance.canary.decide"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "GOVERNANCE_PLAN"
+                },
+                "step_up_required": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "governance.live.decide"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "GOVERNANCE_PLAN"
+                },
+                "step_up_required": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "maintenance.read"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "TECHNICAL_READ_SCOPE"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "development.read"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "TECHNICAL_READ_SCOPE"
+                },
+                "step_up_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "capital.fund"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "CAPITAL_PREVIEW"
+                },
+                "step_up_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "capital.initial_grant"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "CAPITAL_PREVIEW"
+                },
+                "step_up_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "capital.top_up"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "CAPITAL_PREVIEW"
+                },
+                "step_up_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "capital.immediate_decrease"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "CAPITAL_PREVIEW"
+                },
+                "step_up_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "capital.recall_partial"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "CAPITAL_PREVIEW"
+                },
+                "step_up_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "capital.recall_full"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "CAPITAL_PREVIEW"
+                },
+                "step_up_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "capital.adjust_target_budget"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "CAPITAL_PREVIEW"
+                },
+                "step_up_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "capital.set_root_limit"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "CAPITAL_PREVIEW"
+                },
+                "step_up_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "capital.apply_pending"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "PENDING_CONTROL_PREVIEW"
+                },
+                "step_up_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "capital.cancel_remaining"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "PENDING_CONTROL_PREVIEW"
+                },
+                "step_up_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "deployment.register"
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "family_check": {
+                  "const": "INSTANCE_REGISTRATION_PREVIEW"
+                },
+                "step_up_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "FAMILY_CHECK_REQUIRED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "FAMILY_CHECK_REQUIRED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "NO_CURRENT_PERMISSION"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "NO_CURRENT_PERMISSION"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "POLICY_PENDING"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "POLICY_PENDING"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "FIELD_POLICY_PENDING"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "FIELD_POLICY_PENDING"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "ACTION_TARGET_UNSUPPORTED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "ACTION_TARGET_UNSUPPORTED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "permission": {
+                  "const": "ALLOWED"
+                }
+              },
+              "required": [
+                "permission"
+              ]
+            },
+            "then": {
+              "properties": {
+                "reason_class": {
+                  "const": "FAMILY_CHECK_REQUIRED"
+                },
+                "grant_ref": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+                },
+                "authority_mode": {
+                  "enum": [
+                    "VERSIONED_CURRENT",
+                    "LEGACY_COMPATIBILITY",
+                    "APP_ONLY"
+                  ]
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "reason_class": {
+                  "enum": [
+                    "NO_CURRENT_PERMISSION",
+                    "POLICY_PENDING",
+                    "FIELD_POLICY_PENDING",
+                    "ACTION_TARGET_UNSUPPORTED"
+                  ]
+                },
+                "grant_ref": {
+                  "type": "null"
+                },
+                "authority_mode": {
+                  "const": "NOT_ESTABLISHED"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "AccessEligibility": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "environment",
+          "resource",
+          "current_only",
+          "advisory_only",
+          "actions"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.self-eligibility.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+            "description": "Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization."
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "id"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "ROOT",
+                  "PORTFOLIO",
+                  "ALPHA",
+                  "ALPHA_VERSION",
+                  "DEPLOYMENT",
+                  "ACCOUNT",
+                  "BINDING",
+                  "USER"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+                "description": "Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization."
+              }
+            }
+          },
+          "current_only": {
+            "const": true
+          },
+          "advisory_only": {
+            "const": true
+          },
+          "actions": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "$ref": "#/components/schemas/AccessEligibilityRow"
+            },
+            "allOf": [
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "alpha.read"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "portfolio.read"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "portfolio.read_restricted"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "portfolio.discover_linked"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "account.read"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "binding.read"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "audit.read"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "governance.r1.read"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "governance.r2.read"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "governance.canary.read"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "governance.live.read"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "governance.r1.decide"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "governance.r2.decide"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "governance.canary.decide"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "governance.live.decide"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "maintenance.read"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "development.read"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "capital.fund"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "capital.initial_grant"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "capital.top_up"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "capital.immediate_decrease"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "capital.recall_partial"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "capital.recall_full"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "capital.adjust_target_budget"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "capital.set_root_limit"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "capital.apply_pending"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "capital.cancel_remaining"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "deployment.register"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ]
+                },
+                "minContains": 0,
+                "maxContains": 1
+              }
+            ]
+          }
+        },
+        "description": "Current own application permission facts only; target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Not a permit or TS activation.",
+        "examples": [
+          {
+            "schema_version": "portal.self-eligibility.v1",
+            "workspace_id": "ws_TEST_ONLY",
+            "environment": "paper",
+            "resource": {
+              "kind": "PORTFOLIO",
+              "id": "portfolio_TEST_ONLY"
+            },
+            "current_only": true,
+            "advisory_only": true,
+            "actions": [
+              {
+                "action": "portfolio.read",
+                "permission": "ALLOWED",
+                "reason_class": "FAMILY_CHECK_REQUIRED",
+                "public_copy_key": "FAMILY_CHECK_REQUIRED",
+                "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC",
+                "authority_mode": "VERSIONED_CURRENT",
+                "step_up_required": false,
+                "step_up_freshness": "NOT_CHECKED",
+                "challenge_availability": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED",
+                "family_check": "BUSINESS_READ_SCOPE"
+              }
+            ]
+          },
+          {
+            "schema_version": "portal.self-eligibility.v1",
+            "workspace_id": "ws_TEST_ONLY",
+            "environment": "paper",
+            "resource": {
+              "kind": "PORTFOLIO",
+              "id": "portfolio_TEST_ONLY"
+            },
+            "current_only": true,
+            "advisory_only": true,
+            "actions": [
+              {
+                "action": "portfolio.read",
+                "permission": "UNAVAILABLE",
+                "reason_class": "NO_CURRENT_PERMISSION",
+                "public_copy_key": "NO_CURRENT_PERMISSION",
+                "grant_ref": null,
+                "authority_mode": "NOT_ESTABLISHED",
+                "step_up_required": false,
+                "step_up_freshness": "NOT_CHECKED",
+                "challenge_availability": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED",
+                "family_check": "BUSINESS_READ_SCOPE"
+              }
+            ]
+          }
+        ]
+      },
+      "AccessSelfNavigationItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "feature",
+          "state",
+          "authority_mode",
+          "family_check",
+          "source_readiness",
+          "field_readiness",
+          "command_readiness"
+        ],
+        "properties": {
+          "feature": {
+            "enum": [
+              "EXECUTION_PORTFOLIOS",
+              "EXECUTION_ACCOUNTS_BINDINGS",
+              "EXECUTION_OPERATIONS",
+              "EXECUTION_BLOTTER"
+            ]
+          },
+          "state": {
+            "enum": [
+              "ENTERABLE",
+              "HIDDEN"
+            ]
+          },
+          "authority_mode": {
+            "enum": [
+              "SCOPED_CURRENT",
+              "APP_ONLY",
+              "NOT_ESTABLISHED"
+            ]
+          },
+          "family_check": {
+            "const": "NOT_CHECKED"
+          },
+          "source_readiness": {
+            "const": "NOT_CHECKED"
+          },
+          "field_readiness": {
+            "const": "NOT_CHECKED"
+          },
+          "command_readiness": {
+            "const": "NOT_CHECKED"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "HIDDEN"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "authority_mode": {
+                  "const": "NOT_ESTABLISHED"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "authority_mode": {
+                  "enum": [
+                    "SCOPED_CURRENT",
+                    "APP_ONLY"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "feature": {
+                  "const": "EXECUTION_OPERATIONS"
+                }
+              },
+              "required": [
+                "feature"
+              ]
+            },
+            "then": {
+              "properties": {
+                "authority_mode": {
+                  "enum": [
+                    "SCOPED_CURRENT",
+                    "NOT_ESTABLISHED"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "AccessSelfNavigation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "environment",
+          "current_only",
+          "advisory_only",
+          "current_read_mode",
+          "features",
+          "self_entry"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.self-navigation.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+            "description": "Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization."
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "current_only": {
+            "const": true
+          },
+          "advisory_only": {
+            "const": true
+          },
+          "current_read_mode": {
+            "enum": [
+              "LEGACY_COMPATIBILITY",
+              "SCOPED_V2",
+              "NOT_ESTABLISHED"
+            ],
+            "description": "Current Core-workspace reader routing metadata only; not a grant, source readiness or command permit."
+          },
+          "features": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": false,
+            "prefixItems": [
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AccessSelfNavigationItem"
+                  },
+                  {
+                    "properties": {
+                      "feature": {
+                        "const": "EXECUTION_PORTFOLIOS"
+                      }
+                    },
+                    "required": [
+                      "feature"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AccessSelfNavigationItem"
+                  },
+                  {
+                    "properties": {
+                      "feature": {
+                        "const": "EXECUTION_ACCOUNTS_BINDINGS"
+                      }
+                    },
+                    "required": [
+                      "feature"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AccessSelfNavigationItem"
+                  },
+                  {
+                    "properties": {
+                      "feature": {
+                        "const": "EXECUTION_OPERATIONS"
+                      }
+                    },
+                    "required": [
+                      "feature"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AccessSelfNavigationItem"
+                  },
+                  {
+                    "properties": {
+                      "feature": {
+                        "const": "EXECUTION_BLOTTER"
+                      }
+                    },
+                    "required": [
+                      "feature"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "self_entry": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "feature",
+              "mode",
+              "permission",
+              "route",
+              "consumer_state"
+            ],
+            "properties": {
+              "feature": {
+                "const": "PROFILE_ACCESS"
+              },
+              "mode": {
+                "const": "SELF_ONLY"
+              },
+              "permission": {
+                "const": "ALLOWED"
+              },
+              "route": {
+                "type": "null"
+              },
+              "consumer_state": {
+                "const": "AWAITING_CONSUMER_ROUTER"
+              }
+            }
+          }
+        },
+        "description": "Exactly four ordered own menu facts. APP_ONLY is exact reviewed Portal Manager domain permission, never source/field/economic/native/command readiness and never Operations audit. No target IDs, domain digests, peer grants or synthetic capability aliases.",
+        "examples": [
+          {
+            "schema_version": "portal.self-navigation.v1",
+            "workspace_id": "ws_TEST_ONLY",
+            "environment": "paper",
+            "current_only": true,
+            "advisory_only": true,
+            "current_read_mode": "NOT_ESTABLISHED",
+            "self_entry": {
+              "feature": "PROFILE_ACCESS",
+              "mode": "SELF_ONLY",
+              "permission": "ALLOWED",
+              "route": null,
+              "consumer_state": "AWAITING_CONSUMER_ROUTER"
+            },
+            "features": [
+              {
+                "feature": "EXECUTION_PORTFOLIOS",
+                "state": "ENTERABLE",
+                "authority_mode": "APP_ONLY",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+                "state": "ENTERABLE",
+                "authority_mode": "APP_ONLY",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_OPERATIONS",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_BLOTTER",
+                "state": "ENTERABLE",
+                "authority_mode": "APP_ONLY",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              }
+            ]
+          },
+          {
+            "schema_version": "portal.self-navigation.v1",
+            "workspace_id": "ws_TEST_ONLY",
+            "environment": "paper",
+            "current_only": true,
+            "advisory_only": true,
+            "current_read_mode": "NOT_ESTABLISHED",
+            "self_entry": {
+              "feature": "PROFILE_ACCESS",
+              "mode": "SELF_ONLY",
+              "permission": "ALLOWED",
+              "route": null,
+              "consumer_state": "AWAITING_CONSUMER_ROUTER"
+            },
+            "features": [
+              {
+                "feature": "EXECUTION_PORTFOLIOS",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_OPERATIONS",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_BLOTTER",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              }
+            ]
+          },
+          {
+            "schema_version": "portal.self-navigation.v1",
+            "workspace_id": "ws_TEST_ONLY",
+            "environment": "paper",
+            "current_only": true,
+            "advisory_only": true,
+            "current_read_mode": "LEGACY_COMPATIBILITY",
+            "self_entry": {
+              "feature": "PROFILE_ACCESS",
+              "mode": "SELF_ONLY",
+              "permission": "ALLOWED",
+              "route": null,
+              "consumer_state": "AWAITING_CONSUMER_ROUTER"
+            },
+            "features": [
+              {
+                "feature": "EXECUTION_PORTFOLIOS",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_OPERATIONS",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_BLOTTER",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              }
+            ]
+          },
+          {
+            "schema_version": "portal.self-navigation.v1",
+            "workspace_id": "ws_TEST_ONLY",
+            "environment": "paper",
+            "current_only": true,
+            "advisory_only": true,
+            "current_read_mode": "SCOPED_V2",
+            "self_entry": {
+              "feature": "PROFILE_ACCESS",
+              "mode": "SELF_ONLY",
+              "permission": "ALLOWED",
+              "route": null,
+              "consumer_state": "AWAITING_CONSUMER_ROUTER"
+            },
+            "features": [
+              {
+                "feature": "EXECUTION_PORTFOLIOS",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_ACCOUNTS_BINDINGS",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_OPERATIONS",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              },
+              {
+                "feature": "EXECUTION_BLOTTER",
+                "state": "HIDDEN",
+                "authority_mode": "NOT_ESTABLISHED",
+                "family_check": "NOT_CHECKED",
+                "source_readiness": "NOT_CHECKED",
+                "field_readiness": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED"
+              }
+            ]
           }
         ]
       },

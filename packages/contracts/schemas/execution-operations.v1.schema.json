@@ -11612,7 +11612,11 @@
         "family",
         "review",
         "evaluation",
-        "lineage"
+        "criteria",
+        "lineage",
+        "actors",
+        "latest_operation",
+        "recorded_activity"
       ],
       "properties": {
         "schema_version": {
@@ -12177,6 +12181,1160 @@
             }
           ]
         },
+        "criteria": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "basis",
+                "evaluation_policy_version",
+                "evaluation_formula_version",
+                "panels",
+                "items"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "basis": {
+                  "const": "VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE"
+                },
+                "evaluation_policy_version": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "not": {
+                    "pattern": "[\\u0000-\\u001f\\u007f]"
+                  }
+                },
+                "evaluation_formula_version": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "not": {
+                    "pattern": "[\\u0000-\\u001f\\u007f]"
+                  }
+                },
+                "panels": {
+                  "type": "array",
+                  "maxItems": 4,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "panel_id",
+                      "ordinal",
+                      "panel_kind",
+                      "source_authority",
+                      "panel_state",
+                      "as_of_ms",
+                      "freshness_state",
+                      "source_completeness",
+                      "poll_interval_ms",
+                      "formula_version"
+                    ],
+                    "properties": {
+                      "panel_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 191,
+                        "pattern": "^[A-Za-z0-9._:-]+$"
+                      },
+                      "ordinal": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "panel_kind": {
+                        "type": "string",
+                        "enum": [
+                          "OBSERVATION_COVERAGE",
+                          "DRIFT",
+                          "LIMITS_HEALTH",
+                          "PORTFOLIO_FIT"
+                        ]
+                      },
+                      "source_authority": {
+                        "type": "string",
+                        "enum": [
+                          "RESEARCH",
+                          "EXECUTION",
+                          "BROKER",
+                          "DERIVED"
+                        ]
+                      },
+                      "panel_state": {
+                        "type": "string",
+                        "enum": [
+                          "OK",
+                          "PARTIAL",
+                          "STALE",
+                          "UNAVAILABLE",
+                          "ERROR"
+                        ]
+                      },
+                      "as_of_ms": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "freshness_state": {
+                        "type": "string",
+                        "enum": [
+                          "OK",
+                          "STALE",
+                          "UNKNOWN"
+                        ]
+                      },
+                      "source_completeness": {
+                        "type": "string",
+                        "enum": [
+                          "EVENT_SOURCED",
+                          "POLL_BOUNDED",
+                          "UNKNOWN"
+                        ]
+                      },
+                      "poll_interval_ms": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 100,
+                            "maximum": 3600000
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "formula_version": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 191,
+                            "not": {
+                              "pattern": "[\\u0000-\\u001f\\u007f]"
+                            }
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "allOf": [
+                      {
+                        "if": {
+                          "properties": {
+                            "freshness_state": {
+                              "const": "OK"
+                            }
+                          },
+                          "required": [
+                            "freshness_state"
+                          ]
+                        },
+                        "then": {
+                          "properties": {
+                            "as_of_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "if": {
+                          "properties": {
+                            "source_completeness": {
+                              "const": "POLL_BOUNDED"
+                            }
+                          },
+                          "required": [
+                            "source_completeness"
+                          ]
+                        },
+                        "then": {
+                          "properties": {
+                            "poll_interval_ms": {
+                              "type": "integer",
+                              "minimum": 100,
+                              "maximum": 3600000
+                            }
+                          }
+                        },
+                        "else": {
+                          "properties": {
+                            "poll_interval_ms": {
+                              "type": "null"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "items": {
+                  "type": "array",
+                  "maxItems": 256,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "original",
+                      "criterion_key",
+                      "label_key",
+                      "observed",
+                      "limit",
+                      "op",
+                      "unit",
+                      "currency",
+                      "evidence",
+                      "finding_formula_version",
+                      "source_time",
+                      "source_ref"
+                    ],
+                    "properties": {
+                      "original": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "finding_id",
+                          "panel_id",
+                          "ordinal",
+                          "outcome",
+                          "blocking",
+                          "required",
+                          "as_of_ms"
+                        ],
+                        "properties": {
+                          "finding_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 191,
+                            "pattern": "^[A-Za-z0-9._:-]+$"
+                          },
+                          "panel_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 191,
+                            "pattern": "^[A-Za-z0-9._:-]+$"
+                          },
+                          "ordinal": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "outcome": {
+                            "type": "string",
+                            "enum": [
+                              "PASS",
+                              "WATCH",
+                              "FAIL",
+                              "INSUFFICIENT"
+                            ]
+                          },
+                          "blocking": {
+                            "type": "boolean"
+                          },
+                          "required": {
+                            "type": "boolean"
+                          },
+                          "as_of_ms": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "criterion_key": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "AVAILABLE"
+                              },
+                              "value": {
+                                "type": "string",
+                                "enum": [
+                                  "OBSERVATION_COVERAGE",
+                                  "DRIFT",
+                                  "LIMITS_HEALTH",
+                                  "PORTFOLIO_FIT"
+                                ]
+                              },
+                              "reason_code": {
+                                "type": "null"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_METRIC_NOT_REGISTERED"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "label_key": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "AVAILABLE"
+                              },
+                              "value": {
+                                "type": "string",
+                                "enum": [
+                                  "paper_exit.observation_coverage",
+                                  "paper_exit.drift",
+                                  "paper_exit.limits_health",
+                                  "paper_exit.portfolio_fit"
+                                ]
+                              },
+                              "reason_code": {
+                                "type": "null"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_METRIC_NOT_REGISTERED"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "observed": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "AVAILABLE"
+                              },
+                              "value": {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+                              },
+                              "reason_code": {
+                                "type": "null"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_VALUE_NOT_RECORDED"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_VALUE_NOT_DECIMAL"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "limit": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "AVAILABLE"
+                              },
+                              "value": {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+                              },
+                              "reason_code": {
+                                "type": "null"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_VALUE_NOT_RECORDED"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_VALUE_NOT_DECIMAL"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "op": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "availability",
+                          "value",
+                          "reason_code"
+                        ],
+                        "properties": {
+                          "availability": {
+                            "const": "NOT_PUBLISHED"
+                          },
+                          "value": {
+                            "type": "null"
+                          },
+                          "reason_code": {
+                            "const": "SOURCE_COMPARATOR_FIELD_NOT_RECORDED"
+                          }
+                        }
+                      },
+                      "unit": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "AVAILABLE"
+                              },
+                              "value": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 191,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                },
+                                "allOf": [
+                                  {
+                                    "not": {
+                                      "pattern": "[A-Za-z][A-Za-z0-9+.-]*://|^(?:[Jj][Aa][Vv][Aa][Ss][Cc][Rr][Ii][Pp][Tt]|[Dd][Aa][Tt][Aa]|[Ff][Ii][Ll][Ee]):|^[/\\\\]"
+                                    }
+                                  }
+                                ]
+                              },
+                              "reason_code": {
+                                "type": "null"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_TEXT_NOT_RECORDED"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_TEXT_NOT_PUBLIC_SAFE"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "currency": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "AVAILABLE"
+                              },
+                              "value": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 191,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                },
+                                "allOf": [
+                                  {
+                                    "not": {
+                                      "pattern": "[A-Za-z][A-Za-z0-9+.-]*://|^(?:[Jj][Aa][Vv][Aa][Ss][Cc][Rr][Ii][Pp][Tt]|[Dd][Aa][Tt][Aa]|[Ff][Ii][Ll][Ee]):|^[/\\\\]"
+                                    }
+                                  }
+                                ]
+                              },
+                              "reason_code": {
+                                "type": "null"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_TEXT_NOT_RECORDED"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_TEXT_NOT_PUBLIC_SAFE"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "evidence": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "AVAILABLE"
+                              },
+                              "value": {
+                                "type": "string",
+                                "pattern": "^sha256:[0-9a-f]{64}$"
+                              },
+                              "reason_code": {
+                                "type": "null"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_EVIDENCE_HASH_NOT_RECORDED"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "finding_formula_version": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "AVAILABLE"
+                              },
+                              "value": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 191,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                },
+                                "allOf": [
+                                  {
+                                    "not": {
+                                      "pattern": "[A-Za-z][A-Za-z0-9+.-]*://|^(?:[Jj][Aa][Vv][Aa][Ss][Cc][Rr][Ii][Pp][Tt]|[Dd][Aa][Tt][Aa]|[Ff][Ii][Ll][Ee]):|^[/\\\\]"
+                                    }
+                                  }
+                                ]
+                              },
+                              "reason_code": {
+                                "type": "null"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_TEXT_NOT_RECORDED"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_TEXT_NOT_PUBLIC_SAFE"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "source_time": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "AVAILABLE"
+                              },
+                              "value": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "reason_code": {
+                                "type": "null"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "availability",
+                              "value",
+                              "reason_code"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "const": "NOT_PUBLISHED"
+                              },
+                              "value": {
+                                "type": "null"
+                              },
+                              "reason_code": {
+                                "const": "SOURCE_TIME_NOT_RECORDED"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "source_ref": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "kind",
+                          "review_id",
+                          "panel_id",
+                          "finding_id",
+                          "basis"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "PORTAL_STORED_PAPER_EXIT_FINDING"
+                          },
+                          "review_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 191,
+                            "pattern": "^[A-Za-z0-9._:-]+$"
+                          },
+                          "panel_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 191,
+                            "pattern": "^[A-Za-z0-9._:-]+$"
+                          },
+                          "finding_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 191,
+                            "pattern": "^[A-Za-z0-9._:-]+$"
+                          },
+                          "basis": {
+                            "const": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+                          }
+                        }
+                      }
+                    },
+                    "allOf": [
+                      {
+                        "if": {
+                          "properties": {
+                            "criterion_key": {
+                              "type": "object",
+                              "required": [
+                                "availability",
+                                "value"
+                              ],
+                              "properties": {
+                                "availability": {
+                                  "const": "AVAILABLE"
+                                },
+                                "value": {
+                                  "const": "OBSERVATION_COVERAGE"
+                                }
+                              }
+                            }
+                          },
+                          "required": [
+                            "criterion_key"
+                          ]
+                        },
+                        "then": {
+                          "properties": {
+                            "label_key": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "availability",
+                                "value",
+                                "reason_code"
+                              ],
+                              "properties": {
+                                "availability": {
+                                  "const": "AVAILABLE"
+                                },
+                                "value": {
+                                  "const": "paper_exit.observation_coverage"
+                                },
+                                "reason_code": {
+                                  "type": "null"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "if": {
+                          "properties": {
+                            "criterion_key": {
+                              "type": "object",
+                              "required": [
+                                "availability",
+                                "value"
+                              ],
+                              "properties": {
+                                "availability": {
+                                  "const": "AVAILABLE"
+                                },
+                                "value": {
+                                  "const": "DRIFT"
+                                }
+                              }
+                            }
+                          },
+                          "required": [
+                            "criterion_key"
+                          ]
+                        },
+                        "then": {
+                          "properties": {
+                            "label_key": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "availability",
+                                "value",
+                                "reason_code"
+                              ],
+                              "properties": {
+                                "availability": {
+                                  "const": "AVAILABLE"
+                                },
+                                "value": {
+                                  "const": "paper_exit.drift"
+                                },
+                                "reason_code": {
+                                  "type": "null"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "if": {
+                          "properties": {
+                            "criterion_key": {
+                              "type": "object",
+                              "required": [
+                                "availability",
+                                "value"
+                              ],
+                              "properties": {
+                                "availability": {
+                                  "const": "AVAILABLE"
+                                },
+                                "value": {
+                                  "const": "LIMITS_HEALTH"
+                                }
+                              }
+                            }
+                          },
+                          "required": [
+                            "criterion_key"
+                          ]
+                        },
+                        "then": {
+                          "properties": {
+                            "label_key": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "availability",
+                                "value",
+                                "reason_code"
+                              ],
+                              "properties": {
+                                "availability": {
+                                  "const": "AVAILABLE"
+                                },
+                                "value": {
+                                  "const": "paper_exit.limits_health"
+                                },
+                                "reason_code": {
+                                  "type": "null"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "if": {
+                          "properties": {
+                            "criterion_key": {
+                              "type": "object",
+                              "required": [
+                                "availability",
+                                "value"
+                              ],
+                              "properties": {
+                                "availability": {
+                                  "const": "AVAILABLE"
+                                },
+                                "value": {
+                                  "const": "PORTFOLIO_FIT"
+                                }
+                              }
+                            }
+                          },
+                          "required": [
+                            "criterion_key"
+                          ]
+                        },
+                        "then": {
+                          "properties": {
+                            "label_key": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "availability",
+                                "value",
+                                "reason_code"
+                              ],
+                              "properties": {
+                                "availability": {
+                                  "const": "AVAILABLE"
+                                },
+                                "value": {
+                                  "const": "paper_exit.portfolio_fit"
+                                },
+                                "reason_code": {
+                                  "type": "null"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "if": {
+                          "properties": {
+                            "criterion_key": {
+                              "type": "object",
+                              "required": [
+                                "availability"
+                              ],
+                              "properties": {
+                                "availability": {
+                                  "const": "NOT_PUBLISHED"
+                                }
+                              }
+                            }
+                          },
+                          "required": [
+                            "criterion_key"
+                          ]
+                        },
+                        "then": {
+                          "properties": {
+                            "label_key": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "availability",
+                                "value",
+                                "reason_code"
+                              ],
+                              "properties": {
+                                "availability": {
+                                  "const": "NOT_PUBLISHED"
+                                },
+                                "value": {
+                                  "type": "null"
+                                },
+                                "reason_code": {
+                                  "const": "SOURCE_METRIC_NOT_REGISTERED"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "description": "Exact stored finding facts under NEW separately reviewed PAPER_EXIT_CRITERIA on BOTH anchors. Unknown metric means typed absent key/label, not a generic invented criterion. Comparator is always source-absent; no PASS recomputation, prose, URL or floating-point conversion. Runtime additionally correlates source_ref IDs and source_time.value with original finding."
+                  }
+                }
+              },
+              "description": "Finite local stored-byte disclosure, never source acceptance/current economic authority. Runtime checks unique panel/finding identities, panel membership and exact parent review reference. Existing millisecond source clocks only; missing stays null/typed absent."
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+                }
+              }
+            }
+          ]
+        },
         "lineage": {
           "oneOf": [
             {
@@ -12236,6 +13394,359 @@
               }
             }
           ]
+        },
+        "actors": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "basis",
+                "requester_user_id",
+                "artifact_creator_user_id",
+                "decided_by_user_id",
+                "viewer_is_requester",
+                "viewer_is_artifact_creator",
+                "viewer_is_decided_by"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "basis": {
+                  "const": "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION"
+                },
+                "requester_user_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                },
+                "artifact_creator_user_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                },
+                "decided_by_user_id": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 191,
+                      "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "viewer_is_requester": {
+                  "type": "boolean"
+                },
+                "viewer_is_artifact_creator": {
+                  "type": "boolean"
+                },
+                "viewer_is_decided_by": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "decided_by_user_id": {
+                        "type": "null"
+                      }
+                    },
+                    "required": [
+                      "decided_by_user_id"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "viewer_is_decided_by": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "viewer_is_decided_by": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              ],
+              "description": "Exact stored Portal actor IDs plus equality with the current viewer, not role/SoD/current decision eligibility. Null decided_by requires null viewer_is_decided_by, and only then. No names, emails or identity lookup."
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+                }
+              }
+            }
+          ]
+        },
+        "latest_operation": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "basis",
+                "operation_id",
+                "command_version",
+                "command_type",
+                "stored_status",
+                "created_at_ms",
+                "order_basis"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "basis": {
+                  "const": "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY"
+                },
+                "operation_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                },
+                "command_version": {
+                  "const": 1
+                },
+                "command_type": {
+                  "const": "GOVERNANCE_PAPER_EXIT_DECISION"
+                },
+                "stored_status": {
+                  "type": "string",
+                  "enum": [
+                    "PLANNED",
+                    "APPLIED",
+                    "EXPIRED"
+                  ]
+                },
+                "created_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "order_basis": {
+                  "const": "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "type": "string",
+                  "enum": [
+                    "NO_RECORDED_PORTAL_OPERATION",
+                    "LATEST_RECORDED_OPERATION_NOT_PUBLIC"
+                  ]
+                }
+              }
+            }
+          ],
+          "description": "One latest recorded Portal plan under independent latest+detail purposes. Runtime selects newest before public type/version/collision checks; an unreadable latest is typed absent, never an older ID. Stored status is neither apply eligibility nor source settlement."
+        },
+        "recorded_activity": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "basis",
+                "order_basis",
+                "coverage",
+                "limit",
+                "has_more",
+                "items"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "basis": {
+                  "const": "IMMUTABLE_PORTAL_DECISION_ROWS_NOT_SOURCE_OR_STAGE_HISTORY"
+                },
+                "order_basis": {
+                  "const": "POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC"
+                },
+                "coverage": {
+                  "const": "BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY"
+                },
+                "limit": {
+                  "const": 32
+                },
+                "has_more": {
+                  "type": "boolean"
+                },
+                "items": {
+                  "type": "array",
+                  "maxItems": 32,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "decision_id",
+                      "operation_id",
+                      "version_before",
+                      "version_after",
+                      "decided_at_ms",
+                      "kind",
+                      "decision"
+                    ],
+                    "properties": {
+                      "decision_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 191,
+                        "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                      },
+                      "operation_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 191,
+                        "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                      },
+                      "version_before": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "version_after": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "decided_at_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "kind": {
+                        "const": "PAPER_EXIT_DECISION_RECORDED"
+                      },
+                      "decision": {
+                        "type": "string",
+                        "enum": [
+                          "PROMOTE",
+                          "EXTEND_OBSERVATION",
+                          "REJECT"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "has_more": {
+                        "const": true
+                      }
+                    },
+                    "required": [
+                      "has_more"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "items": {
+                        "type": "array",
+                        "minItems": 32
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "RECORDED_ACTIVITY_NOT_PUBLIC"
+                }
+              }
+            }
+          ],
+          "description": "Separately sealed RECORDED_PORTAL_ACTIVITY plus DECISION_OPERATION on BOTH PAPER anchors. Actual bounded immutable Portal decisions only, not source/order/stage history, action eligibility or full history. Runtime additionally checks version_after=version_before+1, unique decision/operation IDs and nonincreasing public decided_at_ms. Exact PostgreSQL microsecond timestamp plus ID ordering is private/query-tested: equal public milliseconds need not have ID lexical order. Standard JSON Schema cannot compare arbitrary scalar siblings or object-key values."
         }
       },
       "description": "Finite current-authorized Paper Exit. Current stored bytes verified for integrity, not historical source acceptance. Optional sections require their own exact current reviewed field purposes. No raw capture/preimage/private intent/prose is returned."
@@ -12254,7 +13765,12 @@
         "anchors",
         "approval",
         "family",
-        "lineage"
+        "lineage",
+        "actors",
+        "latest_operation",
+        "decision_context",
+        "recorded_activity",
+        "recorded_verdicts"
       ],
       "properties": {
         "schema_version": {
@@ -12486,9 +14002,870 @@
               }
             }
           ]
+        },
+        "actors": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "basis",
+                "requester_user_id",
+                "artifact_creator_user_id",
+                "decided_by_user_id",
+                "viewer_is_requester",
+                "viewer_is_artifact_creator",
+                "viewer_is_decided_by"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "basis": {
+                  "const": "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION"
+                },
+                "requester_user_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                },
+                "artifact_creator_user_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                },
+                "decided_by_user_id": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 191,
+                      "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "viewer_is_requester": {
+                  "type": "boolean"
+                },
+                "viewer_is_artifact_creator": {
+                  "type": "boolean"
+                },
+                "viewer_is_decided_by": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "decided_by_user_id": {
+                        "type": "null"
+                      }
+                    },
+                    "required": [
+                      "decided_by_user_id"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "viewer_is_decided_by": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "viewer_is_decided_by": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              ],
+              "description": "Exact stored Portal actor IDs plus equality with the current viewer, not role/SoD/current decision eligibility. Null decided_by requires null viewer_is_decided_by, and only then. No names, emails or identity lookup."
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+                }
+              }
+            }
+          ]
+        },
+        "latest_operation": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "basis",
+                "operation_id",
+                "command_version",
+                "command_type",
+                "stored_status",
+                "created_at_ms",
+                "order_basis"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "basis": {
+                  "const": "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY"
+                },
+                "operation_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                },
+                "command_version": {
+                  "const": 1
+                },
+                "command_type": {
+                  "const": "GOVERNANCE_R2_DECISION"
+                },
+                "stored_status": {
+                  "type": "string",
+                  "enum": [
+                    "PLANNED",
+                    "APPLIED",
+                    "EXPIRED"
+                  ]
+                },
+                "created_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "order_basis": {
+                  "const": "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "type": "string",
+                  "enum": [
+                    "NO_RECORDED_PORTAL_OPERATION",
+                    "LATEST_RECORDED_OPERATION_NOT_PUBLIC"
+                  ]
+                }
+              }
+            }
+          ],
+          "description": "One latest recorded Portal plan under independent latest+detail purposes. Runtime selects newest before public type/version/collision checks; an unreadable latest is typed absent, never an older ID. Stored status is neither apply eligibility nor source settlement."
+        },
+        "decision_context": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "basis",
+                "gate",
+                "workspace_id",
+                "approval_id",
+                "expected_approval_version",
+                "evidence_set_hash",
+                "evidence_hashes",
+                "command_type",
+                "request_schema_version",
+                "plan_path",
+                "admission",
+                "source_side_effect_requested"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "basis": {
+                  "const": "VERIFIED_STORED_R2_INPUTS_NOT_ACTION_AUTHORIZATION"
+                },
+                "gate": {
+                  "const": "R2"
+                },
+                "workspace_id": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 96
+                },
+                "approval_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                },
+                "expected_approval_version": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "evidence_set_hash": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$(?![\\s\\S])"
+                },
+                "evidence_hashes": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ],
+                      "properties": {
+                        "availability": {
+                          "const": "AVAILABLE"
+                        },
+                        "value": {
+                          "type": "array",
+                          "maxItems": 128,
+                          "uniqueItems": true,
+                          "items": {
+                            "type": "string",
+                            "pattern": "^sha256:[0-9a-f]{64}$(?![\\s\\S])"
+                          }
+                        },
+                        "reason_code": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "availability",
+                        "value",
+                        "reason_code"
+                      ],
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        },
+                        "value": {
+                          "type": "null"
+                        },
+                        "reason_code": {
+                          "const": "EVIDENCE_HASH_LIMIT_EXCEEDED"
+                        }
+                      }
+                    }
+                  ],
+                  "description": "Unique own immutable evidence hashes. Runtime additionally requires strictly ascending lexical order; standard JSON Schema does not compare arbitrary array elements. More than128 hashes publishes null+typed absence, never a truncated list or fake empty list."
+                },
+                "command_type": {
+                  "const": "GOVERNANCE_R2_DECISION"
+                },
+                "request_schema_version": {
+                  "const": "governance.r2-decision-plan-request.v1"
+                },
+                "plan_path": {
+                  "const": "/api/v1/execution/commands/plans"
+                },
+                "admission": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "state",
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "NOT_EVALUATED"
+                    },
+                    "reason_code": {
+                      "const": "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"
+                    }
+                  }
+                },
+                "source_side_effect_requested": {
+                  "const": false
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+                }
+              }
+            }
+          ],
+          "description": "Stored verified R2 inputs only, never READY/action authorization or a native source acceptance. Actual plan rechecks current decide/role/SoD/quorum/R1 rules. Runtime correlates workspace/approval/version with the parent; workspace length counts Unicode code points. No private manifest/preimage is disclosed."
+        },
+        "recorded_activity": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "basis",
+                "order_basis",
+                "coverage",
+                "limit",
+                "has_more",
+                "items"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "basis": {
+                  "const": "IMMUTABLE_PORTAL_DECISION_ROWS_NOT_SOURCE_OR_STAGE_HISTORY"
+                },
+                "order_basis": {
+                  "const": "POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC"
+                },
+                "coverage": {
+                  "const": "BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY"
+                },
+                "limit": {
+                  "const": 32
+                },
+                "has_more": {
+                  "type": "boolean"
+                },
+                "items": {
+                  "type": "array",
+                  "maxItems": 32,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "decision_id",
+                      "operation_id",
+                      "version_before",
+                      "version_after",
+                      "decided_at_ms",
+                      "kind",
+                      "decision"
+                    ],
+                    "properties": {
+                      "decision_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 191,
+                        "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                      },
+                      "operation_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 191,
+                        "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                      },
+                      "version_before": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "version_after": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "decided_at_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "kind": {
+                        "const": "R2_DECISION_RECORDED"
+                      },
+                      "decision": {
+                        "type": "string",
+                        "enum": [
+                          "APPROVE",
+                          "APPROVE_WITH_CONDITION",
+                          "DENY"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "has_more": {
+                        "const": true
+                      }
+                    },
+                    "required": [
+                      "has_more"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "items": {
+                        "type": "array",
+                        "minItems": 32
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "RECORDED_ACTIVITY_NOT_PUBLIC"
+                }
+              }
+            }
+          ],
+          "description": "Separately sealed RECORDED_PORTAL_ACTIVITY plus DECISION_OPERATION on BOTH PAPER anchors. Actual bounded immutable Portal decisions only, not source/order/stage history, action eligibility or full history. Runtime additionally checks version_after=version_before+1, unique decision/operation IDs and nonincreasing public decided_at_ms. Exact PostgreSQL microsecond timestamp plus ID ordering is private/query-tested: equal public milliseconds need not have ID lexical order. Standard JSON Schema cannot compare arbitrary scalar siblings or object-key values."
+        },
+        "recorded_verdicts": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "basis",
+                "order_basis",
+                "coverage",
+                "limit",
+                "has_more",
+                "items",
+                "admission"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "basis": {
+                  "const": "STORED_PORTAL_R2_FINDINGS_NOT_CURRENT_GATE_READINESS"
+                },
+                "order_basis": {
+                  "const": "POSTGRES_ORDINAL_ASC_FINDING_ID_C_ASC"
+                },
+                "coverage": {
+                  "const": "BOUNDED_RECORDED_FINDINGS_NOT_FULL_CRITERIA_HISTORY"
+                },
+                "limit": {
+                  "const": 64
+                },
+                "has_more": {
+                  "type": "boolean"
+                },
+                "items": {
+                  "type": "array",
+                  "maxItems": 64,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "finding_id",
+                      "ordinal",
+                      "outcome",
+                      "blocking",
+                      "evaluated_at_ms",
+                      "criterion_key",
+                      "label_key",
+                      "observed",
+                      "limit",
+                      "op",
+                      "unit",
+                      "currency",
+                      "source_ref"
+                    ],
+                    "properties": {
+                      "finding_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 191,
+                        "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                      },
+                      "ordinal": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "PASS",
+                          "WATCH",
+                          "FAIL",
+                          "INSUFFICIENT"
+                        ]
+                      },
+                      "blocking": {
+                        "type": "boolean"
+                      },
+                      "evaluated_at_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "criterion_key": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "availability",
+                          "value",
+                          "reason_code"
+                        ],
+                        "properties": {
+                          "availability": {
+                            "const": "NOT_PUBLISHED"
+                          },
+                          "value": {
+                            "type": "null"
+                          },
+                          "reason_code": {
+                            "const": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+                          }
+                        }
+                      },
+                      "label_key": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "availability",
+                          "value",
+                          "reason_code"
+                        ],
+                        "properties": {
+                          "availability": {
+                            "const": "NOT_PUBLISHED"
+                          },
+                          "value": {
+                            "type": "null"
+                          },
+                          "reason_code": {
+                            "const": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+                          }
+                        }
+                      },
+                      "observed": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "availability",
+                          "value",
+                          "reason_code"
+                        ],
+                        "properties": {
+                          "availability": {
+                            "const": "NOT_PUBLISHED"
+                          },
+                          "value": {
+                            "type": "null"
+                          },
+                          "reason_code": {
+                            "const": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+                          }
+                        }
+                      },
+                      "limit": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "availability",
+                          "value",
+                          "reason_code"
+                        ],
+                        "properties": {
+                          "availability": {
+                            "const": "NOT_PUBLISHED"
+                          },
+                          "value": {
+                            "type": "null"
+                          },
+                          "reason_code": {
+                            "const": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+                          }
+                        }
+                      },
+                      "op": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "availability",
+                          "value",
+                          "reason_code"
+                        ],
+                        "properties": {
+                          "availability": {
+                            "const": "NOT_PUBLISHED"
+                          },
+                          "value": {
+                            "type": "null"
+                          },
+                          "reason_code": {
+                            "const": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+                          }
+                        }
+                      },
+                      "unit": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "availability",
+                          "value",
+                          "reason_code"
+                        ],
+                        "properties": {
+                          "availability": {
+                            "const": "NOT_PUBLISHED"
+                          },
+                          "value": {
+                            "type": "null"
+                          },
+                          "reason_code": {
+                            "const": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+                          }
+                        }
+                      },
+                      "currency": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "availability",
+                          "value",
+                          "reason_code"
+                        ],
+                        "properties": {
+                          "availability": {
+                            "const": "NOT_PUBLISHED"
+                          },
+                          "value": {
+                            "type": "null"
+                          },
+                          "reason_code": {
+                            "const": "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"
+                          }
+                        }
+                      },
+                      "source_ref": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "kind",
+                          "approval_id",
+                          "finding_id",
+                          "basis"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "const": "PORTAL_STORED_R2_FINDING"
+                          },
+                          "approval_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 191,
+                            "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                          },
+                          "finding_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 191,
+                            "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                          },
+                          "basis": {
+                            "const": "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+                          }
+                        }
+                      }
+                    },
+                    "allOf": [
+                      {
+                        "if": {
+                          "properties": {
+                            "blocking": {
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "blocking"
+                          ]
+                        },
+                        "then": {
+                          "properties": {
+                            "outcome": {
+                              "type": "string",
+                              "enum": [
+                                "FAIL",
+                                "INSUFFICIENT"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "admission": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "state",
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "NOT_EVALUATED"
+                    },
+                    "reason_code": {
+                      "const": "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"
+                    }
+                  }
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "has_more": {
+                        "const": true
+                      }
+                    },
+                    "required": [
+                      "has_more"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "items": {
+                        "type": "array",
+                        "minItems": 64
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "reason_code": {
+                  "const": "RECORDED_VERDICTS_NOT_PUBLIC"
+                }
+              }
+            }
+          ],
+          "description": "Independently sealed R2_RECORDED_VERDICTS on BOTH PAPER anchors. Stored R2 verdicts are not current readiness or source criterion acceptance. All structured criterion fields remain null+typed absence, not prose-derived thresholds or metrics. Runtime additionally enforces source_ref finding/parent identity, unique finding IDs and strictly ascending ordinals; these arbitrary sibling/key relations are not standard JSON Schema constraints."
         }
       },
-      "description": "Finite current-authorized Portal R2 parent. Stored lineage is historical reference, never an effective TS grant, current R1 permission, source acceptance or dispatch. No prose, actors or monetary values."
+      "description": "Finite current-authorized Portal R2 parent. Stored lineage is historical reference, never an effective TS grant, current R1 permission, source acceptance or dispatch. Actor IDs/latest plan/stored request inputs each require their own exact current reviewed purposes; they assert no decision eligibility. No prose, private manifest or monetary values."
     },
     "OperationalIncidentCompositionV2": {
       "type": "object",

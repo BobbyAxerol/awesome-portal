@@ -11,29 +11,136 @@
     "as_of_ms": 1000,
     "recorded_through_ms": 1100,
     "facts_through_ms": 1000,
-    "quality": { "completeness": "PARTIAL", "freshness": "STALE", "reasons": ["TEST_ONLY_SOURCE_NOT_QUALIFIED"] },
+    "quality": {
+      "completeness": "PARTIAL",
+      "freshness": "STALE",
+      "reasons": [
+        "TEST_ONLY_SOURCE_NOT_QUALIFIED"
+      ]
+    },
     "coverage": "AUTHORIZED_ONLY",
     "economic_aggregation": "PARTITIONED_ONLY",
-    "query_policy": { "null_order": "LAST_BOTH_DIRECTIONS", "stage_order": "LEXICAL_SET_NOT_RISK_RANK", "maximum_response_bytes": 1048576 },
-    "page": { "limit": 100, "returned_count": 0, "authorized_filtered_count": 0, "next_cursor": null, "previous_cursor": null },
+    "query_policy": {
+      "null_order": "LAST_BOTH_DIRECTIONS",
+      "stage_order": "LEXICAL_SET_NOT_RISK_RANK",
+      "maximum_response_bytes": 1048576
+    },
+    "page": {
+      "limit": 100,
+      "returned_count": 0,
+      "authorized_filtered_count": 0,
+      "next_cursor": null,
+      "previous_cursor": null
+    },
     "items": [],
     "groups": [],
     "capital_statements": [],
     "statement_scope": "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS",
     "scores": {
-      "raw": { "value": null, "status": "policy_pending" },
-      "composition": { "value": null, "status": "policy_pending" },
-      "direct_nav": { "value": null, "status": "policy_pending" },
-      "regime": { "value": null, "status": "unavailable" },
+      "raw": {
+        "value": null,
+        "status": "policy_pending"
+      },
+      "composition": {
+        "value": null,
+        "status": "policy_pending"
+      },
+      "direct_nav": {
+        "value": null,
+        "status": "policy_pending"
+      },
+      "regime": {
+        "value": null,
+        "status": "unavailable"
+      },
       "reason_code": "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED",
       "calculation_path": "PRECOMPUTED_ONLY"
     },
-    "funding_bucket_pnl": { "value": null, "reason_code": "LOT_ATTRIBUTION_METHOD_NOT_APPROVED" },
+    "funding_bucket_pnl": {
+      "value": null,
+      "reason_code": "LOT_ATTRIBUTION_METHOD_NOT_APPROVED"
+    },
     "lineage": {
       "reducer_revision": "manager-model.v1",
       "source_set_ref": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
       "revision": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
       "supersedes_revision": null
+    },
+    "selected_window": null,
+    "query_options": {
+      "temporal_mode": "CURRENT_ONLY",
+      "search": {
+        "fields": [],
+        "modes": [],
+        "maximum_text_length": 160,
+        "normalization": "JS_TO_LOWER_CASE_NO_UNICODE_NORMALIZATION"
+      },
+      "sort_fields": [],
+      "group_fields": [],
+      "metric_keys": [],
+      "economic_partition_required_for": [],
+      "window": {
+        "custom_supported": true,
+        "interpretation": "MATCH_ONLY_NO_READ_TIME_CALCULATION",
+        "independent_metrics": [],
+        "presets": [
+          {
+            "value": "7D",
+            "resolved": null,
+            "data_state": "NOT_PUBLISHED",
+            "reason_code": "EXACT_METRIC_WINDOW_NOT_PUBLISHED"
+          },
+          {
+            "value": "30D",
+            "resolved": null,
+            "data_state": "NOT_PUBLISHED",
+            "reason_code": "EXACT_METRIC_WINDOW_NOT_PUBLISHED"
+          },
+          {
+            "value": "90D",
+            "resolved": null,
+            "data_state": "NOT_PUBLISHED",
+            "reason_code": "EXACT_METRIC_WINDOW_NOT_PUBLISHED"
+          },
+          {
+            "value": "ALL",
+            "resolved": null,
+            "data_state": "NOT_PUBLISHED",
+            "reason_code": "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+          }
+        ]
+      },
+      "stage_environment": [
+        {
+          "environment": "paper",
+          "stages": [
+            "PAPER"
+          ]
+        },
+        {
+          "environment": "sandbox",
+          "stages": [
+            "SANDBOX"
+          ]
+        },
+        {
+          "environment": "live",
+          "stages": [
+            "CANARY",
+            "LIVE"
+          ]
+        }
+      ],
+      "unavailable_fields": [
+        {
+          "field": "current_stage",
+          "reason_code": "CURRENT_STAGE_GRAIN_NOT_PUBLISHED"
+        },
+        {
+          "field": "days_in_stage",
+          "reason_code": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+        }
+      ]
     }
   }
 }

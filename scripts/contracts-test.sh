@@ -111,6 +111,10 @@ cp -a \
 cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access-digest.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/self-eligibility.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/access-policy.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/access-current-relations.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/current-audit-read.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/parent-read-fields.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/history.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/profile-adapter.contract.ts" \
@@ -121,6 +125,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/read-publication.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-model.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-query-p1.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score-publication.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score-revision.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-regime-history.contract.ts" \
@@ -147,6 +152,8 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/command.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/command-collection.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/realtime.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow-criteria.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow-criteria.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"
 cp -a "${ROOT_DIR}/apps/control-api/src/resource-read/scoped-resource.contract.ts" \
@@ -156,6 +163,8 @@ cp -a "${ROOT_DIR}/apps/control-api/src/operations/operational-read.contract.ts"
 # Finite parent schema/field-digest parity stays pure: no repository, service,
 # private provider, configuration or PostgreSQL runtime is copied here.
 cp -a "${ROOT_DIR}/apps/control-api/src/governance/positive-parent.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/parent-followthrough.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/parent-recorded-facts.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/following-parent.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/live-parent.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/governance/"
