@@ -650,6 +650,18 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**2026-10-18 current original08 continuation:** Bobby approved qualified source
+publication, actual current-Core consumer/provider binding and the existing
+07/03/01/06→09connected→10→11 completion sequence. The
+[26-file exact qualified source handoff](integration/execution-native-read-v1/README.md)
+is source-only:213 original cases/strict gates are pinned,8 new publication guard
+units PASS. Current Coreff83f176 has four overlapping later changes; they must
+survive reconciliation and affected verification. Original08 remains owned
+implementation IN_PROGRESS/NOT_MET, not an external blanket wait or connected
+release. See the [campaign main journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
+for current source/runtime/cleanup and scoped next actions; historical tracking
+below does not supersede this continuation.
+
 - **Execution Edge v1.2 / EPG10-00 (2026-10-15):**
   [EPG10-00…11 in the Execution Loop unified plan §23](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
   is `EPG10-00_COMPLETED_INVENTORY_ONLY`, on

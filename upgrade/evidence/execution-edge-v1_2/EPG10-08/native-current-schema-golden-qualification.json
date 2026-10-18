@@ -1,0 +1,54 @@
+{
+  "schema_version": "portal.epg10-08.current-core-schema-golden-qualification.v1",
+  "status": "ISOLATED_15_PASS_NOT_INSTALLED",
+  "current_core": "d9fc67fb1a6437e4d6af4ab68dfe6342b8eb9c52",
+  "candidate_sql_sha256": "826e4e083c8db536fc80a0f0ec272e3a71387a5e5d53a9cde48563f41fe32728",
+  "target": "/tmp/epg10-08-current-schema-golden-c_dlef1n",
+  "original_migrations_sha256": {
+    "132": "84f14101ed46612a2e210d985dba4ac03b1a2ca3bc6611d02dbf49571543cd1a",
+    "134": "279a15abf0bf03058e9c06dbf2d4d01516cb4d7f4eb233eab260e5ec8437862c"
+  },
+  "golden": {
+    "schema_digest": "sha256:e4923afb657e87c6abd3e7c343435875b7b3758d06cc0c06afba4b28f3f6dd1d",
+    "fixture_sha256": "1b1c7ced3095c991aafde6fa0d09bc8a671ee68bd3cb3700b2ca93edbabba8b3",
+    "qualified_spec_sha256": "6267543cadded2e1040c04dafc951dc7cdc8d5d71d8ec14c6a00fb04d598e39a",
+    "independent_derivation": "Original current Candidate SQL on fresh disposable PostgreSQL, then restore original15 assertions and rerun on ANOTHER fresh PostgreSQL; change only obsolete golden digest."
+  },
+  "qualification": {
+    "attempt": "attempt-043831",
+    "receipt_sha256": "eb1d5f9d9eb2a72683cd1516564a6847a477a5ee7a8ab20e959a039300664b39",
+    "passed": 15,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 27.724,
+    "strict_source_and_spec": "PASS"
+  },
+  "retained_attempts": [
+    {
+      "attempt": "attempt-043545",
+      "status": "NOT_PASS_0_CASES",
+      "reason": "Empty dependency mountpoint missing on readonly source.",
+      "receipt_sha256": "a4fe22ecf0a393d380506e63b304d36a6e5506552563aae4d7cb868027541179"
+    },
+    {
+      "attempt": "attempt-043621",
+      "status": "DERIVATION_NOT_QUALIFICATION",
+      "receipt_sha256": "0e8982fef5dcbf462528a837f044197dfe696d1188e5c37a07088f3438b44b74"
+    }
+  ],
+  "cleanup": {
+    "worker_pg_network_removed": true,
+    "operational51_runtime_unchanged": true,
+    "new_images_build_cache": 0,
+    "shared_free_before_bytes": 165040369664,
+    "shared_free_after_bytes": 165040537600,
+    "exclusive_reclaimed_bytes_claimed": false,
+    "private_source_copy": "PENDING_EXACT_TEARDOWN_RECEIPT"
+  },
+  "boundaries": [
+    "Schema idempotency/ACL/drift/rollback/adoption/physical COMMIT lost-ACK correctness only.",
+    "No actual DB/schema/role/identity/policy/grants or provider installed.",
+    "Does not qualify old private Candidate frame engine as current; original current SQL unchanged."
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "phase": "EPG10-08",
+  "scope": "MINIMAL_ADDITIVE_CORE_SCHEMA_INSTALLER_ONLY",
+  "result": "ISOLATED_PASS_NOT_INSTALLED",
+  "provenance": "SYNTHETIC_TEST_ONLY_DISPOSABLE_POSTGRES_16_15_ORIGINAL_SOURCE_SPECIMEN",
+  "attempt": "/tmp/epg10-08-installer-fix-yDNXWDTz/attempt-223422",
+  "archive_sha256": "4d78458414598df08c375cb310a83d10e2229de9c69bf3685c08e1deefc7ac66",
+  "receipt_sha256": "b336cc6ab7adec549f68896a38b460d815801a29896adf531e7dd5e5d7206f58",
+  "junit_sha256": "a88be01b454fef5e039b6f517ac4c18c69376bb26d4ed0541d58d9357898874b",
+  "strict_typecheck": "PASS",
+  "tests": {"passed": 15, "failed": 0, "errors": 0, "skipped": 0, "unit": 3, "actual_pg": 12},
+  "elapsed_seconds": 28.139,
+  "source_pins": {
+    "core-native-installation.ts": "c2429fab2833dbb7b72d132232e4ad5f79b53725bb360f546a5aa28ed7e21fe9",
+    "1723680000132_execution-retained-review-access.sql": "84f14101ed46612a2e210d985dba4ac03b1a2ca3bc6611d02dbf49571543cd1a",
+    "1723680000134_execution-access-policy-v2.sql": "279a15abf0bf03058e9c06dbf2d4d01516cb4d7f4eb233eab260e5ec8437862c",
+    "current-human-candidate.sql": "8b8cc757d41aa54ea81030ae55d1d5946e0ba92882e0e4f5677c12b06d3c2e90"
+  },
+  "independent_schema_golden_digest": "sha256:fac86cbfdd4c6abc186795f89706ff0e178da9c1f04f5a8cf9c28ac2170c6c5f",
+  "coverage": [
+    "Fixed target, source SHA and exact existing ledger check; ABSENT or COMPLETE_EXACT only.",
+    "One transaction, bounded locks/timeouts, existing authority/ledger row hashes preserved.",
+    "Lost COMMIT acknowledgement readback; partial/constraint/column/ACL/grant-option/schema drift refusal.",
+    "Forward adoption of exact matching original source specimen, not blind IF NOT EXISTS."
+  ],
+  "guards": {"both_privileged_locks_clear": true, "actual_foreign_jobs_ended_before_lease": true},
+  "cleanup": {
+    "owned_containers_network_and_lease_removed": true,
+    "protected_operational_tuples_unchanged": 51,
+    "new_images_or_build_cache": 0,
+    "shared_free_bytes_before": 165555777536,
+    "shared_free_bytes_after": 165558145024,
+    "exclusive_reclaim_or_capacity_claim": false
+  },
+  "limitations": [
+    "No real database, identity, grant, credential, listener, service or release changed.",
+    "Original failed strict preflight retained separately; no cases ran in that attempt.",
+    "Final adoption files with embedded independent constants require their own rerun.",
+    "This installer does not qualify actual stable application mounting or human authorization."
+  ],
+  "full_phase_exit": "NOT_MET"
+}

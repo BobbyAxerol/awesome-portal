@@ -1,0 +1,178 @@
+{
+  "owner": "epg10-08-core-finite2-selected-20261017",
+  "result": "PASS",
+  "provenance": "SYNTHETIC_TEST_ONLY_CURRENT_CORE_DOMAIN_CONTINUITY_NOT_INSTALLED",
+  "started_utc": "2026-10-17T21:15:01.732901+00:00",
+  "ended_utc": "2026-10-17T21:16:35.323844+00:00",
+  "elapsed_seconds": 93.592,
+  "groups": [
+    {
+      "label": "unit",
+      "expected": 327,
+      "pg": false,
+      "files": [
+        "test/elp210-manager-domain.spec.ts",
+        "test/elp210-native-scoped-notice-codec.spec.ts",
+        "test/elp210-native-business-read-codec.spec.ts",
+        "test/elp210-native-business-read-client.spec.ts",
+        "test/elp210-native-read-egress.spec.ts",
+        "test/elp210-native-selected-source.spec.ts"
+      ],
+      "exit_code": 0,
+      "counts": {
+        "tests": 327,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "label": "custody",
+      "expected": 28,
+      "pg": true,
+      "files": [
+        "test/elp210-native-core-obligations.spec.ts"
+      ],
+      "exit_code": 0,
+      "counts": {
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "label": "domain",
+      "expected": 29,
+      "pg": true,
+      "files": [
+        "test/elp210-manager-domain-pg.spec.ts"
+      ],
+      "exit_code": 0,
+      "counts": {
+        "tests": 29,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "label": "continuity",
+      "expected": 13,
+      "pg": true,
+      "files": [
+        "test/elp210-legacy-continuity.spec.ts"
+      ],
+      "exit_code": 0,
+      "counts": {
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "label": "finite",
+      "expected": 18,
+      "pg": true,
+      "files": [
+        "test/elp210-native-http-selected.spec.ts"
+      ],
+      "exit_code": 0,
+      "counts": {
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "source_pins": {
+    "apps/control-api/migrations/1723680000000_init-identity.sql": "7af62e52e20e1340882c50f033ab0cd690de99231c3cc4dbd150b2a2f0a000b8",
+    "apps/control-api/migrations/1723680000001_control-facade.sql": "58332ea229658a07386b16cf2718850fbdcfb2a63feece801f0aa72f87fe3034",
+    "apps/control-api/migrations/1723680000012_session-activation-proof.sql": "5595a6e7f7eec6b674a984d16bb9083de5ef44ff948125d109c33b7eeb87ec12",
+    "apps/control-api/migrations/1723680000034_a4-portal-owner-anchor.sql": "270d64558429db7d3b03feba9170d375508309089ffda14979cb2f43dc52a7d1",
+    "apps/control-api/migrations/1723680000035_a4-account-lifecycle.sql": "49c719eb37e6838b86e3fedb24043e19b363cf07fac55aa359d09510dfcbde42",
+    "apps/control-api/migrations/1723680000036_a4-governance-grants.sql": "db1f1ae38cb3919fc893575ded465aac1e5bbe35552b2b305d0f34490983780c",
+    "apps/control-api/migrations/1723680000132_execution-retained-review-access.sql": "84f14101ed46612a2e210d985dba4ac03b1a2ca3bc6611d02dbf49571543cd1a",
+    "apps/control-api/migrations/1723680000134_execution-access-policy-v2.sql": "279a15abf0bf03058e9c06dbf2d4d01516cb4d7f4eb233eab260e5ec8437862c",
+    "apps/control-api/package.json": "087ad2ad67c4d534dda2ec78a8bd669a8c918c886820830b1ce026b352ba0065",
+    "apps/control-api/src/config.ts": "c065f8b9b3968f8e4d7da316387e8072bd2408ef3e130dd1e4951a64a3cb41d6",
+    "apps/control-api/src/db/pool.ts": "2f838bf4f8d00ff0c2643fd164b7fd97ca09d4dc8668c6f56760d1ab0bd37619",
+    "apps/control-api/src/domain.ts": "219eac2502e16138c54fec264dcbdf559aafc814d44c29836dbc1c132db56eb1",
+    "apps/control-api/src/execution-v2/access-current-relations.ts": "4129efd5b6b7876bb8bb0e8fc862791844c8cdecb5d05d530c1365ecabb39248",
+    "apps/control-api/src/execution-v2/access-digest.ts": "4b4dcbbf12b8f8784a7826f962a4fa297d35795f958d221b77edbfd800fb9460",
+    "apps/control-api/src/execution-v2/access-policy.ts": "87ad58de6672571c5159cbebc9fa37075b63c5fa5b212f88b672dfdbd5841865",
+    "apps/control-api/src/execution-v2/access.contract.ts": "8fe6c908ac954558dc60e0467d829aca80ed51528cdb259daf9c3d962ae5ff82",
+    "apps/control-api/src/execution-v2/access.repository.ts": "3231bdda84b827d95aeb52bb4c7000dfbebc514ceb897d7fffce82fd7517e40c",
+    "apps/control-api/src/execution-v2/current-human-candidate.sql": "714fe6c9420b2c161969c8f2506412f963dc505deb72ee845d941fb87cf1da50",
+    "apps/control-api/src/execution-v2/current-human-candidate.ts": "1966abddc9adf3a31250c4c89e09bc2a121eae330fc7424f4d91e2ece90263e4",
+    "apps/control-api/src/execution-v2/current-human-mutations.ts": "13354ee57bf7cae648755583adb588076abc469987f3f3850ac209d6b4ecafe1",
+    "apps/control-api/src/execution-v2/current-human-snapshot.ts": "613482bb5edecc88d85a163f97cfd3a5397ea88fc850c86f720d7427346344ac",
+    "apps/control-api/src/execution-v2/foundation.contract.ts": "4f3a33bb423c9097a201aa8e621084dddae93b7d3751c2d2683237ddfd29e369",
+    "apps/control-api/src/execution-v2/native-business-read-client.ts": "67a6949c61f894e8a9d9d81edd26e5be8482e236dd58533c011b3db480f5259d",
+    "apps/control-api/src/execution-v2/native-business-read-codec.ts": "6cea3c2d3b1689f0e3603440278cba6b6b53f42602497f9451bece89d0c37700",
+    "apps/control-api/src/execution-v2/native-business-read-selected-source.ts": "cea9c64fd7059c39f1182d9e06466ad0a8d8a13bb0dd85a4e8fabc24a03494c8",
+    "apps/control-api/src/execution-v2/native-read-egress.ts": "16e282b5e5d2b79ea3bbba8ad8ca0538dc361324dedd6fe53f19aae29021dad5",
+    "apps/control-api/src/execution-v2/pm-http-request-binding.ts": "709fdc6405fd9d828bcfd166239677ebdce811abdd6f5bfd8e60f662cad2c55a",
+    "apps/control-api/src/repos/owner-access.ts": "4e66a52c345acb86843ba75bd20d1ded1aa056172d782e90e397e51ea84f44e8",
+    "apps/control-api/src/repos/sessions.ts": "a1da2e3724a09ef1d47a60914fdd9d0dcce87c30c10bce3319edff9e295d05f8",
+    "apps/control-api/src/repos/users.ts": "63d948cbc77bac7405ef94d1142af6a15e330c61593e91a62f2fe0397b10c8dd",
+    "apps/control-api/src/research/execution-recipes.generated.ts": "280e8dc2d683f10f3c28a3b3dea4cf07be841f0dd5aec709646e0cec01ce6a19",
+    "apps/control-api/src/research/execution-recipes.ts": "10c4c5c0c22cf96feb6bb6a5cc5e22356f9e45289a04277c210b65bb2a8c9442",
+    "apps/control-api/test/elp210-legacy-continuity.spec.ts": "19e9fd68d321678607f863703bce32b3c10d0ee1b8279cc80c0b3e6b726b72c0",
+    "apps/control-api/test/elp210-manager-domain-pg.spec.ts": "c29b6d27ed5f88149bc7edaf5518c5abeb9108d7f3ef942939e34447baa53ee2",
+    "apps/control-api/test/elp210-manager-domain.spec.ts": "46d9e3a02fd5b8db6a8e4ee7a7c6f590b570b93c3dc7b29cbcbc3592a4797652",
+    "apps/control-api/test/elp210-native-business-read-client.spec.ts": "1970fa459d8a61a6a4d2483097a2bf7f4a9015a2b36dc8c28e62381c9bc018e6",
+    "apps/control-api/test/elp210-native-business-read-codec.spec.ts": "868c78e82ab5aeab930c461aff6d95939ee3439f41e7f714ddb59ad28fa50eb6",
+    "apps/control-api/test/elp210-native-core-obligations.spec.ts": "5e63318245ff44de2feef424dedab98961bf57f25af69386789157259147e588",
+    "apps/control-api/test/elp210-native-http-selected.spec.ts": "ce216f3a7d5d1d7b58484efc17d4bc565b4fdc37e8ad761ca9796f0a6ef037ec",
+    "apps/control-api/test/elp210-native-read-egress.spec.ts": "31188c2a471ceada01932f825615193694f1e05f10829a436314466d4847426b",
+    "apps/control-api/test/elp210-native-scoped-notice-codec.spec.ts": "32284291953bda2fa8eb1b058369d6f8171ccbac11235a3b3e543897c72a6473",
+    "apps/control-api/test/elp210-native-selected-source.spec.ts": "47217964ad22d925d8b38e123f9e8e58e59ef4767fb90da82bd83e209f5823cd",
+    "apps/control-api/test/fixtures/elp210-legacy-e4fd/manager-lists.controller.ts": "b59109c8eacefc740900194ab8531733ec01e34d337ffbb1febc8ebf84cc11b9",
+    "apps/control-api/test/fixtures/elp210-legacy-e4fd/sessions.ts": "2b8eef1f0a5d5fc8bfded57bb7a92361f61712c0b8bc0869665f17e852172840",
+    "apps/control-api/test/fixtures/elp210-legacy-e4fd/workspaces.ts": "dac0044be9ebb90ab56998fb625420bd9de99672ecf2f024ac0683fcbe94454d",
+    "apps/control-api/test/fixtures/elp210-test-certificates.ts": "e3e5155c3cba746c353ee23b3a934d8fd2b02dfc3c25d9cc359447d6c1c649e7",
+    "apps/control-api/test/native-read-egress.spec.ts": "1cf04b207f40aac08861089b8ce579cd0f0314b2814c848d58a2b59041c90721",
+    "apps/control-api/test/native-read-harness.ts": "d71ad63e885818def4605ba1631bd1644b5fb4f63c1359fdcf6ec031354fdba5",
+    "apps/control-api/tsconfig.json": "505f416ac474f249e52523f39a227669a2be931f491d39d67aa76f657de71200"
+  },
+  "cleanup_complete": true,
+  "protected_runtime_unchanged": true,
+  "new_images_build_cache": 0,
+  "free_before": 165705478144,
+  "free_after": 165703540736,
+  "peer_head_at_run": "c730729eaf5071bdcf151a40aebedc4a0f483019",
+  "path": "/tmp/epg10-08-core-finite2-selected-20261017/attempt-211501",
+  "receipt_sha256": "f42990959e58f5d4052c288f916dc469a82afbf47f1cceec2f3ee73b9f5695fa",
+  "runtime_tuple_count": 51,
+  "runtime_before_sha256": "da906191a2c33e4321c42ee544081eb68620891e303146a554e5ad7b3e25afe3",
+  "schema_version": "epg10.selected-native-finite-qualification.v1",
+  "recorded_status": "ISOLATED_COMPONENT_QUALIFIED_UNMOUNTED_FULL08_NOT_MET",
+  "source_archive_sha256": "fedddcc9bb5a685ac2c671650959985c129dd592197ab9815036b714f2107a56",
+  "acceptance_limits": [
+    "Real disposable Core PostgreSQL16.15 + loopback TLS1.3/mTLS + actual finite HTTP",
+    "PM protocol endpoint in these18 cases is synthetic in-memory, not installed PM",
+    "Human/session/domain facts and cryptographic trust TEST_ONLY; not actual manager login/grant",
+    "No installed schema/identity/roles/authority or mounted route change",
+    "Latest peer shared horizon helper is a newer two-file delta, requires its own full rerun",
+    "No current per-frame native SSE or connected revoke/cache/cursor acceptance"
+  ],
+  "covered_cases": [
+    "Physical Core SENDING COMMIT then injected application ACK loss before any response bytes",
+    "Reserved same-response/socket unsent close; same-key ABORTED receipt, no resend",
+    "Native/source/installation expiry clamp and original microsecond Base",
+    "Expired private installation allows recovery only, not new read",
+    "Authenticated PM-shaped settle ACK plus local Core commit/readback before shared obligation release",
+    "Shared NC01 native obligations and recovery/drain, no reverse-key substitution"
+  ],
+  "failed_attempt": {
+    "path": "/tmp/epg10-08-core-finite-selected-20261017/attempt-210958",
+    "result": "NOT_PASS",
+    "product_cases": 0,
+    "reason": "Two owned draft typing issues under strictTS; fixed without weakening strictness",
+    "cleanup_complete": true,
+    "operational_tuples_unchanged": true
+  }
+}

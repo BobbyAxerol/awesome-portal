@@ -1,0 +1,272 @@
+{
+  "schema_version": "execution-edge.native-final-egress-reservation-qualification.v1",
+  "phase": "EPG10-08",
+  "status": "TESTED_ISOLATED_NOT_INSTALLED_FULL_08_NOT_MET",
+  "goal": "Physical SENDING COMMIT ACK loss before finite HTTP dispatch, same-key immutable terminal recovery, no repeat send",
+  "approval": "Bobby original08 continuation; SGP only after both foreign locks and actual jobs ended",
+  "source": {
+    "owner_worktree": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+    "owner_branch": "feat/execution-edge-upgrade-v1_2",
+    "owner_commit": "20a1d27fa4d03ef7162a7980fda3fe3602995a8b",
+    "copied_core_baseline": "6a01686e1c2ef3868c4e3e957d1b75899ff574b4",
+    "core_head_at_execution": "888d017107e32664d9f016dfbe151fb674eba9f3",
+    "pm_head_observed": "918b6ffe1f5eb9d66fe13bde0a91fc4b32bba9b0",
+    "ts_head_observed": "668e10320c0bf5a9089e33b72f317d8d7c7215c3",
+    "source_landing": "PRIVATE_UNMOUNTED; canonical Core code/index not modified by this qualification",
+    "source_file_count": 38,
+    "pins": {
+      "package.json": "087ad2ad67c4d534dda2ec78a8bd669a8c918c886820830b1ce026b352ba0065",
+      "tsconfig.json": "505f416ac474f249e52523f39a227669a2be931f491d39d67aa76f657de71200",
+      "migrations/1723680000001_control-facade.sql": "58332ea229658a07386b16cf2718850fbdcfb2a63feece801f0aa72f87fe3034",
+      "migrations/1723680000034_a4-portal-owner-anchor.sql": "270d64558429db7d3b03feba9170d375508309089ffda14979cb2f43dc52a7d1",
+      "migrations/1723680000000_init-identity.sql": "7af62e52e20e1340882c50f033ab0cd690de99231c3cc4dbd150b2a2f0a000b8",
+      "migrations/1723680000134_execution-access-policy-v2.sql": "279a15abf0bf03058e9c06dbf2d4d01516cb4d7f4eb233eab260e5ec8437862c",
+      "migrations/1723680000132_execution-retained-review-access.sql": "84f14101ed46612a2e210d985dba4ac03b1a2ca3bc6611d02dbf49571543cd1a",
+      "migrations/1723680000036_a4-governance-grants.sql": "db1f1ae38cb3919fc893575ded465aac1e5bbe35552b2b305d0f34490983780c",
+      "migrations/1723680000035_a4-account-lifecycle.sql": "49c719eb37e6838b86e3fedb24043e19b363cf07fac55aa359d09510dfcbde42",
+      "src/domain.ts": "219eac2502e16138c54fec264dcbdf559aafc814d44c29836dbc1c132db56eb1",
+      "src/config.ts": "c065f8b9b3968f8e4d7da316387e8072bd2408ef3e130dd1e4951a64a3cb41d6",
+      "src/db/pool.ts": "2f838bf4f8d00ff0c2643fd164b7fd97ca09d4dc8668c6f56760d1ab0bd37619",
+      "src/research/execution-recipes.ts": "10c4c5c0c22cf96feb6bb6a5cc5e22356f9e45289a04277c210b65bb2a8c9442",
+      "src/research/execution-recipes.generated.ts": "280e8dc2d683f10f3c28a3b3dea4cf07be841f0dd5aec709646e0cec01ce6a19",
+      "src/repos/users.ts": "63d948cbc77bac7405ef94d1142af6a15e330c61593e91a62f2fe0397b10c8dd",
+      "src/repos/sessions.ts": "a1da2e3724a09ef1d47a60914fdd9d0dcce87c30c10bce3319edff9e295d05f8",
+      "src/repos/owner-access.ts": "4e66a52c345acb86843ba75bd20d1ded1aa056172d782e90e397e51ea84f44e8",
+      "src/execution-v2/access-policy.ts": "87ad58de6672571c5159cbebc9fa37075b63c5fa5b212f88b672dfdbd5841865",
+      "src/execution-v2/current-human-mutations.ts": "a80870b171a2ccdd406d6ee35137d4b928817c274c64760bbe7f88fb10772325",
+      "src/execution-v2/access-current-relations.ts": "4129efd5b6b7876bb8bb0e8fc862791844c8cdecb5d05d530c1365ecabb39248",
+      "src/execution-v2/access-digest.ts": "4b4dcbbf12b8f8784a7826f962a4fa297d35795f958d221b77edbfd800fb9460",
+      "src/execution-v2/current-human-candidate.sql": "1f83a7086430192904fadc3e476703478a06e86b2559e30af31a0873d5ab5066",
+      "src/execution-v2/native-business-read-client.ts": "79de1012b6930ea24877b7fda8ec2afb9c0185a9da5b1660c4475b93d30d9533",
+      "src/execution-v2/pm-http-request-binding.ts": "709fdc6405fd9d828bcfd166239677ebdce811abdd6f5bfd8e60f662cad2c55a",
+      "src/execution-v2/foundation.contract.ts": "4f3a33bb423c9097a201aa8e621084dddae93b7d3751c2d2683237ddfd29e369",
+      "src/execution-v2/access.repository.ts": "3231bdda84b827d95aeb52bb4c7000dfbebc514ceb897d7fffce82fd7517e40c",
+      "src/execution-v2/native-read-egress.ts": "224e0a652e4f273dee985b3523a13961009ce6114a39c8e5437f7b216546ea9a",
+      "src/execution-v2/access.contract.ts": "8325741d5444cf9185604c05dfe85a31c434033733d2f7fb8a78bf8c84a90498",
+      "src/execution-v2/current-human-candidate.ts": "4beaae3f4917371f3c75598315f4dba759512884306e3854841b377d8aea112d",
+      "src/execution-v2/native-business-read-selected-source.ts": "755148d2ed836942ee26bc467f6449d6c30d9615147d1900adb9db7bb8b8a984",
+      "src/execution-v2/current-human-snapshot.ts": "7a801223cc9db4f86abab2657e911481840e571f6227521e19f5afd656706c72",
+      "src/execution-v2/native-business-read-codec.ts": "50dfb0350fe4f366e1f32a420d018129fe9b40687669c0eb0406a7b8587fdcdb",
+      "test/elp210-native-business-read-codec.spec.ts": "868c78e82ab5aeab930c461aff6d95939ee3439f41e7f714ddb59ad28fa50eb6",
+      "test/native-read-egress.spec.ts": "f4252d0551195e0e94443d755d0609ef8934c33e1f0fd6a7eebe7b7f1f4ee9cc",
+      "test/current-human-native-read.spec.ts": "9b534d7506ed186a005e396759827c379d75220929f192389b7cf6e622fb69cb",
+      "test/native-read-harness.ts": "2cf6cfb85e8f352343660b311347028794f4dfbb2a05e898c791252f1bf11903",
+      "test/elp210-native-business-read-client.spec.ts": "f80d7dbc0a46d7a5c3909ae69028d502069edec00a5194e7b09ad5c4494fecdb",
+      "test/fixtures/elp210-test-certificates.ts": "e3e5155c3cba746c353ee23b3a934d8fd2b02dfc3c25d9cc359447d6c1c649e7"
+    }
+  },
+  "execution": {
+    "target": "/tmp/epg10-08-native-pg-8kybfbqr/attempt-193337",
+    "started_utc": "2026-10-17T19:33:37.650798+00:00",
+    "ended_utc": "2026-10-17T19:34:17.053493+00:00",
+    "elapsed_seconds": 39.403,
+    "command": "python3 /tmp/epg10-08-native-pg-8kybfbqr/run_native_pg.py",
+    "strict_affected_typescript": "PASS",
+    "tests": {
+      "tests": 169,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "breakdown": {
+      "native_coordinator_units_with_PM_spies": 29,
+      "actual_core_pg": 11,
+      "actual_finite_http_transport": 49,
+      "unchanged_peer_codec": 36,
+      "unchanged_peer_tls_transport": 44
+    },
+    "actual_core_pg_case_names": [
+      "uses genuine current human/domain/field evaluator and SAME SQL ledger without a TS receipt/entity census",
+      "real physical SENDING COMMIT and pool release precede actual response.end; signed READ terminal follows receipt COMMIT",
+      "raw human/session/field policy mutations and coordinator drain see ALL SENDING obligations until actual egress settles",
+      "genuine domain grant revocation between native ENTER/data await and final send refuses all response bytes",
+      "actual DB transition guard rejects rebinding, fake terminal insert and skipping SENDING",
+      "multiple Candidate replicas share global retained/unresolved limits; private local count is only an extra cap",
+      "native restart recovery reads exact durable receipt and never constructs a new Issued authorization",
+      "physical SENDING COMMIT ACK loss settles same-sender actual unsent closure; restart reuses immutable ABORTED without send",
+      "SENDING and ABORTED recovery COMMIT ACKs can both disappear; restart reads the SAME durable no-send receipt",
+      "physical terminal COMMIT ACK loss signs only exact durable readback receipt after release, without HTTP resend",
+      "existing CurrentHumanMutations retires unsent native READ, reconciles same-key native terminal, then applies actual session revoke once"
+    ],
+    "receipt_sha256": "4fcd8a6d18ff1042b7e1b477684e6a663ac5984b4dd653eaed7c2909b2937139",
+    "junit_sha256": "a4cbe92f6afa4bc7a08be5b3df339e256e34752d0a30c2b762da3326c0ad5051",
+    "provenance": "TEST_ONLY_ACTUAL_CORE_POSTGRES_AND_HTTP_PM_WIRE_STUB_NOT_INSTALLED_AUTHORITY",
+    "aggregate_semantics": "169 unique executed definitions; finite49 is included, not added twice; PM wire is stubbed, not real PM authority"
+  },
+  "original_failures": [
+    {
+      "attempt": "185339",
+      "status": "NOT_RUN",
+      "reason": "Readonly source lacked empty node_modules mountpoint; no test executed"
+    },
+    {
+      "attempt": "185423",
+      "status": "NOT_PASS_BEFORE_VITEST",
+      "reason": "Selected wrapper definite assignment, missing TLS helper and existing peer test-only type mismatch; fixed owned wrapper/closure, peer tests unchanged"
+    },
+    {
+      "attempt": "192411",
+      "status": "NOT_PASS",
+      "vitest": {
+        "passed": 165,
+        "failed": 4,
+        "total": 169
+      },
+      "junit": {
+        "tests": 170,
+        "failures": 5,
+        "errors": 0,
+        "skipped": 0
+      },
+      "reason": "3 TEST_ONLY Pool.connect Promise-only fault injectors broke callback overload; delayed-close fixture assumed one event-loop tick; afterAll timeout. Exact fixes preserve callbacks and await actual egress close/admission; original failed evidence retained"
+    }
+  ],
+  "resources": {
+    "worker_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+    "pg_image": "sha256:fe0737ba566a2c5b2a28f34433c0a423261900ec17b9bf7ad115e1aae7e57f1b",
+    "worker_cpu": 1,
+    "worker_memory_mib": 512,
+    "worker_tmpfs_mib": 32,
+    "worker_node_heap_mib": 384,
+    "pg_cpu": 1,
+    "pg_memory_mib": 1024,
+    "pg_data_tmpfs_mib": 256,
+    "network": "owned internal only; no host ports",
+    "new_build_pull_install_images_cache": 0,
+    "worker_id": "4737fd02e2850b31864ca7c5d388384a71e9230dfbd7662794d562c3de835d77",
+    "pg_id": "ea5f9528e8c151264fd2d9ff274a76bd3b3dfd86447b7d6ba46422fe38a5e056",
+    "network_id": "257315cc96c8fc8ab72223753c4524def26cc5ca057d2c430d84d9ac34c7d929"
+  },
+  "cleanup": {
+    "worker_pg_network_removed": true,
+    "protected_runtime_count": 10,
+    "protected_runtime_unchanged": true,
+    "runtime_retention": [
+      {
+        "name": "/portal-control-api-1",
+        "image": "sha256:8400439bc2cea6baf9bb86d3b4e851d4a0601531de86a7c1a47347f5837b7641",
+        "config": "963a3d8436bd48220cc41cafb73a18e8c6d0d4fd6abe72eddb843539b8918f60",
+        "start": "2026-09-19T09:03:33.22089525Z",
+        "restarts": 0,
+        "running": true
+      },
+      {
+        "name": "/portal-portal-api-1",
+        "image": "sha256:4b094ff0d98ad8d6821cca670ab574bc54ae0f31fb38c72ff5edba45da114fed",
+        "config": "2056027ecff00524d57dc45dffc08475fe16612b0ae651acc59560083a261f7e",
+        "start": "2026-09-19T09:03:31.18473303Z",
+        "restarts": 0,
+        "running": true
+      },
+      {
+        "name": "/portal-portal-nats-1",
+        "image": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+        "config": "63741aa5d84c9fa91aadcfbc138c88da7d44e90a8acfb326801d235aa8dfec39",
+        "start": "2026-09-07T15:44:49.548980272Z",
+        "restarts": 0,
+        "running": true
+      },
+      {
+        "name": "/portal-portal-postgres-1",
+        "image": "sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6",
+        "config": "b57b92f6b7e971291ff8e546b587e5145743b1c9234b88574949f0db14b40a7d",
+        "start": "2026-09-07T15:44:49.550112056Z",
+        "restarts": 0,
+        "running": true
+      },
+      {
+        "name": "/portal-portal-web-1",
+        "image": "sha256:c2fb7a8c1122f8b737c3cefee1b78cafda7b025a0f8c36b56b5b9424a1b9ea31",
+        "config": "e0e3c404d22c6ae26fa993e3d56433591bcaf7c77fc89a675b21f4856ff87840",
+        "start": "2026-09-19T09:03:38.883641001Z",
+        "restarts": 0,
+        "running": true
+      },
+      {
+        "name": "/portal-stable-v1-0-1-control-api-1",
+        "image": "sha256:d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263",
+        "config": "26c0d954d1f3af2133b2a528f39430f814e3c35d350095aecf7178f3bc90cedb",
+        "start": "2026-09-18T16:24:22.016887481Z",
+        "restarts": 0,
+        "running": true
+      },
+      {
+        "name": "/portal-stable-v1-0-1-portal-api-1",
+        "image": "sha256:243c9de8b62c4718a64b2f839537c760c102b0e2fa6eb0d7ddc0cb6ce33ffdbf",
+        "config": "7d1004a5207f1ad4f70b9a3d9816f9491f6d8fffd0181517f7c59f413e99c633",
+        "start": "2026-09-18T16:24:19.435272729Z",
+        "restarts": 0,
+        "running": true
+      },
+      {
+        "name": "/portal-stable-v1-0-1-portal-nats-1",
+        "image": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+        "config": "63741aa5d84c9fa91aadcfbc138c88da7d44e90a8acfb326801d235aa8dfec39",
+        "start": "2026-09-08T18:25:13.291218374Z",
+        "restarts": 0,
+        "running": true
+      },
+      {
+        "name": "/portal-stable-v1-0-1-portal-postgres-1",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "config": "b57b92f6b7e971291ff8e546b587e5145743b1c9234b88574949f0db14b40a7d",
+        "start": "2026-09-08T18:25:13.289175039Z",
+        "restarts": 0,
+        "running": true
+      },
+      {
+        "name": "/portal-stable-v1-0-1-portal-web-1",
+        "image": "sha256:e237aabba580445fd43ae839b057e2cdc001b0ab7f1be120e5056c199173cadc",
+        "config": "4326852fe0f34ccf15ae7c22b9a7897be24f15bbc50ccef5ebcd9971130bf187",
+        "start": "2026-09-18T16:24:27.734684222Z",
+        "restarts": 0,
+        "running": true
+      }
+    ],
+    "free_before_bytes": 165874405376,
+    "free_after_bytes": 165872779264,
+    "disk_semantics": "Shared-host observation, not an exclusive capacity measurement",
+    "source_packet_retention": "Exact active source/runner/bounded failure+PASS receipts retained only pending coherent integration; no test image was created; operational/rollback images untouched",
+    "operational_db_identity_mutations": 0,
+    "service_restarts": 0,
+    "push_merge": false
+  },
+  "actual_db_census": {
+    "observed_utc": "2026-10-17T19:30:00Z",
+    "ts": {
+      "container": "live_data_executor",
+      "database": "live_data_executor",
+      "system_identifier": "7674585245102796834",
+      "volume": "trading_system_pgdata",
+      "image": "sha256:6343bdc87ca132c6b53acb26113a6bad1821d188fa39975a745f32ddd9757634",
+      "native_relations_absent": [
+        "public.ts_users",
+        "pm_membership.policy",
+        "pm_business_read.heads",
+        "pm_core_authority.epoch"
+      ]
+    },
+    "core": {
+      "container": "portal-stable-v1-0-1-portal-postgres-1",
+      "database": "portal_control",
+      "system_identifier": "7675333655652302882",
+      "absent": [
+        "public.portal_access_policy_state",
+        "public.portal_access_grants_v2",
+        "public.portal_access_policy_events",
+        "elp210_candidate.authority"
+      ],
+      "latest_migration": "1723680000036_a4-governance-grants"
+    },
+    "mutation": false
+  },
+  "remaining": {
+    "finite_ACK_loss": "ISOLATED_PASS",
+    "native_PM_Core_real_binding": "OWNED_NOT_INSTALLED",
+    "minimal_schema_identity_install": "OWNED_NOT_INSTALLED",
+    "per_frame_SSE": "RAM_DRAFT_8_NEW_CASES_NOT_RUN",
+    "revoke_cache_cursor_recovery_connected": "NOT_RUN",
+    "connected09": "NOT_STARTED_FULL08_NOT_MET",
+    "note": "Do not treat isolated/source-only proof as installed authority, HA, actual network failure or full connected acceptance"
+  }
+}

@@ -1,0 +1,2219 @@
+{
+  "schema_version": "portal.epg10-08.current-manager-notice-source-port.v1",
+  "status": "CURRENT_SOURCE_213_CASES_AND_BOTH_STRICT_GATES_PASS_BOTH_HOSTS_TEST_RESOURCE_CLEAN_NOT_MOUNTED",
+  "source_base": "49bdc6e16ab30bbc5a23b5dec9a8a872a5ec49f1",
+  "phase": "EPG10-08",
+  "full_connected_acceptance": "NOT_MET",
+  "private_target": "/tmp/epg10-08-current-manager-observation-CudeHxJF/current-source-delta",
+  "original_notice_packet_fields_are_historical": true,
+  "files": 5,
+  "production_files": 4,
+  "test_files": 1,
+  "production_delta": {
+    "added": 234,
+    "removed": 76
+  },
+  "test_delta": {
+    "added": 224,
+    "removed": 4
+  },
+  "new_expected_test_cases": 19,
+  "baseline_definitions_preserved": true,
+  "candidate_sql_changed": false,
+  "requires_prepared_manager_read_stream_reducers": true,
+  "reducer_source_origin_sha256": "3775adfaedeccd6b23b3170aac7b46b847a937661206cbcc52f4f01fde3e2b3f",
+  "source_pins": {
+    "apps/control-api/src/execution-v2/current-human-candidate.ts": "12c2cf3e1b4084f2e1074359b531712789ed78777d2f74835df96cdf96a5290e",
+    "apps/control-api/src/execution-v2/read-scope.ts": "18cb0aaf13dc9ecaf440d80a0254b8edaa313002a99979193743e5dcc96d0bf5",
+    "apps/control-api/src/execution-v2/realtime.contract.ts": "656eaeaf933749d29fd5d0d411eb89a224d4a6126dd3f0e4a344d2707acffa63",
+    "apps/control-api/src/execution-v2/realtime.ts": "a0e45c7df0a792dc2c39b35070f8d658c607e6b452c9ef58b087b6d7c931f1e7",
+    "apps/control-api/test/elp210-native-frame-coupled.spec.ts": "9542a128c969db582c2da244dcf68c0ce1d434ac1f8ec9b5e82512f787485e5e"
+  },
+  "contains_secrets_or_database_values": false,
+  "operational_mutations": 0,
+  "new_source_export": true,
+  "committed_pushed_merged_deployed": false,
+  "source_archive_sha256": "d2ac4a8e75652139510db777bc9eb6431fe1b89617668f527eef5829f59eb0cb",
+  "source_archive_bytes": 62423,
+  "source_archive_files": 6,
+  "source_review": "NO_CONFIRMED_BUG_BY_INSPECTION_NOT_TYPECHECK_OR_TEST_PASS",
+  "strict_typecheck": "CURRENT_FULL_PRODUCTION_AND_ALL_SEVEN_SPEC_CLI_STRICT_PASS",
+  "actual_new_cases_run": 0,
+  "source_transfer": "COMPLETED_EXACT_APPROVED_ARCHIVE_VERIFIED_THEN_DISPOSABLE_COPIES_REMOVED",
+  "source_preparation": {
+    "status": "NOT_EXECUTED_DISPOSABLE_687_SOURCE_COPY_REMOVED_CURRENT_ACTIVE_DELTAS_RETAINED",
+    "target": "/tmp/epg10-08-current-manager-notice-20261018-0704",
+    "immutable_core_base": "0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05",
+    "files": 687,
+    "logical_bytes": 12453915,
+    "migrations": 136,
+    "highest_migration_suffix": "0142",
+    "fresh_parent_read_fields_and_actor_member_preserved": true,
+    "approved_packet_repacked": false,
+    "shared_checkout_or_index_changed": false,
+    "expected_domain_cases": 56,
+    "expected_coupled_cases": 31,
+    "actual_cases_run": 0,
+    "qualification": "NOT_RUN_BOUNDED_WAIT_ENDED_NO_NEW_SGP_TEST_AND_EXACT_COPY_CLEANED"
+  },
+  "export_approval": {
+    "approved": true,
+    "sha256": "d2ac4a8e75652139510db777bc9eb6431fe1b89617668f527eef5829f59eb0cb",
+    "target": "bobby@178.128.51.255:/tmp/epg10-08-current-manager-notice-20261018-0704",
+    "scope": "EXACT_SOURCE_TEST_ARCHIVE_ISOLATED_TEST_THEN_CLEANUP_NO_DEPLOY_RESTART_OR_SHARED_CHECKOUT_EDIT"
+  },
+  "independent_original_snapshot_preparation": {
+    "status": "75_PURE_STUB_UNITS_PASS_COUPLED41_NOT_RUN_STRICT_TIMEOUT_NOT_MOUNTED",
+    "private_target": "/tmp/epg10-08-current-manager-observation-CudeHxJF",
+    "files": 11,
+    "production_files": 7,
+    "test_files": 3,
+    "metadata_patch_files": 1,
+    "total_lines_including_reused_context_not_changed_lines": 2312,
+    "expected_codec_unit_cases": 35,
+    "expected_stub_repository_unit_cases": 40,
+    "additional_expected_coupled_cases": 10,
+    "preserved_coupled_cases": 31,
+    "actual_cases_run": 75,
+    "same_encrypted_cursor_wire_and_keyring": true,
+    "original_snapshot_preserved_across_resume": "PURE_CODEC_UNIT_TESTED_NOT_ACTUAL_PG_OR_RUNTIME",
+    "scope_source_dispatch_and_requested_batch_limit": "STUB_REPOSITORY_UNIT_TESTED_NOT_CURRENT_PG_OR_RUNTIME",
+    "per_subscription_candidate_in_one_shared_hub": "IMPLEMENTED_UNTESTED",
+    "two_person_test_fixture_provenance": "TEST_ONLY_DISPOSABLE_DB_PROTOCOL_NOT_INSTALLED_AUTHORITY_OR_CAPACITY",
+    "test_failure_cleanup": "ACTUAL_POLL_JOIN_BEFORE_TEARDOWN_IMPLEMENTED_REVIEWED_NOT_EXECUTED",
+    "new_schema_or_candidate_sql_change": false,
+    "source_exported": false,
+    "source_pins": {
+      "apps/control-api/src/execution-v2/manager-observation-coordinate.ts": "2e93261b6864cd732e631653971461f4b60b36133b2041a8a21fb70af8ccb2f2",
+      "apps/control-api/src/execution-v2/manager-observation-source.ts": "390cf853dfc13273c8d1b6ddc5461566e5ae554dd62c1581e5c75492a4ca07f0",
+      "apps/control-api/src/execution-v2/realtime.ts": "40ca9194122e00be450c1398ee73014f0e8a441cd283f90a18631a9cc526a969",
+      "apps/control-api/src/execution-v2/scoped-replay-cursor.ts": "d7feed027508c7e987c73e6410ca6e9c57fc3b08175353f01093d0cf02ec4cea",
+      "apps/control-api/test/elp210-native-frame-coupled.spec.ts": "ac40570e9c2e802de1f91fd920deb0f7bd0a8dcc0ddce61cfe2ddf6c86e20862",
+      "apps/control-api/src/execution-v2/core-owner-commissioning.ts": "f24d041708c793b3b8d73e3ec9760b9b4f7549da2f68c0dcf49824003f225206",
+      "apps/control-api/src/execution-v2/native-core-composition.ts": "ab2b6db050c7e433d89c6085e8a47ed9bde9687482f27f230955846ef4ac5208",
+      "apps/control-api/src/execution-v2/native-manager-consumer.ts": "8de6ab44b9abbfebed99aa110a5717160c2a547c2e5170153b36d862e6340c1f",
+      "apps/control-api/test/manager-observation-resume.spec.ts": "4b0e05d146a6a7fd513b9cd423404c025f4365f2bbaca47802fa8eadd642b399",
+      "apps/control-api/test/manager-observation-source.spec.ts": "7b18c9f4f3bcf66bd194f3da4ada7854261c12ad1682759ae7e1f5be5d6150fd",
+      "snapshot-metadata-provenance.patch": "96b72655f5b4d8a20c3851f8fbc248055e09c715e5b281fefff67745c713d54c"
+    }
+  },
+  "independent_hk_qualification_target": {
+    "target": "/tmp/epg10-08-manager-qualification-hk-7h4TfVzE",
+    "status": "APPROVED_INPUTS_COPIED_114_UNIT_PASS_STRICT_TIMEOUT_EXACT_TEST_COPY_REMOVED",
+    "expected_unit_cases": 114,
+    "expected_overlay_source_files_after_input_copy_and_owned_ports": 697,
+    "coupled_spec_typecheck_only_expected_cases": 41,
+    "actual_cases_run": 114,
+    "receiver_runner_python_syntax_only": "PASS_NOT_PRODUCT_QUALIFICATION",
+    "maximum_cpu": 2,
+    "maximum_memory_bytes": 2147483648,
+    "maximum_lease_seconds": 300,
+    "network": "NONE",
+    "database": "NONE",
+    "build_pull_install": false,
+    "sgp_to_hk_copy_denied_before_process_creation": true,
+    "source_dependency_bytes_transferred": 138210309,
+    "copy_permission_question": "EXPLICITLY_APPROVED_CALL_B04D7181E585459B922A524C57335712_AND_COMPLETED_THEN_EXACT_CLEANUP",
+    "substitutes_sgp_pg_tls_http_or_runtime_acceptance": false
+  },
+  "source_runtime_reconciliation_2026_10_18_1047": {
+    "canonical_checkout": "/home/bobby/.worktrees/portal-execution-manager-v2",
+    "canonical_branch": "feat/manager-v2-paper-read",
+    "canonical_commit": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+    "active_feature_checkout": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+    "active_feature_branch": "feat/execution-edge-upgrade-v1_2",
+    "active_feature_commit": "20a1d27fa4d03ef7162a7980fda3fe3602995a8b",
+    "ts_source_commit": "668e10320c0bf5a9089e33b72f317d8d7c7215c3",
+    "pm_source_commit": "9c4f727a4969f38da931c2e8427ac4742ac97c0a",
+    "core_sgp_source_commit_not_deployed": "0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05",
+    "runtime_tuple_snapshot_sha256": "a70382e81d9a4d49c52c6216b2421bc5a1d11e0bb41c3f966e53b4126d08cd52",
+    "hk_running_operational_containers": 40,
+    "own_new_test_containers": 0,
+    "active_edge_projection_image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+    "active_source_proxy_image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+    "active_profiles": [
+      "paper",
+      "sandbox",
+      "live"
+    ],
+    "runtime_config_revisions": {
+      "paper_edge": "6180b9bf3d7d16cc8b9ada67ccb6c860e3c83430412de14758961f9857db90f6",
+      "sandbox_edge": "cd79e9c68f67595e5ddbb88bddb95e4694a5b286ac25a72fb29bbe38d15190a1",
+      "live_edge": "98a191c75adf491d5b61de58f2e7d3b7e022a1f15533150d406ae9dc7f55ab0f"
+    },
+    "other_active_worktrees_retained": [
+      {
+        "path": "/home/bobby/.worktrees/portal-eds-current-bff",
+        "branch": "feat/eds-current-bff",
+        "commit": "bab79402be7ca65adb529080865a4fe1a7d5a0bb"
+      },
+      {
+        "path": "/home/bobby/.worktrees/portal-eds09-owner-return-handoff",
+        "branch": "docs/eds09-ts-owner-return-handoff",
+        "commit": "ec97c4835acd1d68e9b58dd8b68015ceecd96864"
+      },
+      {
+        "path": "/home/bobby/.worktrees/portal-elp210-edge-provider-candidate",
+        "branch": "feat/portal-elp210-edge-provider-candidate",
+        "commit": "9db77811fb0845344422f1c77968f6fcbc64b66f"
+      },
+      {
+        "path": "/home/bobby/.worktrees/portal-execution-data-activation",
+        "branch": "feat/execution-data-activation",
+        "commit": "6f6503ea21327bc39946f48c697b4287c673f12c"
+      },
+      {
+        "path": "/home/bobby/.worktrees/portal-r4r5-activation",
+        "branch": "deploy/r4r5-activation",
+        "commit": "d63a650112eca3b2b17f4df1faedd1a0ab06ceaa"
+      }
+    ],
+    "stable_release_retention": "Existing /srv/primus/portal/releases active release; no release mutation or promotion",
+    "named_ts_rollback_retained": [
+      "r59@9150385e",
+      "r49@b4e7a6c0"
+    ],
+    "source_index_and_unrelated_changes_preserved": true,
+    "commit_push_merge_deploy": false,
+    "cleanup": "OWN_SOURCE_ONLY_LEASE_RELEASED_NO_OWN_TEST_IMAGE_CACHE_OR_ROWS_CREATED_ACTIVE_DRAFTS_RETAINED",
+    "docker_inventory": {
+      "images_total": 111,
+      "images_active": 41,
+      "build_cache_records": 423,
+      "build_cache_active": 47,
+      "build_cache_total_reported": "31.75GB"
+    },
+    "filesystem_available_bytes": 222424371200,
+    "capacity_acceptance": "NOT_MEASURED_NO_CAPACITY_CLAIM_NO_SHARED_PRUNE"
+  },
+  "approved_packet_revalidation_2026_10_18_1100": {
+    "utc": "2026-10-18T11:00:14.585579+00:00",
+    "archive_bytes": 62423,
+    "archive_sha256": "d2ac4a8e75652139510db777bc9eb6431fe1b89617668f527eef5829f59eb0cb",
+    "protected_sgp_runtime_count": 51,
+    "protected_runtime_tuples_unchanged": true,
+    "all_protected_runtime_running": true,
+    "attempt_receipts": 0,
+    "actual_cases_run": 0,
+    "foreign_guard_owner": "codex-elp210-commissioning-land-105812",
+    "foreign_guard_until_utc": "2026-10-18T11:43:12.521827+00:00",
+    "sole_bounded_read_only_waiter_session": 94685,
+    "waiter_terminal_utc": "2026-10-18T11:08:03+00:00",
+    "waiter_exit_code": 75,
+    "waiter_terminal_output": "WAIT_DEADLINE_NO_NEW_TEST",
+    "active_own_waiters_or_test_jobs": 0,
+    "qualification": "NOT_RUN_BOUNDED_WAITER_TERMINAL_NO_CLEAR_FOREIGN_RESOURCE_WINDOW",
+    "new_source_or_operational_mutations": false,
+    "missing_current_mount_modules": [
+      "native-manager-consumer.ts",
+      "native-core-composition.ts",
+      "core-owner-commissioning.ts"
+    ],
+    "missing_modules_disposition": "OWNED_CURRENT_SOURCE_PORT_AND_MOUNT_WORK_NOT_ENABLE_FLAG_OR_EXTERNAL_DEBT",
+    "hk_input_copy_permission": "PENDING_NO_RETRY_OR_INDIRECT_BYPASS"
+  },
+  "owned_consumer_selection_port_2026_10_18_1114": {
+    "status": "IMPLEMENTED_PRIVATE_NOT_TYPECHECKED_NOT_EXECUTED_NOT_MOUNTED",
+    "mechanically_reused_old_qualified_modules": 3,
+    "new_consumer_delta": {
+      "added": 19,
+      "removed": 0
+    },
+    "new_expected_selector_cases": 5,
+    "actual_selector_cases_run": 0,
+    "genuine_scope_source_full_domain_and_pool_match": "IMPLEMENTED_UNTESTED",
+    "test_composition_lookup_spy_not_real_composition_acceptance": true,
+    "read_only_review": "NO_CONFIRMED_BUG_NOT_STRICT_OR_TEST_PASS",
+    "immutable_current_core_metadata_missing_seams": [
+      {
+        "file": "execution/maximum-data-operation.service.ts",
+        "symbol": "nativeEpochDigest"
+      },
+      {
+        "file": "execution-v2/access.service.ts",
+        "symbol": "installReviewedManagerDomainPolicy"
+      },
+      {
+        "file": "execution-v2/access-trust.ts",
+        "symbol": "manager_commissioning_target"
+      }
+    ],
+    "seam_disposition": "OWNED_CURRENT_SOURCE_PORT_REQUIRED_NO_OLD_WHOLE_FILE_OVERWRITE_NO_EXTERNAL_DEBT",
+    "sgp_approved_87_case_target_changed": false,
+    "sgp_source_or_dependency_bytes_imported_to_hk": 0,
+    "latest_pm_source": "6f3c852bd61fcc45d7aadacafe2776cbbb0059b7",
+    "latest_ts_source": "668e10320c0bf5a9089e33b72f317d8d7c7215c3",
+    "latest_core_source": "0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05"
+  },
+  "current_round_2026_10_18_1152": {
+    "utc": "2026-10-18T11:52:00Z",
+    "phase_status": "IN_PROGRESS_OWNED_IMPLEMENTATION",
+    "source_base": "0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05",
+    "current_source_files": 697,
+    "current_source_logical_bytes": 12574260,
+    "manifest_sha256": "77c56a789288adeffb0cecc8af6cc89cbea9bc0dbf42e20656a5e2057e3c026c",
+    "source_review": "NARROW_CURRENT_SEAMS_PRESERVE_RETAINED_PARENT_POLICY_AND_EXECUTION_DATA_POOL",
+    "owned_delta_files": 20,
+    "owned_delta_production_files": 14,
+    "owned_delta_test_files": 6,
+    "owned_delta_source_bytes": 481759,
+    "source_pins": {
+      "apps/control-api/src/execution-v2/access-trust.ts": "dd9ff410ed4e001995cbbf9f521d258812a342eb50c16f045bf114c10c0461b7",
+      "apps/control-api/src/execution-v2/access.service.ts": "38127820ac07a00a2aca7e028c0b8e7587def7759febde562d7eacc6e4df0d37",
+      "apps/control-api/src/execution-v2/core-owner-commissioning.ts": "f24d041708c793b3b8d73e3ec9760b9b4f7549da2f68c0dcf49824003f225206",
+      "apps/control-api/src/execution-v2/manager-observation-coordinate.ts": "2e93261b6864cd732e631653971461f4b60b36133b2041a8a21fb70af8ccb2f2",
+      "apps/control-api/src/execution-v2/manager-observation-source.ts": "390cf853dfc13273c8d1b6ddc5461566e5ae554dd62c1581e5c75492a4ca07f0",
+      "apps/control-api/src/execution-v2/native-core-composition.ts": "ab2b6db050c7e433d89c6085e8a47ed9bde9687482f27f230955846ef4ac5208",
+      "apps/control-api/src/execution-v2/native-manager-consumer.ts": "288bb26756155f0c6129a471a5e766f92abfa2ea4571e34a807ad8fb2b2183a7",
+      "apps/control-api/src/execution-v2/realtime.ts": "40ca9194122e00be450c1398ee73014f0e8a441cd283f90a18631a9cc526a969",
+      "apps/control-api/src/execution-v2/scoped-replay-cursor.ts": "d7feed027508c7e987c73e6410ca6e9c57fc3b08175353f01093d0cf02ec4cea",
+      "apps/control-api/src/execution/current-source.proxy.ts": "a92a4d2e73ef66436c971f8303b621fca8ced579f12bab7db6d1ddc918a89a23",
+      "apps/control-api/src/execution/maximum-data-continuation.repository.ts": "00eec0aea1aadbca9f5bfdb72dae4af4dc64ee2bddba0ac9ebfe84c3f3bcc4ca",
+      "apps/control-api/src/execution/maximum-data-operation.service.ts": "fd85ab2f7a1c8a9375768784618a2d8dcb09e1aee27119146fbe5d6201199770",
+      "apps/control-api/src/execution/profile-projection.repository.ts": "f2680679bf34dac2cea5b0a78a303b1dd89f2f7d6ebb1dc6bcb7ba0716b207a6",
+      "apps/control-api/src/execution/shared-read.repository.ts": "9dcfadb6fea125b0ac76acbb05e0bc54bd61d8d5a9f4ba8c64c7754af949d321",
+      "apps/control-api/test/elp210-native-frame-coupled.spec.ts": "ac40570e9c2e802de1f91fd920deb0f7bd0a8dcc0ddce61cfe2ddf6c86e20862",
+      "apps/control-api/test/manager-observation-resume.spec.ts": "4b0e05d146a6a7fd513b9cd423404c025f4365f2bbaca47802fa8eadd642b399",
+      "apps/control-api/test/manager-observation-source.spec.ts": "7b18c9f4f3bcf66bd194f3da4ada7854261c12ad1682759ae7e1f5be5d6150fd",
+      "apps/control-api/test/native-manager-epoch.spec.ts": "ce3400c15ae11d632b6709bdeb32ddb02d99d607e24403acb8247805aa6eebef",
+      "apps/control-api/test/native-manager-install-ack.spec.ts": "4dd4b10228653c1a8bb3ce86c42ff07337355ca7df5ccfd1c884d21db5d02915",
+      "apps/control-api/test/native-manager-preparation.spec.ts": "7421dbfaf44131bb9210ef94924b4b64a894f56e67022a97e97019b03530d98d"
+    },
+    "finite_native_read_preparation": "UNIT_TESTED_CURRENT_DOMAIN_CHECK_SAME_CORE_POOL_BEFORE_SOURCE_AND_DTO_NOT_MOUNTED",
+    "normal_entity_read_boundary": "PRESERVED_FOR_PUBLIC_METHODS_EPOCH_NOT_AUTHORIZATION",
+    "historical_installer_ack_target_validation": "UNIT_TESTED_DATABASE_SYSTEM_LOGIN_AND_ROLE_NO_GRANT_REPAIR_OR_DRAIN",
+    "actual_unit_cases": 114,
+    "unique_unit_cases": 114,
+    "passed": 114,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "unit_groups": {
+      "resume": 35,
+      "source_stub_repository": 40,
+      "epoch": 14,
+      "native_preparation": 19,
+      "installer_ack": 6
+    },
+    "real_pg_coupled_cases_executed": 0,
+    "coupled41_strict": "TIMEOUT_NOT_PASS",
+    "production_strict": "TIMEOUT_NOT_PASS_IN_PRIOR_ATTEMPTS_NOT_REACHED_IN_LAST_ATTEMPT",
+    "overall_qualification": "NOT_PASS",
+    "attempts": [
+      {
+        "result": "NOT_PASS",
+        "started_utc": "2026-10-18T11:35:53.070355+00:00",
+        "finished_utc": "2026-10-18T11:36:01.858671+00:00",
+        "elapsed_seconds": 8.788,
+        "stages": [],
+        "actual_unit_cases": 0,
+        "unique_unit_cases": null,
+        "passed": null,
+        "failures": null,
+        "errors": null,
+        "skipped": null,
+        "container_cleanup": true,
+        "runtime_unchanged": true,
+        "own_lease_removed": true,
+        "cleanup_errors": [],
+        "free_before": 221596073984,
+        "free_after": 221754228736,
+        "new_image_ids": [],
+        "attempt": "attempt-113553",
+        "receipt_sha256": "55d221c236b4b47bf04be14932db83af1a9520661fe59bf5ee064d94035b2cd1"
+      },
+      {
+        "result": "NOT_PASS",
+        "started_utc": "2026-10-18T11:36:44.969990+00:00",
+        "finished_utc": "2026-10-18T11:38:28.966942+00:00",
+        "elapsed_seconds": 103.997,
+        "stages": [
+          {
+            "stage": "production_strict",
+            "exit_code": null,
+            "error": "ETIMEDOUT",
+            "signal": "SIGTERM"
+          }
+        ],
+        "actual_unit_cases": 0,
+        "unique_unit_cases": null,
+        "passed": null,
+        "failures": null,
+        "errors": null,
+        "skipped": null,
+        "container_cleanup": true,
+        "runtime_unchanged": true,
+        "own_lease_removed": true,
+        "cleanup_errors": [],
+        "free_before": 221758771200,
+        "free_after": 222313750528,
+        "new_image_ids": [],
+        "attempt": "attempt-113644",
+        "receipt_sha256": "b96525d44e8d824868bac97d32b90d5200230078d4169b33adcf62a4443f5d21"
+      },
+      {
+        "result": "NOT_PASS",
+        "started_utc": "2026-10-18T11:40:35.701922+00:00",
+        "finished_utc": "2026-10-18T11:43:09.781045+00:00",
+        "elapsed_seconds": 154.079,
+        "stages": [
+          {
+            "stage": "production_strict",
+            "exit_code": null,
+            "error": "ETIMEDOUT",
+            "signal": "SIGTERM"
+          }
+        ],
+        "actual_unit_cases": 0,
+        "unique_unit_cases": null,
+        "passed": null,
+        "failures": null,
+        "errors": null,
+        "skipped": null,
+        "container_cleanup": true,
+        "runtime_unchanged": true,
+        "own_lease_removed": true,
+        "cleanup_errors": [],
+        "free_before": 222208061440,
+        "free_after": 222324899840,
+        "new_image_ids": [],
+        "attempt": "attempt-114035",
+        "receipt_sha256": "f519bec52898d0d36659d4db798ebd08180af17ceca99365b5e4773c0d7ad8be"
+      },
+      {
+        "result": "NOT_PASS",
+        "started_utc": "2026-10-18T11:44:08.221316+00:00",
+        "finished_utc": "2026-10-18T11:45:54.185757+00:00",
+        "elapsed_seconds": 105.964,
+        "stages": [
+          {
+            "stage": "units114",
+            "exit_code": 0,
+            "signal": null
+          },
+          {
+            "stage": "owned_specs_strict",
+            "exit_code": null,
+            "error": "ETIMEDOUT",
+            "signal": "SIGTERM"
+          }
+        ],
+        "actual_unit_cases": 114,
+        "unique_unit_cases": 114,
+        "passed": 114,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "container_cleanup": true,
+        "runtime_unchanged": true,
+        "own_lease_removed": true,
+        "cleanup_errors": [],
+        "free_before": 222145277952,
+        "free_after": 221825753088,
+        "new_image_ids": [],
+        "attempt": "attempt-114408",
+        "receipt_sha256": "ce31707a32aaa5246e24e8ec795f0d9a8e5fa0eb5f4371115b37a2d798bc18a0"
+      }
+    ],
+    "no_runtime_authority_or_identity_installed": true,
+    "core_appmodule_and_routes_mounted": false,
+    "active_unique_source_retained_at": "/tmp/epg10-08-current-manager-observation-CudeHxJF/current-source-delta",
+    "active_source_status": "UNFINISHED_SOURCE_NOT_PRODUCT_ACCEPTANCE_NOT_DISPOSABLE_CACHE",
+    "latest_pm_source": "59ea9aa3a25595300dda29f02c5d384b1c088dc4",
+    "latest_pm_source_boundary": "SELECTED_HISTORY_COORDINATOR_ISOLATED_PG_TLS_RECEIPTS_NOT_INSTALLED_AUTHORITY_OR_NATIVE_CONSUMER_FENCE",
+    "latest_ts_source": "668e10320c0bf5a9089e33b72f317d8d7c7215c3",
+    "latest_core_source": "0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05",
+    "next_owned_action": "DIAGNOSE_CURRENT_STRICT_COMPILER_TIMEOUT_THEN_REAL_PG_COMPOSITION_AND_MINIMAL_COMMISSIONING_IN_ORIGINAL08",
+    "full_connected_acceptance": "NOT_MET",
+    "connected09": "NOT_STARTED"
+  },
+  "two_host_current_test_copy_cleanup": {
+    "hk": {
+      "host": "HK",
+      "target": "/tmp/epg10-08-manager-qualification-hk-7h4TfVzE",
+      "status": "EXACT_COPY_REMOVED_RUNTIME_UNCHANGED",
+      "utc": "2026-10-18T11:50:36.744290+00:00",
+      "regular_files": 9150,
+      "symlinks": 15,
+      "logical_bytes_removed": 139789731,
+      "filesystem_free_before": 221738311680,
+      "protected_runtime_count": 40,
+      "protected_runtime_sha256": "1254df0d5cdbf17afaeeb1d4abbb64fb8e058375e0632bf9477ff696be662b65",
+      "artifact_inventory_before": {
+        "image_count": 107,
+        "image_set_sha256": "4b057ba5fceaee4c7941d0dbad8a3a1857d2e5b33d128e0779d9728b5a732828",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "10.53GB (31%)",
+            "Size": "33.48GB",
+            "TotalCount": "111",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "970.7MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "100.6GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.841GB",
+            "Size": "31.75GB",
+            "TotalCount": "423",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      },
+      "no_container_mount_or_job_reference": true,
+      "own_test_jobs_terminal": true,
+      "no_image_build_pull_install_or_new_cache": true,
+      "docker_prune": false,
+      "volumes_data_services_checkout_or_foreign_lock_changed": false,
+      "target_absent": true,
+      "protected_runtime_unchanged": true,
+      "filesystem_free_after": 221881774080,
+      "artifact_inventory_after": {
+        "image_count": 107,
+        "image_set_sha256": "4b057ba5fceaee4c7941d0dbad8a3a1857d2e5b33d128e0779d9728b5a732828",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "10.53GB (31%)",
+            "Size": "33.48GB",
+            "TotalCount": "111",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "970.7MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "100.6GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.841GB",
+            "Size": "31.75GB",
+            "TotalCount": "423",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      }
+    },
+    "sgp": {
+      "host": "SGP",
+      "target": "/tmp/epg10-08-current-manager-notice-20261018-0704",
+      "status": "EXACT_COPY_REMOVED_RUNTIME_UNCHANGED",
+      "utc": "2026-10-18T11:50:57.621724+00:00",
+      "regular_files": 693,
+      "symlinks": 0,
+      "logical_bytes_removed": 12627937,
+      "filesystem_free_before": 163793166336,
+      "protected_runtime_count": 51,
+      "protected_runtime_sha256": "b069e9bbd016a44baa3743ff826f75dd0c05830e7f7f7fd5a80c5f98067d7e3b",
+      "artifact_inventory_before": {
+        "image_count": 318,
+        "image_set_sha256": "155a95dd1ff439cdf0fdb7d4e0739e728d72388664117e908f9d1c716c80f33e",
+        "docker_usage": [
+          {
+            "Active": "26",
+            "Reclaimable": "74.4GB (83%)",
+            "Size": "88.82GB",
+            "TotalCount": "328",
+            "Type": "Images"
+          },
+          {
+            "Active": "53",
+            "Reclaimable": "471kB (18%)",
+            "Size": "2.503MB",
+            "TotalCount": "61",
+            "Type": "Containers"
+          },
+          {
+            "Active": "22",
+            "Reclaimable": "13.78GB (42%)",
+            "Size": "32.56GB",
+            "TotalCount": "97",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "93",
+            "Reclaimable": "62.81GB",
+            "Size": "195.8GB",
+            "TotalCount": "3769",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      },
+      "no_container_mount_or_job_reference": true,
+      "own_test_jobs_terminal": true,
+      "no_image_build_pull_install_or_new_cache": true,
+      "docker_prune": false,
+      "volumes_data_services_checkout_or_foreign_lock_changed": false,
+      "target_absent": true,
+      "protected_runtime_unchanged": true,
+      "filesystem_free_after": 163807154176,
+      "artifact_inventory_after": {
+        "image_count": 318,
+        "image_set_sha256": "155a95dd1ff439cdf0fdb7d4e0739e728d72388664117e908f9d1c716c80f33e",
+        "docker_usage": [
+          {
+            "Active": "26",
+            "Reclaimable": "74.4GB (83%)",
+            "Size": "88.82GB",
+            "TotalCount": "328",
+            "Type": "Images"
+          },
+          {
+            "Active": "53",
+            "Reclaimable": "471kB (18%)",
+            "Size": "2.503MB",
+            "TotalCount": "61",
+            "Type": "Containers"
+          },
+          {
+            "Active": "22",
+            "Reclaimable": "13.78GB (42%)",
+            "Size": "32.56GB",
+            "TotalCount": "97",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "93",
+            "Reclaimable": "62.81GB",
+            "Size": "195.8GB",
+            "TotalCount": "3769",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      }
+    },
+    "logical_bytes_removed_total": 152417668,
+    "filesystem_deltas_are_shared_host_not_exclusive_reclaimed_bytes": true,
+    "all_four_hk_workers_and_own_leases_removed": true,
+    "sgp_current87cases": "NOT_RUN_TARGET_REMOVED_AFTER_BOUND_WAIT_NO_NEW_TEST",
+    "existing_public_engines_and_peer_cache": "RETAINED_UNCHANGED_NO_OWN_BUILD_PULL_INSTALL",
+    "stable_release_and_named_rollback_artifacts": "RETAINED",
+    "shared_prune": "NOT_PERFORMED_NOT_AUTHORIZED_BY_TEST_COPY_CLEANUP",
+    "unique_unfinished_source": "RETAINED_EXPLICIT_NOT_CLAIMED_COMPLETE_OR_MOUNT_READY"
+  },
+  "superseded_input_retirement_2026_10_18_1155": {
+    "hk_notice": {
+      "status": "SUPERSEDED_COPY_REMOVED_ACTIVE_SOURCE_RETAINED_RUNTIME_UNCHANGED",
+      "host": "HK",
+      "target": "/tmp/epg10-08-current-manager-notice-HkNMZkVt",
+      "active_source_retained_at": "/tmp/epg10-08-current-manager-observation-CudeHxJF/notice-basis-source",
+      "retained_source_pins": {
+        "apps/control-api/src/execution-v2/read-scope.ts": "18cb0aaf13dc9ecaf440d80a0254b8edaa313002a99979193743e5dcc96d0bf5",
+        "apps/control-api/src/execution-v2/current-human-candidate.ts": "12c2cf3e1b4084f2e1074359b531712789ed78777d2f74835df96cdf96a5290e",
+        "apps/control-api/src/execution-v2/realtime.ts": "a0e45c7df0a792dc2c39b35070f8d658c607e6b452c9ef58b087b6d7c931f1e7",
+        "apps/control-api/src/execution-v2/realtime.contract.ts": "656eaeaf933749d29fd5d0d411eb89a224d4a6126dd3f0e4a344d2707acffa63",
+        "apps/control-api/test/elp210-native-frame-coupled.spec.ts": "9542a128c969db582c2da244dcf68c0ce1d434ac1f8ec9b5e82512f787485e5e"
+      },
+      "retained_source_files": 5,
+      "logical_bytes_removed": 557402,
+      "regular_files_removed": 12,
+      "filesystem_free_before": 222261280768,
+      "utc": "2026-10-18T11:54:53.617195+00:00",
+      "runtime_roster_count": 40,
+      "no_container_mount_or_job_reference": true,
+      "docker_prune": false,
+      "source_export_or_new_test": false,
+      "database_or_service_mutation": false,
+      "target_absent": true,
+      "runtime_unchanged": true,
+      "filesystem_free_after": 222261661696
+    },
+    "sgp_reducers": {
+      "status": "SUPERSEDED_COPY_REMOVED_ACTIVE_SOURCE_RETAINED_RUNTIME_UNCHANGED",
+      "host": "SGP",
+      "target": "/tmp/epg10-08-current-manager-reducers-imq8u38a/apps",
+      "active_source_retained_at": "/tmp/epg10-08-current-manager-reducers-imq8u38a/active-source-delta",
+      "retained_source_pins": {
+        "apps/control-api/src/execution-v2/access.contract.ts": "d0df4ee93e959d3a98ebacd286aed65f9c7f71082f3f7bffea67ed97414a21a9",
+        "apps/control-api/src/execution-v2/access-policy.ts": "c56c6f85a29d2dc59605195212f7dcc54c917b1aa98480af145c0cd00ae2c0f7",
+        "apps/control-api/src/execution-v2/current-human-snapshot.ts": "5238093f65a164d50d21bca2ee2759c19fa7a8e0d5658a24beffa6813d1cf51d",
+        "apps/control-api/test/elp210-manager-domain-access.spec.ts": "c1d0a13da8a4c2fcd4da0792c7317c5157c0afb9f5b4da2c57e2d8df2f540607"
+      },
+      "retained_source_files": 4,
+      "logical_bytes_removed": 12252292,
+      "regular_files_removed": 673,
+      "filesystem_free_before": 163783434240,
+      "utc": "2026-10-18T11:55:17.360260+00:00",
+      "runtime_roster_count": 53,
+      "no_container_mount_or_job_reference": true,
+      "docker_prune": false,
+      "source_export_or_new_test": false,
+      "database_or_service_mutation": false,
+      "target_absent": true,
+      "runtime_unchanged": true,
+      "filesystem_free_after": 163797270528
+    },
+    "logical_bytes_removed": 12809694,
+    "private_unfinished_sources_retained": true,
+    "operational_mutations": 0,
+    "prune_performed": false
+  },
+  "connected09": "NOT_STARTED",
+  "current_round_2026_10_18_1315": {
+    "status": "SOURCE_ONLY_PARTIAL_QUALIFICATION_NOT_FULL08_ACCEPTANCE",
+    "source_base_tested": "0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05",
+    "latest_core_observed_after_test": "25218372a10147b9910458f08a85c93479169d3f",
+    "latest_core_source_reconciliation": "REQUIRED_BEFORE_BINDING_NOT_CLAIMED_TESTED",
+    "source_manifest_sha256": "491ec053603e80daf70e984cfd460f1518213a7f571e597c34cdd8685184932f",
+    "source_files": 697,
+    "source_bytes": 12574430,
+    "owned_delta_files": 22,
+    "owned_delta_pins": {
+      "apps/control-api/src/execution-v2/access-trust.ts": "dd9ff410ed4e001995cbbf9f521d258812a342eb50c16f045bf114c10c0461b7",
+      "apps/control-api/src/execution-v2/access.service.ts": "38127820ac07a00a2aca7e028c0b8e7587def7759febde562d7eacc6e4df0d37",
+      "apps/control-api/src/execution-v2/core-owner-commissioning.ts": "f24d041708c793b3b8d73e3ec9760b9b4f7549da2f68c0dcf49824003f225206",
+      "apps/control-api/src/execution-v2/manager-observation-coordinate.ts": "2e93261b6864cd732e631653971461f4b60b36133b2041a8a21fb70af8ccb2f2",
+      "apps/control-api/src/execution-v2/manager-observation-source.ts": "390cf853dfc13273c8d1b6ddc5461566e5ae554dd62c1581e5c75492a4ca07f0",
+      "apps/control-api/src/execution-v2/native-core-composition.ts": "ab2b6db050c7e433d89c6085e8a47ed9bde9687482f27f230955846ef4ac5208",
+      "apps/control-api/src/execution-v2/native-manager-consumer.ts": "288bb26756155f0c6129a471a5e766f92abfa2ea4571e34a807ad8fb2b2183a7",
+      "apps/control-api/src/execution-v2/realtime.ts": "40ca9194122e00be450c1398ee73014f0e8a441cd283f90a18631a9cc526a969",
+      "apps/control-api/src/execution-v2/scoped-replay-cursor.ts": "d7feed027508c7e987c73e6410ca6e9c57fc3b08175353f01093d0cf02ec4cea",
+      "apps/control-api/src/execution/current-source.proxy.ts": "a92a4d2e73ef66436c971f8303b621fca8ced579f12bab7db6d1ddc918a89a23",
+      "apps/control-api/src/execution/maximum-data-continuation.repository.ts": "00eec0aea1aadbca9f5bfdb72dae4af4dc64ee2bddba0ac9ebfe84c3f3bcc4ca",
+      "apps/control-api/src/execution/maximum-data-operation.service.ts": "fd85ab2f7a1c8a9375768784618a2d8dcb09e1aee27119146fbe5d6201199770",
+      "apps/control-api/src/execution/profile-projection.repository.ts": "f2680679bf34dac2cea5b0a78a303b1dd89f2f7d6ebb1dc6bcb7ba0716b207a6",
+      "apps/control-api/src/execution/shared-read.repository.ts": "9dcfadb6fea125b0ac76acbb05e0bc54bd61d8d5a9f4ba8c64c7754af949d321",
+      "apps/control-api/test/elp210-native-frame-coupled.spec.ts": "ac40570e9c2e802de1f91fd920deb0f7bd0a8dcc0ddce61cfe2ddf6c86e20862",
+      "apps/control-api/test/manager-observation-resume.spec.ts": "4b0e05d146a6a7fd513b9cd423404c025f4365f2bbaca47802fa8eadd642b399",
+      "apps/control-api/test/manager-observation-source.spec.ts": "7b18c9f4f3bcf66bd194f3da4ada7854261c12ad1682759ae7e1f5be5d6150fd",
+      "apps/control-api/test/native-manager-epoch.spec.ts": "ce3400c15ae11d632b6709bdeb32ddb02d99d607e24403acb8247805aa6eebef",
+      "apps/control-api/test/native-manager-install-ack.spec.ts": "4dd4b10228653c1a8bb3ce86c42ff07337355ca7df5ccfd1c884d21db5d02915",
+      "apps/control-api/test/native-manager-preparation.spec.ts": "7421dbfaf44131bb9210ef94924b4b64a894f56e67022a97e97019b03530d98d",
+      "apps/control-api/src/execution/profile-realtime.service.ts": "5c7116ed271f5fda1710c39c0600a186e5ef512decd9baf67a0ebe32ada21d67",
+      "apps/control-api/src/execution/service-heartbeats.service.ts": "72b1b07486d45b98ba754d61fb776dc84047a06262c4b34848670018a2c6e162"
+    },
+    "earlier_diagnostic": {
+      "status": "NOT_PASS_TWO_OWNED_TYPE_REGRESSIONS_FOUND",
+      "receipt_sha256": "04f858f298093cd28c5d7a096c319ca739bf1b0daa22997bc593455c5293a930",
+      "elapsed_ms": 160862,
+      "production_roots": 547,
+      "program_files": 1310,
+      "actual_product_cases": 0
+    },
+    "repair": {
+      "scope": "TWO_TYPE_ONLY_LEGACY_METADATA_CONSUMER_FIXES",
+      "runtime_behavior_change": false,
+      "emitted_js_parity_checks": 2,
+      "emitted_js_parity_result": "PASS"
+    },
+    "actual_qualification": {
+      "status": "CLI_STRICT_AND_114_UNITS_PASS",
+      "provenance": "TEST_ONLY_CURRENT_SOURCE_CLI_OR_DIAGNOSTIC_NOT_RUNTIME",
+      "mode": "production",
+      "started_utc": "2026-10-18T13:12:01.188707+00:00",
+      "source_manifest_sha256": "491ec053603e80daf70e984cfd460f1518213a7f571e597c34cdd8685184932f",
+      "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+      "maximum_cpu": 2,
+      "maximum_memory_bytes": 2147483648,
+      "maximum_lease_seconds": 300,
+      "free_before": 226964004864,
+      "actual_product_cases": 114,
+      "commands": [
+        [
+          "metadata_emission_parity",
+          [
+            "/metadata_emission_parity.cjs"
+          ],
+          5000
+        ],
+        [
+          "production_strict",
+          [
+            "node_modules/typescript/bin/tsc",
+            "--noEmit",
+            "--project",
+            "tsconfig.build.json"
+          ],
+          210000
+        ],
+        [
+          "units114",
+          [
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "--configLoader",
+            "runner",
+            "--cache=false",
+            "--maxWorkers=1",
+            "--no-file-parallelism",
+            "--reporter=default",
+            "--reporter=junit",
+            "--outputFile.junit=/evidence/units.xml",
+            "test/manager-observation-resume.spec.ts",
+            "test/manager-observation-source.spec.ts",
+            "test/native-manager-epoch.spec.ts",
+            "test/native-manager-preparation.spec.ts",
+            "test/native-manager-install-ack.spec.ts"
+          ],
+          25000
+        ]
+      ],
+      "exit_code": 0,
+      "progress_sha256": "63ef76500c692b0e16394c85f2860cddbe4c9a013801d9361a9a8aa1e1dedb84",
+      "last_events": [
+        {
+          "file": "src/execution/profile-realtime.service.ts",
+          "status": "EXACT_EMITTED_JAVASCRIPT_PARITY",
+          "sha256": "7b3896845f47d186053aec0fe6bc237c921a75d39bd61fd2475a12566614683a"
+        },
+        {
+          "file": "src/execution/service-heartbeats.service.ts",
+          "status": "EXACT_EMITTED_JAVASCRIPT_PARITY",
+          "sha256": "7f7627171fd35059a9fd9163b802b8cc99bf9e119ac3aab2e21bd3a5a12835b6"
+        }
+      ],
+      "completed_files": 0,
+      "error_locations": [],
+      "stages": [
+        {
+          "stage": "metadata_emission_parity",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "stage": "production_strict",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "stage": "units114",
+          "exit_code": 0,
+          "signal": null
+        }
+      ],
+      "passed": 114,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "container_absent": true,
+      "runtime_unchanged": true,
+      "input_copy_cleanup": "EXACT_TARGET_REMOVED_AFTER_TERMINAL_CONTAINER",
+      "own_lease_removed": true,
+      "free_after": 226932776960,
+      "finished_utc": "2026-10-18T13:15:04.357635+00:00",
+      "receipt_sha256": "e0d2e57604ca809c8fde16c9cab66a271c0c2ded486167195d32c97fdbad8ca9"
+    },
+    "owned_spec_cli": "NOT_RUN_NO_DOWNGRADE_FROM_PRODUCTION_CHECK",
+    "actual_pg_coupled41": "NOT_RUN",
+    "actual_pg_domain56": "NOT_RUN",
+    "live_authority_installation": false,
+    "public_route_mounting": false,
+    "exact_hk_cleanup": {
+      "host": "HK",
+      "target": "/tmp/epg10-08-manager-qualification-hk-7h4TfVzE",
+      "status": "EXACT_COPY_REMOVED_RUNTIME_UNCHANGED",
+      "utc": "2026-10-18T13:14:47.303107+00:00",
+      "regular_files": 9114,
+      "symlinks": 15,
+      "logical_bytes_removed": 138524715,
+      "filesystem_free_before": 226818899968,
+      "protected_runtime_count": 40,
+      "protected_runtime_sha256": "6d9d17e7c632480bf3826cf600aabf8aa4fc12713e06df429a3d747c53923431",
+      "artifact_inventory_before": {
+        "image_count": 107,
+        "image_set_sha256": "4b057ba5fceaee4c7941d0dbad8a3a1857d2e5b33d128e0779d9728b5a732828",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "10.53GB (31%)",
+            "Size": "33.48GB",
+            "TotalCount": "111",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "989.9MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "95.11GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.841GB",
+            "Size": "31.75GB",
+            "TotalCount": "423",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      },
+      "no_container_mount_or_job_reference": true,
+      "own_test_jobs_terminal": true,
+      "no_image_build_pull_install_or_new_cache": true,
+      "docker_prune": false,
+      "volumes_data_services_checkout_or_foreign_lock_changed": false,
+      "target_absent": true,
+      "protected_runtime_unchanged": true,
+      "filesystem_free_after": 226961981440,
+      "artifact_inventory_after": {
+        "image_count": 107,
+        "image_set_sha256": "4b057ba5fceaee4c7941d0dbad8a3a1857d2e5b33d128e0779d9728b5a732828",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "10.53GB (31%)",
+            "Size": "33.48GB",
+            "TotalCount": "111",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "989.9MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "95.14GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.841GB",
+            "Size": "31.75GB",
+            "TotalCount": "423",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      },
+      "receipt_sha256": "55b6a8b9598f88f9faaeb842e22c0626ce6db664fa5125d61da138e31470ea73"
+    },
+    "two_host_audit": {
+      "utc": "2026-10-18T13:16:18.244773+00:00",
+      "sgp": {
+        "read_only": true,
+        "current_notice_copy_absent": true,
+        "superseded_reducer_apps_absent": true,
+        "own_test_containers": 0,
+        "own_test_networks": 0,
+        "own_test_volumes": 0,
+        "own_jobs": 0,
+        "retained_active_source_files": 4,
+        "retention": "UNIQUE_UNFINISHED_SOURCE_NOT_DISPOSABLE_INPUT_CACHE_REMOVE_AFTER_REVIEWED_LANDING",
+        "running_roster": 53,
+        "filesystem_free_bytes": 163716399104,
+        "image_count": 318,
+        "build_cache_records": 3769,
+        "build_cache_active": 93,
+        "build_cache_size": "195.8GB",
+        "foreign_lock_preserved": {
+          "owner": "codex-elp210-commissioning-land-124722",
+          "until_utc": "2026-10-18T13:32:22.839114+00:00"
+        },
+        "mutations": 0
+      },
+      "hk": {
+        "current_input_copy_absent": true,
+        "superseded_notice_copy_absent": true,
+        "own_worker_absent": true,
+        "own_test_networks": 0,
+        "own_test_volumes": 0,
+        "own_lease_removed": true,
+        "protected_runtime_tuples_unchanged": 40,
+        "later_foreign_lock_preserved": {
+          "owner": "codex-pma11-owner-binding-hk-pma11-owner-binding-qualified-hk-20261018",
+          "started_utc": "2026-10-18T13:15:21.406748+00:00",
+          "until_utc": "2026-10-18T13:20:21.406748+00:00"
+        }
+      },
+      "no_own_new_image_build_pull_or_build_cache": true,
+      "shared_prune": false,
+      "database_volume_role_identity_service_or_peer_checkout_mutations": 0,
+      "cleanup_disposition": "NO_DISPOSABLE_CURRENT_TEST_RESOURCES_REMAIN_RETAIN_ACTIVE_UNFINISHED_SOURCE_AND_BOUNDED_EVIDENCE",
+      "filesystem_delta_not_exclusive_reclaimed_bytes": true
+    },
+    "full08": "NOT_MET",
+    "connected09": "NOT_STARTED",
+    "committed_pushed_merged_deployed": false
+  },
+  "qualification_2026_10_18_1332": {
+    "source_base": "0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05",
+    "source_manifest_sha256": "7ecba15ef969c3ada480fb24cbb7bd64d9db07ad61d6d9b71af7bf9af47f2a5c",
+    "source_files": 697,
+    "source_bytes": 12574936,
+    "owned_delta_files": 23,
+    "seven_spec_strict": {
+      "status": "SEVEN_OWNED_SPECS_CLI_STRICT_PASS_NOT_PG_EXECUTION",
+      "provenance": "TEST_ONLY_CURRENT_SOURCE_CLI_OR_DIAGNOSTIC_NOT_RUNTIME",
+      "mode": "spec",
+      "started_utc": "2026-10-18T13:26:26.686036+00:00",
+      "source_manifest_sha256": "7ecba15ef969c3ada480fb24cbb7bd64d9db07ad61d6d9b71af7bf9af47f2a5c",
+      "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+      "maximum_cpu": 2,
+      "maximum_memory_bytes": 2147483648,
+      "maximum_lease_seconds": 300,
+      "free_before": 225597186048,
+      "actual_product_cases": 0,
+      "commands": [
+        [
+          "owned_specs_strict",
+          [
+            "node_modules/typescript/bin/tsc",
+            "--noEmit",
+            "--target",
+            "ES2022",
+            "--module",
+            "ESNext",
+            "--moduleResolution",
+            "Bundler",
+            "--lib",
+            "ES2022",
+            "--strict",
+            "--esModuleInterop",
+            "--skipLibCheck",
+            "--experimentalDecorators",
+            "--emitDecoratorMetadata",
+            "--useUnknownInCatchVariables",
+            "--resolveJsonModule",
+            "--types",
+            "node",
+            "test/manager-observation-resume.spec.ts",
+            "test/manager-observation-source.spec.ts",
+            "test/native-manager-epoch.spec.ts",
+            "test/native-manager-preparation.spec.ts",
+            "test/native-manager-install-ack.spec.ts",
+            "test/elp210-native-frame-coupled.spec.ts",
+            "test/elp210-manager-domain-access.spec.ts"
+          ],
+          210000
+        ]
+      ],
+      "exit_code": 0,
+      "progress_sha256": "5b75a446ae7ba5c3c8e5423c8cb3a6d3ed20ae999aff74390bc1b36822a515bd",
+      "last_events": [],
+      "completed_files": 0,
+      "error_locations": [],
+      "stages": [
+        {
+          "stage": "owned_specs_strict",
+          "exit_code": 0,
+          "signal": null
+        }
+      ],
+      "container_absent": true,
+      "runtime_unchanged": true,
+      "input_copy_cleanup": "EXACT_TARGET_REMOVED_AFTER_TERMINAL_CONTAINER",
+      "own_lease_removed": true,
+      "free_after": 225140645888,
+      "finished_utc": "2026-10-18T13:29:35.035543+00:00",
+      "receipt_sha256": "42253291958bb8298ac38f611a71fe9013dec8d9ac8ebec1ab115512ef6af6e9"
+    },
+    "strict_cleanup": {
+      "host": "HK",
+      "target": "/tmp/epg10-08-manager-qualification-hk-7h4TfVzE",
+      "status": "EXACT_COPY_REMOVED_RUNTIME_UNCHANGED",
+      "utc": "2026-10-18T13:29:15.564056+00:00",
+      "regular_files": 9114,
+      "symlinks": 15,
+      "logical_bytes_removed": 138525217,
+      "filesystem_free_before": 225084014592,
+      "protected_runtime_count": 40,
+      "protected_runtime_sha256": "6d9d17e7c632480bf3826cf600aabf8aa4fc12713e06df429a3d747c53923431",
+      "artifact_inventory_before": {
+        "image_count": 107,
+        "image_set_sha256": "4b057ba5fceaee4c7941d0dbad8a3a1857d2e5b33d128e0779d9728b5a732828",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "10.53GB (31%)",
+            "Size": "33.48GB",
+            "TotalCount": "111",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "993.3MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "96.68GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.841GB",
+            "Size": "31.75GB",
+            "TotalCount": "423",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      },
+      "no_container_mount_or_job_reference": true,
+      "own_test_jobs_terminal": true,
+      "no_image_build_pull_install_or_new_cache": true,
+      "docker_prune": false,
+      "volumes_data_services_checkout_or_foreign_lock_changed": false,
+      "target_absent": true,
+      "protected_runtime_unchanged": true,
+      "filesystem_free_after": 225184133120,
+      "artifact_inventory_after": {
+        "image_count": 107,
+        "image_set_sha256": "4b057ba5fceaee4c7941d0dbad8a3a1857d2e5b33d128e0779d9728b5a732828",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "10.53GB (31%)",
+            "Size": "33.48GB",
+            "TotalCount": "111",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "993.3MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "96.74GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.841GB",
+            "Size": "31.75GB",
+            "TotalCount": "423",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      }
+    },
+    "pg_qualification": {
+      "raw_driver_record": {
+        "status": "97_ACTUAL_PG_TLS_HTTP_CASES_PASS_SOURCE_ONLY_NOT_INSTALLED_AUTHORITY",
+        "provenance": "SYNTHETIC_PM_PROTOCOL_ACTUAL_DISPOSABLE_PG_TLS_HTTP_NOT_INSTALLED_AUTHORITY",
+        "started_utc": "2026-10-18T13:30:13.753993+00:00",
+        "source_manifest_sha256": "7ecba15ef969c3ada480fb24cbb7bd64d9db07ad61d6d9b71af7bf9af47f2a5c",
+        "source_base": "0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05",
+        "maximum_concurrent_cpu": 2,
+        "maximum_concurrent_memory_bytes": 2147483648,
+        "maximum_lease_seconds": 300,
+        "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+        "postgres_image": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+        "free_before": 224724504576,
+        "groups": [
+          {
+            "label": "manager-domain",
+            "expected": 56,
+            "exit_code": 0,
+            "physical_exit_code": 0,
+            "oom_killed": false,
+            "log_sha256": "7036082d7c6022e87f559317e32692452b2c9cf2f25d73d4f84870ba010ccfa7",
+            "actual_cases": 56,
+            "unique_cases": 56,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "junit_sha256": "5f7e0a19d7da065948b09126abe627d7be12986d8dc2cd6a7aeeb5dab41f5136"
+          },
+          {
+            "label": "manager-notice",
+            "expected": 41,
+            "exit_code": 0,
+            "physical_exit_code": 0,
+            "oom_killed": false,
+            "log_sha256": "0fbc127845e05e60866d7cf9ea9349379fd13bcfbd5467369c89e0522f5a3927",
+            "actual_cases": 41,
+            "unique_cases": 41,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "junit_sha256": "f757e19244c23f082861eae58ee7bc8b4932c7c401c58036e3b643765d8b404f"
+          }
+        ],
+        "commands": [
+          [
+            "node",
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "--configLoader",
+            "runner",
+            "--cache=false",
+            "--maxWorkers=1",
+            "--no-file-parallelism",
+            "--reporter=default",
+            "--reporter=junit",
+            "--outputFile.junit=/evidence/manager-domain.xml",
+            "test/elp210-manager-domain-access.spec.ts"
+          ],
+          [
+            "node",
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "--configLoader",
+            "runner",
+            "--cache=false",
+            "--maxWorkers=1",
+            "--no-file-parallelism",
+            "--reporter=default",
+            "--reporter=junit",
+            "--outputFile.junit=/evidence/manager-notice.xml",
+            "test/elp210-native-frame-coupled.spec.ts"
+          ]
+        ],
+        "resource_cleanup_errors": [],
+        "runtime_unchanged": true,
+        "input_copy_cleanup": "EXACT_TARGET_REMOVED_AFTER_TERMINAL_JOBS",
+        "own_lease_removed": true,
+        "finished_utc": "2026-10-18T13:32:40.005688+00:00",
+        "elapsed_seconds": 146.252,
+        "free_after": 224293453824,
+        "no_build_pull_install_shared_prune_or_runtime_mutation": true
+      },
+      "receipt_sha256": "8e2feaec0e32918c535959b3da567b530461917ebce4d784dbe1e3105e284872",
+      "interpreted_case_counts": {
+        "total": 97,
+        "pure": 31,
+        "actual_pg_fixture_cases": 66,
+        "domain_pure": 31,
+        "domain_pg": 25,
+        "coupled_suite_pg_tls_http": 41,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "raw_driver_97_actual_pg_label_is_not_a_claim_that_all_97_are_pg": true,
+      "junit_sha256": {
+        "domain": "5f7e0a19d7da065948b09126abe627d7be12986d8dc2cd6a7aeeb5dab41f5136",
+        "notice": "f757e19244c23f082861eae58ee7bc8b4932c7c401c58036e3b643765d8b404f"
+      }
+    },
+    "pg_cleanup": {
+      "host": "HK",
+      "target": "/tmp/epg10-08-manager-qualification-hk-7h4TfVzE",
+      "status": "EXACT_COPY_REMOVED_RUNTIME_UNCHANGED",
+      "utc": "2026-10-18T13:32:22.078129+00:00",
+      "regular_files": 9114,
+      "symlinks": 15,
+      "logical_bytes_removed": 138525217,
+      "filesystem_free_before": 224209854464,
+      "protected_runtime_count": 40,
+      "protected_runtime_sha256": "6d9d17e7c632480bf3826cf600aabf8aa4fc12713e06df429a3d747c53923431",
+      "artifact_inventory_before": {
+        "image_count": 107,
+        "image_set_sha256": "4b057ba5fceaee4c7941d0dbad8a3a1857d2e5b33d128e0779d9728b5a732828",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "10.53GB (31%)",
+            "Size": "33.48GB",
+            "TotalCount": "111",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "994MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "97.51GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.841GB",
+            "Size": "31.75GB",
+            "TotalCount": "423",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      },
+      "no_container_mount_or_job_reference": true,
+      "own_test_jobs_terminal": true,
+      "no_image_build_pull_install_or_new_cache": true,
+      "docker_prune": false,
+      "volumes_data_services_checkout_or_foreign_lock_changed": false,
+      "target_absent": true,
+      "protected_runtime_unchanged": true,
+      "filesystem_free_after": 224333975552,
+      "artifact_inventory_after": {
+        "image_count": 107,
+        "image_set_sha256": "4b057ba5fceaee4c7941d0dbad8a3a1857d2e5b33d128e0779d9728b5a732828",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "10.53GB (31%)",
+            "Size": "33.48GB",
+            "TotalCount": "111",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "994MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "97.55GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.841GB",
+            "Size": "31.75GB",
+            "TotalCount": "423",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      }
+    },
+    "strong_component_evidence": [
+      "SENDING_COMMIT_ACK_LOSS_PHYSICAL_RESERVATION_CLOSED_ZERO_BYTES_IMMUTABLE_ABORTED",
+      "PER_FRAME_CURRENT_MANAGER_READ_AND_STREAM_REVOKE_BEFORE_ISSUE_AND_AFTER_ENTER",
+      "SOURCE_AND_LOCAL_ACK_COMMIT_RELEASE_FENCE_NO_EARLY_FRAME_OR_CURSOR",
+      "TWO_REAL_TEST_PEOPLE_SAME_HUB_ORIGINAL_CANDIDATE_AND_JOINED_QUIESCENCE",
+      "ORIGINAL_SNAPSHOT_CURSOR_AUTHENTICATION_CURRENT_SOURCE_BOUNDED_QUERY"
+    ],
+    "still_not_proven": [
+      "CURRENT25218372_APP_MOUNT",
+      "REAL_PM_CORE_WORKLOAD_IDENTITY_AUTHORITY_COMMISSIONING",
+      "ACTUAL_RUNTIME_REVOKE_CACHE_CURSOR_SSE_DRILLS",
+      "CONNECTED09_CUTOVER10_ACCEPTANCE11"
+    ],
+    "actual_pm_protocol": "SYNTHETIC_TEST_ONLY_NOT_COMMISSIONED_NATIVE_PM",
+    "operational_mutations": 0,
+    "full08": "NOT_MET",
+    "connected09": "NOT_STARTED"
+  },
+  "pending_composed_sse_recovery": {
+    "status": "FULL_PRODUCTION_SEVEN_SPEC_STRICT_AND_213_SOURCE_CASES_PASS_NOT_INSTALLED_OR_MOUNTED",
+    "manifest_sha256": "ed93f56f1031cebac36ed2139992e048568ddd432138f6cff8a09e9965e4f44e",
+    "source_files": 697,
+    "source_bytes": 12580401,
+    "owned_delta_files": 23,
+    "change": "SAME_CURRENT_CANDIDATE_RECOVERY_REGISTRY_ACCEPTS_EXACT_HTTP_OR_SSE_DURABLE_LIFECYCLE",
+    "new_actual_pg_test_definitions": 2,
+    "expected_coupled_cases": 43,
+    "actual_new_case_execution": 2,
+    "prior_97_pass_not_inherited_as_current_pin_acceptance": true,
+    "current_pm_source": "ec5d5d94769eac3ed4e66ea42a67251ac9738269",
+    "current_core_source_observed": "ff83f1766b513c18d3fb0102cfc5c6889ffb6343",
+    "installed_or_mounted": false
+  },
+  "qualification_2026_10_18_1348": {
+    "status": "CURRENT_SOURCE_COMPONENT_QUALIFIED_NOT_INSTALLED_AUTHORITY",
+    "source_base_tested": "0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05",
+    "source_manifest_sha256": "ed93f56f1031cebac36ed2139992e048568ddd432138f6cff8a09e9965e4f44e",
+    "source_files": 697,
+    "source_bytes": 12580401,
+    "owned_delta_files": 23,
+    "strict": {
+      "status": "SEVEN_OWNED_SPECS_CLI_STRICT_PASS_NOT_PG_EXECUTION",
+      "provenance": "TEST_ONLY_CURRENT_SOURCE_CLI_OR_DIAGNOSTIC_NOT_RUNTIME",
+      "mode": "spec",
+      "started_utc": "2026-10-18T13:36:59.614651+00:00",
+      "source_manifest_sha256": "ed93f56f1031cebac36ed2139992e048568ddd432138f6cff8a09e9965e4f44e",
+      "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+      "maximum_cpu": 2,
+      "maximum_memory_bytes": 2147483648,
+      "maximum_lease_seconds": 300,
+      "free_before": 224430972928,
+      "actual_product_cases": 0,
+      "commands": [
+        [
+          "owned_specs_strict",
+          [
+            "node_modules/typescript/bin/tsc",
+            "--noEmit",
+            "--target",
+            "ES2022",
+            "--module",
+            "ESNext",
+            "--moduleResolution",
+            "Bundler",
+            "--lib",
+            "ES2022",
+            "--strict",
+            "--esModuleInterop",
+            "--skipLibCheck",
+            "--experimentalDecorators",
+            "--emitDecoratorMetadata",
+            "--useUnknownInCatchVariables",
+            "--resolveJsonModule",
+            "--types",
+            "node",
+            "test/manager-observation-resume.spec.ts",
+            "test/manager-observation-source.spec.ts",
+            "test/native-manager-epoch.spec.ts",
+            "test/native-manager-preparation.spec.ts",
+            "test/native-manager-install-ack.spec.ts",
+            "test/elp210-native-frame-coupled.spec.ts",
+            "test/elp210-manager-domain-access.spec.ts"
+          ],
+          210000
+        ]
+      ],
+      "exit_code": 0,
+      "progress_sha256": "5b75a446ae7ba5c3c8e5423c8cb3a6d3ed20ae999aff74390bc1b36822a515bd",
+      "last_events": [],
+      "completed_files": 0,
+      "error_locations": [],
+      "stages": [
+        {
+          "stage": "owned_specs_strict",
+          "exit_code": 0,
+          "signal": null
+        }
+      ],
+      "container_absent": true,
+      "runtime_unchanged": true,
+      "input_copy_cleanup": "EXACT_TARGET_REMOVED_AFTER_TERMINAL_CONTAINER",
+      "own_lease_removed": true,
+      "free_after": 224311775232,
+      "finished_utc": "2026-10-18T13:40:02.171838+00:00",
+      "receipt_sha256": "e0d11526bb647dd21f3afe0ed0c9faa730b8346d2d2135bf325faf63ab04310d"
+    },
+    "actual_execution": {
+      "status": "99_CASES_31_PURE_68_PG_FIXTURE_PASS_SOURCE_ONLY_NOT_INSTALLED_AUTHORITY",
+      "provenance": "SYNTHETIC_PM_PROTOCOL_ACTUAL_DISPOSABLE_PG_TLS_HTTP_NOT_INSTALLED_AUTHORITY",
+      "started_utc": "2026-10-18T13:45:12.633595+00:00",
+      "source_manifest_sha256": "ed93f56f1031cebac36ed2139992e048568ddd432138f6cff8a09e9965e4f44e",
+      "source_base": "0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05",
+      "maximum_concurrent_cpu": 2,
+      "maximum_concurrent_memory_bytes": 2147483648,
+      "maximum_lease_seconds": 300,
+      "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+      "postgres_image": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+      "free_before": 223425798144,
+      "groups": [
+        {
+          "label": "manager-domain",
+          "expected": 56,
+          "exit_code": 0,
+          "physical_exit_code": 0,
+          "oom_killed": false,
+          "log_sha256": "520c8fc5683c05449616c49db1e831aa8d65c62c439437099948f428b1040e34",
+          "actual_cases": 56,
+          "unique_cases": 56,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "junit_sha256": "adae4813782e73e327b0f0d5356505731aa4e3f68b02444303f6736dc87b35f6"
+        },
+        {
+          "label": "manager-notice",
+          "expected": 43,
+          "exit_code": 0,
+          "physical_exit_code": 0,
+          "oom_killed": false,
+          "log_sha256": "32a408ab772b44b5573a62c64c25b0d99505bf8052ccc9dae48ca8018ea0d3f7",
+          "actual_cases": 43,
+          "unique_cases": 43,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "junit_sha256": "d6ae41f14ed5cb64e4ccced8985ce7b89beb2c7e876242d0d9755db362203ba4"
+        }
+      ],
+      "commands": [
+        [
+          "node",
+          "node_modules/vitest/vitest.mjs",
+          "run",
+          "--configLoader",
+          "runner",
+          "--cache=false",
+          "--maxWorkers=1",
+          "--no-file-parallelism",
+          "--reporter=default",
+          "--reporter=junit",
+          "--outputFile.junit=/evidence/manager-domain.xml",
+          "test/elp210-manager-domain-access.spec.ts"
+        ],
+        [
+          "node",
+          "node_modules/vitest/vitest.mjs",
+          "run",
+          "--configLoader",
+          "runner",
+          "--cache=false",
+          "--maxWorkers=1",
+          "--no-file-parallelism",
+          "--reporter=default",
+          "--reporter=junit",
+          "--outputFile.junit=/evidence/manager-notice.xml",
+          "test/elp210-native-frame-coupled.spec.ts"
+        ]
+      ],
+      "case_census": {
+        "total": 99,
+        "pure": 31,
+        "actual_pg_fixture_cases": 68,
+        "coupled_pg_tls_http_suite_cases": 43,
+        "new_composition_cases": 2
+      },
+      "resource_cleanup_errors": [],
+      "runtime_unchanged": true,
+      "input_copy_cleanup": "EXACT_TARGET_REMOVED_AFTER_TERMINAL_JOBS",
+      "own_lease_removed": true,
+      "finished_utc": "2026-10-18T13:47:32.308010+00:00",
+      "elapsed_seconds": 139.674,
+      "free_after": 223424040960,
+      "no_build_pull_install_shared_prune_or_runtime_mutation": true,
+      "receipt_sha256": "75235f7fe42c9a1fb23b932ead5cf1035dbabe2f104615209528f0a899871c9a"
+    },
+    "exact_hk_input_cleanup": {
+      "host": "HK",
+      "target": "/tmp/epg10-08-manager-qualification-hk-7h4TfVzE",
+      "status": "EXACT_COPY_REMOVED_RUNTIME_UNCHANGED",
+      "utc": "2026-10-18T13:47:15.739106+00:00",
+      "regular_files": 9114,
+      "symlinks": 15,
+      "logical_bytes_removed": 138530686,
+      "filesystem_free_before": 223244070912,
+      "protected_runtime_count": 40,
+      "protected_runtime_sha256": "6d9d17e7c632480bf3826cf600aabf8aa4fc12713e06df429a3d747c53923431",
+      "artifact_inventory_before": {
+        "image_count": 100,
+        "image_set_sha256": "e15bc242eb4709c29f90110d82cbc854b62828b260e3d78067083a539407cb75",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "11.27GB (33%)",
+            "Size": "33.42GB",
+            "TotalCount": "104",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "997.6MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "99.87GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.78GB",
+            "Size": "31.02GB",
+            "TotalCount": "412",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      },
+      "no_container_mount_or_job_reference": true,
+      "own_test_jobs_terminal": true,
+      "no_image_build_pull_install_or_new_cache": true,
+      "docker_prune": false,
+      "volumes_data_services_checkout_or_foreign_lock_changed": false,
+      "target_absent": true,
+      "protected_runtime_unchanged": true,
+      "filesystem_free_after": 223451713536,
+      "artifact_inventory_after": {
+        "image_count": 100,
+        "image_set_sha256": "e15bc242eb4709c29f90110d82cbc854b62828b260e3d78067083a539407cb75",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "11.27GB (33%)",
+            "Size": "33.42GB",
+            "TotalCount": "104",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "997.6MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "99.83GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.78GB",
+            "Size": "31.02GB",
+            "TotalCount": "412",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      }
+    },
+    "two_new_cases": {
+      "positive": "GENUINE_COMPOSITION_REGISTRY_RECOVERS_COMPLETED_FRAME_SOURCE_ACK_BEFORE_ACTUAL_SELF_SESSION_REVOKE_COMMIT_NO_RESEND",
+      "negative": "ENTER_ACK_LOST_UNKNOWN_ZERO_BYTES_BLOCKS_ACTUAL_SELF_SESSION_MUTATION",
+      "notice_kind": "ENTITY_NOTICE_MANAGEMENT_SSE_LIFECYCLE_NOT_DIRECT_MANAGER_ONLY_DOMAIN_NOTICE",
+      "installed_authority_claim": false
+    },
+    "cleanup_audits": {
+      "HK": {
+        "host": "HK",
+        "utc": "2026-10-18T13:47:56.065990+00:00",
+        "status": "NO_OWN_DISPOSABLE_RESOURCE_OR_JOB_LEFT",
+        "disposable_paths_absent": {
+          "current_input": true,
+          "superseded_notice": true
+        },
+        "owned_disposable_resources": {
+          "containers": [],
+          "networks": [],
+          "volumes": []
+        },
+        "own_active_jobs": [],
+        "own_measurement_lease_absent": true,
+        "foreign_guard_metadata_retained": [],
+        "running_operational_containers": 40,
+        "runtime_unchanged_during_audit": true,
+        "runtime_tuple_sha256": "6d9d17e7c632480bf3826cf600aabf8aa4fc12713e06df429a3d747c53923431",
+        "free_before": 223553945600,
+        "free_after": 223509741568,
+        "image_ids": 100,
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "11.27GB (33%)",
+            "Size": "33.42GB",
+            "TotalCount": "104",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "997.7MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "99.74GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.78GB",
+            "Size": "31.02GB",
+            "TotalCount": "412",
+            "Type": "Build Cache"
+          }
+        ],
+        "retained_active_source_and_bounded_evidence": {
+          "path": "/tmp/epg10-08-current-manager-observation-CudeHxJF",
+          "regular_files": 88,
+          "logical_bytes": 1727351,
+          "reason": "UNFINISHED_AUTHORED_SOURCE_AND_BOUNDED_RECEIPTS_NOT_DISPOSABLE_CACHE"
+        },
+        "new_cleanup_mutation": false,
+        "shared_prune": false,
+        "volumes_data_runtime_secrets_peer_jobs_or_foreign_locks_changed": false,
+        "image_listing_rows": 105
+      },
+      "SGP": {
+        "host": "SGP",
+        "utc": "2026-10-18T13:48:01.722427+00:00",
+        "status": "NO_OWN_DISPOSABLE_RESOURCE_OR_JOB_LEFT",
+        "disposable_paths_absent": {
+          "notice_input": true,
+          "superseded_reducer_checkout": true
+        },
+        "owned_disposable_resources": {
+          "containers": [],
+          "networks": [],
+          "volumes": []
+        },
+        "own_active_jobs": [],
+        "own_measurement_lease_absent": true,
+        "foreign_guard_metadata_retained": [],
+        "running_operational_containers": 51,
+        "runtime_unchanged_during_audit": true,
+        "runtime_tuple_sha256": "b069e9bbd016a44baa3743ff826f75dd0c05830e7f7f7fd5a80c5f98067d7e3b",
+        "free_before": 163817840640,
+        "free_after": 163815362560,
+        "image_ids": 318,
+        "docker_usage": [
+          {
+            "Active": "25",
+            "Reclaimable": "74.4GB (83%)",
+            "Size": "88.82GB",
+            "TotalCount": "328",
+            "Type": "Images"
+          },
+          {
+            "Active": "51",
+            "Reclaimable": "471kB (19%)",
+            "Size": "2.458MB",
+            "TotalCount": "59",
+            "Type": "Containers"
+          },
+          {
+            "Active": "22",
+            "Reclaimable": "13.78GB (42%)",
+            "Size": "32.66GB",
+            "TotalCount": "97",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "93",
+            "Reclaimable": "62.81GB",
+            "Size": "195.8GB",
+            "TotalCount": "3769",
+            "Type": "Build Cache"
+          }
+        ],
+        "retained_active_source_and_bounded_evidence": {
+          "path": "/tmp/epg10-08-current-manager-reducers-imq8u38a/active-source-delta",
+          "regular_files": 6,
+          "logical_bytes": 99014,
+          "reason": "UNFINISHED_AUTHORED_SOURCE_AND_BOUNDED_RECEIPTS_NOT_DISPOSABLE_CACHE",
+          "authored_source_files": 4,
+          "bounded_receipt_files": 2
+        },
+        "new_cleanup_mutation": false,
+        "shared_prune": false,
+        "volumes_data_runtime_secrets_peer_jobs_or_foreign_locks_changed": false,
+        "image_listing_rows": 382
+      }
+    },
+    "current_peer_source_not_tested_or_deployed": {
+      "ts_canonical_older": "668e10320c0bf5a9089e33b72f317d8d7c7215c3",
+      "ts_upgraded_authority_path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+      "ts_upgraded_authority_commit": "e4992fe53471726903fe02ffa0c89314027d6738",
+      "pm": "ec5d5d94769eac3ed4e66ea42a67251ac9738269",
+      "core": "ff83f1766b513c18d3fb0102cfc5c6889ffb6343",
+      "peer_working_tree_and_index_preserved": true
+    },
+    "full_production_gate": "PASS_SAME_EXACT_CURRENT_PIN_NOT_INHERITED",
+    "remaining_owned_implementation": [
+      "CURRENT_CORE_SELECTED_NATIVE_APP_CONSUMER_MOUNT",
+      "REAL_PM_CORE_WORKLOAD_IDENTITY_AUTHORITY_COMMISSIONING",
+      "ACTUAL_RUNTIME_REVOKE_CACHE_CURSOR_SSE_DRILLS"
+    ],
+    "operational_mutations": 0,
+    "full08": "NOT_MET",
+    "connected09": "NOT_STARTED",
+    "current_full_production_gate": {
+      "status": "CLI_STRICT_AND_114_UNITS_PASS",
+      "provenance": "TEST_ONLY_CURRENT_SOURCE_CLI_OR_DIAGNOSTIC_NOT_RUNTIME",
+      "mode": "production",
+      "started_utc": "2026-10-18T13:50:07.979513+00:00",
+      "source_manifest_sha256": "ed93f56f1031cebac36ed2139992e048568ddd432138f6cff8a09e9965e4f44e",
+      "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+      "maximum_cpu": 2,
+      "maximum_memory_bytes": 2147483648,
+      "maximum_lease_seconds": 300,
+      "free_before": 222875590656,
+      "actual_product_cases": 114,
+      "commands": [
+        [
+          "metadata_emission_parity",
+          [
+            "/metadata_emission_parity.cjs"
+          ],
+          5000
+        ],
+        [
+          "production_strict",
+          [
+            "node_modules/typescript/bin/tsc",
+            "--noEmit",
+            "--project",
+            "tsconfig.build.json"
+          ],
+          210000
+        ],
+        [
+          "units114",
+          [
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "--configLoader",
+            "runner",
+            "--cache=false",
+            "--maxWorkers=1",
+            "--no-file-parallelism",
+            "--reporter=default",
+            "--reporter=junit",
+            "--outputFile.junit=/evidence/units.xml",
+            "test/manager-observation-resume.spec.ts",
+            "test/manager-observation-source.spec.ts",
+            "test/native-manager-epoch.spec.ts",
+            "test/native-manager-preparation.spec.ts",
+            "test/native-manager-install-ack.spec.ts"
+          ],
+          25000
+        ]
+      ],
+      "exit_code": 0,
+      "progress_sha256": "05f9bfa1d5dc0121fcd12d78bc17e39f23f95594135e241453dc6feacdffb3eb",
+      "last_events": [
+        {
+          "file": "src/execution/profile-realtime.service.ts",
+          "status": "EXACT_EMITTED_JAVASCRIPT_PARITY",
+          "sha256": "7b3896845f47d186053aec0fe6bc237c921a75d39bd61fd2475a12566614683a"
+        },
+        {
+          "file": "src/execution/service-heartbeats.service.ts",
+          "status": "EXACT_EMITTED_JAVASCRIPT_PARITY",
+          "sha256": "7f7627171fd35059a9fd9163b802b8cc99bf9e119ac3aab2e21bd3a5a12835b6"
+        }
+      ],
+      "completed_files": 0,
+      "error_locations": [],
+      "stages": [
+        {
+          "stage": "metadata_emission_parity",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "stage": "production_strict",
+          "exit_code": 0,
+          "signal": null
+        },
+        {
+          "stage": "units114",
+          "exit_code": 0,
+          "signal": null
+        }
+      ],
+      "passed": 114,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "container_absent": true,
+      "runtime_unchanged": true,
+      "input_copy_cleanup": "EXACT_TARGET_REMOVED_AFTER_TERMINAL_CONTAINER",
+      "own_lease_removed": true,
+      "free_after": 222906105856,
+      "finished_utc": "2026-10-18T13:53:16.725026+00:00",
+      "receipt_sha256": "a0034c3bf854f09b79b9791b32e8782e22bf3740e7b5301a761e2444066dcd48"
+    },
+    "post_production_gate_hk_input_cleanup": {
+      "host": "HK",
+      "target": "/tmp/epg10-08-manager-qualification-hk-7h4TfVzE",
+      "status": "EXACT_COPY_REMOVED_RUNTIME_UNCHANGED",
+      "utc": "2026-10-18T13:52:59.195700+00:00",
+      "regular_files": 9114,
+      "symlinks": 15,
+      "logical_bytes_removed": 138530686,
+      "filesystem_free_before": 222795296768,
+      "protected_runtime_count": 40,
+      "protected_runtime_sha256": "6d9d17e7c632480bf3826cf600aabf8aa4fc12713e06df429a3d747c53923431",
+      "artifact_inventory_before": {
+        "image_count": 100,
+        "image_set_sha256": "e15bc242eb4709c29f90110d82cbc854b62828b260e3d78067083a539407cb75",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "11.27GB (33%)",
+            "Size": "33.42GB",
+            "TotalCount": "104",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "998.9MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "100.3GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.78GB",
+            "Size": "31.02GB",
+            "TotalCount": "412",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      },
+      "no_container_mount_or_job_reference": true,
+      "own_test_jobs_terminal": true,
+      "no_image_build_pull_install_or_new_cache": true,
+      "docker_prune": false,
+      "volumes_data_services_checkout_or_foreign_lock_changed": false,
+      "target_absent": true,
+      "protected_runtime_unchanged": true,
+      "filesystem_free_after": 222927994880,
+      "artifact_inventory_after": {
+        "image_count": 100,
+        "image_set_sha256": "e15bc242eb4709c29f90110d82cbc854b62828b260e3d78067083a539407cb75",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "11.27GB (33%)",
+            "Size": "33.42GB",
+            "TotalCount": "104",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "998.9MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "100.3GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.78GB",
+            "Size": "31.02GB",
+            "TotalCount": "412",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      }
+    }
+  },
+  "current_source_case_count": 213,
+  "current_source_case_census": {
+    "total": 213,
+    "distinct_case_identities": 213,
+    "pure": 145,
+    "actual_pg_fixture_cases": 68,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "cleanup_closeout_2026_10_18_1354": {
+    "status": "BOTH_HOSTS_NO_OWN_DISPOSABLE_RESOURCE_OR_JOB_LEFT_SOURCE_ONLY_COMPONENT_QUALIFICATION",
+    "qualification": "213_DISTINCT_CURRENT_PIN_CASE_IDENTITIES_PASS_145_PURE_68_PG_FIXTURE",
+    "full_production_strict": "PASS",
+    "seven_owned_specs_strict": "PASS",
+    "metadata_emission_parity": "TWO_EXACT_PASS",
+    "actual_cases": 213,
+    "unique_cases": 213,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "all_three_qualification_profiles_same_source_manifest": "ed93f56f1031cebac36ed2139992e048568ddd432138f6cff8a09e9965e4f44e",
+    "actual_pm_protocol": "SYNTHETIC_NOT_COMMISSIONED_AUTHORITY",
+    "latest_exact_input_cleanup": {
+      "host": "HK",
+      "target": "/tmp/epg10-08-manager-qualification-hk-7h4TfVzE",
+      "status": "EXACT_COPY_REMOVED_RUNTIME_UNCHANGED",
+      "utc": "2026-10-18T13:52:59.195700+00:00",
+      "regular_files": 9114,
+      "symlinks": 15,
+      "logical_bytes_removed": 138530686,
+      "filesystem_free_before": 222795296768,
+      "protected_runtime_count": 40,
+      "protected_runtime_sha256": "6d9d17e7c632480bf3826cf600aabf8aa4fc12713e06df429a3d747c53923431",
+      "artifact_inventory_before": {
+        "image_count": 100,
+        "image_set_sha256": "e15bc242eb4709c29f90110d82cbc854b62828b260e3d78067083a539407cb75",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "11.27GB (33%)",
+            "Size": "33.42GB",
+            "TotalCount": "104",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "998.9MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "100.3GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.78GB",
+            "Size": "31.02GB",
+            "TotalCount": "412",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      },
+      "no_container_mount_or_job_reference": true,
+      "own_test_jobs_terminal": true,
+      "no_image_build_pull_install_or_new_cache": true,
+      "docker_prune": false,
+      "volumes_data_services_checkout_or_foreign_lock_changed": false,
+      "target_absent": true,
+      "protected_runtime_unchanged": true,
+      "filesystem_free_after": 222927994880,
+      "artifact_inventory_after": {
+        "image_count": 100,
+        "image_set_sha256": "e15bc242eb4709c29f90110d82cbc854b62828b260e3d78067083a539407cb75",
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "11.27GB (33%)",
+            "Size": "33.42GB",
+            "TotalCount": "104",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "998.9MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "100.3GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.78GB",
+            "Size": "31.02GB",
+            "TotalCount": "412",
+            "Type": "Build Cache"
+          }
+        ],
+        "prune_performed": false
+      }
+    },
+    "final_audits": {
+      "HK": {
+        "host": "HK",
+        "utc": "2026-10-18T13:53:51.522448+00:00",
+        "status": "NO_OWN_DISPOSABLE_RESOURCE_OR_JOB_LEFT",
+        "disposable_paths_absent": {
+          "current_input": true,
+          "superseded_notice": true
+        },
+        "owned_disposable_resources": {
+          "containers": [],
+          "networks": [],
+          "volumes": []
+        },
+        "own_active_jobs": [],
+        "own_measurement_lease_absent": true,
+        "foreign_guard_metadata_retained": [],
+        "running_operational_containers": 40,
+        "runtime_unchanged_during_audit": true,
+        "runtime_tuple_sha256": "6d9d17e7c632480bf3826cf600aabf8aa4fc12713e06df429a3d747c53923431",
+        "free_before": 222811389952,
+        "free_after": 222782775296,
+        "image_ids": 100,
+        "image_listing_rows": 105,
+        "docker_usage": [
+          {
+            "Active": "41",
+            "Reclaimable": "11.27GB (33%)",
+            "Size": "33.42GB",
+            "TotalCount": "104",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (1%)",
+            "Size": "999MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "100.4GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "1.78GB",
+            "Size": "31.02GB",
+            "TotalCount": "412",
+            "Type": "Build Cache"
+          }
+        ],
+        "retained_active_source_and_bounded_evidence": {
+          "path": "/tmp/epg10-08-current-manager-observation-CudeHxJF",
+          "regular_files": 91,
+          "logical_bytes": 1764843,
+          "reason": "UNFINISHED_AUTHORED_SOURCE_AND_BOUNDED_RECEIPTS_NOT_DISPOSABLE_CACHE"
+        },
+        "new_cleanup_mutation": false,
+        "shared_prune": false,
+        "volumes_data_runtime_secrets_peer_jobs_or_foreign_locks_changed": false
+      },
+      "SGP": {
+        "host": "SGP",
+        "utc": "2026-10-18T13:53:59.528621+00:00",
+        "status": "NO_OWN_DISPOSABLE_RESOURCE_OR_JOB_LEFT",
+        "disposable_paths_absent": {
+          "notice_input": true,
+          "superseded_reducer_checkout": true
+        },
+        "owned_disposable_resources": {
+          "containers": [],
+          "networks": [],
+          "volumes": []
+        },
+        "own_active_jobs": [],
+        "own_measurement_lease_absent": true,
+        "foreign_guard_metadata_retained": [],
+        "running_operational_containers": 51,
+        "runtime_unchanged_during_audit": true,
+        "runtime_tuple_sha256": "b069e9bbd016a44baa3743ff826f75dd0c05830e7f7f7fd5a80c5f98067d7e3b",
+        "free_before": 163813408768,
+        "free_after": 163813376000,
+        "image_ids": 318,
+        "image_listing_rows": 382,
+        "docker_usage": [
+          {
+            "Active": "25",
+            "Reclaimable": "74.4GB (83%)",
+            "Size": "88.82GB",
+            "TotalCount": "328",
+            "Type": "Images"
+          },
+          {
+            "Active": "51",
+            "Reclaimable": "471kB (19%)",
+            "Size": "2.458MB",
+            "TotalCount": "59",
+            "Type": "Containers"
+          },
+          {
+            "Active": "22",
+            "Reclaimable": "13.78GB (42%)",
+            "Size": "32.67GB",
+            "TotalCount": "97",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "93",
+            "Reclaimable": "62.81GB",
+            "Size": "195.8GB",
+            "TotalCount": "3769",
+            "Type": "Build Cache"
+          }
+        ],
+        "retained_active_source_and_bounded_evidence": {
+          "path": "/tmp/epg10-08-current-manager-reducers-imq8u38a/active-source-delta",
+          "regular_files": 6,
+          "logical_bytes": 99014,
+          "reason": "UNFINISHED_AUTHORED_SOURCE_AND_BOUNDED_RECEIPTS_NOT_DISPOSABLE_CACHE",
+          "authored_source_files": 4,
+          "bounded_receipt_files": 2
+        },
+        "new_cleanup_mutation": false,
+        "shared_prune": false,
+        "volumes_data_runtime_secrets_peer_jobs_or_foreign_locks_changed": false
+      }
+    },
+    "active_runtime_reconciliation": {
+      "hk_protected_tuple_count": 40,
+      "hk_protected_tuple_sha256": "6d9d17e7c632480bf3826cf600aabf8aa4fc12713e06df429a3d747c53923431",
+      "active_edge_projection_image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+      "active_source_proxy_image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+      "config_revisions": {
+        "paper_edge": "6180b9bf3d7d16cc8b9ada67ccb6c860e3c83430412de14758961f9857db90f6",
+        "sandbox_edge": "cd79e9c68f67595e5ddbb88bddb95e4694a5b286ac25a72fb29bbe38d15190a1",
+        "live_edge": "98a191c75adf491d5b61de58f2e7d3b7e022a1f15533150d406ae9dc7f55ab0f"
+      },
+      "stable_hk_release_path": "/srv/primus/portal/releases",
+      "stable_sgp_release_path": "/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose",
+      "named_ts_rollback_retained": [
+        "r59@9150385e",
+        "r49@b4e7a6c0"
+      ],
+      "own_runtime_restart_or_recreate": 0,
+      "shared_cleanup_or_peer_source_index_mutation": false
+    },
+    "canonical_checkout": "/home/bobby/.worktrees/portal-execution-manager-v2",
+    "canonical_branch": "feat/manager-v2-paper-read",
+    "canonical_commit": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+    "active_feature_checkout": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+    "active_feature_branch": "feat/execution-edge-upgrade-v1_2",
+    "active_feature_commit": "20a1d27fa4d03ef7162a7980fda3fe3602995a8b",
+    "active_feature_worktrees": "ALL_SEVEN_PREVIOUSLY_RECORDED_ACTIVE_UNMERGED_TREES_RETAINED",
+    "preexisting_six_staged_paths_preserved": true,
+    "commit_push_merge_deploy": false,
+    "full08": "IN_PROGRESS_OWNED_IMPLEMENTATION_NOT_MET",
+    "connected09": "NOT_STARTED",
+    "next_owned_action": "CURRENT_CORE_SELECTED_NATIVE_CONSUMER_MOUNT_THEN_REAL_PROVIDER_COMMISSIONING_AND_RUNTIME_REVOKE_CACHE_CURSOR_SSE_DRILLS"
+  }
+}

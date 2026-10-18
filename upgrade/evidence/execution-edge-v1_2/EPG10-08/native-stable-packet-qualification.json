@@ -1,0 +1,197 @@
+{
+  "schema_version": "portal.epg10-08.approved-stable-native-packet-qualification.v1",
+  "status": "ISOLATED_240_PASS_NOT_DEPLOYED",
+  "phase_status": "IN_PROGRESS_OWNED_IMPLEMENTATION",
+  "full_connected_acceptance": "NOT_MET",
+  "provenance": "SYNTHETIC_TEST_ONLY_RELEASED_CORE_NATIVE_COMPATIBILITY_NOT_INSTALLED",
+  "approved_archive_sha256": "5378b4acfee3ab6448156987e20561d2ae6b53409ba34d7f37e081ccadb6f898",
+  "source_release": "e4fd93658de1ff0614126a85d70e59a23c25a01f",
+  "current_core_observed": "d9fc67fb1a6437e4d6af4ab68dfe6342b8eb9c52",
+  "test": {
+    "attempt": "/tmp/epg10-08-stable-native-repair-iu_ygqeg/attempt-050258",
+    "receipt_sha256": "f0fa08bb0eb26d7c1e7f41b3c7b119fc095ca30889c67fc3ba56495596b06331",
+    "started_utc": "2026-10-18T05:02:58.669962+00:00",
+    "ended_utc": "2026-10-18T05:05:49.416398+00:00",
+    "elapsed_seconds": 170.747,
+    "passed": 240,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "unique_case_names": 240,
+    "case_names_sha256": "1b0504ce546e177e6b484a1e6b38395675f76edc7a8276b03ec91da6e3dfa481",
+    "groups": [
+      {
+        "label": "legacy",
+        "expected": 96,
+        "pg": true,
+        "files": [
+          "test/auth.spec.ts",
+          "test/a4-account-lifecycle.spec.ts",
+          "test/a4-governance-delegation.spec.ts",
+          "test/a4-owner-access.spec.ts",
+          "test/mutation-security.spec.ts"
+        ],
+        "exit_code": 0,
+        "counts": {
+          "tests": 96,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      {
+        "label": "unit",
+        "expected": 73,
+        "pg": false,
+        "files": [
+          "test/elp210-native-manager-consumer.spec.ts",
+          "test/stable-native-rollback.spec.ts",
+          "test/elp210-native-core-composition.spec.ts",
+          "test/elp210-native-core-runtime.spec.ts"
+        ],
+        "exit_code": 0,
+        "counts": {
+          "tests": 73,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      {
+        "label": "rollback",
+        "expected": 4,
+        "pg": true,
+        "files": [
+          "test/stable-native-rollback-pg.spec.ts"
+        ],
+        "exit_code": 0,
+        "counts": {
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      {
+        "label": "finite",
+        "expected": 67,
+        "pg": true,
+        "files": [
+          "test/elp210-native-http-selected.spec.ts"
+        ],
+        "exit_code": 0,
+        "counts": {
+          "tests": 67,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    ],
+    "strict_commands": [
+      [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--project",
+        "tsconfig.build.json"
+      ],
+      [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--target",
+        "ES2022",
+        "--module",
+        "ESNext",
+        "--moduleResolution",
+        "Bundler",
+        "--lib",
+        "ES2022",
+        "--strict",
+        "--esModuleInterop",
+        "--skipLibCheck",
+        "--experimentalDecorators",
+        "--emitDecoratorMetadata",
+        "--useUnknownInCatchVariables",
+        "--resolveJsonModule",
+        "--types",
+        "node",
+        "test/elp210-native-manager-consumer.spec.ts",
+        "test/stable-native-rollback.spec.ts",
+        "test/elp210-native-core-composition.spec.ts",
+        "test/elp210-native-core-runtime.spec.ts",
+        "test/stable-native-rollback-pg.spec.ts",
+        "test/elp210-native-http-selected.spec.ts"
+      ]
+    ],
+    "strict_scope": "ALL_PRODUCTION_SOURCE_AND_ALL_OWNED_NATIVE_TESTS_NOT_FULL_PROJECT",
+    "junit_sha256": {
+      "unit.xml": "6768b37992542505813712abd1a55bb821f4c7fddfc2a9cb50a90aee81a9050d",
+      "rollback.xml": "2f763e9eca545b2a689eb1b6e2de04924d135d33294abe3694e1233b6c1d8e0e",
+      "legacy.xml": "84bec822cc70a19914fa4d03fae73b6fa56f975187acc1a92ccb9fea78846730",
+      "finite.xml": "efbb390a9d4cf1355c12d7511991d1561473626fa5742967fb6303ff857ef51e"
+    },
+    "source_pin_count": 537,
+    "source_pins_digest": "f64184766740d557a493092e199974ce4bce3efa70627733a3bc0b6c1bea4c95",
+    "source_repairs_sha256": {
+      "apps/control-api/src/facade/session.guard.ts": "f928fb6425a4da9a28ed124c3b7242e7ce3c9bc488c4b9697fe41e41ee52fb02",
+      "apps/control-api/src/app.module.ts": "fa76437333105d0b9d457c06a48032e6ccc758a148661f9478e4f93792503fd2",
+      "apps/control-api/test/elp210-native-manager-consumer.spec.ts": "d5c657922dae2d4865945b443d3a0970003c8dc89259eed6ca06c60ffb8011f5",
+      "apps/control-api/test/a4-governance-delegation.spec.ts": "b6291a3271ccbb8fd900c4d98f500de05cb9f06e7c04f732ce271784f87f5de0",
+      "apps/control-api/test/elp210-native-http-selected.spec.ts": "8b50db8026158ef5763a5e3c7ff06d55058231abca2d0471608f1becd43711fa"
+    }
+  },
+  "preserved_failures": [
+    {
+      "attempt": "attempt-042123",
+      "actual_pass": 139,
+      "failed": 5,
+      "not_run": 96,
+      "worker_errors": 5,
+      "receipt_sha256": "90e8d6a2276aef2c7845821a3b02fb3ec3fd2a98bbe113ad613455e4faad65e5"
+    },
+    {
+      "attempt": "attempt-044148",
+      "passed": 218,
+      "failed": 22,
+      "receipt_sha256": "903f39c6be7be578b4b5d6ee67017ece71bc72b4145b4abc608d64314d8d9127",
+      "boundary": "Two finite bodies not reached because previous fixture cleanup failed."
+    },
+    {
+      "attempt": "attempt-044809",
+      "passed": 239,
+      "failed": 1,
+      "receipt_sha256": "fda1a58e0a1162c913b95b40dc58aeed9d67ec7dbba7bde743a0fd95fe1251f6"
+    },
+    {
+      "attempt": "attempt-045745",
+      "passed": 66,
+      "failed": 1,
+      "diagnostic_only": true,
+      "receipt_sha256": "8a9814c143de842530b4ddc5aee595a16b1c4203bf1e8b5ff2b38ed6d6beaf5b"
+    }
+  ],
+  "repairs": [
+    "Optional explicit SessionGuard provisioner token and SAME AppModule provider; no auth bypass.",
+    "Unit beforeEach returns void, exact genuine STATUS-before-RESOLVE assertions.",
+    "Reuse current Core ACTIVE PortalUser and genuine TEST_ONLY session fixtures; production authorization unchanged.",
+    "Independent bounded fixture teardown including TEST_ONLY step-up FK rows; preserve original errors.",
+    "Wait for genuine resolve-arrived before SQL observer polling on the SAME pool; retain pool-release assertion, 2500ms settlement deadline and all zero-byte/served/abort checks."
+  ],
+  "cleanup": {
+    "worker_db_network_removed": true,
+    "operational_services": 51,
+    "runtime_unchanged": true,
+    "runtime_tuples_sha256": "da906191a2c33e4321c42ee544081eb68620891e303146a554e5ad7b3e25afe3",
+    "new_images_and_build_cache": 0,
+    "shared_free_before_bytes": 164722184192,
+    "shared_free_after_bytes": 164983963648,
+    "exclusive_reclaimed_bytes_claimed": false,
+    "source_copy_cleanup": "PENDING_SEPARATE_EXACT_TEARDOWN_RECEIPT"
+  },
+  "limitations": [
+    "Not full-project strict or normal-hook qualification.",
+    "Frozen stable-native draft is not the current Core frame implementation; do not overwrite current Candidate/SQL/Hub.",
+    "No real human session, schema, identity, grants, provider, listener, command or release installed.",
+    "Current Manager-domain READ/STREAM and observation-journal port plus real revoke/cache/cursor/SSE acceptance remain owned original08 work."
+  ]
+}

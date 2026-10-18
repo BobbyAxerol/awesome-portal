@@ -155,7 +155,7 @@
     {
       "id": "manager_projection",
       "file": "services/portal-execution-edge-rs/crates/manager-projection/src/lib.rs",
-      "sha256": "sha256:98d81e750fb289962e3c937b5c644304d00cc170828dfe60fee7a8731238f657"
+      "sha256": "sha256:d4f0c053a539fae8090ea69388a17b400c5daa7510ab7bd596d51b4cd1b505b7"
     },
     {
       "id": "frontend_execution_route",

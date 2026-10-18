@@ -1,0 +1,96 @@
+{
+  "status": "CLI_STRICT_AND_114_UNITS_PASS",
+  "provenance": "TEST_ONLY_CURRENT_SOURCE_CLI_OR_DIAGNOSTIC_NOT_RUNTIME",
+  "mode": "production",
+  "started_utc": "2026-10-18T13:50:07.979513+00:00",
+  "source_manifest_sha256": "ed93f56f1031cebac36ed2139992e048568ddd432138f6cff8a09e9965e4f44e",
+  "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+  "maximum_cpu": 2,
+  "maximum_memory_bytes": 2147483648,
+  "maximum_lease_seconds": 300,
+  "free_before": 222875590656,
+  "actual_product_cases": 114,
+  "commands": [
+    [
+      "metadata_emission_parity",
+      [
+        "/metadata_emission_parity.cjs"
+      ],
+      5000
+    ],
+    [
+      "production_strict",
+      [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--project",
+        "tsconfig.build.json"
+      ],
+      210000
+    ],
+    [
+      "units114",
+      [
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--configLoader",
+        "runner",
+        "--cache=false",
+        "--maxWorkers=1",
+        "--no-file-parallelism",
+        "--reporter=default",
+        "--reporter=junit",
+        "--outputFile.junit=/evidence/units.xml",
+        "test/manager-observation-resume.spec.ts",
+        "test/manager-observation-source.spec.ts",
+        "test/native-manager-epoch.spec.ts",
+        "test/native-manager-preparation.spec.ts",
+        "test/native-manager-install-ack.spec.ts"
+      ],
+      25000
+    ]
+  ],
+  "exit_code": 0,
+  "progress_sha256": "05f9bfa1d5dc0121fcd12d78bc17e39f23f95594135e241453dc6feacdffb3eb",
+  "last_events": [
+    {
+      "file": "src/execution/profile-realtime.service.ts",
+      "status": "EXACT_EMITTED_JAVASCRIPT_PARITY",
+      "sha256": "7b3896845f47d186053aec0fe6bc237c921a75d39bd61fd2475a12566614683a"
+    },
+    {
+      "file": "src/execution/service-heartbeats.service.ts",
+      "status": "EXACT_EMITTED_JAVASCRIPT_PARITY",
+      "sha256": "7f7627171fd35059a9fd9163b802b8cc99bf9e119ac3aab2e21bd3a5a12835b6"
+    }
+  ],
+  "completed_files": 0,
+  "error_locations": [],
+  "stages": [
+    {
+      "stage": "metadata_emission_parity",
+      "exit_code": 0,
+      "signal": null
+    },
+    {
+      "stage": "production_strict",
+      "exit_code": 0,
+      "signal": null
+    },
+    {
+      "stage": "units114",
+      "exit_code": 0,
+      "signal": null
+    }
+  ],
+  "passed": 114,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "container_absent": true,
+  "runtime_unchanged": true,
+  "input_copy_cleanup": "EXACT_TARGET_REMOVED_AFTER_TERMINAL_CONTAINER",
+  "own_lease_removed": true,
+  "free_after": 222906105856,
+  "finished_utc": "2026-10-18T13:53:16.725026+00:00"
+}

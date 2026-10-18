@@ -1,0 +1,65 @@
+{
+  "status": "SEVEN_OWNED_SPECS_CLI_STRICT_PASS_NOT_PG_EXECUTION",
+  "provenance": "TEST_ONLY_CURRENT_SOURCE_CLI_OR_DIAGNOSTIC_NOT_RUNTIME",
+  "mode": "spec",
+  "started_utc": "2026-10-18T13:36:59.614651+00:00",
+  "source_manifest_sha256": "ed93f56f1031cebac36ed2139992e048568ddd432138f6cff8a09e9965e4f44e",
+  "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+  "maximum_cpu": 2,
+  "maximum_memory_bytes": 2147483648,
+  "maximum_lease_seconds": 300,
+  "free_before": 224430972928,
+  "actual_product_cases": 0,
+  "commands": [
+    [
+      "owned_specs_strict",
+      [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--target",
+        "ES2022",
+        "--module",
+        "ESNext",
+        "--moduleResolution",
+        "Bundler",
+        "--lib",
+        "ES2022",
+        "--strict",
+        "--esModuleInterop",
+        "--skipLibCheck",
+        "--experimentalDecorators",
+        "--emitDecoratorMetadata",
+        "--useUnknownInCatchVariables",
+        "--resolveJsonModule",
+        "--types",
+        "node",
+        "test/manager-observation-resume.spec.ts",
+        "test/manager-observation-source.spec.ts",
+        "test/native-manager-epoch.spec.ts",
+        "test/native-manager-preparation.spec.ts",
+        "test/native-manager-install-ack.spec.ts",
+        "test/elp210-native-frame-coupled.spec.ts",
+        "test/elp210-manager-domain-access.spec.ts"
+      ],
+      210000
+    ]
+  ],
+  "exit_code": 0,
+  "progress_sha256": "5b75a446ae7ba5c3c8e5423c8cb3a6d3ed20ae999aff74390bc1b36822a515bd",
+  "last_events": [],
+  "completed_files": 0,
+  "error_locations": [],
+  "stages": [
+    {
+      "stage": "owned_specs_strict",
+      "exit_code": 0,
+      "signal": null
+    }
+  ],
+  "container_absent": true,
+  "runtime_unchanged": true,
+  "input_copy_cleanup": "EXACT_TARGET_REMOVED_AFTER_TERMINAL_CONTAINER",
+  "own_lease_removed": true,
+  "free_after": 224311775232,
+  "finished_utc": "2026-10-18T13:40:02.171838+00:00"
+}

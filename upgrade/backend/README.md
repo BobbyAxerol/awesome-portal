@@ -7,6 +7,17 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 current source publication (2026-10-18):**
+  [guarded actual Core source](../integration/execution-native-read-v1/README.md)
+  publishes26 exact authored/prerequisite files and three bounded original
+  receipts for the213-case source qualification. Current Coreff83f176 overlaps
+  four files and must be reconciled, not overwritten or relabelled qualified.
+  Eight publication-guard units PASS; no provider/consumer mounting or connected
+  acceptance follows from source publication. Latest main journal governs:
+  original08 remains IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET;09connected
+  NOT_STARTED. The older "no owned runnable work" statements below describe
+  historical independent slices, not the current mounting/commissioning work.
+
 - [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
   — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…10 approved/in progress;11 independent COMPLETE; original10/11 connected round2 approved, NOT_MET**. Six offline
   metadata cases PASS, with source/runtime/TLS and owned unknowns recorded in

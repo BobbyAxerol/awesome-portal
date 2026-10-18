@@ -1,0 +1,42 @@
+{
+  "phase": "EPG10-08",
+  "scope": "PM_FINITE_FRAME_TERMINAL_AND_INERT_PRIVATE_ENTRYPOINT",
+  "result": "ISOLATED_PASS_NOT_INSTALLED",
+  "provenance": "SYNTHETIC_TEST_ONLY_WITH_ACTUAL_DISPOSABLE_POSTGRES_AND_COMPONENT_MTLS",
+  "attempt": "/tmp/epg10-08-pm-final-20261017/attempt-222458",
+  "archive_sha256": "27d8fde371285ddb6bebf57930cdb831d8a63948f1aabe60d5bc9590329afb12",
+  "receipt_sha256": "ba21e4b2dc9801d3b3f8b4114653ffbcc296e91e79c84d23900778fab1b805b6",
+  "junit_sha256": "2e7e686b6709962a61bf95bf5076a14617e952a5a0ccbf4e83d436e7cd380c9c",
+  "tests": {"passed": 242, "failed": 0, "errors": 0, "skipped": 0},
+  "test_groups": {"regression": 219, "frame_family": 10, "private_entrypoint": 13},
+  "elapsed_seconds": 40.937,
+  "commit_only_normalization": {
+    "path": "services/portfolio_management/native_manager_read_private.py",
+    "change": "Remove one extra blank EOF line only; identical Python AST and non-layout tokens.",
+    "committed_sha256": "8d09488e13b47bc588897b710e99a420a8106f55b0d055b32c6f0004b5033f02"
+  },
+  "source_pins": {
+    "services/portfolio_management/native_fence.py": "ec7016f26ced2c2cba19e6c03b83ad70b2576d235078d64ccaa80beaaca87186",
+    "services/portfolio_management/business_root_held.py": "da9c5a62778c2af82339f5f52b9ae17b97aa440a2cde04d51e3f63cec296fd4c",
+    "services/portfolio_management/native_business_read_provider.py": "0134b84aa9da5887214faa3108cc299a120a217762dabdb23386347589c9b048",
+    "services/portfolio_management/native_manager_read_private.py": "5ba8e6196ceebc5b93c7a8112de91c0a131f50b1a7178902054c5e76e6712942",
+    "tests/integration/test_pma11_frame_terminal.py": "fa0e5762a574f7312e52783d04ec2848c3aeb4910ee6f765a95c2ae74080ccef",
+    "tests/unit/test_pma11_native_manager_read_private.py": "683f165796bb6d51f209f6a0c5e0adde156e6aca4567e16f0ef23b44b8c78d1d"
+  },
+  "guards": {"both_privileged_locks_clear": true, "foreign_actual_jobs_ended_before_lease": true},
+  "cleanup": {
+    "owned_containers_network_and_lease_removed": true,
+    "protected_operational_tuples_unchanged": 51,
+    "new_images_or_build_cache": 0,
+    "shared_free_bytes_before": 165592870912,
+    "shared_free_bytes_after": 165592096768,
+    "exclusive_reclaim_or_capacity_claim": false
+  },
+  "limitations": [
+    "Not actual production authority, current human login, native source or Core final-frame acceptance.",
+    "No actual database, role, identity, grant, listener or operational service changed.",
+    "Prior 228/1 and 240/2 failures retained; test counts are not summed across attempts.",
+    "Historical draft headers are retained byte-identically; this receipt records actual qualification."
+  ],
+  "full_phase_exit": "NOT_MET"
+}

@@ -13,7 +13,16 @@ elif [[ $# -ne 0 ]]; then
   exit 2
 fi
 tmp_dir="$(mktemp -d)"
-cleanup() { rm -rf -- "${tmp_dir}"; }
+cleanup() {
+  # The privileged branch deliberately makes this fixture root-owned. Restore
+  # only its directory ownership so the invoking user can remove its children.
+  # Never recursively change ownership or follow a substituted secret symlink.
+  if [[ "${EUID}" != 0 && -d "${tmp_dir}/edge-secrets" && ! -L "${tmp_dir}/edge-secrets" ]] &&
+    [[ "$(stat -c %u -- "${tmp_dir}/edge-secrets")" != "$(id -u)" ]]; then
+    sudo -n chown --no-dereference "$(id -u):$(id -g)" -- "${tmp_dir}/edge-secrets"
+  fi
+  rm -rf -- "${tmp_dir}"
+}
 trap cleanup EXIT
 
 # CI/publication uses a deliberately non-privileged user and must never obtain
