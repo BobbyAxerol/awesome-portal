@@ -650,6 +650,18 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 actual Core inputs22:50UTC:** the
+[same native commissioning packet](integration/execution-native-read-v1/native-db-commissioning/README.md#current-core-private-inputs--2026-10-182250utc)
+now records six actual same-RR/READONLY observations, genuine Core DB/39-ledger/
+identity/workspace pins and inactive root0600 configuration for six selections/
+two offline owner intakes. Six actual-file offline cases PASS,0FAIL/SKIP;
+first runner-startup failure retained, no DB/source request, grant install or
+secret transfer.41runtime tuples unchanged, helper/lease cleanup complete.
+Current Core WIP differs in17of43authored paths;14match qualified bytes,
+6match base and6are missing. Preserve active peer tests/source/index and
+reconcile/qualify those actual bytes before mounting. This is owned08integration,
+not connected acceptance or a reason to replace genuine current authority.
+
 **Original08 actual native producer22:25UTC:** the
 [actual commissioning packet](integration/execution-native-read-v1/native-db-commissioning/README.md)
 now supersedes older uninstalled-native statements for the exact TS target:

@@ -82,6 +82,50 @@ Do not run all TS migrations or copy a live catalogue as expected input.
 
 ## Boundaries, cleanup and next action
 
+### Current Core private inputs — 2026-10-18,22:50UTC
+
+Six actual native observations were captured in **one RR/READONLY source
+transaction**, not copied from install templates. The private source return is
+`/home/bobby/secure/portal-native-manager-read/v1/commissioning/core-inputs-v1/native-source-return.json`
+(SHA256 `85e0c6f89f41f6679b26603ba76e5862552c9a28d79a08ccde8c82b51465ef38`).
+It is observation-only, not a held grant or terminal outcome. Exact observation
+bytes determine semantic pins; native counters stay decimal strings and the
+native document stays opaque JSON text. No ISSUE/ENTER or database write occurred.
+
+Fresh read-only SGP metadata confirms `portal_control`, system
+`7675333655652302882`, role `portal`,39migration names and the real protected
+Bobby ID. All three Portal accounts are ACTIVE in their existing workspaces;
+no account, password, role or membership was recreated/promoted. Private Core
+configuration `core-inputs-v1/native-core-runtime.json` (SHA256
+`61a9204289326ac6f01a31d9aa88511ebe0f7ce9727de508995072b5cb177a28`)
+prepares six Bobby/Stan×Paper/Sandbox/Live selections, two root-owned offline
+owner intakes and12 **not installed** domain READ/STREAM grants. It adds no
+Thanh default, entity delegation, command or financial grant. This does not
+replace the separate approved native membership-management commissioning.
+
+Actual-file preflight: **6PASS/0FAIL/SKIP**, no mocked filesystem or generated
+identity/key, network=none and no DB connection/source call. It covers genuine
+TLS/Ed25519 references, both owner artifacts, all six exact native pins and
+wrong runtime hash, owner-artifact hash and Core-role pin denials. First attempt
+failed in runner startup before test collection: Vite tried to write .vite-temp
+below a read-only mount. Preserve that failure; only the config-loader invocation
+was corrected, keeping all source/dependency/private mounts read-only. Seven
+interference samples found zero overlaps. Both attempts removed their helper
+and lease;41operational tuples remained unchanged. No image build/pull/rotation
+or secret transfer occurred. Root0600 private inputs are deliberately retained.
+
+**Do not blindly apply/deploy the frozen profile over current Core WIP.** Fresh
+hash comparison of43authored paths on Core5291 finds14qualified-exact,
+6base-exact,6missing and17peer-changed paths, including consumer/composition/
+currentness/realtime logic. Two peer test containers are still active. Preserve
+their source/index and job; reconcile current bytes in a private specimen,
+qualify the exact merged source/schema/writers, then mount it in the existing
+Core owning pool/coordinator. The config above is validated against the
+published qualified profile, **not** those unqualified17new peer changes.
+Its finite offline intake interval must be checked at installation; never
+silently extend it or call it an operational change window. Stable Core remains
+unchanged. Full08 connected acceptance remains NOT_MET;09connected not started.
+
 Explicit commissioning caps are 8 unresolved/4096 retained native records,
 source/control pools2 each, provider2 in-flight. These are finite safety bounds,
 **not measured production capacity or indefinite retention**. No UNKNOWN/history

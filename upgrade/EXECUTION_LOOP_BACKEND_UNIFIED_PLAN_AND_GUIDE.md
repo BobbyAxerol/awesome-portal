@@ -21509,6 +21509,86 @@ at the consumed reference copy. Shared free213342453760→213342560256B;
 Independent golden/receipts/private active source and credentials retained.
 SGP exact historical source remains absent; its live peer test pair is preserved.
 
+**Original08 continuation22:45UTC / actual Core input preparation:** source
+de50dc6c is already published; do not retransmit/retest the historical approved
+SSE packet or upgrade its tainted SGP run into acceptance. Goal of this owned
+slice is to prepare the existing current-Core composition from the six actual
+native READ observations, not fixture/native facts reconstructed from templates.
+Guide08 and original23.20.7 invariants/rollback remain binding. Recheck live PM,
+Core, native runtime and exact DB identity; preserve peer source/index/jobs.
+Capture all six observations in one actual RR/READONLY source transaction,
+using the existing observer/catalogue/source-fingerprint checks; derive semantic
+pins from exact native observation bytes (preserve int64 counters as strings).
+Write only root0600 private observation/config/owner-intake references outside
+Git, O_EXCL/no overwrite. No ISSUE/ENTER, lease, grant, account, DDL or old
+runtime change. Existing private provider and its active source/PKI are retained.
+Use a <=30s cached1CPU512MiB helper, fresh actual host guard/120s owned lease,
+source-only credential mount, no admin/maintenance DSN or CA private key; always
+remove own helper/lease and record41-runtime/disk checks. Then build and validate
+the already qualified Core runtime-reference configuration offline with fixed
+real identity/domain/target pins and explicitly commissioning-only bounds. Core
+owner artifacts stay offline; no fabricated sessions or grants by config load.
+SGP install/mount is a subsequent action in this same08, gated only by its real
+peer source/job/review state and an exact journaled runtime window, not a new
+phase or generic approval. Full08 remains IN_PROGRESS_OWNED_IMPLEMENTATION /
+NOT_MET;09connected NOT_STARTED. Sanitized evidence, backend indices and a
+coherent normal-hook commit accompany this slice; no credentials enter Git.
+
+**Actual inputs22:44–22:49UTC:** six observations captured in the same genuine
+RR/READONLY source transaction, return85e0c6f8/24263B, users3/heads6/revisions6,
+ISSUE0/writes0. Own helper/lease removed;41tuples unchanged,
+free215564619776→215561154560B. Fresh SGP metadata bde3a6ab confirms actual
+portal_control/system7675333655652302882/roleportal/39migrations and all3real
+users ACTIVE, each in its actual workspace; initial mistaken legacy `users`
+metadata query was readonly and failed, corrected to the source's portal_users
+query. No source/business data or privileges changed. Private Core config
+61a92042 now prepares6selections/2owner intakes and12not-installed domain
+READ/STREAM grants, no Thanh default, no entity/command/financial rights. Files
+root0600 outsideGit; no key rotation/transfer or Core activation. Native input
+is observation-only, not held authority. Intake interval is finite/offline and
+cannot be silently extended/reused as a later installation window.
+
+First offline helper22:49UTC exited1 BEFORE collecting tests: Vite's bundled
+config loader tried to create .vite-temp below the read-only source/dependency
+mount and returned ENOENT. Preserve original logs/receipt; not a failed native
+configuration case and not PASS. Runtime41unchanged, helper/lease removed,
+foreign overlap0, free215359610880→215350890496B. Correct ONLY runner invocation
+to the installed Vite runner config-loader; source/dependencies/private inputs
+stay read-only, no writable shared cache or public download. Retry uses a new
+exact attempt directory and the same six test cases, network=none/noDB.
+
+**Actual private-file preflight22:50:14UTC PASS:**6PASS/0FAIL/SKIP with genuine
+filesystem/PKI/Ed25519 references, exact six observation-derived pins and both
+owner artifacts. Positive config preparation plus wrong runtime SHA, artifact
+SHA and independently pinned Core role denials; no mocked filesystem, generated
+human/session/key, DB pool, source request, grant installation or runtime mount.
+Seven actual host-interference samples,0overlap. Helper/lease removed,41tuples
+unchanged, free215159988224→215131021312B; original failed startup receipt stays
+at the parent root, successful receipt/JUnit-JSON under preflight-runner in
+/tmp/epg10-08-core-actual-inputs-yXsn067W. Private root0600 source-return/config/
+two intakes retained outsideGit; no secret transfer/rotation. Intake expiry is
+not an operational window or durable approval extension. All published6mode
+selections remain configuration, not Sandbox/Live business-delivery evidence.
+
+**Current parallel source comparison / decision boundary:** readonly43-path
+manifest comparison dccf49c2 on actual Core5291 finds14qualified-exact,
+6base-exact,6missing and17peer-changed paths. Changes include access/currentness,
+owner intake/composition/consumer and realtime/projection logic/tests. Actual
+peer node/postgres1420285 pair remains live; preserve it and171dirty paths.
+The offline six-case result qualifies our published profile plus real input
+files, not those new peer source changes or a full-Core deployment on39tables.
+Next runnable owned slice is private current-source reconciliation with exact
+writer/route/schema closure; then actual schema/intake install and SAME Core
+pool/coordinator mounting when its real source/job gate permits, followed by
+connected revoke/cache/cursor/SSE/recovery. Never overwrite WIP, run a second
+authority instance bypassing old writers, use fake sessions or force a stale
+golden. No new phase/general approval; full08 IN_PROGRESS_OWNED_IMPLEMENTATION /
+NOT_MET,09connected NOT_STARTED. The same commissioning packet and both backend
+indices record these results. Current publication includes sanitized receipts/
+hashes only; active private provider/source/config/history and cached necessary
+public dependencies stay retained. No new image/build cache was created by
+these cached helper runs; inventory/normal-hook cleanup remains exact-owned.
+
 
 
 

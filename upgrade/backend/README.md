@@ -7,6 +7,16 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 actual Core private inputs (2026-10-18,22:50UTC):**
+  [same native commissioning packet](../integration/execution-native-read-v1/native-db-commissioning/README.md#current-core-private-inputs--2026-10-182250utc)
+  records six genuine same-RR observations and the verified actual Core target/
+  identities/39-ledger. Root0600 inactive config has six selections/two offline
+  intakes; six real-file offline checks PASS after a retained Vite startup
+  failure. No Core grant/session/runtime install or secret transfer.41runtime
+  tuples unchanged; own helpers/leases removed. Current peer source comparison
+  finds17changed/6missing paths needing reconciliation, not blind patching.
+  Full08NOT_MET,09connected NOT_STARTED; active native producer is retained.
+
 - **Original08 actual producer commissioning (2026-10-18,22:25UTC):**
   [native DB/runtime packet](../integration/execution-native-read-v1/native-db-commissioning/README.md)
   records actual GUARDED install,3new identities/roles,6READ acceptances across
