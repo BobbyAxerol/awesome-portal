@@ -11,12 +11,22 @@
  * (`Fixtures.tsx`, mounted only on the dev route), and presentation-only
  * modules that carry no business facts.
  */
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = resolve(__dirname, "..");
 const ENTRY = resolve(__dirname, "ExecutionPreviewRoute.tsx");
+
+// V2 modules load through `lazy(() => import())`, which IMPORT_RE cannot see,
+// so every non-test V2 source file is its own entry.
+function v2Entries(dir = resolve(__dirname, "v2")): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return v2Entries(path);
+    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [path] : [];
+  });
+}
 
 // Value imports only: `import type` edges are erased at build time and carry
 // no producer — the demo VALUES must arrive through props from the lab.
@@ -41,7 +51,7 @@ function resolveModule(fromFile: string, spec: string): string | null {
 function walk(): { visited: Set<string>; offences: string[] } {
   const visited = new Set<string>();
   const offences: string[] = [];
-  const queue = [ENTRY];
+  const queue = [ENTRY, ...v2Entries()];
   while (queue.length > 0) {
     const file = queue.pop()!;
     if (visited.has(file)) continue;

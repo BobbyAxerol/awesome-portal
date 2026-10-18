@@ -1,0 +1,72 @@
+/* Flag chip. Pairs are written per kind, colour and tint side by side, so the
+ * contrast gate can read them without resolving an indirection variable.
+ *
+ * Uppercase is intentional here (hi-fi kit) and allowed only under v2/css;
+ * the v2Hygiene test (U7) allowlists `.exec-flag`. */
+.exec-flag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px 1px 6px;
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--ink-soft);
+  border-left-width: 3px;
+}
+.exec-flag[data-size="sm"] {
+  padding: 0 6px 0 5px;
+  letter-spacing: 0.04em;
+}
+.exec-flag-glyph {
+  line-height: 1;
+}
+.exec-flag-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.exec-flag[data-k="ok"] { color: var(--f-ok); background: var(--f-ok-bg); border-color: var(--f-ok); }
+/* The stripe says "waiting on an external event" without a second hue. */
+.exec-flag[data-k="pending"] {
+  color: var(--f-pending);
+  background: var(--f-pending-bg);
+  background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--f-pending-hatch) 4px 8px);
+  border-color: var(--f-pending);
+}
+.exec-flag[data-k="recall"] { color: var(--f-recall); background: var(--f-recall-bg); border-color: var(--f-recall); }
+.exec-flag[data-k="partial"] { color: var(--f-partial); background: var(--f-partial-bg); border-color: var(--f-partial); }
+/* Dashed outline: unknown is not failed and is not retried. */
+.exec-flag[data-k="unknown"] {
+  color: var(--f-unknown);
+  background: var(--f-unknown-bg);
+  border-color: var(--f-unknown);
+  border-style: dashed;
+  border-left-style: solid;
+}
+.exec-flag[data-k="applied"] { color: var(--f-applied); background: var(--f-applied-bg); border-color: var(--f-applied); }
+.exec-flag[data-k="rejected"] { color: var(--f-rejected); background: var(--f-rejected-bg); border-color: var(--f-rejected); }
+.exec-flag[data-k="display"] { color: var(--f-display); background: var(--f-display-bg); border-color: var(--f-display); }
+.exec-flag[data-k="stale"] { color: var(--f-stale); background: var(--f-stale-bg); border-color: var(--f-stale); }
+.exec-flag[data-k="paused"] { color: var(--f-paused); background: var(--f-paused-bg); border-color: var(--f-paused); }
+.exec-flag[data-k="approval"] { color: var(--f-approval); background: var(--f-approval-bg); border-color: var(--f-approval); }
+.exec-flag[data-k="incident"] { color: var(--f-incident); background: var(--f-incident-bg); border-color: var(--f-incident); }
+.exec-flag[data-k="operation"] { color: var(--f-operation); background: var(--f-operation-bg); border-color: var(--f-operation); }
+.exec-flag[data-k="attention"] { color: var(--f-attention); background: var(--f-attention-bg); border-color: var(--f-attention); }
+/* Dotted outline: not applicable is grey and never red. */
+.exec-flag[data-k="na"] {
+  color: var(--f-na);
+  background: var(--f-na-bg);
+  border-color: var(--f-na);
+  border-style: dotted;
+  border-left-style: solid;
+}
+.exec-flag[data-k="neutral"] { color: var(--f-neutral); background: var(--f-neutral-bg); border-color: var(--f-neutral); }

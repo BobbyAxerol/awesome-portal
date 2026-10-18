@@ -6,7 +6,7 @@
  * financial data for a fixture on a product route; screens whose contract is
  * not published render a typed unavailable state instead.
  */
-import { Fragment, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
+import { Fragment, Suspense, lazy, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   CommandCenterSnapshotContainer,
@@ -38,6 +38,15 @@ import type { DeliveryPolicy } from "./profile";
 import { NewApprovalRequestContainer } from "./screens/NewApprovalRequest";
 import { WaiversRegisterContainer } from "./screens/WaiversRegister";
 import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
+import { EXECUTION_V2_SHELL } from "./v2/flags";
+
+// UXM-07: the V2 context bar loads only when the build flag names it. The
+// condition reads the raw env string so the bundler folds it away when the
+// flag is unset: the flag-off dist carries no V2 chunk and the frame renders
+// no extra element. EXECUTION_V2_SHELL stays the runtime gate (key + umbrella).
+const V2ContextBar = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("./v2/shell/ContextBar").then((m) => ({ default: m.ConnectedContextBar })))
+  : null;
 import {
   AdminCatalogueContainer,
   ApprovalInboxContainer,
@@ -136,7 +145,7 @@ export function PreviewBanner({ profile, screenId, registryWord }: { profile: st
     </aside>
   );
 }
-function PreviewFrame({ screenId, profile, children }: { screenId: string; profile?: string | null; children: ReactNode }) {
+export function PreviewFrame({ screenId, profile, children }: { screenId: string; profile?: string | null; children: ReactNode }) {
   const sessionKey = retainedSessionKey(useSession().principal);
   // Bind before children's passive effects; never fetch or notify another component during render.
   useLayoutEffect(() => { ensureRetainedReview(sessionKey); }, [sessionKey]);
@@ -159,6 +168,7 @@ function PreviewFrame({ screenId, profile, children }: { screenId: string; profi
           amendment is codex's (consolidated request); shown in the inspector
           as drift, never used to pick a data source. */}
       <PreviewBanner profile="http" screenId={screenId} registryWord={profile} />
+      {V2ContextBar && EXECUTION_V2_SHELL ? <Suspense fallback={null}><V2ContextBar /></Suspense> : null}
       <Fragment key={refreshEpoch}>{children}</Fragment>
     </ExecutionSurface>
   );

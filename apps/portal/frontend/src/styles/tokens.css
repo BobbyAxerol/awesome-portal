@@ -565,6 +565,60 @@
   --ws-8: #f1c21b;
   --ws-other: #8d8d8d;
 
+  /* Execution Loop V2 chart series (hi-fi v2 kit). Fixed roles, not a ramp:
+   * dd is drawdown and loss only, sim is simulated data only. Separate from
+   * --ws-* and --exec-chart-* on purpose; two of them match by value today. */
+  --series: #78a9ff;
+  --series-2: #08bdba;
+  --series-3: #d4a75e;
+  --series-4: #ee5396;
+  --series-dd: #ff832b;
+  --series-sim: #be95ff;
+
+  /* Execution Loop V2 flag kinds (hi-fi v2 kit): ink + tint per semantic kind,
+   * chosen by the caller from the enum and never from the label text. Every
+   * -bg pair is >= 4.5:1; tokens.test.ts holds the floor. Hex only, one per
+   * line, so the pair gates can read them. */
+  --f-ok: #42be65;
+  --f-ok-bg: #0e2a17;
+  --f-pending: #f1c21b;
+  --f-pending-bg: #2c2506;
+  --f-recall: #ff832b;
+  --f-recall-bg: #2e1b08;
+  --f-partial: #d4a75e;
+  --f-partial-bg: #2a2214;
+  --f-unknown: #ee5396;
+  --f-unknown-bg: #2e1220;
+  --f-applied: #08bdba;
+  --f-applied-bg: #082a2a;
+  --f-rejected: #fa4d56;
+  --f-rejected-bg: #2d0f11;
+  --f-display: #33b1ff;
+  --f-display-bg: #0b2233;
+  --f-stale: #f1c21b;
+  --f-stale-bg: #2c2506;
+  --f-paused: #8d8d8d;
+  --f-paused-bg: #232323;
+  --f-approval: #a56eff;
+  --f-approval-bg: #1f1630;
+  --f-incident: #fa4d56;
+  --f-incident-bg: #3a1013;
+  --f-operation: #78a9ff;
+  --f-operation-bg: #0d1d3a;
+  --f-na: #8d8d8d;
+  --f-na-bg: #1d1d1d;
+  /* Not in the kit's own list. neutral is ink-soft on the cell surface.
+   * attention is amber, deliberately not --f-rejected: "needs attention" is
+   * not a failure (review2/06 s2.2 item 3), and it also stays apart from the
+   * pending/stale yellow and the recall orange. The warning glyph and the
+   * label carry the rest of the distinction. */
+  --f-neutral: #c6c6c6;
+  --f-neutral-bg: #262626;
+  --f-attention: #ffa51f;
+  --f-attention-bg: #301e05;
+  /* Diagonal stripe laid over --f-pending-bg; the only non-hex flag token. */
+  --f-pending-hatch: rgba(241, 194, 27, 0.12);
+
   --shadow-e1: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-e2: 0 4px 12px rgba(0, 0, 0, 0.55);
   --shadow-e3: 0 10px 28px rgba(0, 0, 0, 0.6);

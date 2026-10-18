@@ -1,0 +1,135 @@
+/* The one Drawer (hi-fi v2 kit .drawer). Docked: 380px beside the table.
+ * Overlay: fixed to the right edge below 1500px, over a scrim. `data-mode` is
+ * set by the component from the same breakpoint, so role and look agree.
+ *
+ * No uppercase here: the kit's header caps are dropped so this file needs no
+ * entry in the v2 hygiene allowlist. Text and fill pairs sit in one rule. */
+.exec-dock {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  min-width: 0;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+}
+.exec-dock:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.exec-dock[data-mode="overlay"] {
+  position: fixed;
+  right: 0;
+  /* The shell sets this to its own chrome height; 81px is the kit's. */
+  top: var(--exec-dock-top, 81px);
+  bottom: 0;
+  z-index: 30;
+  width: min(420px, 100vw);
+  overflow: auto;
+  box-shadow: var(--shadow-raised);
+}
+.exec-dock-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: var(--scrim);
+}
+
+.exec-dock-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 9px 16px;
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-dock-heading {
+  min-width: 0;
+}
+.exec-dock-title {
+  margin: 0;
+  font: var(--exec-font-section);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-dock-subtitle {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+.exec-dock-close {
+  flex: none;
+  padding: 2px 8px;
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-dock-close:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.exec-dock-close:focus-visible,
+.exec-dock-btn:focus-visible,
+.exec-dock-access:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.exec-dock-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 16px;
+  font: var(--exec-font-body);
+  overflow: auto;
+}
+
+.exec-dock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 12px 16px;
+  border-top: 1px solid var(--line-strong);
+}
+.exec-dock-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 100%;
+}
+.exec-dock-btn {
+  padding: 6px 16px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-dock-btn[data-variant="primary"] {
+  color: var(--on-accent);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+.exec-dock-btn:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.exec-dock-reason {
+  margin: 0;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-dock-access {
+  font: var(--exec-font-caption);
+  color: var(--accent);
+}
