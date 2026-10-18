@@ -40,9 +40,9 @@ for (const [name, route, root] of SCREENS) {
       });
       page.on("pageerror", (error) => offences.push(`pageerror: ${error.message}`));
       // Chromium's own console line for a failed fetch names no URL; this does.
-      // The BFF double has never answered the UDB-03 retained-review read (501
-      // on every V1 route too, DEBT-UXM07-003), so that one URL and its console
-      // line are tolerated here and nowhere else.
+      // The double answers the UDB-03 retained-review read with the typed 404
+      // "not configured" (a normal stack has none), so that one URL and its
+      // console line are tolerated here and nowhere else.
       let retainedRefusals = 0;
       page.on("response", (response) => {
         if (new URL(response.url()).pathname === "/api/v1/execution/retained-review") {
@@ -68,7 +68,7 @@ for (const [name, route, root] of SCREENS) {
       if (dir) await page.screenshot({ path: `${dir}/${name}-${label}.png`, fullPage: true });
 
       expect(foreign).toEqual([]);
-      const expected = (line: string) => /Failed to load resource.*501/.test(line);
+      const expected = (line: string) => /Failed to load resource.*404/.test(line);
       let tolerated = retainedRefusals;
       expect(offences.filter((line) => !(expected(line) && tolerated-- > 0))).toEqual([]);
     });

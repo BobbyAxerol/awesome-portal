@@ -1045,6 +1045,15 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     if (v2 !== null) return v2;
   }
 
+  if (method === "GET" && path === "/retained-review") {
+    // UDB-03 (DEBT-UXM07-003): a normal stack has no retained review. The
+    // honest answer is the server's typed "not configured" refusal, which the
+    // consumer reads as status "absent"; serving a retained body would flip
+    // every screen into read-only retained mode. Chromium still logs the 404,
+    // so the specs allow exactly that URL and nothing else.
+    return { status: 404, body: { error: { code: "UDB_RETAINED_REVIEW_NOT_CONFIGURED", message: "no retained review is configured for this stack" } } };
+  }
+
   if (method === "GET") {
     /*
      * R3-3 · the Portal review capture BE-R2-8 published.

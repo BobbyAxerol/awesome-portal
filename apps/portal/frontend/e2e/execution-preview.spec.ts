@@ -56,6 +56,11 @@ test("every product route consumes the same-origin BFF and never leaves the orig
     ) {
       return;
     }
+    // The normal stack has no retained review: the double answers the typed
+    // 404 (UDB_RETAINED_REVIEW_NOT_CONFIGURED) and Chromium logs the status.
+    if (/Failed to load resource.*404/.test(message.text()) && message.location().url.includes("/api/v1/execution/retained-review")) {
+      return;
+    }
     consoleOffences.push(`${message.type()}: ${message.text()}`);
   });
   page.on("pageerror", (error) => consoleOffences.push(`pageerror: ${error.message}`));
