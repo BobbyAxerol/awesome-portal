@@ -27,6 +27,7 @@
  * token, and both are read from structured fields rather than from that string.
  */
 import type { Authority, PanelStatus } from "./contracts";
+import { v1Refusal } from "./api/schemaGuard";
 import { readPanelEnvelope, type LineageItem, type PanelEnvelope } from "./certification";
 
 function obj(raw: unknown): Record<string, unknown> | null {
@@ -192,6 +193,7 @@ function actionPolicy(raw: unknown): LiveActionPolicy | null {
 }
 
 export function readLiveFullOperations(raw: unknown): LiveFullOperations | null {
+  if (v1Refusal(raw) !== null) return null;
   const root = obj(raw);
   const dep = obj(root?.deployment);
   if (!root || !dep) return null;

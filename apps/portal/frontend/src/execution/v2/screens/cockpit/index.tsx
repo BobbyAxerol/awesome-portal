@@ -276,8 +276,8 @@ function OwnRequests({ api, workspaceId, principal }: { api: ExecutionApi; works
       render: (row) =>
         row.status === null ? <span className="exec-ck-np">Status not published</span> : row.status === "PENDING" ? <Flag kind="pending" label="Awaiting approval" size="sm" /> : <Flag kind="neutral" label={row.status} size="sm" />,
     },
-    { key: "approvers", label: "Approvers", numeric: true, render: (row) => quorumText(row.quorumMet, row.quorumRequired) ?? <span className="exec-ck-np">Not published</span> },
-    { key: "clock", label: "Clock", render: (row) => slaView(row.sla)?.phrase ?? <span className="exec-ck-np">Not published</span> },
+    { key: "approvers", label: "Approvers", numeric: true, render: (row) => quorumText(row.quorumMet, row.quorumRequired) ?? <span className="exec-ck-np">{NOT_PUBLISHED.approvers}</span> },
+    { key: "clock", label: "Clock", render: (row) => slaView(row.sla)?.phrase ?? <span className="exec-ck-np">{NOT_PUBLISHED.clock}</span> },
   ];
 
   return (

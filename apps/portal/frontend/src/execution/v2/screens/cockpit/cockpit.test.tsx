@@ -8,6 +8,7 @@ import type { ExecutionApi, InboxResult } from "../../../api/ports";
 import { readLiveReview } from "../../../api/profileRead";
 import { readConditionsPage, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "../../../api/rows";
 import type { ApprovalRow, DecidedRow } from "../../../screens/ApprovalInbox";
+import { v1GovernanceParent, type GovernanceParentKind } from "../../readers/dispatch";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import Cockpit, { type CockpitProps } from "./index";
 
@@ -32,7 +33,7 @@ const WRITES = [
   "planCommand", "runOperatorTask", "acknowledgeOperation", "resolveOperation",
 ] as const;
 const READS = [
-  "listApprovals", "getApprovalHistory", "getGateR1", "getGateR2", "getLiveReview", "getPaperExit", "getWaivers", "getReviewCaptureCapabilities",
+  "listApprovals", "getApprovalHistory", "getGateR1", "getGateR2", "getLiveReview", "getGovernanceParent", "getPaperExit", "getWaivers", "getReviewCaptureCapabilities",
 ] as const;
 
 type Handler = (...args: never[]) => unknown;
@@ -53,6 +54,12 @@ function port(handlers: Partial<Record<(typeof READS)[number], Handler>>): Port 
         return (...args: unknown[]) => {
           calls.push({ name, args });
           const handler = (handlers as Record<string, Handler | undefined>)[name];
+          // The version-aware read is the cockpit's one evidence call; unless a test answers it itself, it
+          // goes through the V1 handlers of the same port, as the fixture port does.
+          if (!handler && name === "getGovernanceParent") {
+            const [kind, id, workspaceId] = args as [GovernanceParentKind, string, string | undefined];
+            return v1GovernanceParent(api, kind, id, workspaceId);
+          }
           if (!handler) throw new Error(`unexpected port call: ${name}`);
           return Promise.resolve(handler(...(args as never[])));
         };

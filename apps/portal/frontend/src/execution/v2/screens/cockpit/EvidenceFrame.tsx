@@ -12,14 +12,20 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import type { PanelStatus } from "../../../contracts";
 import type { ConditionRow, ExecutionApi } from "../../../api/ports";
+import type { LiveReviewPayload } from "../../../api/profileRead";
 import { readGateR2Detail } from "../../../api/rows";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../../../api/rows";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { reviewRouteFor, type ApprovalGate } from "../../../screens/ApprovalInbox";
+import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
+import { unsupportedText, type GovernanceParentRead } from "../../readers/dispatch";
+import type {
+  AbsentSectionV2, ApprovalV2, ExitFindingV2, ExitPanelV2, LiveParentV2, PaperExitParentV2, R2ParentV2,
+} from "../../readers/governanceParents";
 import { withContext } from "../../urlState";
-import { instantText, KIND_TAG, NOT_PUBLISHED, settledPanel, type EvidenceData, type EvidenceKind } from "./laneModel";
+import { instantText, KIND_TAG, NOT_PUBLISHED, notPublishedFor, settledPanel, type EvidenceData, type EvidenceKind } from "./laneModel";
 
 /* ── the read ─────────────────────────────────────────────────────────────── */
 
@@ -36,6 +42,34 @@ export interface EvidenceTarget {
 
 const GATE_OF_KIND: Readonly<Record<EvidenceKind, ApprovalGate>> = { r1: "R1", r2: "R2", exit: "PAPER_EXIT", live: "LIVE_GATE" };
 
+/** One dispatched read as cockpit state: V1 as it always was, V2 as its own kind, anything else as a stated failure. */
+function readyFromParent(value: GovernanceParentRead, warnings: readonly string[]): EvidenceState {
+  const read = value.read;
+  if (read.kind === "unsupported") return { status: "failed", panel: "unavailable", reason: unsupportedText(read) };
+  const partial = warnings.length > 0;
+  if (read.kind === "v2") {
+    switch (value.kind) {
+      case "r2":
+        return { status: "ready", partial, data: { kind: "r2v2", parent: read.value as R2ParentV2 }, warnings };
+      case "exit":
+        return { status: "ready", partial, data: { kind: "exitv2", parent: read.value as PaperExitParentV2 }, warnings };
+      case "live":
+        return { status: "ready", partial, data: { kind: "livev2", parent: read.value as LiveParentV2 }, warnings };
+    }
+  }
+  switch (value.kind) {
+    case "r2":
+      return { status: "ready", partial, data: { kind: "r2", detail: read.value as GateR2Detail }, warnings };
+    case "exit":
+      return { status: "ready", partial, data: { kind: "exit", detail: read.value as PaperExitDetail }, warnings };
+    case "live": {
+      // The governance document rides inside the live payload as a full R2 review; the R2 reader decodes it.
+      const payload = read.value as LiveReviewPayload;
+      return { status: "ready", partial, data: { kind: "live", payload, backbone: readGateR2Detail(payload.governanceBackbone) }, warnings };
+    }
+  }
+}
+
 async function readEvidence(api: ExecutionApi, target: EvidenceTarget, workspaceId: string | undefined): Promise<EvidenceState> {
   try {
     switch (target.kind) {
@@ -45,28 +79,13 @@ async function readEvidence(api: ExecutionApi, target: EvidenceTarget, workspace
           ? { status: "ready", partial: (result.warnings?.length ?? 0) > 0, data: { kind: "r1", detail: result.value }, warnings: result.warnings ?? [] }
           : { status: "failed", panel: settledPanel(result.status), reason: result.reason };
       }
-      case "r2": {
-        const result = await api.getGateR2(target.id, workspaceId);
-        return result.ok
-          ? { status: "ready", partial: (result.warnings?.length ?? 0) > 0, data: { kind: "r2", detail: result.value }, warnings: result.warnings ?? [] }
-          : { status: "failed", panel: settledPanel(result.status), reason: result.reason };
-      }
-      case "exit": {
-        const result = await api.getPaperExit(target.id, workspaceId);
-        return result.ok
-          ? { status: "ready", partial: (result.warnings?.length ?? 0) > 0, data: { kind: "exit", detail: result.value }, warnings: result.warnings ?? [] }
-          : { status: "failed", panel: settledPanel(result.status), reason: result.reason };
-      }
+      case "r2":
+      case "exit":
       case "live": {
-        const result = await api.getLiveReview(target.id, workspaceId);
+        // One version-aware read for the three kinds that share a route with a V2 body (v2/readers/dispatch.ts).
+        const result = await api.getGovernanceParent(target.kind, target.id, workspaceId);
         return result.ok
-          ? {
-              status: "ready",
-              partial: (result.warnings?.length ?? 0) > 0,
-              // The governance document rides inside the live payload as a full R2 review; the R2 reader decodes it.
-              data: { kind: "live", payload: result.value, backbone: readGateR2Detail(result.value.governanceBackbone) },
-              warnings: result.warnings ?? [],
-            }
+          ? readyFromParent(result.value, result.warnings ?? [])
           : { status: "failed", panel: settledPanel(result.status), reason: result.reason };
       }
     }
@@ -103,8 +122,9 @@ function NotPublished({ text }: { text: string }) {
   return <span className="exec-ck-np">{text}</span>;
 }
 
-function Word({ value }: { value: string | null | undefined }) {
-  return value ? <>{value}</> : <span className="exec-ck-np">Not published</span>;
+/** A published word, or the absence named with the FE request that will publish it. */
+function Word({ value, fe }: { value: string | null | undefined; fe: string }) {
+  return value ? <>{value}</> : <span className="exec-ck-np">{notPublishedFor(fe)}</span>;
 }
 
 type Mark = "pass" | "watch" | "fail" | "insufficient";
@@ -218,7 +238,7 @@ function R1Body({ detail }: { detail: GateR1Detail }) {
                   <tr key={`${index}:${entry.label}`}>
                     <td>{entry.label}</td>
                     <td className="exec-ck-id">{entry.value}</td>
-                    <td><Word value={entry.verification} /></td>
+                    <td><Word value={entry.verification} fe="FE-028" /></td>
                   </tr>
                 ))}
               </tbody>
@@ -246,10 +266,10 @@ function R2Body({ detail, heading = "R2 review" }: { detail: GateR2Detail; headi
           <Kv
             rows={[
               { label: "R1 state", value: detail.r1State },
-              { label: "R1 request", value: <Word value={detail.r1Id} /> },
-              { label: "Decided by", value: <Word value={detail.r1DecidedBy} /> },
-              { label: "Decided at", value: <Word value={instantText(detail.r1DecidedAt)} /> },
-              { label: "Expires", value: <Word value={instantText(detail.r1Expiry)} /> },
+              { label: "R1 request", value: <Word value={detail.r1Id} fe="FE-028" /> },
+              { label: "Decided by", value: <Word value={detail.r1DecidedBy} fe="FE-030" /> },
+              { label: "Decided at", value: <Word value={instantText(detail.r1DecidedAt)} fe="FE-030" /> },
+              { label: "Expires", value: <Word value={instantText(detail.r1Expiry)} fe="FE-028" /> },
             ]}
           />
         ) : (
@@ -319,7 +339,7 @@ function ExitBody({ detail }: { detail: PaperExitDetail }) {
         </Panel>
       ) : null}
       <Panel title="Recommendation">
-        <div className="exec-ck-pad"><Word value={detail.recommendation} /></div>
+        <div className="exec-ck-pad"><Word value={detail.recommendation} fe="FE-028" /></div>
       </Panel>
       {detail.activationPlan ? (
         <Panel title="Activation plan" right="Preview only">
@@ -380,14 +400,181 @@ function LiveBody({ data }: { data: Extract<EvidenceData, { kind: "live" }> }) {
           <Kv
             rows={[
               { label: "State", value: source.state },
-              { label: "Freshness", value: <Word value={source.freshness} /> },
-              { label: "Completeness", value: <Word value={source.completeness} /> },
-              { label: "As of", value: <Word value={instantText(source.asOf)} /> },
+              { label: "Freshness", value: <Word value={source.freshness} fe="FE-029" /> },
+              { label: "Completeness", value: <Word value={source.completeness} fe="FE-029" /> },
+              { label: "As of", value: <Word value={instantText(source.asOf)} fe="FE-029" /> },
             ]}
           />
         ) : (
           <div className="exec-ck-pad"><span className="exec-ck-np">The live current-source envelope was not published</span></div>
         )}
+      </Panel>
+    </>
+  );
+}
+
+/* ── V2 parent bodies (SCOPED_V2 workspaces) ──────────────────────────────── */
+
+/** A section the server published as absent: the state word and its own reason code, never invented copy. */
+function Absent({ section }: { section: AbsentSectionV2 }) {
+  return <span className="exec-ck-np">{`Not published · ${section.reasonCode}`}</span>;
+}
+
+function Id({ value }: { value: string }) {
+  return <span className="exec-ck-id">{value}</span>;
+}
+
+function when(value: Parameters<typeof formatAsOf>[0] | null): ReactNode {
+  return value === null ? <span className="exec-ck-np">None yet</span> : formatAsOf(value);
+}
+
+const STATUS_WORD: Readonly<Record<ApprovalV2["status"], string>> = {
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  APPROVED_WITH_CONDITION: "Approved with a condition",
+  DENIED: "Denied",
+  CHANGES_REQUESTED: "Changes requested",
+  EXPIRED: "Expired",
+};
+
+/** The approval row every V2 parent carries: Portal lifecycle clocks, not source freshness. */
+function ApprovalPanel({ approval, observedAt }: { approval: ApprovalV2; observedAt: Parameters<typeof formatAsOf>[0] }) {
+  return (
+    <Panel title="Approval" right={`Portal read ${formatAsOf(observedAt)}`}>
+      <Kv
+        rows={[
+          { label: "Status", value: STATUS_WORD[approval.status] },
+          { label: "Version", value: String(approval.approvalVersion) },
+          { label: "Policy", value: <Id value={approval.policyVersion} /> },
+          { label: "Approvers", value: `${approval.quorumMet} of ${approval.quorumRequired}` },
+          { label: "Evidence", value: approval.evidenceComplete ? "Complete" : "Incomplete" },
+          { label: "Created", value: when(approval.createdAt) },
+          { label: "Review due", value: when(approval.slaDueAt) },
+          { label: "Expires", value: when(approval.expiresAt) },
+          { label: "Decided", value: when(approval.decidedAt) },
+        ]}
+      />
+    </Panel>
+  );
+}
+
+function R2V2Body({ parent }: { parent: R2ParentV2 }) {
+  const lineage = parent.lineage;
+  return (
+    <>
+      <Panel title="Criteria" right="R2 review">
+        <div className="exec-ck-pad"><NotPublished text={NOT_PUBLISHED.criteria} /></div>
+      </Panel>
+      <Panel title="R1 lineage">
+        {lineage.availability === "AVAILABLE" ? (
+          <Kv
+            rows={[
+              { label: "R1 request", value: <Id value={lineage.r1ApprovalId} /> },
+              { label: "Risk grant", value: <Id value={lineage.observedRiskGrantId} /> },
+              { label: "Currency", value: lineage.currency },
+              { label: "R1 state", value: <NotPublished text={notPublishedFor(parent.notPublished.r1State)} /> },
+              { label: "Decided by", value: <NotPublished text={notPublishedFor(parent.notPublished.r1DecidedBy)} /> },
+              { label: "Expires", value: <NotPublished text={notPublishedFor(parent.notPublished.r1Expiry)} /> },
+            ]}
+          />
+        ) : (
+          <div className="exec-ck-pad"><Absent section={lineage} /></div>
+        )}
+      </Panel>
+      <Panel title="Capital change preview" right="Derived, not applied">
+        <div className="exec-ck-pad"><NotPublished text={NOT_PUBLISHED.capital} /></div>
+      </Panel>
+      <ApprovalPanel approval={parent.approval} observedAt={parent.header.observedAt} />
+    </>
+  );
+}
+
+const PANEL_TITLE: Readonly<Record<ExitPanelV2["panelKind"], string>> = {
+  OBSERVATION_COVERAGE: "Observation coverage",
+  DRIFT: "Drift",
+  LIMITS_HEALTH: "Limits health",
+  PORTFOLIO_FIT: "Portfolio fit",
+};
+const OUTCOME_MARK: Readonly<Record<ExitFindingV2["outcome"], Mark>> = { PASS: "pass", WATCH: "watch", FAIL: "fail", INSUFFICIENT: "insufficient" };
+
+/** What a V2 finding says about itself. There is no label, so the id is the honest name. */
+function findingRow(finding: ExitFindingV2) {
+  return {
+    label: finding.findingId,
+    mark: OUTCOME_MARK[finding.outcome],
+    note: `${finding.required ? "Required" : "Not required"}${finding.blocking ? " · Blocking" : ""}`,
+  };
+}
+
+function ExitV2Body({ parent }: { parent: PaperExitParentV2 }) {
+  const { evaluation, lineage, review } = parent;
+  return (
+    <>
+      {evaluation.availability === "AVAILABLE" ? (
+        evaluation.panels.map((panel) => (
+          <Panel key={panel.panelId} title={PANEL_TITLE[panel.panelKind]} right={`${panel.sourceAuthority.toLowerCase()} · ${panel.panelState.toLowerCase()}`}>
+            {panel.panelState !== "OK" ? (
+              <div className="exec-ck-pad">
+                <PanelState
+                  status={panel.panelState === "PARTIAL" ? "partial" : panel.panelState === "STALE" ? "stale" : "unavailable"}
+                  reason={`Panel state ${panel.panelState}${panel.asOf === null ? "; it published no clock" : `; as of ${formatAsOf(panel.asOf)}`}.`}
+                />
+              </div>
+            ) : null}
+            <Criteria rows={evaluation.findings.filter((finding) => finding.panelId === panel.panelId).map(findingRow)} />
+          </Panel>
+        ))
+      ) : (
+        <Panel title="Evaluation">
+          <div className="exec-ck-pad"><Absent section={evaluation} /></div>
+        </Panel>
+      )}
+      <ChartPanel />
+      <Panel title="Review">
+        <Kv
+          rows={[
+            { label: "State", value: review.reviewState.replace(/_/g, " ").toLowerCase() },
+            { label: "Version", value: String(review.reviewVersion) },
+            { label: "Promotes to", value: review.promoteTo.replace(/_/g, " ").toLowerCase() },
+            { label: "Extension", value: review.extensionDays === null ? "None" : `${review.extensionDays} days until ${when(review.extendedUntil)}` },
+          ]}
+        />
+      </Panel>
+      <Panel title="Lineage">
+        {lineage.availability === "AVAILABLE" ? (
+          <Kv
+            rows={[
+              { label: "R1 request", value: <Id value={lineage.r1ApprovalId} /> },
+              { label: "R2 request", value: <Id value={lineage.r2ApprovalId} /> },
+              { label: "Source snapshot", value: <Id value={lineage.sourceSnapshotHash} /> },
+              { label: "Evidence set", value: <Id value={lineage.evidenceSetHash} /> },
+            ]}
+          />
+        ) : (
+          <div className="exec-ck-pad"><Absent section={lineage} /></div>
+        )}
+      </Panel>
+      <Panel title="Recommendation">
+        <div className="exec-ck-pad"><NotPublished text={NOT_PUBLISHED.criteria} /></div>
+      </Panel>
+      <ApprovalPanel approval={parent.approval} observedAt={parent.header.observedAt} />
+    </>
+  );
+}
+
+function LiveV2Body({ parent }: { parent: LiveParentV2 }) {
+  return (
+    <>
+      <ApprovalPanel approval={parent.approval} observedAt={parent.header.observedAt} />
+      <Panel title="Governance backbone">
+        <div className="exec-ck-pad"><NotPublished text={notPublishedFor(parent.notPublished.governanceBackbone)} /></div>
+      </Panel>
+      <ChartPanel />
+      <Panel title="Canary evidence branches">
+        <div className="exec-ck-pad"><NotPublished text={notPublishedFor(parent.notPublished.canaryBranches)} /></div>
+      </Panel>
+      <Panel title="Current source · live facts">
+        <div className="exec-ck-pad"><NotPublished text={notPublishedFor(parent.notPublished.liveFacts)} /></div>
       </Panel>
     </>
   );
@@ -416,6 +603,11 @@ function titleOf(header: EvidenceHeader, data: EvidenceData | null): string {
       return data.detail.subject;
     case "live":
       return data.backbone?.subject ?? data.payload.canaryDeploymentId ?? header.id;
+    // No V2 parent carries a subject label: the request id is the title.
+    case "r2v2":
+    case "exitv2":
+    case "livev2":
+      return header.id;
   }
 }
 
@@ -435,6 +627,30 @@ function verdictOf(data: EvidenceData): { tone: Tone; headline: string; facts: s
       return { tone: "mute", headline: `R1 ${data.detail.r1State.toLowerCase().replace(/_/g, " ")}`, facts: data.detail.grantName ? [`Grant ${data.detail.grantName}`] : [] };
     case "live":
       return { tone: "mute", headline: "Evidence ready · Live decisions are closed", facts: data.payload.readAt ? [`Read ${instantText(data.payload.readAt) ?? data.payload.readAt}`] : [] };
+    case "r2v2": {
+      // The lineage is what the body says it is; the old "no R1 lineage" claim is not made for a body that carries one.
+      const lineage = data.parent.lineage;
+      return {
+        tone: "mute",
+        headline: lineage.availability === "AVAILABLE" ? "R1 lineage published" : "R1 lineage not published",
+        facts: [lineage.availability === "AVAILABLE" ? `R1 ${lineage.r1ApprovalId}` : lineage.reasonCode, `Approval ${STATUS_WORD[data.parent.approval.status].toLowerCase()}`],
+      };
+    }
+    case "exitv2": {
+      const evaluation = data.parent.evaluation;
+      if (evaluation.availability !== "AVAILABLE") return { tone: "mute", headline: "Evaluation not published", facts: [evaluation.reasonCode] };
+      const findings = evaluation.findings;
+      const pass = findings.filter((finding) => finding.outcome === "PASS").length;
+      const blocking = findings.filter((finding) => finding.blocking && finding.outcome !== "PASS").length;
+      // Findings are counted as published; whether the gate is met is a verdict the body does not carry (FE-028).
+      return {
+        tone: blocking > 0 ? "warn" : "mute",
+        headline: `Findings ${pass} of ${findings.length} pass`,
+        facts: [`${blocking} blocking`, `Gate verdict: ${NOT_PUBLISHED.criteria}`, `Promotes to ${data.parent.review.promoteTo.replace(/_/g, " ").toLowerCase()}`],
+      };
+    }
+    case "livev2":
+      return { tone: "mute", headline: "Evidence ready · Live decisions are closed", facts: [`Approval ${STATUS_WORD[data.parent.approval.status].toLowerCase()}`] };
   }
 }
 
@@ -496,6 +712,9 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason }: Evidenc
       {data?.kind === "r2" ? <R2Body detail={data.detail} /> : null}
       {data?.kind === "exit" ? <ExitBody detail={data.detail} /> : null}
       {data?.kind === "live" ? <LiveBody data={data} /> : null}
+      {data?.kind === "r2v2" ? <R2V2Body parent={data.parent} /> : null}
+      {data?.kind === "exitv2" ? <ExitV2Body parent={data.parent} /> : null}
+      {data?.kind === "livev2" ? <LiveV2Body parent={data.parent} /> : null}
     </div>
   );
 }
@@ -537,7 +756,7 @@ export function WaiverEvidence({ row }: { row: ConditionRow }) {
             { label: "Subject", value: row.subjectLabel },
             { label: "Environment", value: row.environment },
             { label: "Owner", value: row.owner },
-            { label: "Lapses", value: <Word value={instantText(row.dueAt)} /> },
+            { label: "Lapses", value: <Word value={instantText(row.dueAt)} fe="FE-030" /> },
             { label: "Policy", value: row.policyVersion },
           ]}
         />

@@ -11,6 +11,7 @@ import type { PanelStatus } from "../../../contracts";
 import type { LiveReviewPayload } from "../../../api/profileRead";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../../../api/rows";
 import type { ApprovalGate, DecidedRow } from "../../../screens/ApprovalInbox";
+import type { ApprovalV2, LiveParentV2, PaperExitParentV2, R2ParentV2 } from "../../readers/governanceParents";
 import { formatAsOf, readAsOf } from "../../boundary";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import type { InboxActor, InboxRowV2, InboxSlaV2 } from "./inboxRowV2";
@@ -26,7 +27,20 @@ export const NOT_PUBLISHED = {
   decisionCall: "Not published (FE-030)",
   lane: "Not published (FE-034)",
   stepUp: "Not published (FE-015)",
+  /** The approver count and ladder: the queue row adds them with `creator`, `ladder` and `sla_due_at` (FE-030). */
+  approvers: "Not published (FE-030)",
+  /** The review clock (`sla_due_at`) on a row that has no SLA (FE-030). */
+  clock: "Not published (FE-030)",
+  /** The policy version of a request whose read did not carry one (FE-030, with the decision call). */
+  policy: "Not published (FE-030)",
+  /** The capital rows of an R2 review: no V2 parent carries them (FE-030, "what changes"). */
+  capital: "Not published (FE-030)",
 } as const;
+
+/** `Not published (FE-xxx)` for a datum, from the id a V2 parent names for it. */
+export function notPublishedFor(fe: string): string {
+  return `Not published (${fe})`;
+}
 
 /** `17 Oct 09:14Z` (UTC) for an RFC3339 instant; the text as sent when it is not one; `null` when there is none. */
 export function instantText(iso: string | null | undefined): string | null {
@@ -328,7 +342,15 @@ export type EvidenceData =
   | { kind: "r1"; detail: GateR1Detail }
   | { kind: "r2"; detail: GateR2Detail }
   | { kind: "exit"; detail: PaperExitDetail }
-  | { kind: "live"; payload: LiveReviewPayload; backbone: GateR2Detail | null };
+  | { kind: "live"; payload: LiveReviewPayload; backbone: GateR2Detail | null }
+  /**
+   * The V2 parent bodies a SCOPED_V2 workspace answers on the same routes. They
+   * are their own kinds, not V1 objects with fields filled in: a V1-shaped value
+   * built from a V2 body would carry claims the body never made.
+   */
+  | { kind: "r2v2"; parent: R2ParentV2 }
+  | { kind: "exitv2"; parent: PaperExitParentV2 }
+  | { kind: "livev2"; parent: LiveParentV2 };
 
 export interface EvidenceSummary {
   creator: InboxActor | null;
@@ -360,9 +382,34 @@ function r2Summary(detail: GateR2Detail, workspaceId: string | null): EvidenceSu
   };
 }
 
+const DECISION_STATUSES: readonly ApprovalV2["status"][] = ["APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED"];
+
+/**
+ * What a V2 approval says for the rail. No creator and no actor are published
+ * (FE-030), so `creator` stays `null` and `decided.by` says so. A decision is
+ * only reported for a status that is one (an EXPIRED request was not decided).
+ */
+function approvalSummary(approval: ApprovalV2, workspaceId: string): EvidenceSummary {
+  const decided = approval.decidedAt !== null && DECISION_STATUSES.includes(approval.status)
+    ? { outcome: approval.status, by: NOT_PUBLISHED.decisionCall, at: new Date(approval.decidedAt).toISOString() }
+    : null;
+  return {
+    ...NONE,
+    quorumMet: approval.quorumMet,
+    quorumRequired: approval.quorumRequired,
+    policyVersion: approval.policyVersion,
+    workspaceId,
+    decided,
+  };
+}
+
 export function summarizeEvidence(data: EvidenceData | null): EvidenceSummary {
   if (data === null) return NONE;
   switch (data.kind) {
+    case "r2v2":
+    case "exitv2":
+    case "livev2":
+      return approvalSummary(data.parent.approval, data.parent.header.workspaceId);
     case "r1": {
       const d = data.detail;
       const name = published(d.creator);

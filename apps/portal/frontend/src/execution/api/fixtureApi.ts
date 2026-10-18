@@ -11,6 +11,7 @@
  * the ones in the mapping, not the ones in `fetch`. A fixture that returned
  * finished `ApprovalRow` objects would test nothing.
  */
+import { v1GovernanceParent } from "../v2/readers/dispatch";
 import CC_SNAPSHOT_BUSY from "../../../../../../packages/contracts/fixtures/execution-command-center.busy.valid.json";
 import PAPER_OVERVIEW_READY from "../../../../../../packages/contracts/fixtures/execution-paper-overview.ready.valid.json";
 import SANDBOX_OVERVIEW_READY from "../../../../../../packages/contracts/fixtures/execution-sandbox-overview.ready.valid.json";
@@ -406,7 +407,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     };
   };
 
-  return {
+  const self: ExecutionApi = {
     /* N29-FE-01 lab/test port — serves the canonical contract fixtures. */
     async getReviewCaptureCapabilities() { return unavailable("PORTAL_REVIEW_CAPTURE_REQUIRES_AUTHENTICATED_BFF"); },
     async captureR2() { return unavailable("PORTAL_REVIEW_CAPTURE_REQUIRES_AUTHENTICATED_BFF"); },
@@ -494,6 +495,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         "The live review",
       );
     },
+    getGovernanceParent: (kind, id, workspaceId) => v1GovernanceParent(self, kind, id, workspaceId),
     async getAccountBroker360(_accountId: string) {
       return unavailable("N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED: the full exposure population is not published; this screen stays typed unavailable.");
     },
@@ -1073,4 +1075,5 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       };
     },
   };
+  return self;
 }

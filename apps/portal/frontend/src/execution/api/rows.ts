@@ -26,6 +26,7 @@
 import { readDecimal, readEnum, readId, readTimestamp, type MaybeKnown } from "../adapter";
 import { bindExitDecision, bindGateDecision, bindR1Decision, readCaptureContext, readDecisionContext, readPaperExitDecisionContext, safeR1Href, type CaptureContext, type ContextRead, type DecisionContext, type ExitBinding, type R1Binding } from "./governanceContext";
 import type { ApprovalId, EvidenceMark, PromotionStage, Sla } from "../contracts";
+import { v1Refusal } from "./schemaGuard";
 import type { ApprovalGate, ApprovalRow, DecidedRow, InertReason } from "../screens/ApprovalInbox";
 import type { ChecklistItem, DecisionLock, PassportEntry } from "../screens/GateR1Review";
 import type { CapitalPreview } from "../analytics";
@@ -625,6 +626,8 @@ export interface GateR2Detail {
 }
 
 export function readGateR2Detail(raw: unknown): GateR2Detail | null {
+  // A V2 body on this route is refused, never read as a V1 body with nothing in it (api/schemaGuard.ts).
+  if (v1Refusal(raw) !== null) return null;
   const o = obj(raw);
   const workspaceId = typeof o?.workspace_id === "string" && o.workspace_id.length > 0 ? o.workspace_id : null;
   if (!o) return null;
@@ -816,6 +819,7 @@ export interface PaperExitDetail {
 }
 
 export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
+  if (v1Refusal(raw) !== null) return null;
   const o = obj(raw);
   const workspaceId = typeof o?.workspace_id === "string" && o.workspace_id.length > 0 ? o.workspace_id : null;
   if (!o) return null;

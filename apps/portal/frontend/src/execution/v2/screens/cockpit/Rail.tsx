@@ -161,7 +161,7 @@ export function Rail({ api, target, evidence, principal, workspaceId }: RailProp
       <section className="exec-ck-panel" aria-label="Decision controls">
         <div className="exec-ck-ph">
           <h3 className="exec-ck-pt">Decision</h3>
-          <span className="exec-ck-pr">{policy ? `Policy ${policy}` : <Np text="Policy Not published" />}</span>
+          <span className="exec-ck-pr">{policy ? `Policy ${policy}` : <Np text={`Policy ${NOT_PUBLISHED.policy}`} />}</span>
         </div>
         <div className="exec-ck-bd">
           {waiver ? (

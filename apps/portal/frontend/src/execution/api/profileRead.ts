@@ -14,6 +14,7 @@ import {
   readUtcEpochMs,
   type GeneratedPanelEnvelope,
 } from "../screenDataContract";
+import { v1Refusal } from "./schemaGuard";
 
 export interface BranchCapability {
   capabilityId: string;
@@ -279,6 +280,7 @@ export interface LiveReviewPayload {
 }
 
 export function readLiveReview(raw: unknown): LiveReviewPayload | null {
+  if (v1Refusal(raw) !== null) return null;
   const root = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : null;
   if (!root || root.schema_version !== "governance.live-review.v1") return null;
   const workspaceId = typeof root.workspace_id === "string" && root.workspace_id.length > 0 ? root.workspace_id : null;

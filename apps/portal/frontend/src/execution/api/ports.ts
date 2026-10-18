@@ -39,6 +39,7 @@ import type { ScreenContract } from "../screenContracts";
 import type { CommandCatalogue } from "../adminCatalog";
 import type { CommandPlan, CommandPlanRequestInput } from "../commandPlan";
 import type { IncidentDetail, OperationsQueue, WorkflowResult } from "../operations";
+import type { GovernanceParentKind, GovernanceParentRead } from "../v2/readers/dispatch";
 import type { IncidentRootReadV2, OperationalQueueQueryV2, OperationalQueueReadV2 } from "../v2/readers/operationalQueue";
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
@@ -342,6 +343,15 @@ export interface ExecutionApi {
   runOperatorTask(taskId: string, params: Readonly<Record<string, string | number | boolean | null>>): Promise<Result<OperatorTaskRunResult>>;
   /** `GET /governance/approvals/{id}/live` — `governance.live-review.v1`. */
   getLiveReview(approvalId: string, workspaceId?: string): Promise<Result<LiveReviewPayload>>;
+  /**
+   * The R2, Paper Exit or Live review on its V1 route, read by the body's
+   * `schema_version` (v2/readers/dispatch.ts). In a SCOPED_V2 workspace the
+   * same route answers a V2 parent body, which the V1 readers refuse; this
+   * method answers whichever the server sent, tagged, so a caller never reads
+   * a V2 body as V1. A body neither reader accepts is an `unsupported` answer
+   * inside an `ok` result, not a transport failure.
+   */
+  getGovernanceParent(kind: GovernanceParentKind, id: string, workspaceId?: string): Promise<Result<GovernanceParentRead>>;
   /** `GET /screens/accounts/{id}` — N28 typed unavailable until published. */
   getAccountBroker360(accountId: string): Promise<Result<ProfileEnvelope>>;
   /** EDS-04 exact resource BFFs. Each resolves the resource server-side first. */

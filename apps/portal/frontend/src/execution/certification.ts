@@ -20,6 +20,7 @@
  *      room in particular must not look like a running canary.
  */
 import type { Authority, FreshnessState, PanelStatus } from "./contracts";
+import { v1Refusal } from "./api/schemaGuard";
 
 function obj(raw: unknown): Record<string, unknown> | null {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw)
@@ -230,6 +231,8 @@ export interface SandboxCertification {
 }
 
 export function readSandboxCertification(raw: unknown): SandboxCertification | null {
+  // The V2 following-parent body would read here with all three side-effect flags `true` (api/schemaGuard.ts).
+  if (v1Refusal(raw) !== null) return null;
   const root = obj(raw);
   const cert = obj(root?.certification);
   const certificationId = str(cert?.certification_id);
@@ -486,6 +489,7 @@ function actionPolicy(raw: unknown): CanaryActionPolicy | null {
 }
 
 export function readCanaryControlRoom(raw: unknown): CanaryControlRoom | null {
+  if (v1Refusal(raw) !== null) return null;
   const root = obj(raw);
   const dep = obj(root?.deployment);
   if (!root || !dep) return null;

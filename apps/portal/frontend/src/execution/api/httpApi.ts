@@ -40,6 +40,8 @@ import {
 import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProblem";
 import { readCommandCatalogue } from "../adminCatalog";
 import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../operations";
+import { readGovernanceParentByKind, unsupportedText, type GovernanceParentKind, type GovernanceParentRead } from "../v2/readers/dispatch";
+import { refusalReason } from "./schemaGuard";
 import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } from "../v2/readers/operationalQueue";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { readLiveFullOperations } from "../liveFull";
@@ -397,6 +399,31 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     );
   const getOperatorTasks = (): Promise<Result<OperatorTaskCatalogue>> =>
     readGet("/commands/tasks", readOperatorTasks, "The operator task catalogue");
+  /**
+   * The review for an approval on its V1 route, read by `schema_version`: a
+   * SCOPED_V2 workspace answers the V2 parent body on the same path, and the V1
+   * reader would misread it (v2/readers/dispatch.ts).
+   */
+  const getGovernanceParent = async (kind: GovernanceParentKind, id: string, workspaceId?: string): Promise<Result<GovernanceParentRead>> => {
+    const blocked = readBlocked();
+    if (blocked) return unavailable(blocked);
+    const route = kind === "exit" ? `/governance/exit-reviews/${encodeURIComponent(id)}` : `/governance/approvals/${encodeURIComponent(id)}/${kind === "r2" ? "r2" : "live"}`;
+    const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+    const what = kind === "r2" ? "The R2 review" : kind === "exit" ? "The exit review" : "The live review";
+    let response: Response;
+    try {
+      response = await get(`${route}${qs}`, signal);
+    } catch {
+      return unavailable(`${what} never reached the Portal — network failure.`);
+    }
+    if (!response.ok) return problem(response);
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* read below as not an object */ }
+    const value = readGovernanceParentByKind(kind, body);
+    if (value.read.kind === "unsupported") return unavailable(`${what}: ${unsupportedText(value.read)} (${value.read.reason})`);
+    const warnings = value.kind !== "live" && value.read.kind === "v1" ? value.read.value.gaps : undefined;
+    return { ok: true as const, value, ...(warnings ? { warnings } : {}) };
+  };
   const getLiveReview = (approvalId: string, workspaceId?: string): Promise<Result<LiveReviewPayload>> =>
     readGet(
       `/governance/approvals/${encodeURIComponent(approvalId)}/live`
@@ -629,6 +656,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     getOperatorTasks,
     runOperatorTask,
     getLiveReview,
+    getGovernanceParent,
     getAccountBroker360,
     getAlpha360Resource,
     getPortfolio360Resource,
@@ -770,10 +798,11 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         signal,
       );
       if (!response.ok) return problem(response);
-      const cert = readSandboxCertification(await response.json());
+      const body: unknown = await response.json();
+      const cert = readSandboxCertification(body);
       return cert
         ? { ok: true as const, value: cert }
-        : unavailable("The certification response could not be read.");
+        : unavailable(refusalReason(body, "The certification response could not be read."));
     },
 
     async getCanaryControlRoom(deploymentId) {
@@ -781,10 +810,11 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       if (blocked) return unavailable(blocked);
       const response = await get(`/deployments/${encodeURIComponent(deploymentId)}/canary`, signal);
       if (!response.ok) return problem(response);
-      const room = readCanaryControlRoom(await response.json());
+      const body: unknown = await response.json();
+      const room = readCanaryControlRoom(body);
       return room
         ? { ok: true as const, value: room }
-        : unavailable("The canary control room response could not be read.");
+        : unavailable(refusalReason(body, "The canary control room response could not be read."));
     },
 
     async getLiveFullOperations(deploymentId) {
@@ -792,10 +822,11 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       if (blocked) return unavailable(blocked);
       const response = await get(`/deployments/${encodeURIComponent(deploymentId)}/live`, signal);
       if (!response.ok) return problem(response);
-      const live = readLiveFullOperations(await response.json());
+      const body: unknown = await response.json();
+      const live = readLiveFullOperations(body);
       return live
         ? { ok: true as const, value: live }
-        : unavailable("The live full operations response could not be read.");
+        : unavailable(refusalReason(body, "The live full operations response could not be read."));
     },
 
     async listOperations(query) {
@@ -1137,10 +1168,11 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
       const response = await get(`/governance/approvals/${encodeURIComponent(approvalId)}/r2${qs}`, signal);
       if (!response.ok) return problem(response);
-      const detail = readGateR2Detail(await response.json());
+      const body: unknown = await response.json();
+      const detail = readGateR2Detail(body);
       return detail
         ? { ok: true as const, value: detail, warnings: detail.gaps }
-        : unavailable("The R2 review response could not be read.");
+        : unavailable(refusalReason(body, "The R2 review response could not be read."));
     },
 
     async getPaperExit(reviewId: string, workspaceId?: string) {
@@ -1149,10 +1181,11 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
       const response = await get(`/governance/exit-reviews/${encodeURIComponent(reviewId)}${qs}`, signal);
       if (!response.ok) return problem(response);
-      const detail = readPaperExitDetail(await response.json());
+      const body: unknown = await response.json();
+      const detail = readPaperExitDetail(body);
       return detail
         ? { ok: true as const, value: detail, warnings: detail.gaps }
-        : unavailable("The exit review response could not be read.");
+        : unavailable(refusalReason(body, "The exit review response could not be read."));
     },
 
     async planDecision(input) {

@@ -12,6 +12,7 @@
  * action taken elsewhere, and every flag here is read with the operator that
  * makes an unreadable value the **safe** answer.
  */
+import { v1Refusal } from "./api/schemaGuard";
 
 const obj = (value: unknown): Record<string, unknown> | null =>
   typeof value === "object" && value !== null && !Array.isArray(value)
@@ -42,6 +43,7 @@ export interface StagedActivation {
 }
 
 export function readStagedActivation(raw: unknown): StagedActivation | null {
+  if (v1Refusal(raw) !== null) return null;
   const body = obj(raw);
   if (!body || body.schema_version !== "execution.staged-activation-capabilities.v1") return null;
   const rows = Array.isArray(body.capabilities) ? body.capabilities : [];
