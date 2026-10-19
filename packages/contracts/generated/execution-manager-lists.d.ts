@@ -137,7 +137,7 @@ export interface components {
         };
         MetricState: {
             /** @enum {unknown} */
-            state: "AVAILABLE" | "EMPTY" | "UNAVAILABLE";
+            state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
             reason_code: string | null;
         };
         AlphaFleetItem: {
