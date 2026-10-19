@@ -203,6 +203,12 @@
   cursor: pointer;
 }
 
+/* The same control as a link (a denied panel's "See what you can access"). */
+a.exec-ops-apply {
+  display: inline-block;
+  text-decoration: none;
+}
+
 /* ---- tabs --------------------------------------------------------------- */
 
 .exec-ops-tabs {
@@ -275,6 +281,18 @@
   font: var(--exec-font-id);
   color: var(--ink);
   overflow-wrap: anywhere;
+}
+/* A target that has a page is a link: accent, underlined on focus and hover, same type as the plain id. */
+a.exec-ops-id,
+a.exec-ops-mono,
+.exec-ops-subline a {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+a.exec-ops-id:hover,
+a.exec-ops-mono:hover,
+.exec-ops-subline a:hover {
+  text-decoration: underline;
 }
 .exec-ops-meta {
   font: var(--exec-font-meta);

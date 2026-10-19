@@ -30,7 +30,7 @@
  * |---|---|---|---|---|---|
  * | triage list limit 10 of up to hundreds; 50 alphas read; a few currencies | 200 rows in the DOM | the server ranks and truncates ("10 of ~214 seen"); alphas capped at 50 with the total named | `command-center.triage-rank.v1`, Fleet page limit 50 and its summary | counts keep `~` and "at least"; null is never 0; no sum across currencies | three reads per 15 s tick; no per-row requests |
  *
- * No URL state beyond the shared context params.
+ * No URL state beyond the shared context params. Links carry them (`withContext`).
  */
 import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -38,6 +38,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useSession } from "../../../../auth/session";
 import type { ExecutionApi } from "../../../api/ports";
 import { streamGate } from "../../../commandCenter";
+import { ID_ROUTES } from "../../../idLinks";
 import { canonicalHref } from "../../../links";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import type { SseFactory } from "../../../sse";
@@ -69,6 +70,8 @@ export interface OverviewScreenProps {
   capabilities?: ReadonlySet<string>;
   /** Injected so a test can prove nothing connects; `undefined` uses the browser's EventSource when it exists. */
   sseFactory?: SseFactory | null;
+  /** Where "My access" lives. A denied read links there; without it a denied panel offers nothing to follow. */
+  accessHref?: string;
 }
 
 /** `Not published (FE-017)`: the word, then the request ids. Blocks' table does not carry these composites yet. */
@@ -114,7 +117,12 @@ function freshnessFlag(state: string | null): { kind: FlagKind; label: string } 
   }
 }
 
-export default function OverviewScreen({ api, workspaceId, capabilities, sseFactory }: OverviewScreenProps) {
+/** The one thing to do about a read that was refused: see what the session may open (D9). */
+function deniedActions(status: string, accessHref: string | undefined, to: (href: string) => string): ReactNode {
+  return status === "denied" && accessHref ? <Link className="exec-ov-link" to={to(accessHref)}>See what you can access</Link> : undefined;
+}
+
+export default function OverviewScreen({ api, workspaceId, capabilities, sseFactory, accessHref }: OverviewScreenProps) {
   const { access } = useSession();
   const [params] = useSearchParams();
 
@@ -149,7 +157,11 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
     return (
       <div className="exec-ov-v2" data-screen="overview-v2">
         <h1 className="exec-ov-title">{heading}</h1>
-        <PanelState status={reads.composition.status} reason={reads.composition.reason} actions={<button type="button" className="exec-ov-btn" onClick={reads.reload}>Try again</button>} />
+        <PanelState
+          status={reads.composition.status}
+          reason={reads.composition.reason}
+          actions={<>{deniedActions(reads.composition.status, accessHref, (href) => withContext(href, params))}<button type="button" className="exec-ov-btn" onClick={reads.reload}>Try again</button></>}
+        />
       </div>
     );
   }
@@ -177,7 +189,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   const ctx = (href: string) => withContext(canonicalHref(href) ?? href, params);
 
   const ownColumns: readonly CardsColumn<OwnRow>[] = [
-    { key: "alpha", label: "Alpha", render: (r) => <span className="exec-ov-what"><span className="exec-ov-what-title">{r.label}</span><span className="exec-ov-sub">{r.version}</span></span> },
+    { key: "alpha", label: "Alpha", render: (r) => <span className="exec-ov-what"><Link className="exec-ov-what-title exec-ov-link" to={ctx(ID_ROUTES.alpha(r.alphaId))}>{r.label}</Link><span className="exec-ov-sub">{r.version}</span></span> },
     { key: "stage", label: "Stage", render: (r) => r.stages.map((s) => humanize(s)).join(", ") },
     { key: "allocation", label: "Allocation (current)", numeric: true, render: (r) => (r.allocations.length === 0 ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-lines">{r.allocations.map((a) => <span key={a.currency}><MoneyCell value={a.decimal} /> <small className="exec-blk-unit">{a.currency}</small></span>)}</span>) },
     { key: "pnl", label: "Open-position PnL (current)", numeric: true, render: (r) => (r.pnl.length === 0 ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-lines">{r.pnl.map((a) => <span key={a.currency}><MoneyCell value={a.decimal} /> <small className="exec-blk-unit">{a.currency}</small></span>)}</span>) },
@@ -281,7 +293,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
         {reads.fleet.phase === "loading" ? (
           <PanelSkeleton label="Loading the fleet register" />
         ) : reads.fleet.phase === "error" ? (
-          <PanelState status={reads.fleet.status} reason={reads.fleet.reason} />
+          <PanelState status={reads.fleet.status} reason={reads.fleet.reason} actions={deniedActions(reads.fleet.status, accessHref, ctx)} />
         ) : facts.length === 0 ? (
           <PanelState status="empty" reason={fleet?.summary ? "The fleet summary lists no currency." : "The fleet read carried no summary, so no allocation or exposure is shown."} />
         ) : (
@@ -336,13 +348,17 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
           </SectionPanel>
         </div>
       ) : (
-        <SectionPanel title="Alphas in your slice" aside={fleet ? `${own.length} of ${fleet.totalCount}` : undefined} flush>
+        <SectionPanel
+          title="Alphas in your slice"
+          aside={<>{fleet ? `${own.length} of ${fleet.totalCount} ` : null}<Link className="exec-ov-link" to={ctx("/deployments/alphas")}>Alpha Fleet</Link></>}
+          flush
+        >
           {reads.fleet.phase === "ready" ? (
             <>
               <CardsTable columns={ownColumns} rows={own} rowKey={(r) => r.alphaId} label="Your alphas" empty={<PanelState status="empty" reason="No alpha is in your slice." />} />
               <p className="exec-ov-note">What a researcher may see is not decided (<Gap ids={FE_RESEARCHER} />); nothing beyond the server's own scoping is applied here.</p>
             </>
-          ) : reads.fleet.phase === "loading" ? <PanelSkeleton label="Loading your alphas" /> : <PanelState status={reads.fleet.status} reason={reads.fleet.reason} />}
+          ) : reads.fleet.phase === "loading" ? <PanelSkeleton label="Loading your alphas" /> : <PanelState status={reads.fleet.status} reason={reads.fleet.reason} actions={deniedActions(reads.fleet.status, accessHref, ctx)} />}
         </SectionPanel>
       )}
 

@@ -436,3 +436,99 @@ describe("a caller without a fund-wide read", () => {
     expect(screen.getByLabelText("Fund figures")).toBeTruthy();
   });
 });
+
+describe("links (#7, M11, D9)", () => {
+  const researcher = new Set(["governance.r1.read"]);
+
+  it("the researcher view links each alpha name to Alpha 360 and the panel to Alpha Fleet, keeping the context", async () => {
+    mount({ capabilities: researcher }, httpApi(), "/execution?env=paper&workspace_id=ws_1");
+    const table = await screen.findByRole("table", { name: "Your alphas" });
+    await waitFor(() => expect(screen.queryByRole("status", { name: /^Loading/ })).toBeNull());
+    const links = within(table).getAllByRole("link");
+    expect(links.length).toBe(3);
+    for (const link of links) {
+      const url = new URL(link.getAttribute("href")!, "http://x");
+      expect(url.pathname).toMatch(/^\/deployments\/alphas\/[^/]+$/);
+      expect(url.searchParams.get("env")).toBe("paper");
+      expect(url.searchParams.get("workspace_id")).toBe("ws_1");
+      expect(link.textContent).toBeTruthy();
+    }
+    const panelNode = screen.getByRole("region", { name: "Alphas in your slice" });
+    const fleet = within(panelNode).getByRole("link", { name: "Alpha Fleet" });
+    expect(fleet.getAttribute("href")).toBe("/deployments/alphas?env=paper&workspace_id=ws_1");
+  });
+
+  it("the alpha link is keyboard-reachable and named by the alpha, not by 'link' or a bare id", async () => {
+    mount({ capabilities: researcher });
+    const table = await screen.findByRole("table", { name: "Your alphas" });
+    await waitFor(() => expect(screen.queryByRole("status", { name: /^Loading/ })).toBeNull());
+    const first = within(table).getAllByRole("link")[0]!;
+    expect(first.getAttribute("tabindex")).not.toBe("-1");
+    expect(first.getAttribute("aria-label")).toBeNull();
+    expect(first.closest("td")?.getAttribute("data-l")).toBe("Alpha");
+  });
+
+  it("the manager view has no Alpha Fleet panel link and its alpha-less layout is unchanged", async () => {
+    mount({ capabilities: new Set(["execution.operations.read"]) });
+    await loaded();
+    expect(screen.queryByRole("link", { name: "Alpha Fleet" })).toBeNull();
+    expect(screen.queryByRole("table", { name: "Your alphas" })).toBeNull();
+  });
+
+  /** The snapshot with its triage hrefs replaced, as the command-center repository writes them. */
+  const withHrefs = (hrefs: string[]) => {
+    const base = httpApi();
+    return override({
+      getOperationalComposition: async (name, query) => {
+        const result = await base.getOperationalComposition(name, query);
+        if (!result.ok) return result;
+        const snapshot = structuredClone(result.value.data.command_center) as { panels: { needs_you: { items: Record<string, unknown>[] } } };
+        snapshot.panels.needs_you.items.forEach((item, i) => { if (hrefs[i]) item.href = hrefs[i]; });
+        return { ...result, value: { ...result.value, data: { command_center: snapshot } } };
+      },
+      getAlphaFleet: (q) => base.getAlphaFleet(q),
+      listOperationalQueueV2: (q) => base.listOperationalQueueV2(q),
+    });
+  };
+
+  it("a server href with ?operation_id= opens the operation the way every other link does", async () => {
+    mount({}, withHrefs(["/execution/operations/incidents/inc_44", "/execution/operations?operation_id=op_1251"]), "/execution?env=paper");
+    await loaded();
+    const rows = within(within(panel("Needs attention")).getByRole("list", { name: "Ranked triage list" })).getAllByRole("listitem");
+    expect(rows[1]!.querySelector("a")?.getAttribute("href")).toBe("/execution/operations?operation=op_1251&env=paper");
+  });
+
+  it("a server href with ?filter=findings is kept as sent: the link claims no filter, Operations answers it", async () => {
+    mount({}, withHrefs(["/execution/operations?filter=findings"]), "/execution?env=paper");
+    await loaded();
+    const rows = within(within(panel("Needs attention")).getByRole("list", { name: "Ranked triage list" })).getAllByRole("listitem");
+    expect(rows[0]!.querySelector("a")?.getAttribute("href")).toBe("/execution/operations?filter=findings&env=paper");
+  });
+
+  it("a denied composition links to My access when the route gives it, with the context, and nothing when it does not", async () => {
+    const denied = override({
+      getOperationalComposition: async () => ({ ok: false, status: "denied", reason: "OPERATIONAL_READ_DENIED" }),
+      getAlphaFleet: (q) => httpApi().getAlphaFleet(q),
+      listOperationalQueueV2: (q) => httpApi().listOperationalQueueV2(q),
+    });
+    mount({ accessHref: "/administration/profile-access" }, denied, "/execution?env=paper&workspace_id=ws_1");
+    const link = await screen.findByRole("link", { name: "See what you can access" });
+    expect(link.getAttribute("href")).toBe("/administration/profile-access?env=paper&workspace_id=ws_1");
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+    cleanup();
+    mount({}, denied);
+    await screen.findByText(/OPERATIONAL_READ_DENIED/);
+    expect(screen.queryByRole("link", { name: "See what you can access" })).toBeNull();
+  });
+
+  it("an unavailable composition offers Try again and no access link", async () => {
+    const down = override({
+      getOperationalComposition: async () => ({ ok: false, status: "unavailable", reason: "PORTAL_READ_FAILED" }),
+      getAlphaFleet: (q) => httpApi().getAlphaFleet(q),
+      listOperationalQueueV2: (q) => httpApi().listOperationalQueueV2(q),
+    });
+    mount({ accessHref: "/administration/profile-access" }, down);
+    await screen.findByText(/PORTAL_READ_FAILED/);
+    expect(screen.queryByRole("link", { name: "See what you can access" })).toBeNull();
+  });
+});

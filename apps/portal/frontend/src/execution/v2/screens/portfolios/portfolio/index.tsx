@@ -44,7 +44,7 @@ import { applyTab, resolveTab } from "../../../tabAliases";
 import { useExecUrlState, withContext } from "../../../urlState";
 import { EXPORT_REASON, PF_FE, npText } from "../fe";
 import { freshnessFlag, humanize } from "../format";
-import { DEFAULT_ROUTES, FROM_PORTFOLIO_PREFIX, joinQuery, type PortfolioRoutes } from "../routes";
+import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_PORTFOLIO_PREFIX, joinQuery, type PortfolioRoutes } from "../routes";
 import { IN_PARAM } from "../selection";
 import { Allocations } from "./Allocations";
 import { AccountsTab, AlphasTab } from "./AlphasAccounts";
@@ -241,7 +241,9 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
 
   const fresh = resource ? freshnessFlag(resource.freshness) : null;
   const subParts = [identity?.portfolioId ?? id, identity?.owner ?? null, identity?.baseCurrency ?? null].filter((part): part is string => part !== null);
-  const compareHref = withContext(joinQuery(routes.compare, `${IN_PARAM}=${encodeURIComponent(id)}&from=${FROM_PORTFOLIO_PREFIX}${encodeURIComponent(id)}`), params);
+  const compareHref = routes.compare === null
+    ? null
+    : withContext(joinQuery(routes.compare, `${IN_PARAM}=${encodeURIComponent(id)}&from=${FROM_PORTFOLIO_PREFIX}${encodeURIComponent(id)}`), params);
 
   return (
     <div className="exec-pf-v2" data-screen="portfolio-360-v2">
@@ -265,7 +267,14 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
             <button type="button" className="exec-pf-btn" disabled title={EXPORT_REASON} aria-describedby={`${tabsId}-export`}>Report pack</button>
             <span id={`${tabsId}-export`} className="exec-pf-why">{EXPORT_REASON}</span>
           </span>
-          <Link className="exec-pf-link-btn" to={compareHref}>Compare with</Link>
+          {compareHref === null ? (
+            <span className="exec-pf-btnwhy">
+              <button type="button" className="exec-pf-btn" disabled title={COMPARE_OFF_REASON} aria-describedby={`${tabsId}-compare`}>Compare with</button>
+              <span id={`${tabsId}-compare`} className="exec-pf-why">{COMPARE_OFF_REASON}</span>
+            </span>
+          ) : (
+            <Link className="exec-pf-link-btn" to={compareHref}>Compare with</Link>
+          )}
           <button type="button" className="exec-pf-btn" disabled={identity === null} title={identity === null ? "The portfolio has not resolved" : undefined} onClick={() => select(RAIL_SELECTION)}>Actions</button>
         </div>
       </header>

@@ -35,7 +35,7 @@ import { useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { useExecUrlState, withContext } from "../../urlState";
-import { ActionPane } from "./ActionPane";
+import { ActionPane, withQuery } from "./ActionPane";
 import {
   ROW_CAP, ROW_STATES, ROW_STATE_VIEW, firstNotLive, firstReasonFor, humanize, stateCounts, tiersOf, toRows, type ActionRow, type RowState,
 } from "./adminModel";
@@ -51,14 +51,74 @@ export interface AdminScreenProps {
   workspaceId?: string;
   /** Where "My access" lives, for the denied state. */
   accessHref?: string;
-  /** Capital actions start here. */
+  /** Capital actions start here. Defaults to the Portfolios list; the route may pass its own. */
   portfoliosHref?: string;
-  /** Plans are followed here. */
+  /** Plans are followed here. Defaults to the Operations queue; `?operation=<id>` is added per plan. */
   operationsHref?: string;
+}
+
+/** The params V1 links write (`/administration/actions?...`); V2 reads them and never runs anything from them. */
+export interface LinkedParams {
+  operation: string | null;
+  action: string | null;
+  binding: string | null;
+  cmd: string | null;
+}
+
+/** A task the link named: by task id or catalogue key, exactly, never by a guessed spelling. */
+export function linkedRowFor(rows: readonly ActionRow[], wanted: string | null): ActionRow | null {
+  if (wanted === null || wanted === "") return null;
+  return rows.find((r) => r.id === wanted) ?? rows.find((r) => r.task.catalogKey === wanted) ?? null;
 }
 
 function isRowState(value: string | null): value is RowState {
   return value !== null && (ROW_STATES as readonly string[]).includes(value);
+}
+
+/**
+ * What an old V1 link asked for, said plainly. Admin Actions has no operation lookup, so `operation` is
+ * handed back to Operations; `cmd` and `action` select a task only when the catalogue carries it.
+ */
+function LinkedNotice({ linked, row, selection, params, operationsHref }: {
+  linked: LinkedParams;
+  row: ActionRow | null;
+  selection: string | null;
+  params: URLSearchParams;
+  operationsHref: string;
+}) {
+  const named = linked.cmd ?? linked.action;
+  if (linked.operation === null && named === null) return null;
+  return (
+    <div className="exec-adm-banner" role="note" aria-label="What the link asked for">
+      <Flag kind="unknown" label="From a link" size="sm" />
+      <span>
+        {named !== null ? (
+          row !== null ? (
+            <>
+              The link named {linked.cmd !== null ? "command" : "action"} <code>{named}</code>
+              {linked.binding ? <> for binding <code>{linked.binding}</code></> : null}.{" "}
+              {selection === row.id ? `${row.title} is open. ` : `${row.title} is in the list. `}
+              Nothing was run.{" "}
+            </>
+          ) : (
+            <>
+              The link named {linked.cmd !== null ? "command" : "action"} <code>{named}</code>
+              {linked.binding ? <> for binding <code>{linked.binding}</code></> : null}, and this catalogue has no task with that key, so nothing is selected.{" "}
+              {linked.binding !== null ? (
+                <Link className="exec-adm-link" to={withContext(`/deployments/accounts?binding=${encodeURIComponent(linked.binding)}`, params)}>Back to the binding</Link>
+              ) : null}{" "}
+            </>
+          )
+        ) : null}
+        {linked.operation !== null ? (
+          <>
+            Operation <code>{linked.operation}</code> came with the link. Admin Actions has no operation lookup.{" "}
+            <Link className="exec-adm-link" to={withContext(withQuery(operationsHref, "operation", linked.operation), params)}>Open it in Operations</Link>
+          </>
+        ) : null}
+      </span>
+    </div>
+  );
 }
 
 function freshness(state: string | null): { kind: FlagKind; label: string } {
@@ -71,7 +131,7 @@ function freshness(state: string | null): { kind: FlagKind; label: string } {
 }
 
 export default function AdminScreen({
-  api, workspaceId, accessHref, portfoliosHref = "/execution/portfolios", operationsHref = "/execution/operations?source=admin",
+  api, workspaceId, accessHref, portfoliosHref = "/deployments/portfolios", operationsHref = "/execution/operations",
 }: AdminScreenProps) {
   const reads = useAdminReads(api, workspaceId);
   const [params, setParams] = useSearchParams();
@@ -80,6 +140,7 @@ export default function AdminScreen({
   const summaryId = useId();
   const url = useExecUrlState();
 
+  const linked: LinkedParams = { operation: params.get("operation"), action: params.get("action"), binding: params.get("binding"), cmd: params.get("cmd") };
   const stateParam = params.get("state");
   const filter: RowState | "all" = isRowState(stateParam) ? stateParam : "all";
 
@@ -112,10 +173,21 @@ export default function AdminScreen({
     autoId.current = null;
   }, [workspaceId]);
   const tasksLoaded = reads.tasks.phase === "ready";
+  // A link that names a task (`cmd`, or `action` from an accounts link) selects that row, once. It never runs it:
+  // the pane opens on its facts and every control in it is the reader's to press. A URL that already names a
+  // selection wins, as it does for the auto-open below.
+  const linkedRow = linkedRowFor(rows, linked.cmd) ?? linkedRowFor(rows, linked.action);
   useEffect(() => {
     if (autoOpened.current || !tasksLoaded) return;
     autoOpened.current = true;
-    if (mode !== "dock" || selection !== null || firstReady === null) return;
+    if (selection !== null) return;
+    if (linkedRow !== null) {
+      url.set({ sel: linkedRow.id }, { replace: true });
+      return;
+    }
+    // A link named a task this catalogue does not carry: opening some other action would look like an answer.
+    if (linked.cmd || linked.action) return;
+    if (mode !== "dock" || firstReady === null) return;
     autoId.current = firstReady.id;
     url.set({ sel: firstReady.id }, { replace: true });
   }, [tasksLoaded, mode, selection, firstReady, url]);
@@ -221,7 +293,7 @@ export default function AdminScreen({
             <Flag kind={fresh.kind} label={fresh.label} size="sm" />
             {composition?.readAt ? <span className="exec-adm-meta">Read {utcStamp(composition.readAt)}</span> : null}
           </span>
-          <Link className="exec-adm-link" data-variant="outline" to={withContext(operationsHref, params)}>Open in Operations (source: admin)</Link>
+          <Link className="exec-adm-link" data-variant="outline" to={withContext(operationsHref, params)}>Open in Operations</Link>
           <button type="button" className="exec-adm-btn" onClick={reads.reload}>Refresh</button>
         </div>
       </header>
@@ -271,6 +343,8 @@ export default function AdminScreen({
           <span>The command catalogue was not read, so routes and tiers are not joined. {reads.catalogue.status === "denied" ? "It is for administrators." : reads.catalogue.reason}</span>
         </div>
       ) : null}
+
+      <LinkedNotice linked={linked} row={linkedRow} selection={selection} params={params} operationsHref={operationsHref} />
 
       <div className="exec-adm-bar">
         <div className="exec-adm-seg" role="group" aria-label="Filter by state">
@@ -327,7 +401,7 @@ export default function AdminScreen({
         <p className="exec-adm-note">
           Capital actions are not started here. They begin in <Link className="exec-adm-link" to={withContext(portfoliosHref, params)}>Portfolios</Link> with a preview.
         </p>
-        <Link className="exec-adm-link" to={withContext(operationsHref, params)}>Open in Operations (source: admin)</Link>
+        <Link className="exec-adm-link" to={withContext(operationsHref, params)}>Open in Operations</Link>
       </div>
 
       <details className="exec-adm-prov">

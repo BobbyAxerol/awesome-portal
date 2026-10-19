@@ -6,11 +6,14 @@
  * order id); it says so, because the fills relation is its own bounded page and
  * an empty list means "none on this page", not "none".
  */
+import { Link, useSearchParams } from "react-router-dom";
+
 import { utcStamp } from "../../../time";
 import type { FunnelStage, OrderFunnel } from "../../../analytics";
 import type { PanelStatus } from "../../../contracts";
 import { PanelState } from "../../../components/states";
 import { Flag } from "../../Flag";
+import { withContext } from "../../urlState";
 import type { FlagKind } from "../../flagKinds";
 import { groupExact, humanize, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder, type Exact } from "./blotterModel";
 
@@ -98,6 +101,7 @@ export function OrderDetail({
   /** The fills page this order's fills came from has more rows than it carried. */
   loadedFills: number;
 }) {
+  const [params] = useSearchParams();
   const status = statusView(order.status);
   const refused = status.bucket === "REJECTED";
   return (
@@ -167,7 +171,7 @@ export function OrderDetail({
         {refused && (order.errorMessage || order.errorCode) ? (
           <p className="exec-blt2-note">{order.errorMessage ?? order.errorCode}{order.errorMessage && order.errorCode ? ` (${order.errorCode})` : ""}</p>
         ) : null}
-        {chartHref ? <a className="exec-blt2-link" href={chartHref}>Open on chart</a> : null}
+        {chartHref ? <Link className="exec-blt2-link" to={withContext(chartHref, params)}>Open on chart</Link> : null}
       </section>
     </div>
   );

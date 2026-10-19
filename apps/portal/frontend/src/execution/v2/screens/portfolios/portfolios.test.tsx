@@ -14,6 +14,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import { V2_CAPABILITY } from "../../shell/roleNav";
 import { makeApi, type Override } from "./harness.fixtures";
 import PortfolioListScreen, { PORTFOLIOS_SCREEN_KEY } from "./index";
+import { COMPARE_OFF_REASON, DEFAULT_ROUTES } from "./routes";
 
 afterEach(cleanup);
 
@@ -369,6 +370,46 @@ describe("columns", () => {
     mount(makeApi().api, "/deployments/portfolios?hide=owner,nonsense");
     await loaded();
     expect([...table().querySelectorAll("th")].map((th) => th.textContent)).not.toContain("Owner");
+  });
+});
+
+describe("Compare is off (M2)", () => {
+  const off = { ...DEFAULT_ROUTES, compare: null };
+  const mountOff = (api: ExecutionApi, entry = "/deployments/portfolios") =>
+    render(
+      <MemoryRouter initialEntries={[entry]}>
+        <PortfolioListScreen api={api} routes={off} />
+        <Where />
+      </MemoryRouter>,
+    );
+
+  it("draws no link to Compare, even with two picks in the address, and the control says why it is off", async () => {
+    mountOff(makeApi().api, `/deployments/portfolios?in=${PF.core},${PF.satellite}`);
+    await loaded();
+    expect(screen.queryByRole("link", { name: /^Compare/ })).toBeNull();
+    const button = screen.getByRole("button", { name: "Compare" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.title).toBe(COMPARE_OFF_REASON);
+    expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toContain(`Compare: ${COMPARE_OFF_REASON}`);
+    expect(document.querySelector("a[href*='view=compare']")).toBeNull();
+  });
+
+  it("the row boxes are off with the same reason, and the selection bar does not promise a comparison", async () => {
+    mountOff(makeApi().api);
+    await loaded();
+    expect(screen.queryByText("Select 2 to 4 portfolios to compare")).toBeNull();
+    expect(screen.getByText(COMPARE_OFF_REASON, { selector: ".exec-pf-selbar span" })).toBeTruthy();
+    const box = screen.getByRole("checkbox", { name: "Select Core to compare" }) as HTMLInputElement;
+    expect(box.disabled).toBe(true);
+    expect(box.title).toBe(COMPARE_OFF_REASON);
+    expect(search().has("in")).toBe(false);
+  });
+
+  it("with Compare on, nothing about the list changes", async () => {
+    mount(makeApi().api);
+    await loaded();
+    expect((screen.getByRole("checkbox", { name: "Select Core to compare" }) as HTMLInputElement).disabled).toBe(false);
+    expect(screen.getByText("Select 2 to 4 portfolios to compare")).toBeTruthy();
   });
 });
 

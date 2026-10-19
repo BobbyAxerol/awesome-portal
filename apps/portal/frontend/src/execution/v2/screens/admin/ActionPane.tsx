@@ -99,7 +99,18 @@ function CommandStrip({ plan }: { plan: CommandPlan | null }) {
   );
 }
 
-function PlanResult({ plan, operationsHref }: { plan: CommandPlan; operationsHref: string }) {
+/** `href` with one query param set, whatever query it already carries. */
+export function withQuery(href: string, key: string, value: string): string {
+  const hashAt = href.indexOf("#");
+  const hash = hashAt < 0 ? "" : href.slice(hashAt);
+  const rest = hashAt < 0 ? href : href.slice(0, hashAt);
+  const queryAt = rest.indexOf("?");
+  const query = new URLSearchParams(queryAt < 0 ? "" : rest.slice(queryAt + 1));
+  query.set(key, value);
+  return `${queryAt < 0 ? rest : rest.slice(0, queryAt)}?${query.toString()}${hash}`;
+}
+
+function PlanResult({ plan, operationsHref, params }: { plan: CommandPlan; operationsHref: string; params: URLSearchParams }) {
   const applicable = planApplicable(plan);
   return (
     <div className="exec-adm-plan" aria-label="Plan">
@@ -118,7 +129,7 @@ function PlanResult({ plan, operationsHref }: { plan: CommandPlan; operationsHre
       {plan.payloadStoragePolicy === "HASH_ONLY_NO_RAW" ? (
         <p className="exec-adm-note">The request is stored as a hash and never kept. It cannot be read back here.</p>
       ) : null}
-      <Link className="exec-adm-link" to={withContext(operationsHref, new URLSearchParams())}>Open in Operations (source: admin)</Link>
+      <Link className="exec-adm-link" to={withContext(withQuery(operationsHref, "operation", plan.operationId), params)}>Open in Operations</Link>
     </div>
   );
 }
@@ -284,7 +295,7 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
             <DockAction label="Make plan" reason={gate.allowed ? STALE_REASON : gate.reason} />
           )}
           {plan.phase === "error" ? <PanelState status={plan.status} reason={plan.reason} /> : null}
-          {currentPlan ? <PlanResult plan={currentPlan} operationsHref={operationsHref} /> : null}
+          {currentPlan ? <PlanResult plan={currentPlan} operationsHref={operationsHref} params={params} /> : null}
         </div>
       )}
 

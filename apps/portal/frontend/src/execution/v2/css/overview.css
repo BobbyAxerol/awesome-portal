@@ -156,6 +156,10 @@
   font: var(--exec-font-control);
   color: var(--ink);
 }
+/* The alpha name in "Alphas in your slice" is a link to Alpha 360: link colour, same type as the plain title. */
+a.exec-ov-what-title {
+  color: var(--accent);
+}
 .exec-ov-sub {
   font: var(--exec-font-meta);
   color: var(--ink-faint);

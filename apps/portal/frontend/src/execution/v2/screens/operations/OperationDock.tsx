@@ -12,8 +12,9 @@ import { ENV_LABEL } from "../../urlState";
 import { PanelState } from "../../../components/states";
 import { ACCESS_PATH, FE, NotPublished, notPublishedReason } from "./notPublished";
 import {
-  CHECK_ORIGINAL_COPY, humanize, receiptOutcome, severityWord, TARGET_LABEL, triageOutcome,
+  CHECK_ORIGINAL_COPY, humanize, receiptOutcome, severityWord, triageOutcome,
 } from "./outcome";
+import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
 
@@ -82,7 +83,7 @@ export function OperationDock({ operationId, row, loading, mode, onClose }: Oper
         <dt>Triage</dt>
         <dd><Flag kind={triage.kind} label={triage.label} size="sm" /></dd>
         <dt>Target</dt>
-        <dd><span className="exec-ops-mono">{TARGET_LABEL[row.targetType]} {row.targetId}</span></dd>
+        <dd><TargetLink className="exec-ops-mono" type={row.targetType} id={row.targetId} environment={row.environment} /></dd>
         <dt>Environment</dt>
         <dd>{ENV_LABEL[row.environment]}</dd>
         <dt>Severity</dt>

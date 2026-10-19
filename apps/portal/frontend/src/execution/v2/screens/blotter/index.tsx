@@ -22,10 +22,16 @@
  * | 10^5 to 10^7 orders; 50 per page, up to 100 fills and 200 legs beside it | 200 rows in the DOM | keyset Newer/Older, one page in the DOM; scope narrows loaded rows; column chooser | `BlotterQuery` keyset cursors and the four filters; `exact_total`, `filtered_total`, `aggregates.status` | exact digits; counts only as stated (null is never 0); fills "on this page" not "all"; no cross-currency sum | one read per page, re-read on a realtime notification (never counted as an event); one funnel read per expanded row |
  *
  * URL: `status` (bucket), `symbol`, `venue`, `side`, and the scopes `deployment`,
- * `account`, `alpha`, `order`, `fill`. Defaults omitted.
+ * `account`, `alpha`, `order`, `fill`. Defaults omitted. V1 wrote the bucket as
+ * `filter` (ALL, FILLED, PARTIAL, REJECTED, OPEN: the same five words), so a link
+ * with `?filter=` is read as `status` and rewritten once; a word that is not one
+ * of them is dropped with a sentence, never quietly.
+ *
+ * Links to the chart are router links that keep `env` and `workspace_id` and say
+ * where they came from (`from=blotter`); the destination builds its Back from it.
  */
 import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { useSession } from "../../../../auth/session";
 import type { ExecutionApi } from "../../../api/ports";
@@ -38,6 +44,7 @@ import { Flag } from "../../Flag";
 import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { useMediaQuery } from "../../useMediaQuery";
+import { withContext } from "../../urlState";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
   CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NO_SCOPE, applyScope, blotterQuery, chipCounts, filtersKey,
@@ -79,8 +86,11 @@ function FoldPanel({ title, aside, defaultOpen = false, children }: { title: str
   );
 }
 
+/** The `from` value a link out of the Blotter carries; the destination owns what Back does with it. */
+export const FROM_BLOTTER = "blotter";
+
 function defaultChartHref(order: BlotterOrder): string | null {
-  return order.alphaId ? `/deployments/alphas/${encodeURIComponent(order.alphaId)}?tab=Trade%20Replay&focus=order:${encodeURIComponent(order.orderId)}` : null;
+  return order.alphaId ? `/deployments/alphas/${encodeURIComponent(order.alphaId)}?tab=Trade%20Replay&focus=order:${encodeURIComponent(order.orderId)}&from=${FROM_BLOTTER}` : null;
 }
 
 const SCOPE_KEYS = ["deployment", "account", "alpha", "order", "fill"] as const;
@@ -102,7 +112,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
   const narrow = useMediaQuery("(max-width: 660px)");
 
   /* ── url -> filters and scope ─────────────────────────────────────── */
-  const statusParam = params.get("status");
+  const statusParam = params.get("status")?.trim().toUpperCase() ?? null;
   const sideParam = params.get("side");
   const filters: ServerFilters = useMemo(
     () => ({
@@ -118,6 +128,36 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
     return { ...NO_SCOPE, deployment: read("deployment"), account: read("account"), alpha: read("alpha"), order: read("order"), fill: read("fill") };
   }, [params]);
   const fk = filtersKey(filters);
+
+  // V1's `filter` is this screen's `status`; a word that is neither is said, not swallowed. One write, replace.
+  const [urlNotices, setUrlNotices] = useState<readonly string[]>([]);
+  useEffect(() => {
+    const legacy = params.get("filter");
+    const status = params.get("status")?.trim() ?? "";
+    const notes: string[] = [];
+    const next = new URLSearchParams(params);
+    if (legacy !== null) {
+      next.delete("filter");
+      const word = legacy.trim().toUpperCase();
+      if (word === "ALL" || isBucket(word)) {
+        if (status === "") {
+          if (word !== "ALL") next.set("status", word);
+        } else if (status.toUpperCase() !== word) {
+          notes.push(`The link also asked for filter ${legacy}; status ${status} is used.`);
+        }
+      } else {
+        notes.push(`The link asked for filter \u201c${legacy}\u201d. The blotter filters by status (Open, Partial, Filled or Rejected), so the list is not narrowed by it.`);
+      }
+    }
+    const upper = status.toUpperCase();
+    if (status !== "" && upper !== "ALL" && !isBucket(upper)) {
+      next.delete("status");
+      notes.push(`Ignored status \u201c${status}\u201d: the blotter filters by Open, Partial, Filled or Rejected, so the list is not narrowed by it.`);
+    }
+    if (legacy === null && notes.length === 0) return;
+    if (notes.length > 0) setUrlNotices((prev) => [...prev, ...notes.filter((text) => !prev.includes(text))]);
+    setParams(next, { replace: true });
+  }, [params, setParams]);
 
   const setParam = useCallback(
     (name: string, value: string | null) => {
@@ -284,7 +324,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
             status="denied"
             title="You can't open this page"
             reason="The blotter is outside what your access allows."
-            actions={accessHref ? <a className="exec-blt2-link" href={accessHref}>See what you can access</a> : undefined}
+            actions={accessHref ? <Link className="exec-blt2-link" to={withContext(accessHref, params)}>See what you can access</Link> : undefined}
           />
         ) : (
           <PanelState status={state.status} reason={state.reason} actions={<button type="button" className="exec-blt2-btn" onClick={() => setReloadTick((n) => n + 1)}>Try again</button>} />
@@ -320,6 +360,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
         </div>
       </header>
 
+      {urlNotices.map((text) => <div key={text} className="exec-blt2-banner" role="status" data-kind="info"><Flag kind="na" label="Not applied" size="sm" /><span>{text}</span></div>)}
       {staleReason ? <div className="exec-blt2-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span>The last refresh failed ({staleReason}). The rows below are the last good read.</span></div> : null}
       {incomplete ? <div className="exec-blt2-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span>Some figures are missing. The read is {humanize(page.completeness ?? page.state)}.</span></div> : null}
       {page.skippedOrders > 0 ? <div className="exec-blt2-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span>{page.skippedOrders} {page.skippedOrders === 1 ? "row" : "rows"} on this page could not be read and {page.skippedOrders === 1 ? "is" : "are"} not shown.</span></div> : null}
@@ -470,7 +511,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
                               <span className="exec-blt2-ordercell">
                                 <button type="button" className="exec-blt2-x" aria-expanded={isOpen} aria-label={`${isOpen ? "Hide" : "Show"} legs and fills for order ${order.orderId}`} onClick={() => toggle(order.orderId)}>{isOpen ? "\u2212" : "+"}</button>
                                 {orderChart !== null ? (
-                                  <a className="exec-blt2-idlink" href={orderChart} title="Open on chart">{order.orderId}</a>
+                                  <Link className="exec-blt2-idlink" to={withContext(orderChart, params)} title="Open on chart">{order.orderId}</Link>
                                 ) : (
                                   <span className="exec-blt2-id">{order.orderId}</span>
                                 )}

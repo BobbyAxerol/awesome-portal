@@ -127,7 +127,7 @@ describe("the detail pane", () => {
     const pane = await open("/administration/actions?sel=allocation-change");
     expect(within(pane).getByRole("heading", { name: "Change allocation" })).toBeTruthy();
     expect(pane.textContent).toContain("Start in Portfolios");
-    expect(within(pane).getByRole("link", { name: "Open Portfolios" }).getAttribute("href")).toContain("/execution/portfolios");
+    expect(within(pane).getByRole("link", { name: "Open Portfolios" }).getAttribute("href")).toBe("/deployments/portfolios");
     expect(pane.textContent).toContain("N27_COMMAND_TRANSPORT_NOT_ACTIVATED");
     expect(within(pane).queryByRole("button", { name: "Make plan" })).toBeNull();
   });
@@ -163,6 +163,82 @@ describe("the detail pane", () => {
     await open("/administration/actions?sel=account-sync");
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(search().get("sel")).toBeNull());
+  });
+});
+
+describe("links (D4, M12)", () => {
+  it("the default Portfolios target is a route that exists, and the default Operations link names no source", async () => {
+    mount("/administration/actions?workspace_id=ws_1&env=paper");
+    await loaded();
+    const hrefs = screen.getAllByRole("link", { name: "Open in Operations" }).map((a) => a.getAttribute("href"));
+    expect(hrefs.length).toBe(2);
+    for (const href of hrefs) {
+      expect(href).toBe("/execution/operations?env=paper&workspace_id=ws_1");
+      expect(href).not.toContain("source=");
+    }
+    const portfolios = screen.getByRole("link", { name: "Portfolios" });
+    expect(portfolios.getAttribute("href")).toBe("/deployments/portfolios?env=paper&workspace_id=ws_1");
+    expect(document.body.textContent).not.toContain("source: admin");
+  });
+
+  it("a plan links to its own operation in Operations, keeping the context", async () => {
+    const pane = await open("/administration/actions?sel=account-sync&workspace_id=ws_1");
+    fireEvent.change(within(pane).getByLabelText(/^Target \(/), { target: { value: "acc_1" } });
+    fireEvent.change(within(pane).getByLabelText(/Target version/), { target: { value: "3" } });
+    fireEvent.change(within(pane).getByLabelText(/^Note/), { target: { value: "Pause while the broker is checked" } });
+    fireEvent.click(within(pane).getByRole("button", { name: "Make plan" }));
+    const link = await within(pane).findByRole("link", { name: "Open in Operations" });
+    const href = new URL(link.getAttribute("href")!, "http://x");
+    expect(href.pathname).toBe("/execution/operations");
+    expect(href.searchParams.get("operation")).toBeTruthy();
+    expect(href.searchParams.get("workspace_id")).toBe("ws_1");
+    expect(href.searchParams.get("source")).toBeNull();
+  });
+
+  it("cmd selects the task by catalogue key without running or planning anything", async () => {
+    mount("/administration/actions?cmd=account/sync");
+    const pane = await dock();
+    expect(within(pane).getByRole("heading", { name: /Account sync|Sync/i })).toBeTruthy();
+    await waitFor(() => expect(search().get("sel")).toBe("account-sync"));
+    const note = screen.getByRole("note", { name: "What the link asked for" });
+    expect(note.textContent).toContain("command account/sync");
+    expect(note.textContent).toContain("Nothing was run.");
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(0);
+  });
+
+  it("action selects by task id, and the binding is named with a way back", async () => {
+    mount("/administration/actions?action=account-sync&binding=deribit_main_01&env=paper");
+    await dock();
+    await waitFor(() => expect(search().get("sel")).toBe("account-sync"));
+    const note = screen.getByRole("note", { name: "What the link asked for" });
+    expect(note.textContent).toContain("binding deribit_main_01");
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(0);
+  });
+
+  it("an action the catalogue lacks selects nothing, opens nothing unprompted, and links back to the binding", async () => {
+    mount("/administration/actions?action=rotate_credential&binding=deribit_main_01&env=paper");
+    await loaded();
+    const note = screen.getByRole("note", { name: "What the link asked for" });
+    expect(note.textContent).toContain("no task with that key, so nothing is selected");
+    expect(search().get("sel")).toBeNull();
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(within(note).getByRole("link", { name: "Back to the binding" }).getAttribute("href")).toBe("/deployments/accounts?binding=deribit_main_01&env=paper");
+  });
+
+  it("operation is handed to Operations with its deep link, and selects no task", async () => {
+    mount("/administration/actions?operation=op_1253&workspace_id=ws_1");
+    await loaded();
+    const note = screen.getByRole("note", { name: "What the link asked for" });
+    expect(note.textContent).toContain("no operation lookup");
+    expect(within(note).getByRole("link", { name: "Open it in Operations" }).getAttribute("href")).toBe("/execution/operations?operation=op_1253&workspace_id=ws_1");
+    expect(search().get("sel")).toBeNull();
+  });
+
+  it("a URL that already selects a task keeps it over cmd", async () => {
+    mount("/administration/actions?sel=emergency-close&cmd=account/sync");
+    const pane = await dock();
+    expect(within(pane).getByRole("heading", { name: "Emergency close" })).toBeTruthy();
+    expect(search().get("sel")).toBe("emergency-close");
   });
 });
 

@@ -18,12 +18,24 @@ import { formatAsOf } from "../../../boundary";
 import type { IncidentLinkV2, OperationV2 } from "../../../readers/operationalQueue";
 import { ENV_LABEL } from "../../../urlState";
 import { PF_FE } from "../fe";
+import { joinQuery } from "../routes";
 import { Absent, Np, humanize } from "../format";
 import type { TabCtx } from "./ctx";
 import { groupAlphas } from "./model";
 import { InternalLink, ReadGate } from "./parts";
 
 import "../../../css/portfolios.css";
+
+/**
+ * The incident drawer route over the operations queue. An incident id is not an operation id, so it never
+ * rides `?sel=` (that selects an operation row); it has its own path under the queue.
+ */
+export function incidentRoute(operations: string, incidentId: string): string {
+  const queryAt = operations.indexOf("?");
+  const path = queryAt < 0 ? operations : operations.slice(0, queryAt);
+  const query = queryAt < 0 ? "" : operations.slice(queryAt);
+  return `${path}/incidents/${encodeURIComponent(incidentId)}${query}`;
+}
 
 const FE_INCIDENT_LINKS = { fe: "FE-042", what: "Operation-to-incident links" } as const;
 
@@ -73,7 +85,7 @@ function OperationsPanel({ ctx }: { ctx: TabCtx }) {
         const { incidents, notAttested } = linkedIncidents(rows);
         const opColumns: CardsColumn<OperationV2>[] = [
           { key: "when", label: "When · UTC", render: (op) => formatAsOf(op.createdAt.ms) },
-          { key: "command", label: "Operation", render: (op) => <InternalLink to={`${ctx.routes.operations}?sel=${encodeURIComponent(op.operationId)}`} search={ctx.search}>{humanize(op.commandKey.replace(/[/.]/g, " "))}</InternalLink> },
+          { key: "command", label: "Operation", render: (op) => <InternalLink to={joinQuery(ctx.routes.operations, `operation=${encodeURIComponent(op.operationId)}`)} search={ctx.search}>{humanize(op.commandKey.replace(/[/.]/g, " "))}</InternalLink> },
           { key: "environment", label: "Environment", render: (op) => ENV_LABEL[op.environment] },
           { key: "severity", label: "Severity", render: (op) => <Flag kind={SEVERITY_KIND[op.severity] ?? "unknown"} label={humanize(op.severity)} size="sm" /> },
           { key: "source", label: "Queue state", render: (op) => humanize(op.sourceStatus) },
@@ -92,7 +104,7 @@ function OperationsPanel({ ctx }: { ctx: TabCtx }) {
                     {incidents.map((link) => (
                       <li key={link.incidentId}>
                         <Flag kind={link.incident.workflowState === "OPEN" ? "incident" : "neutral"} label={humanize(link.incident.workflowState)} size="sm" />{" "}
-                        <InternalLink to={`${ctx.routes.operations}?sel=${encodeURIComponent(link.incidentId)}`} search={ctx.search}>{link.incidentId}</InternalLink>
+                        <InternalLink to={incidentRoute(ctx.routes.operations, link.incidentId)} search={ctx.search}>{link.incidentId}</InternalLink>
                         <span className="exec-pf-dim"> · {humanize(link.incident.severity)} · {humanize(link.relationship)}</span>
                       </li>
                     ))}

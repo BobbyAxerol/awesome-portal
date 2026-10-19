@@ -11,9 +11,15 @@
  * Filters are forwarded to the read, never applied to loaded rows, so the
  * counts stay the server's. The 24H window is the one local control (review2/07):
  * it hides loaded rows older than the window and says how many it hid.
+ *
+ * The window and the filters live in the URL (opsUrl.ts), written with replace
+ * so a refresh and a pasted link land on the same list. `?operation=<id>` (the
+ * deep link every other screen writes) selects the operation once and is then
+ * removed from the URL; the selection itself is `sel`. V1's `?filter=` is
+ * answered with a sentence, never applied.
  */
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { useLocation, useNavigate, type To } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams, type To } from "react-router-dom";
 
 import { PanelState } from "../../../components/states";
 import type { ExecutionApi } from "../../../api/ports";
@@ -27,10 +33,13 @@ import {
   type OperationalQueueQueryV2, type OperationalQueueV2, type OperationV2, type SeverityV2,
   type TargetTypeV2, type TriageStateV2, type VerificationResultV2,
 } from "../../readers/operationalQueue";
-import { ENV_LABEL, EXEC_ENVS, useExecUrlState, type ExecEnv } from "../../urlState";
+import { ENV_LABEL, EXEC_ENVS, serializeUrlParams, useExecUrlState, type ExecEnv } from "../../urlState";
 import { IncidentRootDrawer } from "./IncidentRootDrawer";
-import { FE, NotPublished, notPublishedReason } from "./notPublished";
+import { ACCESS_PATH, AccessLink, FE, NotPublished, notPublishedReason } from "./notPublished";
 import { OperationDock } from "./OperationDock";
+import {
+  invalidNotice, legacyFilterNotice, OPS_WINDOWS, readOpsUrl, writeOpsUrl, type Filters, type OpsWindow,
+} from "./opsUrl";
 import { humanize, TARGET_LABEL } from "./outcome";
 import { QueueTable } from "./QueueTable";
 import { StatusCounts } from "./StatusCounts";
@@ -47,8 +56,8 @@ export const MINE_REASON = notPublishedReason(
   "The queue has no assignee or creator, so it cannot be filtered to you.",
 );
 
-export type OpsWindow = "24H" | "7D" | "30D" | "90D" | "ALL";
-const WINDOWS: readonly OpsWindow[] = ["24H", "7D", "30D", "90D", "ALL"];
+export type { OpsWindow } from "./opsUrl";
+const WINDOWS = OPS_WINDOWS;
 const WINDOW_MS: Readonly<Record<OpsWindow, number | null>> = {
   "24H": 24 * 3_600_000,
   "7D": 7 * 24 * 3_600_000,
@@ -57,24 +66,12 @@ const WINDOW_MS: Readonly<Record<OpsWindow, number | null>> = {
   ALL: null,
 };
 
-type Lens = "attention" | "all";
 type View = "commands" | "exceptions" | "audit";
 const VIEWS: readonly { id: View; label: string }[] = [
   { id: "commands", label: "Commands" },
   { id: "exceptions", label: "Exceptions" },
   { id: "audit", label: "Audit" },
 ];
-
-interface Filters {
-  lens: Lens;
-  triage: TriageStateV2 | "";
-  severity: SeverityV2 | "";
-  verification: VerificationResultV2 | "";
-  targetType: TargetTypeV2 | "";
-  env: ExecEnv | "";
-  commandKey: string;
-}
-const NO_FILTERS: Filters = { lens: "attention", triage: "", severity: "", verification: "", targetType: "", env: "", commandKey: "" };
 
 /** The query a set of filters stands for. The Needs attention lens is `triage_state=UNACKNOWLEDGED`. */
 export function queryFor(filters: Filters, workspaceId?: string): OperationalQueueQueryV2 {
@@ -147,10 +144,12 @@ export interface OperationsV2Props {
   incidentId?: string | null;
   /** Where closing the incident drawer returns to. */
   queuePath?: string;
+  /** Where "My access" lives, for a denied read (D9). */
+  accessHref?: string;
 }
 
 export default function OperationsV2({
-  api, workspaceId, now, requestedOperation = null, incidentId = null, queuePath = "/execution/operations",
+  api, workspaceId, now, requestedOperation = null, incidentId = null, queuePath = "/execution/operations", accessHref = ACCESS_PATH,
 }: OperationsV2Props) {
   const mode = useDockMode();
   const { selection, select, close } = useDockSelection();
@@ -160,9 +159,11 @@ export default function OperationsV2({
   const mineReasonId = useId();
   const sourceHealth = useSourceHealth(api, workspaceId);
 
-  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
-  const [draftKey, setDraftKey] = useState("");
-  const [range, setRange] = useState<OpsWindow>("24H");
+  const [params, setParams] = useSearchParams();
+  const urlState = useMemo(() => readOpsUrl(params), [params]);
+  const { filters, range } = urlState;
+  const [draftKey, setDraftKey] = useState(filters.commandKey);
+  const [urlNotices, setUrlNotices] = useState<readonly string[]>([]);
   const [load, setLoad] = useState<Load>({ phase: "loading" });
   const [reloadTick, setReloadTick] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
@@ -205,13 +206,56 @@ export default function OperationsV2({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, queryKey, reloadTick]);
 
-  // A link that names an operation opens it once; it is not re-forced after the reader closes it.
-  const requested = useRef(requestedOperation);
+  // The Back button and a pasted link can change the command key under the draft the reader was typing.
+  useEffect(() => setDraftKey(filters.commandKey), [filters.commandKey]);
+
+  // What the link carried that is not state yet, settled in one write (replace, so Back does not return to it):
+  //  - `operation`: a link that names an operation opens it once, as `sel`, and the param is removed, so closing the
+  //    dock does not re-open it and Back does not stack an entry per click. A `sel` already in the URL wins.
+  //  - `filter`: V1's command-center filters have no equivalent here; say so and drop it.
+  //  - a value of ours that is not valid: drop it and say so.
+  // The base is the canonical form of the URL, so this write also carries the rewrite `useExecUrlState` queued.
+  const operationParam = params.get("operation");
+  const wanted = operationParam ?? requestedOperation;
+  const consumed = useRef<string | null>(null);
   useEffect(() => {
-    if (requested.current && !selection) select(requested.current);
-    requested.current = null;
+    const next = serializeUrlParams(url.value, params);
+    const notices: string[] = [];
+    let changed = false;
+    if (wanted) {
+      if (consumed.current !== wanted) {
+        consumed.current = wanted;
+        if (!params.get("sel")) {
+          next.set("sel", wanted);
+          changed = true;
+        }
+      }
+      if (operationParam !== null) {
+        next.delete("operation");
+        changed = true;
+      }
+    } else consumed.current = null;
+    if (urlState.legacyFilter !== null) {
+      notices.push(legacyFilterNotice(urlState.legacyFilter));
+      next.delete("filter");
+      changed = true;
+    }
+    if (urlState.invalid.length > 0) {
+      notices.push(invalidNotice(urlState.invalid));
+      for (const key of urlState.invalid) next.delete(key);
+      changed = true;
+    }
+    if (notices.length > 0) setUrlNotices((prev) => [...prev, ...notices.filter((text) => !prev.includes(text))]);
+    if (changed) setParams(next, { replace: true });
+    // `url` is a new object per render; its value is read through `params`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [params, wanted]);
+
+  /** Writes a change of window or filters to the URL, replacing the entry: a filter is not a page. */
+  const commit = (next: { filters?: Filters; range?: OpsWindow }) => {
+    setUrlNotices([]);
+    setParams(writeOpsUrl(serializeUrlParams(url.value, params), { filters: next.filters ?? filters, range: next.range ?? range }), { replace: true });
+  };
 
   const loadMore = useCallback(async () => {
     if (load.phase !== "ready" || load.loadingMore || !load.queue.page.nextCursor) return;
@@ -248,7 +292,7 @@ export default function OperationsV2({
   const visible = windowMs === null ? rows : rows.filter((row) => row.createdAt.ms >= nowMs - windowMs);
   const hidden = rows.length - visible.length;
 
-  const patch = (next: Partial<Filters>) => setFilters((prev) => ({ ...prev, ...next }));
+  const patch = (next: Partial<Filters>) => commit({ filters: { ...filters, ...next } });
   const setView = (next: View) => url.set({ view: next === "commands" ? null : next, sel: null });
 
   const tabKeys = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -436,7 +480,7 @@ export default function OperationsV2({
                     <span id="exec-ops-window-label">Window</span>
                     <div className="exec-ops-seg" role="group" aria-labelledby="exec-ops-window-label">
                       {WINDOWS.map((w) => (
-                        <button key={w} type="button" aria-pressed={range === w} onClick={() => setRange(w)}>
+                        <button key={w} type="button" aria-pressed={range === w} onClick={() => commit({ range: w })}>
                           {w === "ALL" ? "All time" : w}
                         </button>
                       ))}
@@ -494,6 +538,7 @@ export default function OperationsV2({
                 </div>
                 <p id={mineReasonId} className="exec-ops-reason">Mine: {MINE_REASON}</p>
 
+                {urlNotices.map((text) => <p key={text} className="exec-ops-banner" role="status">{text}</p>)}
                 {notice ? <p className="exec-ops-banner" role="status">{notice}</p> : null}
                 {ready?.stale ? (
                   <p className="exec-ops-banner" role="status">
@@ -507,7 +552,12 @@ export default function OperationsV2({
                     <PanelState
                       status={load.status}
                       reason={load.reason}
-                      actions={<button type="button" className="exec-ops-apply" onClick={() => setReloadTick((t) => t + 1)}>Try again</button>}
+                      actions={(
+                        <>
+                          {load.status === "denied" ? <AccessLink href={accessHref} /> : null}
+                          <button type="button" className="exec-ops-apply" onClick={() => setReloadTick((t) => t + 1)}>Try again</button>
+                        </>
+                      )}
                     />
                   ) : null}
                   {load.phase === "unsupported" ? (
@@ -560,7 +610,7 @@ export default function OperationsV2({
         </div>
 
         {incidentOpen ? (
-          <IncidentRootDrawer api={api} incidentId={incidentId} workspaceId={workspaceId} mode={mode} onClose={closeIncident} />
+          <IncidentRootDrawer api={api} incidentId={incidentId} workspaceId={workspaceId} mode={mode} onClose={closeIncident} accessHref={accessHref} />
         ) : null}
         {operationOpen && selection ? (
           <OperationDock

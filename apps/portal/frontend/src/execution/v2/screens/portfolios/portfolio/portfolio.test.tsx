@@ -12,6 +12,8 @@ import type { ExecutionApi } from "../../../../api/ports";
 import { V2_CAPABILITY } from "../../../shell/roleNav";
 import { makeApi, type Override } from "../harness.fixtures";
 import PortfolioScreen, { PORTFOLIO_SCREEN_KEY } from "./index";
+import { incidentRoute } from "./People";
+import { COMPARE_OFF_REASON, DEFAULT_ROUTES } from "../routes";
 
 afterEach(cleanup);
 
@@ -67,6 +69,22 @@ describe("header", () => {
     const pack = screen.getByRole("button", { name: "Report pack" }) as HTMLButtonElement;
     expect(pack.disabled).toBe(true);
     expect(pack.title).toBe("Export is not available yet.");
+  });
+
+  it("M2: with Compare off the header has no link to it, a disabled control with the reason instead", async () => {
+    render(
+      <MemoryRouter initialEntries={[`/deployments/portfolios/${PF.core}?env=paper`]}>
+        <PortfolioScreen api={makeApi().api} portfolioId={PF.core} routes={{ ...DEFAULT_ROUTES, compare: null }} />
+        <Where />
+      </MemoryRouter>,
+    );
+    await ready();
+    expect(screen.queryByRole("link", { name: "Compare with" })).toBeNull();
+    const button = screen.getByRole("button", { name: "Compare with" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.title).toBe(COMPARE_OFF_REASON);
+    expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toBe(COMPARE_OFF_REASON);
+    expect(document.querySelector("a[href*='view=compare']")).toBeNull();
   });
 
   it("says Not available for an owner or base currency the resource did not publish", async () => {
@@ -441,6 +459,55 @@ describe("People and Activity", () => {
     const query = queriesOf("/operations")[0];
     expect(query.get("target_type")).toBe("PORTFOLIO");
     expect(query.get("target_id")).toBe(PF.core);
+  });
+
+  it("D5: an operation links to its `?operation=` deep link, never through sel", async () => {
+    mount(makeApi().api, "?env=paper&workspace_id=ws_1");
+    await ready();
+    await goto("People and Activity");
+    const table = await screen.findByRole("table", { name: "Operations on this portfolio" });
+    const opLinks = within(table).getAllByRole("link");
+    expect(opLinks.length).toBeGreaterThan(0);
+    for (const link of opLinks) {
+      const href = new URL(link.getAttribute("href")!, "http://x");
+      expect(href.pathname).toBe("/execution/operations");
+      expect(href.searchParams.get("operation")).toMatch(/^op_/);
+      expect(href.searchParams.get("sel")).toBeNull();
+      expect(href.searchParams.get("workspace_id")).toBe("ws_1");
+      expect(href.searchParams.get("env")).toBe("paper");
+    }
+  });
+
+  it("D5: a linked incident opens the incident drawer route, not an operation selection", async () => {
+    const withIncident: Override = (method, path, search) => {
+      if (path !== "/operations") return undefined;
+      const answer = answerPortfolios(method, path, search);
+      if (!answer) return answer;
+      const body = JSON.parse(JSON.stringify(answer.body)) as { page: { rows: Record<string, unknown>[] } };
+      body.page.rows[0]!.incident_links = {
+        basis: "CURRENT_LINK_ROWS_AUTHORIZED_INCIDENTS_ONLY", bound: 3, authorized_link_count: 1, truncated: false,
+        items: [{
+          state: "LINKED", incident_id: "inc_TEST_ONLY_a", relationship: "RELATED", linked_at: "2026-08-22T12:09:00.000004Z",
+          incident: { target: { type: "PORTFOLIO", id: PF.core }, environment: "PAPER", severity: "WARNING", workflow_state: "OPEN" },
+          link_history: { availability: "NOT_PUBLISHED", reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED" },
+        }],
+      };
+      return { ...answer, body };
+    };
+    mount(makeApi(withIncident).api, "?env=paper&workspace_id=ws_1");
+    await ready();
+    await goto("People and Activity");
+    const list = await screen.findByRole("list", { name: "Linked incidents" });
+    const href = new URL(within(list).getByRole("link", { name: "inc_TEST_ONLY_a" }).getAttribute("href")!, "http://x");
+    expect(href.pathname).toBe("/execution/operations/incidents/inc_TEST_ONLY_a");
+    expect(href.searchParams.get("sel")).toBeNull();
+    expect(href.searchParams.get("workspace_id")).toBe("ws_1");
+    expect(href.searchParams.get("env")).toBe("paper");
+  });
+
+  it("D5: incidentRoute keeps a query on the operations route and encodes the id", () => {
+    expect(incidentRoute("/execution/operations", "inc 1/2")).toBe("/execution/operations/incidents/inc%201%2F2");
+    expect(incidentRoute("/execution/operations?x=1", "inc_1")).toBe("/execution/operations/incidents/inc_1?x=1");
   });
 
   it("does not read the operations queue until the tab opens", async () => {

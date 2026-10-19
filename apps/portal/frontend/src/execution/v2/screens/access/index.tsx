@@ -58,6 +58,11 @@ const TABS: readonly { id: Tab; label: string }[] = [
 export interface AccessSelfViewProps {
   /** The V1 grant matrix. Offered on a second tab to owners only. */
   manage?: ReactNode;
+  /**
+   * The workspace the session publishes, when it publishes one (today's `/access/self` does not). The address wins;
+   * without either, no grants are requested and the card says the session publishes none.
+   */
+  sessionWorkspaceId?: string | null;
   /** The clock for "Read hh:mmZ"; injected so a test is not a race with the minute. */
   now?: () => number;
   /** Test seam for the one HTTP read. */
@@ -92,12 +97,13 @@ type GrantsView =
   | { phase: "unavailable"; reason: string; code: string | null; requestId: string | null }
   | { phase: "ready"; effective: AccessEffective; readAt: UtcEpochMs | null; stale: { reason: string; requestId: string | null } | null };
 
-export default function AccessSelfView({ manage, now, fetchImpl }: AccessSelfViewProps) {
+export default function AccessSelfView({ manage, sessionWorkspaceId = null, now, fetchImpl }: AccessSelfViewProps) {
   const { principal, access } = useSession();
   const url = useExecUrlState();
   const location = useLocation();
   const headingId = useId();
-  const workspaceId = url.value.workspace_id;
+  // The address names the workspace, else the session does when it publishes one. Never a guess: with neither, nothing is read.
+  const workspaceId = url.value.workspace_id ?? (sessionWorkspaceId !== null && sessionWorkspaceId !== "" ? sessionWorkspaceId : null);
   const { load, reload, refreshing } = useAccessEffective(workspaceId, { now, fetchImpl });
 
   const session = access.kind === "ready" ? access.access : null;
@@ -296,7 +302,7 @@ export default function AccessSelfView({ manage, now, fetchImpl }: AccessSelfVie
         <PanelHead level={2} id={`${headingId}-granted`} title="Granted to you" aside="What, where and until when" />
         {grants.phase === "idle" ? (
           <p className="exec-acc-state" role="status">
-            <strong>Not available.</strong> No workspace is named in the address (<span className="exec-acc-code">workspace_id</span>) and the session does not publish one, so the grants were not requested.
+            <strong>Not available.</strong> The session does not publish a workspace; add <span className="exec-acc-code">?workspace_id=...</span> to the address to read your grants. No grants were requested.
           </p>
         ) : null}
         {grants.phase === "loading" ? <p className="exec-acc-state" role="status">Loading your grants.</p> : null}

@@ -42,7 +42,7 @@ import {
   type DomainFilter, type SortKey,
 } from "./listModel";
 import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId } from "./PortfolioTable";
-import { DEFAULT_ROUTES, FROM_LIST, joinQuery, type PortfolioRoutes } from "./routes";
+import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_LIST, joinQuery, type PortfolioRoutes } from "./routes";
 import { COMPARE_MAX, COMPARE_MIN, IN_PARAM, partitionByCurrency, selectionFrom, withSelection } from "./selection";
 import { useRead } from "./useRead";
 
@@ -187,10 +187,12 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
     : "";
   // `sort=allocated:*` in the address with no currency: sortRows has nothing to compare, so the order is the name order. Say so.
   const sortFallsBack = sort.key === "allocated" && ccy === null;
-  const comparable = chosen.length >= COMPARE_MIN && chosen.length <= COMPARE_MAX && unknownChosen.length === 0;
-  const compareHref = withContext(joinQuery(routes.compare, `${IN_PARAM}=${picked.ids.join(",")}&from=${FROM_LIST}`), params);
+  const compareOn = routes.compare !== null;
+  const comparable = compareOn && chosen.length >= COMPARE_MIN && chosen.length <= COMPARE_MAX && unknownChosen.length === 0;
+  const compareHref = routes.compare === null ? null : withContext(joinQuery(routes.compare, `${IN_PARAM}=${picked.ids.join(",")}&from=${FROM_LIST}`), params);
 
   const selectionMessage = (() => {
+    if (!compareOn) return picked.ids.length === 0 ? COMPARE_OFF_REASON : `${picked.ids.length} selected. ${COMPARE_OFF_REASON}.`;
     if (picked.ids.length === 0) return `Select ${COMPARE_MIN} to ${COMPARE_MAX} portfolios to compare`;
     const head = `${picked.ids.length} selected`;
     if (unknownChosen.length > 0) return `${head}. ${unknownChosen.length === 1 ? "One is" : `${unknownChosen.length} are`} not in the loaded portfolios.`;
@@ -199,7 +201,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
     }
     return head;
   })();
-  const compareWhy = picked.ids.length < COMPARE_MIN ? `Select at least ${COMPARE_MIN} portfolios` : unknownChosen.length > 0 ? "Some selected portfolios are not loaded" : "";
+  const compareWhy = !compareOn ? COMPARE_OFF_REASON : picked.ids.length < COMPARE_MIN ? `Select at least ${COMPARE_MIN} portfolios` : unknownChosen.length > 0 ? "Some selected portfolios are not loaded" : "";
 
   const empty = (() => {
     if (!envelope) return undefined;
@@ -319,7 +321,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             <span>{selectionMessage}</span>
             <span className="exec-pf-spacer" />
             {picked.ids.length > 0 ? <button type="button" className="exec-pf-btn" onClick={clearSelection}>Clear selection</button> : null}
-            {comparable ? (
+            {comparable && compareHref !== null ? (
               <Link className="exec-pf-link-btn" data-variant="primary" to={compareHref}>Compare {chosen.length}</Link>
             ) : (
               <button type="button" className="exec-pf-btn" disabled title={compareWhy} aria-describedby={reasonId}>Compare</button>

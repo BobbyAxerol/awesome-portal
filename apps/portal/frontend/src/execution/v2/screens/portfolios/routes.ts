@@ -6,7 +6,11 @@
 export interface PortfolioRoutes {
   list: string;
   portfolio(portfolioId: string): string;
-  compare: string;
+  /**
+   * Where Compare lives, or `null` when this build does not mount it (its flag is off): then no screen draws a
+   * link to it, only a disabled control that says so (M2).
+   */
+  compare: string | null;
   alpha(alphaId: string): string;
   fleet: string;
   account(accountId: string): string;
@@ -41,6 +45,9 @@ export const DEFAULT_ROUTES: PortfolioRoutes = {
   operations: "/execution/operations",
   access: "/administration/profile-access",
 };
+
+/** Why Compare is off when `routes.compare` is null; the sentence on the disabled control. */
+export const COMPARE_OFF_REASON = "Compare is not enabled on this build";
 
 /** `from` values these screens write and read; anything else goes back to the list. */
 export const FROM_LIST = "portfolios";

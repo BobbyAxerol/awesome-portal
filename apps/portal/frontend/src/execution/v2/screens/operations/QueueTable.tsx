@@ -19,7 +19,8 @@ import type { OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
 import { IncidentLinks } from "./IncidentLinks";
 import { FE, NotPublished } from "./notPublished";
-import { axesText, commandLabel, receiptOutcome, severityWord, TARGET_LABEL, triageOutcome } from "./outcome";
+import { axesText, commandLabel, receiptOutcome, severityWord, triageOutcome } from "./outcome";
+import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
 
@@ -35,7 +36,7 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
       label: "Target and operation",
       render: (row) => (
         <span className="exec-ops-target">
-          <span className="exec-ops-id">{TARGET_LABEL[row.targetType]} {row.targetId}</span>
+          <TargetLink className="exec-ops-id" type={row.targetType} id={row.targetId} environment={row.environment} />
           <span className="exec-ops-meta" title={row.commandKey}>
             {commandLabel(row.commandKey)} · {ENV_LABEL[row.environment]} · {severityWord(row.severity)}
           </span>

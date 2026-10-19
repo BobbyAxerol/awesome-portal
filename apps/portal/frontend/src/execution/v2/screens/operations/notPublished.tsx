@@ -7,6 +7,9 @@
  * live in this one table so a closed request changes one line.
  */
 import type { ReactNode } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+
+import { withContext } from "../../urlState";
 
 import "../../css/operations.css";
 
@@ -62,4 +65,10 @@ export function NotPublished({ id, reasonCode, children }: NotPublishedProps) {
       {reasonCode ? <span className="exec-ops-np-reason">{reasonCode}</span> : null}
     </span>
   );
+}
+
+/** The action on a denied panel: where the session's access is listed, with the context kept (D9). */
+export function AccessLink({ href }: { href: string }) {
+  const [params] = useSearchParams();
+  return <Link className="exec-ops-apply" to={withContext(href, params)}>See what you can access</Link>;
 }

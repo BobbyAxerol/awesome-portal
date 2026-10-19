@@ -209,6 +209,87 @@ describe("server filters", () => {
   });
 });
 
+describe("V1 filter alias and router links (M10, M7)", () => {
+  it.each(["FILLED", "PARTIAL", "REJECTED", "OPEN"])("?filter=%s is the status bucket: rewritten once to status, asked of the server, no notice", async (word) => {
+    mount(`/execution/blotter?filter=${word}&env=paper`);
+    await loaded();
+    await waitFor(() => expect(search().get("status")).toBe(word));
+    expect(search().has("filter")).toBe(false);
+    expect(search().get("env")).toBe("paper");
+    await waitFor(() => expect(lastQuery().get("status_bucket")).toBe(word));
+    expect(screen.queryByText(/Ignored|The link asked/)).toBeNull();
+  });
+
+  it("?filter=ALL is the default and leaves nothing in the URL", async () => {
+    mount("/execution/blotter?filter=ALL");
+    await loaded();
+    await waitFor(() => expect(where()).toBe("/execution/blotter"));
+    expect(lastQuery().has("status_bucket")).toBe(false);
+  });
+
+  it("a status written in lower case is the same bucket", async () => {
+    mount("/execution/blotter?status=filled");
+    await loaded();
+    await waitFor(() => expect(lastQuery().get("status_bucket")).toBe("FILLED"));
+    expect(screen.queryByText(/Ignored/)).toBeNull();
+  });
+
+  it("an unknown filter is said and dropped, and the list is not narrowed", async () => {
+    mount("/execution/blotter?filter=findings&symbol=ETHUSDT");
+    await loaded();
+    expect(await screen.findByText(/The link asked for filter “findings”/)).toBeTruthy();
+    await waitFor(() => expect(search().has("filter")).toBe(false));
+    expect(search().get("symbol")).toBe("ETHUSDT");
+    expect(lastQuery().has("status_bucket")).toBe(false);
+  });
+
+  it("an unknown status is said and dropped instead of being read as All in silence", async () => {
+    mount("/execution/blotter?status=Cancelled");
+    await loaded();
+    expect(await screen.findByText(/Ignored status “Cancelled”/)).toBeTruthy();
+    await waitFor(() => expect(search().has("status")).toBe(false));
+  });
+
+  it("when status and filter disagree, status wins and the link's other word is said", async () => {
+    mount("/execution/blotter?status=OPEN&filter=FILLED");
+    await loaded();
+    expect(await screen.findByText(/also asked for filter FILLED; status OPEN is used/)).toBeTruthy();
+    expect(search().get("status")).toBe("OPEN");
+    expect(search().has("filter")).toBe(false);
+  });
+
+  it("the order id and Open on chart are router links to Trade replay: context kept, from=blotter, no page reload", async () => {
+    mount("/execution/blotter?env=paper&workspace_id=ws_1&order=ord_00137");
+    await loaded();
+    await waitFor(() => expect(document.querySelector("a.exec-blt2-link")).not.toBeNull());
+    const row = bodyRows().find((r) => idOf(r) === "ord_00137")!;
+    const links = [row.querySelector("a.exec-blt2-idlink")!, document.querySelector("a.exec-blt2-link")!];
+    expect(links.every((l) => l !== null)).toBe(true);
+    for (const link of links) {
+      const url = new URL(link.getAttribute("href")!, "http://x");
+      expect(url.pathname).toMatch(/^\/deployments\/alphas\//);
+      expect(url.searchParams.get("tab")).toBe("Trade Replay");
+      expect(url.searchParams.get("focus")).toBe("order:ord_00137");
+      expect(url.searchParams.get("from")).toBe("blotter");
+      expect(url.searchParams.get("env")).toBe("paper");
+      expect(url.searchParams.get("workspace_id")).toBe("ws_1");
+      expect(link.hasAttribute("data-discover") || link.getAttribute("href")!.startsWith("/")).toBe(true);
+    }
+    // A router link is handled in the page: the click is cancelled (a plain anchor would be left to the browser).
+    expect(fireEvent.click(links[0]!)).toBe(false);
+    await waitFor(() => expect(where()).toMatch(/^\/deployments\/alphas\//));
+  });
+
+  it("the denied state's link is a router link that keeps the context", async () => {
+    setOverviewDoubleVariants({ blotter: "denied" });
+    mount("/execution/blotter?env=paper&workspace_id=ws_1", { accessHref: "/profile-access" });
+    const link = await screen.findByRole("link", { name: "See what you can access" });
+    expect(link.getAttribute("href")).toBe("/profile-access?env=paper&workspace_id=ws_1");
+    expect(fireEvent.click(link)).toBe(false);
+    await waitFor(() => expect(where()).toBe("/profile-access?env=paper&workspace_id=ws_1"));
+  });
+});
+
 describe("expanding an order", () => {
   it("shows the fills with their own quantity, price and fee, and never a total", async () => {
     mount();
@@ -332,7 +413,10 @@ describe("scope from other screens (loaded pages only)", () => {
     const row = bodyRows().find((r) => idOf(r) === "ord_00137")!;
     expect(row.getAttribute("data-selected")).toBe("true");
     expect(document.querySelector(".exec-blt2-kid")).toBeTruthy();
-    expect(document.querySelector(".exec-blt2-link")?.getAttribute("href")).toContain("focus=order:ord_00137");
+    // The link is re-serialised by withContext (a colon is %3A, a space is +); read it as a URL, not as text.
+    const link = new URL(document.querySelector(".exec-blt2-link")!.getAttribute("href")!, "http://x");
+    expect(link.searchParams.get("focus")).toBe("order:ord_00137");
+    expect(link.searchParams.get("tab")).toBe("Trade Replay");
   });
 
   it("an order that is not on the loaded page says so instead of opening something else", async () => {

@@ -238,7 +238,7 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
     const { api } = fakeApi();
     mount(api);
     const t = await table();
-    fireEvent.click(within(t).getByText(/Account acc_TEST_ONLY_operational/));
+    fireEvent.click(within(t).getByText(/Account acc_TEST_ONLY_operational/).closest("tr")!);
     const dock = await screen.findByRole("complementary", { name: "account/sync" });
     expect(screen.getByTestId("where").textContent).toContain("sel=op_01K3COMMANDPLAN000000000000");
     expect(within(dock).getByText("op_01K3COMMANDPLAN000000000000")).toBeTruthy();
@@ -266,7 +266,7 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
     const { api } = fakeApi();
     mount(api);
     const t = await table();
-    fireEvent.click(within(t).getByText(/Account acc_TEST_ONLY_operational/));
+    fireEvent.click(within(t).getByText(/Account acc_TEST_ONLY_operational/).closest("tr")!);
     const dialog = await screen.findByRole("dialog");
     expect(dialog.getAttribute("aria-modal")).toBe("true");
   });

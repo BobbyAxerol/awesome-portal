@@ -220,7 +220,9 @@ describe("FE-042 incident links in the queue row", () => {
       const row = rowOf("op_TEST_ONLY_links_b");
       const stops = [...row.querySelectorAll<HTMLElement>("a[href], button")];
       expect(stops.map((el) => el.getAttribute("aria-label") ?? el.textContent)).toEqual([
+        // The target is a link now (#5), first in the row; then the incident link, then the action.
         // Row b is ACKNOWLEDGED with an UNCERTAIN outcome: its action is the check-original button.
+        "Account acc_TEST_ONLY_operational",
         "Open incident inc_TEST_ONLY_links_1, linked to operation op_TEST_ONLY_links_b",
         "Check original request",
       ]);

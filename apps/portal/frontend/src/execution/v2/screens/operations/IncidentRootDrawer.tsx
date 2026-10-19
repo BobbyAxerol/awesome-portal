@@ -24,8 +24,9 @@ import { formatAsOf } from "../../boundary";
 import type { IncidentRootReadV2, IncidentRootV2, IncidentStateV2, InstantV2 } from "../../readers/operationalQueue";
 import { INCIDENT_STATES_V2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
-import { ACCESS_PATH, FE, NotPublished, notPublishedReason } from "./notPublished";
-import { humanize, TARGET_LABEL } from "./outcome";
+import { ACCESS_PATH, AccessLink, FE, NotPublished, notPublishedReason } from "./notPublished";
+import { humanize } from "./outcome";
+import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
 
@@ -74,9 +75,11 @@ export interface IncidentRootDrawerProps {
   workspaceId?: string;
   mode: DockMode;
   onClose(): void;
+  /** Where "My access" lives; the footer's blocked actions and a denied read point there. */
+  accessHref?: string;
 }
 
-export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose }: IncidentRootDrawerProps) {
+export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose, accessHref = ACCESS_PATH }: IncidentRootDrawerProps) {
   const [load, setLoad] = useState<Load>({ phase: "loading" });
   const gapId = useId();
 
@@ -105,10 +108,10 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
   // D9: a blocked action says why and where to see the missing grant.
   const actions = (
     <>
-      <DockAction label="Acknowledge" reason={INCIDENT_ACTION_REASONS.acknowledge} accessHref={ACCESS_PATH} />
-      <DockAction label="Assign to me" reason={INCIDENT_ACTION_REASONS.assign} accessHref={ACCESS_PATH} />
-      <DockAction label="Mark mitigated" reason={INCIDENT_ACTION_REASONS.mitigate} accessHref={ACCESS_PATH} />
-      <DockAction label="Mark resolved" reason={INCIDENT_ACTION_REASONS.resolve} variant="primary" accessHref={ACCESS_PATH} />
+      <DockAction label="Acknowledge" reason={INCIDENT_ACTION_REASONS.acknowledge} accessHref={accessHref} />
+      <DockAction label="Assign to me" reason={INCIDENT_ACTION_REASONS.assign} accessHref={accessHref} />
+      <DockAction label="Mark mitigated" reason={INCIDENT_ACTION_REASONS.mitigate} accessHref={accessHref} />
+      <DockAction label="Mark resolved" reason={INCIDENT_ACTION_REASONS.resolve} variant="primary" accessHref={accessHref} />
     </>
   );
 
@@ -116,7 +119,7 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
     return (
       <Drawer title="Incident" subtitle={incidentId} onClose={onClose} mode={mode} actions={actions}>
         {load.phase === "loading" ? <PanelState status="loading" /> : null}
-        {load.phase === "failed" ? <PanelState status={load.status} reason={load.reason} /> : null}
+        {load.phase === "failed" ? <PanelState status={load.status} reason={load.reason} actions={load.status === "denied" ? <AccessLink href={accessHref} /> : undefined} /> : null}
         {load.phase === "unsupported" ? (
           <PanelState
             status="unavailable"
@@ -157,7 +160,7 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
       subtitle={(
         <>
           <Flag kind={flag.kind} label={`${flag.label} · ${humanize(incident.severity)}`} size="sm" />
-          <span className="exec-ops-subline">{TARGET_LABEL[incident.targetType]} {incident.targetId} · {ENV_LABEL[incident.environment]}</span>
+          <span className="exec-ops-subline"><TargetLink type={incident.targetType} id={incident.targetId} environment={incident.environment} /> · {ENV_LABEL[incident.environment]}</span>
         </>
       )}
       onClose={onClose}
@@ -178,7 +181,7 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
       </p>
       <dl className="exec-ops-facts">
         <dt>Target</dt>
-        <dd><span className="exec-ops-mono">{TARGET_LABEL[incident.targetType]} {incident.targetId}</span></dd>
+        <dd><TargetLink className="exec-ops-mono" type={incident.targetType} id={incident.targetId} environment={incident.environment} /></dd>
         <dt>Environment</dt>
         <dd>{ENV_LABEL[incident.environment]}</dd>
         <dt>Created</dt>

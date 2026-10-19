@@ -243,12 +243,35 @@ describe("refusals and failures are distinct states", () => {
     expect(alert.textContent).toContain("different workspace");
   });
 
-  it("without a workspace in the address nothing is requested and the card says why", async () => {
+  it("without a workspace in the address nothing is requested and the card says exactly what is missing (D2)", async () => {
     const { fetchImpl } = mount({}, ACCESS_PATH);
-    const note = await screen.findByText(/No workspace is named in the address/);
+    const note = await screen.findByText(/The session does not publish a workspace; add/);
     expect(note.closest("p")?.textContent).toContain("Not available.");
+    expect(note.closest("p")?.textContent).toContain("The session does not publish a workspace; add ?workspace_id=... to the address to read your grants. No grants were requested.");
+    expect(document.body.textContent).not.toContain("No workspace is named in the address");
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: /Refresh/ })).toBeNull();
+  });
+
+  it("a session that publishes a workspace is read without the address naming one (D2)", async () => {
+    const { fetchImpl } = mount({ sessionWorkspaceId: ACCESS_DOUBLE_WORKSPACES.pending }, ACCESS_PATH);
+    await granted();
+    expect(String((fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![0])).toBe(`/api/admin/profile-access/v2/effective?workspace_id=${ACCESS_DOUBLE_WORKSPACES.pending}`);
+    expect(screen.queryByText(/The session does not publish a workspace/)).toBeNull();
+    expect(screen.getByRole("button", { name: /Refresh/ })).toBeTruthy();
+  });
+
+  it("the address wins over the session's workspace", async () => {
+    const { fetchImpl } = mount({ sessionWorkspaceId: "ws_from_session" }, workspace("pending"));
+    await granted();
+    const urls = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
+    expect(urls.every((u) => u.endsWith(`workspace_id=${ACCESS_DOUBLE_WORKSPACES.pending}`))).toBe(true);
+  });
+
+  it("an empty session workspace is no workspace: nothing is requested", async () => {
+    const { fetchImpl } = mount({ sessionWorkspaceId: "" }, ACCESS_PATH);
+    await screen.findByText(/The session does not publish a workspace; add/);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it("while the read is in flight the card says loading, not empty", async () => {

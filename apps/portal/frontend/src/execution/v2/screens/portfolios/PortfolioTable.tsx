@@ -17,6 +17,7 @@ import { PF_FE, type Unpublished } from "./fe";
 import { Absent, MoneyList, Np } from "./format";
 import type { PortfolioRow, SortKey } from "./listModel";
 import type { PortfolioRoutes } from "./routes";
+import { COMPARE_OFF_REASON } from "./routes";
 import { COMPARE_MAX } from "./selection";
 
 import "../../css/portfolios.css";
@@ -114,8 +115,9 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
       label: "Compare",
       render: (row) => {
         const checked = selected.has(row.portfolioId);
-        const blocked = !row.comparable || (!checked && full);
-        const why = !row.comparable ? row.notComparableReason : !checked && full ? `At most ${COMPARE_MAX} can be compared` : null;
+        const off = routes.compare === null;
+        const blocked = off || !row.comparable || (!checked && full);
+        const why = off ? COMPARE_OFF_REASON : !row.comparable ? row.notComparableReason : !checked && full ? `At most ${COMPARE_MAX} can be compared` : null;
         return (
           <input
             type="checkbox"
