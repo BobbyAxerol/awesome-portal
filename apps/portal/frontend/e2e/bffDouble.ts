@@ -22,6 +22,7 @@ import { answerAccount } from "./bffDoubleAccount";
 import { answerAlpha } from "./bffDoubleAlpha";
 import { answerOverview } from "./bffDoubleOverview";
 import { answerPortfolios } from "./bffDoublePortfolios";
+import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 
 const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
 const canonical = (name: string): unknown => JSON.parse(readFileSync(join(CONTRACTS, name), "utf8"));
@@ -89,26 +90,33 @@ function problem(status: number, code: string, message: string): Answer {
   return { status, body: { error: { code, message } } };
 }
 
+/** The unit double's rows, plus the generated ones when the standalone server runs at a larger scale. */
+const approvalRows = (): Record<string, unknown>[] => {
+  const extra = scaled().approvals;
+  return extra.length === 0 ? APPROVAL_ROWS : [...APPROVAL_ROWS, ...extra];
+};
+
 /** Raw inbox page — the same rows and view semantics the unit double uses. */
 function approvalsPage(search: URLSearchParams): Answer {
+  const rows = approvalRows();
   const view = search.get("filter") ?? search.get("view") ?? "ALL";
-  const inView = APPROVAL_ROWS.filter((r) => matchesView(r, view));
+  const inView = rows.filter((r) => matchesView(r, view));
   const limit = Number(search.get("limit") ?? 50);
   const after = search.get("after");
   const start = after ? inView.findIndex((r) => String(r.approval_id) === after) + 1 : 0;
   const slice = inView.slice(start, start + limit);
   const sla = (r: Record<string, unknown>) => (r.sla ?? {}) as Record<string, unknown>;
-  const overdue = APPROVAL_ROWS.filter(
+  const overdue = rows.filter(
     (r) => typeof sla(r).age_minutes === "number" && typeof sla(r).budget_minutes === "number" && (sla(r).age_minutes as number) > (sla(r).budget_minutes as number),
   ).length;
   return ok({
     rows: slice,
-    total_count: APPROVAL_ROWS.length,
+    total_count: rows.length,
     filtered_count: inView.length,
     next_cursor: start + limit < inView.length && slice.length > 0 ? String(slice[slice.length - 1].approval_id) : null,
     prev_cursor: start > 0 && slice.length > 0 ? String(slice[0].approval_id) : null,
     has_more: start + limit < inView.length,
-    counts: { pending: APPROVAL_ROWS.length, overdue, due_soon: 1 },
+    counts: { pending: rows.length, overdue, due_soon: 1 },
   });
 }
 
@@ -198,12 +206,17 @@ function legacyAlphaFleet(search: URLSearchParams): Answer {
 export function alphaFleet(search: URLSearchParams): Answer {
   const page = ALPHA_FLEET.page as Record<string, unknown>;
   const base = (Array.isArray(page.rows) ? page.rows as Record<string, unknown>[] : [])[0] ?? {};
-  const dep = (id: string, stage: string, venue: string, account: string, portfolio: [string, string], health: string, state: string, active: boolean, updated: string) => ({
-    deployment_id: id, stage, venue, account_id: account, portfolio_id: portfolio[0], portfolio_name: portfolio[1], currency: "USDT",
-    allocation: "10000", balance_total: "10000", balance_free: "10000", balance_locked: "0", position_fact_count: 0,
-    realized_pnl: "0", unrealized_pnl: "0", net_pnl: "0", exposure: "0",
+  type Money = { currency: string; allocation: string; exposure: string; realized: string; unrealized: string };
+  const dep = (id: string, stage: string, venue: string, account: string, portfolio: [string, string], health: string, state: string, active: boolean, updated: string, money?: Money) => ({
+    deployment_id: id, stage, venue, account_id: account, portfolio_id: portfolio[0], portfolio_name: portfolio[1], currency: money?.currency ?? "USDT",
+    allocation: money?.allocation ?? "10000", balance_total: money?.allocation ?? "10000",
+    balance_free: money ? addDecimal(money.allocation, `-${money.exposure}`) : "10000", balance_locked: money?.exposure ?? "0", position_fact_count: 0,
+    realized_pnl: money?.realized ?? "0", unrealized_pnl: money?.unrealized ?? "0", net_pnl: money ? addDecimal(money.realized, money.unrealized) : "0", exposure: money?.exposure ?? "0",
     state, active, health, updated_at: updated,
   });
+  /** Per-currency totals of one deployment field; a currency is never added to another. */
+  const totals = (deployments: Record<string, unknown>[], field: string) =>
+    sumByCurrency(deployments.map((d) => ({ currency: d.currency as string, value: d[field] as string })));
   const PF_MAIN: [string, string] = ["pf_main", "Main"];
   const PF_SAT: [string, string] = ["pf_sat", "Satellite"];
   const row = (
@@ -212,11 +225,22 @@ export function alphaFleet(search: URLSearchParams): Answer {
   ) => ({
     ...base,
     alpha_id: id, alpha_label: label, version, stage: stages[0], stages, owner,
-    portfolios: [...new Map(deployments.map((d) => [d.portfolio_id as string, { portfolio_id: d.portfolio_id, name: d.portfolio_name, base_currency: "USDT" }])).values()],
+    portfolios: [...new Map(deployments.map((d) => [d.portfolio_id as string, { portfolio_id: d.portfolio_id, name: d.portfolio_name, base_currency: d.currency }])).values()],
     deployments,
-    allocations: deployments.length > 0 ? [{ currency: "USDT", value: String(deployments.length * 10000) }] : [],
-    balances: deployments.length > 0 ? [{ currency: "USDT", total: String(deployments.length * 10000), free: String(deployments.length * 10000), locked: "0" }] : [],
-    position_pnl: [], exposure: deployments.length > 0 ? [{ currency: "USDT", value: "0" }] : [],
+    allocations: totals(deployments, "allocation"),
+    balances: totals(deployments, "balance_total").map(({ currency, value }) => ({
+      currency, total: value,
+      free: totals(deployments, "balance_free").find((x) => x.currency === currency)!.value,
+      locked: totals(deployments, "balance_locked").find((x) => x.currency === currency)!.value,
+    })),
+    position_pnl: deployments.some((d) => d.realized_pnl !== "0")
+      ? totals(deployments, "realized_pnl").map(({ currency, value }) => ({
+        currency, realized: value,
+        unrealized: totals(deployments, "unrealized_pnl").find((x) => x.currency === currency)!.value,
+        net: totals(deployments, "net_pnl").find((x) => x.currency === currency)!.value,
+      }))
+      : [],
+    exposure: totals(deployments, "exposure"),
     health, attention_reasons: attention, updated_at: updated,
   });
   const all: Record<string, unknown>[] = [
@@ -234,6 +258,10 @@ export function alphaFleet(search: URLSearchParams): Answer {
       dep("dep_d2", "PAPER", "BINANCE", "acc_d2", PF_SAT, "FINDING", "ACTIVE", true, "2026-09-01T12:59:00Z"),
     ], "2026-09-01T13:00:00Z"),
     row("alpha_e", "Idea E", "0.1", null, ["RESEARCH"], "RESEARCH_ONLY", [], [], "2026-09-01T12:00:00Z"),
+    // Empty unless the standalone server runs at a larger scale (e2e/bffScale.ts).
+    ...scaled().alphas.map((a) => row(a.id, a.label, a.version, a.owner, a.stages, a.health, a.attention,
+      a.deployments.map((d) => dep(d.id, d.stage, d.venue, d.accountId, [d.portfolioId, d.portfolioName], d.health, d.state, d.active, d.updatedAt,
+        { currency: d.currency, allocation: d.allocation, exposure: d.exposure, realized: d.realized, unrealized: d.unrealized })), a.updatedAt)),
   ];
 
   const text = (key: string) => (search.get(key) ?? "").trim();
@@ -294,9 +322,23 @@ export function alphaFleet(search: URLSearchParams): Answer {
   }
   const window = rows.slice(start, end);
 
+  const larger = scaled().alphas.length > 0;
   const sum = (items: Record<string, unknown>[], key: string) => {
+    if (larger) {
+      // Per currency, exact: a book that spans USDT and JPY publishes two totals, never one.
+      const entries = items.flatMap((item) => item[key] as { currency: string; value: string }[]);
+      return entries.length > 0 ? sumByCurrency(entries) : [{ currency: "USDT", value: "0" }];
+    }
     const total = items.flatMap((item) => item[key] as Record<string, string>[]).reduce((acc, value) => acc + Number(value.value), 0);
     return [{ currency: "USDT", value: String(total) }];
+  };
+  const pnlTotals = () => {
+    const entries = all.flatMap((item) => item.position_pnl as { currency: string; realized: string; unrealized: string; net: string }[]);
+    return [...new Set(entries.map((e) => e.currency))].sort().map((currency) => {
+      const mine = entries.filter((e) => e.currency === currency);
+      const add = (field: "realized" | "unrealized" | "net") => mine.reduce((acc, e) => addDecimal(acc, e[field]), "0");
+      return { currency, realized: add("realized"), unrealized: add("unrealized"), net: add("net") };
+    });
   };
   const stageCounts = Object.fromEntries([...new Set(all.flatMap((item) => item.stages as string[]))].sort()
     .map((stage) => [stage, all.filter((item) => (item.stages as string[]).includes(stage)).length]));
@@ -310,6 +352,7 @@ export function alphaFleet(search: URLSearchParams): Answer {
     stage_counts: stageCounts,
     allocation_by_currency: sum(all, "allocations"),
     exposure_by_currency: sum(all, "exposure"),
+    ...(larger ? { current_position_pnl_by_currency: pnlTotals() } : {}),
   };
   const applied = [
     ["alpha_label", "contains", needle], ["stage", "contains", stageFilter], ["owner", "eq", owner], ["health", "eq", health],
@@ -1061,7 +1104,12 @@ export interface BffDoubleOptions {
   screensV2?: boolean;
 }
 
-export function answerExecutionBff(method: string, pathname: string, search: URLSearchParams, options: BffDoubleOptions = {}): Answer {
+/**
+ * `requestBody` is the parsed JSON of a write, for the one double that reads it
+ * (`answerOverview`, the command-plan echo of `command_key`). The Playwright stub
+ * passes none, which is how its answers have always been; the standalone server does.
+ */
+export function answerExecutionBff(method: string, pathname: string, search: URLSearchParams, options: BffDoubleOptions = {}, requestBody?: unknown): Answer {
   const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";
   const seg = path.split("/").filter(Boolean);
 
@@ -1071,7 +1119,7 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
       answerAlpha(method, path, search2) ??
       answerAccount(method, path, search2) ??
       answerPortfolios(method, path, search2) ??
-      answerOverview(method, pathname, search2);
+      answerOverview(method, pathname, search2, requestBody);
     if (sparse !== null) return sparse as Answer;
   }
 

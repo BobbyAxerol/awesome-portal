@@ -67,6 +67,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { answerOperationsV2 } from "./bffDoubleV2";
+import { addDecimal as addExact, scaleCounts, scaled, sumByCurrency, type PortfolioSpec } from "./bffScale";
 
 export interface BffAnswerPortfolios {
   status: number;
@@ -124,7 +125,17 @@ const LIST_ITEMS = [
   ITEM({ portfolio_id: PF.unallocated, name: "pf_unallocated", owner: null, state: "UNKNOWN", base_currency: "UNKNOWN", environments: ["paper"], allocation_count: 0, deployment_count: 0, allocated_by_currency: [], updated_at: "2026-10-01T00:00:00Z" }),
 ];
 
+/** Generated portfolios (empty unless the standalone server runs at a larger scale, e2e/bffScale.ts). */
+const scaledPortfolio = (id: string): PortfolioSpec | undefined => scaled().portfolios.find((p) => p.id === id);
+
+const scaledItem = (p: PortfolioSpec) => ITEM({
+  portfolio_id: p.id, name: p.name, owner: p.owner, state: p.state, base_currency: p.base, environments: p.environments,
+  allocation_count: p.deploymentIds.length, deployment_count: p.deploymentIds.length, allocated_by_currency: p.allocatedByCurrency, updated_at: p.updatedAt,
+});
+
 function portfolioList(): BffAnswerPortfolios {
+  const extra = scaled();
+  const shown = extra.portfolios.slice(0, Math.max(0, scaleCounts().portfoliosShown - LIST_ITEMS.length));
   return ok({
     ...LIST,
     read_at: READ_AT,
@@ -136,9 +147,9 @@ function portfolioList(): BffAnswerPortfolios {
       sandbox: { state: "AVAILABLE", reason_code: null },
       live: { state: "AVAILABLE", reason_code: null },
     },
-    total_portfolios: 9,
-    truncated: true,
-    items: LIST_ITEMS,
+    total_portfolios: extra.portfolios.length > 0 ? extra.portfoliosTotal : 9,
+    truncated: extra.portfolios.length > 0 ? extra.portfoliosTruncated : true,
+    items: shown.length > 0 ? [...LIST_ITEMS, ...shown.map(scaledItem)] : LIST_ITEMS,
   });
 }
 
@@ -247,8 +258,30 @@ function portfolioResource(id: string): BffAnswerPortfolios {
     case PF.empty: return ok(resourceFor(PF.empty, [], { name: "Pilot", owner: null, base: "USDT", environments: ["paper"], completeness: "PARTIAL" }));
     case PF.error: return problem(503, "PORTFOLIO_RESOURCE_UNAVAILABLE", "The portfolio resource could not be read.");
     case PF.missing: return problem(404, "PORTFOLIO_NOT_FOUND", "No such portfolio.");
-    default: return ok({ ...resourceFor(id, [], { name: id, owner: null, base: "UNKNOWN", environments: [] }), state: "partial", data: {} });
+    default: {
+      const generated = scaledPortfolio(id);
+      if (generated) return ok(scaledResource(generated));
+      return ok({ ...resourceFor(id, [], { name: id, owner: null, base: "UNKNOWN", environments: [] }), state: "partial", data: {} });
+    }
   }
+}
+
+/** A generated portfolio's book, from the deployments the fleet shows for it. Strategies and balances are registered once. */
+function scaledDeps(p: PortfolioSpec): Dep[] {
+  const mine = scaled().alphas.flatMap((a) => a.deployments.map((d) => ({ a, d }))).filter(({ d }) => d.portfolioId === p.id);
+  return mine.map(({ a, d }) => {
+    STRATEGIES[a.id] ??= { strategy_id: a.id, alpha_id: a.id, label: a.label, version: `v${a.version}`, trader_id: a.owner };
+    // A balance is published for an account that syncs; the others stay unpublished (null), never zero.
+    const binding = scaled().bindings.find((b) => b.accountId === d.accountId);
+    if (binding && binding.credentialState !== "NOT_PUBLISHED" && binding.credentialState !== "EXPIRED") {
+      BALANCES[d.accountId] ??= { ccy: d.currency, total: addExact(d.allocation, d.allocation), free: d.allocation, locked: d.allocation };
+    }
+    return { id: d.id, strategy: a.id, mode: d.environment, venue: d.venue, account: d.accountId, ccy: d.currency, allocation: d.allocation, pnl: addExact(d.realized, d.unrealized), exposure: d.exposure, health: d.health };
+  });
+}
+
+function scaledResource(p: PortfolioSpec): Row {
+  return resourceFor(p.id, scaledDeps(p), { name: p.name, owner: p.owner, base: p.base, environments: p.environments });
 }
 
 /* ── GET /derivations/portfolios/{id}/capital ──────────────────────────── */
@@ -304,6 +337,25 @@ function portfolioCapital(id: string, environment: Env): BffAnswerPortfolios {
       account_balance_by_currency: [{ currency: "JPY", population: "1", total: "52000000", free: "20000000", locked: "32000000" }],
       unpublished_inputs: [],
     }, "READY", null));
+  }
+  const generated = scaledPortfolio(id);
+  const deps = generated ? scaledDeps(generated).filter((d) => d.mode === environment) : [];
+  if (generated && deps.length > 0) {
+    const allocated = sumByCurrency(deps.map((d) => ({ currency: d.ccy, value: d.allocation })));
+    const accounts = [...new Set(deps.map((d) => d.account))];
+    const published = accounts.filter((a) => BALANCES[a] !== undefined);
+    const balances = sumByCurrency(published.map((a) => ({ currency: BALANCES[a]!.ccy, value: BALANCES[a]!.total })));
+    const complete = published.length === accounts.length;
+    return ok(derivation(id, environment, {
+      portfolio: portfolio(generated.name, generated.base),
+      allocation_by_currency: allocated.map(({ currency, value }) => ({ currency, population: String(deps.filter((d) => d.ccy === currency).length), allocated_capital: value, max_capital: addExact(value, value) })),
+      account_balance_by_currency: balances.map(({ currency, value }) => {
+        const mine = published.filter((a) => BALANCES[a]!.ccy === currency);
+        const sum = (field: "free" | "locked") => mine.reduce((acc, a) => addExact(acc, BALANCES[a]![field]), "0");
+        return { currency, population: String(mine.length), total: value, free: sum("free"), locked: sum("locked") };
+      }),
+      unpublished_inputs: complete ? [] : ["account_balances"],
+    }, complete ? "READY" : "PARTIAL", complete ? null : "ACCOUNT_BALANCES_NOT_PUBLISHED"));
   }
   return ok(derivation(id, environment, { portfolio: null, allocation_by_currency: [], account_balance_by_currency: [], unpublished_inputs: [] }, "EMPTY", "NO_BOOK_IN_ENVIRONMENT"));
 }
@@ -429,6 +481,15 @@ function equityPayload(search: URLSearchParams): BffAnswerPortfolios {
   if (kind !== "portfolio") return unavailable("SUBJECT_KIND_NOT_SERVED_BY_THIS_DOUBLE");
   if (id === PF.core) return build("USDT", "Core equity", AS_OF_MS - 47 * HOUR, 48, 61_000_000, 12_500, [20, 28], "PARTIAL");
   if (id === PF.yen) return build("JPY", "Yen-Carry equity", AS_OF_MS - 23 * HOUR, 24, 5_200_000_000, 150_000, null, "READY");
+  const generated = scaledPortfolio(id);
+  if (generated && generated.deploymentIds.length > 0) {
+    // Three in four generated books publish a series; one in three of those has a published gap.
+    const key = Number(generated.id.slice(-3));
+    if (key % 4 !== 0) {
+      const start = Math.round(Number(generated.allocatedByCurrency[0]?.value ?? "0") * 100);
+      return build(generated.base, `${generated.name} equity`, AS_OF_MS - 47 * HOUR, 48, start, Math.max(1, Math.round(start / 2500)), key % 3 === 0 ? [20, 28] : null, key % 3 === 0 ? "PARTIAL" : "READY");
+    }
+  }
   return unavailable("NO_EQUITY_SNAPSHOTS_FOR_SUBJECT");
 }
 

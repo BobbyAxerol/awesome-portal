@@ -50,6 +50,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { addDecimal, scaled, sumByCurrency } from "./bffScale";
+
 export interface BffAnswerAccount {
   status: number;
   body: unknown;
@@ -103,6 +105,12 @@ const BINDINGS: readonly BindingSpec[] = [
   { bindingId: "tn_bnc@BINANCE", accountId: "acc_tn_bnc", venue: "BINANCE", state: "SUSPENDED", credentialState: "NOT_PUBLISHED", updatedAt: "2026-10-15T12:00:00.000Z", environment: "sandbox" },
 ];
 
+/** The five bindings the double holds, plus the generated ones (empty unless the standalone server runs at a larger scale). */
+const allBindings = (): readonly BindingSpec[] => {
+  const extra = scaled().bindings;
+  return extra.length === 0 ? BINDINGS : [...BINDINGS, ...extra];
+};
+
 const bindingItem = (b: BindingSpec) => ({
   binding_id: b.bindingId,
   account_id: b.accountId,
@@ -150,7 +158,7 @@ function bindingsList(search: URLSearchParams): BffAnswerAccount {
   const state = search.get("state") ?? "";
   const filter = [environment, query, venue, state].join("&");
 
-  const scoped = BINDINGS.filter((b) => b.environment === environment);
+  const scoped = allBindings().filter((b) => b.environment === environment);
   const matching = scoped
     .filter((b) => (query === "" || `${b.bindingId} ${b.accountId}`.toLowerCase().includes(query)) && (venue === "" || b.venue === venue) && (state === "" || b.state === state))
     // The contract's order: updated_at desc, then binding_id desc.
@@ -187,7 +195,7 @@ function bindingsList(search: URLSearchParams): BffAnswerAccount {
 }
 
 function bindingDetail(id: string, search: URLSearchParams): BffAnswerAccount {
-  const spec = BINDINGS.find((b) => b.bindingId === id);
+  const spec = allBindings().find((b) => b.bindingId === id);
   if (!spec) return problem(404, "BINDING_NOT_FOUND", `no binding ${id}`);
   const asked = search.get("environment");
   if (asked !== null && asked !== spec.environment) return problem(404, "BINDING_NOT_FOUND", `${id} is not in the ${asked} environment`);
@@ -206,7 +214,7 @@ function bindingDetail(id: string, search: URLSearchParams): BffAnswerAccount {
 }
 
 function bindingExposure(id: string): BffAnswerAccount {
-  const spec = BINDINGS.find((b) => b.bindingId === id);
+  const spec = allBindings().find((b) => b.bindingId === id);
   if (!spec) return problem(404, "BINDING_NOT_FOUND", `no binding ${id}`);
   const analytics = BINDING_EXPOSURE.analytics as Record<string, unknown>;
   const data = analytics.data as Record<string, unknown>;
@@ -415,11 +423,59 @@ const ACCOUNTS: readonly AccountSpec[] = [
   },
 ];
 
+/**
+ * An account the generated universe holds, shaped like the hand-written ones. Its facts come from the
+ * deployments the fleet shows against it; what its credential state says is unpublished stays absent.
+ */
+function scaledAccount(id: string): AccountSpec | undefined {
+  const binding = scaled().bindings.find((b) => b.accountId === id);
+  if (!binding) return undefined;
+  const { credentialState, environment, venue, bindingId } = binding;
+  const deployments = scaled().alphas.flatMap((a) => a.deployments.map((d) => ({ a, d }))).filter(({ d }) => d.accountId === id);
+  const label = `${venue} ${id.slice(-3)}`;
+  const mode = environment;
+  if (credentialState === "NOT_PUBLISHED") {
+    return { id, environment, bindingId, label, state: "empty", freshness: "FRESH", rows: {}, capabilities: [] };
+  }
+  const currency = deployments[0]?.d.currency ?? "USDT";
+  const allocated = sumByCurrency(deployments.map(({ d }) => ({ currency: d.currency, value: d.allocation })));
+  const total = allocated.find((x) => x.currency === currency)?.value ?? "0";
+  const locked = deployments.reduce((acc, { d }) => (d.currency === currency ? addDecimal(acc, d.exposure) : acc), "0");
+  const free = addDecimal(total, `-${locked}`);
+  const expired = credentialState === "EXPIRED";
+  const stale = credentialState === "SYNC_STALE";
+  const at = expired ? minutesBefore(900) : stale ? minutesBefore(180) : AS_OF_MS;
+  const rows: Record<string, Row[]> = {
+    accounts: [{ account_id: id, label, strategy_id: deployments[0]?.a.id ?? null, mode, venue, base_currency: currency, account_type: "CROSS", state: "ACTIVE" }],
+    deployments: deployments.map(({ a, d }) => ({ deployment_id: d.id, account_id: id, strategy_id: a.id, portfolio_id: d.portfolioId, mode, venue, state: d.state === "ACTIVE" ? "RUNNING" : "HALTED" })),
+    venue_accounts: [{ binding_id: bindingId, account_id: id, mode, venue, state: binding.state }],
+    account_balances: [balance(id, currency, total, free, locked, at)],
+    positions: [],
+    portfolio_allocations: deployments.map(({ a, d }) => ({ portfolio_id: d.portfolioId, strategy_id: a.id, deployment_id: d.id, account_id: id, mode, currency: d.currency, allocated_capital: d.allocation })),
+  };
+  if (!expired) {
+    rows.broker_sync = [{ sync_id: `bs_${id.slice(-3)}`, source: "BROKER", status: stale ? "STALE" : "SYNCED", currency, buying_power: free, synced_at: iso(at), synced_at_ms: at }];
+    rows.exposure_headroom = [{ currency, free, maintenance: locked, headroom: addDecimal(free, `-${locked}`), verdict: "AVAILABLE" }];
+  }
+  return {
+    id, environment, bindingId, label,
+    state: expired ? "partial" : "ready",
+    freshness: expired ? "STALE" : stale ? "AGING" : "FRESH",
+    rows,
+    capabilities: [
+      cap("accounts"), cap("account_balances"),
+      cap("margin_balances", "UNAVAILABLE", "MARGIN_SOURCE_GAP"),
+      expired ? cap("broker_account_sync_effective", "UNAVAILABLE", "BROKER_SYNC_UNAVAILABLE") : cap("broker_account_sync_effective"),
+      ...(expired ? [] : [cap("exposure_headroom")]),
+    ],
+  };
+}
+
 const SYNTHETIC_PHYSICAL_KEYS = /external_account_ref/;
 
 function accountResource(id: string, search: URLSearchParams): BffAnswerAccount {
   if (id === "acc_err") return problem(503, "ACCOUNT_RESOURCE_UNAVAILABLE", "the account resource could not be read");
-  const spec = ACCOUNTS.find((entry) => entry.id === id);
+  const spec = ACCOUNTS.find((entry) => entry.id === id) ?? scaledAccount(id);
   // A sibling sleeve answers as a thin account on the same binding.
   const sibling = SIBLINGS.has(id);
   if (!spec && !sibling) return problem(404, "ACCOUNT_NOT_FOUND", `no account ${id}`);
@@ -487,7 +543,7 @@ const FILLS: readonly Row[] = [
 
 /** The two sibling sleeves of the shared binding answer as empty accounts of the same environment. */
 const SIBLINGS: ReadonlySet<string> = new Set(["acc_bnc_sat", "acc_bnc_can"]);
-const specOf = (id: string): AccountSpec | undefined => ACCOUNTS.find((entry) => entry.id === id) ?? (SIBLINGS.has(id) ? ACCOUNTS[0] : undefined);
+const specOf = (id: string): AccountSpec | undefined => ACCOUNTS.find((entry) => entry.id === id) ?? (SIBLINGS.has(id) ? ACCOUNTS[0] : undefined) ?? scaledAccount(id);
 
 function subjectRecords(accountId: string, relation: "orders" | "fills", search: URLSearchParams): BffAnswerAccount {
   const spec = specOf(accountId);

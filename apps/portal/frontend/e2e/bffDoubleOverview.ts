@@ -55,6 +55,7 @@ import { COMMAND_CATALOGUE_FIXTURE, COMMAND_PLAN_FIXTURE } from "../src/executio
 import { BLOTTER_BUCKET } from "../src/execution/contracts";
 import { ACTIVATION_CAPABILITIES, SOURCE_HEALTH_READ } from "../src/execution/derivedReads.fixtures";
 import { answerOperationsV2 } from "./bffDoubleV2";
+import { scaleCounts } from "./bffScale";
 
 export interface OverviewAnswer {
   status: number;
@@ -92,6 +93,16 @@ export interface OverviewDoubleVariants {
 const DEFAULTS: OverviewDoubleVariants = { commandCenter: "busy", fleet: "passthrough", operations: "v2", blotter: "paged", admin: "relay-off", stream: "unpublished" };
 let variants: OverviewDoubleVariants = { ...DEFAULTS };
 let planCalls = 0;
+let planMode: "sequence" | "blocked" = "sequence";
+
+/**
+ * `sequence` (default, what the specs walk): call 1 ACCEPTED, call 2 UNKNOWN, then the canonical
+ * BLOCKED. `blocked`: every plan is the canonical BLOCKED answer, whatever the call count, so the
+ * answer is the same for the same request (the standalone server's mode; `resetOverviewDouble` leaves it).
+ */
+export function setOverviewPlanMode(mode: "sequence" | "blocked"): void {
+  planMode = mode;
+}
 
 export function setOverviewDoubleVariants(next: Partial<OverviewDoubleVariants>): void {
   variants = { ...variants, ...next };
@@ -227,6 +238,8 @@ function plan(search: URLSearchParams | null, requestBody: unknown): OverviewAns
   const base = clone(COMMAND_PLAN_FIXTURE) as Record<string, unknown>;
   const asked = (requestBody ?? {}) as { command_key?: string };
   const withKey = { ...base, command_key: asked.command_key ?? base.command_key };
+  // The standalone server pins the honest answer: the real relay only ever answers BLOCKED.
+  if (planMode === "blocked") return ok(withKey);
   if (planCalls === 1) {
     return ok({ ...withKey, operation_id: "op_DOUBLE_PLAN_ACCEPTED", status: "ACCEPTED", blockers: [], relay_capability: "ENABLED", source_side_effect_requested: false });
   }
@@ -279,16 +292,18 @@ function toUnits(text: string, dp: number): bigint {
 
 interface Row { order: Record<string, unknown>; fills: Record<string, unknown>[]; legs: Record<string, unknown>[]; group: Record<string, unknown> | null; status: string; symbol: string; venue: string; side: string }
 
-function buildRows(partial: boolean): Row[] {
+function buildRows(partial: boolean, count: number): Row[] {
   const rows: Row[] = [];
-  for (let i = 0; i < BLOTTER_DOUBLE_COUNT; i += 1) {
+  // A larger book (the standalone server's FIXTURE_SCALE) also leaves some commissions unpublished.
+  const larger = count !== BLOTTER_DOUBLE_COUNT;
+  for (let i = 0; i < count; i += 1) {
     const inst = INSTRUMENTS[i % 3]!;
     const k = i % 3;
     const status = STATUS_PATTERN[i % 10]!;
     const side = i % 2 === 0 ? "BUY" : "SELL";
     const market = i % 4 === 1;
     const stop = i % 11 === 0 && !market;
-    const number = BLOTTER_DOUBLE_COUNT - i;
+    const number = count - i;
     const orderId = `ord_${pad(number)}`;
     const client = `cl-${pad(number)}`;
     const t = NEWEST_MS - i * 7 * 60_000 - (i % 5) * 1000;
@@ -347,7 +362,7 @@ function buildRows(partial: boolean): Row[] {
           side,
           price: fromUnits(priceUnits - BigInt(p), inst.priceDp),
           quantity: fromUnits(q, inst.qtyDp),
-          commission: partial && (i + p) % 3 === 0 ? null : bnb ? "0.00042100" : "0.0123",
+          commission: (partial && (i + p) % 3 === 0) || (larger && (i + p) % 9 === 4) ? null : bnb ? "0.00042100" : "0.0123",
           commission_currency: bnb ? "BNB" : "USDT",
           liquidity_side: market ? "TAKER" : "MAKER",
           realized_pnl: "0",
@@ -386,8 +401,18 @@ function buildRows(partial: boolean): Row[] {
   return rows;
 }
 
-const ROWS = buildRows(false);
-const ROWS_PARTIAL = buildRows(true);
+/** Built once per book size: the spec's 137 orders, or the standalone server's scale. */
+const built = new Map<string, Row[]>();
+function rowsFor(partial: boolean): Row[] {
+  const count = scaleCounts().blotterOrders;
+  const key = `${partial ? "partial" : "full"}:${count}`;
+  let rows = built.get(key);
+  if (!rows) {
+    rows = buildRows(partial, count);
+    built.set(key, rows);
+  }
+  return rows;
+}
 
 function encodeCursor(index: number, signature: string): string {
   return Buffer.from(JSON.stringify({ i: index, s: signature }), "utf8").toString("base64url");
@@ -411,7 +436,7 @@ function blotter(search: URLSearchParams): OverviewAnswer {
   const v = variants.blotter;
   if (v === "denied") return DENIED();
   if (v === "error") return problem(503, "PAPER_READ_UPSTREAM_UNAVAILABLE", "The paper read is unavailable.");
-  const source = v === "partial" ? ROWS_PARTIAL : ROWS;
+  const source = rowsFor(v === "partial");
   const all = v === "empty" ? [] : source;
   const bucket = search.get("status_bucket");
   const statuses = bucket && bucket in BLOTTER_BUCKET ? (BLOTTER_BUCKET[bucket as keyof typeof BLOTTER_BUCKET] as readonly string[]) : null;
@@ -459,7 +484,7 @@ function blotter(search: URLSearchParams): OverviewAnswer {
 }
 
 function funnel(orderId: string): OverviewAnswer {
-  const row = ROWS.find((r) => r.order.order_id === orderId);
+  const row = rowsFor(false).find((r) => r.order.order_id === orderId);
   if (!row) return problem(404, "ORDER_FUNNEL_ORDER_NOT_FOUND", "The order was not found.");
   const body = clone(FUNNEL_BASE) as Record<string, unknown> & { analytics: { data: { order_id: string; stages: Record<string, unknown>[]; event_count: number; returned_event_count: number } } };
   const submitted = Date.parse(String(row.order.submitted_at));
@@ -481,7 +506,7 @@ function funnel(orderId: string): OverviewAnswer {
 }
 
 function conditionalGroup(groupId: string): OverviewAnswer {
-  const row = ROWS.find((r) => r.group?.group_id === groupId);
+  const row = rowsFor(false).find((r) => r.group?.group_id === groupId);
   const found = row !== undefined;
   return ok({
     schema_version: "execution.derivation.conditional-legs.v1",

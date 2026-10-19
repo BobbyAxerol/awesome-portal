@@ -32,6 +32,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { scaled } from "./bffScale";
+
 export interface BffAnswerV2 {
   status: number;
   body: unknown;
@@ -79,7 +81,8 @@ const SYNTHETIC: readonly Synthetic[] = [
 ];
 
 function dataset(): Row[] {
-  const synthetic: Row[] = SYNTHETIC.map((s) => ({
+  // The generated rows are empty unless the standalone server runs at a larger scale (bffScale.ts).
+  const synthetic: Row[] = [...SYNTHETIC, ...scaled().operations].map((s) => ({
     ...FIXTURE_ROW,
     operation_id: s.id,
     command_key: s.command,
@@ -99,7 +102,13 @@ function dataset(): Row[] {
   return [FIXTURE_ROW, ...synthetic];
 }
 
-const ROWS = dataset();
+let memo: { source: unknown; rows: Row[] } | null = null;
+/** Built once per scale: the generated list is a different array for each scale, so identity is the key. */
+function allRows(): Row[] {
+  const source = scaled().operations;
+  if (memo === null || memo.source !== source) memo = { source, rows: dataset() };
+  return memo.rows;
+}
 
 function problem(status: number, code: string, message: string): BffAnswerV2 {
   return { status, body: { error: { code, message }, request_id: "req_double_operations_v2" } };
@@ -157,7 +166,8 @@ function queue(search: URLSearchParams): BffAnswerV2 {
     if (!KNOWN.has(key)) return problem(400, "OPERATIONAL_READ_INPUT_INVALID", `Unknown query parameter ${key}.`);
   }
   const applied: { field: string; op: "eq"; value: string }[] = [];
-  let rows = ROWS;
+  const all = allRows();
+  let rows = all;
   for (const spec of FILTERS) {
     const value = search.get(spec.param);
     if (value === null) continue;
@@ -202,7 +212,7 @@ function queue(search: URLSearchParams): BffAnswerV2 {
     read_truth: { state: ordered.length === 0 ? "EMPTY" : "AVAILABLE", reason_code: null, scope: "REQUEST" },
     page: {
       rows: page,
-      total_count: ROWS.length,
+      total_count: all.length,
       filtered_count: ordered.length,
       next_cursor: end < ordered.length && page.length > 0 ? encodeCursor(page[page.length - 1], signature) : null,
       prev_cursor: start > 0 && page.length > 0 ? encodeCursor(page[0], signature) : null,
