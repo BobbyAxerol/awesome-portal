@@ -56,6 +56,13 @@
   background: var(--warn-bg);
   border-color: var(--warn);
 }
+/* A failed refresh keeps the last good read: the edge is the stale colour and the rows are demoted. */
+.exec-adm-banner[data-tone="stale"] {
+  border-color: var(--f-stale);
+}
+.exec-adm-tiers[data-stale="true"] {
+  opacity: 0.7;
+}
 /* Operations link in the head is a bordered chip (hi-fi .chipx), the footer one is a plain link. */
 .exec-adm-link[data-variant="outline"] {
   color: var(--accent);

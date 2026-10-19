@@ -8,7 +8,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { answerUsers, setUsersDoubleVariant, USERS_DOUBLE_COUNT, type UsersDoubleVariant } from "../../../../../e2e/bffDoubleUsers";
 import type { AccountSummary } from "../../../../features/admin/accountApi";
+import { ABSENT, getPath } from "../../testkit/matrix";
+import {
+  arrayCases, enumCases, integerCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, stringCases, type NegativeCase,
+} from "../../testkit/negative";
 import UsersScreen, { USERS_SCREEN_KEY, type UsersClient } from "./index";
+import { readHistory, readRoster, RosterMalformed } from "./rosterReader";
 import {
   failureOf, filterAccounts, matchesQuery, NO_FILTERS, ROW_CAP, rosterCounts, stepUpView, STATE_VIEW,
 } from "./usersModel";
@@ -364,16 +369,365 @@ describe("usersModel", () => {
   });
 });
 
-describe("roster reader (V1 accountApi) on hostile bodies", () => {
-  it("an unknown role reads as USER and an unknown state as DISABLED, never ADMIN or ACTIVE", async () => {
-    globalThis.fetch = (async () => new Response(JSON.stringify({
-      accounts: [{ user_id: "u", username: "x", display_name: "X", role: "SUPERADMIN", account_state: "WIZARD", must_change_password: "yes", account_revision: "7", locked: 1 }],
-    }), { status: 200 })) as unknown as typeof fetch;
+/* ── F5 L3 negative: the roster read as the V2 screen consumes it ───────────────────────────
+ *
+ * The contract (rosterReader.ts): a malformed body is the honest "unavailable" state naming the
+ * row and the field; ONE malformed row refuses the WHOLE roster (a partial table that looks real
+ * would carry wrong counts); unknown extra keys are ignored and never shown. The old V1 repairs
+ * (non-list read as an empty roster, a bad revision read as 0, a string row read as an account
+ * with no id) are gone from this screen: each was a lie.
+ */
+
+const goodRow = (n: number, over: Record<string, unknown> = {}) => ({
+  user_id: `usr_${n}`,
+  username: `user${n}`,
+  display_name: `Account ${n}`,
+  role: "USER",
+  account_state: "ACTIVE",
+  must_change_password: false,
+  account_revision: 3,
+  locked: false,
+  ...over,
+});
+const goodBody = () => ({ accounts: [goodRow(1), goodRow(2), goodRow(3)] });
+const PROBE = "PROBE_HOSTILE_TEXT_9137";
+
+/** The reader's verdict on a whole payload: rows when accepted, the refusal's location when not. A throw of any other kind fails the test. */
+function verdict(body: unknown): { ok: true; rows: ReturnType<typeof readRoster> } | { ok: false; error: RosterMalformed } {
+  try {
+    return { ok: true, rows: readRoster(body) };
+  } catch (error) {
+    if (error instanceof RosterMalformed) return { ok: false, error };
+    throw error;
+  }
+}
+
+/** What the screen shows when it is handed `body` as the roster response. */
+async function mountWith(body: unknown, init: ResponseInit = { status: 200 }, raw?: string) {
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = new URL(String(input), "http://portal.test");
+    if (url.pathname === "/api/admin/step-up") return new Response(JSON.stringify({ state: "REQUIRED", expires_at: null }), { status: 200 });
+    return new Response(raw ?? JSON.stringify(body), init);
+  }) as unknown as typeof fetch;
+  mount();
+  await waitFor(() => expect(screen.queryByRole("status", { name: "Loading accounts" })).toBeNull());
+}
+const unavailable = () => document.querySelector(".exec-state[data-status='unavailable']");
+
+describe("roster reader: the V2 contract on each field the screen shows", () => {
+  it("accepts a well-formed roster and reads every field it shows, and only those", () => {
+    const v = verdict({ accounts: [{ ...goodRow(1), password_hash: "sekrit", extra: { nested: [1] } }] });
+    expect(v.ok && v.rows).toEqual([{ userId: "usr_1", username: "user1", displayName: "Account 1", role: "USER", accountState: "ACTIVE", mustChangePassword: false, accountRevision: 3, locked: false }]);
+  });
+
+  const fields: [string, (c: NegativeCase) => boolean][] = [];
+  const refusedAll = () => false;
+
+  describe.each([
+    ["user_id", () => stringCases(goodBody(), ["accounts", 1, "user_id"]), refusedAll],
+    ["username", () => stringCases(goodBody(), ["accounts", 1, "username"]), refusedAll],
+    ["display_name (absent, null or blank = not stated, the rest refused)", () => stringCases(goodBody(), ["accounts", 1, "display_name"]), (c: NegativeCase) => {
+      const v = getPath(c.value, ["accounts", 1, "display_name"]);
+      return v === undefined || v === null || (typeof v === "string" && v.trim() === "");
+    }],
+    ["role", () => enumCases(goodBody(), ["accounts", 1, "role"], ["ADMIN", "USER"]), refusedAll],
+    ["account_state", () => enumCases(goodBody(), ["accounts", 1, "account_state"], ["ACTIVE", "INVITED", "DISABLED", "ARCHIVED"]), refusedAll],
+    ["account_revision (a count: null is not 0)", () => integerCases(goodBody(), ["accounts", 1, "account_revision"]), refusedAll],
+  ] as const)("%s", (_field, make, accepted) => {
+    const cases = make();
+    it.each(cases.map((c) => [c.name, c] as const))("%s", (_name, c) => {
+      const v = verdict(c.value);
+      if (accepted(c)) {
+        expect(v.ok, c.name).toBe(true);
+        return;
+      }
+      expect(v.ok, c.name).toBe(false);
+      if (!v.ok) {
+        expect(v.error.code).toBe("ROSTER_MALFORMED");
+        expect(v.error.where).toMatch(/^row 2, /);
+        // The refusal names a position and a field, never the refused value.
+        expect(v.error.message + v.error.where).not.toMatch(/PROBE|evil|XXXX/);
+        expect(leaked({ code: v.error.code, where: v.error.where, message: v.error.message }, c.probe)).toBe(false);
+      }
+    });
+  });
+  void fields;
+
+  it.each([
+    ["must_change_password", "yes"], ["must_change_password", 1], ["must_change_password", 0], ["must_change_password", "true"], ["must_change_password", null], ["must_change_password", ABSENT], ["must_change_password", []],
+    ["locked", "yes"], ["locked", 1], ["locked", 0], ["locked", "false"], ["locked", null], ["locked", ABSENT], ["locked", {}],
+  ] as const)("%s <- %j is refused: a flag is true or false, never a guess", (field, value) => {
+    const body = goodBody() as { accounts: Record<string, unknown>[] };
+    if (value === ABSENT) delete body.accounts[1]![field];
+    else body.accounts[1]![field] = value;
+    const v = verdict(body);
+    expect(v.ok).toBe(false);
+    if (!v.ok) expect(v.error.where).toBe(`row 2, ${field}`);
+  });
+
+  it("a revision of exactly 0 is a real 0 and is kept; nothing else becomes 0", () => {
+    const v = verdict({ accounts: [goodRow(1, { account_revision: 0 })] });
+    expect(v.ok && v.rows[0]!.accountRevision).toBe(0);
+  });
+
+  it("missing or null required keys: each refused by name (missing-required, null-vs-absent)", () => {
+    const required = ["user_id", "username", "role", "account_state", "must_change_password", "locked", "account_revision"];
+    for (const c of requiredCases(goodBody(), required.map((k) => ["accounts", 1, k]))) {
+      const v = verdict(c.value);
+      expect(v.ok, c.name).toBe(false);
+      if (!v.ok) expect(v.error.where, c.name).toMatch(/^row 2, /);
+    }
+  });
+
+  it("the container: not an array, null, absent, array elements of the wrong type, a half-keyed row and a repeated id are refused; a shorter list is a valid shorter roster", () => {
+    for (const c of arrayCases(goodBody(), ["accounts"], { idKey: "user_id" })) {
+      const v = verdict(c.value);
+      if (c.category === "truncated" && /<- cut to \d+ of \d+$/.test(c.name)) {
+        expect(v.ok, c.name).toBe(true);
+        continue;
+      }
+      expect(v.ok, c.name).toBe(false);
+    }
+  });
+
+  it("bad roots: null, text, a bare array, an empty object, a Map, 5000-deep nesting are refused and never throw anything else", () => {
+    for (const c of rootCases()) expect(verdict(c.value).ok, c.name).toBe(false);
+    expect(verdict({ accounts: [] }).ok).toBe(true);
+  });
+
+  it("duplicate user ids: the second is refused by position (two rows would collide on selection and keys)", () => {
+    const v = verdict({ accounts: [goodRow(1), goodRow(2), goodRow(1, { username: "other" })] });
+    expect(v.ok).toBe(false);
+    if (!v.ok) expect(v.error.where).toBe("row 3, user_id (repeated)");
+  });
+
+  it("control and bidirectional characters are refused in ids, usernames and names; ordinary Unicode (Vietnamese, ZWJ emoji, RTL words without marks) is kept exactly", () => {
+    for (const bad of ["a\u0000b", "a\nb", "a\tb", "a\u007fb", "a\u0085b", "a\u2028b", "a\u202eb", "a\u202ab", "a\u2066b", "a\u2069b", "a\u200eb", "a\u200fb", "a\u061cb"]) {
+      for (const field of ["user_id", "username", "display_name"]) {
+        const v = verdict({ accounts: [goodRow(1, { [field]: bad })] });
+        expect(v.ok, `${field} <- ${JSON.stringify(bad)}`).toBe(false);
+      }
+    }
+    const fine = "Nguy\u1ec5n V\u0103n A \u{1F468}\u200D\u{1F4BB} \u05e9\u05dc\u05d5\u05dd";
+    const v = verdict({ accounts: [goodRow(1, { display_name: fine })] });
+    expect(v.ok && v.rows[0]!.displayName).toBe(fine);
+  });
+
+  it("oversize: 256 characters are kept, 257 and 70,000 are refused (user_id, username, display_name)", () => {
+    for (const field of ["user_id", "username", "display_name"]) {
+      expect(verdict({ accounts: [goodRow(1, { [field]: "a".repeat(256) })] }).ok, `${field} 256`).toBe(true);
+      expect(verdict({ accounts: [goodRow(1, { [field]: "a".repeat(257) })] }).ok, `${field} 257`).toBe(false);
+      expect(verdict({ accounts: [goodRow(1, { [field]: "a".repeat(70_000) })] }).ok, `${field} 70k`).toBe(false);
+    }
+  });
+
+  it("extra unknown keys (secrets, nested objects, __proto__, constructor) are ignored and never reach the rows", () => {
+    for (const c of pollutionCases(goodBody(), [["accounts", 1], []])) {
+      const v = verdict(c.value);
+      expect(v.ok, c.name).toBe(true);
+      expect(leaked(v.ok ? v.rows : null, c.probe), c.name).toBe(false);
+      expect(prototypeIsClean()).toBe(true);
+    }
+    const parsed = JSON.parse(`{"accounts":[{"user_id":"u","username":"x","role":"USER","account_state":"ACTIVE","must_change_password":false,"locked":false,"account_revision":1,"__proto__":{"role":"ADMIN"},"role_preset":"ROOT"}]}`);
+    const v = verdict(parsed);
+    expect(v.ok && v.rows[0]!.role).toBe("USER");
+    expect(v.ok && Object.keys(v.rows[0]!).sort()).toEqual(["accountRevision", "accountState", "displayName", "locked", "mustChangePassword", "role", "userId", "username"]);
+  });
+
+  it("10,000 rows are read whole and exactly (order kept, counts exact)", () => {
+    const rows = Array.from({ length: 10_000 }, (_, i) => goodRow(i + 1, { account_state: ["ACTIVE", "INVITED", "DISABLED", "ARCHIVED"][i % 4], locked: i % 10 === 0, role: i < 5 ? "ADMIN" : "USER" }));
+    const v = verdict({ accounts: rows });
+    if (!v.ok) throw new Error("a well-formed 10,000-row roster must be read");
+    expect(v.rows).toHaveLength(10_000);
+    expect(v.rows[0]!.userId).toBe("usr_1");
+    expect(v.rows[9_999]!.userId).toBe("usr_10000");
+    const counts = rosterCounts(v.rows);
+    expect(counts).toMatchObject({ total: 10_000, locked: 1_000, byRole: { ADMIN: 5, USER: 9_995 }, byState: { ACTIVE: 2_500, INVITED: 2_500, DISABLED: 2_500, ARCHIVED: 2_500 } });
+  });
+
+  it("10,000 rows with one bad row at the very end still refuse the whole roster, naming row 10000", () => {
+    const rows = Array.from({ length: 10_000 }, (_, i) => goodRow(i + 1));
+    rows[9_999] = goodRow(10_000, { account_revision: "9" });
+    const v = verdict({ accounts: rows });
+    expect(v.ok).toBe(false);
+    if (!v.ok) expect(v.error.where).toBe("row 10000, account_revision");
+  });
+});
+
+describe("the screen on a malformed roster: unavailable, never a table that looks real, never 'the roster is empty'", () => {
+  const refusals: [string, unknown, string][] = [
+    ["a non-array container", { accounts: { length: 1, 0: goodRow(1) } }, "the body"],
+    ["accounts null", { accounts: null }, "the body"],
+    ["no accounts key", {}, "the body"],
+    ["a bare array body", [goodRow(1)], "the body"],
+    ["a null body", null, "the body"],
+    ["a null row", { accounts: [goodRow(1), null] }, "row 2, row"],
+    ["a string row", { accounts: [goodRow(1), "usr_2"] }, "row 2, row"],
+    ["a wrong-typed id", { accounts: [goodRow(1, { user_id: 7 })] }, "row 1, user_id"],
+    ["a missing username", { accounts: [goodRow(1), (() => { const r: Record<string, unknown> = goodRow(2); delete r.username; return r; })()] }, "row 2, username"],
+    ["a null role", { accounts: [goodRow(1, { role: null })] }, "row 1, role"],
+    ["an unknown role", { accounts: [goodRow(1, { role: "SUPERADMIN" })] }, "row 1, role"],
+    ["an unknown state", { accounts: [goodRow(1, { account_state: "WIZARD" })] }, "row 1, account_state"],
+    ["a revision sent as text", { accounts: [goodRow(1, { account_revision: "7" })] }, "row 1, account_revision"],
+    ["a revision of null", { accounts: [goodRow(1, { account_revision: null })] }, "row 1, account_revision"],
+    ["a non-boolean locked", { accounts: [goodRow(1, { locked: 1 })] }, "row 1, locked"],
+    ["a 70,000 character username", { accounts: [goodRow(1, { username: `${PROBE}${"x".repeat(70_000)}` })] }, "row 1, username"],
+    ["a bidi override in a display name", { accounts: [goodRow(1, { display_name: `${PROBE}\u202eevil` })] }, "row 1, display_name"],
+    ["a control character in an id", { accounts: [goodRow(1, { user_id: `${PROBE}\u0000` })] }, "row 1, user_id"],
+    ["duplicate ids", { accounts: [goodRow(1), goodRow(1)] }, "row 2, user_id (repeated)"],
+  ];
+
+  it.each(refusals)("%s", async (_name, body, where) => {
+    await mountWith(body);
+    const state = unavailable();
+    expect(state, "the unavailable state is shown").not.toBeNull();
+    expect(state!.textContent).toContain(`The account roster could not be read (ROSTER_MALFORMED, ${where}).`);
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+    expect(screen.queryByRole("table", { name: "Accounts" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Account counts" })).toBeNull();
+    const text = document.body.textContent ?? "";
+    expect(text).not.toMatch(/The roster is empty|No account has been created|in the roster read/);
+    // Nothing of the body is echoed: not the probe, not an id, not the name.
+    expect(text).not.toContain(PROBE);
+    expect(text).not.toContain("usr_1");
+    expect(text).not.toContain("user1");
+  });
+
+  it("text that is not JSON (a proxy's HTML page) is unavailable, not an empty roster", async () => {
+    await mountWith(null, { status: 200 }, "<html>Bad gateway</html>");
+    expect(unavailable()!.textContent).toContain("ROSTER_MALFORMED, the body");
+    expect(document.body.textContent).not.toContain("Bad gateway");
+    expect(screen.queryByRole("table", { name: "Accounts" })).toBeNull();
+  });
+
+  it("the honest empty roster is still empty: {accounts: []} is a different claim from a refused body", async () => {
+    await mountWith({ accounts: [] });
+    expect(screen.getByText("The roster is empty. No account has been created.")).toBeTruthy();
+    expect(unavailable()).toBeNull();
+  });
+
+  it("a refused roster recovers on Try again when the server then sends a good one", async () => {
+    let n = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "http://portal.test");
+      if (url.pathname === "/api/admin/step-up") return new Response(JSON.stringify({ state: "REQUIRED", expires_at: null }), { status: 200 });
+      n += 1;
+      return new Response(JSON.stringify(n === 1 ? { accounts: "rows" } : goodBody()), { status: 200 });
+    }) as unknown as typeof fetch;
     mount();
+    fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
     await loaded();
-    const row = rowsOf()[0]!;
-    expect(row.querySelector("td[data-l='Role']")?.textContent).toBe("User");
-    expect(row.querySelector("td[data-l='State']")?.textContent).toContain("Disabled");
-    expect(row.querySelector("td[data-l='Revision']")?.textContent).toBe("0");
+    expect(rowsOf()).toHaveLength(3);
+  });
+
+  it("a good roster shows ordinary Unicode and exact strings untouched, and the extra keys do not appear", async () => {
+    await mountWith({ accounts: [goodRow(1, { display_name: "Nguy\u1ec5n V\u0103n A", username: "a.b_c-d", password_hash: "sekrit-hash" })] });
+    expect(rowsOf()[0]!.querySelector("td[data-l='Account']")?.textContent).toContain("Nguy\u1ec5n V\u0103n A");
+    expect(rowsOf()[0]!.querySelector("td[data-l='Account']")?.textContent).toContain("a.b_c-d");
+    expect(document.body.textContent).not.toContain("sekrit-hash");
+  });
+
+  it("a name that is only spaces falls back to the username instead of a blank row", async () => {
+    await mountWith({ accounts: [goodRow(1, { display_name: "   " }), goodRow(2, { display_name: null })] });
+    expect(rowsOf()[0]!.querySelector("td[data-l='Account'] .exec-usr-display")?.textContent).toBe("user1");
+    expect(rowsOf()[1]!.querySelector("td[data-l='Account'] .exec-usr-display")?.textContent).toBe("user2");
+  });
+
+  it("10,000 rows: the DOM stays at 50 rows, the counts are exact, and the label says 10000 in the roster read", async () => {
+    const rows = Array.from({ length: 10_000 }, (_, i) => goodRow(i + 1, { account_state: i % 2 === 0 ? "ACTIVE" : "DISABLED" }));
+    await mountWith({ accounts: rows });
+    expect(rowsOf()).toHaveLength(50);
+    expect(screen.getByText("Showing 50 of 10000 accounts, 10000 in the roster read")).toBeTruthy();
+    const kpis = screen.getByRole("region", { name: "Account counts" });
+    expect(within(kpis).getByText("Accounts").parentElement?.textContent).toContain("10000");
+    expect(within(kpis).getByText("Active").parentElement?.textContent).toContain("5000");
+  });
+
+  it("a server error is still worded as its code (503) and a 403 as a denial; neither is a malformed body", async () => {
+    await mountWith({ error: { code: "ACCOUNT_STORE_UNAVAILABLE", message: "down" } }, { status: 503 });
+    expect(unavailable()!.textContent).toContain("(ACCOUNT_STORE_UNAVAILABLE)");
+    cleanup();
+    await mountWith({ error: { code: "OWNER_ACCESS_REQUIRED" } }, { status: 403 });
+    expect(document.querySelector(".exec-state[data-status='denied']")).not.toBeNull();
+    cleanup();
+    await mountWith({ error: { code: 7, message: { x: 1 } } }, { status: 500 });
+    expect(unavailable()!.textContent).toContain("(ACCOUNT_REQUEST_FAILED)");
+  });
+});
+
+describe("the drawer's history read: timestamps and entries (same refusal contract)", () => {
+  const entry = (over: Record<string, unknown> = {}) => ({
+    operation_id: "op_1", action: "create", outcome: "APPLIED", reason_code: null, expected_revision: 0, resulting_revision: 1,
+    rollback_description: "Archive the account.", step_up_used: false, occurred_at: "2026-09-30T08:00:00.000Z", ...over,
+  });
+  const history = (body: unknown) => {
+    try {
+      return { ok: true as const, rows: readHistory(body) };
+    } catch (error) {
+      if (error instanceof RosterMalformed) return { ok: false as const, error };
+      throw error;
+    }
+  };
+
+  it.each([
+    ["a non-array history", { history: "x" }, "the body"],
+    ["no history key", {}, "the body"],
+    ["a null entry", { history: [entry(), null] }, "entry 2, entry"],
+    ["an unknown outcome", { history: [entry({ outcome: "WIZARD" })] }, "entry 1, outcome"],
+    ["a missing outcome", { history: [entry({ outcome: undefined })] }, "entry 1, outcome"],
+    ["a timestamp in words", { history: [entry({ occurred_at: "yesterday" })] }, "entry 1, occurred_at"],
+    ["a timestamp as a number", { history: [entry({ occurred_at: 1_790_000_000_000 })] }, "entry 1, occurred_at"],
+    ["a 70,000 character timestamp", { history: [entry({ occurred_at: "2026-09-30T08:00:00Z".padEnd(70_000, "0") })] }, "entry 1, occurred_at"],
+    ["a date with no time", { history: [entry({ occurred_at: "2026-09-30" })] }, "entry 1, occurred_at"],
+    ["a bidi override in the action", { history: [entry({ action: "disable\u202e" })] }, "entry 1, action"],
+    ["an expected revision as text", { history: [entry({ expected_revision: "0" })] }, "entry 1, expected_revision"],
+    ["a negative resulting revision", { history: [entry({ resulting_revision: -1 })] }, "entry 1, resulting_revision"],
+    ["a reason code that is an object", { history: [entry({ reason_code: {} })] }, "entry 1, reason_code"],
+    ["an oversize rollback text", { history: [entry({ rollback_description: "r".repeat(70_000) })] }, "entry 1, rollback_description"],
+  ] as const)("%s is refused whole, naming %s", (_name, body, where) => {
+    const v = history(body);
+    expect(v.ok).toBe(false);
+    if (!v.ok) {
+      expect(v.error.code).toBe("HISTORY_MALFORMED");
+      expect(v.error.where).toBe(where);
+    }
+  });
+
+  it("a null or absent timestamp stays a gap (empty), never a made-up instant, and null resulting revision stays null (not 0)", () => {
+    const v = history({ history: [entry({ occurred_at: null, resulting_revision: null }), entry({ operation_id: "op_2", occurred_at: undefined, reason_code: "ACCOUNT_REVISION_STALE" })] });
+    expect(v.ok && v.rows.map((r) => [r.occurredAt, r.resultingRevision, r.reasonCode])).toEqual([["", null, null], ["", 1, "ACCOUNT_REVISION_STALE"]]);
+  });
+
+  it("offset timestamps and extra keys are kept and ignored respectively", () => {
+    const v = history({ history: [entry({ occurred_at: "2026-09-30T08:00:00+07:00", secret: "x" })] });
+    expect(v.ok && v.rows[0]!.occurredAt).toBe("2026-09-30T08:00:00+07:00");
+  });
+
+  async function openDrawer(historyBody: unknown) {
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "http://portal.test");
+      if (url.pathname === "/api/admin/step-up") return new Response(JSON.stringify({ state: "REQUIRED", expires_at: null }), { status: 200 });
+      if (url.pathname === "/api/admin/accounts") return new Response(JSON.stringify(goodBody()), { status: 200 });
+      return new Response(JSON.stringify(historyBody), { status: 200 });
+    }) as unknown as typeof fetch;
+    mount("/administration/users?sel=usr_1");
+    return screen.findByRole("complementary");
+  }
+
+  it("a malformed history is the drawer's unavailable state and the account's facts from the roster stay", async () => {
+    const dock = await openDrawer({ history: [entry({ occurred_at: `${PROBE} yesterday` })] });
+    await waitFor(() => expect(within(dock).getByText(/The account history could not be read \(HISTORY_MALFORMED, entry 1, occurred_at\)\./)).toBeTruthy());
+    expect(within(dock).queryByRole("list", { name: "Account history" })).toBeNull();
+    expect(within(dock).queryByText("This account has no recorded operations.")).toBeNull();
+    expect(dock.textContent).toContain("Role");
+    expect(dock.textContent).toContain("Revision");
+    expect(document.body.textContent).not.toContain(PROBE);
+  });
+
+  it("a history with a null timestamp prints 'not published', not 1970 and not a blank", async () => {
+    const dock = await openDrawer({ history: [entry({ occurred_at: null })] });
+    const list = await within(dock).findByRole("list", { name: "Account history" });
+    expect(list.textContent).toContain("not published");
+    expect(list.textContent).not.toMatch(/1970|Invalid Date|NaN/);
   });
 });

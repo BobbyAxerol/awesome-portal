@@ -18,7 +18,7 @@
  *
  * | cardinality | break point | degradation | server contract | invariant | perf budget |
  * |---|---|---|---|---|---|
- * | 24 tasks in 6 groups; catalogue bounded at 64 entries | 200 rows in the DOM (never met) | tier panels; state filter; provenance table capped | the catalogue bound (64) is the server's | a missing task is named ("N of M reported"), never dropped silently | four reads on mount, none polled; 24 table rows |
+ * | 24 tasks in 6 groups; catalogue bounded at 64 entries | 200 rows in the DOM (never met) | tier panels; state filter; provenance table capped | the catalogue bound (64) is the server's | a missing task is named ("N of M reported"), a row past the cap is named ("Showing 200 of N"), never dropped silently; a failed refresh keeps the last good rows, demoted, with the reason | four reads on mount, none polled; 24 table rows |
  *
  * URL: `sel` (the task id) and the screen-local `state` filter. Defaults omitted.
  */
@@ -88,6 +88,7 @@ export default function AdminScreen({
   const composition = reads.composition.phase === "ready" ? reads.composition.value : null;
   const activation = reads.activation.phase === "ready" ? reads.activation.value : null;
 
+  const loadedCount = taskCatalogue?.tasks.length ?? 0;
   const rows = useMemo(() => (taskCatalogue ? toRows(taskCatalogue.tasks.slice(0, ROW_CAP), catalogue) : []), [taskCatalogue, catalogue]);
   const counts = useMemo(() => stateCounts(rows), [rows]);
   const tiers = useMemo(() => tiersOf(rows, taskCatalogue?.taskGroups ?? [], filter), [rows, taskCatalogue, filter]);
@@ -160,6 +161,14 @@ export default function AdminScreen({
 
   const asked = taskCatalogue?.totalTasks ?? null;
   const missing = asked !== null && taskCatalogue !== null && taskCatalogue.tasks.length < asked;
+  const capped = loadedCount > ROW_CAP;
+  // The read that failed on refresh while an earlier good one is still on screen, by name.
+  const staleReads = [
+    { label: "task catalogue", read: reads.tasks },
+    { label: "command catalogue", read: reads.catalogue },
+    { label: "admin composition", read: reads.composition },
+    { label: "staged activation", read: reads.activation },
+  ].flatMap(({ label, read }) => (read.phase === "ready" && read.stale ? [{ label, reason: read.stale.reason }] : []));
   const fresh = freshness(catalogue?.scope?.freshnessState ?? null);
   const notLive = firstNotLive(activation);
   const authority = composition?.commandAuthority ?? null;
@@ -224,10 +233,28 @@ export default function AdminScreen({
           <span>The staged-activation read failed ({reads.activation.reason}), so the first reason an action is not live is limited to what the task catalogue states.</span>
         </div>
       ) : null}
+      {staleReads.length > 0 ? (
+        <div className="exec-adm-banner" data-tone="stale" role="status">
+          <Flag kind="stale" label="Stale" size="sm" />
+          <span>
+            Showing the last good read. The refresh failed for the {staleReads.map((r) => `${r.label} (${r.reason})`).join(", the ")}.
+          </span>
+        </div>
+      ) : null}
       {missing ? (
         <div className="exec-adm-banner" role="status">
           <Flag kind="partial" label="Partial" size="sm" />
           <span>Some actions are missing. {taskCatalogue!.tasks.length} of {asked} reported.</span>
+        </div>
+      ) : null}
+      {capped ? (
+        <div className="exec-adm-banner" data-tone="cap" role="status">
+          <Flag kind="partial" label="Capped" size="sm" />
+          <span>
+            Showing {ROW_CAP} of {loadedCount} actions.
+            {asked !== null && asked > loadedCount ? ` ${loadedCount} is only what was loaded; the server reports ${asked}.` : ""}
+            {" "}Counts and the lists below cover the {ROW_CAP} shown.
+          </span>
         </div>
       ) : null}
       {reads.catalogue.phase === "error" ? (
@@ -249,8 +276,10 @@ export default function AdminScreen({
       </div>
 
       <div className="exec-adm-main" data-docked={selection !== null && mode === "dock" ? "true" : undefined}>
-        <div className="exec-adm-tiers">
-          {rows.length === 0 ? (
+        <div className="exec-adm-tiers" data-stale={reads.tasks.phase === "ready" && reads.tasks.stale ? "true" : undefined}>
+          {rows.length === 0 && asked !== null && asked > 0 ? (
+            <PanelState status="partial" reason={`The server reports ${asked} actions but none could be read. This is not an empty catalogue.`} />
+          ) : rows.length === 0 ? (
             <PanelState status="empty" reason="No actions are published for this profile. Check Provenance for the catalogue source." />
           ) : tiers.length === 0 ? (
             <PanelState status="empty" reason="No action is in this state." actions={<button type="button" className="exec-adm-btn" onClick={() => setFilter("all")}>Show all</button>} />

@@ -6,6 +6,11 @@
  * `ExecutionApi` screen: it reads `/api/admin/accounts` and `/api/admin/step-up`
  * through `features/admin/accountApi.ts`, the same client the V1 screen uses.
  *
+ * The roster and the history are read by `./rosterReader`, which refuses a
+ * malformed body instead of repairing it (one bad row refuses the whole roster,
+ * as "unavailable", naming the row and the field); the V1 reader's repairs
+ * (a non-list as an empty roster, a bad revision as 0) would be lies here.
+ *
  * What the account read publishes is what is shown: the V1 roles `ADMIN` and
  * `USER`, the four lifecycle states, `locked` and `mustChangePassword`, the
  * revision, and the account's own operation history. Role presets and a last
@@ -25,7 +30,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { accounts, stepUp, type AccountSummary, type HistoryEntry, type StepUpState } from "../../../../features/admin/accountApi";
+import { stepUp, type AccountSummary, type HistoryEntry, type StepUpState } from "../../../../features/admin/accountApi";
 import { useSession } from "../../../../auth/session";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { ExecutionSurface } from "../../../ExecutionSurface";
@@ -35,6 +40,7 @@ import { SectionPanel } from "../../blocks";
 import { Drawer, DockAction, useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { useExecUrlState } from "../../urlState";
+import { readDetailFromServer, readRosterFromServer } from "./rosterReader";
 import {
   ACCOUNT_ROLES, ACCOUNT_STATES, PAGE_SIZE, PRESET_REQUESTS, ROLE_LABEL, ROW_CAP, STATE_VIEW,
   failureOf, filterAccounts, isRole, isState, rosterCounts, stepUpView, type UsersFilters,
@@ -47,11 +53,11 @@ export const USERS_SCREEN_KEY = "users" as const;
 /** The three reads, injectable so a test or a lab can stand in for the network. */
 export interface UsersClient {
   roster(): Promise<AccountSummary[]>;
-  detail(userId: string): Promise<{ account: AccountSummary; history: HistoryEntry[] }>;
+  detail(userId: string): Promise<{ history: HistoryEntry[] }>;
   stepUp(): Promise<StepUpState>;
 }
 
-const DEFAULT_CLIENT: UsersClient = { roster: accounts.roster, detail: accounts.detail, stepUp: stepUp.state };
+const DEFAULT_CLIENT: UsersClient = { roster: readRosterFromServer, detail: readDetailFromServer, stepUp: stepUp.state };
 
 export interface UsersScreenProps {
   client?: UsersClient;

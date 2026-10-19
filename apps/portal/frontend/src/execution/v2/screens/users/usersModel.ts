@@ -125,8 +125,12 @@ export function failureOf(error: unknown): { status: "denied" | "unavailable"; r
   const code = typeof error === "object" && error !== null && "code" in error && typeof (error as { code: unknown }).code === "string"
     ? (error as { code: string }).code
     : null;
+  // A refused body names where (a row and a field), never the value that was refused.
+  const where = typeof error === "object" && error !== null && "where" in error && typeof (error as { where: unknown }).where === "string"
+    ? (error as { where: string }).where
+    : null;
   return {
     status: "unavailable",
-    reason: code ? `The account roster could not be read (${code}).` : "The account roster could not be read.",
+    reason: `The account ${code?.startsWith("HISTORY_") ? "history" : "roster"} could not be read${code ? ` (${code}${where ? `, ${where}` : ""})` : ""}.`,
   };
 }

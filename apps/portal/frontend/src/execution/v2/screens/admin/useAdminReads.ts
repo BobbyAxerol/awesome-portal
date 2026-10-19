@@ -10,8 +10,14 @@
  *
  * None of them polls: the catalogue is a revisioned document and the screen
  * offers a Refresh instead of a timer. `reload` re-asks all four.
+ *
+ * A refresh that fails (not denied) after a good read keeps that read and marks
+ * it `stale` with the reason, so the screen can show the last good rows demoted
+ * instead of blanking them. A first read that fails has nothing to keep, and a
+ * denial is a fact about now: it replaces what was shown. A change of API or
+ * workspace is a different session of reads: nothing carries over.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 
 import type { CommandCatalogue } from "../../../adminCatalog";
 import type { ExecutionApi, Result } from "../../../api/ports";
@@ -23,16 +29,18 @@ import type { StagedActivation } from "../../../stagedActivation";
 export type ReadState<T> =
   | { phase: "loading" }
   | { phase: "error"; status: Exclude<PanelStatus, "ok" | "loading">; reason: string }
-  | { phase: "ready"; value: T; warnings: readonly string[] };
+  | { phase: "ready"; value: T; warnings: readonly string[]; stale?: { reason: string } };
 
 const loading = { phase: "loading" } as const;
 
-function settle<T>(result: Result<T>): ReadState<T> {
+function settle<T>(result: Result<T>, prev: ReadState<T>): ReadState<T> {
   if (result.ok) return { phase: "ready", value: result.value, warnings: result.warnings ?? [] };
+  if (prev.phase === "ready" && result.status !== "denied") return { ...prev, stale: { reason: result.reason } };
   return { phase: "error", status: result.status === "loading" ? "unavailable" : result.status, reason: result.reason };
 }
 
-const failed = (): ReadState<never> => ({ phase: "error", status: "unavailable", reason: "PORTAL_READ_FAILED" });
+const failed = <T,>(prev: ReadState<T>): ReadState<T> =>
+  prev.phase === "ready" ? { ...prev, stale: { reason: "PORTAL_READ_FAILED" } } : { phase: "error", status: "unavailable", reason: "PORTAL_READ_FAILED" };
 
 export interface AdminReads {
   tasks: ReadState<OperatorTaskCatalogue>;
@@ -49,14 +57,23 @@ export function useAdminReads(api: ExecutionApi, workspaceId?: string): AdminRea
   const [activation, setActivation] = useState<ReadState<StagedActivation>>(loading);
   const [tick, setTick] = useState(0);
 
+  const scope = useRef({ api, workspaceId });
+
   useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
+    if (scope.current.api !== api || scope.current.workspaceId !== workspaceId) {
+      scope.current = { api, workspaceId };
+      setTasks(loading);
+      setCatalogue(loading);
+      setComposition(loading);
+      setActivation(loading);
+    }
     const scoped = api.withReadSignal?.(controller.signal) ?? api;
-    const run = <T>(read: () => Promise<Result<T>>, set: (state: ReadState<T>) => void) => {
+    const run = <T>(read: () => Promise<Result<T>>, set: Dispatch<SetStateAction<ReadState<T>>>) => {
       read().then(
-        (result) => { if (!cancelled) set(settle(result)); },
-        () => { if (!cancelled) set(failed()); },
+        (result) => { if (!cancelled) set((prev) => settle(result, prev)); },
+        () => { if (!cancelled) set((prev) => failed(prev)); },
       );
     };
     run(() => scoped.getOperatorTasks(), setTasks);

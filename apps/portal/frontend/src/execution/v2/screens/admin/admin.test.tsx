@@ -431,3 +431,180 @@ describe("the auto-open is once, filter-aware and does not take focus", () => {
     expect(document.activeElement).toBe(row);
   });
 });
+
+/* ── F5 L1 state matrix: empty, stale (a refresh that fails, a stale catalogue) ─────────── */
+
+/** The double's task catalogue, as the port returns it, to build variants from. */
+async function baseTasks() {
+  const result = await httpApi().getOperatorTasks();
+  if (!result.ok) throw new Error("fixture catalogue unreadable");
+  return result.value;
+}
+type TaskCatalogue = Awaited<ReturnType<typeof baseTasks>>;
+const asTasks = (value: TaskCatalogue) => async () => ({ ok: true as const, value, warnings: [] as string[] });
+
+describe("states: empty is not stale is not unavailable", () => {
+  it("empty: a catalogue that states zero actions says none are published, with no error and no stale chip", async () => {
+    const base = await baseTasks();
+    mount("/administration/actions", {}, override({ getOperatorTasks: asTasks({ ...base, tasks: [], totalTasks: 0, counts: { connected: 0, inactive: 0, incompatible: 0 } }) }));
+    expect(await screen.findByText("No actions are published for this profile. Check Provenance for the catalogue source.")).toBeTruthy();
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("0 of 0 can run now");
+    expect(text).not.toMatch(/PORTAL_READ_FAILED|Try again|last good read/);
+    expect(document.querySelector(".exec-adm-tiers .exec-state")?.getAttribute("data-status")).toBe("empty");
+    expect(document.querySelector(".exec-adm-banner[data-tone='stale']")).toBeNull();
+    expect(document.querySelector(".exec-adm-tiers")?.getAttribute("data-stale")).toBeNull();
+    expect(screen.queryByText(/Some actions are missing/)).toBeNull();
+  });
+
+  it("empty is not 'none arrived': a server that states 24 actions while none could be read is Partial, never 'no actions are published'", async () => {
+    const base = await baseTasks();
+    mount("/administration/actions", {}, override({ getOperatorTasks: asTasks({ ...base, tasks: [] }) }));
+    expect(await screen.findByText(/The server reports 24 actions but none could be read/)).toBeTruthy();
+    expect(screen.queryByText(/No actions are published for this profile/)).toBeNull();
+    expect(document.querySelector(".exec-state")?.getAttribute("data-status")).toBe("partial");
+    expect(screen.getByText(/Some actions are missing\. 0 of 24 reported\./)).toBeTruthy();
+  });
+
+  it("stale (freshness): a catalogue the server calls STALE keeps every row and says Stale, not unavailable", async () => {
+    const live = httpApi();
+    const base = await live.getCommandCatalogue();
+    if (!base.ok) throw new Error("fixture command catalogue unreadable");
+    const stale = { ...base.value, scope: { ...base.value.scope!, freshnessState: "STALE" } };
+    mount("/administration/actions", {}, override({ getCommandCatalogue: async () => ({ ok: true as const, value: stale, warnings: [] as string[] }) }));
+    await loaded();
+    expect(document.querySelector(".exec-adm-fresh .exec-flag")?.getAttribute("data-k")).toBe("stale");
+    expect(document.querySelector(".exec-adm-fresh")?.textContent).toContain("Stale");
+    expect(within(tierTable("Read")).getAllByRole("row").length).toBeGreaterThan(1);
+    expect(screen.queryByText(/PORTAL_READ_FAILED|Try again/)).toBeNull();
+  });
+
+  it("stale (refresh failed): the last good rows stay, demoted, with the reason; nothing is blanked and the state is not 'unavailable'", async () => {
+    let calls = 0;
+    const base = await baseTasks();
+    const api = override({
+      getOperatorTasks: async () => {
+        calls += 1;
+        return calls === 1 ? { ok: true as const, value: base, warnings: [] as string[] } : { ok: false as const, status: "unavailable" as const, reason: "TASKS_STORE_DOWN" };
+      },
+    });
+    mount("/administration/actions", {}, api);
+    await loaded();
+    const before = within(tierTable("Read")).getAllByRole("row").length;
+    expect(document.querySelector(".exec-adm-tiers")?.getAttribute("data-stale")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    const banner = await screen.findByText(/Showing the last good read\. The refresh failed for the task catalogue \(TASKS_STORE_DOWN\)/);
+    expect(banner.closest("[role='status']")?.querySelector(".exec-flag")?.getAttribute("data-k")).toBe("stale");
+    expect(document.querySelector(".exec-adm-tiers")?.getAttribute("data-stale")).toBe("true");
+    expect(within(tierTable("Read")).getAllByRole("row")).toHaveLength(before);
+    expect(screen.getByText("0 of 24 can run now")).toBeTruthy();
+    expect(screen.queryByText("Try again")).toBeNull();
+    expect(document.querySelector(".exec-state[data-status='unavailable']")).toBeNull();
+    // A good refresh clears it.
+    calls = 0;
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(document.querySelector(".exec-adm-tiers")?.getAttribute("data-stale")).toBeNull());
+    expect(screen.queryByText(/The refresh failed/)).toBeNull();
+  });
+
+  it("stale (refresh failed) names each read that is stale, including a throw, and a denied refresh replaces the rows instead", async () => {
+    let calls = 0;
+    const base = await baseTasks();
+    const api = override({
+      getOperatorTasks: async () => {
+        calls += 1;
+        if (calls === 1) return { ok: true as const, value: base, warnings: [] as string[] };
+        throw new Error("network");
+      },
+    });
+    mount("/administration/actions", {}, api);
+    await loaded();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    expect(await screen.findByText(/task catalogue \(PORTAL_READ_FAILED\)/)).toBeTruthy();
+    cleanup();
+
+    let n = 0;
+    const denied = override({
+      getOperatorTasks: async () => {
+        n += 1;
+        return n === 1 ? { ok: true as const, value: base, warnings: [] as string[] } : { ok: false as const, status: "denied" as const, reason: "ADMIN_ONLY" };
+      },
+    });
+    mount("/administration/actions", {}, denied);
+    await loaded();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    // A refusal is a fact about now, not staleness: no rows from before remain.
+    expect(await screen.findByText("You can't open this page")).toBeTruthy();
+    expect(screen.queryByRole("table", { name: "Read actions" })).toBeNull();
+    expect(document.body.textContent).not.toContain("System health");
+  });
+
+  it("a first read that fails has nothing to keep: it is unavailable, not stale", async () => {
+    mount("/administration/actions", {}, override({ getOperatorTasks: async () => ({ ok: false, status: "unavailable", reason: "TASKS_STORE_DOWN" }) }));
+    expect(await screen.findByText(/TASKS_STORE_DOWN/)).toBeTruthy();
+    expect(screen.queryByText(/last good read/)).toBeNull();
+    expect(document.querySelector(".exec-state")?.getAttribute("data-status")).toBe("unavailable");
+  });
+});
+
+/* ── F5 L2 scale: ROW_CAP ───────────────────────────────────────────────────────────────── */
+
+describe("row cap: 200 rows drawn, the label names the rest", () => {
+  async function many(count: number, reported: number | null = count) {
+    const base = await baseTasks();
+    const template = base.tasks.find((t) => t.taskGroup === "READ_INSPECT")!;
+    const tasks = Array.from({ length: count }, (_, i) => ({ ...template, taskId: `bulk-${i}`, title: `Bulk ${i}`, catalogKey: null }));
+    return { ...base, tasks, totalTasks: reported, taskGroups: ["READ_INSPECT"] };
+  }
+  const drawn = () => within(tierTable("Read")).getAllByRole("row").length - 1;
+  const capLabel = () => screen.queryByText(/^Showing \d+ of \d+ actions\./);
+
+  it("exactly 200: every row is drawn and there is no cap label", async () => {
+    mount("/administration/actions", {}, override({ getOperatorTasks: asTasks(await many(200)) }));
+    await screen.findByRole("heading", { name: "Read" });
+    expect(drawn()).toBe(200);
+    expect(capLabel()).toBeNull();
+    expect(document.querySelector(".exec-adm-banner[data-tone='cap']")).toBeNull();
+  });
+
+  it("201: 200 rows in the DOM and 'Showing 200 of 201 actions.'", async () => {
+    mount("/administration/actions", {}, override({ getOperatorTasks: asTasks(await many(201)) }));
+    await screen.findByRole("heading", { name: "Read" });
+    expect(drawn()).toBe(200);
+    const label = document.querySelector(".exec-adm-banner[data-tone='cap']")!;
+    expect(label.textContent).toContain("Showing 200 of 201 actions.");
+    expect(label.textContent).not.toContain("only what was loaded");
+    expect(screen.queryAllByText("Bulk 200")).toHaveLength(0);
+    expect(within(tierTable("Read")).getByText("Bulk 199")).toBeTruthy();
+    // The counts say they cover the rows drawn, not the loaded list.
+    expect(label.textContent).toContain("cover the 200 shown");
+    expect(screen.getByRole("button", { name: /^All 200$/ })).toBeTruthy();
+  });
+
+  it("500: still 200 rows (and 200 provenance rows), 'Showing 200 of 500 actions.'", async () => {
+    mount("/administration/actions", {}, override({ getOperatorTasks: asTasks(await many(500)) }));
+    await screen.findByRole("heading", { name: "Read" });
+    expect(drawn()).toBe(200);
+    const provenance = within(document.querySelector("details.exec-adm-prov") as HTMLElement).getByRole("table", { name: "Action provenance", hidden: true });
+    expect(within(provenance).getAllByRole("row", { hidden: true }).length - 1).toBe(200);
+    expect(document.querySelector(".exec-adm-banner[data-tone='cap']")!.textContent).toContain("Showing 200 of 500 actions.");
+  });
+
+  it("when the server reports more than was loaded, 500 is said to be only what was loaded", async () => {
+    mount("/administration/actions", {}, override({ getOperatorTasks: asTasks(await many(500, 900)) }));
+    await screen.findByRole("heading", { name: "Read" });
+    expect(drawn()).toBe(200);
+    const label = document.querySelector(".exec-adm-banner[data-tone='cap']")!.textContent ?? "";
+    expect(label).toContain("Showing 200 of 500 actions.");
+    expect(label).toContain("500 is only what was loaded; the server reports 900.");
+    expect(screen.getByText(/Some actions are missing\. 500 of 900 reported\./)).toBeTruthy();
+  });
+
+  it("an unstated server total never invents a bigger number", async () => {
+    mount("/administration/actions", {}, override({ getOperatorTasks: asTasks(await many(250, null)) }));
+    await screen.findByRole("heading", { name: "Read" });
+    const label = document.querySelector(".exec-adm-banner[data-tone='cap']")!.textContent ?? "";
+    expect(label).toContain("Showing 200 of 250 actions.");
+    expect(label).not.toContain("the server reports");
+  });
+});
