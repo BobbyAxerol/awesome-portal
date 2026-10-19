@@ -148,6 +148,36 @@ export interface DrawerProps {
   focusOnOpen?: boolean;
 }
 
+/**
+ * The control the reader last pressed. Safari and Firefox on macOS do not focus a button on press, so when the panel
+ * opens from that press `document.activeElement` is still <body> and the opener would be unknown: Esc and Close would
+ * both fall back to the page. The press is noted in the capture phase (before any handler opens the panel) and is only
+ * trusted when the panel opens within the same gesture (`PRESS_WINDOW_MS`), so a panel opened from the URL never
+ * adopts an old click.
+ */
+const PRESS_WINDOW_MS = 400;
+const CONTROL = 'button, a[href], [role="button"], [tabindex]:not([tabindex="-1"])';
+let lastPress: { el: HTMLElement; at: number } | null = null;
+if (typeof document !== "undefined") {
+  document.addEventListener(
+    "click",
+    (event) => {
+      const control = event.target instanceof Element ? event.target.closest<HTMLElement>(CONTROL) : null;
+      lastPress = control ? { el: control, at: performance.now() } : null;
+    },
+    true,
+  );
+}
+
+/** The element focus returns to: what had focus when the panel opened, else the control pressed to open it. */
+function findOpener(): HTMLElement | null {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body) return active;
+  const press = lastPress;
+  if (press !== null && press.el.isConnected && performance.now() - press.at < PRESS_WINDOW_MS) return press.el;
+  return null;
+}
+
 /** Where focus goes on close when nothing opened the panel: the first table row control, else main. */
 function focusFallback(): void {
   const row = document.querySelector<HTMLElement>('table tbody tr[tabindex="0"], table tbody a[href], table tbody button:not([disabled])');
@@ -184,7 +214,7 @@ export function Drawer({ open = true, onClose, title, subtitle, children, action
   useEffect(() => {
     if (!open) return;
     userClosed.current = false;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const opener = findOpener();
     if (focusRef.current) panel.current?.focus();
     return () => {
       // Only if nobody has moved focus on purpose in the meantime.

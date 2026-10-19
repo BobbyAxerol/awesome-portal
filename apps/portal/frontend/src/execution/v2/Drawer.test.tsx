@@ -436,6 +436,47 @@ describe("focusOnOpen and the close fallback", () => {
     expect(document.activeElement).toBe(opener);
   });
 
+  it("an opener that did not take focus on press (Safari, Firefox on macOS) is still where Close and Esc return, but only for the same gesture", () => {
+    render(
+      <MemoryRouter initialEntries={["/fleet"]}>
+        <Screen />
+        <table><tbody><tr tabIndex={0} data-testid="row"><td>x</td></tr></tbody></table>
+      </MemoryRouter>,
+    );
+    const opener = screen.getByText("Open row");
+    // A press that leaves focus on <body>: no opener.focus() before the click.
+    expect(document.activeElement).toBe(document.body);
+    fireEvent.click(opener);
+    expect(screen.getByRole("complementary")).toBeTruthy();
+    fireEvent.click(screen.getByText("Close"));
+    expect(document.activeElement).toBe(opener);
+    // Esc the same way.
+    (document.activeElement as HTMLElement).blur();
+    fireEvent.click(opener);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("a press older than the gesture is not adopted: a panel opened from the URL still uses the fallback", () => {
+    const now = vi.spyOn(performance, "now");
+    try {
+      now.mockReturnValue(1000);
+      render(
+        <MemoryRouter initialEntries={["/fleet"]}>
+          <button type="button">Elsewhere</button>
+        </MemoryRouter>,
+      );
+      fireEvent.click(screen.getByText("Elsewhere"));
+      cleanup();
+      now.mockReturnValue(1000 + 5000);
+      mountRow({ focusOnOpen: false });
+      fireEvent.click(screen.getByText("Close"));
+      expect(document.activeElement).toBe(screen.getByTestId("first-row"));
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it("StrictMode's simulated cleanup does not defeat focusOnOpen={false}", () => {
     render(
       <StrictMode>

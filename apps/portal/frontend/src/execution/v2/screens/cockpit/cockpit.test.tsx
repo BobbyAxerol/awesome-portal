@@ -1178,6 +1178,30 @@ describe("the New request drawer", () => {
     expect(drawer()).toBeNull();
   });
 
+  it("opening the drawer never writes `sel`: the one that appears on a wide screen is the cockpit's own first-load pick, made once and before the click", async () => {
+    // Narrow: nothing is auto-selected, so opening the drawer must leave the URL without a `sel`.
+    viewport(false);
+    const narrow = await mountNav(standardPort(), "/governance/approvals");
+    expect(where()).not.toContain("sel=");
+    fireEvent.click(newRequestButton());
+    await settle();
+    expect(where()).toContain("compose=request");
+    expect(where()).not.toContain("sel=");
+    narrow.unmount();
+    // Wide: the first load picks one request (replace), then the drawer opens and closes without touching it.
+    viewport(true);
+    await mountNav(standardPort(), "/governance/approvals");
+    const picked = new URLSearchParams(where().split("?")[1] ?? "").get("sel");
+    expect(picked).not.toBeNull();
+    fireEvent.click(newRequestButton());
+    await settle();
+    expect(new URLSearchParams(where().split("?")[1] ?? "").get("sel")).toBe(picked);
+    const dialog = document.querySelector(".exec-dock") as HTMLElement;
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await settle();
+    expect(new URLSearchParams(where().split("?")[1] ?? "").get("sel")).toBe(picked);
+  });
+
   it("the drawer's Close removes the key with replace: Back afterwards does not reopen it", async () => {
     viewport(false);
     await mountNav(standardPort(), "/governance/approvals", {}, ["/prev", "/governance/approvals"]);

@@ -938,6 +938,48 @@ describe("the drawer: draft, close, focus", () => {
     expect(document.activeElement).toBe(opener);
   });
 
+  it("the Close button returns focus to the opener too, as Esc does (a pointer press on Close moves focus onto it first)", async () => {
+    mountDrawer(port(() => CREATED).api);
+    const opener = screen.getByRole("button", { name: "New request" });
+    opener.focus();
+    fireEvent.click(opener);
+    await loaded();
+    const close = within(drawer()).getByRole("button", { name: "Close" });
+    close.focus();
+    fireEvent.click(close);
+    expect(document.querySelector('[data-screen="new-request-drawer-v2"]')).toBeNull();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("a click on an opener that does not take focus on press (Safari, Firefox on macOS) is still the opener Close returns to", async () => {
+    mountDrawer(port(() => CREATED).api);
+    const opener = screen.getByRole("button", { name: "New request" });
+    // The press lands on the button, but the browser leaves focus on <body>.
+    expect(document.activeElement).toBe(document.body);
+    fireEvent.pointerDown(opener);
+    fireEvent.click(opener);
+    await loaded();
+    const close = within(drawer()).getByRole("button", { name: "Close" });
+    close.focus();
+    fireEvent.click(close);
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("opened from the URL (no opener), Close lands on the main landmark rather than being lost", async () => {
+    render(
+      <MemoryRouter initialEntries={["/governance/approvals?compose=request"]}>
+        <main>
+          <Cockpit api={port(() => CREATED).api} />
+        </main>
+      </MemoryRouter>,
+    );
+    await loaded();
+    const close = within(drawer()).getByRole("button", { name: "Close" });
+    close.focus();
+    fireEvent.click(close);
+    expect(document.activeElement).toBe(document.querySelector("main"));
+  });
+
   it("policy block applies in the drawer too", async () => {
     const { api, createApprovalRequest } = port(() => CREATED);
     mountDrawer(api, "/governance/approvals?compose=request", { writeBlockedReason: "Recording is disabled for this screen." });
