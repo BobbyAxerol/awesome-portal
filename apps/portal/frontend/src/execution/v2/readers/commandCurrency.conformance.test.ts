@@ -228,37 +228,48 @@ describe("L0 · canonical, verbatim", () => {
 /* ═════════════════ defects in the fixtures / contract (pinned) ═════════════════ */
 describe("defects pinned", () => {
   /*
-   * DEFECT CC-1 (fixture): `execution-trusted-commands.synthetic.valid.json#ack_only`
-   * is the pre-upgrade status (no `currency`). It is a "valid" fixture of the
-   * very schema that now requires `currency` (Codex's own tests dodge it by
-   * reading `execution-command-currency#public_status` in its place:
-   * `execution-operation-reader.spec.ts:26`). Any consumer that loads it as the
-   * canonical served status gets a body the schema calls incomplete.
-   * it.fails: flips red the day the fixture is fixed or removed.
+   * CC-1 (fixed by Codex in d0789674): `execution-trusted-commands.synthetic.valid.json#ack_only`
+   * used to be the pre-upgrade status (no `currency`) and the schema called it
+   * incomplete. The fixture is now the served status (it carries `currency`), and
+   * the stored form moved to `stored_ack_only` (the currency fixture's
+   * `stored_status`). Now an ordinary test: the fixture is a valid served status
+   * and the reader reads it; the stored form is still refused by both.
    */
-  it.fails("DEFECT CC-1: execution-trusted-commands#ack_only is a valid served CommandStatus", () => {
-    const ack = loadCanonical<Draft>("execution-trusted-commands.synthetic").ack_only;
-    expect(cmdViolations(ack)).toEqual([]);
+  it("CC-1 (fixed): execution-trusted-commands#ack_only is a valid served CommandStatus the reader reads", () => {
+    const fixture = loadCanonical<Draft>("execution-trusted-commands.synthetic");
+    expect(cmdViolations(fixture.ack_only)).toEqual([]);
+    const status = cmdOf(fixture.ack_only);
+    expect(status).not.toBeNull();
+    expect(status!.currency).toBe(fixture.ack_only.currency);
+    // The served one equals the currency fixture's served status; the stored one is the old shape.
+    expect(fixture.ack_only).toEqual(SERVED);
+    expect(fixture.stored_ack_only).toEqual(STORED);
+    expect(cmdViolations(fixture.stored_ack_only).length).toBeGreaterThan(0);
+    expect(readCommandStatusV1(fixture.stored_ack_only)).toBeNull();
   });
 
   /*
-   * DEFECT CC-2 (contract): `CommandStatus.business.revision` is
-   * `^(?:0|[1-9][0-9]{0,18})$` (19 digits, up to 9999999999999999999) but the
-   * server's pmCounter refuses anything above int64 (9223372036854775807). The
-   * schema therefore accepts a revision the server never sends. The reader holds
-   * the int64 bound (stricter than the schema); this pins the schema side.
+   * CC-2 (fixed by Codex in d0789674): `CommandStatus.business.revision` was
+   * `^(?:0|[1-9][0-9]{0,18})$` (accepted up to 9999999999999999999) while the
+   * server's pmCounter refuses anything above int64. The pattern is now the exact
+   * PM int64 grammar (max 9223372036854775807). Ordinary tests: the schema and the
+   * reader both refuse the first value above int64, and both accept int64 max.
    */
-  it.fails("DEFECT CC-2: the capital CommandStatus schema refuses a revision above int64", () => {
+  it("CC-2 (fixed): the capital CommandStatus schema refuses a revision above int64", () => {
     const body = clone(SERVED);
     body.business.revision = "9223372036854775808";
     expect(cmdViolations(body)).not.toEqual([]);
+    body.business.revision = "9223372036854775807";
+    expect(cmdViolations(body)).toEqual([]);
   });
 
-  it("CC-2 (reader side): the reader refuses the revision the schema lets through", () => {
+  it("CC-2 (reader side): the reader refuses the revision the schema now refuses, and reads int64 max", () => {
     const body = clone(SERVED);
     body.business.revision = "9223372036854775808";
-    expect(cmdViolations(body)).toEqual([]);
+    expect(cmdViolations(body)).not.toEqual([]);
     expect(readCommandStatusV1(body)).toBeNull();
+    body.business.revision = "9223372036854775807";
+    expect(cmdOf(body)).not.toBeNull();
   });
 
   /*
@@ -488,8 +499,8 @@ describe("L1 · matrix E · int64 counters (revision, receipt versions)", () => 
     body.business.revision = value;
     // null is a legal "no revision yet" for the capital status only.
     expect(cmdOf(body) !== null).toBe(ok);
-    // The schema is looser at exactly one place: 19 digits above int64 (DEFECT CC-2).
-    if (cmdViolations(body).length > 0) expect(cmdOf(body)).toBeNull();
+    // Since d0789674 the schema holds the same int64 bound (CC-2 fixed): schema and reader agree exactly.
+    expect(cmdViolations(body).length === 0).toBe(ok);
   });
   it.each(COUNTERS.filter(([, value]) => value !== null))("receipt version · %s", (_name, value, ok) => {
     const body = clone(WAITING);

@@ -2,6 +2,8 @@
 
 Người viết: Claude (subagent F8c). Review là **ghi nhận, không phải ACK** (Rules §10.3): ACK chỉ khi Bobby giao UXM tương ứng. Mọi verdict là **đề xuất**. Bổ sung cho [consumer-review-2026-10-18.md](consumer-review-2026-10-18.md) (F8) và [consumer-review-pending-control-2026-10-18.md](consumer-review-pending-control-2026-10-18.md) (F8b): file này trả lời phần Codex đã giao trong `e19ad906` mà FE chưa đọc, và cập nhật R-1/R-2 của F8b.
 
+> **Cập nhật sau `d0789674` (Codex):** SE-1, CC-1 và CC-2 trong file này đã được Codex sửa và reader FE đã đổi theo. Các mục S-4, S-8, S-9, §3.1 (dòng `business.revision`), §4 và §12 bên dưới là bản **trước** `d0789674`; số liệu và verdict hiện hành ở [§13](#13-cập-nhật-sau-d0789674).
+
 ## 0. Pin, phương pháp, giới hạn
 
 | Mục | Giá trị |
@@ -216,3 +218,59 @@ Copy đề xuất cho `reason_class` (UI tiếng Anh, **chờ Bobby duyệt**): 
 | Test mới | accessSelf 75 + 2 067 (2 `it.fails`: SE-1a, SE-1b) · commandCurrency 78 + 5 726 (2 `it.fails`: CC-1, CC-2) = **7 946 test, 4 expected-fail, 0 đỏ** |
 | Gate | vitest focused trên `readers/ testkit/ boundary* v2Hygiene` 17 file: 25 570 passed + 4 expected fail; `tsc --noEmit` exit 0; `scripts/refresh-release-integrity-ledgers.sh --check` exit 0 (`changed:false`, không cần `--write`) |
 | Không chạy | Playwright, build, baseline ảnh (không chạm pixel), test backend của Codex |
+
+## 13. Cập nhật sau `d0789674`
+
+Pin: `d0789674` (Codex), FE đã rebase lên đó. Diff đọc bằng `git diff 35953e07 d0789674 -- packages/contracts`. Chỉ phần liên quan tới hai reader này; không nối màn, không sửa file Codex.
+
+### 13.1 Hợp đồng đổi gì
+
+| Hợp đồng | Thay đổi | Ảnh hưởng tới reader |
+| --- | --- | --- |
+| `execution-access.openapi.json#AccessEligibility` | Thêm `allOf` 28 khối **target rule** (một khối cho mỗi action, từ `RULES[action].kinds` của `self-eligibility.ts`): nếu `resource.kind` thuộc danh sách kind của action thì `reason_class != ACTION_TARGET_UNSUPPORTED`; ngược lại hàng phải `permission = UNAVAILABLE` và `reason_class` thuộc `{ACTION_TARGET_UNSUPPORTED, POLICY_PENDING}` (không bao giờ ALLOWED, không `NO_CURRENT_PERMISSION`/`FIELD_POLICY_PENDING`). Áp cho **mọi** hàng của body. Schema của hàng (`AccessEligibilityRow`), `AccessSelfNavigation` **không đổi** | Reader cũ nhận các cặp (action, kind) mà schema nay từ chối: reader **lỏng hơn schema** (vi phạm luật số 1). Đây là nguồn của 5 test đỏ ở `accessSelf.conformance` |
+| `execution-trusted-commands.openapi.json#CommandStatus.business.revision` (và bản nhúng ở `execution-workflows.openapi.json`) | Pattern 19 chữ số thay bằng ngữ pháp int64 chính xác (max `9223372036854775807`), `description` "never a JS Number" | CC-2 **đã sửa**: schema và reader cùng bound |
+| `execution-trusted-commands.synthetic.valid.json` | `ack_only` nay là status phục vụ **có `currency`** (bằng `command-currency#public_status`); bản cũ chuyển thành `stored_ack_only` (bằng `stored_status`) | CC-1 **đã sửa** |
+| `execution-profile-realtime` / `execution-scoped-realtime` / `execution-operation-reader` | Header `X-Portal-Realtime-State`/`-Cursor`, `OpaqueNativeCursor`, fixture/ schema scoped-realtime | Ngoài phạm vi hai reader này; không đọc trong lượt này |
+
+### 13.2 Tám test đỏ (5 accessSelf + 3 commandCurrency) → nguyên nhân và cách sửa
+
+| Test (trước) | Nguyên nhân | Sửa |
+| --- | --- | --- |
+| matrix A "every action with its own family" | Test đặt mọi action lên resource `PORTFOLIO`; schema nay từ chối ALLOWED `alpha.read` trên PORTFOLIO. **Test oracle cũ** | Mỗi action chạy trên kind đầu tiên của chính nó, **lấy từ schema** |
+| matrix B (ô `UNAVAILABLE`+`ACTION_TARGET_UNSUPPORTED`) | Bảng viết tay `accept` coi 4 lý do đều hợp lệ trên PORTFOLIO; schema nay cấm `ACTION_TARGET_UNSUPPORTED` trên kind được hỗ trợ. **Oracle cũ**; kèm **reader** lỏng hơn schema | `accept` viết lại từ câu chữ hợp đồng mới, chạy **hai lần**: `portfolio.read` trên PORTFOLIO (3+3 ô hợp lệ) và trên ACCOUNT (0+2 ô). Mỗi ô đối chiếu cả reader lẫn schema |
+| matrix C "one" / "sixteen distinct" | Mười sáu action đầu trên PORTFOLIO gồm cả action chỉ cho ACCOUNT/BINDING/ALPHA, nay không còn hợp lệ ở dạng ALLOWED | Hàng dựng bằng `rowOn(action, kind)`: kind không hỗ trợ thì gửi đúng hàng mà server gửi (UNAVAILABLE + ACTION_TARGET_UNSUPPORTED) |
+| L2 "16 rows of widest-legal text" | Cùng lý do | Chọn 16 action mà PORTFOLIO hỗ trợ (đều ALLOWED với grant ref 256 codepoint) |
+| `commandCurrency` CC-1, CC-2 (`it.fails`) và "CC-2 reader side" | Gap đã được Codex sửa nên `it.fails` đỏ ("Expect test to fail"); test reader-side khẳng định schema **nhận** revision `2^63` | Đổi thành test thường (xem 13.3). Không có `it.fails` nào còn lại trong hai file |
+
+**Reader (`accessSelf.ts`)**: thêm bảng `ELIGIBILITY_ACTION_KINDS` (28 action → kind) và kiểm tra trong `readEligibilityRow(raw, resourceKind)`; một hàng sai voids cả body. Bảng là bản chép có kiểu, **test so từng chữ với 28 khối của schema** nên kind thêm vào hợp đồng sẽ làm test đỏ, không phải màn. `ELIGIBILITY_ACTION_RULES` (family/step-up) giữ nguyên.
+
+### 13.3 Test thêm/đổi
+
+- `accessSelf.conformance.test.ts`: L0 so bảng kind với schema (28 khối, hình `then`/`else` đúng chữ, mọi kind là kind reader biết); **matrix H** mới: 28 action × 8 kind × 5 câu trả lời = 1 120 ô, reader nhận ⇔ câu chữ hợp đồng ⇔ schema; USER không hỗ trợ action nào; quy tắc áp cho mọi hàng; matrix B tham số hóa theo kind (2 lần); SE-1a/SE-1b thành test thường (schema và reader cùng từ chối, đồng thời đọc được bản hợp lệ đối ứng).
+- `accessSelf.test.ts`: lý do `ACTION_TARGET_UNSUPPORTED` chỉ đọc trên kind không hỗ trợ; test mới "the action must fit the resource kind" (ALLOWED / `NO_CURRENT_PERMISSION` / `FIELD_POLICY_PENDING` trên kind sai, `ACTION_TARGET_UNSUPPORTED` trên kind đúng, USER).
+- `commandCurrency.conformance.test.ts`: CC-1 thành test thường (fixture hợp lệ với schema, reader đọc, `ack_only` = `public_status`, `stored_ack_only` = `stored_status` bị cả schema lẫn reader từ chối); CC-2 thành hai test thường (schema từ chối `2^63`, nhận `2^63-1`; reader cùng hành vi); matrix E nay khẳng định **schema và reader nhất trí tuyệt đối** trên 24 dạng counter (trước đó có ngoại lệ "schema lỏng hơn").
+- Nhóm **reader chặt hơn schema có chủ đích**: giữ nguyên 6 mục ở accessSelf (text chỉ khoảng trắng, bidi, zero-width, surrogate lẻ, selector >256 byte, bidi trong `grant_ref`). Ở commandCurrency, mục `business.revision > int64` của §3.1 **không còn là "chặt hơn"** (hai bên nhất trí); các mục còn lại (bidi/zero-width, >28 chữ số thập phân, partition, `currency` >512 byte, `readUtcEpochMs`) không đổi.
+
+### 13.4 Gap còn lại / gap mới
+
+| Gap | Trạng thái |
+| --- | --- |
+| SE-1a / SE-1b (bảng action ↔ kind) | **ĐÃ SỬA bởi Codex** (S-4 đóng). Reader giữ bảng, có test so với schema |
+| CC-1 (`ack_only` thiếu `currency`) | **ĐÃ SỬA** (S-8 đóng) |
+| CC-2 (revision >int64) | **ĐÃ SỬA** cho `CommandStatus` và bản nhúng trong workflows (S-9 đóng) |
+| SE-2 (body hợp lệ cho resource/env khác vẫn đọc được) | Còn: bản chất schema; giữ `eligibilityAnswers`/`navigationAnswers` |
+| CC-3 (status lưu và phục vụ chung `schema_version`) | Còn (NOTE) |
+| L-1 / S-10 (bidi, zero-width, `currency` text mở) | Còn; reader chặt hơn |
+| S-1…S-3, S-5…S-7, S-11 | Không đổi trong `d0789674` |
+| **Mới (NOTE, không phải lỗi)** | Trên kind không hỗ trợ, schema nhận cả `ACTION_TARGET_UNSUPPORTED` lẫn `POLICY_PENDING` (Codex ghi rõ: producer thay copy này bằng POLICY_PENDING khi policy chưa sẵn sàng). Hệ quả: FE **không phân biệt được** "hành động không áp cho kind này" với "policy chưa sẵn sàng" khi thấy `POLICY_PENDING`; màn không được suy diễn một trong hai. Và với kind đúng, `POLICY_PENDING` vẫn hợp lệ nên không thể dùng lý do để suy kind. Không cần yêu cầu mới; chỉ cần UI in đúng lý do đã công bố |
+
+### 13.5 Verdict đề xuất (đổi so với §7)
+
+- `portal.self-eligibility.v1`: giữ **ACCEPTED** (đọc), và lý do mạnh hơn: S-4 đã đóng, reader nay bằng schema ở cả bảng action↔kind. Cần reader-mới này (không phải bản `e19ad906`) trước khi nối.
+- `portal.self-navigation.v1`: giữ **CHANGES_REQUESTED** (S-1…S-3), không đổi.
+- `CommandStatus.currency` + `PendingControlStatus.currency`: giữ **ACCEPTED**; S-8 và S-9 đóng, chỉ còn S-10 (ngữ pháp `currency`) và S-11.
+
+### 13.6 Bằng chứng
+
+`npx tsc --noEmit -p tsconfig.json` exit 0. vitest tập trung: `accessSelf.test` 76, `accessSelf.conformance` 2 233, `commandCurrency.test` 78, `commandCurrency.conformance` 5 726 (tất cả pass, **0 `it.fails`**); `readers/` + `testkit/` 14 file, 24 842 test pass. Supersedes số liệu §12 (4 expected-fail). Chưa chạy: Playwright, build, baseline ảnh, test backend/contracts của Codex.
+

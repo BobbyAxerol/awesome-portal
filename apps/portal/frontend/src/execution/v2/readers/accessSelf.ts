@@ -35,7 +35,8 @@
  * - a readable body of another `schema_version` is `unsupported_shape`, never
  *   fed to these types;
  * - every cross-field rule of the published schema (family and step-up by
- *   action, reason by permission, authority by state, feature order) is
+ *   action, action/target-kind compatibility, reason by permission, authority
+ *   by state, feature order) is
  *   enforced here, so an inconsistent row is refused rather than repaired;
  * - never throws.
  */
@@ -92,6 +93,51 @@ export const ELIGIBILITY_ACTION_RULES = {
 } as const satisfies Record<string, { family: EligibilityFamilyCheck; stepUp: boolean | null }>;
 export type EligibilityAction = keyof typeof ELIGIBILITY_ACTION_RULES;
 export const ELIGIBILITY_ACTIONS = Object.keys(ELIGIBILITY_ACTION_RULES) as readonly EligibilityAction[];
+
+/**
+ * Which resource kinds each action is compatible with: the target rules Codex
+ * published in `AccessEligibility.allOf` (d0789674; 28 `if kind in [...]` blocks,
+ * from the producer's `RULES[action].kinds`). Request-target compatibility only,
+ * never resource existence or a permit. Held here as a typed copy because the
+ * schema states it as an `if/then/else` per action; `accessSelf.conformance.test.ts`
+ * compares this table with those blocks word for word, so a kind added to the
+ * contract fails there, not on a screen.
+ *
+ * A row whose action is compatible with `resource.kind` may be anything except
+ * ACTION_TARGET_UNSUPPORTED. A row whose action is not compatible is
+ * UNAVAILABLE with ACTION_TARGET_UNSUPPORTED, or POLICY_PENDING when the current
+ * producer cannot establish policy; never ALLOWED, never another reason.
+ */
+export const ELIGIBILITY_ACTION_KINDS = {
+  "alpha.read": ["ALPHA", "ALPHA_VERSION", "DEPLOYMENT"],
+  "portfolio.read": ["PORTFOLIO"],
+  "portfolio.read_restricted": ["PORTFOLIO"],
+  "portfolio.discover_linked": ["PORTFOLIO"],
+  "account.read": ["ACCOUNT"],
+  "binding.read": ["BINDING"],
+  "audit.read": ["ROOT", "PORTFOLIO", "DEPLOYMENT", "ACCOUNT"],
+  "governance.r1.read": ["PORTFOLIO", "DEPLOYMENT"],
+  "governance.r2.read": ["PORTFOLIO", "DEPLOYMENT"],
+  "governance.canary.read": ["PORTFOLIO", "DEPLOYMENT"],
+  "governance.live.read": ["PORTFOLIO", "DEPLOYMENT"],
+  "governance.r1.decide": ["PORTFOLIO", "DEPLOYMENT"],
+  "governance.r2.decide": ["PORTFOLIO", "DEPLOYMENT"],
+  "governance.canary.decide": ["PORTFOLIO", "DEPLOYMENT"],
+  "governance.live.decide": ["PORTFOLIO", "DEPLOYMENT"],
+  "maintenance.read": ["ROOT", "PORTFOLIO", "DEPLOYMENT", "ACCOUNT", "ALPHA", "ALPHA_VERSION", "BINDING"],
+  "development.read": ["ROOT", "PORTFOLIO", "DEPLOYMENT", "ACCOUNT", "ALPHA", "ALPHA_VERSION", "BINDING"],
+  "capital.fund": ["ROOT", "PORTFOLIO", "DEPLOYMENT"],
+  "capital.initial_grant": ["ROOT", "PORTFOLIO", "DEPLOYMENT"],
+  "capital.top_up": ["ROOT", "PORTFOLIO", "DEPLOYMENT"],
+  "capital.immediate_decrease": ["ROOT", "PORTFOLIO", "DEPLOYMENT"],
+  "capital.recall_partial": ["ROOT", "PORTFOLIO", "DEPLOYMENT"],
+  "capital.recall_full": ["ROOT", "PORTFOLIO", "DEPLOYMENT"],
+  "capital.adjust_target_budget": ["ROOT", "PORTFOLIO", "DEPLOYMENT"],
+  "capital.set_root_limit": ["ROOT", "PORTFOLIO", "DEPLOYMENT"],
+  "capital.apply_pending": ["PORTFOLIO", "DEPLOYMENT"],
+  "capital.cancel_remaining": ["PORTFOLIO", "DEPLOYMENT"],
+  "deployment.register": ["PORTFOLIO"],
+} as const satisfies Record<EligibilityAction, readonly AccessResourceKind[]>;
 export const MAX_ELIGIBILITY_ACTIONS = 16;
 
 export const ELIGIBILITY_UNAVAILABLE_REASONS = ["NO_CURRENT_PERMISSION", "POLICY_PENDING", "FIELD_POLICY_PENDING", "ACTION_TARGET_UNSUPPORTED"] as const;
@@ -255,7 +301,7 @@ const ROW_KEYS = [
 ] as const;
 const ALL_REASONS = ["FAMILY_CHECK_REQUIRED", ...ELIGIBILITY_UNAVAILABLE_REASONS] as const;
 
-function readEligibilityRow(raw: unknown): EligibilityRow | null {
+function readEligibilityRow(raw: unknown, resourceKind: AccessResourceKind): EligibilityRow | null {
   const row = closed(raw, ROW_KEYS);
   if (row === null) return null;
   const action = oneOf(row.action, ELIGIBILITY_ACTIONS);
@@ -272,6 +318,10 @@ function readEligibilityRow(raw: unknown): EligibilityRow | null {
   if (familyCheck !== rule.family || row.step_up_required !== rule.stepUp) return null;
   // The copy key is the reason, always.
   if (publicCopyKey !== reasonClass) return null;
+  // The action must fit the kind of resource asked about (schema allOf target rules, d0789674): a compatible kind never answers
+  // ACTION_TARGET_UNSUPPORTED; an incompatible one is UNAVAILABLE with ACTION_TARGET_UNSUPPORTED or POLICY_PENDING, never ALLOWED.
+  const compatible = (ELIGIBILITY_ACTION_KINDS[action] as readonly AccessResourceKind[]).includes(resourceKind);
+  if (compatible ? reasonClass === "ACTION_TARGET_UNSUPPORTED" : permission !== "UNAVAILABLE" || (reasonClass !== "ACTION_TARGET_UNSUPPORTED" && reasonClass !== "POLICY_PENDING")) return null;
   const unchecked: EligibilityUnchecked = { stepUpFreshness: "NOT_CHECKED", challengeAvailability: "NOT_CHECKED", commandReadiness: "NOT_CHECKED" };
   const base = { action, familyCheck, stepUpRequired: rule.stepUp as boolean | null, unchecked };
   if (permission === "ALLOWED") {
@@ -308,7 +358,7 @@ export function readAccessEligibility(raw: unknown): AccessEligibilityRead | nul
   ) return null;
   const actions: EligibilityRow[] = [];
   for (const entry of body.actions) {
-    const row = readEligibilityRow(entry);
+    const row = readEligibilityRow(entry, kind);
     if (row === null) return null;
     actions.push(row);
   }

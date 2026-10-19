@@ -152,12 +152,29 @@ describe("self-eligibility, the boundary", () => {
     expect(readAccessEligibility(edit(ABSENT, change))).toBeNull();
   });
 
-  it("every unavailable reason in the contract reads, with its own copy key", () => {
+  it("every unavailable reason in the contract reads, with its own copy key (ACTION_TARGET_UNSUPPORTED only on a kind the action does not fit)", () => {
     for (const reason of ["NO_CURRENT_PERMISSION", "POLICY_PENDING", "FIELD_POLICY_PENDING", "ACTION_TARGET_UNSUPPORTED"]) {
-      const row = eligibility(edit(ABSENT, (b) => { b.actions[0].reason_class = reason; b.actions[0].public_copy_key = reason; })).actions[0]!;
+      // ABSENT asks portfolio.read about a PORTFOLIO; an ACCOUNT is a kind portfolio.read does not support.
+      const kind = reason === "ACTION_TARGET_UNSUPPORTED" ? "ACCOUNT" : "PORTFOLIO";
+      const row = eligibility(edit(ABSENT, (b) => { b.resource.kind = kind; b.actions[0].reason_class = reason; b.actions[0].public_copy_key = reason; })).actions[0]!;
       expect(row.reasonClass).toBe(reason);
       expect(row.publicCopyKey).toBe(reason);
     }
+  });
+
+  it("the action must fit the resource kind: ALLOWED or a plain reason on an unsupported kind, and ACTION_TARGET_UNSUPPORTED on a supported one, void the read", () => {
+    expect(ABSENT.actions[0].action).toBe("portfolio.read");
+    expect(ABSENT.resource.kind).toBe("PORTFOLIO");
+    // portfolio.read is a PORTFOLIO action. On an ACCOUNT an allowed row is not a row the server sends.
+    expect(readAccessEligibility(edit(POSITIVE, (b) => { b.resource.kind = "ACCOUNT"; }))).toBeNull();
+    // ... nor are NO_CURRENT_PERMISSION or FIELD_POLICY_PENDING (only the two target reasons are).
+    for (const reason of ["NO_CURRENT_PERMISSION", "FIELD_POLICY_PENDING"]) {
+      expect(readAccessEligibility(edit(ABSENT, (b) => { b.resource.kind = "ACCOUNT"; b.actions[0].reason_class = reason; b.actions[0].public_copy_key = reason; })), reason).toBeNull();
+    }
+    // On the supported kind, ACTION_TARGET_UNSUPPORTED is a lie.
+    expect(readAccessEligibility(edit(ABSENT, (b) => { b.actions[0].reason_class = "ACTION_TARGET_UNSUPPORTED"; b.actions[0].public_copy_key = "ACTION_TARGET_UNSUPPORTED"; }))).toBeNull();
+    // A USER resource fits no action at all.
+    expect(readAccessEligibility(edit(POSITIVE, (b) => { b.resource.kind = "USER"; }))).toBeNull();
   });
 
   it("text that can reverse or hide what is printed is refused whole (bidi override, zero width, whitespace-only)", () => {

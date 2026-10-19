@@ -18,6 +18,7 @@
  *          x grant_ref x authority x step-up x family
  *       B  permission x reason x copy key x grant_ref x authority, full
  *       C  rows per body: 0, 1, 16, 17 x repeated action x unknown action
+ *       H  action x resource kind x answer (28 x 8 x 5): the target-kind rules
  *       D  navigation: read mode x the state/authority of each of the 4 features
  *       E  navigation: every order of the four features (only one is the contract)
  *       F  requests: action count x repeat x unknown x selector -> URL or null
@@ -30,10 +31,12 @@
  *     prototype pollution, bad roots); every case refused, or accepted only
  *     where the schema accepts it; never throws, never leaks its probe.
  *     Where the reader is deliberately STRICTER than the schema it is counted
- *     and named; where the contract is looser than the server (DEFECT SE-1),
- *     an `it.fails` pins the behaviour a fix would bring.
+ *     and named. (SE-1, the action/target-kind table, is published since
+ *     d0789674 and held by the reader: no `it.fails` is left in this file.)
  */
 import { afterAll, describe, expect, it } from "vitest";
+
+import { ACCESS_RESOURCE_KINDS } from "./accessEffective";
 
 import { canonicalDigest, loadCanonical, loadSchema, schemaEnum } from "../testkit/loadCanonical";
 import { cartesian, coverage, describeCoverage, dimension, dimensionOf, getPath, pairwise, type Draft } from "../testkit/matrix";
@@ -45,6 +48,7 @@ import { validateAgainst } from "../testkit/schema";
 import {
   ACCESS_ELIGIBILITY_SCHEMA,
   ACCESS_SELF_NAVIGATION_SCHEMA,
+  ELIGIBILITY_ACTION_KINDS,
   ELIGIBILITY_ACTION_RULES,
   ELIGIBILITY_ACTIONS,
   ELIGIBILITY_ALLOWED_AUTHORITIES,
@@ -95,6 +99,24 @@ const NAV_HIDDEN: Draft = caseOf("AccessSelfNavigation", "ABSENT_PERMISSION");
 const NAV_LEGACY: Draft = caseOf("AccessSelfNavigation", "ROUTING_LEGACY_COMPATIBILITY_NOT_A_GRANT");
 const NAV_V2: Draft = caseOf("AccessSelfNavigation", "ROUTING_SCOPED_V2_NOT_A_GRANT");
 const ROW_BASE: Draft = clone(POSITIVE.actions[0]);
+
+/**
+ * The action -> resource-kind table, read from the published schema's 28 target rules
+ * (`AccessEligibility.allOf`: `if resource.kind in [...] then reason_class != ACTION_TARGET_UNSUPPORTED
+ * else permission = UNAVAILABLE and reason_class in [ACTION_TARGET_UNSUPPORTED, POLICY_PENDING]`).
+ */
+const TARGET_RULES: Draft[] = (loadSchema(OPENAPI).components as Draft).schemas.AccessEligibility.allOf;
+const KINDS_FROM_SCHEMA: Record<string, string[]> = Object.fromEntries(TARGET_RULES.map((rule) => [
+  rule.then.properties.actions.items.if.properties.action.const as string, rule.if.properties.resource.properties.kind.enum as string[],
+]));
+const supports = (action: string, kind: string): boolean => (KINDS_FROM_SCHEMA[action] ?? []).includes(kind);
+/** An action's own row as the server sends it for this kind: an allowed row when the kind is supported, else the unsupported-target row. */
+const rowOn = (action: string, kind: string, base: Draft = ROW_BASE): Draft => {
+  const rule = (ELIGIBILITY_ACTION_RULES as Record<string, { family: string; stepUp: boolean | null }>)[action] ?? { family: "BUSINESS_READ_SCOPE", stepUp: false };
+  const row: Draft = { ...clone(base), action, family_check: rule.family, step_up_required: rule.stepUp };
+  if (supports(action, kind) || !(action in ELIGIBILITY_ACTION_RULES)) return row;
+  return { ...row, permission: "UNAVAILABLE", reason_class: "ACTION_TARGET_UNSUPPORTED", public_copy_key: "ACTION_TARGET_UNSUPPORTED", grant_ref: null, authority_mode: "NOT_ESTABLISHED" };
+};
 
 const eligOf = (raw: unknown): AccessEligibility | null => {
   const read = readAccessEligibility(raw);
@@ -185,6 +207,21 @@ describe("L0 · canonical, verbatim", () => {
     expect(fromSchema).toEqual(JSON.parse(JSON.stringify(ELIGIBILITY_ACTION_RULES)));
   });
 
+  it("the action -> resource-kind table is the schema's 28 target rules, word for word (nothing derived)", () => {
+    expect(TARGET_RULES).toHaveLength(ELIGIBILITY_ACTIONS.length);
+    expect(Object.keys(KINDS_FROM_SCHEMA).sort()).toEqual([...ELIGIBILITY_ACTIONS].sort());
+    expect(JSON.parse(JSON.stringify(ELIGIBILITY_ACTION_KINDS))).toEqual(KINDS_FROM_SCHEMA);
+    for (const rule of TARGET_RULES) {
+      const action = rule.then.properties.actions.items.if.properties.action.const;
+      expect(rule.then.properties.actions.items.then, action).toEqual({ properties: { reason_class: { not: { const: "ACTION_TARGET_UNSUPPORTED" } } } });
+      expect(rule.else.properties.actions.items.then, action).toEqual({
+        properties: { permission: { const: "UNAVAILABLE" }, reason_class: { enum: ["ACTION_TARGET_UNSUPPORTED", "POLICY_PENDING"] } },
+      });
+      // Every kind named is a kind the reader knows.
+      for (const kind of rule.if.properties.resource.properties.kind.enum) expect(ACCESS_RESOURCE_KINDS as readonly string[], action).toContain(kind);
+    }
+  });
+
   it("no other body in the file is read by either reader; each is the typed unsupported_shape", () => {
     for (const c of canonical.cases) {
       if (c.type !== "AccessEligibility") expect(readAccessEligibility(c.value), c.type).toEqual({ kind: "unsupported_shape", schemaVersion: typeof c.value.schema_version === "string" ? c.value.schema_version : null });
@@ -240,16 +277,78 @@ describe("L1 · matrix A · one eligibility row, pairwise", () => {
     for (const action of ELIGIBILITY_ACTIONS) {
       const rule = ELIGIBILITY_ACTION_RULES[action];
       const body = clone(POSITIVE);
+      // A kind the action supports (taken from the schema), as the server sends it.
+      body.resource.kind = KINDS_FROM_SCHEMA[action]![0];
       Object.assign(body.actions[0], { action, family_check: rule.family, step_up_required: rule.stepUp });
       expect(eligViolations(body), action).toEqual([]);
       const row = eligOf(body)!.actions[0]!;
+      expect(row.permission, action).toBe("ALLOWED");
       expect(row.familyCheck, action).toBe(rule.family);
       expect(row.stepUpRequired, action).toBe(rule.stepUp);
     }
   });
 });
 
-describe("L1 · matrix B · permission x reason x copy key x grant_ref x authority", () => {
+describe("L1 · matrix H · action x resource kind x permission/reason (28 x 8 x 6)", () => {
+  // From the contract's sentence, not from the schema: a supported kind never answers ACTION_TARGET_UNSUPPORTED;
+  // an unsupported kind answers UNAVAILABLE with ACTION_TARGET_UNSUPPORTED or POLICY_PENDING and nothing else, never ALLOWED.
+  const ANSWERS = [
+    { name: "ALLOWED", set: {} },
+    ...["NO_CURRENT_PERMISSION", "POLICY_PENDING", "FIELD_POLICY_PENDING", "ACTION_TARGET_UNSUPPORTED"].map((reason) => ({
+      name: reason, set: { permission: "UNAVAILABLE", reason_class: reason, public_copy_key: reason, grant_ref: null, authority_mode: "NOT_ESTABLISHED" },
+    })),
+  ];
+  const accept = (supported: boolean, answer: string) => (supported ? answer !== "ACTION_TARGET_UNSUPPORTED" : answer === "ACTION_TARGET_UNSUPPORTED" || answer === "POLICY_PENDING");
+  const cells = ELIGIBILITY_ACTIONS.flatMap((action) => ACCESS_RESOURCE_KINDS.flatMap((kind) => ANSWERS.map((answer) => ({ action, kind, answer }))));
+
+  it("prints the matrix size and how many cells each side accepts", () => {
+    expect(cells).toHaveLength(28 * 8 * 5);
+    const accepted = cells.filter((c) => accept(supports(c.action, c.kind), c.answer.name));
+    console.info(`accessSelf H (action x kind x answer): ${cells.length} cells, ${accepted.length} accepted`);
+    // 28 actions x 5 kinds' worth of supported cells (4 answers each) + unsupported cells (2 answers each).
+    const supportedPairs = ELIGIBILITY_ACTIONS.reduce((n, a) => n + ACCESS_RESOURCE_KINDS.filter((k) => supports(a, k)).length, 0);
+    expect(accepted).toHaveLength(supportedPairs * 4 + (28 * 8 - supportedPairs) * 2);
+  });
+
+  it("USER supports no action: every action on a USER is UNAVAILABLE with ACTION_TARGET_UNSUPPORTED or POLICY_PENDING", () => {
+    expect(ELIGIBILITY_ACTIONS.filter((a) => supports(a, "USER"))).toEqual([]);
+  });
+
+  it("every cell: the reader reads it exactly when the sentence and the schema accept it", () => {
+    for (const { action, kind, answer } of cells) {
+      const body = clone(POSITIVE);
+      body.resource.kind = kind;
+      const rule = ELIGIBILITY_ACTION_RULES[action];
+      body.actions = [{ ...clone(ROW_BASE), action, family_check: rule.family, step_up_required: rule.stepUp, ...answer.set }];
+      const expected = accept(supports(action, kind), answer.name);
+      const label = `${action} on ${kind}: ${answer.name}`;
+      expect(eligViolations(body).length === 0, label).toBe(expected);
+      expect(eligOf(body) !== null, label).toBe(expected);
+    }
+  });
+
+  it("the rule holds for every row of a body, not only the first", () => {
+    const body = clone(POSITIVE);
+    body.resource.kind = "PORTFOLIO";
+    const ok = rowOn("portfolio.read", "PORTFOLIO");
+    const bad = { ...rowOn("account.read", "ACCOUNT") }; // an allowed account.read on a PORTFOLIO
+    body.actions = [ok, bad];
+    expect(eligViolations(body).length).toBeGreaterThan(0);
+    expect(eligOf(body)).toBeNull();
+    body.actions = [ok, rowOn("account.read", "PORTFOLIO")];
+    expect(eligViolations(body)).toEqual([]);
+    expect(eligOf(body)!.actions.map((r) => [r.action, r.permission, r.reasonClass])).toEqual([
+      ["portfolio.read", "ALLOWED", "FAMILY_CHECK_REQUIRED"], ["account.read", "UNAVAILABLE", "ACTION_TARGET_UNSUPPORTED"],
+    ]);
+  });
+});
+
+describe.each([
+  // portfolio.read on a PORTFOLIO: supported, so ACTION_TARGET_UNSUPPORTED is never the reason.
+  ["supported kind (portfolio.read on PORTFOLIO)", "PORTFOLIO", 3, 3],
+  // portfolio.read on an ACCOUNT: not supported, so only UNAVAILABLE with ACTION_TARGET_UNSUPPORTED or POLICY_PENDING.
+  ["unsupported kind (portfolio.read on ACCOUNT)", "ACCOUNT", 0, 2],
+] as const)("L1 · matrix B · permission x reason x copy key x grant_ref x authority · %s", (_label, kind, allowedCount, unavailableCount) => {
   const DIMS = [
     dimension("permission", [...AT, "permission"], ["ALLOWED", "UNAVAILABLE"]),
     dimension("reason", [...AT, "reason_class"], REASONS),
@@ -260,19 +359,27 @@ describe("L1 · matrix B · permission x reason x copy key x grant_ref x authori
     dimension("grant_ref", [...AT, "grant_ref"], [null, "acg_x"]),
     dimension("authority", [...AT, "authority_mode"], AUTHORITIES),
   ];
-  const states = cartesian(POSITIVE, DIMS);
+  const root = clone(POSITIVE);
+  root.resource.kind = kind;
+  const states = cartesian(root, DIMS);
   // Written from the contract's sentence, not from the schema: an allowed row has a grant, a reason that sends it on to the family check
-  // and a real authority; an unavailable row has a reason, no grant and no authority.
+  // and a real authority; an unavailable row has a reason, no grant and no authority. Since d0789674 the action must also fit the
+  // resource kind: a supported kind never answers ACTION_TARGET_UNSUPPORTED; an unsupported kind answers only UNAVAILABLE with
+  // ACTION_TARGET_UNSUPPORTED or POLICY_PENDING.
+  const supported = supports("portfolio.read", kind);
   const accept = (p: Record<string, string>) => p.copy === "same" && (
-    (p.permission === "ALLOWED" && p.reason === "FAMILY_CHECK_REQUIRED" && p.grant_ref === "acg_x" && p.authority !== "NOT_ESTABLISHED")
-    || (p.permission === "UNAVAILABLE" && p.reason !== "FAMILY_CHECK_REQUIRED" && p.grant_ref === "null" && p.authority === "NOT_ESTABLISHED")
+    (supported && p.permission === "ALLOWED" && p.reason === "FAMILY_CHECK_REQUIRED" && p.grant_ref === "acg_x" && p.authority !== "NOT_ESTABLISHED")
+    || (p.permission === "UNAVAILABLE" && p.reason !== "FAMILY_CHECK_REQUIRED" && p.grant_ref === "null" && p.authority === "NOT_ESTABLISHED"
+      && (supported ? p.reason !== "ACTION_TARGET_UNSUPPORTED" : p.reason === "ACTION_TARGET_UNSUPPORTED" || p.reason === "POLICY_PENDING"))
   );
 
   it("prints the matrix size", () => {
-    console.info(describeCoverage("accessSelf B (permission) cartesian", coverage(DIMS, states)));
+    console.info(describeCoverage(`accessSelf B (permission) cartesian, ${kind}`, coverage(DIMS, states)));
+    expect(supports("portfolio.read", "PORTFOLIO")).toBe(true);
+    expect(supports("portfolio.read", "ACCOUNT")).toBe(false);
     expect(states).toHaveLength(2 * 5 * 2 * 2 * 4);
-    // 3 real authorities for an allowed row, 4 reasons for an unavailable one.
-    expect(states.filter((s) => accept(s.picks))).toHaveLength(3 + 4);
+    // 3 real authorities for an allowed row; 3 reasons (supported) or 2 (unsupported) for an unavailable one.
+    expect(states.filter((s) => accept(s.picks))).toHaveLength(allowedCount + unavailableCount);
   });
 
   it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
@@ -294,10 +401,8 @@ describe("L1 · matrix B · permission x reason x copy key x grant_ref x authori
 });
 
 describe("L1 · matrix C · rows per body", () => {
-  const rowFor = (action: string): Draft => {
-    const rule = (ELIGIBILITY_ACTION_RULES as Record<string, { family: string; stepUp: boolean | null }>)[action] ?? { family: "BUSINESS_READ_SCOPE", stepUp: false };
-    return { ...clone(ROW_BASE), action, family_check: rule.family, step_up_required: rule.stepUp };
-  };
+  // The resource is a PORTFOLIO: an action it does not support is sent as the unsupported-target row (rowOn), as the server does.
+  const rowFor = (action: string): Draft => rowOn(action, "PORTFOLIO");
   const body = (actions: string[]) => { const b = clone(POSITIVE); b.actions = actions.map(rowFor); return b; };
   const distinct = (n: number) => ELIGIBILITY_ACTIONS.slice(0, n) as string[];
   const CASES: [string, string[]][] = [
@@ -450,8 +555,11 @@ describe("L2 · scale", () => {
     const body = clone(POSITIVE);
     body.workspace_id = "w".repeat(256);
     body.resource.id = "r".repeat(256);
+    // Sixteen actions a PORTFOLIO supports, so every row is an allowed one with a 256-codepoint grant ref.
+    const supported = ELIGIBILITY_ACTIONS.filter((a) => supports(a, "PORTFOLIO")).slice(0, 16);
+    expect(supported).toHaveLength(16);
     body.actions = cloneRows(ROW_BASE, 16, (row, index) => {
-      const action = ELIGIBILITY_ACTIONS[index]!;
+      const action = supported[index]!;
       const rule = ELIGIBILITY_ACTION_RULES[action];
       Object.assign(row, { action, family_check: rule.family, step_up_required: rule.stepUp, grant_ref: `${index}`.padEnd(256, "g") });
     });
@@ -639,26 +747,33 @@ describe("L3 · where the reader is stricter than the schema, on purpose", () =>
 /* ═══════════════ defects in the contract (pinned, not fixed here) ═══════════════ */
 describe("defects pinned (contract, not reader)", () => {
   /*
-   * DEFECT SE-1 (contract): the server only answers ALLOWED for a resource kind
-   * the action supports (RULES[action].kinds in self-eligibility.ts: portfolio.read
-   * only for PORTFOLIO, account.read only for ACCOUNT, ...) and answers
-   * ACTION_TARGET_UNSUPPORTED for the rest. That table is not in the published
-   * schema, so the schema (and this reader) accept `portfolio.read` ALLOWED on an
-   * ACCOUNT, and ACTION_TARGET_UNSUPPORTED on a PORTFOLIO. A FE-side copy of the
-   * table would drift from the server's. Pinned with it.fails: it flips red the day
-   * the schema publishes kinds per action (or the reader gets a published table).
+   * SE-1 (fixed by Codex in d0789674): the server only answers ALLOWED for a
+   * resource kind the action supports (RULES[action].kinds) and answers
+   * ACTION_TARGET_UNSUPPORTED for the rest, which the schema did not say. The
+   * schema now publishes the table (28 target rules in `AccessEligibility.allOf`)
+   * and the reader holds it (`ELIGIBILITY_ACTION_KINDS`, compared with the schema
+   * in L0). The two former `it.fails` are ordinary tests: the schema and the
+   * reader refuse both bodies, and still read the legal counterparts.
    */
-  it.fails("DEFECT SE-1a: an ALLOWED portfolio.read on an ACCOUNT resource is refused", () => {
+  it("SE-1a (fixed): an ALLOWED portfolio.read on an ACCOUNT resource is refused by the schema and by the reader", () => {
     const body = clone(POSITIVE);
     body.resource.kind = "ACCOUNT";
+    expect(eligViolations(body).length).toBeGreaterThan(0);
     expect(readAccessEligibility(body)).toBeNull();
+    body.resource.kind = "PORTFOLIO";
+    expect(eligViolations(body)).toEqual([]);
+    expect(eligOf(body)).not.toBeNull();
   });
 
-  it.fails("DEFECT SE-1b: ACTION_TARGET_UNSUPPORTED for a portfolio.read on a PORTFOLIO is refused", () => {
+  it("SE-1b (fixed): ACTION_TARGET_UNSUPPORTED for a portfolio.read on a PORTFOLIO is refused by the schema and by the reader", () => {
     const body = clone(ABSENT);
     body.actions[0].reason_class = "ACTION_TARGET_UNSUPPORTED";
     body.actions[0].public_copy_key = "ACTION_TARGET_UNSUPPORTED";
+    expect(eligViolations(body).length).toBeGreaterThan(0);
     expect(readAccessEligibility(body)).toBeNull();
+    body.resource.kind = "ACCOUNT";
+    expect(eligViolations(body)).toEqual([]);
+    expect(eligOf(body)!.actions[0]).toMatchObject({ permission: "UNAVAILABLE", reasonClass: "ACTION_TARGET_UNSUPPORTED" });
   });
 
   /*
