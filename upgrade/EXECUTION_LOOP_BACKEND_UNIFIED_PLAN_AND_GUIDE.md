@@ -21811,6 +21811,771 @@ unreferenced hook image. Push only the approved exact awesome-portal Edge
 feature ref, never peer Core/dev/main/mirror. Full08 remains owned integration/
 NOT_MET,09connected NOT_STARTED; no full-phase or release completion claim.
 
+**Publication completed / next original08 transaction,18Oct23:49UTC:** previous
+goal turn is PROGRESS: Bobby commit5f433f8c4cb39cf170248304ecde8d61b2d786f1,
+12Git paths/+4059lines, normal hooks130contracts+717API/72suites PASS, workspace/
+restore PASS. Exact awesome-portal feature ref push and ls-remote agree; no
+merge/force/dev/main/mirror or peer-Core publication. Hook234131 receipt/log
+fbb160c5 under /tmp/epg10-08-core-current-reconcile-68Q5Tn0w;41protected runtime
+tuples unchanged, ownlease absent, BuildKit428→428/newIDs0. Removed only this
+hook's new unreferenced image4cf5e620 after quiet/ownership/no-ancestor checks;
+shared free213096521728→213095759872B, not exclusive reclaimed bytes. Retain
+active native producer/privatePKI/config/history, old runtimes and namedrollback.
+
+Continue approved same08, not a new phase/general approval. Before code or
+installation, refresh current Core e19/target39ledger/identity/real-auth and
+runtime writer/config closure, parallel TS/PM/DL heads and both-host actual jobs.
+Read bounded metadata and named source only; no secret/session/verifier output.
+Determine the exact schema/intake/release transaction and existing normal
+AuthService login needed for genuine connected proof. Private intake interval
+must be checked, not silently extended/relabelled an operational window.
+Source-qualified22delta and existing independent receipts are reusable; do not
+rerun unaffected931cases, invent sessions/grants, overwrite peercheckout or
+start a second authority instance bypassing current writers. Current scope is
+read-only target/writer/session-path audit and bounded commissioning preparation;
+any actual schema/credential transfer/runtime change must have exact reviewed
+targets/window/rollback and fresh guards recorded before execution. Secrets stay
+in protected references, not Git/chat/argv/logs. Finish dependency-independent
+assembly/verification now; retain exact cleanup/receipt paths. Full08 NOT_MET,
+09connected NOT_STARTED;07command/03publisher/01+06capacity remain distinct.
+
+**Actual target audit23:54UTC / focused current-release preparation:** SGP Core
+e19 remains clean; actual stable service is node-user image d2c23ad668fc, config
+26c0d954, source revision e4fd9365, not current e19. Core DB portal_control/portal/
+7675333655652302882 still has39ledger entries, no Candidate or policy schema;
+98sessions (count only, no token/hash read). Actual AUTH_MODE is
+cloudflare_access_local_password, not dev. Normal login needs valid external
+assertion plus Portal credential, and request reads require its real session;
+no private caller bundle is currently supplied. Nonblocking request asks only
+for a protected reference, never cookie/password/assertion values. This limits
+positive human connected evidence, not preparation or negative controls.
+Private61a92042 config is unchanged:6selectors/2intakes/0retained recovery; both
+one-hour intake windows have expired at23:47:18UTC. Do not install or renew them
+by changing a clock/waiving intake, and do not equate config validity with grants.
+Parallel heads TS668e1032/nextf2229d7a/PM908169aa/DL5bf5cd54 unchanged.
+
+Before further implementation, declare the runnable focused gate precisely:
+prepare /tmp/epg10-08-core-stable39-JezaG4cB as one bounded current-release input,
+reusing frozen qualified5291 source, exact71-or-fewer current source deltas and
+published22-file e19 patch; verify full current pins and all outputs. Reuse the
+existing genuine factory7-case stable39 fixture, original CoreNativeInstallation
+component and independent schema golden unchanged. Those7historical cases were
+on5291, NOT e19; run only this impacted stable39/current-AppModule compatibility
+gate, not the unaffected931cases. Disposable PG/Node only, pinned cached images
+and existing read-only public deps, existing finite CPU/memory/time bounds,
+fresh root/user locks AND physical-job checks, interference sampling and41
+operational tuple equality. No real PM/session/capacity credit from this fixture.
+Record every failed attempt separately. Remove exact test cells/network/lease;
+retain at most the single hash-pinned current source as active release input,
+or remove it after its final consumer. No SGP source/index/deploy/secret change,
+actual schema/policy install, role/password/identity change or new image in this
+focused gate. Source SQL explicitly remains an uncommissioned candidate; a
+verified installer fixture does not by itself authorize its production adoption.
+Actual commissioning must separately pin the writer/role/schema baseline,
+fresh intake/window, same owning service/coordinator and rollback/recovery.
+
+**Preparation refusal/correction,19Oct00:00UTC:** initial guard refused during
+PM's HK input-stream reservation until00:00:59; no copy/lease/job was started by
+that attempt. A fresh physical guard later passed. Source assembly then stopped
+before SFTP because the reused43-file frozen profile needs77current preimages,
+not the earlier71reviewed overlap inputs. Exact extra6 are app.module.ts,
+db/pool.ts, maximum-data-operation.controller.ts, realtime.controller.ts,
+main.ts and execution-realtime.spec.ts: current Core predates those adopted
+mounts; these are original e19 preimages, not6new business changes. Exact77
+source bytes2402398 (<3MiB) are already pinned by the committed1168-path closure.
+This is an owned preparation bound error, not an external blocker/product test.
+No SFTP or product test ran. Original failed receipt misleadingly reports batch
+length as transferred count; preserve it and correct the collector to report
+invocation/completion separately.41runtime tuples unchanged, ownlease removed,
+shared free213031317504→213005586432B. Retain the one bounded partial source for
+hash-verified resume only: prove it is exactly old1158-minus6absent files and
+the declared dependency symlink, with no unknown file or earlier transfer.
+Then read exactly77pinned source/test files (same24MiB total source bound),
+verify e19 preimages and original output closure, and run the declared7-case
+stable39/current factory gate under fresh guards. Never relax target/golden/
+permission predicates or overwrite failed evidence to obtain a green result.
+
+**Current source gate00:03–00:07UTC:** corrected assembly verifies1175files,
+5ce2964a,77source reads/2402398B, no remote writes;41runtime tuples unchanged,
+ownlease removed. Reused source helper plus exact current preimages, no force
+or peer edit. Independent strict factory compilation on current source PASS
+at00:06:46/exit0,32interference samples/0overlap, source unchanged and own
+cells/network/lease0,41runtime tuples unchanged. Shared free213034577920→
+212604657664B; no build/pull/newimage/cache. Seven-case factory job000712 ended
+00:07:31UTC, exit0:7PASS/0FAIL/ERROR/SKIP, JUnit11ea7760;4interference samples,
+0overlap/errors,1175source pins unchanged,41runtime tuples unchanged and own
+cells/network/lease0. Shared free212484694016→212693704704B, not exclusive
+reclaimed bytes. This is a current-e19 stable39 factory proof, not actual PM,
+human session, connected revoke or production capacity acceptance. Derived runner
+is original finite correctness driver with only exact source/profile/cell/ledger
+selection changes; one accidental literal+ in generated shell was caught and
+removed before any container/job, finalshell1af9720b. Old derivation output is
+not the executed shell pin. Original assembly failure/incorrect transfer-count
+receipt remains preserved and explicitly superseded by actual77completed reads.
+
+**Public-source delivery scope before action:** approved goal1 includes making
+published5f433f8c actually readable by owning SGP agent. If fresh SGP user/root
+locks and physical-job checks are quiet, fetch only that awesome-portal feature
+ref into the existing repo's object store/FETCH_HEAD, verify exact fetched SHA
+and object, preserve current branch/HEAD/index/worktree and all runtime/DB.
+No checkout/apply/merge/push/rebase/reset, secret transfer, new test or deploy.
+Refuse a changed remote/target or foreign active job; source prep/read-only
+review can continue. This does not publish peer e19 to its remote or approve
+runtime installation. Native commissioning still needs exact same-writer,
+root-maintenance versus node-serving file ownership, schema/adoption/window
+and safe rollback/recovery. Normal startup has no migration/bootstrap command;
+do not introduce one or run139migrations on the39-ledger database.
+
+**User safety/auth clarification and closeout preparation,19Oct00:12–00:17UTC:**
+Bobby says create the needed caller input, request exact additional authority
+when necessary, and remove disposable test resources without affecting
+production/peer work. Interpret this as normal private/test provisioning, not
+permission to forge Cloudflare, insert a human session directly, change Bobby/
+Stan passwords, switch AUTH_MODE=dev or replace the real SessionGuard. Review
+of AuthController/AuthService/CloudflareJwtVerifier confirms real login needs
+Cloudflare's valid assertion plus the Portal credential; SessionGuard needs a
+genuine active session. Source provisioning cannot mint Cloudflare's signature.
+SGP has cloudflared installed but no bobby ~/.cloudflared directory; metadata
+inspection is not proof that no credential exists elsewhere. No token/cookie/
+password/hash was inspected or output, no interactive login was initiated and
+no private caller bundle/session was manufactured. Actual user authentication
+remains an external-issuer input, not an unimplemented alternate login route.
+
+Bounded receipt [stable39/e19 qualification](integration/execution-native-read-v1/current-core-reconciliation/stable39-qualification.json)
+records the focused compile/7cases and original failed materialization without
+rewriting prior evidence. Full hash check confirms1175files/20629199logical
+bytes plus only the declared /deps/node_modules symlink; this single source
+specimen is disposable, not runtime or a rollback archive. Its exact teardown
+is owned pending cleanup, not external technical debt. Preserve only bounded
+receipts/pins/helpers after the final source consumer; never follow the symlink
+or remove borrowed dependencies. Both actual test jobs already ended and
+removed their cells, network, lease and generated tmpfs keys.
+
+Fresh host guard00:12UTC: HK foreign claude-dl-opt-resource reservation through
+01:39:35UTC; no new test, hook, build, image/cache/source teardown is started.
+SGP has no reservation but actual peer Vitest processes persist at00:14UTC;
+the promised source fetch is NOT performed while that guard fails. Preserve
+their process/lock/source/index. Read-only auth/service audit confirms stable
+Core d2c23ad668fc, config26c0d954, started18Sep16:24:22UTC/restarts0; it is still
+e4fd9365, not e19 or our22-file delta. The unrelated web-name lookup found no
+such exact container and is not runtime acceptance. No SGP writes/resources,
+production mutation, credential transfer or service restart this slice.
+
+Runnable-now results: finish receipt/indices and exact cleanup preparation.
+Runnable-after-quiet: source specimen teardown, normal-hook coherent commit
+and approved exact Edge feature push; SGP exact-object Git fetch preserving
+e19 HEAD/index/worktree. Do not rerun the accepted931+7cases merely because
+publication waits. Truly separate prerequisites before actual installation:
+the Core owner must adopt the exact e19 release plus22delta (not silently
+promote peer changes over stable e4fd;171was the5291→e19 comparison, NOT the
+actual release delta—see the00:26 audit below); actual candidate SQL is explicitly
+isolated-only until this adoption; record one exact Core/DB/config change
+window and rollback/recovery boundary. Minimal schema is not permission to run
+all current unrelated routes on stable39. Node-owned serving references and
+root-only offline maintenance remain separate. Do not renew the expired intake
+or apply132/134/Candidate/grants to production from this test receipt. A genuine
+Cloudflare/Portal login is required for the positive human drill; a fixture or
+service token cannot be relabelled Bobby/Stan. Original08 NOT_MET;
+09connected NOT_STARTED. Next recommendation is this same08 commissioning,
+not a new phase or repeated generic approval.
+
+**Read-only closeout audit00:20UTC / no premature phase close:** directly
+reconfirmed0owned cells/networks for the finite test owner. The two cached
+borrowed Node/PG images c610fcdf/44c4ee98 remain intact; no build/pull/cache
+mutation in this focused gate. Current HK has41running services, new native
+producer28ea3958/configf33f19ca and all inspected Portal services restarts0.
+Edge/worker d6aa7a51, SourceProxy aa14e21c, projection PG cf78e766; P/S/L
+execution-edge/source-proxy/manager-projection-worker and projection-postgres
+services remain on the existing versioned configs. Paper Manager/issuer28ea3958
+retain configs225db775/7710fc8e. No runtime mutation by this slice. Stable
+release paths remain HK/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy
+and SGP/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose;
+active/explicit rollback/private runtime artifacts are retained, no worktree/
+branch/cache/volume prune. TS rollbackr59@9150385e/r49@b4e7a6c0 unchanged.
+
+Fresh exact-source delivery controller00:19:54UTC returned
+DEFERRED_NO_FETCH_NO_WRITES: SGP npm job1895129 and anonymous browser/test cell
+nostalgic_bouman are active. Current Core e19/docs/research-loop-plan is clean;
+no fetch, checkout/index/HEAD/remote/config change or remote file was created.
+This is a guard refusal, not a failed product test. SGPrules/Execution campaign
+rules were reread without editing their branch or claiming consumer ACK.
+Do not transfer secret files or mint a counterfeit assertion to sidestep this.
+
+Canonical checkout remains /home/bobby/.worktrees/portal-execution-manager-v2,
+feat/manager-v2-paper-read@54c6f5f3; active owned feature checkout
+/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2,
+feat/execution-edge-upgrade-v1_2@5f433f8c. Other active Portal feature checkouts
+remain eds-current-bff/bab79402, eds09/ec97c483, elp210/9db77811,
+dataactivation/6f6503ea and r4r5/d63a6501 per the existing inventory; no peer
+worktree cleanup. Parallel TS668e1032/nextf2229d7a/PM908169aa/DL5bf5cd54 heads
+rechecked unchanged; all peer WIP preserved. Current owned5Git paths are
+tracking/README/one sanitized focused receipt only, no new product API/auth
+code. They remain UNCOMMITTED; stage is empty, normal hook NOT_RUN because the
+HK foreign reservation still lasts to01:39:35UTC. Last published commit remains
+5f433f8c; do not claim this new receipt is already remote. Diff check, JSON/
+receipt/log/JUnit/source/installer pin consistency and cleanup-helper AST parse
+PASS (metadata checks, not new product cases). Exact source cleanup helper at
+/tmp/epg10-08-core-stable39-JezaG4cB/cleanup-source.py is prepared, NOT_EXECUTED:
+it refuses active foreign work, validates1175hashes/UID/no runtime mount, writes
+a durable intent, unlinks only the known symlink and removes only source/;
+receipts/pins/helpers/shared dependencies/operational state stay intact.
+Latest shared free211542499328B is a capacity snapshot, not cleanup recovery.
+No background job or delayed cleanup has been launched by this closeout.
+Next permitted step after physical quiet is this exact owned teardown then
+one normal-hook publication; connected commissioning still needs the genuine
+external login and exact owning-Core release/adoption/recovery package above.
+08 stays IN_PROGRESS/NOT_MET,09connected NOT_STARTED; no new phase is opened.
+
+**Next original08 goal turn / concrete release-boundary evidence,00:26UTC:**
+previous turn classified PROGRESS: focused current factory proof was checked,
+public sanitized receipt/indices added and exact guarded teardown prepared;
+full goal was not narrowed or completed. Continue read-only producer/target
+discovery now under the unchanged foreign HK window. No new phase or peer edit.
+
+Actual owning Git objects now prove stablee4fd9365→currente19ad906 changes
+**987Control-API paths:864added/123modified**, including498src/388test/
+99migration paths plus package.json/lock. Exact name-status bytes digest
+ce2d8dee0081133eb765320919f3f60bd44e9050993da36d6ae24c9827415113.
+AuthService, SessionGuard, AppModule, config and dependency lock all differ;
+main.ts alone matches. The earlier171number describes the5291→e19 peer slice,
+not the deployed-to-current release blast radius. This corrects the deployment
+proposal, not the exact22-file patch,931source cases or7factory receipt. A file
+count is not proof of incompatibility: the actual whole-release/schema/profile
+compatibility remains UNQUALIFIED, not a manufactured regression. The focused
+minimal39-ledger factory does not qualify all these unrelated APIs/migrations.
+Do not deploy wholee19 as if it were only our22file change, run all migrations,
+or backport to the older stable branch without its owner's scoped decision.
+The exact owning-Core release/adoption must preserve current writers and
+recovery, with fail-closed affected routes during rollback rather than silent
+old-image/config-unset permission fallback. No such rollout is performed here.
+
+Bounded actual-service census00:26:40UTC finds four Core services on SGP:
+stable d2c23ad6/cloudflare_access_local_password; portal-research-preview
+d13cef06/dev; portal8400439b/dev; portal-probe5db1d65f/dev. All restarts0,
+none has CONTROL_API_NATIVE_CORE_CONFIG_FILE. The three dev services' DB/IDs
+are UNKNOWN, not assumed equivalent to verified stable DB/identities. Do not
+retarget one, copy grants/accounts or label dev sessions as real Bobby/Stan
+to sidestep stable commissioning. Their nonsecret config refs are now in the
+[same focused receipt](integration/execution-native-read-v1/current-core-reconciliation/stable39-qualification.json).
+
+Parallel source revalidation: all15native capture inputs still hash-identical
+to original03native-receipt at TSnextf2229d7a; generic fence counterexample has
+no changed source to rerun. PM908169aa current command handoff still declares
+runtime_human_workload_provider=NOT_PUBLISHED and runtime_commit_lease_proof=
+NOT_PUBLISHED; EdgeCommandHandler explicitly has no HTTP wire/route/transport.
+Thus07actual binding and03source acceptance remain their precise owner inputs,
+not something to invent from format-only records or inherit from READ grants.
+PM's new runtime43/mixed75 WIP remains TEST_ONLY/current-owner evidence;
+do not count it as deployed PM authority or overwrite its active preparation.
+No product rerun or source/runtime/DB mutation accompanies this hash review.
+
+Installed cloudflared help confirms normal access login starts an IdP browser/
+headless flow; --quiet suppresses JWT output. It does not mint an externally
+signed human identity unattended. No flow/token/cache was created. One concise
+nonblocking question asks whether Bobby will complete the official IdP step or
+have the Portal agent provide the protected genuine session bundle. Never put
+the assertion/cookie/password in chat/Git/argv or treat our native signing key
+as Cloudflare authority. This human-login input blocks its positive drill only;
+owned source publication/teardown and producer/release preparation continue.
+08NOT_MET/09connected NOT_STARTED; no command/financial/profile activation.
+
+**Correct-volume evidence and bounded target choice00:31–00:33UTC:** parsed
+only database host/name/role and Docker network/volume metadata in SGP memory;
+no DSN/credential output. Four identified containers each received one1s
+statement/500ms lock-bound READ ONLY transaction, explicitly rolled back:
+system ID, migration count and only the three exact named user IDs/statuses.
+Stable remains7675333655652302882/39, all three pinned users ACTIVE, volume
+portal-stable-v1-0-1_portal-postgres-data. Research-preview is a DIFFERENT
+7688673963308855330/127 system, Bobby usr_5a38d5dfb08b44748f5776fbe04a1434,
+Stan/Thanh absent. portal integration is7675320204448350242/39, same named IDs
+but Stan INVITED, volumeportal_portal-postgres-data. probe is7682060456617267240/
+29, Stan INVITED, its own anonymous volume. Thus the private config's existing
+stable target is correct and cannot be swapped by matching the common
+portal_control name. No account was created/activated/reset, no permission or
+session changed. No adoption/target switch follows from this diagnostic.
+
+The existing handoff now has one compact four-target table and precise receipt
+fields, not another phase/ledger. The separate nonblocking scope question asks
+whether the owner wants the Core owner's reviewed integration release first
+with stable untouched, or preparation of an explicit stable rollout package.
+This is a newly observed actual987-path release/physical-target boundary, not
+another request to approve08 generally. Do not infer a choice while unanswered.
+An integration choice does not inherit stable native IDs/keys/acceptances or
+close actual production/human-auth acceptance; prepare its exact input mapping
+first. Both caller-auth and exact target questions remain unanswered here.
+
+Verified-wait observation00:29:21UTC: previously active npm1895129 is now
+authoritatively absent, but its foreign SGP container3e5e310b/nostalgic_bouman
+is still RUNNING since00:18:44, not terminal. Do not infer that the job ended
+from the missing npm process or delete a foreign test resource. Source fetch
+stays deferred behind the full quiet guard; no new test or runtime write.
+New DB observations are diagnostics, not performance/coexistence evidence.
+Owned cleanup/normal-hook publication remain queued only in this goal, not a
+background process, until the HK window/physical jobs actually permit them.
+
+**User cleanup safeguard /00:40UTC:** rechecked exact SGP browser container
+3e5e310b: absent, but the fresh full guard finds foreign node jobs1994812/
+1994860/1995001. Exact5f433 fetch therefore again stops BEFORE any Git write.
+HK still reserves until01:39:35UTC; no hook/build/test/source teardown started.
+Bounded receipt consistency and cleanup-helper syntax PASS, no product rerun.
+Both backend indices now reflect the four verified physical DB targets, not
+the superseded UNKNOWN parity. Owned1175-file source cleanup and five-path
+normal-hook publication remain pending, not completed or running in background.
+Do not delete peer jobs, borrowed dependencies or active/rollback resources.
+No production/DB/auth mutation;08NOT_MET/09connected NOT_STARTED. Genuine caller
+and exact Core release/target choice remain the two previously requested inputs.
+
+**Original08 continuation / source visibility and impasse audit00:42–00:45UTC:**
+previous turn is VERIFIED_WAIT: its exact three live SGP processes were polled
+and are now absent. Fresh full guard finds new test cells75adb893/65da8b97 and
+npm2004228/node2004244; no fetch started. A genuinely read-only ls-remote from
+SGP succeeds for Edge5f433f8c, proving owning-agent remote visibility without
+local object/ref/index writes, not consumer application or acceptance. Current
+Core remains e19; its checkout/index preserved. The same focused receipt holds
+the bounded result. Parallel TS668e1032/nextf2229d7a/PM908169aa/DL5bf5cd54 and
+canonicalPortal54c6 heads/WIP rechecked unchanged, no peer edits or runtime writes.
+
+The same genuine caller and exact Core release/target inputs remain absent
+across the00:26,00:40 and00:42continuations. Safe input-independent source,
+receipt, compatibility/volume review and exact teardown preparation are done;
+no owned code/test defect is relabelled external debt. Current runnable-now
+set is empty. Remaining execution needs external changes: (1) HK window ending
+and actual jobs quiet permit owned20.63MB source teardown plus normal-hook
+five-path commit/push; (2) Bobby/Core owner chooses the matched reviewed release
+and physical target, with its schema/window/recovery boundary; (3) official IdP
+login or a protected genuine session bundle supplies human authentication.
+Neither a fixture, another dev DB nor987unreviewed peer changes substitutes
+these inputs. Three-turn audit therefore permits goal status BLOCKED, not
+COMPLETE or PAUSED. Phase08 remains IN_PROGRESS/connected NOT_MET;09connected
+NOT_STARTED. Resume exact pending action when its input arrives, no new phase
+or repeated generic08approval. No background job, production mutation, broad
+cleanup, merge or new publication occurred; new tracking remains uncommitted
+under the live HK reservation until01:39:35UTC. Last published5f433f8c remains
+usable; active/rollback/private artifacts and all seven feature worktrees stay.
+
+**Bobby resumed original08 / latest target decision,19Oct01:18–01:21UTC
+(08:18–08:21Asia/Saigon):** the later reply explicitly selects **Core integration
+release first; stable production unchanged**, superseding the earlier stable
+rollout-package option. Bobby will complete the official Cloudflare IdP step
+when the correct flow is opened. This is not permission to forge a session or
+inherit stable keys/grants. Fresh blocked audit starts with this resumed work;
+08 remains IN_PROGRESS/connected NOT_MET, not a new phase or stable cutover.
+
+Scope/goal: deliver the exact qualified e19+22delta to the Core integration
+release, prepare its true DB/identity/trust input and bounded qualification;
+follow [08 guide](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls)
+and [current source packet](integration/execution-native-read-v1/current-core-reconciliation/README.md).
+Existing portal-integration checkout is docs/consolidation-closeout-20260919
+atc43ee0317a439b4566decd5fddfc8be839db239e, clean; its control-api8400439b/
+config963a3d84 uses dev auth and has no native config. It is not e19 or the
+qualified output. Core owning source remains clean docs/research-loop-plan@
+e19ad906; current dev is an ancestor. Do not apply the patch over c43 or merge/
+push peer branches as incidental handoff. Preserve their writer/pool/coordinator.
+
+Integration target remains a separate physical DB7675320204448350242/39 on
+portal_portal-postgres-data; prior bounded audit has Bobby ACTIVE/Stan INVITED.
+No state promotion/account creation/key/grant copying is implied. Exact target
+inputs and normal invitation/auth are required before genuine-user acceptance.
+Stablee4fd/d2c23ad6/config26c0d954 and its volume/private inputs remain retained,
+not the deployment target. Rollback: stop new integration admission, preserve
+ambiguous operations/recovery custody; no old permissive authority fallback or
+production-volume rollback. A reviewed release/config is distinct from the
+old worktree path or branch name.
+
+01:20–01:21UTC unauthenticated HTTPS header-only checks: dev origin returns200
+with no Access redirect; stable returns302 to the existing official Cloudflare
+issuer's /cdn-cgi/access/login/portal.primusspark.com. No body/cookie/session read.
+Cloudflared help confirms --quiet avoids JWT output. Do not start a CLI login
+for unprotected dev or mislabel stable authentication as integration authority.
+Prepare/open the correct official flow once the integration Access/auth target
+is commissioned; Bobby supplies the IdP step, not a secret in chat. No auth
+mode, Access policy or credential was changed by this discovery.
+
+Test gates: exact source/preimage/output/dependency pins and existing qualified
+receipts; true DB/ledger/schema/identity pins; same-pool authority through COMMIT;
+real reject/revoke/cache/cursor/SSE and cleanup, with integration versus stable
+acceptance separate. No unchanged931+7case rerun merely for this decision/docs.
+HK fresh guard now has foreign reservation claude P18.4 G12 v224 FINAL rustls
+until02:14:46UTC/09:14:46Asia/Saigon, superseding the old01:39deadline. No heavy
+job/cleanup/hook starts under it. Safe metadata/input/handoff preparation and
+SGP read-only work continue; exact source fetch still uses its physical-job guard.
+
+**Integration input preparation01:22–01:27UTC /08:22–08:27Asia/Saigon:**
+existing pinned guard refuses the exact source fetch before writing: live
+control-api-test node/postgres2163122; the same two handles remain RUNNING at
+01:25, not terminal despite their running ExitCode0. Source remains advertised
+at5f433; no local fetch/apply or consumer ACK is claimed. TS668e1032/nextf2229/
+PM908169aa/DL5bf5cd54 and their2/1/20/1dirty paths rechecked, preserved.
+
+Official Cloudflare protocol/source review identifies the bounded HEAD metadata
+check. Installed cloudflared2026.8.2; dev HEAD404 has no Access metadata, stable
+does. Metadata was not signature-verified or used as authority. Ordinary dev
+GET200 alone does not prove the account has no policy; no exhaustive account
+claim. Bounded known SGP secure/env/reference metadata finds no CF management
+reference, no .cloudflared or wrangler config; no secret read/output. Do not
+start a wrong-target flow or falsely claim Cloudflare failure from user auth.
+No process/session/token/cache created; Bobby's login action is ready once the
+matching integration Access/auth is actually commissioned. Do not activate new
+shared-dev Access/auth as a side effect without its exact coordinated window.
+
+Fresh one1s/500ms-lock READ ONLY transaction/explicit rollback confirms selected
+DB7675320204448350242/39 and exact volume. All three existing named identities
+already have one official-CF-issuer binding, not dev mappings. Bobby ACTIVE has
+one workspace; Stan INVITED has none. No subject/email/credential/session output
+or authority mutation; do not rebind/recreate/promote them. Existing identity
+bindings are not current grants or a genuine login receipt. The same focused
+receipt and [Core adoption action/return](integration/execution-native-read-v1/current-core-reconciliation/README.md#core-owner-adoption-action-and-return)
+now specify source, target/schema, private serving refs, real auth/invitation,
+same-coordinator drill, exact review/window and fail-closed rollback. This is a
+usable owner request, not proof the Core owner received/accepted/deployed it.
+Source/package semantics unchanged; reuse931+7results, no new product test.
+Only owned five tracking/README/receipt paths changed; hook/publication and
+20.63MB exact source cleanup remain waiting for physical quiet. Stable/Edge/
+PM runtime, DB/auth/key/grants and rollback untouched;08NOT_MET/09not started.
+
+**Source-delivery gate01:30UTC /08:30Asia/Saigon:** the fresh pinned SGP
+guard is now physically quiet; exact approved fetch of5f433f8c succeeds.
+FETCH_HEAD/object verified; Coree19 branch/HEAD/index/clean worktree and all51
+current runtime tuples unchanged. No apply/deploy/secret transfer. This closes
+the earlier missing local source-object delivery, not Core consumer adoption.
+Next bounded preflight uses the already-published verifier plus three packet
+files from this exact Git object in an auto-cleaned private temporary directory;
+target is current owning e19, never old c43. Verify preimages/dependencies and
+git apply --check only, preserve source/index/runtime; no DB, listener, build,
+test container, credential or policy. Require fresh quiet checks and record
+actual output/cleanup, not another931+7business rerun or consumer ACK.
+
+**Preflight result and independently runnable source adoption01:31UTC:**
+published verifier returns EXACT_PREIMAGE_PATCH_CHECK_PASS/22files/writes0 on
+actual owning e19. Four Git-derived temporary files320892B auto-removed;
+shared free162865410048B before=after,51runtime tuples and source/index unchanged,
+pre/post physical guards quiet. No application, build or source/DB mutation.
+Exact result/pins are added to the same focused receipt, not inherited test credit.
+
+Under Bobby's explicit integration-first assignment, proceed now with a separate
+reviewable **source candidate**, not a runtime rollout: SGP feature
+feat/execution-native-read-integration at
+/home/bobby/.worktrees/portal-execution-native-core-integration. Start from
+current dev53316263, fast-forward only this new feature to existing integration
+e19 (dev is its ancestor), then apply the exact qualified22file patch. Do not
+merge/push/change shared dev/main or the peer docs/research-loop-plan and old
+portal-integration branches. Their HEAD/index/source/runtime stay protected.
+Before product edits, record the task/guide/scope/tests/rollback in the candidate
+Core Unified plan and its two required backend indices. Owned25paths only:
+22manifest paths plus those3tracking files; source/output hashes verified and
+diff reviewed before one normal-hook commit and the approved feature publication.
+New source worktree is an active documented feature, not a deployment/archive.
+Bounded source prep/test resources and any new unreferenced hook image/cache
+must be inventoried/cleaned; retain only this active feature, accepted receipts
+and all existing operational/rollback/private artifacts. No secret transfer,
+policy/DB/auth install, service restart or Core-owner acceptance is implied.
+Fresh SGP quiet/lease/capacity checks govern its hook; the HK lock still blocks
+HK cleanup/hook only, not independently runnable source adoption on quiet SGP.
+
+**Source candidate preparation result01:43UTC /08:43Asia/Saigon:** the exact
+new feature/worktree above is prepared and staged, not committed.22source
+paths+3Core tracking paths, +1982/-99 total; all22qualified outputs match and
+the1168dependency/auxiliary closure validates. No peer dev/main/docs branch
+or checkout/index changed; all51runtime tuples unchanged. Candidate Git tree
+144134233B; shared free162859331584→162698362880B, above20%floor. Four packet
+files/private temp directory and own5minute lease removed. Retain this active
+documented feature for Core review; no DB/auth/secret/service mutation.
+Preparation controller syntax/guide-link preflight first failed locally before
+SSH or any remote write; corrected and both outer/remote AST PASS before the
+successful source preparation. This is not a product-test failure or hidden
+rerun. The same focused JSON/README and both backend indices now include actual
+01:30fetch,01:31preflight and01:43source preparation, not stale DEFERRED claims.
+Next runnable item is the unchanged normal Core pre-commit gate under a fresh
+SGP physical guard/own lease, reviewed25path scope and before/after image/cache/
+runtime inventories. Record actual full-hook counts; do not inherit old717API
+counts, bypass hooks or mistake a source commit for connected08/consumer ACK.
+
+**Normal source landing gate01:47UTC /08:47Asia/Saigon:** two initial attempts
+stop before hook/lease/test creation because foreign Node2262074 is active.
+The exact PID remains live at01:46–01:47; it is not stopped or treated as
+terminal. A bounded read-only quiet waiter then observes a fully quiet fresh
+guard and starts the unmodified normal pre-commit gate on the isolated25path
+candidate. Actual hook PID2269832/evidence
+/tmp/epg10-08-core-integration-hook-bhg5mo40; RUNNING, no PASS/commit claimed.
+Own50minute lease, before runtime/image/cache/disk inventory captured; no
+performance claim, production/DB/auth/secret operation or peer checkout change.
+Actual hook results and exact teardown are pending this same job, not another
+test/profile launched concurrently. Fresh HK foreign reservation is now Claude
+P18.4 G13 until02:11:19UTC/09:11:19Asia/Saigon (superseding02:14:46); its owner
+and actual jobs must still be quiet before the queued exact HK source cleanup
+or five-path documentation hook. No foreign lock/process/resource is removed.
+
+Fresh HK reservation read01:58UTC supersedes that deadline again: Claude
+P18.4 G13 v5.6 actual runtime window started01:48:19UTC, until03:48:19UTC /
+10:48:19Asia/Saigon. Do not use the historical02:11/02:14deadline to begin HK
+cleanup/hook or remove the active foreign reservation. SGP owns a separate
+source-hook lease/job and continues independently; actual API build passed and
+full single-worker suite is RUNNING. Current cell observation169.97%CPU,
+697.3MiB/3GiB/49PIDs is diagnostic only, not capacity evidence. No second test,
+resource-cap increase, runtime/config/auth/DB mutation or HK teardown occurs.
+
+**Actual hook progress/diagnostic02:06UTC /09:06Asia/Saigon:** contracts1087
+PASS/74files, Core TypeScript build PASS. API remains RUNNING, not accepted.
+First three terminal API files: elp204-positive-parent298cases/527305ms,
+elp210-commissioning114/16754ms, elp2-access-transaction152/61997ms, all PASS.
+The first file's wall duration is not one test exceeding its20s bound; it has
+298separate cases. No product failure/defect is inferred from slow output.
+Two bounded stack samples used the exact verified own Node worker66/host
+2310736 in6da98e70593c/control-api-test-node-2296058: both resumed immediately,
+only function/source positions read, no variables/secret, no host published
+port or production process. Diagnostic inspector stays inside that disposable
+cell and disappears on normal teardown. This is correctness/diagnostic source
+evidence, never timing/capacity qualification. Full normal hook still mandatory;
+no case skip, hook bypass, concurrent profile or code change was introduced.
+
+**Terminal normal hook/source landing02:35UTC; reconciled02:49UTC:** actual
+normal gate PASS/exit0 and committed b87f73dbda3d119dbb09ed9f263b89738abbb874,
+same25paths/qualified22outputs, Bobby identity, clean SGP candidate. Contracts
+1087PASS/74files; API8060PASS/7SKIP in413PASS/3SKIP files,0failure; real isolated
+PostgreSQL restore drill PASS. Seven skips are not passed/genuine-user evidence;
+capture their exact declared test names before publication report. No production
+latency/capacity/HA or connected08 is claimed. Full gate took about47minutes,
+not another authored/profile test or an unapproved production rollout.
+
+The read-progress tool's automatic approval review stalled then timed out for
+about39minutes. It did not start a second suite. One allowed read-only retry
+retrieves authoritative terminal receipt: own hook PID absent, two2296058
+cells/network absent, own lease removed. Local SSH supervision subsequently
+times out after its3000s bound; this does not undo the earlier actual commit or
+mean its job remains running. Preserve both original receipts/errors honestly.
+Raw runtime comparison is FALSE because foreign2398087 node/postgres appeared
+at02:14:21/23 while the own gate was running. Exact reconciliation: all51before
+tuples still identical, no missing/changed runtime; only those2foreign additions.
+Thus operational runtime unchanged; foreign overlap means no timing/capacity
+qualification. Never remove either foreign cell/PID or rewrite the raw FALSE.
+
+New inventory delta: one hook image dc7df10e036731c0f097027b820a354a868664286032a9d289722c5380ba67d1,
+two cache IDs93531mg3hiqkie66sij56vsev/p2st027n7pojrmqrxuvc6rpk4; cache3769→3771,
+shared free162696318976→162489352192B. These are inventory deltas, not proof
+both cache records belong to this job during overlap. Attribution/retention
+review and quiet exact teardown remain required; no broad prune. Fresh SGP
+foreign cells/node are still running at02:49, so cleanup is deferred, not done.
+Light, explicitly approved feature-only Git publication is independent of
+destructive cleanup and does not launch a hook build/test; perform it now if
+there is no active SGP measurement reservation, preserving dev/main/peer refs.
+Normal pre-push remains enabled. Stable Core/DB/auth/PKI/rollback stay unchanged.
+
+**Feature publication02:51:21UTC /09:51Asia/Saigon — COMPLETE source slice:**
+normal pre-push publishes only feat/execution-native-read-integration@
+b87f73dbda3d119dbb09ed9f263b89738abbb874 to BobbyAxerol/awesome-portal;
+ls-remote confirms that exact commit. Shared dev/main and both peer refs remain
+unchanged, clean candidate retained as one active documented feature; no merge,
+runtime/database/auth/Docker mutation. The current README and both indices now
+give Core its actual branch/commit/task-card entry point rather than only a
+patch path. Core-owner ACK/review/release/connected acceptance remain distinct.
+
+Skip accounting: Research full04-read-models1, w3-real-DR1, sampler-real-source1;
+native stable rollback-PG4 deliberately require EPG10_08_NATIVE_READ_TEST_ONLY=1
+and exact native-core-read-db/native_core_read_test, not the full-suite DB.
+Those identical4source cases already PASS/0SKIP in the accepted dedicated
+rollback profile233456 at18Oct23:35:02UTC (receipt9088d7526311794379cfef8b7b0e865f7aa40fc4ea8b571f1415b28b073775fc);
+do not replace them by the separate7factory cases or rerun unchanged source.
+Three other Research skips do not certify real source/DR; outside this read
+source-adoption slice. No owned failing test is waived or labelled external debt.
+
+Cache metadata review: two8KiB source.local records created01:48:20/21UTC,
+UsageCount1/Reclaimable/Sharedfalse, local context/dockerfile from the guarded
+hook; neither existed before. Before removal require unchanged exact ID/type/
+creation/use/reference pins, fresh quiet and lease; no broad prune or active/
+rollback deletion. Official buildx supports exact id equality filters:
+https://docs.docker.com/reference/cli/docker/buildx/prune/ (instruction only,
+not a claim cleanup ran). One exact dc7df10e image also requires unused ID/tag/
+ancestor proof. SGP foreign2398087/PIDs still active at publication; defer
+destructive cleanup only, not the completed source publication. HK foreign
+window now until03:48:56UTC/10:48:56Asia/Saigon; no cleanup/hook under it.
+Runnable remaining preparation is the exact cleanup controller/manifest and
+receipt/index consistency checks; real auth/schema/window/consumer adoption
+remain Core-owner integration inputs. Full08NOT_MET,09connected NOT_STARTED.
+
+**Closure recheck and exact cleanup continuation02:55–03:02UTC:** SGP owning
+research e19 and old integration c43 stay clean; canonical portal87d9d98c has
+5peer-owned WIP records, preserved. Candidate b87f73db clean/published. Stable
+Core d2c23ad6/config26c0d954, integration8400439b/config963a3d84 and preview
+d13cef06/config42a9f3ad have restart0 and unchanged image/config. Source-only
+adoption is not a deployment. Exact current guard becomes quiet at02:55.
+
+Execute cleanup immediately under that quiet window. Two initial ownership
+assertions stop BEFORE any delete because exported OCI indexac3dda0243ade6e8932d03db412f1e368b01d5aaf653dd293f5b9141e299b814
+differs from loaded image IDdc7df10e; no index=config assumption or secret read.
+Verify exact before/after ID delta, sole named offline:test tag in pinned hook
+log, Dockerfile labels/user101:101, no running/stopped container ancestor, and
+fresh quiet. The exact test image is then removed successfully (rebuildable
+from versioned Dockerfile); no operational/rollback image or volume touched.
+The two exact-cache prune calls return0 but records remain; postcondition fails
+and this no-op is NOT reported as cleanup success. Own lease removed in finally,
+durable cleanup-intent retains original disk/runtime pins for recovery.
+
+Prepared recovery controller finish-core-cache-cleanup.py validates image
+absent, original operational runtime hash, unchanged exact two8KiB source.local
+IDs/created/type/use1/reclaimable/unshared, and proves each du equality filter
+selects only one ID. Internal-record eligibility may be enabled with --all only
+while that exact ID filter remains; never unfiltered prune. Fresh guard now
+finds new foreign Node2712504/2714057 and stops BEFORE cache cleanup/lease.
+Thus current remaining cleanup is exactly2cache IDs/16384B on SGP plus the
+1175file/20629199B HK specimen and five-path documentation normal hook, not
+unfinished owned source or a failed product test. Helpers/receipts prepared;
+runtime/source/DB/auth/PKI/rollback/peer jobs unchanged. Repeat the exact owned
+cleanup when that host is actually quiet; do not wait on unrelated auth inputs.
+
+### Original08 integration-first final source handoff and remaining gates — 2026-10-19
+
+Source slice IMPLEMENTED/TESTED/PUBLISHED: SGP active feature checkout
+/home/bobby/.worktrees/portal-execution-native-core-integration,
+feat/execution-native-read-integration@b87f73dbda3d119dbb09ed9f263b89738abbb874,
+awesome-portal remote verified;25paths/+1982/-99, clean. No dev/main merge or
+stable promotion. HK canonical Portal remains manager-v2-paper-read54c6f5f3;
+owned upgrade worktree/branch remains execution-edge-upgrade-v1_2@5f433f8c
+with exactly five owned journal/index/README/receipt paths pending normal-hook
+commit/publication; preserve the three unrelated untracked entries. Seven
+preexisting active HK feature worktrees retained, none merged/deleted by us.
+
+SGP stable release remains /srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose,
+image d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263 /
+config26c0d954d1f3af2133b2a528f39430f814e3c35d350095aecf7178f3bc90cedb,
+restart0 at03:30:52UTC; integration8400439b/963a3d84 and previewd13cef06/
+42a9f3ad also unchanged/restart0. HK release remains
+/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy;
+all existing Edge/Manager/Source Proxy/native producer, private PKI/config,
+database state and named rollback artifacts retained, no runtime change by
+this task. Current HK Docker read inside sandbox cannot sudo (NNP); no fresh
+healthy/production acceptance claim substitutes that missing observation.
+
+Image-cleanup disk receipt reconciled03:30UTC: intent162671202304B free before,
+later shared-host162533752832B free. This is not exclusive reclaimed bytes;
+other jobs run. Exact D4 image confirmed absent, all own cells/network/lease
+gone, active source candidate retained. Cache finish guard at03:29still finds
+foreign Node jobs, later2721352/2726063; no repeated prune or foreign job stop.
+Exactly2idle8KiB source-cache records remain with prepared exact recovery.
+HK reservation now claude-s100-final-lowload-b58e40dd until04:57:58UTC /
+11:57:58Asia/Saigon, superseding old deadlines. Its description mentions15
+paused Portal containers/Codex tree; that is foreign-owner lock provenance,
+not our runtime action or a fresh health receipt. Do not unpause/delete their
+resources or run HK1175file cleanup/documentation hook while reserved.
+
+**Actual parallel-source check (runnable, done):** Core owning research has now
+advanced independently to35953e073f609c154ec484b19b4ceeeb09b566c8, clean,
+421changed paths/+75919/-143 since e19, mostly peer UI/docs.0overlap with our
+22native source paths; read-only exact22patch check PASS/exit0/writes0 and
+HEAD/index unchanged. Six dependency-closure paths changed: operations/
+operational-read contract/repository/service, query/contracts.ts,
+query/postgres.ts, test/elp204-operational-current.spec.ts. Targeted source
+review: FE-042incident links authorize both targets before bound/count;
+FE-043closed status facets exclude only own filter; listWithSnapshot lends the
+same RR/read-only transaction; list() interface retained. Native22paths need
+no conflict overwrite. This is source review, not a new test execution or
+automatic compatibility certification. Old strict full-closure verifier must
+reject changed dependencies rather than silently refresh pins.
+
+Next exact Core-owner action within existing08: adopt b87delta into its
+reviewed integration release, preserve these6dependency semantics and421peer/
+UI changes, qualify that actual combined revision (query/ops/native/current
+policy/same-pool/egress), then return release/image/config/physical-target and
+private serving/auth/schema/window inputs. Our8060PASS belongs to e19+b87delta,
+not untested359combined release. No new phase/generic08approval is requested;
+source publication is not a consumer ACK. Stable untouched, selected integration
+DB/auth/invitation constraints remain exactly as already recorded.
+
+Runnable owned preparation is complete: source/25path review, normal gate,
+publication, native4PG reuse proof, current-owner delta/patch preflight, exact
+cleanup recovery, receipt/indices. Remaining execution is genuinely gated:
+SGP actual quiet permits2cache cleanup; HK actual reservation release/quiet
+permits exact20.63MB specimen teardown and five-path documentation hook/push;
+Core owner matched integration release/auth/private inputs permit08real-user
+revoke/cache/cursor/SSE. Full08connected NOT_MET;09connected NOT_STARTED.
+Recommended next action is Core adoption/matched qualification plus those
+exact cleanups when each host becomes quiet, not another phase or fake session.
+
+**Terminal read-only reconciliation,03:39UTC /10:39Asia/Saigon:** recovered the
+earlier truncated cleanup-tool result by inspecting durable state, not blindly
+rerunning deletion. exact-cleanup.json is absent; both exact source.local IDs
+93531mg3hiqkie66sij56vsev and p2st027n7pojrmqrxuvc6rpk4 remain8KiB each,
+UsageCount1/reclaimable/unshared. No cache-complete claim. Fresh SGP guard
+finds foreign npm2755565 and Node2755638/2763452/2763497/2763556/2763605/
+2763619/2763626; no prune/test/build started. Own hook/cells/network remain
+absent; image absent. Shared free162533937152B; original51runtime tuples
+unchanged, the historical2foreign additions/raw FALSE retained. Candidate
+b87clean, Core359clean, integrationc43clean, canonical87d9 retains5peer WIP.
+Stable/integration/preview images/config/restart0 match the pins above. HK
+reservation still until04:57:58UTC; no override, source teardown or commit-hook
+started. Main-plan/indices/receipt updates are the same five owned WIP paths,
+diff-check/JSON validation only, not a published documentation commit. No new
+phase or production/auth/DB/release operation was introduced by this check.
+
+### Original08 resumed integration commissioning and exact cleanup — 2026-10-19 12:54 Asia/Saigon
+
+**Approval/status:** Bobby renews the existing goal and explicitly continues
+reviewed Core integration -> exact integration/auth/schema -> genuine revoke/
+cache/cursor/SSE. Original08 IN_PROGRESS; connected NOT_MET;09connected not
+started. Stable production remains outside the change target. Same08 guide,
+native commissioning packet and current-Core reconciliation links above govern;
+no new phase or repeat generic approval. Goal service still reports BLOCKED
+at this read; only the user/product resumes it, not a new goal or false completion.
+
+**Runnable slice completed:** full HK/SGP guards returned quiet. At05:54:31UTC,
+the pre-journalled hash-checked HK controller removed only its1175regular-file/
+20629199logical-byte source child and unlinked the sole node_modules symlink
+without following /deps.41runtime tuples unchanged; no Docker mutation, own
+lease removed. Shared free214014124032 ->214036094976B. At05:54:51UTC, SGP
+controller removed exactly93531mg3hiqkie66sij56vsev and p2st027n7pojrmqrxuvc6rpk4,
+2idle source.local records/16384B, cache3771->3769. Original51runtime tuples
+and original cleanup runtime hash unchanged; earlier test image remains absent,
+own lease removed. Shared free162422992896 ->162422296576B; not exclusive
+reclaimed-byte evidence. Both owned pending cleanups from the prior report are
+now closed. Receipts: /tmp/epg10-08-core-stable39-JezaG4cB/source-cleanup.json
+on HK; /tmp/epg10-08-core-integration-hook-bhg5mo40/exact-cleanup.json on SGP.
+All operational/source/PKI/private/rollback artifacts and borrowed dependencies
+retained. No broad prune, volumes, peer cells, data or authority deletion.
+
+**New peer input, not our authored work:** Core has independently adopted the
+native integration in d0789674afdff9e9a168a5a6f75e0f582c96ba54,64paths/+6018/-190,
+on /home/bobby/portal-research, docs/research-loop-plan. The dated actual
+/home/bobby/.local/state/portal-execution-elp210/20261019/c7-terminal.md records
+1118contracts PASS/75files and8102API PASS/3SKIP/416PASS+2SKIPfiles, build and
+scoped restore PASS; log SHA25653e8b95edf75c72916da648a3d47ce3c962c547aa2a2a924ebf173caad82ab93.
+The tracked pre-gate PENDING/787PASS+3FAIL receipt remains intact; the actual
+terminal and parent/commit/source witnesses supersede only its pending gate,
+not its failure history. Source qualification is TEST_ONLY, not HK commission.
+This closes the former 'Core has not adopted/requalified six dependencies'
+source gap: no rerun of unchanged d078 merely to refresh tracking. Do NOT apply
+the old22patch again: read-only forward check now refuses because adopted
+paths changed; writes0, HEAD/index unchanged. Core's later FE-054/backend and
+contract WIP is preserved and is not covered by d078's gate. Neither d078 nor
+our published b87 is an approved/deployed whole integration runtime image.
+
+**Parallel cut:** TS canonical668e1032 still has its2peer edits; TS-next now
+40437453 records IDR-128 workload isolation, not an external N03 publication.
+PM5cf79ecf plus WIP retains command runtime-human provider/COMMIT lease
+NOT_PUBLISHED and runtime/SSE receipts unqualified. DLmain5bf5cd54 has its
+plan WIP. No peer branch/ref/data/service was changed here. Those genuinely
+producer-owned command03/07 and matched01/06 inputs remain explicit, not code
+or cleanup forgotten by Edge. Keep source-dark and physical-capacity boundaries.
+
+**Next owned transaction:** publish exactly the five existing owned HK tracking/
+receipt paths after diff/JSON/identity/scope checks through the normal unmodified
+hook (core.hooksPath=.githooks); preserve3unrelated untracked entries. Before/
+after images/cache/runtime and actual gate log/receipt are required; any new
+disposable hook image/cache is its exact cleanup target, not a broad prune.
+No code or peer source overwrite, new remote source copy, runtime/DB/auth change
+is part of this publication. Stable SGPd2c23ad6/26c0d954, integration8400439b/
+963a3d84 and previewd13cef06/42a9f3ad remain restart0 at05:54read; integration
+still c43runtime rather than d078. Canonical/worktree/release/rollback pins in
+the previous handoff remain except for the new Core source above.
+
+**Remaining commissioning decision boundary:** choose only the reviewed Core
+integration image/config and physical DB7675320204448350242/39, reconcile its
+minimal native schema/independent golden, and commission distinct serving-UID
+private refs/owner intake plus genuine protected integration auth. Existing
+stable-only private target7675333655652302882/expired intake is NOT permission
+to retarget keys/grants. No fake dev principal, direct invitation status edit,
+stable-session reuse, blanket current migration bootstrap or whole stable
+rollout. Once exact integration input is present, bind/test in this same08
+without asking generic approval again; retain ambiguity/recovery on rollback.
+
 
 
 

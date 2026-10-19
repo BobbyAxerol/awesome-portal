@@ -7,6 +7,59 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 resumed19Oct12:54Asia/Saigon:** both pending cleanups closed:
+  HK1175files/20.63MB and SGP2exact cache IDs/16KiB;41HK/51SGP tuples unchanged.
+  Core adopted native read/runtime in d0789674 and its actual terminal records
+  1118contract/8102API PASS,3SKIP/build/restore PASS. Source-only, not connected
+  commissioning; later Core WIP is preserved and unqualified by that result.
+  [Current transaction and exact remaining integration inputs](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-resumed-integration-commissioning-and-exact-cleanup--2026-10-19-1254-asiasaigon).
+  Five owned tracking/receipt paths go through the normal hook; stable and all
+  operational/private/rollback resources remain unchanged.08NOT_MET/09not started.
+
+- **Original08 Core source published19Oct09:51Asia/Saigon:**
+  feat/execution-native-read-integration@b87f73db on awesome-portal, clean25path
+  source candidate;1087contract PASS,8060API PASS/7SKIP,0FAIL, restore PASS.
+  [Core adoption and exact remaining cleanup/connected boundary](../integration/execution-native-read-v1/current-core-reconciliation/README.md#current-owner-direction--integration-first).
+  51operational tuples unchanged; only2foreign test additions explain raw drift.
+  Own cells/network/lease/test image gone;2cache IDs/16KiB and HK specimen/journal hook still
+  wait for quiet. No stable/runtime/DB/auth/PKI/rollback/dev/main mutation.
+  Core review+matching integration auth/schema/private refs precede real08
+  revoke/cache/cursor/SSE. No consumer ACK or09connected acceptance claimed.
+  Core later advanced to35953e07:0overlap with22native paths,6query/operational
+  dependency changes. Patch-check PASS/writes0; old e19test evidence is not
+  inherited as qualification of that actual merged release. Preserve peer/UI.
+  Read-only10:39Asia/Saigon: b87clean, exact2cache IDs still present, foreign
+  SGP npm/Node active; HK window until11:57:58. Five-path journal/receipt is
+  local WIP, not yet a separate published documentation commit.
+
+- **Original08 resumed19Oct08:18Asia/Saigon:** latest owner choice is Core
+  integration release first, stable unchanged. [Adoption boundary](../integration/execution-native-read-v1/current-core-reconciliation/README.md#current-owner-direction--integration-first)
+  distinguishes actual old integrationc43/8400439b/dev-auth from qualified
+  e19+22delta, its separate DB and normal genuine-user/IdP flow. No production
+  mutation or session fabrication;08NOT_MET,09connected not started.
+  Actual08:30–08:43Asia/Saigon: exact5f433 fetched and22file e19preflight PASS;
+  separate SGP feat/execution-native-read-integration holds verified22source+
+  3tracking paths staged. Peer checkouts/51runtime tuples unchanged; temporary
+  packet/lease removed. Normal hook/commit/publication and Core-owner ACK pending.
+
+- **Original08 current e19/stable39 factory (2026-10-19,00:07UTC):**
+  [focused receipt](../integration/execution-native-read-v1/current-core-reconciliation/stable39-qualification.json)
+  records strict PASS +7existing factory cases PASS/0FAIL/ERROR/SKIP on exact
+  current e19+22delta, not historical5291 or connected PM authority.41runtime
+  tuples unchanged, own cells/network/lease/tmpfs keys removed; one source
+  specimen awaits exact quiet teardown under the shared-host rule. No actual
+  Core install/auth/session or service change. Full08NOT_MET/09connected
+  NOT_STARTED; genuine caller and exact production adoption remain required.
+  Actual releasede4fd→e19 delta is987paths;171was only5291→e19. Four actual
+  Core services have no native config; three are dev-auth. The00:33 audit pins
+  four different physical DBs; only stable matches the commissioned target.
+  Preview has a different Bobby ID; integration/probe have Stan INVITED.
+  The same receipt pins this release boundary, not a full-release
+  compatibility certificate or permission to deploy unrelated peer changes.
+  SGP read-only remote visibility00:43UTC confirms Edge5f433f8c is readable;
+  actual fetch/apply now recorded above; consumer ACK and connected acceptance
+  are not inferred from source visibility or preparation.
+
 - **Original08 current Core e19 reconciliation (2026-10-18,23:35UTC):**
   [22-file source delta](../integration/execution-native-read-v1/current-core-reconciliation/README.md)
   preserves current eligibility/grants/scalar-only journal and genuine same-pool

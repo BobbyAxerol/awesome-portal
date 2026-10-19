@@ -650,6 +650,69 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 resumed19Oct12:54Asia/Saigon:** exact HK1175file/20.63MB specimen
+and SGP2source-cache IDs/16KiB teardown COMPLETE,41HK/51SGP runtime tuples
+unchanged; active/rollback/private artifacts retained. Core independently
+landed d0789674 with actual terminal1118contract/8102API PASS,3SKIP, build/
+restore PASS. This closes source adoption/current-dependency qualification,
+not actual provider/human auth or integration rollout. Preserve its new WIP;
+do not reapply22patch or inherit the result for changed bytes. [Latest original08
+journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-resumed-integration-commissioning-and-exact-cleanup--2026-10-19-1254-asiasaigon)
+tracks exact target/auth/schema/serving refs and the five-path normal-hook
+publication transaction. Stable unchanged; full08NOT_MET/09connected not started.
+
+**Original08 integration source published19Oct09:51Asia/Saigon:** SGP
+feat/execution-native-read-integration@b87f73db is on awesome-portal, clean,
+25paths/+1982/-99, exact22qualified source outputs. Normal hook:1087contracts
+PASS; API8060PASS/7SKIP,0FAIL; restore PASS. [Adoption/skip/cleanup details](integration/execution-native-read-v1/current-core-reconciliation/README.md#current-owner-direction--integration-first).
+All51original operational tuples unchanged; raw drift flag retains2foreign
+test additions, no capacity proof. Own cells/network/lease and exact test image
+removed;2cache records/16KiB and HK specimen/journal hook wait for real quiet. Stable/current service,
+DB/auth/PKI/rollback/dev/main unchanged; source publication is not owner ACK or
+connected08. Next: Core review/adopt candidate, commission matching integration
+Access/auth/private refs/schema/window, then real-user08 drill;09not started.
+Later Core35953e07 changes6qualified query/operational dependencies, not our22
+paths; readonly patch-check PASS/writes0. The same handoff names the exact
+matched-release qualification action; no silent pin refresh or421peer/UI merge.
+Read-only10:39Asia/Saigon recheck: source b87clean; exact2cache IDs still
+present, foreign SGP npm/Node jobs active. HK window remains until11:57:58;
+five-path journal/receipt publication and exact source teardown still pending.
+
+**Original08 resumed19Oct08:18Asia/Saigon:** Bobby's later choice is Core
+integration first, stable unchanged; official IdP login is user-completed.
+Actual integrationc43/8400439b is not qualified e19+22delta and has dev auth;
+the [same handoff](integration/execution-native-read-v1/current-core-reconciliation/README.md#current-owner-direction--integration-first)
+now pins release/DB/auth boundaries. No blind patch, key/grant copy, production
+rollout or genuine-user acceptance inferred. HK foreign window now ends
+09:14:46Asia/Saigon; owned cleanup/hook remain pending,08NOT_MET/09not started.
+Source progress08:30–08:43Asia/Saigon: exact5f433 fetched, e19preflight22PASS;
+separate SGP feat/execution-native-read-integration now has exact22source+
+3tracking paths staged, verifier PASS. Both peer checkouts and51runtime tuples
+unchanged. Normal hook/commit/publication still pending; not Core-owner ACK.
+
+**Original08 current e19/stable39 factory,19Oct00:07UTC:** the existing genuine
+factory now runs on exact current e19+22delta: strict PASS and7PASS/0FAIL/ERROR/
+SKIP, unchanged independent schema golden and39-ledger. See the
+[focused receipt](integration/execution-native-read-v1/current-core-reconciliation/stable39-qualification.json).
+This is not actual PM/human/connected acceptance.41HK runtime tuples unchanged;
+owned cells/network/lease/tmpfs keys removed, one disposable source specimen
+awaits exact quiet teardown. HK foreign window still prevents its hook/cleanup;
+SGP source delivery/adoption preparation has progressed independently above.
+No actual Core schema/policy/session/runtime or auth change. Full08NOT_MET;
+09connected NOT_STARTED. Exact production adoption/window/recovery and genuine
+Cloudflare/Portal caller remain separate before connected commissioning.
+Actual00:26 release audit corrects the blast radius: stablee4fd→e19 differs
+in987Control-API paths, not the1715291→e19 slice. Four SGP Core services have
+no native config; three use dev auth. The00:33 read-only volume audit confirms
+four different physical DBs: only stable matches the commissioned target;
+preview has a different Bobby ID and integration/probe have Stan INVITED.
+Whole-release compatibility is unqualified, not a regression inferred from a
+file count. Core-owner matched release/adoption is required; no whole-image
+promotion, full migrations or alternate dev-principal shortcut was performed.
+SGP read-only remote visibility at00:43UTC confirms Edge feature5f433f8c is
+readable; actual08:30fetch/08:43candidate apply are recorded above, not inferred
+from visibility. Consumer ACK and matching genuine caller remain outstanding.
+
 **Original08 current Core reconciliation23:35UTC:** the
 [e19 source delta](integration/execution-native-read-v1/current-core-reconciliation/README.md)
 is SOURCE_QUALIFIED, not installed or connected acceptance. Core
