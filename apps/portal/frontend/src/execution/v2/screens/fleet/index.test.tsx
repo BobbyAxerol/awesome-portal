@@ -835,7 +835,14 @@ describe("board view", () => {
     expect(carry.querySelector(".exec-fleet-version")?.textContent).toBe("3.2");
     expect(carry.textContent).toContain("Owner Bobby-001");
     expect(carry.textContent).toContain("Ready");
-    expect(carry.textContent).toContain("Readiness: Not published (FE-027)");
+    // The same gap on every card of a lane is stated once at the lane head, never per card, and never dropped.
+    expect(carry.textContent).not.toContain("Readiness");
+    const paperGap = lane("Paper").querySelectorAll(".exec-fleet-lane-head .exec-fleet-lane-gap");
+    expect(paperGap).toHaveLength(1);
+    expect(paperGap[0]!.textContent).toBe("Readiness: Not published (FE-027) for every alpha here");
+    expect(lane("Paper").querySelectorAll(".exec-fleet-card-ready")).toHaveLength(0);
+    // A lane with no card carries no readiness line.
+    expect(lane("R1 gate").textContent).not.toContain("for every alpha here");
     const nodes = [...carry.querySelectorAll(".exec-blk-spine-mini i")].map((i) => i.getAttribute("data-s"));
     expect(nodes).toEqual(["unknown", "unknown", "cur", "ahead", "ahead", "ahead"]);
     expect(nodes).not.toContain("done");

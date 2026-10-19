@@ -41,7 +41,8 @@ export interface FleetBoardProps {
   onOpen(row: FleetRow): void;
 }
 
-function Card({ row, selected, href, onOpen }: { row: FleetRow; selected: boolean; href: string; onOpen(row: FleetRow): void }) {
+/** `sharedGap`: every card in the lane carries the same readiness gap, so the lane header states it once (the card omits it). */
+function Card({ row, selected, href, onOpen, sharedGap }: { row: FleetRow; selected: boolean; href: string; onOpen(row: FleetRow): void; sharedGap: boolean }) {
   const current = spineStage(row.stageCode);
   const shown = row.attention.slice(0, MAX_REASONS);
   const hidden = row.attention.length - shown.length;
@@ -70,7 +71,7 @@ function Card({ row, selected, href, onOpen }: { row: FleetRow; selected: boolea
         ) : null}
       </span>
       {current ? <JourneySpine variant="mini" current={current} label={`${row.label} lifecycle`} /> : null}
-      <span className="exec-fleet-np exec-fleet-card-ready">Readiness: {notPublished(BOARD_READINESS)}</span>
+      {sharedGap ? null : <span className="exec-fleet-np exec-fleet-card-ready">Readiness: {notPublished(BOARD_READINESS)}</span>}
     </li>
   );
 }
@@ -97,12 +98,18 @@ function Column({ column, headingId, selectedKey, hrefFor, onOpen }: {
       </section>
     );
   }
+  // Today the fleet read publishes no readiness for any alpha, so every card in a lane carries the same gap: it is
+  // stated once at the lane head, never dropped.
+  const sharedGap = n > 0;
   return (
     <section className="exec-fleet-lane" data-stage={column.code} aria-labelledby={headingId}>
       <header className="exec-fleet-lane-head">
         <h3 id={headingId} className="exec-fleet-lane-title">{column.label}</h3>
         <span className="exec-fleet-lane-count">{n} loaded</span>
         <span className="exec-fleet-lane-pub">In your scope: {column.published}</span>
+        {sharedGap ? (
+          <span className="exec-fleet-np exec-fleet-lane-gap">Readiness: {notPublished(BOARD_READINESS)} for every alpha here</span>
+        ) : null}
       </header>
       {n === 0 ? (
         <p className="exec-fleet-lane-empty">
@@ -111,7 +118,7 @@ function Column({ column, headingId, selectedKey, hrefFor, onOpen }: {
       ) : (
         <ul className="exec-fleet-lane-cards" aria-label={`${column.label}, ${n} loaded`}>
           {column.rows.map((row) => (
-            <Card key={row.key} row={row} selected={row.key === selectedKey} href={hrefFor(row)} onOpen={onOpen} />
+            <Card key={row.key} row={row} selected={row.key === selectedKey} href={hrefFor(row)} onOpen={onOpen} sharedGap={sharedGap} />
           ))}
         </ul>
       )}

@@ -27,10 +27,16 @@
 }
 .exec-fleet-fresh {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   font: var(--exec-font-meta);
   color: var(--ink-soft);
+}
+/* The freshness chip is a short word: it never wraps letter by letter in a narrow header row. */
+.exec-fleet-fresh .exec-flag {
+  flex: none;
+  white-space: nowrap;
 }
 .exec-fleet-banner {
   display: flex;
@@ -562,6 +568,9 @@ a.exec-fleet-open {
 .exec-fleet-lane-pub {
   font: var(--exec-font-meta);
   color: var(--ink-faint);
+}
+.exec-fleet-lane-gap {
+  margin-top: 2px;
 }
 .exec-fleet-lane-empty {
   margin: 0;
