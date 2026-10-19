@@ -1122,3 +1122,142 @@ function BackButton() {
   const navigate = useNavigate();
   return <button type="button" onClick={() => navigate(-1)}>History back</button>;
 }
+
+/* ── New request drawer (S3 W-REQUEST, `?compose=request`) ─────────────────── */
+
+describe("the New request drawer", () => {
+  const stanRows = () => ({ ...inbox(), ...{ rawRows: [wire("apr_a", "R1", "stan", "Alpha One"), wire("apr_b", "R2", "bobby", "Beta Two")] } }) as InboxResult;
+  const fetchCalls: string[] = [];
+  beforeEach(() => {
+    fetchCalls.length = 0;
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      fetchCalls.push(String(input));
+      return new Response(JSON.stringify({ items: [] }), { status: 200, headers: { "content-type": "application/json" } });
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const drawer = () => document.querySelector('[data-screen="new-request-drawer-v2"]');
+  const newRequestButton = () => screen.getByRole("button", { name: "New request" });
+
+  async function mountNav(p: Port, entry: string, props: Partial<CockpitProps> = {}, initial?: string[]) {
+    const view = render(
+      <MemoryRouter initialEntries={initial ?? [entry]} initialIndex={initial ? initial.length - 1 : 0}>
+        <Cockpit api={p.api} {...props} />
+        <Where />
+        <BackButton />
+      </MemoryRouter>,
+    );
+    await settle();
+    return view;
+  }
+
+  it("is mounted closed: no drawer, no run-library read, no write, and the button says it opens a dialog", async () => {
+    const p = standardPort();
+    await mountNav(p, "/governance/approvals");
+    expect(drawer()).toBeNull();
+    expect(fetchCalls).toEqual([]);
+    expect(newRequestButton().getAttribute("aria-haspopup")).toBe("dialog");
+    for (const write of WRITES) expect(p.calls.map((call) => call.name), write).not.toContain(write);
+  });
+
+  it("New request pushes ?compose=request (Back closes it) and shows the form; nothing is sent", async () => {
+    viewport(false);
+    const p = standardPort();
+    await mountNav(p, "/governance/approvals", {}, ["/prev", "/governance/approvals?sel=apr_a"]);
+    fireEvent.click(newRequestButton());
+    await settle();
+    expect(where()).toContain("compose=request");
+    expect(where()).toContain("sel=apr_a");
+    expect(drawer()).not.toBeNull();
+    expect(p.calls.map((call) => call.name)).not.toContain("createApprovalRequest");
+    fireEvent.click(screen.getByRole("button", { name: "History back" }));
+    await settle();
+    expect(where()).not.toContain("compose=");
+    expect(where()).toContain("sel=apr_a");
+    expect(drawer()).toBeNull();
+  });
+
+  it("the drawer's Close removes the key with replace: Back afterwards does not reopen it", async () => {
+    viewport(false);
+    await mountNav(standardPort(), "/governance/approvals", {}, ["/prev", "/governance/approvals"]);
+    fireEvent.click(newRequestButton());
+    await settle();
+    const dialog = document.querySelector(".exec-dock") as HTMLElement;
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await settle();
+    expect(where()).not.toContain("compose=");
+    fireEvent.click(screen.getByRole("button", { name: "History back" }));
+    await settle();
+    expect(where()).toBe("/governance/approvals");
+    expect(drawer()).toBeNull();
+  });
+
+  it("while it is open the cockpit's own keys do nothing: j, k, n and Esc leave the selection and the announcement alone", async () => {
+    viewport(false);
+    await mountNav(standardPort(), "/governance/approvals?sel=apr_b&compose=request");
+    expect(drawer()).not.toBeNull();
+    const live = screen.getAllByRole("status").find((el) => el.classList.contains("exec-ck-live")) as HTMLElement;
+    // From a button inside the drawer (not an input), where only the guard stops the cockpit.
+    const close = within(document.querySelector(".exec-dock") as HTMLElement).getByRole("button", { name: "Close" });
+    for (const key of ["j", "k", "n", "a", "r"]) fireEvent.keyDown(close, { key });
+    await settle();
+    expect(where()).toContain("sel=apr_b");
+    expect(live.textContent).toBe("");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await settle();
+    // The drawer takes Esc (it closes); the cockpit does not clear the selection.
+    expect(where()).toContain("sel=apr_b");
+    expect(where()).not.toContain("compose=");
+  });
+
+  it("once it is closed the cockpit keys work again", async () => {
+    viewport(false);
+    await mountNav(standardPort(), "/governance/approvals?sel=apr_b&compose=request");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await settle();
+    expect(where()).not.toContain("compose=");
+    fireEvent.keyDown(document.body, { key: "k" });
+    await settle();
+    expect(where()).toContain("sel=apr_a");
+  });
+
+  it("a link with ?compose=request opens it; the run library is read on that first opening", async () => {
+    await mountNav(standardPort(), "/governance/approvals?compose=request");
+    expect(drawer()).not.toBeNull();
+    expect(fetchCalls.length).toBeGreaterThan(0);
+  });
+
+  it("the delivery policy's reason reaches the drawer as writeBlockedReason", async () => {
+    await mountNav(standardPort(), "/governance/approvals?compose=request", { writeBlockedReason: "The delivery policy blocks governance writes." });
+    expect(screen.queryAllByText(/delivery policy blocks governance writes/).length).toBeGreaterThan(0);
+  });
+
+  describe("researcher (own requests only)", () => {
+    beforeEach(() => signIn({ userId: "usr_stan", username: "stan", capabilities: V2_ROLE_PRESETS.researcher }));
+
+    it("has the same drawer, and Esc in it does not leave the read-only request", async () => {
+      viewport(false);
+      const clear = vi.fn();
+      const p = standardPort({}, stanRows());
+      await mountNav(p, "/governance/approvals/apr_a/r1?compose=request", { pathSelection: { id: "apr_a", kind: "r1" }, onClearPathSelection: clear });
+      expect(drawer()).not.toBeNull();
+      fireEvent.keyDown(document.body, { key: "Escape" });
+      await settle();
+      expect(clear).not.toHaveBeenCalled();
+      // Closed now: Esc means what it meant before.
+      fireEvent.keyDown(document.body, { key: "Escape" });
+      expect(clear).toHaveBeenCalledTimes(1);
+    });
+
+    it("the list view shows New request and opens the drawer", async () => {
+      viewport(false);
+      await mountNav(standardPort({}, stanRows()), "/governance/approvals");
+      expect(screen.getByRole("heading", { name: "My requests" })).toBeTruthy();
+      fireEvent.click(newRequestButton());
+      await settle();
+      expect(where()).toContain("compose=request");
+      expect(drawer()).not.toBeNull();
+    });
+  });
+});

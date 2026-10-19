@@ -34,14 +34,14 @@ import { useSession } from "../auth/session";
 import { createHttpApi } from "./api/httpApi";
 import { contractFor, useExecutionRuntime } from "./useExecutionRuntime";
 import { isAvailable, unavailableSentence } from "./screenContracts";
-import type { DeliveryPolicy } from "./profile";
+import { governanceWriteBlocked, type DeliveryPolicy } from "./profile";
 import { NewApprovalRequestContainer } from "./screens/NewApprovalRequest";
 import { WaiversRegisterContainer } from "./screens/WaiversRegister";
 import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
 import { EXECUTION_V2_SHELL, isV2Screen } from "./v2/flags";
 import { withContext, withoutParams, type ExecEnv } from "./v2/urlState";
 import { RouteFeaturesProvider } from "./v2/shell/routeFeatures";
-import type { EnvLock } from "./v2/shell/ContextBar";
+import type { EnvLock, WindowLock } from "./v2/shell/ContextBar";
 
 // UXM-07: the V2 context bar loads only when the build flag names it. The
 // condition reads the raw env string so the bundler folds it away when the
@@ -73,6 +73,12 @@ const V2PortfolioList = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => i
 const V2Portfolio = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/portfolios/portfolio")) : null;
 const V2Compare = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/compare")) : null;
 const V2Account = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/account")) : null;
+// S3 stage screens (2026-10-19, D2: one key and one chunk per screen). Same raw-env gate: a flag-off build emits none of them.
+const V2Workbench = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/workbench")) : null;
+const V2Sandbox = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/sandbox")) : null;
+const V2Canary = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/canary")) : null;
+const V2Live = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/live")) : null;
+const V2Request = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/request")) : null;
 import {
   AdminCatalogueContainer,
   ApprovalInboxContainer,
@@ -194,11 +200,32 @@ const BLOTTER_WINDOW_LOCK = { reason: "Not published (FE-025). The orders read t
 // Operations carries its own Range control and the server takes no window (FE-025): the bar's window says so.
 // No `effective`: a fixed chip would lie once the local Range changes.
 const OPERATIONS_WINDOW_LOCK = { reason: "Operations has its own Range control below. The server takes no window (FE-025)." };
-/** The window lock a V2 screen's own read implies; `undefined` keeps the bar's generic "server takes no window" lock. */
-function windowLockFor(screenId: string): { reason: string; effective?: string } | undefined {
-  if (screenId === "EXECUTION_OPERATIONS_QUEUE_SCREEN" && isV2Screen("ops")) return OPERATIONS_WINDOW_LOCK;
-  if (screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2Screen("blotter")) return BLOTTER_WINDOW_LOCK;
-  return undefined;
+// The S3 stage screens read one deployment, and none of those reads takes the bar's window: each says what it covers instead.
+const WORKBENCH_WINDOW_LOCK = { reason: "Not published (FE-025). The deployment read takes no window.", effective: "Published window" };
+const SANDBOX_WINDOW_LOCK = { reason: "The certification run fixes the window", effective: "Certification run" };
+const CANARY_WINDOW_LOCK = { reason: "The Canary trial fixes the window.", effective: "Trial window" };
+const LIVE_WINDOW_LOCK = { reason: "Live operations reads from activation.", effective: "Since activation" };
+/**
+ * The window lock a V2 screen's own read implies; `undefined` keeps the bar's generic "server takes no window" lock.
+ * The stage screens are V2 only on their deployment route (`context.hasDeploymentId`): a list route is the Fleet or the V1 list.
+ */
+export function windowLockFor(screenId: string, context: EnvLockContext = {}, isV2: (key: Parameters<typeof isV2Screen>[0]) => boolean = isV2Screen): { reason: string; effective?: string } | undefined {
+  if (screenId === "EXECUTION_OPERATIONS_QUEUE_SCREEN" && isV2("ops")) return OPERATIONS_WINDOW_LOCK;
+  if (screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2("blotter")) return BLOTTER_WINDOW_LOCK;
+  if (context.hasDeploymentId !== true) return undefined;
+  switch (screenId) {
+    case "EXECUTION_PAPER_WORKBENCH_SCREEN":
+    case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN":
+      return isV2("workbench") ? WORKBENCH_WINDOW_LOCK : undefined;
+    case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
+      return isV2("sandbox") ? SANDBOX_WINDOW_LOCK : undefined;
+    case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN":
+      return isV2("canary") ? CANARY_WINDOW_LOCK : undefined;
+    case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN":
+      return isV2("live") ? LIVE_WINDOW_LOCK : undefined;
+    default:
+      return undefined;
+  }
 }
 /** What the route knows about the URL that decides whether the environment applies. */
 export interface EnvLockContext {
@@ -206,8 +233,20 @@ export interface EnvLockContext {
   compare?: boolean;
   /** The alpha route carries an alpha id (a 360); without one it is the Fleet list. */
   hasAlphaId?: boolean;
+  /** The stage route carries a deployment id; without one it is a list (the Fleet, or the V1 overview). */
+  hasDeploymentId?: boolean;
 }
 export const PATH_ENV_REASON = "The path sets the environment.";
+/** The reason the S3 stage screens give once they mount: the deployment they read is in one environment. */
+export const DEPLOYMENT_ENV_REASON = "The deployment fixes the environment.";
+// The flag that mounts the V2 screen of each stage route (on its deployment route only).
+const STAGE_V2_KEY: Readonly<Record<string, Parameters<typeof isV2Screen>[0]>> = {
+  EXECUTION_PAPER_WORKBENCH_SCREEN: "workbench",
+  EXECUTION_PAPER_WORKBENCH_VNM_SCREEN: "workbench",
+  EXECUTION_SANDBOX_CERTIFICATION_SCREEN: "sandbox",
+  EXECUTION_CANARY_CONTROL_ROOM_SCREEN: "canary",
+  EXECUTION_LIVE_FULL_OPERATIONS_SCREEN: "live",
+};
 // A deployment path names its own environment; the bar's buttons would change nothing there (audit D6).
 const PATH_ENV: Readonly<Record<string, ExecEnv>> = {
   EXECUTION_PAPER_WORKBENCH_SCREEN: "paper",
@@ -226,7 +265,10 @@ const OPERATIONS_ENV_LOCK: EnvLock = { reason: "Operations has its own Environme
  */
 export function envLockFor(screenId: string, context: EnvLockContext = {}, isV2: (key: Parameters<typeof isV2Screen>[0]) => boolean = isV2Screen): EnvLock | undefined {
   const pathEnv = PATH_ENV[screenId];
-  if (pathEnv !== undefined) return { reason: PATH_ENV_REASON, effective: pathEnv };
+  if (pathEnv !== undefined) {
+    const key = STAGE_V2_KEY[screenId];
+    return { reason: context.hasDeploymentId === true && key !== undefined && isV2(key) ? DEPLOYMENT_ENV_REASON : PATH_ENV_REASON, effective: pathEnv };
+  }
   switch (screenId) {
     case "EXECUTION_FULL_BLOTTER_SCREEN":
       return isV2("blotter") ? BLOTTER_ENV_LOCK : undefined;
@@ -249,7 +291,7 @@ export function envLockFor(screenId: string, context: EnvLockContext = {}, isV2:
   }
 }
 
-export function PreviewFrame({ screenId, profile, envLock, children }: { screenId: string; profile?: string | null; /** Overrides the lock `envLockFor` derives from the screen alone. */ envLock?: EnvLock | null; children: ReactNode }) {
+export function PreviewFrame({ screenId, profile, envLock, windowLock, children }: { screenId: string; profile?: string | null; /** Overrides the lock `envLockFor` derives from the screen alone. */ envLock?: EnvLock | null; /** Overrides the lock `windowLockFor` derives from the screen alone (the route knows whether a deployment id is in the path). */ windowLock?: WindowLock; children: ReactNode }) {
   const sessionKey = retainedSessionKey(useSession().principal);
   // Bind before children's passive effects; never fetch or notify another component during render.
   useLayoutEffect(() => { ensureRetainedReview(sessionKey); }, [sessionKey]);
@@ -257,7 +299,9 @@ export function PreviewFrame({ screenId, profile, envLock, children }: { screenI
   const refreshEpoch = useRetainedReview().epoch;
   // One Carbon theme (decision A2): with the cockpit on, the approval and review screens leave the light governance surface.
   const onCockpit = V2Cockpit !== null && isV2Screen("cockpit") && COCKPIT_SCREENS.has(screenId);
-  const kind: ExecutionSurfaceKind = GOVERNANCE_SCREENS.has(screenId) && !onCockpit
+  // The V2 New request page is Carbon too: it leaves the light governance surface when its flag is on.
+  const onV2Request = V2Request !== null && isV2Screen("request") && screenId === "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN";
+  const kind: ExecutionSurfaceKind = GOVERNANCE_SCREENS.has(screenId) && !onCockpit && !onV2Request
     ? "governance"
     : "deployments";
 
@@ -274,7 +318,7 @@ export function PreviewFrame({ screenId, profile, envLock, children }: { screenI
           amendment is codex's (consolidated request); shown in the inspector
           as drift, never used to pick a data source. */}
       <PreviewBanner profile="http" screenId={screenId} registryWord={profile} />
-      {V2ContextBar && EXECUTION_V2_SHELL ? <Suspense fallback={null}><V2ContextBar envLock={envLock === undefined ? envLockFor(screenId) : envLock} windowLock={windowLockFor(screenId)} /></Suspense> : null}
+      {V2ContextBar && EXECUTION_V2_SHELL ? <Suspense fallback={null}><V2ContextBar envLock={envLock === undefined ? envLockFor(screenId) : envLock} windowLock={windowLock === undefined ? windowLockFor(screenId) : windowLock} /></Suspense> : null}
       <Fragment key={refreshEpoch}>{children}</Fragment>
     </ExecutionSurface>
   );
@@ -427,6 +471,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
           api={api}
           workspaceId={routeWorkspaceId}
           accessHref={accessHref}
+          writeBlockedReason={governanceWriteBlocked(policy)}
           pathSelection={{ id, kind }}
           onClearPathSelection={() => navigate({ pathname: APPROVALS_PATH, search: cockpitClearSearch(search) })}
         />
@@ -463,11 +508,13 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
     case "EXECUTION_APPROVAL_INBOX_SCREEN":
       // EL-V2-05: a row (and the rail's Open) navigates to the review its gate owns.
       content = V2Cockpit && isV2Screen("cockpit")
-        ? <Suspense fallback={null}><V2Cockpit api={api} workspaceId={routeWorkspaceId} accessHref={accessHref} /></Suspense>
+        ? <Suspense fallback={null}><V2Cockpit api={api} workspaceId={routeWorkspaceId} accessHref={accessHref} writeBlockedReason={governanceWriteBlocked(policy)} /></Suspense>
         : <ApprovalInboxContainer api={api} workspaceId={routeWorkspaceId} onOpenRequest={(id, gate) => navigate(reviewRouteFor({ id, gate }))} />;
       break;
     case "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN":
-      content = <NewApprovalRequestContainer api={api} />;
+      content = V2Request && isV2Screen("request")
+        ? <Suspense fallback={null}><V2Request api={api} writeBlockedReason={governanceWriteBlocked(policy)} /></Suspense>
+        : <NewApprovalRequestContainer api={api} />;
       break;
     case "EXECUTION_GATE_LIVE_REVIEW_SCREEN":
       content = cockpitAt(approvalId, "live") ?? (approvalId ? <GateLiveReviewContainer key={`${approvalId}|${routeWorkspaceId ?? ""}`} api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />);
@@ -489,28 +536,47 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
         : cockpitAt(reviewId, "exit") ?? (<PaperExitReviewContainer key={`${reviewId ?? ""}|${routeWorkspaceId ?? ""}`} api={api} reviewId={reviewId} workspaceId={routeWorkspaceId} />);
       break;
     case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN":
-      content = deploymentId ? <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} variant="vnm" /> : <MissingRouteId what="deployment" />;
+      content = deploymentId
+        ? V2Workbench && isV2Screen("workbench")
+          ? <Suspense fallback={null}><V2Workbench api={api} deploymentId={deploymentId} variant="vnm" /></Suspense>
+          : <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} variant="vnm" />
+        : <MissingRouteId what="deployment" />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_SCREEN":
       // Feature canonical route (/deployments/paper) = the paper list, entry
       // of WF 1c; /:deploymentId opens that deployment's workbench. The
       // sidebar must never land an operator inside one alpha unasked.
-      content = deploymentId ? <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} /> : stageListRedirect("paper") ?? <PaperOverviewRichContainer api={api} />;
+      content = deploymentId
+        ? V2Workbench && isV2Screen("workbench")
+          ? <Suspense fallback={null}><V2Workbench api={api} deploymentId={deploymentId} /></Suspense>
+          : <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} />
+        : stageListRedirect("paper") ?? <PaperOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
       // Feature canonical route (/deployments/sandbox) = the sandbox overview,
       // entry screen of WF 1d; /:deploymentId opens that certification.
       content = deploymentId
-        ? <SandboxCertificationContainer api={api} deploymentId={deploymentId} />
+        ? V2Sandbox && isV2Screen("sandbox")
+          ? <Suspense fallback={null}><V2Sandbox api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} /></Suspense>
+          : <SandboxCertificationContainer api={api} deploymentId={deploymentId} />
         : stageListRedirect("sandbox") ?? <SandboxOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN":
-      content = deploymentId ? <CanaryControlRoomContainer api={api} deploymentId={deploymentId} /> : <MissingRouteId what="deployment" />;
+      // The V2 Canary reads `workspace_id` from the URL itself.
+      content = deploymentId
+        ? V2Canary && isV2Screen("canary")
+          ? <Suspense fallback={null}><V2Canary api={api} deploymentId={deploymentId} /></Suspense>
+          : <CanaryControlRoomContainer api={api} deploymentId={deploymentId} />
+        : <MissingRouteId what="deployment" />;
       break;
     case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN":
       // Feature canonical route (/deployments/live) = the live overview, entry
       // screen of WF 1f/1e; /:deploymentId opens that deployment's workbench.
-      content = deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : stageListRedirect("live") ?? <LiveOverviewRichContainer api={api} />;
+      content = deploymentId
+        ? V2Live && isV2Screen("live")
+          ? <Suspense fallback={null}><V2Live api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} /></Suspense>
+          : <LiveFullOperationsContainer api={api} deploymentId={deploymentId} />
+        : stageListRedirect("live") ?? <LiveOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
       content = V2Blotter && isV2Screen("blotter")
@@ -576,11 +642,13 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = null;
   }
 
+  const lockContext: EnvLockContext = { compare: compareOn && search.get("view") === "compare", hasAlphaId: Boolean(params.alphaId), hasDeploymentId: deploymentId !== null };
   return (
     <PreviewFrame
       screenId={screenId}
       profile={profile}
-      envLock={envLockFor(screenId, { compare: compareOn && search.get("view") === "compare", hasAlphaId: Boolean(params.alphaId) }) ?? null}
+      envLock={envLockFor(screenId, lockContext) ?? null}
+      windowLock={windowLockFor(screenId, lockContext)}
     >
       {/*
         * The server's own word about this screen, above the screen. It is a

@@ -39,22 +39,20 @@ export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
  * - `archived`: the Archived lens is part of the Fleet (`tab=archived`, key `fleet`); there is no separate screen.
  * - `replay`: Trade Replay rides the Alpha 360 Replay tab (key `alpha`); nothing reads `replay` itself.
  *
- * Pending (S3 stage screens, 2026-10-19, D2: one key per screen). Each leaves
- * this list in the commit that makes `ExecutionPreviewRoute` read
- * `isV2Screen("<key>")` for its screen, not before; until then the V1 screen
- * renders even when the manifest names the key:
- * - `workbench`: the V2 Paper workbench (W-PAPER). It is the Paper key; nothing mounts it yet.
- * - `sandbox`, `canary`, `live`: the stage screens (W-SANDBOX, W-CANARY, W-LIVE).
- * - `request`: New request page and its drawer (W-REQUEST).
+ * Pending: none. The S3 stage screens (2026-10-19, D2: one key per screen) left
+ * this list in the commit that made `ExecutionPreviewRoute` read
+ * `isV2Screen("<key>")` for each: `workbench` (Paper, deployment routes),
+ * `sandbox`, `canary`, `live` (deployment routes) and `request` (the New request
+ * page; its drawer rides the cockpit, under the `cockpit` key).
  *
- * They stay in the list because env files and build args already carry them
- * (a key dropped from the list would read as a typo), but `isV2Screen` answers
- * false for them even when the manifest names them, so listing one cannot make
+ * A key that env files already carry before its screen is wired belongs in
+ * `EXEC_V2_PENDING_KEYS` until the route reads it: `isV2Screen` answers false
+ * for a pending key even when the manifest names it, so listing one cannot make
  * a screen look migrated. `flags.test.ts` holds both halves: every other key is
- * read by `isV2Screen("<key>")` in source, and these are read nowhere.
+ * read by `isV2Screen("<key>")` in source, and the reserved ones are read nowhere.
  */
 export const EXEC_V2_PERMANENT_RESERVED_KEYS = ["archived", "replay"] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
-export const EXEC_V2_PENDING_KEYS = ["workbench", "sandbox", "canary", "live", "request"] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
+export const EXEC_V2_PENDING_KEYS = [] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
 export const EXEC_V2_RESERVED_KEYS = [...EXEC_V2_PERMANENT_RESERVED_KEYS, ...EXEC_V2_PENDING_KEYS] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
 const RESERVED: ReadonlySet<string> = new Set(EXEC_V2_RESERVED_KEYS);
 

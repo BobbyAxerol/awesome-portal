@@ -80,6 +80,19 @@ UX-F áp dụng (fixture lane, tập con): F01/02/03 (vai, deny), F04/05/06 (ng�
 - **Request:** FE-001…036 ở [sổ đồng bộ](../../FRONTEND_BACKEND_SYNC.md); P1 chặn S1/S2: FE-025, 027, 028, 030. Tin nhắn cho Codex: [PROMPT_FOR_CODEX](../../design/sync/PROMPT_FOR_CODEX.md) (AWAITING_CONSUMER_REVIEW).
 - **Nợ mở:** hue `attention` (chọn cam, chờ Bobby xác nhận); PM pin; bảng ràng buộc chéo (RV-1); DEBT-UXM07-001/002 (lỗi có sẵn trên tip Codex, xem debt-register); FE-037…041 ở [backend-requests](backend-requests.md).
 
+## 4b. S3 screens wired (2026-10-19, W-INTEG)
+Năm màn tầng stage đã được nối vào `ExecutionPreviewRoute.tsx`, mỗi màn một khoá và một chunk `lazy()` đọc chuỗi env thô (cờ tắt không phát chunk nào). `EXEC_V2_PENDING_KEYS` giờ rỗng; còn `archived`, `replay` là khoá dành riêng vĩnh viễn.
+
+| Khoá | Route | Gốc V2 (`data-screen`) | Ghi chú |
+|---|---|---|---|
+| `workbench` | `/deployments/paper/:deploymentId`, `/deployments/paper/:deploymentId/vn-market` | `workbench-v2` | Chỉ nhánh có `deploymentId`; `/deployments/paper` (không id) vẫn là redirect Fleet hoặc danh sách V1. Biến thể `vnm` là prop |
+| `sandbox` | `/deployments/sandbox/:deploymentId` | `sandbox-v2` | Danh sách không id giữ `stageListRedirect("sandbox")` hoặc V1 |
+| `canary` | `/deployments/live/:deploymentId/canary` | `canary-v2` | Màn tự đọc `workspace_id` từ URL |
+| `live` | `/deployments/live/:deploymentId` | `live-v2` | `/deployments/live/:id` là Live, `/…/canary` là Canary |
+| `request` | `/governance/approvals/new` | `new-request-v2` | Bề mặt Carbon khi cờ bật (V1 giữ bề mặt governance). Ngăn kéo (`?compose=request`) đi theo khoá `cockpit`: nút "New request" trên Approvals, kể cả chế độ nhà nghiên cứu |
+
+Thanh bối cảnh (cờ `shell` bật, cùng màn bật): cửa sổ bị khoá với nhãn riêng (Published window · Certification run · Trial window · Since activation), môi trường khoá với lý do "The deployment fixes the environment." Cờ tắt giữ lý do "The path sets the environment." và không có chip cửa sổ. Ngăn kéo mở thì phím j/k/n/Esc không điều khiển hàng đợi cockpit. Test: `v2/flagOn.test.tsx`, `v2/flagOff.test.tsx`, `v2/linkTargets.test.tsx`, `v2/flags.test.ts`, `screens/cockpit/cockpit.test.tsx`.
+
 ## 5. Rollback
 Tắt cờ `VITE_EXECUTION_V2_SCREENS` (mặc định đã tắt) rồi xoá `src/execution/v2/**` và các test mới; token chỉ append trong khối carbon nên gỡ không ảnh hưởng; không đụng backend/registry/contracts.
 

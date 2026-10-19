@@ -52,21 +52,24 @@ describe("reserved keys", () => {
   const reserved: readonly string[] = EXEC_V2_RESERVED_KEYS;
   const mounting = EXEC_V2_SCREEN_KEYS.filter((key) => !reserved.includes(key));
 
-  it("names the two permanent keys and the five pending S3 keys, and nothing else", () => {
+  it("names the two permanent keys and no pending key (the five S3 keys are wired)", () => {
     expect([...EXEC_V2_PERMANENT_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
-    expect([...EXEC_V2_PENDING_KEYS].sort()).toEqual(["canary", "live", "request", "sandbox", "workbench"]);
-    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "canary", "live", "replay", "request", "sandbox", "workbench"]);
+    expect([...EXEC_V2_PENDING_KEYS]).toEqual([]);
+    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
   });
 
-  it("D2: every S3 stage screen has its own key (no shared `stages` key), and the Paper key stays `workbench`", () => {
-    for (const key of ["workbench", "sandbox", "canary", "live", "request"]) expect(parseV2Manifest(key).has(key as never), key).toBe(true);
+  it("D2: every S3 stage screen has its own key (no shared `stages` key), the Paper key stays `workbench`, and each one mounts", () => {
+    for (const key of ["workbench", "sandbox", "canary", "live", "request"] as const) {
+      expect(parseV2Manifest(key).has(key), key).toBe(true);
+      expect(isV2Screen(key, parseV2Manifest(key), true), key).toBe(true);
+    }
     expect(parseV2Manifest("stages").size).toBe(0);
   });
 
-  it("are still read from a manifest (so an env file that lists them is not a typo) but never turn a screen on", () => {
+  it("the permanent keys are still read from a manifest (so an env file that lists them is not a typo) but never turn a screen on", () => {
     const set = parseV2Manifest("fleet,archived,workbench,sandbox,canary,live,request,replay");
     expect(set.has("archived")).toBe(true);
-    for (const key of EXEC_V2_PENDING_KEYS) expect(set.has(key), key).toBe(true);
+    expect(set.has("replay")).toBe(true);
     for (const key of EXEC_V2_RESERVED_KEYS) expect(isV2Screen(key, set, true), key).toBe(false);
     expect(isV2Screen("fleet", set, true)).toBe(true);
   });

@@ -8,9 +8,15 @@
  *
  * It is a preview. Every decision control is disabled with
  * "Preview · not recorded" (UXM-09), and this module never calls a plan, an
- * apply or any write on the port: the reads are `listApprovals`,
+ * apply or a decision write on the port: the reads are `listApprovals`,
  * `getApprovalHistory`, `getGateR1/R2`, `getLiveReview`, `getPaperExit`,
  * `getWaivers` and `getReviewCaptureCapabilities`.
+ *
+ * The one thing it can open is a form: "New request" shows the request drawer
+ * (`?compose=request`, S3 W-REQUEST). The drawer is the only code here that
+ * writes, and only on an explicit Submit click; the server decides whether the
+ * write is allowed (`writeBlockedReason` is the delivery policy's word, not a
+ * permission). While it is open it owns the keyboard: j/k/n/Esc do not drive the queue.
  *
  * Mount contract (the primary wires it): default export, props `{ api,
  * workspaceId?, pathSelection?, onClearPathSelection?, accessHref? }`. The V1
@@ -34,6 +40,7 @@ import { reviewRouteFor, type DecidedRow } from "../../../screens/ApprovalInbox"
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { useExecUrlState, withContext } from "../../urlState";
+import { RequestDrawer } from "../request/RequestDrawer";
 import "../../css/cockpit.css";
 import { EvidenceFrame, useEvidenceRead, WaiverEvidence, type EvidenceHeader, type EvidenceTarget } from "./EvidenceFrame";
 import { mergeInboxRows, readRawRows, type InboxRowV2 } from "./inboxRowV2";
@@ -75,6 +82,8 @@ export interface CockpitProps {
   onClearPathSelection?: () => void;
   /** Where "My access" goes when the page is denied (D9). */
   accessHref?: string;
+  /** Why the delivery policy does not allow a governance write (`governanceWriteBlocked(policy)`), or null; forwarded to the New request drawer. */
+  writeBlockedReason?: string | null;
 }
 
 export const PAGE_SIZE = 50;
@@ -277,14 +286,20 @@ function OwnRequests({
   principal,
   pathSelection,
   onClearPathSelection,
+  writeBlockedReason,
 }: {
   api: ExecutionApi;
   workspaceId?: string;
   principal: Principal;
   pathSelection?: CockpitProps["pathSelection"];
   onClearPathSelection?: () => void;
+  writeBlockedReason?: string | null;
 }) {
   const [params] = useSearchParams();
+  const url = useExecUrlState();
+  const composing = url.value.compose === "request";
+  const composeRef = useRef(false);
+  composeRef.current = composing;
   const inbox = useInbox(api, "ALL", workspaceId);
   const { own, unknownOwner } = useMemo(() => ownRequests(inbox.rows, principal), [inbox.rows, principal]);
 
@@ -313,6 +328,8 @@ function OwnRequests({
       if (event.key !== "Escape" || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
       const target = event.target;
       if (target instanceof HTMLElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
+      // The New request drawer owns Esc while it is open.
+      if (composeRef.current) return;
       clearRef.current?.();
     };
     document.addEventListener("keydown", onKey);
@@ -341,6 +358,8 @@ function OwnRequests({
     { key: "clock", label: "Clock", render: (row) => slaView(row.sla)?.phrase ?? <span className="exec-ck-np">{NOT_PUBLISHED.clock}</span> },
   ];
 
+  const drawer = <RequestDrawer api={api} open={composing} onClose={() => url.set({ compose: null }, { replace: true })} writeBlockedReason={writeBlockedReason} />;
+
   if (wanted !== null) {
     return (
       <div className="exec-ck-page" data-screen="own-request">
@@ -362,6 +381,7 @@ function OwnRequests({
             <EvidenceFrame kind={evidenceTarget.kind} header={header} evidence={evidence} />
           </section>
         ) : null}
+        {drawer}
       </div>
     );
   }
@@ -372,6 +392,9 @@ function OwnRequests({
         <div>
           <h1 className="exec-ck-h">My requests</h1>
           <p className="exec-ck-sub">Read only · decisions are made by reviewers</p>
+        </div>
+        <div className="exec-ck-ctrls">
+          <button type="button" className="exec-ck-btn" aria-haspopup="dialog" onClick={() => url.set({ compose: "request" })}>New request</button>
         </div>
       </div>
       {inbox.status === "loading" ? <PanelSkeleton label="Loading your requests" /> : null}
@@ -391,6 +414,7 @@ function OwnRequests({
           ) : null}
         </section>
       ) : null}
+      {drawer}
     </div>
   );
 }
@@ -404,8 +428,12 @@ function itemHeader(item: QueueItem): EvidenceHeader | null {
   return { id: row.id, title: row.subject, context: context || null, gate: row.gate };
 }
 
-function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection, principal }: CockpitProps & { principal: Principal }) {
+function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection, writeBlockedReason, principal }: CockpitProps & { principal: Principal }) {
   const url = useExecUrlState();
+  // The New request drawer (`?compose=request`) owns the keyboard while it is open: j/k/n/Esc inside it do not drive the queue.
+  const composing = url.value.compose === "request";
+  const composeRef = useRef(false);
+  composeRef.current = composing;
   const [params, setParams] = useSearchParams();
   // Lane, lens and waiver filter are the URL's (M9): a reload and Back restore them; a bad value reads as the default.
   const lane: Lane = laneFromView(url.value.view);
@@ -514,6 +542,7 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
       const target = event.target;
       if (target instanceof HTMLElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
+      if (composeRef.current) return;
       const { keys, selectedKey: current, hadSel } = keyState.current;
       const key = event.key.toLowerCase();
       if (helpRef.current) return;
@@ -585,6 +614,8 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
           <button type="button" className="exec-ck-btn" aria-haspopup="dialog" onClick={() => setHelpOpen(true)}>
             <kbd>?</kbd> Keys
           </button>
+          {/* Pushes a history entry, so Back closes the drawer; the drawer's own close replaces. */}
+          <button type="button" className="exec-ck-btn" aria-haspopup="dialog" onClick={() => url.set({ compose: "request" })}>New request</button>
         </div>
       </div>
       <p className="exec-ck-banner" role="note">Preview build. Decisions are shown here, not recorded.</p>
@@ -629,6 +660,8 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
 
       <p className="exec-ck-live" role="status" aria-live="polite">{announcement}</p>
       {helpOpen ? <KeysHelp onClose={() => setHelpOpen(false)} /> : null}
+      {/* Always mounted and driven by `open`: the draft survives Back, and the Run Library is read on first open only. */}
+      <RequestDrawer api={api} open={composing} onClose={() => url.set({ compose: null }, { replace: true })} writeBlockedReason={writeBlockedReason} />
     </div>
   );
 }
@@ -661,6 +694,7 @@ export default function ApprovalsCockpit(props: CockpitProps) {
         principal={who}
         pathSelection={props.pathSelection}
         onClearPathSelection={props.onClearPathSelection}
+        writeBlockedReason={props.writeBlockedReason}
       />
     );
   }

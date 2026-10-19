@@ -23,6 +23,11 @@ import type { PortalRegistryDocument } from "../../portal/contracts";
 import { ADMIN_OPERATIONS_HREF, ADMIN_PORTFOLIOS_HREF } from "./screens/admin";
 import { accountHref, deploymentHref as accountDeploymentHref, ACCESS_PATH, ACCOUNTS_PATH, alphaHref as accountAlphaHref, portfolioHref } from "./screens/account/model";
 import { deploymentHref as alphaDeploymentHref, replayHref } from "./screens/alpha/model";
+import { reviewRouteFor } from "../screens/ApprovalInbox";
+import { SPINE_ROUTES } from "./screens/canary/model";
+import { canaryHref } from "./screens/live/model";
+import { NEW_REQUEST_HREF, QUEUE_HREF, RUN_LIBRARY_HREF } from "./screens/request/model";
+import { DEFAULT_ROUTES as WORKBENCH_ROUTES } from "./screens/workbench/model";
 import { FLEET_ROUTE, fleetUrlForStageList } from "./screens/fleet/stageRedirect";
 import { alphaHref as fleetAlphaHref } from "./screens/fleet/fleetModel";
 import { DEFAULT_ROUTES, joinQuery } from "./screens/portfolios/routes";
@@ -96,7 +101,7 @@ describe("the shared route builders produce mounted paths", () => {
     ["paper workbench", DEFAULT_ROUTES.deployment(ID, "PAPER"), "EXECUTION_PAPER_WORKBENCH_SCREEN"],
     ["sandbox workbench", DEFAULT_ROUTES.deployment(ID, "SANDBOX"), "EXECUTION_SANDBOX_CERTIFICATION_SCREEN"],
     ["live workbench", DEFAULT_ROUTES.deployment(ID, "LIVE"), "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"],
-    ["canary routes to live", DEFAULT_ROUTES.deployment(ID, "CANARY"), "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"],
+    ["canary has its own route under live", DEFAULT_ROUTES.deployment(ID, "CANARY"), "EXECUTION_CANARY_CONTROL_ROOM_SCREEN"],
     ["approvals", DEFAULT_ROUTES.approvals, "EXECUTION_APPROVAL_INBOX_SCREEN"],
     ["operations", DEFAULT_ROUTES.operations, "EXECUTION_OPERATIONS_QUEUE_SCREEN"],
     ["profile access", DEFAULT_ROUTES.access, "profile-access"],
@@ -131,10 +136,62 @@ describe("the shared route builders produce mounted paths", () => {
   });
 });
 
+// ------------------------------------------------------- the S3 stage screens (2026-10-19)
+
+describe("the S3 stage screens' own paths mount the screen they name", () => {
+  const ID = "dep_1";
+  const MOUNTS: [string, string][] = [
+    [`/deployments/paper/${ID}`, "EXECUTION_PAPER_WORKBENCH_SCREEN"],
+    [`/deployments/paper/${ID}/vn-market`, "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN"],
+    [`/deployments/sandbox/${ID}`, "EXECUTION_SANDBOX_CERTIFICATION_SCREEN"],
+    [`/deployments/live/${ID}`, "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"],
+    [`/deployments/live/${ID}/canary`, "EXECUTION_CANARY_CONTROL_ROOM_SCREEN"],
+    ["/governance/approvals/new", "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN"],
+  ];
+  it.each(MOUNTS)("%s mounts %s", async (path, screenId) => {
+    expect(await mountedAt(path)).toBe(screenId);
+  });
+
+  it("Canary is a child of Live: both paths are distinct screens", async () => {
+    expect(await mountedAt(`/deployments/live/${ID}`)).not.toBe(await mountedAt(`/deployments/live/${ID}/canary`));
+  });
+
+  // Every link a new screen builds, from the builders it exports (the literal scan below also reads the same sources).
+  const BUILT: [string, string, string][] = [
+    ["Live canaryHref", canaryHref(ID), "EXECUTION_CANARY_CONTROL_ROOM_SCREEN"],
+    ["Canary spine to paper", SPINE_ROUTES.paper!(ID), "EXECUTION_PAPER_WORKBENCH_SCREEN"],
+    ["Canary spine to sandbox", SPINE_ROUTES.sandbox!(ID), "EXECUTION_SANDBOX_CERTIFICATION_SCREEN"],
+    ["Canary spine to live", SPINE_ROUTES.live!(ID), "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"],
+    ["Workbench to the deployment's blotter", WORKBENCH_ROUTES.blotter(ID), "EXECUTION_FULL_BLOTTER_SCREEN"],
+    ["Workbench to an order in the blotter", WORKBENCH_ROUTES.blotter(ID, "o_1"), "EXECUTION_FULL_BLOTTER_SCREEN"],
+    ["Workbench to the alpha", WORKBENCH_ROUTES.alpha("a_1"), "EXECUTION_ALPHA_360_SCREEN"],
+    ["Workbench to the account", WORKBENCH_ROUTES.account("acc_1"), "EXECUTION_ACCOUNT_BROKER_360_SCREEN"],
+    ["Workbench to the portfolio", WORKBENCH_ROUTES.portfolio("pf_1"), "EXECUTION_PORTFOLIO_360_SCREEN"],
+    ["Workbench to operations", WORKBENCH_ROUTES.operations, "EXECUTION_OPERATIONS_QUEUE_SCREEN"],
+    ["Workbench to exit reviews", WORKBENCH_ROUTES.exitReviews, "EXECUTION_PAPER_EXIT_REVIEW_SCREEN"],
+    ["Workbench to the fleet", WORKBENCH_ROUTES.fleet, "EXECUTION_ALPHA_FLEET_LIST_SCREEN"],
+    ["Request QUEUE_HREF", QUEUE_HREF, "EXECUTION_APPROVAL_INBOX_SCREEN"],
+    ["Request NEW_REQUEST_HREF", NEW_REQUEST_HREF, "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN"],
+    ["Request Open request (R1 gate)", reviewRouteFor({ id: "AP-1", gate: "R1" }), "EXECUTION_GATE_R1_REVIEW_SCREEN"],
+    ["reviewRouteFor R2", reviewRouteFor({ id: "AP-1", gate: "R2" }), "EXECUTION_GATE_R2_REVIEW_SCREEN"],
+    ["reviewRouteFor paper exit", reviewRouteFor({ id: "EX-1", gate: "PAPER_EXIT" }), "EXECUTION_PAPER_EXIT_REVIEW_SCREEN"],
+    ["reviewRouteFor live gate", reviewRouteFor({ id: "AP-1", gate: "LIVE_GATE" }), "EXECUTION_GATE_LIVE_REVIEW_SCREEN"],
+  ];
+  it.each(BUILT)("%s (%s) resolves to %s", async (_label, target, screenId) => {
+    expect(await mountedAt(pathOf(target))).toBe(screenId);
+  });
+
+  it("the Request screen's Run Library link is a mounted path (a different module, mounted by the shell)", async () => {
+    expect(await mountedAt(pathOf(RUN_LIBRARY_HREF))).not.toBe("NOT_FOUND");
+  });
+});
+
 // ------------------------------------------------------- every path literal in the V2 sources
 
 const V2_ROOT = join(process.cwd(), "src/execution/v2");
-const SKIP = /(\.test\.tsx?$|[\\/]testkit[\\/]|harness|\.fixtures?\.tsx?$)/;
+const SKIP = /(\.test\.tsx?$|[\\/]testkit[\\/]|harness|\.fixtures?\.tsx?$|\.testbase\.tsx?$)/;
+/** Bare lane roots are prefixes that `backTo.ts` matches against (its ROOTS list), not links: none of them is a route. */
+const LANE_ROOTS = new Set(["/deployments", "/governance", "/execution", "/administration"]);
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -162,6 +219,7 @@ function literals(): { file: string; path: string }[] {
       for (const lane of lanes) {
         const text = lane === null ? match[2] : match[2].replace(/^\/deployments\/\$\{[^}]*\}/, `/deployments/${lane}`);
         const path = pathOf(text.replace(/\$\{[^}]*\}/g, "x_1"));
+        if (LANE_ROOTS.has(path)) continue;
         if (!found.has(path)) found.set(path, relative(process.cwd(), file));
       }
     }
