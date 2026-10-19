@@ -561,6 +561,53 @@ describe("ELP2-09 bounded ownership — slow clients, reconnects and uncooperati
     await h.hub.poll();
     expect(h.read).toHaveBeenCalledOnce();
   });
+  it("shutdown drain joins the actual abort-ignoring source, not only the stopped poll", async () => {
+    const h=harness(),pending=deferred<EdgeScopedNoticeBatch>();
+    h.read.mockReturnValueOnce(pending.promise);await h.subscribe();const polling=h.hub.poll();await flush();
+    let drained=false;const drain=h.hub.drain().then(()=>{drained=true;});
+    try {
+      await polling;await flush();expect(drained).toBe(false);
+      expect(h.hub.diagnostics()).toMatchObject({clients:0,source_flights:1});
+      expect(h.read.mock.calls[0][3].aborted).toBe(true);
+      await h.hub.poll();expect(h.read).toHaveBeenCalledOnce();
+    } finally { pending.resolve(batch());await drain; }
+    expect(drained).toBe(true);expect(h.hub.diagnostics().source_flights).toBe(0);
+    expect(h.authority.writes).toBe(0);
+  });
+  it("drain joins pending subscription authorization before reporting quiescence",async()=>{
+    const h=harness(),pending=deferred<string>();
+    const work=h.subscribe({guard:{...h.guard,currentIdentity:()=>pending.promise}});
+    const refused=expect(work).rejects.toMatchObject({code:"STOPPED"});
+    let drained=false;const drain=h.hub.drain().then(()=>{drained=true;});
+    try{
+      await flush();expect(drained).toBe(false);expect(h.hub.diagnostics().pending_subscriptions).toBe(1);
+      pending.resolve(binding().principal_scope_digest);await refused;await drain;
+      expect(h.hub.diagnostics()).toMatchObject({clients:0,pending_subscriptions:0,source_flights:0});
+      expect(h.read).not.toHaveBeenCalled();expect(h.authority.writes).toBe(0);
+    }finally{pending.resolve(binding().principal_scope_digest);await drain;}
+  });
+  it("drain joins poll authorization even before a source flight exists",async()=>{
+    const h=harness(),pending=deferred<string>();await h.subscribe();
+    vi.spyOn(h.guard,"currentIdentity").mockReturnValue(pending.promise);
+    const polling=h.hub.poll();let drained=false;const drain=h.hub.drain().then(()=>{drained=true;});
+    try{
+      await flush();expect(drained).toBe(false);expect(h.hub.diagnostics().source_flights).toBe(0);
+      pending.resolve(binding().principal_scope_digest);await polling;await drain;
+      expect(h.read).not.toHaveBeenCalled();expect(h.authority.writes).toBe(0);
+      await h.hub.poll();expect(h.read).not.toHaveBeenCalled();
+    }finally{pending.resolve(binding().principal_scope_digest);await polling;await drain;}
+  });
+  it("shutdown drain also joins a timed-out provider before its actual rejection", async () => {
+    const h=harness(),pending=deferred<EdgeScopedNoticeBatch>();
+    h.read.mockReturnValueOnce(pending.promise);await h.subscribe();const polling=h.hub.poll();await flush();
+    await polling;
+    expect(h.hub.diagnostics()).toMatchObject({source_flights:1,timed_out_flights:1});
+    let drained=false;const drain=h.hub.drain().then(()=>{drained=true;});
+    try {await flush();expect(drained).toBe(false);}
+    finally {pending.reject(new Error("TEST_ONLY-late-source-rejection"));await drain;}
+    expect(drained).toBe(true);expect(h.hub.diagnostics().source_flights).toBe(0);
+    expect(h.authority.writes).toBe(0);
+  });
   it("settles stopped pollers but retains an abort-ignoring source slot until actual completion", async () => {
     const h = harness();
     const pending = deferred<EdgeScopedNoticeBatch>();

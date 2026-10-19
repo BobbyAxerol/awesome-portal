@@ -12423,3 +12423,50 @@ Actual corrected qualification21:06:16.131619–21:07:29.428425UTC:348PASS (278u
   provider/authority/financial/SSE/budget/calibration/coexistence/G2 and consumer
   gates remain open; no ELP2-11, runtime activation, merge or push.
 
+### Original08 native read/SSE integration source candidate — 2026-10-19
+
+Bobby's latest assignment selects the Core integration release first and keeps
+stable production unchanged. This entry belongs to the existing EPG10-08 task,
+not ELP2-11 entry or a new runtime/authority phase.
+
+Source scope: a separate feat/execution-native-read-integration candidate,
+started from dev53316263 and fast-forwarded only here to Core e19ad906, then
+the exact published22-file native HTTP/SSE/runtime delta. Peer integrationc43,
+research e19 and shared dev/main branches/index/worktrees remain unchanged.
+No production checkout, DB, credentials, policy, auth mode, service or Access
+application changes are authorized by this source operation.
+
+Goal and invariants: retain current policy/self-eligibility, scalar-only bounded
+observation journal, same pool/current mutation coordinator and physical-flight
+recovery. Source is the qualified patch; no legacy feed/auth fallback, second
+authority instance, command/financial grant, UI or source publication is added.
+
+Guide: [EPG10-08](https://github.com/BobbyAxerol/awesome-portal/blob/5f433f8c4cb39cf170248304ecde8d61b2d786f1/upgrade/upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md).
+Published patch, dependency/output pins and source receipts: [https://github.com/BobbyAxerol/awesome-portal/blob/5f433f8c4cb39cf170248304ecde8d61b2d786f1/upgrade/integration/execution-native-read-v1/current-core-reconciliation/README.md](https://github.com/BobbyAxerol/awesome-portal/blob/5f433f8c4cb39cf170248304ecde8d61b2d786f1/upgrade/integration/execution-native-read-v1/current-core-reconciliation/README.md).
+Authoritative original08 journal/actual result: [https://github.com/BobbyAxerol/awesome-portal/blob/5f433f8c4cb39cf170248304ecde8d61b2d786f1/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23207-original08--actual-provider-owning-boundary-and-connected-acceptance](https://github.com/BobbyAxerol/awesome-portal/blob/5f433f8c4cb39cf170248304ecde8d61b2d786f1/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23207-original08--actual-provider-owning-boundary-and-connected-acceptance).
+
+Validation: reuse unchanged931 behavior executions and7 genuine isolated
+factory cases only within their declared source/schema boundaries. Actual SGP
+read-only preflight01:31UTC confirms22preimages/dependencies and patch check,
+writes0; four temporary files320892B removed,51runtime tuples unchanged.
+Require exact applied-output verification, staged25path scope, diff --check,
+Bobby identity and the unmodified normal pre-commit gate before landing. The
+normal-hook result/receipt is recorded in the original08 journal, not asserted
+PASS in advance here. A source commit is not a Core-owner consumer ACK.
+
+Runtime exit remains NOT_MET: selected integration DB7675320204448350242/39
+is not stable7675333655652302882; Bobby ACTIVE, Stan INVITED/no workspace.
+Commission proper integration Access/auth/private refs and reviewed minimal
+schema/intake in its exact coordinated window before real-user revoke/cache/
+cursor/SSE. Preserve normal invitation, current authority and serving UID/modes;
+never copy stable keys/grants, fake a session or run all current migrations.
+Real-source/command07/publisher03/capacity01/06 and09connected remain separate.
+
+Rollback: this is an unmerged source candidate with no runtime activation;
+reject/remove it through normal feature cleanup if not adopted. Any later
+runtime rollback stops new admission and preserves ambiguous work/recovery;
+never restore old permissive authority, delete outcomes or alter stable data.
+Retain only this active documented feature, bounded receipts and operational/
+rollback artifacts; clean exact disposable hook resources after their jobs end.
+Core-owner review/merge/release and connected acceptance are still outstanding.
+

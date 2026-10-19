@@ -21,6 +21,10 @@ import type { PendingControlTrust } from "./execution-v2/pending-control.trust";
 import type { AccessTrustProvider } from "./execution-v2/access-trust";
 import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "./execution-v2/manager-runtime";
 import type { CurrentHumanMutations } from "./execution-v2/current-human-mutations";
+import { composeNativeCore,nativeCoreManagerReadConsumer } from "./execution-v2/native-core-composition";
+import { NativeManagerReadConsumer } from "./execution-v2/native-manager-consumer";
+import { ScopedReplayCursorCodec } from "./execution-v2/scoped-replay-cursor";
+import type { ScopedReplayLimits } from "./execution-v2/realtime";
 import { ExecutionReadScopes } from "./execution-v2/read-scope";
 import { AuthService } from "./auth/auth.service";
 import { Argon2CredentialService } from "./auth/argon";
@@ -89,7 +93,7 @@ import { AuthoritativeEventLedgerRepository } from "./execution/authoritative-ev
 import { ExecutionMarketCandlesController } from "./execution/market-candles.controller";
 import { ExecutionMarketCandlesService } from "./execution/market-candles.service";
 import { ExecutionProfileProjectionWorker } from "./execution/profile-projection.worker";
-import { ExecutionProfileRealtimeService } from "./execution/profile-realtime.service";
+import { ExecutionProfileRealtimeService, NATIVE_MANAGER_REALTIME_COORDINATOR } from "./execution/profile-realtime.service";
 import { ExecutionProductReadSource } from "./execution/product-read-source";
 import { ExecutionProfileHistoryController } from "./execution/profile-history.controller";
 import { ExecutionProfileHistoryService } from "./execution/profile-history.service";
@@ -246,12 +250,18 @@ export interface ControlApiDependencies {
   /** Explicit private candidate composition, never an environment switch or
    * browser input. It must share the candidate's bounded Core pool. */
   currentHumanMutations?: CurrentHumanMutations;
+  /** Genuine private composition only; never reconstructed from HTTP or ENV. */
+  nativeManagerRead?: Awaited<ReturnType<typeof composeNativeCore>>;
+  /** Explicit private connected-budget input, not a public/env activation. */
+  nativeManagerRealtimeLimits?: ScopedReplayLimits;
 }
 
 @Module({})
 export class AppModule {
   static register(config: ControlApiConfig, pool: Pool, executionPool?: Pool,
     dependencies: ControlApiDependencies = {}): DynamicModule {
+    if (dependencies.nativeManagerRealtimeLimits !== undefined && dependencies.nativeManagerRead === undefined)
+      throw new Error("NATIVE_MANAGER_REALTIME_COMPOSITION_REQUIRED");
     if (dependencies.allowTestOnlyExecutionAccess && config.NODE_ENV !== "test")
       throw new Error("TEST_ONLY Execution authority requires an isolated test application.");
     if (dependencies.currentHumanMutations && !dependencies.currentHumanMutations.usesPool(pool))
@@ -561,6 +571,18 @@ export class AppModule {
         ExecutionContractAuthorityService,
         MaximumDataContinuationRepository,
         MaximumDataOperationService,
+        ...(dependencies.nativeManagerRead!==undefined?[{
+          provide:NativeManagerReadConsumer,
+          useFactory:(operations:MaximumDataOperationService,scopes:ExecutionReadScopes,
+            repository:ExecutionProfileProjectionRepository,cfg:ControlApiConfig)=>nativeCoreManagerReadConsumer(
+            dependencies.nativeManagerRead!,pool,operations,dependencies,
+            dependencies.nativeManagerRealtimeLimits === undefined ? undefined : {
+              scopes, repository, limits: {...dependencies.nativeManagerRealtimeLimits},
+              codec:new ScopedReplayCursorCodec(cfg.QUERY_CURSOR_ACTIVE_KEY_ID,querySigningKeys(cfg),
+                Math.min(300_000,cfg.QUERY_CURSOR_TTL_SECONDS*1000)),
+            }),
+          inject:[MaximumDataOperationService,ExecutionReadScopes,ExecutionProfileProjectionRepository,CONTROL_API_CONFIG],
+        },{ provide:NATIVE_MANAGER_REALTIME_COORDINATOR, useExisting:NativeManagerReadConsumer }]:[]),
         Portfolio360LocalService,
         ExecutionDurableMirrorRepository,
         ExecutionDurableFinancialRepository,

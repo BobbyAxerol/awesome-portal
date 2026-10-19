@@ -15,6 +15,8 @@ import { selectedNativeBusinessReadSelection } from "./native-business-read-sele
 import { privateOwnerCommissioning, type PrivateOwnerCommissioningPin } from "./core-owner-commissioning";
 import type { AccessTrustProvider } from "./access-trust";
 import type { ExecutionAccessService } from "./access.service";
+import { NativeManagerReadConsumer, type NativeManagerRealtimeOptions } from "./native-manager-consumer";
+import type { MaximumDataOperationService } from "../execution/maximum-data-operation.service";
 
 export interface NativeCorePersonProfileSelector {
   portal_user_id:string;human_issuer:string;subject:string;workspace_id:string;
@@ -33,6 +35,25 @@ export interface NativeCoreCompositionInput {
   retained_recovery:readonly NativeCoreSelection[];
   owner_intakes:readonly PrivateOwnerCommissioningPin[];
   mutation_limits:{maximum_intents:number;maximum_recoveries_per_request:number};
+}
+const managerBindings=new WeakMap<object,{
+  pool:Pool;trust:AccessTrustProvider;mutations:CurrentHumanMutations;
+  selections:readonly NativeCoreSelection[];
+}>();
+
+/** Private app DI only: select the genuine composition and the SAME authority,
+ * pool and recovery coordinator. A copied/fake object cannot mount a reader.
+ * This does not install policies, start a source or authorize any request. */
+export function nativeCoreManagerReadConsumer(
+  composition:Awaited<ReturnType<typeof composeNativeCore>>,pool:Pool,
+  operations:MaximumDataOperationService,
+  dependencies:{executionAccessTrust?:AccessTrustProvider;currentHumanMutations?:CurrentHumanMutations},
+  realtime?:NativeManagerRealtimeOptions,
+):NativeManagerReadConsumer{
+  const binding=managerBindings.get(composition);
+  if(!binding||binding.pool!==pool||binding.trust!==dependencies.executionAccessTrust||
+    binding.mutations!==dependencies.currentHumanMutations)return invalid();
+  return new NativeManagerReadConsumer(pool,operations,composition,binding.selections,realtime);
 }
 const invalid=():never=>{throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_CONFIG_INVALID");};
 function own(value:unknown,keys:readonly string[]):Record<string,unknown>{
@@ -125,7 +146,7 @@ export async function composeNativeCore(pool:Pool,baseTrust:AccessTrustProvider,
   const mutations=new CurrentHumanMutations(pool,enumerator!,reverse,limits,native);
   let trust=baseTrust;
   const intakes=pins.map(pin=>{const prepared=privateOwnerCommissioning(trust,pool,pin);trust=prepared.trust;return prepared;});
-  return Object.freeze({
+  const composition=Object.freeze({
     dependencies:Object.freeze({executionAccessTrust:trust,currentHumanMutations:mutations}),
     /** Explicit offline maintenance only. A failed later intake preserves
      * earlier immutable receipts; exact manual retry replays. Runtime selection
@@ -142,4 +163,7 @@ export async function composeNativeCore(pool:Pool,baseTrust:AccessTrustProvider,
       return candidate;
     },
   });
+  managerBindings.set(composition,{pool,trust,mutations,
+    selections:Object.freeze(active.map(entry=>Object.freeze({selector:entry.selector,config:entry.config})))});
+  return composition;
 }

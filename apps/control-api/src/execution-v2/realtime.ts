@@ -88,13 +88,14 @@ export interface NativeScopedReplayDependencies {
  * refresh. Identical scoped flights coalesce; no browser TS polling. */
 export class ScopedReplayHub {
   private readonly clients=new Map<string,Client>();
-  private readonly flights=new Map<string,Promise<EdgeScopedNoticeBatch>>();
-  /** Original source promises, never the timeout/abort race returned to pollers. */
-  private readonly sourceSettlements=new Set<Promise<EdgeScopedNoticeBatch>>();
+  private readonly flights=new Map<string,{result:Promise<EdgeScopedNoticeBatch>;settled:Promise<void>}>();
   private readonly cancellations=new Map<string,AbortController>();
   private readonly timedOutFlights=new Set<string>();
   private queuedBytes=0;
   private pending=0;
+  private operations=0;
+  private operationIdle=Promise.resolve();
+  private resolveOperationIdle?:()=>void;
   private stopped=false;
   private readonly limits:Readonly<ScopedReplayLimits>;
   private readonly native?:Readonly<NativeScopedReplayDependencies>;
@@ -110,6 +111,7 @@ export class ScopedReplayHub {
     if(this.stopped)throw new ScopedReplayError("STOPPED");
     if(this.clients.size+this.pending>=this.limits.maximumClients)throw new ScopedReplayError("RECONNECT_LIMIT");
     this.pending++;
+    const finish=this.beginOperation();
     try{
     const binding=structuredClone(scopedReplayBinding.parse(input.binding));
     if(await input.guard.currentIdentity()!==binding.principal_scope_digest)throw new ScopedReplayError("SCOPE_CHANGED");
@@ -122,7 +124,7 @@ export class ScopedReplayHub {
       queue:[],bytes:0,closed:false,busy:false};
     this.clients.set(client.id,client);
     return{id:client.id,close:()=>this.close(client)};
-    }finally{this.pending--;}
+    }finally{this.pending--;finish();}
   }
   /** Opt-in original08 physical path. No guard.write/raw write callback is
    * accepted. HTTP transport ownership belongs exclusively to SAME Candidate.
@@ -133,6 +135,7 @@ export class ScopedReplayHub {
     if(this.stopped)throw new ScopedReplayError("STOPPED");
     if(this.clients.size+this.pending>=this.limits.maximumClients)throw new ScopedReplayError("RECONNECT_LIMIT");
     this.pending++;
+    const finish=this.beginOperation();
     let stream:NativeReadEgressStream|undefined,registered=false;
     let candidate=dependencies.candidate;
     try{
@@ -159,11 +162,14 @@ export class ScopedReplayHub {
     }finally{
       this.pending--;
       if(stream&&!registered)try{nativeCandidateMethods.close.call(candidate,stream);}catch{/* original owner retains any uncertain state */}
+      finish();
     }
   }
   async poll():Promise<void>{
     if(this.stopped)return;
-    await Promise.all([...this.clients.values()].map(c=>this.pollClient(c)));
+    const finish=this.beginOperation();
+    try{await Promise.all([...this.clients.values()].map(c=>this.pollClient(c)));}
+    finally{finish();}
   }
   /** Explicit app-revoke notification is a fast purge hint, never the only
    * fence. Missed hints are covered by current authority before every write. */
@@ -175,13 +181,22 @@ export class ScopedReplayHub {
     for(const c of this.clients.values())this.terminate(c,"unavailable","STOPPED");
     for(const controller of this.cancellations.values())controller.abort();
   }
-  /** Private lifecycle join only. Stop remains synchronous and pollers settle
-   * promptly, but source teardown/pool shutdown must wait for the original
-   * source calls, including providers that ignored abort. This is not a source
-   * ACK or a native-custody/transport settlement proof. No timeout frees slots. */
+  /** App shutdown joins ACTUAL source work, not the timeout/abort race. A
+   * non-cooperating source keeps its bounded slot until it really settles. */
+  async drain():Promise<void>{
+    this.stop();
+    await this.operationIdle;
+    await Promise.all([...this.flights.values()].map(flight=>flight.settled));
+  }
+  /** Existing Core lifecycle API. Join original source work, not the aborted
+   * poller promise. The same retained flights also back full Hub drain. */
   async settleSourceReads():Promise<void>{
     if(!this.stopped)throw new Error("REPLAY_SOURCE_SETTLE_REQUIRES_STOP");
-    await Promise.allSettled([...this.sourceSettlements]);
+    await Promise.all([...this.flights.values()].map(flight=>flight.settled));
+  }
+  private beginOperation():()=>void{
+    if(this.operations++===0)this.operationIdle=new Promise(resolve=>{this.resolveOperationIdle=resolve;});
+    return ()=>{if(--this.operations===0){this.resolveOperationIdle?.();this.resolveOperationIdle=undefined;}};
   }
   diagnostics(){return{clients:this.clients.size,queued_bytes:this.queuedBytes,source_flights:this.flights.size,
     pending_subscriptions:this.pending,timed_out_flights:this.timedOutFlights.size,browser_source_calls:0,semantics:"NOTIFICATION_ONLY" as const};}
@@ -250,7 +265,7 @@ export class ScopedReplayHub {
   }
   private async read(c:Client){
     const key=accessDigest([c.binding,c.sourceCursor]);
-    const existing=this.flights.get(key);if(existing)return existing;
+    const existing=this.flights.get(key);if(existing)return existing.result;
     if(this.flights.size>=this.limits.maximumClients)throw new ScopedReplayError("RECONNECT_LIMIT");
     const controller=new AbortController();let timer:ReturnType<typeof setTimeout>|undefined;
     const source=Promise.resolve().then(()=>{
@@ -268,13 +283,11 @@ export class ScopedReplayHub {
     timer.unref();
     const result=Promise.race([source,cancelled]);
     this.cancellations.set(key,controller);
-    this.flights.set(key,result);
-    this.sourceSettlements.add(source);
-    void source.finally(()=>{
+    const settled=source.then(()=>undefined,()=>undefined).finally(()=>{
       clearTimeout(timer);controller.signal.removeEventListener("abort",abort);
       this.flights.delete(key);this.timedOutFlights.delete(key);this.cancellations.delete(key);
-      this.sourceSettlements.delete(source);
-    }).catch(()=>undefined);
+    });
+    this.flights.set(key,{result,settled});
     return result;
   }
   private async pollClient(c:Client):Promise<void>{

@@ -4,19 +4,45 @@ import type { ControlApiConfig } from "../config";
 
 let sharedPool: Pool | null = null;
 const corePools = new Map<string, Pool>();
+const corePoolProfiles = new WeakMap<Pool,string>();
 
-export function buildPool(connectionString: string): Pool {
+/** Explicit private installation bounds; never mutate a live cached pool. */
+export interface CorePoolProfile {
+  max:number; connectionTimeoutMillis:number; statement_timeout:number;
+  query_timeout:number; idle_in_transaction_session_timeout:number;
+}
+function reviewedCorePoolProfile(input:CorePoolProfile):CorePoolProfile {
+  const profile={max:input.max,connectionTimeoutMillis:input.connectionTimeoutMillis,
+    statement_timeout:input.statement_timeout,query_timeout:input.query_timeout,
+    idle_in_transaction_session_timeout:input.idle_in_transaction_session_timeout};
+  if(!Number.isSafeInteger(profile.max)||profile.max<1||profile.max>10||
+    [profile.connectionTimeoutMillis,profile.statement_timeout,profile.query_timeout,
+      profile.idle_in_transaction_session_timeout].some(n=>!Number.isSafeInteger(n)||n<1||n>60000)||
+    profile.query_timeout<=profile.statement_timeout)
+    throw new Error("CURRENT_HUMAN_CORE_POOL_PROFILE_INVALID");
+  return Object.freeze(profile);
+}
+
+export function buildPool(connectionString: string, input?:CorePoolProfile): Pool {
+  const profile=input===undefined?undefined:reviewedCorePoolProfile(input);
+  const fingerprint=profile===undefined?"LEGACY":JSON.stringify(profile);
   const existing = corePools.get(connectionString);
   if (existing && !(existing as Pool & {ending:boolean;ended:boolean}).ending &&
-      !(existing as Pool & {ended:boolean}).ended) { sharedPool = existing; return existing; }
+      !(existing as Pool & {ended:boolean}).ended) {
+    if(profile!==undefined&&corePoolProfiles.get(existing)!==fingerprint)
+      throw new Error("CURRENT_HUMAN_CORE_POOL_PROFILE_MISMATCH");
+    sharedPool = existing; return existing;
+  }
   {
     sharedPool = new Pool({
       connectionString,
       max: 10,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,
+      ...profile,
     });
     corePools.set(connectionString, sharedPool);
+    corePoolProfiles.set(sharedPool,fingerprint);
     const pool = sharedPool, originalEnd = pool.end.bind(pool);
     pool.end = ((callback?: () => void) => {
       if (corePools.get(connectionString) === pool) corePools.delete(connectionString);
@@ -93,15 +119,18 @@ export async function withTransaction<T>(
   fn: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
   const client = await pool.connect();
+  let discardClient = false;
   try {
     await client.query("BEGIN");
     const result = await fn(client);
     await client.query("COMMIT");
     return result;
   } catch (error) {
-    await client.query("ROLLBACK");
+    try { await client.query("ROLLBACK"); }
+    catch { discardClient = true; }
     throw error;
   } finally {
-    client.release();
+    if(discardClient) client.release(true);
+    else client.release();
   }
 }

@@ -650,6 +650,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 source integration candidate (2026-10-19):** the separate
+feat/execution-native-read-integration adopts exact e19+22 qualified HTTP/SSE
+source without changing stable/current integration runtime. See
+[Core task scope and gate](UNIFIED_IMPLEMENTATION_PLAN.md#original08-native-readsse-integration-source-candidate--2026-10-19).
+Same pool/current policy and recovery retained; normal hook mandatory before
+landing, actual original08 connected acceptance NOT_MET. No auth/DB/policy,
+command/financial/UI or ELP2-11 activation is implied.
+
 **Delivered since the runway note above** (commits on
 `chore/v1.1-roadmap-taskboard`):
 

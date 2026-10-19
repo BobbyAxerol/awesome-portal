@@ -194,20 +194,20 @@ export class MaximumDataOperationService {
    * on epoch JSON. Existing public methods keep their full readScopes behavior.
    * This returns private bytes only; Candidate still owns final authorization
    * and physical send after the last source/cache await. */
-  async prepareNativeManagerPage(expectedPool:Pool,principal:MaximumDataOperationPrincipal,
-    operation:NativeManagerOperation,query:MaximumDataDeploymentQuery,source:SelectedNativeBusinessReadSource){
+  async currentNativeManagerRead(expectedPool:Pool,principal:MaximumDataOperationPrincipal,
+    operation:NativeManagerOperation|{kind:"OBSERVATION"},query:MaximumDataDeploymentQuery,source:SelectedNativeBusinessReadSource){
     if(!this.nativeCorePool||this.nativeCorePool!==expectedPool)
       throw new MaximumDataOperationError("NATIVE_MANAGER_READ_UNAVAILABLE",503);
     const selected=selectedNativeBusinessReadSelection(source);
     const relation=operation.kind==="RELATION"?managerRelationOperationByRoute(operation.route_id):undefined;
-    if(operation.kind!=="DEPLOYMENTS"&&!relation||!Number.isInteger(query.limit)||query.limit<1||query.limit>200||
+    if(operation.kind!=="DEPLOYMENTS"&&operation.kind!=="OBSERVATION"&&!relation||!Number.isInteger(query.limit)||query.limit<1||query.limit>200||
       !["paper","sandbox","live"].includes(query.environment)||
       query.cursor!==undefined&&(typeof query.cursor!=="string"||query.cursor.length<1||query.cursor.length>128))
       throw new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403);
-    const profile=operation.kind==="DEPLOYMENTS"?maximumDataDeploymentBinding(query.environment).profileId:
-      managerRelationProfileBinding(query.environment).profileId;
-    const catalogue=operation.kind==="DEPLOYMENTS"?MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256:
-      MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
+    const profile=operation.kind==="RELATION"?managerRelationProfileBinding(query.environment).profileId:
+      maximumDataDeploymentBinding(query.environment).profileId;
+    const catalogue=operation.kind==="RELATION"?MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest:
+      MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256;
     if(selected.binding.subject!==principal.user.userId||selected.human.portal_user_id!==principal.user.userId||
       selected.binding.workspace_id!==principal.workspaceId||selected.binding.environment!==query.environment||
       selected.domain.profile_id!==profile||selected.domain.catalogue_sha256!==catalogue.slice(7)||
@@ -233,8 +233,16 @@ export class MaximumDataOperationService {
       throw new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403);
     const nativeEpochDigest=nativeManagerDataEpoch({actor,workspace_id:principal.workspaceId,
       environment:query.environment,decision,source:selected,
-      operation_id:operation.kind==="DEPLOYMENTS"?MAXIMUM_DATA_DEPLOYMENT_OPERATION.logicalOperationId:relation!.operationId,
+      operation_id:operation.kind==="OBSERVATION"?"portal.manager-observation.snapshot.v1":
+        operation.kind==="DEPLOYMENTS"?MAXIMUM_DATA_DEPLOYMENT_OPERATION.logicalOperationId:relation!.operationId,
       base_query:{limit:query.limit}});
+    return {decision,nativeEpochDigest};
+  }
+
+  async prepareNativeManagerPage(expectedPool:Pool,principal:MaximumDataOperationPrincipal,
+    operation:NativeManagerOperation,query:MaximumDataDeploymentQuery,source:SelectedNativeBusinessReadSource){
+    const {decision,nativeEpochDigest}=await this.currentNativeManagerRead(expectedPool,principal,operation,query,source);
+    const relation=operation.kind==="RELATION"?managerRelationOperationByRoute(operation.route_id):undefined;
     const privatePrincipal={...principal,nativeEpochDigest};
     const dto=operation.kind==="DEPLOYMENTS"?await this.prepareDeploymentData(privatePrincipal,query):
       await this.prepareRelationData(privatePrincipal,relation!,query);

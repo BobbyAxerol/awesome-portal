@@ -31,9 +31,12 @@ import {
 } from "./realtime.proxy";
 import { ExecutionCurrentSourceProxy } from "./current-source.proxy";
 import { ExecutionLocalReadAuthority } from "./local-read-authority";
-import { retainedReview } from "./retained-read-profile";
+import { retainedReview, localProfileReadable } from "./retained-read-profile";
 import { ExecutionReadScopes, ExecutionReadScopeError, type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
 import { technicalDiagnosticsSchema } from "../execution-v2/technical-read.contract";
+import { NativeManagerReadConsumer } from "../execution-v2/native-manager-consumer";
+import { ScopedReplayError } from "../execution-v2/scoped-replay-cursor";
+import { MaximumDataOperationError } from "./maximum-data-operation.service";
 
 interface RealtimeRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -54,11 +57,19 @@ export class ExecutionRealtimeController {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionLocalReadAuthority) private readonly readAuthority: ExecutionLocalReadAuthority,
     @Optional() @Inject(ExecutionReadScopes) private readonly scopes?: ExecutionReadScopes,
+    @Optional() @Inject(NativeManagerReadConsumer) private readonly nativeManager?: NativeManagerReadConsumer,
   ) {}
 
   private async legacyStream(request: RealtimeRequest, workspaceId=request.portalWorkspaceId) {
     if (this.scopes) await this.scopes.assertLegacyStream({user:request.portalUser,session:request.portalSession,
       workspaceId,viewerWorkspaceId:request.portalWorkspaceId});
+  }
+
+  private nativeProfileAvailable(environment: ProjectionEnvironment): void {
+    if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true")
+      throw new LocalRealtimeError("EXECUTION_LOCAL_READ_DISABLED", 404);
+    if (!localProfileReadable(this.config, environment))
+      throw new LocalRealtimeError("EXECUTION_PROFILE_READ_DISABLED", 404);
   }
 
   /**
@@ -165,6 +176,15 @@ export class ExecutionRealtimeController {
     @Res({ passthrough: true }) reply?: FastifyReply,
   ) {
     const { environment, profileId, workspaceId } = localScope(this.config, rawEnvironment);
+    if (this.nativeManager && !retainedReview(this.config)) {
+      if (!reply) throw new LocalRealtimeError("N31_NATIVE_REPLY_REQUIRED", 503);
+      try {
+        this.nativeProfileAvailable(environment);
+        if (await this.nativeManager.serveProfileSnapshot({user:request.portalUser,session:request.portalSession,
+          workspaceId,viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId},
+          environment,profileId,this.localRealtime,reply)) return;
+      } catch (error) { throw localHttpError(error); }
+    }
     await this.readAuthority.authorize(request, environment);
     if (retainedReview(this.config)) {
       // No resumable cursor exists in this profile. A 204 is intentional
@@ -194,9 +214,18 @@ export class ExecutionRealtimeController {
     let cleanup = () => undefined as void;
     try {
       const { environment, profileId, workspaceId } = localScope(this.config, rawEnvironment);
+      const cursor = singleHeader(request.headers["last-event-id"]) ?? singleValue(rawCursor);
+      if (this.nativeManager) this.nativeProfileAvailable(environment);
+      if (this.nativeManager && await this.nativeManager.serveProfileStream(
+        {user:request.portalUser,session:request.portalSession,workspaceId,
+          viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId},
+        environment,profileId,cursor,reply)) {
+        try { this.localRealtime.startNativePolling(); }
+        catch { reply.raw.destroy(); }
+        return;
+      }
       await this.readAuthority.authorize(request, environment);
       await this.legacyStream(request, workspaceId);
-      const cursor = singleHeader(request.headers["last-event-id"]) ?? singleValue(rawCursor);
       reply.hijack();
       reply.raw.writeHead(200, {
         "content-type": "text/event-stream; charset=utf-8",
@@ -273,6 +302,7 @@ export class ExecutionRealtimeController {
       if (closed) unsubscribe();
     } catch (error) {
       cleanup();
+      if (reply.raw.destroyed || reply.raw.writableEnded) return;
       if (!reply.raw.headersSent) void reply.status(localStatus(error)).send(localErrorBody(error));
       else reply.raw.end();
     }
@@ -456,21 +486,26 @@ function sse(event: LocalRealtimeEnvelope): string {
 }
 
 function localStatus(error: unknown): number {
+  if (error instanceof ScopedReplayError) return error.code === "RECONNECT_LIMIT" ? 429 :
+    ["SOURCE_UNAVAILABLE", "STOPPED"].includes(error.code) ? 503 : 409;
   return error instanceof HttpException ? error.getStatus() :
-    error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ? error.status : 500;
+    error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ||
+      error instanceof MaximumDataOperationError ? error.status : 500;
 }
 
 function localErrorBody(error: unknown) {
   if (error instanceof HttpException) return error.getResponse();
   return {
     error: {
-      code: error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ? error.code : "N31_LOCAL_REALTIME_FAILED",
+      code: error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ||
+        error instanceof MaximumDataOperationError || error instanceof ScopedReplayError ? error.code : "N31_LOCAL_REALTIME_FAILED",
       message: "Local execution realtime is unavailable.",
     },
   };
 }
 
 function localHttpError(error: unknown): Error {
-  if (error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError) return error;
+  if (error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ||
+    error instanceof MaximumDataOperationError) return error;
   return new HttpException(localErrorBody(error), localStatus(error));
 }

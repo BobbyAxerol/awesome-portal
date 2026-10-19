@@ -7,6 +7,12 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 source integration candidate (2026-10-19):** exact e19+22
+  native HTTP/SSE/runtime source on a separate feature, stable runtime untouched.
+  [Task, guide, source proof and landing/rollback gate](../UNIFIED_IMPLEMENTATION_PLAN.md#original08-native-readsse-integration-source-candidate--2026-10-19).
+  Core-owner review/release and genuine connected08 remain outstanding; this
+  is not ELP2-11 entry, a new grant or runtime acceptance.
+
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
   — **the governing owner request.** It consolidates N02/N03 incremental
   source, N06 evidence, all 24 N11 reads, all nine N12 commands, N15

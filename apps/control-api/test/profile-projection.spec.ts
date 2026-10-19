@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { Pool } from "pg";
 import { buildPool } from "../src/db/pool";
 import { ExecutionProductReadSource } from "../src/execution/product-read-source";
-import { CurrentSourceProxyError } from "../src/execution/current-source.proxy";
+import { CurrentSourceProxyError, type CurrentSourcePrincipal } from "../src/execution/current-source.proxy";
 import { ExecutionProfileRealtimeService } from "../src/execution/profile-realtime.service";
 import {
   acceptedProjectionAdapters,
@@ -15,6 +15,7 @@ import {
   documentInvalidReason,
   ExecutionProfileProjectionRepository,
   ProfileProjectionDocument,
+  type ProjectionRow,
 } from "../src/execution/profile-projection.repository";
 import type { DurableMirrorWriter } from "../src/execution/durable-mirror.contract";
 import {
@@ -35,6 +36,21 @@ import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
 const workspaceId = "ws_projection_test";
 const profileId = "PAPER_BINANCE_USDM";
 const relationKey = "manager.strategies:strategies";
+/** Synthetic projection-only fixture, not a real session or access proof.
+ * These legacy local-reader tests do not install or replace read authority. */
+function testOnlyProjectionPrincipal(sessionId: string): CurrentSourcePrincipal {
+  const now = new Date();
+  return {
+    workspaceId,
+    user: { userId: "usr_bobby", username: "TEST_ONLY_projection", displayName: "TEST_ONLY projection",
+      role: "ADMIN", status: "ACTIVE", mustChangePassword: false, failedLoginCount: 0,
+      lockedUntil: null, sessionVersion: 1, createdAt: now, updatedAt: now, disabledAt: null,
+      accountRevision: 1, archivedAt: null },
+    session: { sessionId, userId: "usr_bobby", state: "ACTIVE", sessionVersion: 1,
+      authenticationTime: now, idleExpiresAt: new Date(now.getTime() + 60_000),
+      absoluteExpiresAt: new Date(now.getTime() + 60_000) },
+  };
+}
 let pool: Pool;
 let repository: ExecutionProfileProjectionRepository;
 
@@ -382,10 +398,7 @@ describe("Phase 1 SGP-local profile projection", () => {
     const source = new ExecutionProductReadSource(config, repository, {
       relationPage: async () => { namedCalls += 1; throw new Error("unexpected named warm-up read"); },
     } as never);
-    const principal = {
-      principalId: "usr_bobby", sessionId: "ses_1", workspaceId,
-      roles: ["ADMIN"], authenticationTime: new Date(), authenticationMethods: ["portal_session"],
-    };
+    const principal = testOnlyProjectionPrincipal("ses_1");
     const [left, right] = await Promise.all([
       source.relation(principal, "paper", "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
         "manager.strategies", "strategies", { limit: 1 }),
@@ -418,10 +431,7 @@ describe("Phase 1 SGP-local profile projection", () => {
     const source = new ExecutionProductReadSource(config, repository, {
       relationPage: async () => { namedCalls += 1; throw new Error("unexpected named warm-up read"); },
     } as never);
-    const principal = {
-      principalId: "usr_bobby", sessionId: "ses_eds03", workspaceId,
-      roles: ["ADMIN"], authenticationTime: new Date(), authenticationMethods: ["portal_session"],
-    };
+    const principal = testOnlyProjectionPrincipal("ses_eds03");
 
     const resolution = await source.resolveDeploymentScope(
       principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", "dep_200",
@@ -449,10 +459,7 @@ describe("Phase 1 SGP-local profile projection", () => {
     const source = new ExecutionProductReadSource(config, repository, {
       relationPage: async () => { throw new Error("unexpected named warm-up read"); },
     } as never);
-    const principal = {
-      principalId: "usr_bobby", sessionId: "ses_r2_3", workspaceId,
-      roles: ["ADMIN"], authenticationTime: new Date(), authenticationMethods: ["portal_session"],
-    };
+    const principal = testOnlyProjectionPrincipal("ses_r2_3");
 
     const exact = await source.relation(
       principal, "paper", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.orders", "orders",
@@ -1760,8 +1767,8 @@ describe("P4-D window ladder merge", () => {
 describe("row provenance across catalogues (dev 2026-09-07: a pre-catalogue warm window froze the paper projection)", () => {
   const digest = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
   const base = { workspace_id: "ws", profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "r" };
-  const bare = { lineage: { ...base }, fields: { id: "old", ts: "2026-09-01T00:00:00.000Z" } };
-  const stamped = { lineage: { ...base, source_catalogue_sha256: digest }, fields: { id: "new", ts: "2026-09-02T00:00:00.000Z" } };
+  const bare: ProjectionRow = { lineage: { ...base }, fields: { id: "old", ts: "2026-09-01T00:00:00.000Z" } };
+  const stamped: ProjectionRow = { lineage: { ...base, source_catalogue_sha256: digest }, fields: { id: "new", ts: "2026-09-02T00:00:00.000Z" } };
 
   it("drops rows without a catalogue under a catalogued document, rows with one under a bare document, and keeps the rest", () => {
     expect(provenanceCompatibleRows([bare, stamped], digest)).toEqual({ rows: [stamped], dropped: 1 });
