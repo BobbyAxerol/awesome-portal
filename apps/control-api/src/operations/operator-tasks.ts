@@ -13,7 +13,27 @@ export interface OperatorTaskDefinition {
   catalogKey: string | null;
   parameterKeys: readonly string[];
   typedConfirmWord: string | null;
+  /** FE-056 display metadata (optional additive keys of `execution.command-tasks.v1`). */
+  display: OperatorTaskDisplay;
 }
+
+/**
+ * One operator-facing short name, one sentence and a scope label per task.
+ * Text states only what the task is for, from its catalogue key, parameters and
+ * classification; it never claims that the Portal can run the task (that is
+ * `state`/`reason_code`).  Bounds are mirrored by the published schema.
+ */
+export interface OperatorTaskDisplay {
+  displayName: string;
+  description: string;
+  scopeLabel: string;
+}
+
+export const OPERATOR_TASK_DISPLAY_BOUNDS = Object.freeze({
+  displayName: 80,
+  description: 240,
+  scopeLabel: 80,
+});
 
 const task = (
   taskId: string,
@@ -22,6 +42,9 @@ const task = (
   mode: OperatorTaskDefinition["mode"],
   catalogKey: string | null,
   parameterKeys: readonly string[],
+  displayName: string,
+  scopeLabel: string,
+  description: string,
   typedConfirmWord: string | null = null,
 ): OperatorTaskDefinition => ({
   taskId,
@@ -31,6 +54,7 @@ const task = (
   catalogKey,
   parameterKeys,
   typedConfirmWord,
+  display: { displayName, description, scopeLabel },
 });
 
 /**
@@ -38,30 +62,30 @@ const task = (
  * enums/numbers; no row admits a raw URL, shell fragment, SQL or credential.
  */
 export const OPERATOR_TASKS: readonly OperatorTaskDefinition[] = [
-  task("health", "READ_INSPECT", "System health", "READ", null, ["mode"]),
-  task("inspect", "READ_INSPECT", "Alpha / account inspect", "READ", "alpha/inspect", ["alpha_id", "account_id", "mode"]),
-  task("capital", "READ_INSPECT", "Capital history", "READ", "capital/history", ["portfolio_id", "account_id", "limit"]),
-  task("performance", "READ_INSPECT", "Performance & NAV", "READ", "performance/portfolio", ["portfolio_id", "alpha_id", "account_id"]),
-  task("sizing", "READ_INSPECT", "Sizing explanations", "READ", "sizing/history", ["alpha_id", "symbol", "limit"]),
-  task("broker-read", "READ_INSPECT", "Broker bindings & exposure", "READ", "broker/bindings", ["external_account_ref", "mode", "venue"]),
-  task("redis-inspect", "READ_INSPECT", "Redis inspection", "READ", "redis/trading-state", ["mode", "venue"]),
-  task("portfolio-create", "PORTFOLIO_CAPITAL", "Create portfolio", "MUTATION", "portfolio/create", ["portfolio_id", "name", "base_currency", "state", "reason"]),
-  task("portfolio-state", "PORTFOLIO_CAPITAL", "Portfolio state", "MUTATION", "portfolio/state", ["portfolio_id", "state", "reason"]),
-  task("allocation-change", "PORTFOLIO_CAPITAL", "Change allocation", "MUTATION", "allocation/<root>", ["portfolio_id", "account_id", "allocated_capital", "max_capital", "movement_type", "reason"]),
-  task("config-plan", "PORTFOLIO_CAPITAL", "Declarative config plan / apply", "MUTATION", "config/plan", ["config_artifact_id", "reason"]),
-  task("deployment-state", "DEPLOYMENT_RISK", "Deployment state", "MUTATION", "deployment/state", ["deployment_id", "state", "reason"]),
-  task("trading-state", "DEPLOYMENT_RISK", "Trading state per mode/venue", "MUTATION", "risk/state", ["mode", "venue", "state", "reason"]),
-  task("risk-profile", "DEPLOYMENT_RISK", "Risk profile", "MUTATION", "risk/profile", ["alpha_id", "mode", "venue", "risk_profile_id", "reason"]),
-  task("alpha-register", "DEPLOYMENT_RISK", "Register alpha", "MUTATION", "alpha/register", ["alpha_id", "registration_artifact_id", "reason"]),
-  task("account-policy", "ACCOUNT", "Account policy", "MUTATION", "account/policy", ["account_id", "policy_id", "expected_revision", "reason"]),
-  task("account-seed-paper", "ACCOUNT", "Seed paper account", "MUTATION", "account/seed-paper", ["alpha_id", "account_id", "venue", "currency", "amount", "account_type", "reason"]),
-  task("account-sync", "BROKER_SYNC_RECONCILIATION", "Broker account sync", "MUTATION", "account/sync", ["account_id", "mode", "venue", "reason"]),
-  task("reconcile-positions", "BROKER_SYNC_RECONCILIATION", "Reconcile positions", "MUTATION", "account/reconcile-positions", ["account_id", "mode", "venue", "sync_first", "apply", "reason"]),
-  task("reconcile-open-orders", "BROKER_SYNC_RECONCILIATION", "Reconcile open orders", "MUTATION", "account/reconcile-open-orders", ["account_id", "mode", "venue", "sync_first", "apply", "reason"]),
-  task("broker-reconcile", "BROKER_SYNC_RECONCILIATION", "Aggregate physical reconcile", "MUTATION", "broker/reconcile-positions", ["external_account_ref", "mode", "venue", "domain", "sync_first", "reason"]),
-  task("emergency-close", "EMERGENCY_DESTRUCTIVE", "Emergency close", "DANGER", "ops/emergency-close", ["account_id", "alpha_id", "mode", "venue", "reason"], "CLOSE"),
-  task("testnet-hard-reset", "EMERGENCY_DESTRUCTIVE", "Shared testnet hard reset", "BLOCKED", null, [], "BINANCE_TESTNET_ONLY"),
-  task("lab-reset", "EMERGENCY_DESTRUCTIVE", "Lab reset", "BLOCKED", null, [], null),
+  task("health", "READ_INSPECT", "System health", "READ", null, ["mode"], "System health", "System", "Read-only system health check, selectable by mode; no source operation is published for it."),
+  task("inspect", "READ_INSPECT", "Alpha / account inspect", "READ", "alpha/inspect", ["alpha_id", "account_id", "mode"], "Alpha / account inspect", "Account · Alpha", "Read-only inspection of an alpha or an account for a mode."),
+  task("capital", "READ_INSPECT", "Capital history", "READ", "capital/history", ["portfolio_id", "account_id", "limit"], "Capital history", "Portfolio · Account", "Read-only history of capital movements for a portfolio or an account, limited to a bounded number of rows."),
+  task("performance", "READ_INSPECT", "Performance & NAV", "READ", "performance/portfolio", ["portfolio_id", "alpha_id", "account_id"], "Performance and NAV", "Portfolio · Account · Alpha", "Read-only performance and NAV figures for a portfolio, an account or an alpha."),
+  task("sizing", "READ_INSPECT", "Sizing explanations", "READ", "sizing/history", ["alpha_id", "symbol", "limit"], "Sizing explanations", "Alpha", "Read-only history of position-sizing explanations for an alpha and symbol, limited to a bounded number of rows."),
+  task("broker-read", "READ_INSPECT", "Broker bindings & exposure", "READ", "broker/bindings", ["external_account_ref", "mode", "venue"], "Broker bindings and exposure", "Account · Venue", "Read-only view of the broker binding and exposure behind an external account reference, for a mode and venue."),
+  task("redis-inspect", "READ_INSPECT", "Redis inspection", "READ", "redis/trading-state", ["mode", "venue"], "Redis inspection", "Venue", "Direct Redis trading-state inspection; the Portal forbids direct Redis access, so this task cannot be run from here."),
+  task("portfolio-create", "PORTFOLIO_CAPITAL", "Create portfolio", "MUTATION", "portfolio/create", ["portfolio_id", "name", "base_currency", "state", "reason"], "Create portfolio", "Portfolio", "Creates a portfolio from an id, name, base currency and initial state, with a recorded reason."),
+  task("portfolio-state", "PORTFOLIO_CAPITAL", "Portfolio state", "MUTATION", "portfolio/state", ["portfolio_id", "state", "reason"], "Portfolio state", "Portfolio", "Changes the state of a portfolio, with a recorded reason."),
+  task("allocation-change", "PORTFOLIO_CAPITAL", "Change allocation", "MUTATION", "allocation/<root>", ["portfolio_id", "account_id", "allocated_capital", "max_capital", "movement_type", "reason"], "Change allocation", "Portfolio · Account", "Changes the capital allocated to an account within a portfolio (allocated and maximum capital, movement type), with a recorded reason."),
+  task("config-plan", "PORTFOLIO_CAPITAL", "Declarative config plan / apply", "MUTATION", "config/plan", ["config_artifact_id", "reason"], "Config plan and apply", "System", "Plans and applies a declarative configuration artifact, with a recorded reason."),
+  task("deployment-state", "DEPLOYMENT_RISK", "Deployment state", "MUTATION", "deployment/state", ["deployment_id", "state", "reason"], "Deployment state", "Deployment", "Changes the state of a deployment, with a recorded reason."),
+  task("trading-state", "DEPLOYMENT_RISK", "Trading state per mode/venue", "MUTATION", "risk/state", ["mode", "venue", "state", "reason"], "Trading state", "Venue", "Sets the trading state for a mode and venue, with a recorded reason."),
+  task("risk-profile", "DEPLOYMENT_RISK", "Risk profile", "MUTATION", "risk/profile", ["alpha_id", "mode", "venue", "risk_profile_id", "reason"], "Risk profile", "Alpha · Venue", "Sets the risk profile applied to an alpha for a mode and venue, with a recorded reason."),
+  task("alpha-register", "DEPLOYMENT_RISK", "Register alpha", "MUTATION", "alpha/register", ["alpha_id", "registration_artifact_id", "reason"], "Register alpha", "Alpha", "Registers an alpha from a registration artifact, with a recorded reason."),
+  task("account-policy", "ACCOUNT", "Account policy", "MUTATION", "account/policy", ["account_id", "policy_id", "expected_revision", "reason"], "Account policy", "Account", "Updates the policy of an account at an expected revision, with a recorded reason."),
+  task("account-seed-paper", "ACCOUNT", "Seed paper account", "MUTATION", "account/seed-paper", ["alpha_id", "account_id", "venue", "currency", "amount", "account_type", "reason"], "Seed paper account", "Account · Alpha · Venue", "Seeds a paper account for an alpha on a venue with a starting amount and currency, with a recorded reason."),
+  task("account-sync", "BROKER_SYNC_RECONCILIATION", "Broker account sync", "MUTATION", "account/sync", ["account_id", "mode", "venue", "reason"], "Broker account sync", "Account · Venue", "Synchronises an account with its broker for a mode and venue, with a recorded reason."),
+  task("reconcile-positions", "BROKER_SYNC_RECONCILIATION", "Reconcile positions", "MUTATION", "account/reconcile-positions", ["account_id", "mode", "venue", "sync_first", "apply", "reason"], "Reconcile positions", "Account · Venue", "Reconciles the positions of an account with the broker for a mode and venue, optionally syncing first and optionally applying the result."),
+  task("reconcile-open-orders", "BROKER_SYNC_RECONCILIATION", "Reconcile open orders", "MUTATION", "account/reconcile-open-orders", ["account_id", "mode", "venue", "sync_first", "apply", "reason"], "Reconcile open orders", "Account · Venue", "Reconciles the open orders of an account with the broker for a mode and venue, optionally syncing first and optionally applying the result."),
+  task("broker-reconcile", "BROKER_SYNC_RECONCILIATION", "Aggregate physical reconcile", "MUTATION", "broker/reconcile-positions", ["external_account_ref", "mode", "venue", "domain", "sync_first", "reason"], "Aggregate physical reconcile", "Account · Venue", "Reconciles positions for a broker binding (external account reference) for a mode, venue and domain, optionally syncing first."),
+  task("emergency-close", "EMERGENCY_DESTRUCTIVE", "Emergency close", "DANGER", "ops/emergency-close", ["account_id", "alpha_id", "mode", "venue", "reason"], "Emergency close", "Account · Alpha · Venue", "Emergency close for an account or alpha on a mode and venue; needs the typed word CLOSE and two-person approval.", "CLOSE"),
+  task("testnet-hard-reset", "EMERGENCY_DESTRUCTIVE", "Shared testnet hard reset", "BLOCKED", null, [], "Shared testnet hard reset", "System", "Host-level hard reset of the shared testnet; blocked in the Portal and not exposed.", "BINANCE_TESTNET_ONLY"),
+  task("lab-reset", "EMERGENCY_DESTRUCTIVE", "Lab reset", "BLOCKED", null, [], "Lab reset", "System", "Host-level reset of the lab environment; blocked in the Portal and not exposed.", null),
 ] as const;
 
 const LOCAL_R0_ADAPTER = Object.freeze({
@@ -183,6 +207,9 @@ export function operatorTaskCatalogue(localR0Enabled = false) {
       scope: taskScope(definition.parameterKeys),
       cli_forms: [],
       meta: source?.source_reference ?? "Portal-curated task; source operation not published",
+      display_name: definition.display.displayName,
+      description: definition.display.description,
+      scope_label: definition.display.scopeLabel,
       params: definition.parameterKeys.map((key) => ({
         key,
         source_registry: registryFor(key),

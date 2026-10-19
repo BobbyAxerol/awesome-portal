@@ -37,6 +37,20 @@ describe("L0 canonical", () => {
     expect(activation.capabilities).toHaveLength(7);
     expect(plan.status).toBe("BLOCKED");
   });
+  it("reads the optional FE-056 display metadata and tolerates bodies that predate it", () => {
+    const health = tasks.tasks.find((t) => t.taskId === "health")!;
+    expect(health.displayName).toBe("System health");
+    expect(health.scopeLabel).toBe("System");
+    expect(health.description).toMatch(/^Read-only/);
+    // `meta` is still the source reference, never replaced by the sentence.
+    expect(health.meta).toBe("Portal-curated task; source operation not published");
+    expect(tasks.tasks.every((t) => t.displayName && t.description && t.scopeLabel)).toBe(true);
+    const legacy = structuredClone(loadCanonical(TASKS)) as { tasks: Record<string, unknown>[] };
+    for (const t of legacy.tasks) { delete t.display_name; delete t.description; delete t.scope_label; }
+    const read = readOperatorTasks(legacy)!;
+    expect(read.tasks).toHaveLength(24);
+    expect(read.tasks.every((t) => t.displayName === null && t.description === null && t.scopeLabel === null)).toBe(true);
+  });
   it("leaves the files as it found them", () => {
     for (const [name, digest] of digests) expect(canonicalDigest(name), name).toBe(digest);
   });

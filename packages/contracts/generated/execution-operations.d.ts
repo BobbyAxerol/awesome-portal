@@ -944,6 +944,12 @@ export interface components {
             scope: string;
             cli_forms: string[];
             meta: string;
+            /** @description FE-056: short operator-facing name. Optional, additive; absent means the consumer falls back to task_title. No control or bidirectional-format characters. */
+            display_name?: string;
+            /** @description FE-056: one sentence saying what the task is for. Optional, additive; it never states that the Portal can run the task (see state/reason_code). No control or bidirectional-format characters. */
+            description?: string;
+            /** @description FE-056: display label for scope (same target kinds, title-cased). Optional, additive. No control or bidirectional-format characters. */
+            scope_label?: string;
             params: components["schemas"]["Param"][];
             typed_confirm_word: string | null;
             authority: components["schemas"]["Authority"];
@@ -1099,6 +1105,12 @@ export interface components {
                     scope: string;
                     cli_forms: string[];
                     meta: string;
+                    /** @description FE-056: short operator-facing name. Optional, additive; absent means the consumer falls back to task_title. No control or bidirectional-format characters. */
+                    display_name?: string;
+                    /** @description FE-056: one sentence saying what the task is for. Optional, additive; it never states that the Portal can run the task (see state/reason_code). No control or bidirectional-format characters. */
+                    description?: string;
+                    /** @description FE-056: display label for scope (same target kinds, title-cased). Optional, additive. No control or bidirectional-format characters. */
+                    scope_label?: string;
                     params: components["schemas"]["Param"][];
                     typed_confirm_word: string | null;
                     authority: components["schemas"]["Authority"];

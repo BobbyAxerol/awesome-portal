@@ -161,6 +161,10 @@ export interface OperatorTask {
   scope: string;
   cliForms: readonly string[];
   meta: string;
+  /** FE-056 optional display metadata; null when the body predates it. `meta` stays the source reference. */
+  displayName?: string | null;
+  description?: string | null;
+  scopeLabel?: string | null;
   params: readonly OperatorTaskParam[];
   typedConfirmWord: string | null;
   requiredRole: string | null;
@@ -249,6 +253,9 @@ export function readOperatorTasks(raw: unknown): OperatorTaskCatalogue | null {
         scope: str(o.scope) ?? "",
         cliForms: (Array.isArray(o.cli_forms) ? o.cli_forms : []).flatMap((c) => (typeof c === "string" ? [c] : [])),
         meta: str(o.meta) ?? "",
+        displayName: str(o.display_name),
+        description: str(o.description),
+        scopeLabel: str(o.scope_label),
         params: (Array.isArray(o.params) ? o.params : []).flatMap((p) => {
           const po = obj(p);
           const key = str(po?.key);

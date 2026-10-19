@@ -341,7 +341,17 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
         key: null,
         state: "SUPPORTED_BUT_INACTIVE",
         unlisted_reason: "CATALOG_ENTRY_NOT_PUBLISHED",
+        // FE-056: display metadata is additive; `meta` keeps the source-reference semantics.
+        display_name: "System health",
+        scope_label: "System",
+        meta: "Portal-curated task; source operation not published",
       });
+    expect(response.json().tasks.every(
+      (task: { display_name?: unknown; description?: unknown; scope_label?: unknown }) =>
+        [task.display_name, task.description, task.scope_label].every(
+          (value) => typeof value === "string" && value.length > 0,
+        ),
+    )).toBe(true);
     expect(response.json().tasks.find(
       (task: { task_id: string }) => task.task_id === "redis-inspect",
     )).toMatchObject({
