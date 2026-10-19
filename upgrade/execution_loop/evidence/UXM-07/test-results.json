@@ -209,5 +209,29 @@
       "full pre-commit hook (re-run at the R2 step)",
       "Compare/Columns menu at 390px was checked only by Playwright overflow assertions, not by eye"
     ]
+  },
+  "audit_round": {
+    "date": "2026-10-19",
+    "commits": [
+      "185076d8",
+      "8da315b9",
+      "2b9c6fcf",
+      "654a39b3",
+      "4f892c47"
+    ],
+    "playwright_v2": "34 passed after the five commits (17 routes x 1440/390)",
+    "visual_pinned_image": "377 passed, 15 failed, 16 skipped; the 15 are identical to the first run and to the pristine Codex tip (surface-audit 10, c06 4, EL-V2-05 1)"
+  },
+  "f5_close": {
+    "date": "2026-10-19",
+    "commits": [
+      "86949186",
+      "33125d3e",
+      "96c64e76"
+    ],
+    "vitest_wide": "31636 passed, 2 failed, 4 expected-fail (1 skipped) on the merged tree; the 2 were r2Ledger (Codex, DEBT-UXM07-009) and testHygiene (a `return` in users.test.tsx, fixed afterwards, files rerun 194/194)",
+    "tsc": "exit 0",
+    "playwright_v2": "34 passed on the fresh build",
+    "matrix": "conformance-matrix-2026-10-19.md"
   }
 }

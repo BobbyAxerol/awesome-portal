@@ -247,6 +247,8 @@ Tất cả `OPEN`; chưa gửi cho Codex ngoài việc ghi ở đây (Codex đ�
 | FE-041 | P3 | Tham số `window` (gắn FE-025) | `ContextBar` `windowLock` | Portal | Trả lời FE-025 |
 | FE-042 | P2 | Operations queue item V2 có `incident_id` (nullable) hoặc quan hệ operation→incident | Incident drawer mở từ hàng hàng đợi | Portal | Contract |
 | FE-043 | P3 | `status_counts` cho KPI Operations (server-counted) hoặc quyết định không có | 4 ô KPI theo trạng thái trong hi-fi | Portal | Contract hoặc "no" |
+| FE-052 | P2 | Blotter: `deployment_id`, filled qty, average price, slippage and fee per order; filter by stage/deployment/account/alpha in `BlotterQuery`; bracket legs carry `order_id` | order relations missing; scope chips cannot filter | Portal | Contract |
+| FE-053 | P3 | Users: last sign-in; `accountApi.roster` answers an empty list for a malformed body (cannot be told from "no users") | Users table | Portal | Contract |
 | FE-056 | P3 | `/operator-tasks`: `description`, `display_name`, `scope_label` (hiện `meta` là tham chiếu nguồn) | HIFI Admin sub-line | Portal | Contract |
 | FE-057 | P2 | `observed_at_ms` / `valid_until_ms` (hoặc revision) trên `portal.self-navigation.v1` và `self-eligibility.v1` | rail không biết projection cũ đến đâu | Portal | Contract |
 | FE-058 | P2 | Navigation: phủ đủ 7 mục rail, môi trường, và tên cho `accounts.manage` (thu hẹp FE-037) | thay `V2_CAPABILITY` | Portal | Contract |

@@ -123,3 +123,11 @@ Hai lượt review bị phản hồi là còn yếu (hai `it.fails`, khoảng 34
 - **A** `4c65f2e4` Fleet/Operations/Incident/Cockpit, kèm D4 phía FE (stage vắng trong `stage_counts` in "Not available", không in 0).
 - **B** `b7bd9d78` Portfolios/Compare/Alpha 360 (đầu bảng sắp xếp được, Partitions thu một dòng, nến xanh).
 - Evidence: tsc 0; vitest rộng 31.297 pass, 1 đỏ là DEBT-UXM07-009 (Codex), 4 expected-fail của Codex; trình duyệt V2 34/34. Visual pinned-image và hook đầy đủ chạy ở bước R2 kế tiếp. Còn lại: DEBT-UXM07-008, -011, -012.
+
+## Vòng kiểm toán và đóng F5 (2026-10-19)
+Sau pass 2, bốn agent chỉ-đọc kiểm trung thực, a11y, các mục fidelity còn hở và ma trận L1–L3; năm writer sửa theo file (không ai commit chung cây).
+- Trung thực (2 MAJOR + 5 MINOR): huy hiệu Issues-only không hiện 0 trước khi đọc xong; lane count Cockpit không lấy dữ liệu lane khác; verdict R1 có tiêu chí `insufficient` không bao giờ xanh; Portfolios subtitle nêu bộ lọc domain; Overview không đổi stage vắng thành 0; đếm "partial" ở source health chỉ tính PARTIAL; `updatedAgo` lấy sàn giờ. Commit `185076d8`, `8da315b9`, `2b9c6fcf`.
+- A11y (1 MAJOR + ~12 MINOR): drawer Admin tự mở không cướp focus (`focusOnOpen`); Columns popover, hộp phím, pager Blotter một bản theo media query, glyph CSS không vào tên truy cập, link "My access: <hành động>".
+- Fidelity còn hở đóng được ở FE: JourneySpine một ghi chú, PanelHead `lead`, windowLock Operations, EquityPanel 390px, Replay ghim mức TP/SL ngoài thang (opt-in, V1 không đổi), test incident chập chờn (DEBT-UXM07-010). Commit `654a39b3`, `4f892c47`.
+- F5: accessEffective kiểm với schema (phát hiện AE-4, AE-5), Access cap 200, Admin rỗng/stale/cap, Users reader chặt, Compare/Replay quy mô + âm tính, pane governance 199..256 findings. Commit `86949186`, `33125d3e`, `96c64e76`. Ma trận: `conformance-matrix-2026-10-19.md`.
+- Gate: tsc 0; vitest rộng 31.636 pass, 2 đỏ (r2Ledger của Codex; testHygiene do một `return` trong users.test.tsx, đã sửa); Playwright V2 34/34; visual pinned-image 377 pass và 15 đỏ trùng tập đã đỏ trên bản sạch của Codex. Còn: DEBT-UXM07-008, -011, -013.

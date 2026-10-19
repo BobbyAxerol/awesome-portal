@@ -36,7 +36,7 @@
       "id": "DEBT-UXM07-008",
       "title": "HIFI fidelity rows not fixed after pass 2 (class B, MINOR/uncertain)",
       "where": "hifi-comparison-2026-10-18.md section 'Pass 2 (2026-10-19)': Chua lam",
-      "consequence": "visual polish only; no data or authority effect. Pass 2 (commits 9f6b5dcb, 4c65f2e4, b7bd9d78) fixed about 40 more rows; remaining: T-B5/T-B9 (Y labels keep exact decimals, EquityPanel x-ticks/frame at 390), L-B2 (repeated Not published cards in JourneySpine), L-B7 (FE-029 data), R-B5 autoscale (V1 chart), P-B6, OP-5 (windowLock from ExecutionPreviewRoute), OV-6 (SectionPanel title is string-only), CK-2 (no font role), A360-B8 Open orders (no source), USR-B2 per-user Access link (no view), USR-B5 (kept)",
+      "consequence": "visual polish only; no data or authority effect. Passes 1-2 and the audit round fixed most rows. Remaining: T-B5 Y labels keep exact decimals as published (owner/Codex decision), T-B5 Table/Expand buttons (no table view), L-B7 stage bars (FE-029 data), R-B5 body colours already themed, A360 Open orders column (no source), USR-B2 per-user Access link (no view), USR-B5 kept, OP-5 kept as a reason-only lock because the local Range changes the window (lifting Range into the URL is optional), CK-2 (no font role)",
       "owner": "Claude for rows with no dependency; owner/Codex for exact-decimal Y labels"
     },
     {
@@ -47,25 +47,18 @@
       "owner": "Codex"
     },
     {
-      "id": "DEBT-UXM07-010",
-      "title": "One load-flaky V2 incident test",
-      "where": "v2/screens/operations/incident.test.tsx 'MITIGATED marks Open done...'",
-      "evidence": "fails in the wide run, passes alone (16/16) twice",
-      "owner": "Claude: find the timing dependency when the test lane is next touched"
-    },
-    {
       "id": "DEBT-UXM07-011",
       "title": "Readers for self-eligibility/self-navigation/currency exist but are not wired",
       "where": "v2/readers/accessSelf.ts, commandCurrency.ts (commit 83854d9d); roleNav still uses provisional V2_CAPABILITY names",
-      "consequence": "FE-037 stays provisional until Codex answers Q1-Q5 in consumer-review-self-contracts-2026-10-19.md; wiring plan W1-W8 is documented, not built. Navigation projection must stay menu-only (RK-1).",
+      "consequence": "FE-037 stays provisional until Codex answers Q1-Q5 in consumer-review-self-contracts-2026-10-19.md; wiring plan W1-W8 is documented, not built. Navigation projection must stay menu-only (RK-1). Wording decision owed (Bobby/Codex): the Access cell 'Not published (FE-015)' for per-action eligibility may be stale now that portal.self-eligibility.v1 is published; proposed 'Not read yet by this screen' until the route is served and wired.",
       "owner": "Codex (Q1-Q5) then Claude (W1-W8)"
     },
     {
-      "id": "DEBT-UXM07-012",
-      "title": "Small shared-layer follow-ups from pass 2",
-      "where": "Compare Series head at 390px squeezes the SERIES title (blocks.css PanelHead); Drawer auto-focus when admin auto-opens the first ready row; Blotter Newer/Older DOM order differs from visual order at <=660px",
-      "consequence": "layout/a11y polish; no data effect",
-      "owner": "Claude"
+      "id": "DEBT-UXM07-013",
+      "title": "Reader and testkit findings from the F5 closing round",
+      "where": "components/tradeReplayModel.ts str() turns a JSON number price into a string instead of refusing it (pinned KNOWN GAP in replay.l2l3.test.tsx); api/subjectActivity.ts treats a non-array `records` as []; screens/portfolios/format.tsx MoneyList keys lines by currency (React duplicate-key warning when a currency repeats); testkit/schema.ts needs `discriminator` in IGNORED (AccessEffective test writes a temp schema copy without it); V1 features/admin/accountApi.ts roster reader shows malformed bodies as an empty roster (Users V2 now uses rosterReader.ts)",
+      "consequence": "Replay/Users/Portfolios edge cases only; no secret or authority effect",
+      "owner": "Claude (FE files); testkit owner for IGNORED"
     }
   ],
   "closed": [
@@ -102,6 +95,22 @@
       "proposed": "Codex adds the table to the R2 ledger (or states it is out of scope) in the next landing turn.",
       "owner": "Codex",
       "closed_by": "Codex 5291a80f registered execution_operation_queue_v2 (r2Ledger.test passes after the rebase)"
+    },
+    {
+      "id": "DEBT-UXM07-010",
+      "title": "One load-flaky V2 incident test",
+      "where": "v2/screens/operations/incident.test.tsx 'MITIGATED marks Open done...'",
+      "evidence": "fails in the wide run, passes alone (16/16) twice",
+      "owner": "Claude: find the timing dependency when the test lane is next touched",
+      "closed": "185076d8..8da315b9: tests wait for the ready Workflow-state rail (readyDrawer); 17/17 three times alone and under load; component unchanged"
+    },
+    {
+      "id": "DEBT-UXM07-012",
+      "title": "Small shared-layer follow-ups from pass 2",
+      "where": "Compare Series head at 390px squeezes the SERIES title (blocks.css PanelHead); Drawer auto-focus when admin auto-opens the first ready row; Blotter Newer/Older DOM order differs from visual order at <=660px",
+      "consequence": "layout/a11y polish; no data effect",
+      "owner": "Claude",
+      "closed": "2b9c6fcf (Blotter pager now one copy placed by media query), 654a39b3 (panel heads wrap at 660px), 185076d8 (Drawer focusOnOpen + close fallback)"
     }
   ]
 }
