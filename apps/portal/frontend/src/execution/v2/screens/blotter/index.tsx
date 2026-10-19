@@ -48,7 +48,7 @@ import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
-  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NO_SCOPE, applyScope, blotterQuery, chipCounts, filtersKey,
+  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NO_SCOPE, applyScope, blotterQuery, chipCounts, filtersKey, unchippedStatusCounts,
   fillsFor, groupExact, humanize, isBucket, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
@@ -263,6 +263,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
   );
   const rows = scoped ? scoped.rows : [];
   const counts = useMemo(() => (read ? chipCounts(read) : null), [read]);
+  const unchipped = useMemo(() => (read ? unchippedStatusCounts(read) : []), [read]);
   const venues = useMemo(() => [...new Set([...(read?.orders.flatMap((o) => (o.venue ? [o.venue] : [])) ?? []), ...Object.keys(read?.venueCounts ?? {}), ...(filters.venue ? [filters.venue] : [])])].sort(), [read, filters.venue]);
 
   // A link that names an order or a fill opens that row once, when its page is loaded.
@@ -450,6 +451,11 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
               );
             })}
           </div>
+          {unchipped.length > 0 ? (
+            <span className="exec-blt2-na exec-blt2-unchipped" title="The server has no status bucket for these, so the list cannot be filtered to them">
+              No chip: {unchipped.map((u) => `${u.label} ${u.count}`).join(", ")}
+            </span>
+          ) : null}
           <div className="exec-blt2-tools">
             <span className="exec-blt2-menuwrap">
               <button type="button" className="exec-blt2-btn" aria-expanded={chooserOpen} aria-controls={colMenuId} onClick={() => setChooserOpen((v) => !v)}>Columns</button>

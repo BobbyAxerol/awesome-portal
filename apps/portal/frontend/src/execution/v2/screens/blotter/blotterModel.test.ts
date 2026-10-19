@@ -15,7 +15,7 @@ import { ABSENT, cartesian, coverage, describeCoverage, dimension, pairwise, typ
 import { decimalCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, stringCases, type NegativeCase } from "../../testkit/negative";
 import { cloneRows, pad, timed } from "../../testkit/scale";
 import {
-  COLUMNS, DEFAULT_COLUMNS, NO_FILTERS, NO_SCOPE, ROW_CAP, applyScope, blotterQuery, chipCounts, fillsFor, filtersKey, groupExact, humanize,
+  COLUMNS, DEFAULT_COLUMNS, NO_FILTERS, NO_SCOPE, ROW_CAP, applyScope, blotterQuery, chipCounts, unchippedStatusCounts, fillsFor, filtersKey, groupExact, humanize,
   isBucket, legsFor, readBlotter, readExact, scopeActive, shortUtc, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder,
 } from "./blotterModel";
 
@@ -122,6 +122,12 @@ describe("L1 matrix", () => {
     const covered = read(cartesian(canonical, [dimension("s", ["data", "aggregates", "status"], [{ FILLED: 12 }]), dimension("t", ["data", "exact_total"], [12])])[0]!.value)!;
     expect(chipCounts(covered).REJECTED).toEqual({ count: 0, exact: true });
     expect(chipCounts(covered).FILLED).toEqual({ count: 12, exact: true });
+  });
+
+  it("lists the counted statuses no chip claims, and nothing when there is no aggregate", () => {
+    const rows = read(cartesian(canonical, [dimension("s", ["data", "aggregates", "status"], [{ FILLED: 12, CANCELED: 3, EXPIRED: 1, WEIRD_NEW: 2 }]), dimension("t", ["data", "exact_total"], [18])])[0]!.value)!;
+    expect(unchippedStatusCounts(rows)).toEqual([{ status: "CANCELED", label: "Canceled", count: 3 }, { status: "EXPIRED", label: "Expired", count: 1 }, { status: "WEIRD_NEW", label: "Weird new", count: 2 }]);
+    expect(unchippedStatusCounts({ ...rows, statusCounts: null })).toEqual([]);
   });
 
   it("an aggregate that does not cover it leaves unlisted buckets without a number", () => {

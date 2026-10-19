@@ -97,6 +97,17 @@ describe("first page", () => {
     expect(within(group).getByRole("button", { name: new RegExp(`^Rejected\\s*${countOf("REJECTED", "DENIED")}$`) })).toBeTruthy();
     expect(within(group).getByRole("button", { name: new RegExp(`^Open\\s*${countOf("ACCEPTED", "SUBMITTED")}$`) })).toBeTruthy();
   });
+
+  it("says where the orders in no chip are, so the chips and that line add back up to the population", async () => {
+    mount();
+    await loaded();
+    const rest = countOf("CANCELED", "EXPIRED");
+    expect(rest).toBeGreaterThan(0);
+    const line = screen.getByText(/^No chip:/);
+    expect(line.textContent).toContain(`Canceled ${countOf("CANCELED")}`);
+    const chips = ["FILLED", "PARTIALLY_FILLED", "REJECTED", "DENIED", "ACCEPTED", "SUBMITTED"].reduce((n, w) => n + countOf(w), 0);
+    expect(chips + rest).toBe(137);
+  });
 });
 
 describe("exact numbers", () => {

@@ -381,6 +381,19 @@ export function chipCounts(read: BlotterRead): Readonly<Record<BlotterFilter, Ch
   return out;
 }
 
+/**
+ * Statuses the server counted that no chip claims (Canceled, Expired, any word this build does not
+ * know). They have no chip because the server has no bucket for them, so the page lists them beside
+ * the chips and the chip counts plus these add back up to the population the aggregate covers.
+ */
+export function unchippedStatusCounts(read: BlotterRead): { status: string; label: string; count: number }[] {
+  if (read.statusCounts === null) return [];
+  return Object.entries(read.statusCounts)
+    .filter(([status]) => statusView(status).bucket === null)
+    .map(([status, count]) => ({ status, label: statusView(status).label, count }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 /* ── joins ─────────────────────────────────────────────────────────────── */
 
 export function fillsFor(order: BlotterOrder, fills: readonly BlotterFill[]): BlotterFill[] {
