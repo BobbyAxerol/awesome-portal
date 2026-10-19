@@ -45,6 +45,8 @@ interface RelationSpec {
   limit: number;
   cursor?: string;
   localQuery?: {
+    stage?: PaperBlotterQuery["stage"];
+    deployment_id?: string; account_id?: string; alpha_id?: string;
     status?: string; venue?: string; symbol?: string; side?: "BUY" | "SELL";
     statuses?: readonly string[];
     sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
@@ -87,6 +89,7 @@ const SESSION_FIELDS = [
 ] as const;
 const ORDER_FIELDS = [
   "order_id", "client_order_id", "venue_order_id", "trader_id", "strategy_id", "account_id",
+  "deployment_id", "alpha_id",
   "execution_session_id", "mode", "venue", "instrument_id", "symbol", "side", "position_side",
   "order_type", "time_in_force", "quantity", "price", "trigger_price", "status", "reduce_only",
   "post_only", "submitted_at", "updated_at", "error_code", "error_message", "risk_grant_id",
@@ -410,6 +413,21 @@ export class PaperReadService {
   }
 
   async blotter(principal: PaperPrincipal, query: PaperBlotterQuery) {
+    // This is the stable Paper route, not an environment-switching proxy.
+    // A stage filter may narrow Paper; it cannot silently read Live/Canary.
+    if (query.stage !== undefined && query.stage !== "PAPER") {
+      throw new PaperReadError(
+        "N22_BLOTTER_STAGE_NOT_AVAILABLE",
+        "This Blotter route only serves the Paper stage.",
+        400,
+      );
+    }
+    const scopeQuery = {
+      ...(query.stage ? { stage: query.stage } : {}),
+      ...(query.deployment_id ? { deployment_id: query.deployment_id } : {}),
+      ...(query.account_id ? { account_id: query.account_id } : {}),
+      ...(query.alpha_id ? { alpha_id: query.alpha_id } : {}),
+    };
     const opaqueCursor = query.before ?? query.after ?? query.cursor;
     const direction = query.before ? "before" as const : "after" as const;
     const sourceCursor = opaqueCursor
@@ -418,6 +436,7 @@ export class PaperReadService {
       {
         ...spec("orders", "manager.orders", "orders", ORDER_FIELDS, query.limit, sourceCursor),
         localQuery: {
+          ...scopeQuery,
           status: query.status,
           statuses: statusBucket(query.status_bucket),
           venue: query.venue,
@@ -433,7 +452,13 @@ export class PaperReadService {
       spec("reconciliation", "manager.reconciliation", "reconciliation_findings", RECONCILIATION_FIELDS, 100),
       spec("command_journal", "manager.command-journal", "command_journal", JOURNAL_FIELDS, 100),
     ];
-    const relations = await this.fetch(principal, "EXECUTION_FULL_BLOTTER_SCREEN", specs);
+    // Every branch is narrowed at the authorized source boundary, before its
+    // own limit. Joining a single orders page cannot scope the auxiliary
+    // relations correctly and would turn missing lineage into a false empty.
+    const relations = await this.fetch(principal, "EXECUTION_FULL_BLOTTER_SCREEN", specs.map((item) => ({
+      ...item,
+      localQuery: { ...scopeQuery, ...item.localQuery },
+    })));
     const orders = relations.find((item) => item.spec.key === "orders");
     const nextCursor = orders?.page?.nextCursor
       ? this.encodeCursor(orders.page.nextCursor, principal.workspaceId, query, "after")
@@ -453,12 +478,18 @@ export class PaperReadService {
           filters: {
             status: query.status ?? null,
             status_bucket: query.status_bucket ?? null,
+            stage: query.stage ?? "PAPER",
+            deployment_id: query.deployment_id ?? null,
+            account_id: query.account_id ?? null,
+            alpha_id: query.alpha_id ?? null,
             venue: query.venue ?? null,
             symbol: query.symbol ?? null,
             side: query.side ?? null,
           },
           sort: query.sort ?? "submitted_at_desc",
-          filter_allowlist: ["status", "venue", "symbol", "side"],
+          // Keep the published tuple/order exact. status_bucket remains a
+          // supported query helper/echo, not an additional canonical axis.
+          filter_allowlist: ["status", "venue", "symbol", "side", "stage", "deployment_id", "account_id", "alpha_id"],
           sort_allowlist: ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"],
           count_scope: "COMMITTED_HOT_PROJECTION",
         },
@@ -1067,10 +1098,14 @@ function blotterFingerprint(query: PaperBlotterQuery): string {
     limit: query.limit,
     status: query.status ?? null,
     status_bucket: query.status_bucket ?? null,
+    stage: query.stage ?? "PAPER",
+    deployment_id: query.deployment_id ?? null,
+    account_id: query.account_id ?? null,
+    alpha_id: query.alpha_id ?? null,
     venue: query.venue ?? null,
     symbol: query.symbol ?? null,
     side: query.side ?? null,
-    sort: query.sort,
+    sort: query.sort ?? "submitted_at_desc",
   })).digest("base64url");
 }
 

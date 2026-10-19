@@ -59,6 +59,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Paper-only read. Scope filters run over authorized retained tuples before pagination/counts; alpha-to-strategy mapping requires qualified lineage. Missing attribution is typed PARTIAL, not exact empty. Other stages are refused, not silently routed. Scoped views omit legacy global mirror proof/totals and retain SOURCE_PARTIAL; per-order fills/costs are not synthesized from a bounded fill page. */
         get: operations["executionFullBlotterV1"];
         put?: never;
         post?: never;
@@ -131,6 +132,11 @@ export interface components {
                     symbol: string | null;
                     /** @enum {string|null} */
                     side: "BUY" | "SELL" | null;
+                    /** @enum {string|null} */
+                    stage: "PAPER" | null;
+                    deployment_id: components["schemas"]["Identifier"] | null;
+                    account_id: components["schemas"]["Identifier"] | null;
+                    alpha_id: components["schemas"]["Identifier"] | null;
                 };
                 /** @enum {string} */
                 sort: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
@@ -138,7 +144,11 @@ export interface components {
                     "status",
                     "venue",
                     "symbol",
-                    "side"
+                    "side",
+                    "stage",
+                    "deployment_id",
+                    "account_id",
+                    "alpha_id"
                 ];
                 sort_allowlist: [
                     "submitted_at_desc",
@@ -356,6 +366,11 @@ export interface operations {
                 before?: string;
                 status?: "INITIALIZED" | "SUBMITTED" | "ACCEPTED" | "REJECTED" | "DENIED" | "PENDING_UPDATE" | "PENDING_CANCEL" | "PARTIALLY_FILLED" | "FILLED" | "CANCELED" | "EXPIRED" | "TRIGGERED";
                 status_bucket?: "FILLED" | "PARTIAL" | "REJECTED" | "OPEN";
+                /** @description Only PAPER is served by this route; other stages return N22_BLOTTER_STAGE_NOT_AVAILABLE. */
+                stage?: "PAPER" | "SANDBOX" | "CANARY" | "LIVE";
+                deployment_id?: components["schemas"]["Identifier"];
+                account_id?: components["schemas"]["Identifier"];
+                alpha_id?: components["schemas"]["Identifier"];
                 venue?: string;
                 symbol?: string;
                 side?: "BUY" | "SELL";

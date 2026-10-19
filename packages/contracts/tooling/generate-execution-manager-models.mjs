@@ -61,6 +61,17 @@ function json(schema) {
   throw new Error('Unsupported Zod node: ' + type);
 }
 const response = json(contract.managerDatasetResponse), query = json(contract.managerModelQuery);
+// Zod refinements do not serialize themselves: retain the operator-specific
+// value shape in the published JSON contract rather than publishing loose IN.
+const scalarFilter=query.properties.filters.items;
+scalarFilter.properties.values.uniqueItems=true;
+scalarFilter.oneOf=[
+  {properties:{op:{const:'IN'},values:{}},required:['values'],not:{properties:{value:{}},required:['value']}},
+  {properties:{op:{const:'IS_NULL'}},not:{anyOf:[
+    {properties:{value:{}},required:['value']},{properties:{values:{}},required:['values']},
+  ]}},
+  {properties:{op:{enum:['EQ','GTE','LTE']},value:{}},required:['value'],not:{properties:{values:{}},required:['values']}},
+];
 const schemas = { ManagerDataset: response, ManagerDatasetQuery: query, ManagerMetric: json(contract.managerMetric), ManagerDatasetRow: json(contract.managerDatasetRow), ManagerScorePublication: json(contract.managerScorePublication), ManagerCompositionPublication: json(contract.managerCompositionPublication), ManagerRegimePublication: json(contract.managerRegimePublication) };
 schemas.ManagerQueryOptions=json(p1.managerP1Options);
 schemas.ManagerSelectedWindow=json(p1.managerSelectedWindow);
@@ -112,6 +123,12 @@ for(const [route,operation,request,result] of [
       ...Object.fromEntries([400,401,404,409,503].map(code=>[code,{description:({400:'Invalid closed query',401:'Session required',404:'Reference or current grant unavailable',409:'Authority/source/policy changed',503:'Qualified source or bounded capability unavailable'})[code]}]))}}};
 }
 const outputs = {
+  'fixtures/execution-manager-query-in.synthetic.valid.json':{
+    lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',
+    cases:[{environment:'paper',filters:[{field:'health',op:'IN',values:['HEALTHY','DEGRADED']}]},
+      {environment:'paper',filters:[{field:'net_pnl',op:'IN',values:['0','100.0000000000000001']}],
+        economic_partition:{economic_domain:'PAPER',currency:'USDT',basis:'TEST_ONLY:net-ledger',native_profile_ref:'TEST_ONLY:paper',domain_proof_ref:'TEST_ONLY:proof'}}],
+  },
   'schemas/execution-manager-dataset.v1.schema.json': { $schema:'https://json-schema.org/draft/2020-12/schema',
     $id:'https://schemas.primusspark.com/portal/execution-manager-dataset.v1.schema.json', ...response },
   'schemas/execution-manager-score-revision.v1.schema.json':{$schema:'https://json-schema.org/draft/2020-12/schema',

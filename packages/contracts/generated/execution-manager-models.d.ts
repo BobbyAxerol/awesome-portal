@@ -842,13 +842,25 @@ export interface components {
             };
             stage_filter?: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
             lifecycle_filter?: string;
-            filters?: ({
+            filters?: (({
                 /** @enum {string} */
                 field: "alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "stage_presence" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score";
                 /** @enum {string} */
-                op: "EQ" | "GTE" | "LTE" | "IS_NULL";
+                op: "EQ" | "GTE" | "LTE" | "IS_NULL" | "IN";
                 value?: string;
-            } & (unknown & unknown))[];
+                values?: string[];
+            } & (unknown & unknown)) & ({
+                /** @constant */
+                op?: "IN";
+                values: unknown;
+            } | {
+                /** @constant */
+                op?: "IS_NULL";
+            } | {
+                /** @enum {unknown} */
+                op?: "EQ" | "GTE" | "LTE";
+                value: unknown;
+            }))[];
             sort?: {
                 /** @enum {string} */
                 field: "alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "stage_presence" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score";

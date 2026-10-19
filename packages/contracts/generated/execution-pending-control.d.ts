@@ -336,6 +336,16 @@ export interface operations {
                     "application/json": components["schemas"]["PendingControlProblem"];
                 };
             };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation. */
+            500: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingControlProblem"];
+                };
+            };
             /** @description Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics. */
             503: {
                 headers: {
@@ -428,6 +438,16 @@ export interface operations {
                     "application/json": components["schemas"]["PendingControlProblem"];
                 };
             };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation. */
+            500: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingControlProblem"];
+                };
+            };
             /** @description Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics. */
             503: {
                 headers: {
@@ -505,6 +525,16 @@ export interface operations {
             };
             /** @description Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics. */
             409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingControlProblem"];
+                };
+            };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation. */
+            500: {
                 headers: {
                     "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
@@ -599,6 +629,16 @@ export interface operations {
             };
             /** @description Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics. */
             409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingControlProblem"];
+                };
+            };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation. */
+            500: {
                 headers: {
                     "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;

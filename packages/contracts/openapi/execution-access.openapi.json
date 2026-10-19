@@ -132,6 +132,25 @@
               }
             }
           },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
           "503": {
             "description": "Typed public refusal; current authority is required even for replay.",
             "content": {
@@ -488,6 +507,25 @@
               }
             }
           },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
           "503": {
             "description": "Typed public refusal; current authority is required even for replay.",
             "content": {
@@ -643,6 +681,25 @@
           },
           "409": {
             "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -840,6 +897,25 @@
               }
             }
           },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
           "503": {
             "description": "Typed public refusal; current authority is required even for replay.",
             "content": {
@@ -1019,6 +1095,25 @@
               }
             }
           },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
           "503": {
             "description": "Typed public refusal; current authority is required even for replay.",
             "content": {
@@ -1162,6 +1257,25 @@
           },
           "409": {
             "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1369,6 +1483,25 @@
               }
             }
           },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
           "503": {
             "description": "Typed public refusal; current authority is required even for replay.",
             "content": {
@@ -1542,6 +1675,25 @@
           },
           "409": {
             "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1738,6 +1890,25 @@
               }
             }
           },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
           "503": {
             "description": "Typed public refusal; current authority is required even for replay.",
             "content": {
@@ -1902,6 +2073,25 @@
           },
           "409": {
             "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3376,6 +3566,8 @@
           "resource",
           "current_only",
           "advisory_only",
+          "observed_at_ms",
+          "valid_until_ms",
           "actions"
         ],
         "properties": {
@@ -3430,6 +3622,18 @@
           },
           "advisory_only": {
             "const": true
+          },
+          "observed_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Portal evaluation time in UTC epoch milliseconds; not source observation time."
+          },
+          "valid_until_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "End-exclusive ceiling of this actor's current session only, greater than observed_at_ms (producer invariant), not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; no-store and per-family current checks still apply. Never exposes the internal workspace-wide authority-transition deadline."
           },
           "actions": {
             "type": "array",
@@ -6131,6 +6335,8 @@
             },
             "current_only": true,
             "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
             "actions": [
               {
                 "action": "portfolio.read",
@@ -6157,6 +6363,8 @@
             },
             "current_only": true,
             "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
             "actions": [
               {
                 "action": "portfolio.read",
@@ -6285,6 +6493,8 @@
           "environment",
           "current_only",
           "advisory_only",
+          "observed_at_ms",
+          "valid_until_ms",
           "current_read_mode",
           "features",
           "self_entry"
@@ -6312,6 +6522,18 @@
           },
           "advisory_only": {
             "const": true
+          },
+          "observed_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Portal evaluation time in UTC epoch milliseconds; not source observation time."
+          },
+          "valid_until_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "End-exclusive ceiling of this actor's current session only, greater than observed_at_ms (producer invariant), not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; no-store and per-family current checks still apply. Never exposes the internal workspace-wide authority-transition deadline."
           },
           "current_read_mode": {
             "enum": [
@@ -6434,6 +6656,8 @@
             "environment": "paper",
             "current_only": true,
             "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
             "current_read_mode": "NOT_ESTABLISHED",
             "self_entry": {
               "feature": "PROFILE_ACCESS",
@@ -6487,6 +6711,8 @@
             "environment": "paper",
             "current_only": true,
             "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
             "current_read_mode": "NOT_ESTABLISHED",
             "self_entry": {
               "feature": "PROFILE_ACCESS",
@@ -6540,6 +6766,8 @@
             "environment": "paper",
             "current_only": true,
             "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
             "current_read_mode": "LEGACY_COMPATIBILITY",
             "self_entry": {
               "feature": "PROFILE_ACCESS",
@@ -6593,6 +6821,8 @@
             "environment": "paper",
             "current_only": true,
             "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
             "current_read_mode": "SCOPED_V2",
             "self_entry": {
               "feature": "PROFILE_ACCESS",

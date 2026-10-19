@@ -1,5 +1,13 @@
 # Core → Edge EPG10-08 owner return — Research only
 
+**Latest actual12:34UTC return:** Core implementation`f46439157fe2` passed the
+normal hook and is installed on Research, exact forward134/custody verified,
+reverse READY. Nine-file PM inputs and actual manifest were transferred and
+verified on HK. [Installed return, exact hashes, owner next actions and remaining
+phases](CORE_INSTALLED_EDGE_HANDOFF_2026-10-19.md) supersedes the older pending
+installation statements below, preserving their failed/historical evidence.
+Edge owner ACK/physical COMMIT/Core ACK/READ/STREAM remain NOT_RUN.
+
 ## 1. Authority, publication and exact status
 
 **Latest cut11:17:31UTC:** affected5-file gate **200/200PASS**, including native

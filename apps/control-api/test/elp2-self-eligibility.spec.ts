@@ -9,7 +9,7 @@ import { accessDigest, canonicalSelector, grantCurrent, type AccessEvaluationCon
 import { currentAccessRelations, grantBindingDigest,
   type CurrentAccessRelations } from "../src/execution-v2/access-current-relations";
 import { FEATURES, ROW_ACTIONS, RULES, eligibilityInput, eligibilityQuery, eligibilityResult, navigationInput,
-  projectEligibility, projectNavigation, type RowAction } from "../src/execution-v2/self-eligibility";
+  navigationResult, projectEligibility, projectNavigation, type RowAction } from "../src/execution-v2/self-eligibility";
 
 const NOW = 1_800_000_000_000;
 const U = "TEST_ONLY:manager", OWNER = "TEST_ONLY:owner", WS = "TEST_ONLY:workspace", MAP = "TEST_ONLY:mapping";
@@ -88,6 +88,90 @@ function feature(f: ReturnType<typeof fixture>, name: typeof FEATURES[number], e
 }
 
 describe("C3 self projection PRIVATE synthetic pure proposal / NOT_RUN", () => {
+  it("publishes evaluation time and only the actor session ceiling on both advisory projections", () => {
+    const f = fixture();
+    const eligibility = projectEligibility(f.context, input()), navigation = nav(f);
+    for (const result of [eligibility, navigation])
+      expect(result).toMatchObject({ observed_at_ms: NOW, valid_until_ms: NOW + 20000,
+        current_only: true, advisory_only: true });
+    // No invented 60-second permission lease and no client/source timestamp.
+    expect(eligibility.actions[0].command_readiness).toBe("NOT_CHECKED");
+    expect(navigation.features.every(value => value.family_check === "NOT_CHECKED")).toBe(true);
+  });
+  it.each(["session", "grant", "future-deny", "receipt", "native-target"])(
+    "earlier %s transitions never become a public permission-validity guarantee", kind => {
+      const f = fixture(), end = NOW + 100;
+      if (kind === "session") f.context.actor_lease_until_ms = end;
+      if (kind === "grant") f.gs[0].valid_until_ms = end;
+      if (kind === "future-deny") f.context.grants = [...f.gs, grant("TEST_ONLY:future-deny", {
+        effect: "DENY", requires_ts_acceptance: false, ts_receipt: null, valid_from_ms: end })];
+      if (kind === "receipt") f.gs[0].ts_receipt!.expires_at_ms = end;
+      if (kind === "native-target") f.sources.get(U)!.grants[0].targets[0].valid_until_ms = end;
+      for (const result of [projectEligibility(f.context, input()), nav(f)])
+        expect(result).toMatchObject({ observed_at_ms: NOW,
+          valid_until_ms: kind === "session" ? end : NOW + 20000 });
+    });
+  it("new projection time follows the physical clock and cannot revive an expired target", () => {
+    const f = fixture(), clock = vi.spyOn(Date, "now").mockReturnValue(NOW + 6000);
+    try {
+      const result = projectEligibility(f.context, input());
+      expect(result).toMatchObject({ observed_at_ms: NOW + 6000, valid_until_ms: NOW + 20000 });
+      expect(result.actions[0].permission).toBe("UNAVAILABLE");
+      expect(nav(f).features[0].state).toBe("HIDDEN");
+    } finally { clock.mockRestore(); }
+  });
+  it.each(["equal", "reversed"])("runtime rejects %s published advisory intervals", interval => {
+    const f = fixture();
+    for (const [schema, value] of [[eligibilityResult, projectEligibility(f.context, input())],
+      [navigationResult, nav(f)]] as const) {
+      expect(schema.safeParse({ ...value, valid_until_ms: value.observed_at_ms - (interval === "equal" ? 0 : 1) }).success).toBe(false);
+    }
+  });
+  it.each(["peer-grant", "other-env-grant", "peer-domain", "other-env-seal", "unrelated-native"])(
+    "public timestamps do not disclose an unrelated %s transition", kind => {
+      const f = fixture(), before = [projectEligibility(f.context, input()), nav(f)];
+      const end = NOW + 7;
+      if (kind === "peer-grant") {
+        f.context.active_principals = new Set([...f.context.active_principals, "TEST_ONLY:peer"]);
+        f.context.grants = [...f.gs, grant("TEST_ONLY:peer-grant", {
+          subject_user_id: "TEST_ONLY:peer", valid_until_ms: end })];
+      }
+      if (kind === "other-env-grant") f.context.grants = [...f.gs, grant("TEST_ONLY:live-only", {
+        environments: ["live"], valid_until_ms: end })];
+      if (kind === "peer-domain") f.context.manager_domain_grants = [{
+        schema_version: "portal.manager-domain-grant.v1", grant_id: "TEST_ONLY:peer-domain",
+        workspace_id: WS, subject_user_id: "TEST_ONLY:peer", issued_by: OWNER,
+        parent_grant_id: null, revision: "TEST_ONLY:r1", policy_revision: f.context.policy!.revision,
+        action: "business.read_all", effect: "ALLOW", environment: "paper",
+        domain: { profile_id: "TEST_ONLY:profile", catalogue_sha256: "a".repeat(64),
+          profile_sha256: "b".repeat(64), field_policy_sha256: "c".repeat(64) },
+        field_policy_ref: "TEST_ONLY:fields", valid_from_ms: NOW - 1, valid_until_ms: end, revoked_at_ms: null }];
+      if (kind === "other-env-seal") f.context.policy!.manager_read_domains = [{
+        environment: "live", domain: { profile_id: "TEST_ONLY:profile", catalogue_sha256: "a".repeat(64),
+          profile_sha256: "b".repeat(64), field_policy_sha256: "c".repeat(64) },
+        field_policy_ref: "TEST_ONLY:fields", valid_from_ms: NOW - 1, valid_until_ms: end }];
+      if (kind === "unrelated-native") {
+        const unrelated = grant("TEST_ONLY:unrelated-native", { environments: ["live"] });
+        const extra = fixture([unrelated]).sources.get(U)!.grants[0];
+        extra.accepted.expires_at_ms = end;
+        f.sources.get(U)!.grants.push(extra);
+      }
+      const after = [projectEligibility(f.context, input()), nav(f)];
+      expect(after).toEqual(before);
+    });
+  it("does not publish a fabricated ceiling for a pure context without a session lease", () => {
+    const f = fixture(); delete f.context.actor_lease_until_ms;
+    expect(() => row(f)).toThrowError(expect.objectContaining({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED" }));
+    expect(() => nav(f)).toThrowError(expect.objectContaining({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED" }));
+  });
+  it("the private workspace-wide fence still refuses a peer transition crossed during projection", () => {
+    const f = fixture();
+    f.context.grants = [...f.gs, grant("TEST_ONLY:peer-transition", {
+      subject_user_id: "TEST_ONLY:peer", valid_from_ms: NOW + 7 })];
+    const clock = vi.spyOn(Date, "now").mockReturnValueOnce(NOW).mockReturnValue(NOW + 7);
+    try { expect(() => row(f)).toThrowError(expect.objectContaining({ code: "ACCESS_RETRY_REQUIRED" })); }
+    finally { clock.mockRestore(); }
+  });
   it("publishes only own matching grant and explicitly NOT_CHECKED command readiness", () => {
     const f = fixture(), before = JSON.stringify([f.gs, [...f.sources]]);
     expect(row(f)).toMatchObject({ permission: "ALLOWED", grant_ref: f.gs[0].grant_id,

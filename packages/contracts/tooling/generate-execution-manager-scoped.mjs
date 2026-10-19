@@ -39,6 +39,10 @@ for(const [route,path] of Object.entries(spec.paths)){
   op.responses['200'].description='Legacy compatibility or scoped V2 selected solely by durable server policy. Scoped page counts and totals cover authorized rows only. private, no-store.';
   for(const status of [400,401,403,404,409,503]) op.responses[status]??={description:'Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data.'};
   if(route.endsWith('/portfolios')){
+    const search={name:'q',in:'query',required:false,schema:{type:'string',minLength:1,maxLength:160},
+      description:'Literal case-insensitive substring of authorized published names only; no trimming/normalization/wildcards. Controls, blank-only and malformed Unicode are refused. Works on legacy retained rows and scoped V2. Exact q binds scoped cursors; reset paging when q changes. Legacy matching_portfolios counts retained matches only, not the uncapped source census.'};
+    const existingSearch=op.parameters.findIndex(parameter=>parameter.name==='q');
+    if(existingSearch<0)op.parameters.push(search);else op.parameters[existingSearch]=search;
     for(const [name,parameterSchema] of Object.entries({after:{type:'string',maxLength:4096},before:{type:'string',maxLength:4096},limit:{type:'integer',minimum:1,maximum:100}})){
       if(!op.parameters.some(parameter=>parameter.name===name))op.parameters.push({name,in:'query',required:false,schema:parameterSchema,description:'Scoped V2 pagination only; supplying this on legacy authority is rejected, not ignored.'});
     }

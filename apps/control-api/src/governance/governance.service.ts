@@ -247,6 +247,10 @@ export class GovernanceService {
       }, raw),
       this.repository.counts(workspaceId, visibleGates),
     ]);
+    const portfolios = await this.repository.inboxPortfolioIds(workspaceId, page.rows, visibleGates);
+    const enrichedPage = { ...page,
+      rows: page.rows.map(item => ({ ...item, portfolio_id: portfolios.get(item.id) ?? null })),
+    };
     await this.assertParentListUnchanged(user, workspaceId, visibleGates);
     await this.assertParentReadCommissioned(user, workspaceId, "APPROVAL_INBOX", session);
     return {
@@ -269,7 +273,7 @@ export class GovernanceService {
         due_soon: counts.dueSoon,
       },
       read_truth: exactPageReadTruth(page, "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS"),
-      page,
+      page: enrichedPage,
     };
   }
 

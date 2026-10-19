@@ -92,6 +92,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Local ledger: signed actor/session/workspace/portfolio/environment/head/limit-bound continuation. Each request walks at most 8 source pages of 200 rows; totals and descending time order cover only that validated source chunk, not all history. Continuation delegates source-page consistency and rechecks current authorization; it is not a whole-history snapshot guarantee. A source interruption or missing continuation may keep has_more=true with next_cursor=null and a typed reason. Legacy upstream proxy refuses pagination, never silently ignores it. */
         get: operations["executionCapitalLedger"];
         put?: never;
         post?: never;
@@ -173,10 +174,19 @@ export interface components {
             entry_count: number;
             returned_entry_count: number;
             has_more: boolean;
+            next_cursor: string | null;
+            page_limit: number;
+            /** @constant */
+            totals_scope: "AUTHORIZED_VALIDATED_SOURCE_CHUNK";
+            /** @constant */
+            ordering: "CREATED_AT_DESC_WITHIN_SOURCE_CHUNK";
+            /** @constant */
+            continuation_consistency: "SOURCE_PAGE_CONTRACT_AND_CURRENT_AUTHORIZATION";
             /** @constant */
             window: "LATEST";
             buckets: components["schemas"]["LocalCapitalLedgerBucket"][];
             rejected_row_count?: number;
+            duplicate_row_count?: number;
             reason_code?: string | null;
         };
         LocalCapitalLedgerBucket: {
@@ -197,6 +207,9 @@ export interface components {
             before_allocated: components["schemas"]["Decimal"];
             after_allocated: components["schemas"]["Decimal"];
             occurred_at: components["schemas"]["NullableDateTime"];
+            seq: string | null;
+            command_id: string | null;
+            receipt_ref: string | null;
         };
         LocalPortfolioMetadata: {
             /** @constant */
@@ -712,6 +725,8 @@ export interface operations {
         parameters: {
             query?: {
                 environment?: "paper" | "sandbox" | "live";
+                limit?: number;
+                cursor?: string;
             };
             header?: never;
             path: {

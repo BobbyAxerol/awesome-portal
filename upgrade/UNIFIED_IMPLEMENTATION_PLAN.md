@@ -12497,3 +12497,165 @@ frontend edit, preview activation, push or ELP2-11 entry.
   Source-side bundle ACK/window and COMMIT+Core ACK are still NOT_RUN, not
   inferred from200tests. No duplicate focus, frontend edit, push or ELP2-11.
 
+- C7 actual Core installation / Edge delivery2026-10-19 12:34UTC:
+  implementation`f46439157fe25892fc4372dda532bd1f8bdc4773` landed through
+  normal hook: contracts1141PASS/API8309PASS/3oldskips. Exact image is running
+  on Research; backup/hash/TOC, forward134127→128 and registered custody are
+  verified, protected-data hash and seven unrelated runtime tuples unchanged.
+  Reverse listener READY/publicreadyz200; no session issued. Nine-file PM-only
+  inputs plus actual manifest transferred/hash-verified on HK; Core-server
+  TLS1.3 verified, **not** app PM-leaf acceptance or owner ACK. [Exact pins,
+  operational failure/resume record, delivered locator and phase handoff](execution_loop/evidence/ELP2-10/CORE_INSTALLED_EDGE_HANDOFF_2026-10-19.md).
+  Edge owner next ACKs the actual manifest/window before genuine source COMMIT
+  and Core ACK. READ/STREAM/revoke/replay/restart/recovery, financial inputs,
+  approved numerical budget/calibration, matched coexistence/G2 and Claude
+  genuine browser acceptance remain OPEN. Whole10NOT_MET;11NOT_ENTRY_READY.
+  No unchanged full test/build repeat for CLI/receipt fixes, no FE edit, Git
+  push, command/Live, dev/main/stable change or release. Runtime-receipt docs
+  are a separate landing from the implementation commit/image above.
+
+- C7 prioritized continuation2026-10-19 19:50Asia/Saigon: Bobby assigns remaining
+  qualification with new Claude blockers first. Peer`9735d803` read clean; no
+  merge/UI edit. [Round scope, bounded independent ownership, actual-result
+  ledger and exit](execution_loop/evidence/ELP2-10/c7-priority-round-2026-10-19.md).
+  Primary takes FE-057/058 nav freshness/semantics; reused agents review Claude
+  additive BE requests, HK owner acceptance and financial/budget/coexistence
+  prerequisites. Existing installed Core/verified transfer is not repeated.
+  No Edge ACK/window/READY published at refresh; genuine COMMIT/ACK and
+  READ/STREAM stay NOT_RUN. Numeric budget/calibration approvals not invented;
+  whole10NOT_MET,11NOT_ENTRY_READY, no push/dev/main/command/Live.
+
+- C7 source/consumer follow-through2026-10-19 20:02Asia/Saigon: FE-057 adds
+  evaluation/deadline to current self-projections without widening authority;
+  [FE-058/Q1–Q5 contract/route/environment answers](execution_loop/evidence/ELP2-03/self-access-consumer-return-2026-10-19.md).
+  FE-049 Decimal128 producer/aggregate guard and FE-061 HTTP500 contracts are
+  implemented; focused API101/public-producer13/contract85PASS, not additive
+  coverage over old gates. Ordinary R3 pending for one coherent batch. Claude
+  keeps PARTIAL/vocabulary/index145; corrects FE-056 config-plan display in own
+  lane. Actual financial selection for installed workspace not published;
+  offline intake NOT_RUN rather than transplanting old profile/dependencies.
+  [Actual results, source/numerical dependencies and next owners](execution_loop/evidence/ELP2-10/c7-priority-round-2026-10-19.md).
+  Identity image/listener unchanged; no session/source operation, new backup,
+  migration, source ACK or browser PASS. Whole10NOT_MET;11NOT_ENTRY_READY.
+
+- C7 privacy review/final focused2026-10-19 20:19Asia/Saigon: FE-057 public
+  deadline now only own-session ceiling, not permission validity/cache lease.
+  Independent review caught peer/other-env metadata in the initial raw bound;
+  fixed before landing, private conservative403/409 unchanged. Final focused
+  154API/two files and85contractsPASS, Decimal13 unchanged/reused. Earlier101
+  belongs to prior source diff, not the final gate. First ordinary R3 stopped at
+  stale N29 before full API tests; official refresh/final R3 still pending.
+  Peer9735d803 unchanged/clean, no new request; HK13:09 unchanged/no ACK/window.
+  [Exact semantics, tests, hook failure and remaining owners](execution_loop/evidence/ELP2-10/c7-priority-round-2026-10-19.md).
+  No source operation/session/runtime/FE/push change;10NOT_MET/11NOT_ENTRY_READY.
+
+- C7 post-freeze actual2026-10-19 14:20UTC: ordinary R3 exit1; contracts1142PASS,
+  API8337PASS/1auth-expiry-timeout/3oldskips, **no commit/full-gate PASS**.
+  Reviewed test-only real-PG recovery transition repair; no guard/timeout change.
+  [Failed log hash, retake boundary, source/consumer and remaining owners](execution_loop/evidence/ELP2-10/c7-priority-round-2026-10-19.md#post-freeze-return--2026-10-19-1420utc).
+  Edge genuinely accepted manifest15d94c6f as input, not operational ACK/window/
+  recovery READY. No further Core install/Bobby session input needed before
+  owner qualification; preserve existing image/config/custody. Peer ef9014f3
+  clean, no official new BE request; Claude must consume canonical timestamps
+  and plan-only config copy. Financial selection/budget/calibration, matched
+  coexistence/G2 and genuine browser remain OPEN.10NOT_MET/11NOT_ENTRY_READY.
+  Repair follow-through14:26UTC: isolated auth26/26/build/scopedrestorePASS;
+  exact test cell removed. Final normal R3 remains the landing gate, not waived.
+
+- C7 Claude-reader priority2026-10-19 14:57UTC cut: FE-044 literalnameq,
+  FE-033 boundedIN, FE-045 immutable nullable Inboxportfolio, FE-046/032
+  source-chunk ledger continuation and FE-052 server scopefilters implemented;
+  [exact generated types, canonical examples, remaining source subparts,
+  preserved failures and Claude handoff](execution_loop/evidence/ELP2-10/claude-reader-priority-return-2026-10-19.md).
+  Focused Node22/PG293PASS/1fixturestatusFAIL retained; corrected native-adapter
+  fixture local38PASS, ledger8PASS, contracts63PASS/finalreader4PASS overlap.
+  Independent ledger findings fixed, no exactness/authority guard weakened.
+  Ordinary R3 required at landing, not replaced by focused proof. Peer21af6792
+  clean/no official request delta; no FE/peer edits/merge/push. Source14:57
+  PMbc0946f4 docs-only/identity0of10changed, Edge6adc398b unchanged;
+  still no operationalACK/window/recoveryREADY; installedCore not rebuilt.
+  Financial selection/approvedbudgetcalibration/matchedG2/browserOPEN;
+  10NOT_MET/11NOT_ENTRY_READY. Reused3agents/new0, one heavy job at a time.
+
+- C7 independent conformance follow-through2026-10-19 15:10UTC: real Blotter
+  BFF nine-entry tuple corrected to published eight, helper semantics preserved.
+ 1504R3 controlled-cancelled after1147contractsPASS/beforeAPItests; exact cell
+  removed. [Actual response regression, preserved logs and final landing gate](execution_loop/evidence/ELP2-10/claude-reader-priority-return-2026-10-19.md).
+  Reused3agents/new0, single heavy gate. New Edge request008/009 below read;
+  Core review/source/installed-return must be explicit, no early session/JIT.
+
+### Edge → Core precise follow-up request — 2026-10-19
+
+- Bobby explicitly requests the precise Edge follow-up in the active Core
+  checkout and a prompt for the Core agent. Existing C7 / EPG10-08 only; no new
+  phase, release or authority change. Status: REQUEST_WRITTEN_AWAITING_CORE_ACK.
+- Active checkout: SGP `/home/bobby/portal-research`,
+  `docs/research-loop-plan`. Source read pin f46439157fe25892fc4372dda532bd1f8bdc4773;
+  write-time HEAD f46439157fe25892fc4372dda532bd1f8bdc4773. Existing peer changes/index are preserved.
+- Owned paths: this append-only journal, the bounded sync note and
+  [precise Core request](execution_loop/evidence/ELP2-10/EDGE_TO_CORE_EPG10_08_REQUEST_2026-10-19.md).
+  Goal: request the unused-identity finish repair and existing native
+  READ/STREAM composition, with exact producer/consumer return boundaries.
+- Invariants: original source terminal/UNKNOWN fences, protected owner and
+  authority remain unchanged. Core owns Core code/install/session/policy;
+  Edge owns later source/operator/connected acceptance. No code/config/schema,
+  session, DB/role, listener, runtime, frontend, index, merge or push change.
+- Validation: pins/code-path review, links/whitespace and read-only tracking
+  check. No new build/cargo/pytest/load or assertion issuance. Normal landing
+  is left to the owning Core agent with its coherent batch; no hook bypass.
+- Rollback: remove only this writer's request/journal/sync addition; never
+  reset shared files/index or peer changes. Core producer fixes and Edge
+  connected acceptance remain OPEN. Prepared at 2026-10-19 22:12:48 Asia/Saigon.
+
+- Documentation result at 2026-10-19 22:12:48 Asia/Saigon: precise request008/009 and valid
+  relative source/guide links recorded; original main/sync peer text and staged
+  diff preserved byte-for-byte. Whitespace/path checks PASS; existing tracking
+  check PASS.
+  No code/test/runtime changes or disposable resources created; no cleanup/prune
+  required. New request is UNTRACKED and journal/sync are owned unstaged deltas,
+  not a commit/push or Core ACK. Active runtime remains the installed f4643915
+  handoff; no source/release/runtime convergence is claimed by this docs change.
+  Core next: ACK008, focused repair/evidence and installed/source-only return;
+  prepare009 independently. EPG10-08/ELP2-10 full acceptance stays NOT_MET.
+
+- Core explicit ACK008/009: [source-confirmed defect, existing composition
+  seams, independent implementation/installation gates and owners](execution_loop/evidence/ELP2-10/CORE_EDGE_REQUEST_008_009_RETURN_2026-10-19.md).
+ 008ACKNOWLEDGED/IN_PROGRESS;009ACKNOWLEDGED/runtimeNOT_COMPOSED. No new
+  session/JIT/authority/runtime change; reader batch does not close these IDs.
+
+- Core008/009 implementation return2026-10-19:
+  [exact source/bootstrap pins, unchanged terminal/UNKNOWN fences, focused
+  tests, SOURCE_ONLY/NOT_INSTALLED and per-owner009 inputs](execution_loop/evidence/ELP2-10/CORE_EDGE_REQUEST_008_009_RETURN_2026-10-19.md#core-implementation-return--source_only--not_installed-2026-10-19).
+  008SOURCE_IMPLEMENTED_TESTED_UNCOMMITTED/NOT_INSTALLED;28orchestrationPASS,
+  focusedPG311PASS/1connection-timeout; native-only31PASS retake, overlapping.
+  Actual cleanupPASS, no full-hook/connected PASS. Original revision/pre-issue
+  marker prevent false unused cleanup; no fake attempt/receipt/ACK.009 reuses
+  native composition; READ never grantsSTREAM; runtimeNOT_COMPOSED. Old
+  installed image/bootstrap unchanged, **no assertion against old bootstrap**
+  for008 acceptance. Prior normalR3failed1stale scoped-read assertion, not full
+  PASS/commit; focused repair preserves PARTIAL and authority/cursor negatives.
+  Canonical/peer WIP preserved; no push/runtime/FE/provider28445 change.
+  NextBE:008pinreview/normal landing + separately approved coherent install;
+  EdgeoperatorACK/window→physicalCOMMIT/CoreACK→009READ/STREAM. Claude prior
+  reader consumers/browser remain independent; no new public field here.
+  Financial/budget/calibration/matchedG2 stillOPEN;10NOT_MET/11NOT_ENTRY_READY.
+  Late Claude7b5446ca incident: preview control-api restarted by peer and now
+  exited1/custody startup refusal, old16bf image. Read-only confirmed; no reset/
+  unlink/restart/cap change attempted by Core. Actual custody/socket/capacity
+  and coherent008 recovery are Core's next runtime task, not Edge input.
+  Focused candidate typecheck657filesPASS; full-project noEmit at1024MiB OOM,
+  not full-build PASS. Normal R3/commit stillpending; owner-return permits
+  exact uncommitted source/diff hashes, not a claim of landing or closure.
+
+- Bobby subsequent assignment2026-10-20: finish normal R3 and install008 on
+  Research, return actual pins/READY and existing native009 composition.
+  Same C7/EPG10-08 only. Core first reviews stopped-preview custody/capacity;
+  no deletion of obligations/history, fake source terminal/ACK or copied stable
+  grants. One coherent R3 freezes current owned reader/008 source; parallel
+  agents are read-only peer, custody and009 composition reviews. Installation
+  is independent of009 source authority. Prefer existing sequential lifecycle:
+  real identity COMMIT/ACK and exact finish/shutdown before standard native
+  app composition, never two apps/coordinators. Provider28445/six stable
+  bindings, stable/dev/main, Claude WIP and command/Live remain unchanged.
+  Actual R3/install/read/stream results are PENDING at this entry, not PASS.
+

@@ -171,6 +171,24 @@
               }
             }
           },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
           "503": {
             "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
             "headers": {
@@ -358,6 +376,24 @@
               }
             }
           },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
           "503": {
             "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
             "headers": {
@@ -504,6 +540,24 @@
           },
           "409": {
             "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -700,6 +754,24 @@
           },
           "409": {
             "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation.",
             "headers": {
               "Cache-Control": {
                 "schema": {

@@ -120,6 +120,37 @@ describe("ELP2-06 Manager exact query, field and economic scope (TEST_ONLY)", ()
     expect(result.groups[0].totals_scope).toBe("FULL_AUTHORIZED_FILTERED_QUERY");
     expect(result.groups[0].economic_partitions[0].metrics.net_pnl.value).toBe("900101.0000000000000002");
   });
+  it("supports bounded IN before totals/page without widening own-alpha authority", async () => {
+    const f = await fixture();
+    const result = f.read({ filters: [{ field: "alpha_id", op: "IN", values: [OWN.alpha_id, PEER.alpha_id] }] });
+    expect(result.items.map(row => row.alpha_id)).toEqual([OWN.alpha_id, OWN.alpha_id]);
+    expect(result.page.authorized_filtered_count).toBe(2);
+    const exact = f.read({ economic_partition: partition(),
+      filters: [{ field: "net_pnl", op: "IN", values: ["100.00000000000000020"] }] });
+    expect(exact.items.map(row => row.portfolio_id)).toEqual([PRIVATE.portfolio_id]);
+    expect(() => f.read({ filters: [{ field: "net_pnl", op: "IN", values: ["100"] }] })).toThrow();
+  });
+  it("binds IN values to the signed cursor and preserves null absence", async () => {
+    const f = await fixture({ full: true });
+    const query = { filters: [{ field: "name", op: "IN", values: ["Zulu own", "Alpha peer", "Middle own"] }], limit: 1 };
+    const first = f.read(query);
+    expect(first.page.next_cursor).toBeTruthy();
+    expect(() => f.read({ ...query, after: first.page.next_cursor,
+      filters: [{ field: "name", op: "IN", values: ["Zulu own", "Middle own"] }] })).toThrow();
+    expect(f.read({ filters: [{ field: "allocation", op: "IN", values: ["0"] }], economic_partition: partition() }).items).toEqual([]);
+  });
+  it.each([
+    { op: "IN", values: [] }, { op: "IN", values: Array.from({ length: 33 }, (_, i) => String(i)) },
+    { op: "IN", values: ["a", "a"] }, { op: "IN", value: "a", values: ["a"] },
+    { op: "IN", value: "a" }, { op: "EQ", values: ["a"] }, { op: "IS_NULL", values: ["a"] },
+    { op: "IN", values: [1] }, { op: "IN", values: ["\n"] },
+  ])("rejects invalid IN shape %#", filter => {
+    expect(managerModelQuery.safeParse({ environment: "paper", filters: [{ field: "name", ...filter }] }).success).toBe(false);
+  });
+  it("rejects exponent/numeric coercion in decimal IN", () => {
+    expect(managerModelQuery.safeParse({ environment: "paper",
+      filters: [{ field: "net_pnl", op: "IN", values: ["1e3"] }] }).success).toBe(false);
+  });
   it("scopes exact correlated tuples before count, joins, sorting, grouping and totals", async () => {
     const f = await fixture(); const result = f.read({ group_by: ["portfolio_id"] });
     expect(result.page.authorized_filtered_count).toBe(2);
