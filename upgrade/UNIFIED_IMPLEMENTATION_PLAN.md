@@ -12458,3 +12458,42 @@ frontend edit, preview activation, push or ELP2-11 entry.
   approved budget/calibration, matched coexistence/G2 and consumer/source browser
   acceptance are not proved by the local correctness cell. ELP2-11 not opened.
 
+- C7 Research continuation2026-10-19 15:18 Asia/Saigon: `678cf731` landed
+  normalR3 (contracts1141PASS; API8282PASS/3skip; build/scoped restorePASS;
+  eight protected runtimes unchanged; owned resources0). Latest Bobby approval
+  supersedes the cookie-file request: private temporary AuthService PREVIEW is
+  permitted, then exact-session revoke/cleanup; public `claude-preview`
+  unchanged. No session minted yet. Narrow pre-ENTER rollback and expired-
+  installation recovery repairs are authored; validation/connected
+  commissioning pending. [Receipt and backend/Claude handoff](execution_loop/evidence/ELP2-10/research-temporary-session-recovery-2026-10-19.md).
+  ELP2-10 NOT_MET; financial/config/G2/browser separate; no ELP2-11 or push.
+
+- C7 Core→Edge return2026-10-19: actual recovery167/167PASS on Node22/PG;
+  source companion8affected+18reusedPASS with an explicit Core TEST_ONLY model,
+  bounded isolated cells cleaned. [Current owner-return and source patch](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_EPG10_08_OWNER_RETURN.md)
+  names actual deployed/undeployed source, DB/schema/identity/trust/protocol
+  pins and private owner-input index. Core owns reviewed Research install;
+  Edge owns helper adoption and physical role-window COMMIT/ACK. Connected
+  READ/STREAM/revoke/restart/replay gates NOT_RUN, no source fixture PASS or
+  command/Live activation inferred. Normal R3 landing is separate from focused
+  receipts; ELP2-10 NOT_MET, ELP2-11 unopened, no push/dev/main/frontend change.
+
+- C7 checkpoint2026-10-19 17:58 Asia/Saigon:093342 ordinary hook preserved
+  **contracts1141PASS/API8307PASS,1FAIL,3skip**, not a commit. Reviewed strict
+  concurrent-capacity test correction awaits affected PG; PM job104819 still
+  owns SGP measurement reservation with cleanup unconfirmed. Core does not
+  unlink it and waits without holding the shared heavy lock. [Exact external
+  owner/action, review limits and next gate](execution_loop/evidence/ELP2-10/research-temporary-session-recovery-2026-10-19.md#external-measurement-window-checkpoint--2026-10-19).
+  No new build/DDL/session/window/connected receipt. Resume affected group then
+  ordinary R3 and approved Core-only install after owner settles its reservation;
+  no new generic approval/cookie prerequisite. Claude unchanged, ELP2-10 NOT_MET.
+
+- C7 affected-gate terminal2026-10-19 11:17:31UTC: five-file Node22/PostgreSQL
+  **200/200PASS**, build/scoped restorePASS; source/index/eight protected runtimes
+  unchanged and owned resources0. PM104819 reservation is now owner-settled,
+  not removed by Core. Peer`3ca367fe` is reviewed/not merged; fixture BFF stays
+  OFF for genuine C7. [Actual result/hash and ordered next actions](execution_loop/evidence/ELP2-10/research-temporary-session-recovery-2026-10-19.md#affected-gate-terminal--2026-10-19-111731-utc).
+  Fresh ordinary R3 precedes Core-only build/backup/forward134/schema/reverse.
+  Source-side bundle ACK/window and COMMIT+Core ACK are still NOT_RUN, not
+  inferred from200tests. No duplicate focus, frontend edit, push or ELP2-11.
+

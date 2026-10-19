@@ -218,10 +218,14 @@ export class CurrentHumanCandidate {
     if (config.installation_scope) {
       const scope = config.installation_scope;
       if (!id.safeParse(scope.workspace_id).success || scope.environment !== "paper"
-        || !Number.isSafeInteger(scope.valid_until_ms) || scope.valid_until_ms <= Date.now())
+        || !Number.isSafeInteger(scope.valid_until_ms) || scope.valid_until_ms < 1)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_INSTALLATION_SCOPE_INVALID");
       Object.freeze(scope);
     }
+    // Expired SAME-key installations remain constructible for authenticated
+    // recovery of persisted source attempts. Fresh issue/ENTER still check
+    // installation freshness before admission and under the authority lock.
+    // Expiry never proves a held source transaction rolled back.
     for (const value of [config.issuer, config.audience, config.key_id, config.source.issuer,
       config.source.audience, config.source.key_id, config.source.workload_id]) id.parse(value);
     const { ttl_ms, maximum_unresolved, maximum_retained } = config.limits;
@@ -599,12 +603,34 @@ export class CurrentHumanCandidate {
     if (source.phase === "ENTER") throw new CurrentHumanLeaseError("CURRENT_HUMAN_TERMINAL_REQUIRED");
     return this.transaction(async db => {
       const row = (await db.query<Row>("SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR UPDATE", [source.lease_id])).rows[0];
-      if (!row || !["ENTERED", "UNKNOWN", "COMMITTED", "ROLLED_BACK"].includes(row.phase))
-        throw new CurrentHumanLeaseError("CURRENT_HUMAN_RESOLUTION_NOT_AVAILABLE");
+      if (!row) throw new CurrentHumanLeaseError("CURRENT_HUMAN_RESOLUTION_NOT_AVAILABLE");
       this.bind(row, source);
       const terminal = source.phase === "UNKNOWN" ? null : accessDigest({ lease_id: source.lease_id, attempt_id: source.attempt_id,
         phase: source.phase, source_receipt_id: source.source_receipt_id, source_receipt_digest: source.source_receipt_digest,
         workspace_id: source.workspace_id, environment: source.environment, workload_id: source.workload_id, request_digest: source.request_digest });
+      if (row.phase === "ISSUED" || row.phase === "RETIRED") {
+        // A signed source rollback is a separate fact, not a manufactured
+        // ENTER or an inference from expiry. Keep unused Core leases RETIRED.
+        if (source.phase !== "ROLLED_BACK")
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_RESOLUTION_NOT_AVAILABLE");
+        const prior = (await db.query<{ attempt_id: string; terminal_receipt_digest: string }>(
+          "SELECT attempt_id,terminal_receipt_digest FROM elp210_candidate.events WHERE lease_id=$1 AND phase='SOURCE_ROLLED_BACK_UNENTERED' ORDER BY event_id LIMIT 2",
+          [row.lease_id])).rows;
+        if (prior.length) {
+          if (prior.length !== 1 || row.phase !== "RETIRED" || prior[0].attempt_id !== source.attempt_id
+            || prior[0].terminal_receipt_digest !== terminal)
+            throw new CurrentHumanLeaseError("CURRENT_HUMAN_TERMINAL_CONFLICT");
+          return { replayed: true, phase: "ROLLED_BACK" };
+        }
+        if (row.phase === "ISSUED")
+          await db.query("UPDATE elp210_candidate.leases SET phase='RETIRED' WHERE lease_id=$1", [row.lease_id]);
+        await db.query("INSERT INTO elp210_candidate.events(lease_id,phase,attempt_id,terminal_receipt_digest) VALUES($1,'SOURCE_ROLLED_BACK_UNENTERED',$2,$3)",
+          [row.lease_id, source.attempt_id, terminal]);
+        // ACK describes the verified SOURCE terminal, never Core execution.
+        return { replayed: false, phase: "ROLLED_BACK" };
+      }
+      if (!["ENTERED", "UNKNOWN", "COMMITTED", "ROLLED_BACK"].includes(row.phase))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_RESOLUTION_NOT_AVAILABLE");
       if (row.phase === source.phase && row.terminal_receipt_digest === terminal) return { replayed: true, phase: row.phase };
       if (["COMMITTED", "ROLLED_BACK"].includes(row.phase)) throw new CurrentHumanLeaseError("CURRENT_HUMAN_TERMINAL_CONFLICT");
       await db.query("UPDATE elp210_candidate.leases SET phase=$2,terminal_receipt_digest=$3 WHERE lease_id=$1",

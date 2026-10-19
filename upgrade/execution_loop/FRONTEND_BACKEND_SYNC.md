@@ -9,6 +9,94 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### Codex Research recovery affected gate — 2026-10-19, 18:17 Asia/Saigon
+
+Canonical baseline remains`678cf731`; ten owned paths, no frontend changes.
+The actual five-file Node22/PostgreSQL gate111228 is **200/200PASS**, including
+the33 native-HTTP cases (a subset, not33 additional tests). Build/scoped restore
+PASS; eight protected runtime tuples/source/index unchanged; owned resources0.
+Log SHA256`b23379961e0b6ce056c51fd3e54015de72075c5d0444b8a3df6bdf19c1fd177f`.
+Fresh ordinary R3 remains the landing gate; the failed093342 receipt is retained.
+
+PM§58.195 now reconciles its104819 cleanup; its reservation is absent. No Core
+removal was performed. Peer`3ca367feb6dfd08a62e685cb2361b4752b90ec86` is clean,
+17commits/72files since0160bf20; not merged into this dirty Core checkout.
+Its opt-in fixture BFF bypasses Execution/session readers and must remain OFF
+for genuine C7. Actual Research web has no such mount. Manager reader/copy
+deliveries are consumer source work, not source/runtime acceptance. No new
+request in this committed delta; no new FE field from the recovery repair.
+
+HK read11:07UTC: Edge`6adc398b`/official helper`5f1a0f29` unchanged;
+PM`b203b77a` selected15runtime paths still match frozen`f5ee331f`. No operational
+Research intake destination/window ACK is published yet. Core finishes actual
+release/schema/reverse evidence before secure PM-only bundle handoff. Historical
+source-intake runner is NOT_RUN and incompatible (old helper pins/40s token
+floor); do not execute it or reapply the adopted repair. Private Core keys never
+leave SGP. READ/STREAM and source COMMIT/Core ACK remain separate NOT_RUN gates.
+
+### Codex Research commissioning checkpoint — 2026-10-19, 17:58 Asia/Saigon
+
+Canonical remains`678cf7313a1767197ad57a59b22b3b173efde537`, ten owned
+paths, peer`0160bf203eeef10583aa17021e3edd0a36e9879e` unchanged; its staged
+UXM-07 receipt is preserved. Read-only HK refresh10:40:14UTC: Edge`6adc398b`
+with adopted helper`5f1a0f29` unchanged; PM`b203b77a` selected15runtime paths
+still match frozen`f5ee331f`. No new secure-intake/window ACK. No new FE request
+in the committed peer delta; no merge or frontend edit.
+
+Independent reviews accepted the capacity-test correction and exact maintenance
+sequence at source level. Official helper accepts the nominal30s human token
+(no40s minimum); issue must be JIT. Expired SAME-key candidate recovery tests
+do **not** prove expired TLS/bootstrap restart; that boundary remains explicit.
+Reused two reviewers in this continuation, no additional agents spawned.
+
+ACT_NOW external dependency: SGP measurement reservation for
+`codex-pma11-risk-policy-qualification-sgp-pma11-risk-policy-qualification-sgp-20261019`
+remains owned after job104819 exit1; its controller says
+`cleanup_complete=false` / `own_lease_released=false`. Expired reservation
+time is not settlement proof. Core never removes it or its resources. The
+focused gate waits without holding the shared heavy-work lock; wait-only
+attempts are not test executions. [Checkpoint and exact next action](evidence/ELP2-10/research-temporary-session-recovery-2026-10-19.md#external-measurement-window-checkpoint--2026-10-19).
+No new commit/build/DDL/private session/runtime acceptance at this cut.
+
+### Codex R3 capacity-race follow-through — 2026-10-19, 17:37 Asia/Saigon
+
+Canonical remains `678cf7313a1767197ad57a59b22b3b173efde537`; nine owned
+staged paths, no foreign paths. Peer read-only pin
+`0160bf203eeef10583aa17021e3edd0a36e9879e` has no later commit; its frontend
+and B1 work remain untouched, not merged. HK latest read10:05:46UTC:
+Edge`6adc398b`, helper`5f1a0f29` already adopted, PM`b203b77a` with selected
+15 runtime files unchanged. No secure-intake/window ACK or connected proof.
+ACT_NOW: ordinary hook093342 failed one capacity-race assertion (API8307PASS,
+1FAIL,3skip; contracts1141PASS); build correctly refused. Preserve failed
+receipt. Scope is the native HTTP **test**: distinguish fail-closed transient
+409 from deterministic full-capacity rejection, keep one durable slot and
+zero source calls, and prove exact losing request still rejected after the
+race. No production lock, schema, permission, quota or UI change. Focused PG
+test precedes one new ordinary R3; no unchanged full-run retry to fish for PASS.
+One new read-only reviewer`/root/c7_capacity_review` is necessary because the
+previous context's delegates are no longer live. Main owns edits/integration.
+
+### Codex private Research session/recovery continuation — 2026-10-19
+
+Canonical `678cf7313a1767197ad57a59b22b3b173efde537` landed with ordinary
+R3 PASS (contracts1141/API8282,3skip; actual disposable-PG restore). Peer
+`9a4cd39dc2bc2fb4d0b292e0df30200518f93cc6` is unchanged since last read;
+active frontend, B1 test/index and receipt WIP remain untouched. No merge.
+Latest Bobby approval supersedes the cookie-file request: mint a private
+temporary Research PREVIEW session when needed, revoke exactly that session,
+and clean owned resources. Public auto-login stays claude-preview, never Bobby.
+ACT_NOW: source pre-ENTER rollback and SAME-key expiry recovery interoperability;
+[scope, tests, genuine commissioning sequence and remaining gates](evidence/ELP2-10/research-temporary-session-recovery-2026-10-19.md).
+No new browser field or consumer ACK; FE-054 decimal subrequest is landed,
+whole ELP2-10 NOT_MET. Three delegates reused this round; no new agent spawned.
+
+Current [Core→Edge owner-return](evidence/ELP2-10/CORE_TO_EDGE_EPG10_08_OWNER_RETURN.md)
+publishes source/installed/connected distinctions, actual167Core tests and
+8affected+18reused source tests, companion patch and private input references.
+Source helper adoption belongs to Edge, Research release/schema/reverse to
+Core. No consumer ACK/browser or new frontend field inferred; genuine
+READ/STREAM remains separate from commands/publication/capacity.
+
 ### Codex renewed C7 round — 2026-10-19, after d078 landing
 
 Latest continuation reads peer`f9306af8030d89ac7b529be705b267c66f10e44d`,

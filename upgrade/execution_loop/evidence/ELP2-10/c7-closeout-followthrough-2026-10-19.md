@@ -334,9 +334,11 @@ provider release remains separately pinned to`f5ee331fc2b8334cb203ea406df7ed6f46
    generic owner approval. Prefer an existing normal Research Bobby session.
    A private Bobby PREVIEW session would mint an owner credential and requires
    its explicit choice/approval; do not retarget public `claude-preview`.
-   Bobby selected **existing Research Bobby session via a private file** in
-   the async reply; no temporary owner credential will be created. File path
-   is not yet provided. Never print session/cookie bytes in a receipt or log.
+   Bobby previously selected an existing Research Bobby session via a private
+   file. His later approval supersedes that prerequisite: create a private
+   temporary AuthService PREVIEW session when needed, then revoke exactly it.
+   Do not request the cookie file again or retarget public `claude-preview`.
+   [Actual approval, recovery repair and issue/revoke status](research-temporary-session-recovery-2026-10-19.md).
 5. Obtain a genuine Research source acceptance, then install independent
    READ/STREAM owner policies and new trust materials. Scope is Paper only.
    Authority provider is not the Manager data endpoint or an ingestion writer.
@@ -360,3 +362,30 @@ FE-054 exact operation is available to implement against the canonical
 synthetic fixture; timeline/replay subrequests remain OPEN. No frontend edits.
 Backend next remains this approved Research commissioning, not ELP2-11.
 Whole ELP2-10 **NOT_MET**. Reused3 agents;0new; primary owns integration.
+
+### Core → Edge owner-return — current continuation
+
+[Public owner-return](CORE_TO_EDGE_EPG10_08_OWNER_RETURN.md) is the current
+coordination entry, including exact source/deployed distinctions, helper patch,
+protocol/identity/trust references and adoption owners. Actual Core recovery
+167/167PASS and companion8affected+18reusedPASS do not establish genuine
+identity COMMIT/ACK, READ/STREAM, provider ingestion or browser acceptance.
+Core owns Research-only release/backup/forward134/schema/reverse install;
+Edge reviews/adopts helper repair and opens the official finite source window.
+No HK WIP overwrite, schema/role recreation, old native-role changes, source
+SQL seed or stable authority copy. Private temporary Bobby PREVIEW is approved;
+the obsolete cookie-file dependency is removed. Normal-hook landing terminal
+is separately retained under `research-commission/research-recovery-land-*/`.
+
+Current17:58 Asia/Saigon checkpoint: subsequent093342 ordinary R3 failed only
+the capacity-race test assertion; build was refused. Strict test correction,
+maintenance and active-window interop reviews are recorded, not claimed as
+executed tests. PM104819's unsettled measurement reservation currently blocks
+affected-PG admission. [Exact owner/action and current limits](research-temporary-session-recovery-2026-10-19.md#external-measurement-window-checkpoint--2026-10-19).
+No foreign lock/resource is removed; no new build/DDL/session/source window.
+
+Subsequent11:17:31UTC: PM owner settled that reservation; affected Core gate
+111228 completed **200/200PASS**, build/scoped restorePASS, eight protected
+runtimes unchanged/resources0. [Actual log hash, source/peer pins and next gate](research-temporary-session-recovery-2026-10-19.md#affected-gate-terminal--2026-10-19-111731-utc).
+One fresh ordinary-hook landing is next; no duplicate focus run. No installation,
+session issue, source role window or connected ACK is inferred from this result.

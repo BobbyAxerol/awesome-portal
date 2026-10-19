@@ -304,3 +304,14 @@ terminal `5291a80f`, peer F8 requests, C3/C4/C5/C7 implementation, verification
 and source-dark/consumer limits. The packet is the actual result authority;
 not every phase/request is closed by source integration. [Researcher matrix](../ELP2-03/researcher-field-policy-proposal-2026-10-18.md)
 is a proposal only. No runtime activation, peer WIP merge, push or ELP2-11 entry.
+
+## Research temporary session — latest approved continuation
+
+[Approval, actual678cf731 R3 terminal, recovery repair and open gates](research-temporary-session-recovery-2026-10-19.md).
+Latest approval removes the cookie-file prerequisite: mint private PREVIEW just
+in time, then exact revoke/teardown. No session issued at this source cut.
+Actual affected recovery gate167/167PASS; source companion8affected+18reused
+PASS, explicit TEST_ONLY Core model. Normal-hook landing and genuine connected
+commissioning remain separate. [Core → Edge owner-return, source patch, private
+input references and next action](CORE_TO_EDGE_EPG10_08_OWNER_RETURN.md).
+No frontend field, stable change, source fixture credit or full phase PASS.

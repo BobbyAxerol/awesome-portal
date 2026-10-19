@@ -10,7 +10,8 @@ import{createServer,request,ServerResponse,type ClientRequest,type IncomingHttpH
 import{createServer as createHttpsServer,type Server as HttpsServer}from"node:https";
 import{Socket}from"node:net";import{generateKeyPair,decodeJwt,jwtVerify,SignJWT,type KeyLike}from"jose";
 import{Pool,type PoolClient}from"pg";import{beforeAll,beforeEach,afterEach,afterAll,describe,it,expect,vi}from"vitest";
-import{CurrentHumanCandidate,type CurrentHumanNativeHTTPConfig}from"../src/execution-v2/current-human-candidate";
+import{CurrentHumanCandidate,CurrentHumanLeaseError,type CurrentHumanNativeHTTPConfig}from"../src/execution-v2/current-human-candidate";
+import{AccessPolicyError}from"../src/execution-v2/access.contract";
 import{CurrentHumanMutations}from"../src/execution-v2/current-human-mutations";
 import{SelectedNativeBusinessReadSource,selectedNativeBusinessReadSelection}from"../src/execution-v2/native-business-read-selected-source";
 import{prepareNativeBusinessReadRequest,nativeBusinessReadUtcMicroseconds}from"../src/execution-v2/native-business-read-codec";
@@ -530,7 +531,20 @@ describe.skipIf(!pgUrl)("TEST_ONLY NC03 native-family finite HTTP actual-PG inte
    other=context();other.deadline=ctx.deadline;
   const results=await Promise.allSettled([first.prepareNativeRead(actor,ctx),second.prepareNativeRead(actor,other)]);
   expect(results.filter(x=>x.status==="fulfilled")).toHaveLength(1);expect(results.filter(x=>x.status==="rejected")).toHaveLength(1);
-  expect((results.find(x=>x.status==="rejected")as PromiseRejectedResult).reason).toMatchObject({code:"CURRENT_HUMAN_CAPACITY_EXHAUSTED"});
+  const reason=(results.find(x=>x.status==="rejected")as PromiseRejectedResult).reason;
+  // The current workspace authority is checked BEFORE shared capacity. A
+  // racing try-lock may legitimately fail closed before reaching the count.
+  // Do not loosen production locks or treat arbitrary failures as capacity.
+  if(reason instanceof CurrentHumanLeaseError)expect(reason.code).toBe("CURRENT_HUMAN_CAPACITY_EXHAUSTED");
+  else{expect(reason).toBeInstanceOf(AccessPolicyError);expect(reason).toMatchObject({code:"ACCESS_RETRY_REQUIRED",status:409});}
+  const loser=results[0].status==="rejected"?first:second,losingContext=results[0].status==="rejected"?ctx:other;
+  const stored=async()=> (await pool.query("SELECT count(*)::int total,count(*) FILTER(WHERE lease_id=$1)::int losing FROM elp210_candidate.native_read_obligations",
+   [losingContext.binding.lease_id])).rows[0];
+  expect(await stored()).toEqual({total:1,losing:0});
+  // Both transactions have settled. Even a cold replica must now observe
+  // the winner's durable slot: retry the EXACT failed context, not a new key.
+  await expect(loser.prepareNativeRead(actor,losingContext)).rejects.toMatchObject({code:"CURRENT_HUMAN_CAPACITY_EXHAUSTED"});
+  expect(await stored()).toEqual({total:1,losing:0});
   expect(await pending()).toBe(1);expect(calls).toEqual([]);
   const winner=results[0].status==="fulfilled"?first:second,winningContext=results[0].status==="fulfilled"?ctx:other;
   const cold=await CurrentHumanCandidate.createNativeRead(pool,cfg);
@@ -540,6 +554,21 @@ describe.skipIf(!pgUrl)("TEST_ONLY NC03 native-family finite HTTP actual-PG inte
   // forever, discard unresolved state by TTL, or create a second recovery worker.
   await expect(winner.prepareNativeRead(actor,context())).resolves.toBeDefined();
   expect(await pending()).toBe(1);
+ });
+ it("workspace authority contention returns typed retry without consuming a native slot",async()=>{
+  const locker=await pool.connect();
+  try{
+   await locker.query("BEGIN");
+   await locker.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`portal-access-v2:${workspace}`]);
+   // An actual independent transaction owns the lock; no mocked evaluator,
+   // fake error, timer or authority-row bypass supplies this refusal.
+   const refusal=await candidate.prepareNativeRead(actor,ctx).then(()=>{throw Error("TEST_ONLY_UNEXPECTED_ADMISSION");},error=>error);
+   expect(refusal).toBeInstanceOf(AccessPolicyError);expect(refusal).toMatchObject({code:"ACCESS_RETRY_REQUIRED",status:409});
+   expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.native_read_obligations")).rows[0].n).toBe(0);
+   expect(await pending()).toBe(0);expect(calls).toEqual([]);
+  }finally{try{await locker.query("ROLLBACK");}finally{locker.release();}}
+  await expect(candidate.prepareNativeRead(actor,ctx)).resolves.toBeDefined();
+  expect(await pending()).toBe(1);expect(calls).toEqual([]);
  });
  it("default CUSTODY_ONLY SQL and carrier remain unchanged; cannot be converted or settled by HTTP factory",async()=>{
   const legacy=await CurrentHumanCandidate.create(pool,{issuer:config.issuer,audience:config.audience,key_id:config.key_id,private_key:config.private_key,
