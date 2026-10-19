@@ -19,11 +19,11 @@ import "../../css/operations.css";
 
 export const ACK_REASON = notPublishedReason(
   FE.eligibility,
-  "Acknowledging is an ADMIN-only Portal write and this screen does not offer it yet.",
+  "ADMIN-only write, not offered yet.",
 );
 export const RESOLVE_REASON = notPublishedReason(
   FE.eligibility,
-  "Resolving needs a reason and an evidence reference, and this screen does not offer it yet.",
+  "Needs a reason and evidence, not offered yet.",
 );
 
 function instant(value: InstantV2 | null, absent: string) {
@@ -41,9 +41,13 @@ export interface OperationDockProps {
   onClose(): void;
 }
 
+export const SEND_AGAIN_REASON = "Blocked until the outcome is known.";
+
 export function OperationDock({ operationId, row, loading, mode, onClose }: OperationDockProps) {
+  const outcomeUnknown = row !== null && receiptOutcome(row.sourceStatus, row.verificationResult).checkOriginal;
   const actions = (
     <>
+      {outcomeUnknown ? <DockAction label="Send again" reason={SEND_AGAIN_REASON} /> : null}
       <DockAction label="Acknowledge" reason={ACK_REASON} />
       <DockAction label="Resolve" reason={RESOLVE_REASON} />
     </>

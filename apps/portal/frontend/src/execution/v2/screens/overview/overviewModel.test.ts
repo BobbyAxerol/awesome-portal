@@ -44,6 +44,7 @@ describe("triage", () => {
     const [first] = triageRows(snapshotOf("busy").needsYou, (iso) => `T(${iso})`);
     expect(first!.sla).toBe("Overdue (since T(2026-08-22T11:58:00.000Z))");
     expect(first!.age).toBe("10 min");
+    expect(first!.slaShort).toBe("Overdue since 22 Aug 11:58Z, age 10 min");
   });
   it("an item with no deadline says none was published", () => {
     const base = snapshotOf("busy").needsYou!;

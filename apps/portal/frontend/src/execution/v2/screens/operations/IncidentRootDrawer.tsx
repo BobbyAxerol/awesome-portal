@@ -36,10 +36,11 @@ type Load =
   | { phase: "ready"; incident: IncidentRootV2 };
 
 export const INCIDENT_ACTION_REASONS = {
-  acknowledge: notPublishedReason(FE.eligibility, "Acknowledging an incident is an ADMIN-only Portal write and this screen does not offer it yet."),
-  assign: notPublishedReason(FE.assignee, "The incident root has no assignee, so there is nobody to assign."),
-  mitigate: notPublishedReason(FE.eligibility, "Marking mitigated is an ADMIN-only Portal write and this screen does not offer it yet."),
-  resolve: notPublishedReason(FE.eligibility, "Resolving needs every gate met, and no gate is published."),
+  // One short line each: the footer must leave the body room to show what is missing.
+  acknowledge: notPublishedReason(FE.eligibility, "ADMIN-only write, not offered yet."),
+  assign: notPublishedReason(FE.assignee, "No assignee is published."),
+  mitigate: notPublishedReason(FE.eligibility, "ADMIN-only write, not offered yet."),
+  resolve: notPublishedReason(FE.eligibility, "No gate is published."),
 } as const;
 
 function instant(value: InstantV2 | null, absent: string) {
@@ -124,6 +125,19 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
   const incident = load.incident;
   const flag = STATE_FLAG[incident.workflowState];
   const children = incident.historicalChildren;
+  // The facts table below is long: what is missing goes in the drawer's priority slot, above it.
+  const notPublished = (
+    <>
+      <h3 className="exec-ops-section">Not published</h3>
+      <ul className="exec-ops-np-list">
+        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Evidence.</NotPublished></li>
+        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Operations taken.</NotPublished></li>
+        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Resolution gates.</NotPublished></li>
+        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Timeline.</NotPublished></li>
+        <li><NotPublished id={FE.assignee} reasonCode={children.reasonCode}>Assignee.</NotPublished></li>
+      </ul>
+    </>
+  );
   return (
     <Drawer
       title={`Incident ${incident.incidentId}`}
@@ -131,6 +145,7 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
       onClose={onClose}
       mode={mode}
       actions={actions}
+      priority={notPublished}
     >
       <ol className="exec-ops-rail" aria-label="Workflow state">
         {railFor(incident.workflowState).map((s) => (
@@ -168,15 +183,6 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
         <dd>Integration {humanize(incident.sourceIntegrationState).toLowerCase()}; nothing was asked of the source.</dd>
       </dl>
       <p className="exec-ops-reason">Resolving closes the incident only. It never resumes a deployment.</p>
-
-      <h3 className="exec-ops-section">Not published</h3>
-      <ul className="exec-ops-np-list">
-        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Evidence.</NotPublished></li>
-        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Operations taken.</NotPublished></li>
-        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Resolution gates.</NotPublished></li>
-        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Timeline.</NotPublished></li>
-        <li><NotPublished id={FE.assignee} reasonCode={children.reasonCode}>Assignee.</NotPublished></li>
-      </ul>
     </Drawer>
   );
 }

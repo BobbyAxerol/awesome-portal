@@ -353,11 +353,12 @@ describe("L1 · matrix B · row states", () => {
       const tr = dom[i]!;
       const stage = cell(tr, "Stage");
       if (!stage.includes(STAGE_WORD[r.stage]!)) problems.push(`${r.alpha_label}: stage`);
-      if (!stage.includes(HEALTH_FLAG[r.health]![1])) problems.push(`${r.alpha_label}: health`);
+      const healthCell = cell(tr, "Health");
+      if (!healthCell.includes(HEALTH_FLAG[r.health]![1])) problems.push(`${r.alpha_label}: health`);
       if (cell(tr, "Owner") !== (r.owner ?? "Not available")) problems.push(`${r.alpha_label}: owner cell "${cell(tr, "Owner")}"`);
       const deployments = cell(tr, "Deployments");
       if (r.deployments.length === 0 ? !deployments.includes("None deployed") : !deployments.includes(`${r.deployments.length === 1 ? "1 deployment" : `${r.deployments.length} deployments`}`)) problems.push(`${r.alpha_label}: deployments "${deployments}"`);
-      if (r.attention_reasons.length > 2 && !stage.includes("and 1 more")) problems.push(`${r.alpha_label}: hidden reasons not counted`);
+      if (r.attention_reasons.length > 2 && !healthCell.includes("and 1 more")) problems.push(`${r.alpha_label}: hidden reasons not counted`);
       if (r.health === "READY" && tr.querySelector('.exec-fleet-stagecell [data-k="attention"], .exec-fleet-stagecell [data-k="unknown"]')) problems.push(`${r.alpha_label}: ready row carries a warning`);
     });
     expect(problems).toEqual([]);

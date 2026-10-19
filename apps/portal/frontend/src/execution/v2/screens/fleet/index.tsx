@@ -19,6 +19,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
 import { utcStamp } from "../../../time";
 import { useDockMode, useDockSelection } from "../../Drawer";
+import { Kpi, KpiStrip } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { serializeUrlParams, useExecUrlState } from "../../urlState";
@@ -180,6 +181,11 @@ export default function FleetScreen({ api }: FleetScreenProps) {
           <p className="exec-fleet-sub">Identity only. Allocation, PnL and equity are not shown on this screen.</p>
         </div>
         <div className="exec-fleet-fresh">
+          <span className="exec-fleet-seg" role="group" aria-label="View">
+            <button type="button" className="exec-fleet-segbtn" aria-pressed={tableView} onClick={() => url.set({ view: null })}>Table</button>
+            <button type="button" className="exec-fleet-segbtn" aria-pressed={view === "board"} disabled title={notPublished(FE.board)} aria-describedby={reasonId}>Board</button>
+            <button type="button" className="exec-fleet-segbtn" aria-pressed={view === "map"} disabled title={notPublished(FE.map)} aria-describedby={reasonId}>Map</button>
+          </span>
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {envelope ? (
             <span>
@@ -197,17 +203,16 @@ export default function FleetScreen({ api }: FleetScreenProps) {
       ) : null}
 
       {!archived ? (
-        <section className="exec-fleet-kpis" aria-label="Fleet counts">
+        <KpiStrip label="Fleet counts">
           {kpis.map((kpi) => (
-            <div className="exec-fleet-kpi" key={kpi.id}>
-              <span className="exec-fleet-kpi-label">{kpi.label}</span>
-              <span className="exec-fleet-kpi-value">
-                {kpi.value === null ? <span className="exec-fleet-na">Not available</span> : kpi.value}
-              </span>
-              <span className="exec-fleet-kpi-note">{kpi.note}</span>
-            </div>
+            <Kpi
+              key={kpi.id}
+              label={kpi.label}
+              value={kpi.value === null ? undefined : String(kpi.value)}
+              basis={kpi.note}
+            />
           ))}
-        </section>
+        </KpiStrip>
       ) : null}
 
       <div className="exec-fleet-main" data-docked={selection !== null && mode === "dock" ? "true" : undefined}>
@@ -287,12 +292,8 @@ export default function FleetScreen({ api }: FleetScreenProps) {
                 <option value="">Group: none</option>
               </select>
             </label>
-            <span className="exec-fleet-seg" role="group" aria-label="View">
-              <button type="button" className="exec-fleet-segbtn" aria-pressed={tableView} onClick={() => url.set({ view: null })}>Table</button>
-              <button type="button" className="exec-fleet-segbtn" aria-pressed={view === "board"} disabled title={notPublished(FE.board)} aria-describedby={reasonId}>Board</button>
-              <button type="button" className="exec-fleet-segbtn" aria-pressed={view === "map"} disabled title={notPublished(FE.map)} aria-describedby={reasonId}>Map</button>
-            </span>
             <button type="button" className="exec-fleet-btn" disabled title={notPublished(FE.window)} aria-describedby={reasonId}>Window</button>
+            <button type="button" className="exec-fleet-btn" disabled title={notPublished(FE.compare)} aria-describedby={reasonId}>Compare</button>
             {filtered ? <button type="button" className="exec-fleet-btn" onClick={clearFilters}>Clear filters</button> : null}
           </div>
           <p id={reasonId} className="exec-fleet-unpub">

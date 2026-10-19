@@ -23,7 +23,7 @@
   overflow-wrap: anywhere;
 }
 .exec-ck-page > .exec-ck-mast .exec-ck-h {
-  font: var(--exec-font-subtitle);
+  font: var(--exec-font-title);
 }
 .exec-ck-sub {
   margin: 0;
@@ -71,6 +71,11 @@
 }
 
 /* panels */
+/* A preview receipt reads as a draft: dashed, as the HIFI .rc. A recorded one (data-recorded) stays solid. */
+.exec-ck-panel[aria-label="Receipt"]:not([data-recorded]) {
+  border-style: dashed;
+  border-color: var(--ink-soft);
+}
 .exec-ck-panel {
   min-width: 0;
   color: var(--ink);

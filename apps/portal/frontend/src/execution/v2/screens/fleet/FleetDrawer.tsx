@@ -10,10 +10,12 @@ import type { ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { DockAction, Drawer, type DockMode } from "../../Drawer";
+import { JourneySpine } from "../../blocks";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
 import { utcStamp } from "../../../time";
 import { alphaHref, FE, notPublished, type FleetRow } from "./fleetModel";
+import { spineStage } from "./FleetTable";
 
 export interface FleetDrawerProps {
   /** The `sel` value. */
@@ -66,6 +68,12 @@ export function FleetDrawer({ alphaId, row, loading, mode, onClose }: FleetDrawe
         <div className="exec-fleet-drawer-flags">
           <Flag kind={row.health.kind} label={row.health.label} />
         </div>
+        {spineStage(row.stageCode) ? (
+          <section aria-label="Lifecycle position">
+            <h3 className="exec-fleet-h">Lifecycle</h3>
+            <JourneySpine variant="compact" current={spineStage(row.stageCode)} label={`${row.label} lifecycle`} />
+          </section>
+        ) : null}
         {row.attention.length > 0 ? (
           <section aria-label="Attention reasons">
             <h3 className="exec-fleet-h">Attention reasons</h3>

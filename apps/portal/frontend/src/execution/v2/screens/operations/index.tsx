@@ -19,6 +19,7 @@ import { PanelState } from "../../../components/states";
 import type { ExecutionApi } from "../../../api/ports";
 import type { PanelStatus } from "../../../contracts";
 import { useDockMode, useDockSelection } from "../../Drawer";
+import { Kpi, KpiStrip } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import {
   SEVERITIES_V2, TARGET_TYPES_V2, TRIAGE_STATES_V2, VERIFICATION_RESULTS_V2,
@@ -43,12 +44,13 @@ export const MINE_REASON = notPublishedReason(
   "The queue has no assignee or creator, so it cannot be filtered to you.",
 );
 
-export type OpsWindow = "24H" | "7D" | "30D" | "ALL";
-const WINDOWS: readonly OpsWindow[] = ["24H", "7D", "30D", "ALL"];
+export type OpsWindow = "24H" | "7D" | "30D" | "90D" | "ALL";
+const WINDOWS: readonly OpsWindow[] = ["24H", "7D", "30D", "90D", "ALL"];
 const WINDOW_MS: Readonly<Record<OpsWindow, number | null>> = {
   "24H": 24 * 3_600_000,
   "7D": 7 * 24 * 3_600_000,
   "30D": 30 * 24 * 3_600_000,
+  "90D": 90 * 24 * 3_600_000,
   ALL: null,
 };
 
@@ -289,28 +291,12 @@ export default function OperationsV2({
       </div>
 
       {ready ? (
-        <dl className="exec-ops-kpis" aria-label="Queue counts">
-          <div className="exec-ops-kpi">
-            <dt>In scope</dt>
-            <dd className="exec-ops-kpi-value">{number(ready.queue.page.totalCount)}</dd>
-            <dd className="exec-ops-kpi-note">Operations you may see, before filters</dd>
-          </div>
-          <div className="exec-ops-kpi">
-            <dt>Matching</dt>
-            <dd className="exec-ops-kpi-value">{number(ready.queue.page.filteredCount)}</dd>
-            <dd className="exec-ops-kpi-note">After the filters below</dd>
-          </div>
-          <div className="exec-ops-kpi">
-            <dt>Loaded</dt>
-            <dd className="exec-ops-kpi-value">{number(ready.rows.length)}</dd>
-            <dd className="exec-ops-kpi-note">of {number(ready.queue.page.filteredCount)} matching</dd>
-          </div>
-          <div className="exec-ops-kpi">
-            <dt>Read</dt>
-            <dd className="exec-ops-kpi-value">{humanize(ready.queue.readTruth.state)}</dd>
-            <dd className="exec-ops-kpi-note">{ready.queue.readTruth.reasonCode ?? "For this request"}</dd>
-          </div>
-        </dl>
+        <KpiStrip label="Queue counts" columns={4}>
+          <Kpi label="In scope" value={number(ready.queue.page.totalCount)} basis="Operations you may see, before filters" />
+          <Kpi label="Matching" value={number(ready.queue.page.filteredCount)} basis="After the filters below" />
+          <Kpi label="Loaded" value={number(ready.rows.length)} basis={`of ${number(ready.queue.page.filteredCount)} matching`} />
+          <Kpi label="Read" value={humanize(ready.queue.readTruth.state)} basis={ready.queue.readTruth.reasonCode ?? "For this request"} />
+        </KpiStrip>
       ) : null}
 
       <details className="exec-ops-panel">

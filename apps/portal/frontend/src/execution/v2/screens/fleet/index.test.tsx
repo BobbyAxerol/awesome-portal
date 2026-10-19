@@ -70,12 +70,12 @@ describe("identity table", () => {
     expect(cell(rows[0]!, "Owner")).toBe("Bobby-001");
     expect(cell(rows[0]!, "Portfolios")).toBe("Main");
     expect(cell(rows[0]!, "Stage")).toContain("Paper");
-    expect(cell(rows[0]!, "Stage")).toContain("Ready");
+    expect(cell(rows[0]!, "Health")).toContain("Ready");
     expect(cell(rows[1]!, "Owner")).toBe("Lan-002");
     expect(cell(rows[1]!, "Stage")).toContain("also Canary");
     expect(cell(rows[1]!, "Deployments")).toContain("3 deployments");
-    expect(cell(rows[2]!, "Stage")).toContain("Needs attention");
-    expect(cell(rows[2]!, "Stage")).toContain("Deployment attention, Reconciliation open");
+    expect(cell(rows[2]!, "Health")).toContain("Needs attention");
+    expect(cell(rows[2]!, "Health")).toContain("Deployment attention, Reconciliation open");
     expect(cell(rows[3]!, "Deployments")).toContain("2 deployments");
     expect(cell(rows[3]!, "Deployments")).toContain("Finding open");
     expect(cell(rows[4]!, "Deployments")).toContain("None deployed");
@@ -86,7 +86,7 @@ describe("identity table", () => {
     const { api } = makeApi();
     const { container } = mount(api);
     await loaded();
-    const strip = screen.getByRole("region", { name: "Fleet counts" });
+    const strip = screen.getByRole("group", { name: "Fleet counts" });
     const tile = (label: string) => within(strip).getByText(label).parentElement!.textContent;
     expect(tile("Alphas")).toContain("5");
     expect(tile("Deployments")).toContain("7");
@@ -113,45 +113,39 @@ describe("identity table", () => {
     await loaded();
     for (const row of within(table()).getAllByRole("row").slice(1)) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
-        "Alpha", "Owner", "Portfolios", "Stage", "Deployments", "Readiness", "Actions",
+        "Alpha", "Owner", "Portfolios", "Stage", "Health", "Deployments",
       ]);
     }
     expect(table().className).toBe("exec-cards");
   });
 
-  it("names what is not published on every row: readiness and compare", async () => {
+  it("states readiness and compare as not published once, not on every row", async () => {
     const { api } = makeApi();
     mount(api);
     await loaded();
     for (const row of within(table()).getAllByRole("row").slice(1)) {
-      expect(row.querySelector("td[data-l='Readiness']")!.textContent).toBe("Not published (FE-027, FE-028)");
-      const compare = row.querySelector("td[data-l='Actions'] button") as HTMLButtonElement;
-      expect(compare.disabled).toBe(true);
-      expect(compare.title).toBe("Not published (FE-033)");
-      expect(document.getElementById(compare.getAttribute("aria-describedby")!)?.textContent).toContain("Not published (FE-033)");
+      expect(row.querySelector("td[data-l='Readiness']")).toBeNull();
+      expect(row.querySelector("button")).toBeNull();
     }
+    expect(document.body.textContent).toContain("Readiness (FE-027, FE-028)");
+    const compare = screen.getAllByRole("button", { name: "Compare" })[0] as HTMLButtonElement;
+    expect(compare.disabled).toBe(true);
+    expect(compare.title).toBe("Not published (FE-033)");
+    expect(document.getElementById(compare.getAttribute("aria-describedby")!)?.textContent).toContain("FE-033");
   });
-});
 
-describe("not-published controls", () => {
-  it("are disabled and say which FE id they wait for", async () => {
+  it("draws the stage hue and a mini spine from the published current stage alone", async () => {
     const { api } = makeApi();
     mount(api);
     await loaded();
-    const controls: [HTMLElement, string][] = [
-      [screen.getByRole("combobox", { name: "Group by" }), "FE-012"],
-      [screen.getByRole("button", { name: "Board" }), "FE-012, FE-027"],
-      [screen.getByRole("button", { name: "Map" }), "FE-035"],
-      [screen.getByRole("button", { name: "Window" }), "FE-025"],
-    ];
-    for (const [control, fe] of controls) {
-      expect((control as HTMLButtonElement).disabled).toBe(true);
-      expect(control.title).toBe(`Not published (${fe})`);
-      const reason = document.getElementById(control.getAttribute("aria-describedby")!)!.textContent!;
-      expect(reason).toContain(fe);
-    }
-    const all = document.getElementById(screen.getByRole("button", { name: "Window" }).getAttribute("aria-describedby")!)!.textContent!;
-    for (const fe of ["FE-012", "FE-025", "FE-027", "FE-028", "FE-033", "FE-034", "FE-035"]) expect(all).toContain(fe);
+    const rows = within(table()).getAllByRole("row").slice(1);
+    const stage = rows[0]!.querySelector("td[data-l='Stage'] .exec-fleet-stage")!;
+    expect(stage.getAttribute("data-stage")).toBe("PAPER");
+    const spine = rows[0]!.querySelector("td[data-l='Stage'] .exec-blk-spine-mini")!;
+    const nodes = [...spine.querySelectorAll("i")].map((i) => i.getAttribute("data-s"));
+    // Only the current node is known; nothing before it is claimed as done.
+    expect(nodes).toEqual(["unknown", "unknown", "cur", "ahead", "ahead", "ahead"]);
+    expect(nodes).not.toContain("done");
   });
 
   it("a deep link to Board or Map explains itself and offers the Table; it asks nothing", async () => {
@@ -229,7 +223,7 @@ describe("lens tabs", () => {
     expect(await screen.findByText(/Not published \(FE-034\)/)).toBeTruthy();
     expect(search().get("tab")).toBe("archived");
     expect(screen.queryByRole("table", { name: "Alpha fleet" })).toBeNull();
-    expect(screen.queryByRole("region", { name: "Fleet counts" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Fleet counts" })).toBeNull();
     expect(getAlphaFleet.mock.calls.length).toBe(before);
     // Leaving the lens reads again.
     fireEvent.click(screen.getByRole("tab", { name: /^All/ }));

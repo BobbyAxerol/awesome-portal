@@ -213,7 +213,16 @@ const queue = () => screen.getByRole("region", { name: "Decision queue" });
 const rowButton = (name: RegExp) => within(queue()).getByRole("button", { name });
 
 beforeEach(() => signIn({ userId: "usr_bobby", username: "bobby", capabilities: V2_ROLE_PRESETS.manager }));
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  delete (window as { matchMedia?: unknown }).matchMedia;
+});
+
+/** Pretend the viewport is (not) at least 1100px wide; jsdom has no matchMedia and the screen then assumes wide. */
+function viewport(wide: boolean) {
+  (window as unknown as { matchMedia: (query: string) => MediaQueryList }).matchMedia = (query: string) =>
+    ({ matches: wide, media: query, addEventListener: () => undefined, removeEventListener: () => undefined }) as unknown as MediaQueryList;
+}
 
 /* ── access ───────────────────────────────────────────────────────────────── */
 
@@ -413,10 +422,40 @@ describe("queue, lanes and lenses", () => {
 /* ── evidence ─────────────────────────────────────────────────────────────── */
 
 describe("evidence frame", () => {
-  it("nothing selected says so", async () => {
+  // Changed on purpose (UXM-07 CK-1): the first load used to leave the evidence and the rail empty and
+  // this test pinned that. On a wide screen the first request is now open; on a stacked one nothing is.
+  it("on a wide screen the first request is selected on first load, through ?sel= with replace", async () => {
+    viewport(true);
     await mount(standardPort());
+    expect(where()).toContain("sel=apr_a");
+    expect(screen.queryByText("Nothing selected")).toBeNull();
+    expect(within(rail()).queryByText(/Select a request/)).toBeNull();
+    expect(within(queue()).getByRole("button", { name: /Alpha One/ }).getAttribute("aria-current")).toBeTruthy();
+  });
+
+  it("a stacked screen (under 1100px) selects nothing and says so", async () => {
+    viewport(false);
+    await mount(standardPort());
+    expect(where()).not.toContain("sel=");
     expect(screen.getByText("Nothing selected")).toBeTruthy();
     expect(screen.getByText(/Select a request in the queue, or press J/)).toBeTruthy();
+  });
+
+  it("a link's own ?sel= wins over the first row", async () => {
+    viewport(true);
+    await mount(standardPort(), "/execution/approvals?sel=apr_c");
+    expect(where()).toContain("sel=apr_c");
+    expect(where()).not.toContain("apr_a");
+  });
+
+  it("Esc clears the automatic selection and it does not come back", async () => {
+    viewport(true);
+    await mount(standardPort());
+    expect(where()).toContain("sel=apr_a");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await settle();
+    expect(where()).not.toContain("sel=");
+    expect(screen.getByText("Nothing selected")).toBeTruthy();
   });
 
   it("selecting a row writes ?sel=, reads the R1 review, and shows the checklist with Not published (FE-028) cells", async () => {
@@ -662,6 +701,7 @@ describe("waiver lane", () => {
   });
 
   it("selecting a waiver shows the condition and a disabled preview decision, with no gate reads", async () => {
+    viewport(false);
     const p = standardPort();
     await mount(p);
     fireEvent.click(within(queue()).getByRole("button", { name: "Waiver" }));
@@ -691,6 +731,7 @@ describe("waiver lane", () => {
 
 describe("keyboard", () => {
   it("J and K move the selection through the URL, Esc clears it", async () => {
+    viewport(false);
     await mount(standardPort());
     fireEvent.keyDown(document.body, { key: "j" });
     await settle();

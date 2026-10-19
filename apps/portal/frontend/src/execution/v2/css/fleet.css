@@ -43,35 +43,6 @@
   border: 1px solid var(--line-strong);
 }
 
-/* KPI strip: counts only */
-.exec-fleet-kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--space-2);
-}
-.exec-fleet-kpi {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  padding: var(--space-2) var(--space-3);
-  color: var(--ink);
-  background: var(--paper-raised);
-  border: 1px solid var(--line);
-}
-.exec-fleet-kpi-label {
-  font: var(--exec-font-meta);
-  color: var(--ink-faint);
-}
-.exec-fleet-kpi-value {
-  font: var(--exec-font-kpi);
-  color: var(--ink);
-}
-.exec-fleet-kpi-note {
-  font: var(--exec-font-caption);
-  color: var(--ink-faint);
-}
-
 /* layout: table beside a docked drawer */
 .exec-fleet-main {
   display: grid;
@@ -106,8 +77,10 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 6px var(--space-3);
-  font: var(--exec-font-control);
+  padding: 8px var(--space-4);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink-soft);
   background: none;
   border: 0;
@@ -119,7 +92,6 @@
 }
 .exec-fleet-tab[aria-selected="true"] {
   color: var(--ink);
-  background: var(--accent-soft);
   border-bottom-color: var(--accent);
 }
 .exec-fleet-tab:focus-visible,
@@ -229,10 +201,36 @@
   gap: var(--space-2);
 }
 .exec-fleet-stage {
-  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font: var(--exec-font-label);
   color: var(--ink);
+}
+/* 8x8 stage hue, as the HIFI .sd square: Paper and Sandbox filled, Canary hollow, Live solid red. */
+.exec-fleet-stage::before {
+  content: "";
+  flex: none;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  background: transparent;
   border: 1px solid var(--line-strong);
+}
+.exec-fleet-stage[data-stage="PAPER"]::before {
+  background: var(--stage-paper);
+  border-color: var(--stage-paper);
+}
+.exec-fleet-stage[data-stage="SANDBOX"]::before {
+  background: var(--env-sandbox);
+  border-color: var(--env-sandbox);
+}
+.exec-fleet-stage[data-stage="CANARY"]::before {
+  border: 2px solid var(--env-canary);
+}
+.exec-fleet-stage[data-stage="LIVE"]::before {
+  background: var(--env-live);
+  border-color: var(--env-live);
 }
 .exec-fleet-also,
 .exec-fleet-reasons,

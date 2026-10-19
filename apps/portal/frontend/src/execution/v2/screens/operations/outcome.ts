@@ -70,3 +70,13 @@ export function axesText(source: SourceStatusV2, verification: VerificationResul
 }
 
 export const CHECK_ORIGINAL_COPY = "Outcome unknown. Check the original request. Do not send it again.";
+
+/**
+ * `portfolio/adjust-target-budget` -> `Adjust target budget`: the operation in words. The domain prefix is the
+ * target type already printed beside it; the raw key stays on the title. Anything unparseable is shown as sent.
+ */
+export function commandLabel(commandKey: string): string {
+  const action = commandKey.split("/").pop() ?? "";
+  const words = action.replace(/[-_]+/g, " ").trim().toLowerCase();
+  return words === "" ? commandKey : words.charAt(0).toUpperCase() + words.slice(1);
+}

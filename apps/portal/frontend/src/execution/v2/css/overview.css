@@ -130,7 +130,13 @@
   font: var(--exec-font-body);
   color: var(--ink-soft);
   text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
   border-bottom: 1px solid var(--line-soft);
+}
+.exec-ov-cap tr:nth-child(4) th {
+  font-weight: 600;
+  color: var(--ink);
 }
 .exec-ov-cap td {
   padding: 6px 0;
@@ -153,6 +159,48 @@
 .exec-ov-sub {
   font: var(--exec-font-meta);
   color: var(--ink-faint);
+}
+/* HIFI .item: flag + title, action on the right, one meta line. Fits a third-width panel. */
+.exec-ov-items {
+  margin: 0;
+  padding: 0 var(--space-3);
+  list-style: none;
+}
+.exec-ov-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-ov-item:last-child {
+  border-bottom: 0;
+}
+.exec-ov-item-t {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-ov-item-what {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.exec-ov-item-rank {
+  font: var(--exec-font-data);
+  color: var(--ink-faint);
+}
+.exec-ov-item .exec-ov-link {
+  flex: none;
+}
+.exec-ov-item[data-sla="OVERDUE"] .exec-ov-item-sla {
+  color: var(--bad);
+}
+.exec-ov-nowrap {
+  white-space: nowrap;
 }
 .exec-ov-quiet {
   padding: var(--space-3);

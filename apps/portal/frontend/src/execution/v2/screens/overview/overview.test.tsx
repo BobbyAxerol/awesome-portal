@@ -94,16 +94,19 @@ describe("BUSY", () => {
   it("lists the ranked triage in the server's order with rank, kind, deadline and a canonical link", async () => {
     mount();
     await loaded();
-    const list = within(panel("Needs attention")).getByRole("table", { name: "Ranked triage list" });
-    const rows = within(list).getAllByRole("row").slice(1);
-    expect(rows.map((r) => r.querySelector("td[data-l='Rank']")?.textContent)).toEqual(["1", "2", "3"]);
-    expect(rows.map((r) => r.querySelector("td[data-l='Kind']")?.textContent)).toEqual(["▲Incident", "◆Operation", "◈Approval"].map((t) => expect.stringContaining(t.slice(1))));
-    expect(rows[0]!.querySelector("td[data-l='What']")?.textContent).toContain("Broker sync diverged");
-    expect(rows[0]!.querySelector("td[data-l='SLA']")?.textContent).toContain("Overdue (since 2026-08-22 11:58:00 UTC)");
-    const href = (r: HTMLElement) => r.querySelector("td[data-l='Open'] a")?.getAttribute("href");
+    const list = within(panel("Needs attention")).getByRole("list", { name: "Ranked triage list" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows.map((r) => r.querySelector(".exec-ov-item-rank")?.textContent)).toEqual(["1", "2", "3"]);
+    expect(rows.map((r) => r.querySelector(".exec-flag")?.textContent)).toEqual([expect.stringContaining("Incident"), expect.stringContaining("Operation"), expect.stringContaining("Approval")]);
+    expect(rows[0]!.querySelector(".exec-ov-what-title")?.textContent).toContain("Broker sync diverged");
+    // One short SLA line in the third-width panel; the full instant is one hover away.
+    expect(rows[0]!.querySelector(".exec-ov-item-sla")?.textContent).toContain("Overdue since 22 Aug 11:58Z");
+    expect(rows[0]!.querySelector(".exec-ov-item-sla")?.getAttribute("title")).toContain("Overdue (since 2026-08-22 11:58:00 UTC)");
+    const href = (r: HTMLElement) => r.querySelector("a")?.getAttribute("href");
     expect(href(rows[0]!)).toBe("/execution/operations/incidents/inc_44");
     expect(href(rows[1]!)).toBe("/execution/operations?operation=op_1251");
     expect(href(rows[2]!)).toBe("/governance/approvals/AP-352/r2");
+    expect(rows.map((r) => r.querySelector("a")?.textContent)).toEqual(["Investigate", "Verify", "Review"]);
     expect(panel("Needs attention").textContent).toContain("rest are ranked behind these");
   });
 
@@ -260,8 +263,8 @@ describe("scale", () => {
     });
     mount({}, big);
     await loaded();
-    const list = within(panel("Needs attention")).getByRole("table", { name: "Ranked triage list" });
-    expect(within(list).getAllByRole("row").slice(1)).toHaveLength(200);
+    const list = within(panel("Needs attention")).getByRole("list", { name: "Ranked triage list" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(200);
   });
 });
 

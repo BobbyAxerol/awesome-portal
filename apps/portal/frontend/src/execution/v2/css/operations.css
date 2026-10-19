@@ -41,34 +41,8 @@
   border: 1px solid var(--line-strong);
 }
 
-/* ---- KPI strip ---------------------------------------------------------- */
-
-.exec-ops-kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--space-3);
-  margin: 0;
-}
-.exec-ops-kpi {
-  padding: var(--space-3) var(--space-4);
-  color: var(--ink);
-  background: var(--paper-raised);
-  border: 1px solid var(--line);
-}
-.exec-ops-kpi dt {
-  font: var(--exec-font-th);
-  color: var(--ink-soft);
-}
-.exec-ops-kpi dd {
-  margin: 0;
-}
-.exec-ops-kpi-value {
-  font: var(--exec-font-kpi);
-  font-variant-numeric: tabular-nums;
-}
-.exec-ops-kpi-note {
-  font: var(--exec-font-caption);
-  color: var(--ink-soft);
+.exec-ops-time {
+  font: var(--exec-font-id);
 }
 
 /* ---- panels and Not published ------------------------------------------ */
@@ -208,17 +182,18 @@
 }
 .exec-ops-tab {
   padding: var(--space-2) var(--space-4);
-  font: var(--exec-font-control);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink-soft);
-  background: var(--paper);
-  border: 1px solid transparent;
-  border-bottom: 0;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
   cursor: pointer;
 }
 .exec-ops-tab[aria-selected="true"] {
   color: var(--ink);
-  background: var(--paper-raised);
-  border-color: var(--line-strong);
+  border-bottom-color: var(--accent);
 }
 
 /* ---- queue layout ------------------------------------------------------- */
@@ -309,10 +284,14 @@
   color: var(--ink);
 }
 
+.exec-dock-priority .exec-ops-section {
+  margin-top: 0;
+}
+
 .exec-ops-rail {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: 0;
   margin: 0 0 var(--space-3);
   padding: 0;
   list-style: none;
@@ -322,7 +301,10 @@
   padding: var(--space-1) var(--space-3);
   color: var(--ink-soft);
   background: var(--paper);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line);
+}
+.exec-ops-rail li + li {
+  margin-left: -1px;
 }
 .exec-ops-rail li[data-step="done"] {
   color: var(--ink);
@@ -345,8 +327,5 @@
 @media (max-width: 660px) {
   .exec-ops-lay[data-dock="true"] {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .exec-ops-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

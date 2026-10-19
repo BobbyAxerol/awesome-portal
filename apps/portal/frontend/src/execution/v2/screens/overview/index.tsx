@@ -73,7 +73,7 @@ export interface OverviewScreenProps {
 function Gap({ ids, children }: { ids: string; children?: string }) {
   return (
     <span className="exec-blk-np">
-      <span className="exec-blk-np-word">Not published</span> ({ids}){children ? <> {children}</> : null}
+      <span className="exec-blk-np-word">Not published</span> (<span className="exec-ov-nowrap">{ids}</span>){children ? <> {children}</> : null}
     </span>
   );
 }
@@ -172,27 +172,6 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   const today = todayRows(snapshot?.today ?? null);
   const ctx = (href: string) => withContext(canonicalHref(href) ?? href, params);
 
-  const triageColumns: readonly CardsColumn<ReturnType<typeof triageRows>[number]>[] = [
-    { key: "rank", label: "Rank", numeric: true, render: (r) => (r.rank === null ? "Not ranked" : String(r.rank)) },
-    { key: "kind", label: "Kind", render: (r) => (r.kind ? <Flag kind={KIND_FLAG[r.kind].kind} label={KIND_FLAG[r.kind].label} size="sm" /> : <Flag kind="unknown" label="Kind not stated" size="sm" />) },
-    {
-      key: "what",
-      label: "What",
-      render: (r) => (
-        <span className="exec-ov-what">
-          <span className="exec-ov-what-title">{r.title}</span>
-          {r.summary ? <span className="exec-ov-sub">{r.summary}</span> : null}
-        </span>
-      ),
-    },
-    { key: "sla", label: "SLA", render: (r) => <span className="exec-ov-sub">{r.sla}{r.age ? `, age ${r.age}` : ""}</span> },
-    {
-      key: "go",
-      label: "Open",
-      render: (r) => (r.href ? <Link className="exec-ov-link" to={ctx(r.href)}>{r.actionLabel}</Link> : <span className="exec-ov-na" title="The owning screen for this item was not published">No link published</span>),
-    },
-  ];
-
   const ownColumns: readonly CardsColumn<OwnRow>[] = [
     { key: "alpha", label: "Alpha", render: (r) => <span className="exec-ov-what"><span className="exec-ov-what-title">{r.label}</span><span className="exec-ov-sub">{r.version}</span></span> },
     { key: "stage", label: "Stage", render: (r) => r.stages.map((s) => humanize(s)).join(", ") },
@@ -235,6 +214,9 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
       ) : null}
 
       {stale ? <div className="exec-ov-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span>The last refresh failed ({stale}). These are the values from the last good read.</span></div> : null}
+      {fundWide && composition && composition.sourceHealth.profiles.some((p) => (p.state ?? "").toUpperCase() !== "AVAILABLE") ? (
+        <div className="exec-ov-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span>Some sources are partial; figures may be incomplete. See Source health below.</span></div>
+      ) : null}
       {snapshot && snapshot.warnings.length > 0 ? (
         <ul className="exec-ov-warnings" role="status">
           {snapshot.warnings.map((w) => <li key={w.code}><b>{w.code}</b> {w.message}</li>)}
@@ -248,7 +230,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
             <Cell label="Net PnL" note="Windowed"><Gap ids={FE_MONEY} /></Cell>
             <Cell label="Return" note="Windowed"><Gap ids={FE_MONEY} /></Cell>
             <Cell label="Drawdown" note="Needs a NAV series"><Gap ids={FE_MONEY} /></Cell>
-            <Cell label="Open incidents" note="Incidents in the ranked list">
+            <Cell label="Open incidents" note={<>Incidents in the ranked list, <Link className="exec-ov-link" to={ctx("/execution/operations")}>Operations</Link></>}>
               {incidents.value === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{incidents.atLeast ? (incidents.value === 0 ? "None seen" : `at least ${incidents.value}`) : incidents.value}</span>}
             </Cell>
             <Cell
@@ -265,7 +247,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
                 label="Fund performance"
                 points={[]}
                 state={{ kind: "unavailable", copy: `Not published (${FE_MONEY})`, reason: "No fund-level series is published, and none is drawn from client arithmetic." }}
-                height={180}
+                height={240}
               />
             </SectionPanel>
             <SectionPanel title="Capital" aside="Real-funded">
@@ -316,7 +298,22 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
             ) : (
               <>
                 {needs.state === "partial" || needs.state === "stale" ? <p className="exec-ov-banner" role="status"><Flag kind={needs.state === "stale" ? "stale" : "partial"} label={needs.state === "stale" ? "Stale" : "Partial"} size="sm" /> Some triage sources did not answer; the list may be missing items.</p> : null}
-                <CardsTable columns={triageColumns} rows={triage} rowKey={(r) => r.id} label="Ranked triage list" />
+                <ol className="exec-ov-items" aria-label="Ranked triage list">
+                  {triage.map((r) => (
+                    <li key={r.id} className="exec-ov-item" data-sla={r.slaState ?? undefined}>
+                      <div className="exec-ov-item-t">
+                        <span className="exec-ov-item-what">
+                          <span className="exec-ov-item-rank" title={r.rank === null ? "Not ranked" : `Rank ${r.rank}`}>{r.rank === null ? "Not ranked" : r.rank}</span>
+                          {r.kind ? <Flag kind={KIND_FLAG[r.kind].kind} label={KIND_FLAG[r.kind].label} size="sm" /> : <Flag kind="unknown" label="Kind not stated" size="sm" />}
+                          <span className="exec-ov-what-title">{r.title}</span>
+                        </span>
+                        {r.href ? <Link className="exec-ov-link" to={ctx(r.href)}>{r.actionLabel}</Link> : <span className="exec-ov-na" title="The owning screen for this item was not published">No link published</span>}
+                      </div>
+                      {r.summary ? <div className="exec-ov-sub">{r.summary}</div> : null}
+                      <div className="exec-ov-sub exec-ov-item-sla" title={r.sla}>{r.slaShort}</div>
+                    </li>
+                  ))}
+                </ol>
                 {needs.counts.truncated !== false ? <p className="exec-ov-note">{attention.text ?? "More"} in total; the rest are ranked behind these and open in Operations.</p> : null}
               </>
             )}

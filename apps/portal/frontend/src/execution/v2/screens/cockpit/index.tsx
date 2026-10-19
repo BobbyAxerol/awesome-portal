@@ -71,6 +71,9 @@ export interface CockpitProps {
 }
 
 export const PAGE_SIZE = 50;
+/** The three panes sit side by side above 1100px; cockpit.css stacks them at 1100px and below. */
+const AUTO_SELECT_QUERY = "(min-width: 1101px)";
+const STACKED_QUERY = "(max-width: 1100px)";
 /** Rows kept in memory across pages; the queue shows at most `MAX_QUEUE_DOM` of them. */
 export const MAX_LOADED_ROWS = 150;
 
@@ -413,7 +416,31 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
     return () => document.removeEventListener("keydown", onKey);
   }, [urlSet, onClearPathSelection]);
 
-  const select = useCallback((key: string) => urlSet({ sel: key }), [urlSet]);
+  // Stacked, the evidence sits below the whole queue: bring it into view when a request is picked.
+  const select = useCallback(
+    (key: string) => {
+      urlSet({ sel: key });
+      if (typeof window.matchMedia === "function" && window.matchMedia(STACKED_QUERY).matches) {
+        requestAnimationFrame(() => document.querySelector(".exec-ck-main")?.scrollIntoView?.({ block: "start" }));
+      }
+    },
+    [urlSet],
+  );
+
+  // First load on a wide screen opens the request that most needs the reader, so the evidence and the decision
+  // rail are not an empty page (HIFI selects one). Once per mount: Esc still clears, and a link's `sel` wins.
+  // At 1100px and below the panes stack, so an unasked-for selection would push the queue away: nothing is chosen there.
+  const firstLoadDone = useRef(false);
+  const settled = lane === "waiver" ? waivers.status === "ready" || waivers.status === "failed" : inbox.status === "ready" || inbox.status === "failed";
+  useEffect(() => {
+    if (firstLoadDone.current || !settled) return;
+    firstLoadDone.current = true;
+    if (selectedKey !== null || items.length === 0) return;
+    const wide = typeof window.matchMedia === "function" ? window.matchMedia(AUTO_SELECT_QUERY).matches : true;
+    if (!wide) return;
+    const first = items.find((item) => item.kind === "gate" && item.row.needsYou === true) ?? items[0]!;
+    urlSet({ sel: first.key }, { replace: true });
+  }, [settled, selectedKey, items, urlSet]);
 
   const total = inbox.filteredCount ?? inbox.totalCount;
   const footer =
@@ -436,7 +463,7 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
           <CountLine counts={inbox.counts} status={inbox.status} />
         </div>
       </div>
-      <p className="exec-ck-banner" role="note">Preview build. Decisions are shown here, not recorded. {PREVIEW_REASON}.</p>
+      <p className="exec-ck-banner" role="note">Preview build. Decisions are shown here, not recorded.</p>
 
       <div className="exec-ck">
         <Queue

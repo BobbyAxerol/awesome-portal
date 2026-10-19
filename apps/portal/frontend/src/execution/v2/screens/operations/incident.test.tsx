@@ -156,6 +156,11 @@ describe("root content", () => {
       "Not published (FE-031) Timeline.ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED",
       "Not published (FE-030) Assignee.ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED",
     ]);
+    // The block rides the Drawer's priority slot, so it sits above the long facts table.
+    const priority = drawer.querySelector(".exec-dock-priority") as HTMLElement;
+    expect(priority.textContent).toContain("Not published (FE-031) Evidence.");
+    const facts = drawer.querySelector(".exec-ops-facts") as HTMLElement;
+    expect(priority.compareDocumentPosition(facts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // No timeline is drawn from nothing: no list of events, no gate verdicts.
     expect(drawer.textContent).not.toMatch(/gates are not met|0 references|2 events/);
     expect(drawer.textContent).not.toMatch(/[—–]/);

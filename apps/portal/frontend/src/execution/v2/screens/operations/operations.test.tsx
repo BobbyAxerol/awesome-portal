@@ -73,11 +73,11 @@ describe("loaded queue", () => {
     const { api } = fakeApi();
     mount(api);
     await table();
-    const kpis = document.querySelector(".exec-ops-kpis") as HTMLElement;
-    expect(within(kpis).getByText("In scope").nextElementSibling?.textContent).toBe("12");
-    expect(within(kpis).getByText("Matching").nextElementSibling?.textContent).toBe("8");
-    expect(within(kpis).getByText("Loaded").nextElementSibling?.textContent).toBe("8");
-    expect(within(kpis).getByText("Read").nextElementSibling?.textContent).toBe("Available");
+    const kpis = document.querySelector(".exec-blk-kpis") as HTMLElement;
+    expect(within(kpis).getByText("In scope").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("12");
+    expect(within(kpis).getByText("Matching").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("8");
+    expect(within(kpis).getByText("Loaded").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("8");
+    expect(within(kpis).getByText("Read").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("Available");
     expect(screen.getByText(/8 of 8 matching · 12 in scope/)).toBeTruthy();
     expect(screen.getByText("End of the list.")).toBeTruthy();
   });
@@ -98,9 +98,11 @@ describe("loaded queue", () => {
     expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Receipt", "Next"]);
     const row = within(t).getByText(/Account acc_TEST_ONLY_operational/).closest("tr") as HTMLElement;
     expect(within(row).getByText("22 Aug 12:00Z")).toBeTruthy();
-    expect(within(row).getByText(/account\/sync · Paper · Warning/)).toBeTruthy();
+    expect(within(row).getByText(/Sync · Paper · Warning/)).toBeTruthy();
     expect(within(row).getByText("Blocked, not sent")).toBeTruthy();
-    expect(within(row).getByText("Unacknowledged")).toBeTruthy();
+    // Next is an action, not a repeat of the lens: the default lens is all UNACKNOWLEDGED.
+    expect(within(row).queryByText("Unacknowledged")).toBeNull();
+    expect(within(row).getByRole("button", { name: "Review" })).toBeTruthy();
   });
 
   it("prints no dash, no N/A, and says Not published with the request ids", async () => {
@@ -219,9 +221,13 @@ describe("unknown outcome is never success", () => {
     const row = within(t).getByText(/Portfolio pf_TEST_ONLY_canary/).closest("tr") as HTMLElement;
     expect(flags(row)).toContainEqual({ kind: "unknown", text: expect.stringContaining("Unknown outcome") });
     expect(flags(row).some((f) => f.kind === "ok")).toBe(false);
-    expect(within(row).getByText("Check the original request")).toBeTruthy();
-    fireEvent.click(within(row).getByText(/Portfolio pf_TEST_ONLY_canary/));
+    expect(within(row).queryByText("Unacknowledged")).toBeNull();
+    // The one safe call to action for an unknown outcome is a control, and it opens the dock.
+    fireEvent.click(within(row).getByRole("button", { name: "Check original request" }));
     const dock = await screen.findByRole("complementary");
+    const sendAgain = within(dock).getByRole("button", { name: "Send again" }) as HTMLButtonElement;
+    expect(sendAgain.disabled).toBe(true);
+    expect(document.getElementById(sendAgain.getAttribute("aria-describedby")!)?.textContent).toBe("Blocked until the outcome is known.");
     expect(within(dock).getByText("Outcome unknown. Check the original request. Do not send it again.")).toBeTruthy();
   });
 
@@ -420,8 +426,8 @@ describe("states", () => {
     fireEvent.change(screen.getByLabelText("Environment"), { target: { value: "sandbox" } });
     expect(await screen.findByText("Nothing matched these filters.")).toBeTruthy();
     expect(screen.getByText(/0 of 0 matching · 12 in scope/)).toBeTruthy();
-    const kpis = document.querySelector(".exec-ops-kpis") as HTMLElement;
-    expect(within(kpis).getByText("Read").nextElementSibling?.textContent).toBe("Empty");
+    const kpis = document.querySelector(".exec-blk-kpis") as HTMLElement;
+    expect(within(kpis).getByText("Read").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("Empty");
   });
 
   it("a failed refresh keeps the last rows and marks them stale", async () => {

@@ -60,6 +60,8 @@ export interface TriageView {
   severity: string | null;
   /** "Overdue since 2026-08-22 11:58:00 UTC" / "On track". Server words and times; no ticking clock. */
   sla: string;
+  /** One line for a narrow list: "Overdue since 22 Aug 11:58Z, age 10 min". The full instant stays in `sla`. */
+  slaShort: string;
   slaState: string | null;
   rank: number | null;
   href: string | null;
@@ -74,12 +76,25 @@ export function ageLabel(seconds: number | null): string | null {
   return `${Math.round(seconds / 86400)} d`;
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
+/** "22 Aug 11:58Z" from a UTC ISO instant; anything else is printed as the server sent it. */
+function shortInstant(iso: string): string {
+  const m = /^\d{4}-(\d{2})-(\d{2})T(\d{2}:\d{2})/.exec(iso.trim());
+  const month = m ? MONTHS[Number(m[1]) - 1] : undefined;
+  return m && month ? `${Number(m[2])} ${month} ${m[3]}Z` : iso;
+}
+
 export function triageRows(panel: NeedsYouPanel | null, stamp: (iso: string) => string): TriageView[] {
   if (panel === null) return [];
   // Order is the server's. See commandCenter.ts, rule 1.
   return panel.items.slice(0, ROW_CAP).map((item: TriageItem) => {
     const word = item.slaState ? SLA_WORD[item.slaState] ?? humanize(item.slaState) : "No deadline published";
     const due = item.slaDueAt ? ` (${item.slaState === "OVERDUE" ? "since" : "due"} ${stamp(item.slaDueAt)})` : "";
+    const shortDue = item.slaDueAt
+      ? item.slaState === "OVERDUE" ? ` since ${shortInstant(item.slaDueAt)}` : item.slaState === "DUE_SOON" ? `, by ${shortInstant(item.slaDueAt)}` : `, due ${shortInstant(item.slaDueAt)}`
+      : "";
+    const age = ageLabel(item.ageSeconds);
     return {
       id: item.id,
       kind: item.kind,
@@ -87,11 +102,12 @@ export function triageRows(panel: NeedsYouPanel | null, stamp: (iso: string) => 
       summary: item.summary,
       severity: item.severity,
       sla: `${word}${due}`,
+      slaShort: `${word}${shortDue}${age ? `, age ${age}` : ""}`,
       slaState: item.slaState,
       rank: item.rank,
       href: item.href,
       actionLabel: item.actionLabel ?? "Open",
-      age: ageLabel(item.ageSeconds),
+      age,
     };
   });
 }
