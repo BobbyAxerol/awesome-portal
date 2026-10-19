@@ -1088,7 +1088,7 @@ describe("delivery policy — independent flags gate governance and commands", (
   });
 });
 
-describe("registry revision 6 — parsed against the registry actually shipped", () => {
+describe("registry revision 7 — parsed against the registry actually shipped", () => {
   // A contract test across the FE/BE boundary rather than against a fixture of
   // our own making. It is the thing that notices the day the field moves, is
   // renamed, or grows a value this build does not know.
@@ -1111,7 +1111,8 @@ describe("registry revision 6 — parsed against the registry actually shipped",
   });
 
   it("parses every policy and enables only the commissioned Portal governance write", () => {
-    expect(registry.revision).toBe(6);
+    // Revision 7 (Codex e19ad906) adds one thing to revision 6: `scoped_v2_replacement` on the APPROVALS navigation (pinned below).
+    expect(registry.revision).toBe(7);
     // Not `continue`. A policy this build cannot parse used to skip the check
     // silently, so the loop passed loudest exactly when it understood least —
     // a registry that switched a command on in a shape we could not read would
@@ -1156,6 +1157,15 @@ describe("registry revision 6 — parsed against the registry actually shipped",
         shadow.has(id) ? "shadow" : "fixture",
       );
     }
+  });
+
+  it("publishes revision 7's one addition: the V1 APPROVALS navigation names its SCOPED_V2 replacement, a feature that exists", () => {
+    const features = (registry as unknown as { features: { id: string; navigation: Record<string, unknown> }[] }).features;
+    const withReplacement = features.filter((feature) => "scoped_v2_replacement" in feature.navigation);
+    // Exactly one feature carries it today, and it is the V1 approvals entry.
+    expect(withReplacement.map((feature) => feature.id)).toEqual(["APPROVALS"]);
+    expect(withReplacement[0]!.navigation.scoped_v2_replacement).toEqual({ read_mode: "SCOPED_V2", feature_id: "EXECUTION_APPROVALS" });
+    expect(features.some((feature) => feature.id === "EXECUTION_APPROVALS")).toBe(true);
   });
 
   it("keeps SSE dark and enables only the exact BR-EX-72 read/projection policies", () => {

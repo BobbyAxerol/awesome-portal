@@ -1,11 +1,14 @@
 /**
  * Reader conformance for `governanceParents.ts` (Rules 9.8.3, tiers L0 to L3).
  *
- * L0  the 19 parent bodies of `execution-positive-parent.synthetic.valid.json`
- *     (R2, Paper Exit, Sandbox, Canary, Live, and the operation parents), read
- *     verbatim from disk, schema-checked, read by their own reader and by the
- *     generic router, and proved unchanged by the suite. The two compositions
- *     in the same file are not parents and are never read as one.
+ * L0  the 25 parent bodies of `execution-positive-parent.synthetic.valid.json`
+ *     (R2, Paper Exit, Sandbox, Canary, Live, and the operation parents; six of
+ *     them added by Codex e19ad906: `paper_exit_criteria`, `r2_followthrough`,
+ *     `r2_followthrough_hashes_absent`, `paper_exit_followthrough`,
+ *     `r2_recorded`, `paper_exit_recorded`), read verbatim from disk,
+ *     schema-checked, read by their own reader and by the generic router, and
+ *     proved unchanged by the suite. The three compositions in the same file
+ *     are not parents and are never read as one.
  * L1  state matrices; the oracle is the reader's stated contract (header of
  *     governanceParents.ts) with the published schema beside it:
  *       A  approval: status x decision clock x update clock x quorum x evidence
@@ -13,12 +16,22 @@
  *       C  Sandbox: workflow state x clocks; step recording and order
  *       D  Canary: revision x predecessor x proposed cap spelling
  *       E  operation: family x status x applied clock x captured parent x decision
+ *       F  recorded activity: kind x row count x has_more x version step x clock order x ids
+ *       G  R2 recorded verdicts: outcome x blocking x ordinal order x reference x has_more
+ *       H  Paper Exit criterion: key x label x observed spelling x source clock
+ *       I  actors: decider x viewer flags
+ *       J  R2 decision inputs: workspace x approval x version x hash order and count
+ *     The vocabularies of A and B (and every enum of F to J) are read from the
+ *     published schema, not from the reader's constants; a test pins that the
+ *     two are the same list.
  *     Each maps to the documented UI state: an APPROVED / EXPIRED word passes
  *     through unchanged, an optional section is an AVAILABLE body or a typed
  *     absence (never an empty list), a cap is exact and never zero, and
  *     `APPLIED` exists only with its clock.
- * L2  the schema bounds (4 panels, 256 findings) and 200-finding reads. These are single-object reads, not paged; the finding
- *     bound is what keeps them finite.
+ * L2  the schema bounds (4 panels, 256 findings, 256 criteria, 32 recorded
+ *     decisions, 64 recorded verdicts, 128 evidence hashes) and 200-finding
+ *     reads. These are single-object reads, not paged; the bounds are what keep
+ *     them finite.
  * L3  generated negatives for every body: enum, integer, string, decimal, array,
  *     required (every key path), schema swap, pollution and bad roots. Every
  *     case is refused or accepted only where the published schema also accepts
@@ -26,7 +39,7 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 
-import { canonicalDigest, loadCanonical } from "../testkit/loadCanonical";
+import { canonicalDigest, loadCanonical, schemaEnum } from "../testkit/loadCanonical";
 import { ABSENT, cartesian, coverage, describeCoverage, dimension, dimensionOf, getPath, setPath, type Draft } from "../testkit/matrix";
 import {
   arrayCases, decimalCases, enumCases, integerCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases, stringCases,
@@ -41,8 +54,10 @@ import {
   GOVERNANCE_PARENT_OPERATION_V2_SCHEMA,
   GOVERNANCE_PARENT_V2_SCHEMA,
   LIVE_PARENT_V2_SCHEMA,
+  LATEST_OPERATION_ABSENCES,
   PANEL_KINDS_V2,
   PANEL_STATES_V2,
+  PAPER_EXIT_LABEL_KEYS,
   PARENT_V2_SCHEMAS,
   REVIEW_STATES_V2,
   readCanaryParentV2,
@@ -71,11 +86,29 @@ const canonical = loadCanonical<Draft>(FILE);
 const clone = <T,>(value: T): T => structuredClone(value);
 const violations = (def: string, value: unknown) => validateAgainst(SCHEMA, `/$defs/${def}`, value);
 
+/** The vocabularies as the published schema states them (pointers into execution-operations.v1). */
+const R2 = "/$defs/R2ParentReadV2/properties";
+const EXIT = "/$defs/PaperExitParentReadV2/properties";
+const CRITERION = `${EXIT}/criteria/oneOf/0/properties/items/items/properties`;
+const VOCAB = {
+  approvalStatus: schemaEnum(SCHEMA, `${R2}/approval/properties/status`),
+  reviewState: schemaEnum(SCHEMA, `${EXIT}/review/properties/review_state`),
+  panelKind: schemaEnum(SCHEMA, `${EXIT}/evaluation/oneOf/0/properties/panels/items/properties/panel_kind`),
+  panelState: schemaEnum(SCHEMA, `${EXIT}/evaluation/oneOf/0/properties/panels/items/properties/panel_state`),
+  findingOutcome: schemaEnum(SCHEMA, `${EXIT}/evaluation/oneOf/0/properties/findings/items/properties/outcome`),
+  operationStatus: schemaEnum(SCHEMA, `${R2}/latest_operation/oneOf/0/properties/stored_status`),
+  r2Decision: schemaEnum(SCHEMA, `${R2}/recorded_activity/oneOf/0/properties/items/items/properties/decision`),
+  exitDecision: schemaEnum(SCHEMA, `${EXIT}/recorded_activity/oneOf/0/properties/items/items/properties/decision`),
+  verdictOutcome: schemaEnum(SCHEMA, `${R2}/recorded_verdicts/oneOf/0/properties/items/items/properties/outcome`),
+  criterionKey: schemaEnum(SCHEMA, `${CRITERION}/criterion_key/oneOf/0/properties/value`),
+  criterionLabel: schemaEnum(SCHEMA, `${CRITERION}/label_key/oneOf/0/properties/value`),
+};
+
 type Reader = (raw: unknown) => unknown;
 interface Body { key: string; def: string; read: Reader; family: string }
 const BODIES: Body[] = [
-  ...["r2", "r2_absent"].map((key) => ({ key, def: "R2ParentReadV2", read: readR2ParentV2 as Reader, family: "R2" })),
-  ...["paper_exit", "paper_exit_absent", "paper_exit_extended"].map((key) => ({ key, def: "PaperExitParentReadV2", read: readPaperExitParentV2 as Reader, family: "PAPER_EXIT" })),
+  ...["r2", "r2_absent", "r2_followthrough", "r2_followthrough_hashes_absent", "r2_recorded"].map((key) => ({ key, def: "R2ParentReadV2", read: readR2ParentV2 as Reader, family: "R2" })),
+  ...["paper_exit", "paper_exit_absent", "paper_exit_extended", "paper_exit_criteria", "paper_exit_followthrough", "paper_exit_recorded"].map((key) => ({ key, def: "PaperExitParentReadV2", read: readPaperExitParentV2 as Reader, family: "PAPER_EXIT" })),
   ...["r2_operation", "r2_operation_uncaptured", "r2_operation_applied", "r2_operation_expired"].map((key) => ({ key, def: "R2ParentOperationReadV2", read: readOperationParentV2 as Reader, family: "R2" })),
   ...["paper_exit_operation", "paper_exit_operation_applied", "paper_exit_operation_expired"].map((key) => ({ key, def: "PaperExitParentOperationReadV2", read: readOperationParentV2 as Reader, family: "PAPER_EXIT" })),
   ...["sandbox", "sandbox_absent", "sandbox_draft"].map((key) => ({ key, def: "SandboxParentReadV2", read: readSandboxParentV2 as Reader, family: "SANDBOX" })),
@@ -86,11 +119,14 @@ const bodyOf = (key: string): Draft => canonical[key];
 
 /* ═════════════════════════ L0 ═════════════════════════ */
 describe("L0 · canonical, verbatim", () => {
-  it("the file is the synthetic unqualified lane with the 19 parent bodies and 2 compositions this suite covers", () => {
+  it("the file is the synthetic unqualified lane with the 25 parent bodies and 3 compositions this suite covers", () => {
     expect(canonical.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
     expect(canonical.runtime_qualified).toBe(false);
     expect(canonical.authority_installed).toBe(false);
-    expect(BODIES).toHaveLength(19);
+    expect(BODIES).toHaveLength(25);
+    // Every object in the file is a covered body or a composition: a body Codex adds later fails here, not silently.
+    const objects = Object.keys(canonical).filter((key) => typeof canonical[key] === "object");
+    expect(objects.filter((key) => !BODIES.some((b) => b.key === key)).sort()).toEqual(["live_composition", "paper_exit_composition", "r2_composition"]);
     for (const { key } of BODIES) expect(canonical[key], key).toBeTypeOf("object");
   });
 
@@ -112,7 +148,7 @@ describe("L0 · canonical, verbatim", () => {
     for (const fe of Object.values(own.notPublished as Record<string, string>)) expect(fe).toMatch(/^FE-\d{3}$/);
   });
 
-  it("the two compositions are not parents: no reader reads them, and the router answers null", () => {
+  it("the three compositions are not parents: no reader reads them, and the router answers null", () => {
     for (const key of ["r2_composition", "paper_exit_composition", "live_composition"]) {
       const body = canonical[key];
       if (body === undefined) continue;
@@ -184,6 +220,56 @@ describe("L0 · canonical, verbatim", () => {
     expect(live.header.source.runtimeActivationRequested).toBe(false);
   });
 
+  it("the reader's vocabularies are the schema's, word for word, in the schema's order", () => {
+    expect([...APPROVAL_STATUSES_V2]).toEqual([...VOCAB.approvalStatus]);
+    expect([...REVIEW_STATES_V2]).toEqual([...VOCAB.reviewState]);
+    expect([...PANEL_KINDS_V2]).toEqual([...VOCAB.panelKind]);
+    expect([...PANEL_STATES_V2]).toEqual([...VOCAB.panelState]);
+    expect([...FINDING_OUTCOMES_V2]).toEqual([...VOCAB.findingOutcome]);
+    expect([...VOCAB.operationStatus]).toEqual(["PLANNED", "APPLIED", "EXPIRED"]);
+    expect([...VOCAB.r2Decision]).toEqual(["APPROVE", "APPROVE_WITH_CONDITION", "DENY"]);
+    expect([...VOCAB.exitDecision]).toEqual(["PROMOTE", "EXTEND_OBSERVATION", "REJECT"]);
+    expect([...VOCAB.verdictOutcome]).toEqual([...VOCAB.findingOutcome]);
+    expect(Object.keys(PAPER_EXIT_LABEL_KEYS)).toEqual([...VOCAB.criterionKey]);
+    expect(Object.values(PAPER_EXIT_LABEL_KEYS)).toEqual([...VOCAB.criterionLabel]);
+    expect([...LATEST_OPERATION_ABSENCES]).toEqual(["PARENT_FIELD_PURPOSE_NOT_QUALIFIED", ...schemaEnum(SCHEMA, `${R2}/latest_operation/oneOf/2/properties/reason_code`)]);
+  });
+
+  it("e19ad906 sections: each one is AVAILABLE or the typed absence exactly as the wire says, on every body that carries it", () => {
+    const sections: [string, string][] = [
+      ["actors", "actors"], ["latest_operation", "latestOperation"], ["decision_context", "decisionContext"],
+      ["recorded_activity", "recordedActivity"], ["recorded_verdicts", "recordedVerdicts"], ["criteria", "criteria"],
+    ];
+    let seen = 0;
+    for (const { key, read } of BODIES.filter((b) => b.family === "R2" || b.family === "PAPER_EXIT")) {
+      if (key.includes("_operation")) continue;
+      const body = bodyOf(key);
+      const own = read(body) as Draft;
+      for (const [wire, camel] of sections) {
+        if (body[wire] === undefined) {
+          expect(own, `${key}.${camel}`).not.toHaveProperty(camel);
+          continue;
+        }
+        seen += 1;
+        expect(own[camel].availability, `${key}.${camel}`).toBe(body[wire].availability);
+        if (body[wire].availability === "NOT_PUBLISHED") expect(own[camel].reasonCode, `${key}.${camel}`).toBe(body[wire].reason_code);
+      }
+    }
+    // R2 bodies carry 5 sections, Paper Exit bodies 4: 5 R2 + 6 Paper Exit.
+    expect(seen).toBe(5 * 5 + 4 * 6);
+  });
+
+  it("e19ad906: the source reference of a recorded verdict is the approval's, and of a criterion is the review's, in every body", () => {
+    for (const key of ["r2_recorded"]) {
+      const read = readR2ParentV2(bodyOf(key))!;
+      if (read.recordedVerdicts.availability !== "AVAILABLE") throw new Error("absent");
+      for (const verdict of read.recordedVerdicts.items) expect(verdict.sourceRef.approvalId).toBe(read.approval.approvalId);
+    }
+    const exit = readPaperExitParentV2(bodyOf("paper_exit_criteria"))!;
+    if (exit.criteria.availability !== "AVAILABLE") throw new Error("absent");
+    for (const item of exit.criteria.items) expect(item.sourceRef.reviewId).toBe(exit.review.reviewId);
+  });
+
   it("the router's schema list is the four families, and every body's version is on it", () => {
     expect([...PARENT_V2_SCHEMAS]).toEqual([GOVERNANCE_PARENT_V2_SCHEMA, GOVERNANCE_PARENT_OPERATION_V2_SCHEMA, FOLLOWING_PARENT_V2_SCHEMA, LIVE_PARENT_V2_SCHEMA]);
     for (const { key } of BODIES) expect(PARENT_V2_SCHEMAS).toContain(bodyOf(key).schema_version);
@@ -194,7 +280,7 @@ describe("L0 · canonical, verbatim", () => {
 describe("L1 · matrix A · approval: status x decision clock x update clock x quorum x evidence", () => {
   const C = bodyOf("r2").approval.created_at_ms as number;
   const DIMS = [
-    dimension("status", ["approval", "status"], [...APPROVAL_STATUSES_V2]),
+    dimension("status", ["approval", "status"], [...VOCAB.approvalStatus]),
     dimensionOf("decided_at", [
       { label: "null", apply: (d: Draft) => { d.approval.decided_at_ms = null; } },
       { label: "after-created", apply: (d: Draft) => { d.approval.decided_at_ms = C + 1000; } },
@@ -217,7 +303,7 @@ describe("L1 · matrix A · approval: status x decision clock x update clock x q
     const looser = states.filter((s) => readR2ParentV2(s.value) !== null && violations("R2ParentReadV2", s.value).length > 0);
     console.info(describeCoverage("governanceParents A (approval) cartesian", cover));
     console.info(`governanceParents A: reader accepts ${states.filter((s) => readR2ParentV2(s.value) !== null).length}, schema accepts ${states.filter((s) => violations("R2ParentReadV2", s.value).length === 0).length}; ${looser.length} accepted by the reader that the schema refuses`);
-    expect(states).toHaveLength(6 * 3 * 2 * 5 * 2);
+    expect(states).toHaveLength(VOCAB.approvalStatus.length * 3 * 2 * 5 * 2);
     expect(looser).toEqual([]);
   });
 
@@ -242,7 +328,7 @@ describe("L1 · matrix B · Paper Exit: review state x extension x sections; pan
   const base = bodyOf("paper_exit");
   const absent = { availability: "NOT_PUBLISHED", reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" };
   const DIMS = [
-    dimension("review_state", ["review", "review_state"], [...REVIEW_STATES_V2]),
+    dimension("review_state", ["review", "review_state"], [...VOCAB.reviewState]),
     dimensionOf("extension", [
       { label: "none", apply: (d: Draft) => { d.review.extension_days = null; d.review.extended_until_ms = null; } },
       { label: "14d", apply: (d: Draft) => { d.review.extension_days = 14; d.review.extended_until_ms = 1792022400000; } },
@@ -258,9 +344,9 @@ describe("L1 · matrix B · Paper Exit: review state x extension x sections; pan
 
   it("prints the matrix size", () => {
     console.info(describeCoverage("governanceParents B (exit review) cartesian", coverage(DIMS, states)));
-    expect(states).toHaveLength(4 * 4 * 2 * 2);
-    // (EXTENDED + 14d) + (3 other states + no extension), each over the 2 x 2 section choices.
-    expect(states.filter((s) => accepts(s.picks))).toHaveLength((1 + 3) * 2 * 2);
+    expect(states).toHaveLength(VOCAB.reviewState.length * 4 * 2 * 2);
+    // (EXTENDED + 14d) + (the other states + no extension), each over the 2 x 2 section choices.
+    expect(states.filter((s) => accepts(s.picks))).toHaveLength(VOCAB.reviewState.length * 2 * 2);
   });
 
   it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
@@ -475,6 +561,281 @@ describe("L1 · matrix E · operation: family x status x applied clock x capture
   });
 });
 
+/**
+ * Matrices F to J (e19ad906). The oracle is the reader's contract plus the
+ * schema beside it, and each one states its split:
+ * - the reader is never LOOSER than the schema (`looser` is empty);
+ * - every state the reader refuses and the schema accepts is a relation the
+ *   schema descriptions give as "runtime additionally checks" (`runtimeOnly`),
+ *   which standard JSON Schema cannot compare; the matrix names which.
+ */
+const cleanSchema = (def: string, value: unknown) => violations(def, value).length === 0;
+
+describe("L1 · matrix F · recorded activity: kind x row count x has_more x version step x clock order x ids", () => {
+  const ROWS = (n: number, mutate: (row: Draft, i: number) => void): Draft[] => Array.from({ length: n }, (_, i) => {
+    const row: Draft = { decision_id: `decision_${i}`, operation_id: `op_${i}`, version_before: 1, version_after: 2, decided_at_ms: 1_790_812_800_000 - i * 1000, kind: "R2_DECISION_RECORDED", decision: "DENY" };
+    mutate(row, i);
+    return row;
+  });
+  const DIMS = [
+    dimensionOf("kind", [{ label: "own", apply: () => undefined }, { label: "other family's", apply: () => undefined }]),
+    dimensionOf("rows", [0, 1, 31, 32, 33].map((n) => ({ label: String(n), apply: () => undefined }))),
+    dimension("has_more", ["recorded_activity", "has_more"], [false, true]),
+    dimensionOf("step", [{ label: "+1", apply: () => undefined }, { label: "+0", apply: () => undefined }, { label: "+2", apply: () => undefined }]),
+    dimensionOf("clock", [{ label: "descending", apply: () => undefined }, { label: "equal", apply: () => undefined }, { label: "ascending", apply: () => undefined }]),
+    dimensionOf("ids", [{ label: "unique", apply: () => undefined }, { label: "duplicate decision", apply: () => undefined }, { label: "duplicate operation", apply: () => undefined }]),
+    dimensionOf("decision", [{ label: "own", apply: () => undefined }, { label: "other family's", apply: () => undefined }]),
+  ];
+  const states = cartesian(bodyOf("r2_recorded"), DIMS).map((state) => {
+    const body = clone(bodyOf("r2_recorded"));
+    const n = Number(state.picks.rows);
+    body.recorded_activity.has_more = state.picks.has_more === "true";
+    body.recorded_activity.items = ROWS(n, (row, i) => {
+      if (state.picks.kind !== "own") row.kind = "PAPER_EXIT_DECISION_RECORDED";
+      if (state.picks.step === "+0") row.version_after = 1;
+      if (state.picks.step === "+2") row.version_after = 3;
+      if (state.picks.clock === "equal") row.decided_at_ms = 1_790_812_800_000;
+      if (state.picks.clock === "ascending") row.decided_at_ms = 1_790_812_800_000 + i * 1000;
+      if (state.picks.ids === "duplicate decision" && i > 0) row.decision_id = "decision_0";
+      if (state.picks.ids === "duplicate operation" && i > 0) row.operation_id = "op_0";
+      if (state.picks.decision !== "own") row.decision = "PROMOTE";
+    });
+    return { ...state, value: body };
+  });
+  // What only the reader can know: the version step, the clock order, the id uniqueness (and, with one row, order and uniqueness are vacuous).
+  const runtimeBreaks = (p: Record<string, string>) => {
+    const n = Number(p.rows);
+    return p.step !== "+1" && n > 0 || (n > 1 && (p.clock === "ascending" || p.ids !== "unique"));
+  };
+  const schemaOk = (p: Record<string, string>) => {
+    const n = Number(p.rows);
+    // maxItems 32; the kind and the decision are per row, so an empty list carries neither.
+    return n <= 32 && (n === 0 || (p.kind === "own" && p.decision === "own")) && !(p.has_more === "true" && n < 32);
+  };
+  const readerOk = (p: Record<string, string>) => schemaOk(p) && !runtimeBreaks(p);
+
+  it("prints the matrix size and the schema/runtime split", () => {
+    console.info(describeCoverage("governanceParents F (recorded activity) cartesian", coverage(DIMS, states)));
+    const looser = states.filter((x) => readR2ParentV2(x.value) !== null && !cleanSchema("R2ParentReadV2", x.value));
+    const runtimeOnly = states.filter((x) => readR2ParentV2(x.value) === null && cleanSchema("R2ParentReadV2", x.value));
+    console.info(`governanceParents F: ${states.length} states, reader accepts ${states.filter((x) => readerOk(x.picks)).length}, ${runtimeOnly.length} refused by the reader that the schema accepts (runtime relations)`);
+    expect(states).toHaveLength(2 * 5 * 2 * 3 * 3 * 3 * 2);
+    expect(looser).toEqual([]);
+    expect(runtimeOnly.length).toBeGreaterThan(0);
+    expect(runtimeOnly.every((x) => runtimeBreaks(x.picks))).toBe(true);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const read = readR2ParentV2(state.value);
+    expect(read !== null).toBe(readerOk(state.picks));
+    if (read === null || read.recordedActivity.availability !== "AVAILABLE") return;
+    const activity = read.recordedActivity;
+    // The rows are as sent, in the order sent; nothing is sorted, merged or dropped to make the matrix pass.
+    expect(activity.items.map((i) => i.decisionId)).toEqual(state.value.recorded_activity.items.map((i: Draft) => i.decision_id));
+    expect(activity.hasMore).toBe(state.value.recorded_activity.has_more);
+    // "More than shown" only ever with a full page: 32 rows.
+    if (activity.hasMore) expect(activity.items).toHaveLength(32);
+    for (const row of activity.items) expect(row.versionAfter).toBe(row.versionBefore + 1);
+  });
+});
+
+describe("L1 · matrix G · R2 recorded verdicts: outcome x blocking x ordinal order x reference x has_more", () => {
+  const DIMS = [
+    dimension("outcome", ["recorded_verdicts", "items", 1, "outcome"], [...VOCAB.verdictOutcome]),
+    dimension("blocking", ["recorded_verdicts", "items", 1, "blocking"], [false, true]),
+    dimensionOf("ordinals", [
+      { label: "ascending", apply: () => undefined },
+      { label: "equal", apply: (d: Draft) => { d.recorded_verdicts.items[1].ordinal = d.recorded_verdicts.items[0].ordinal; } },
+      { label: "descending", apply: (d: Draft) => { d.recorded_verdicts.items[1].ordinal = d.recorded_verdicts.items[0].ordinal - 1; d.recorded_verdicts.items[0].ordinal = 5; } },
+    ]),
+    dimensionOf("reference", [
+      { label: "own approval", apply: () => undefined },
+      { label: "other approval", apply: (d: Draft) => { d.recorded_verdicts.items[1].source_ref.approval_id = "apr_other"; } },
+      { label: "other finding", apply: (d: Draft) => { d.recorded_verdicts.items[1].source_ref.finding_id = "finding_other"; } },
+    ]),
+    dimension("has_more", ["recorded_verdicts", "has_more"], [false, true]),
+  ];
+  const base = bodyOf("r2_recorded");
+  const states = cartesian(base, DIMS);
+  const schemaOk = (p: Record<string, string>) => !(p.blocking === "true" && (p.outcome === "PASS" || p.outcome === "WATCH")) && p.has_more === "false";
+  const runtimeBreaks = (p: Record<string, string>) => p.ordinals !== "ascending" || p.reference !== "own approval";
+
+  it("prints the matrix size and the schema/runtime split", () => {
+    console.info(describeCoverage("governanceParents G (recorded verdicts) cartesian", coverage(DIMS, states)));
+    const looser = states.filter((x) => readR2ParentV2(x.value) !== null && !cleanSchema("R2ParentReadV2", x.value));
+    const runtimeOnly = states.filter((x) => readR2ParentV2(x.value) === null && cleanSchema("R2ParentReadV2", x.value));
+    console.info(`governanceParents G: ${states.length} states, ${runtimeOnly.length} refused by the reader that the schema accepts (ordinal order, reference identity)`);
+    expect(states).toHaveLength(VOCAB.verdictOutcome.length * 2 * 3 * 3 * 2);
+    expect(looser).toEqual([]);
+    expect(runtimeOnly.every((x) => runtimeBreaks(x.picks))).toBe(true);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const read = readR2ParentV2(state.value);
+    expect(read !== null).toBe(schemaOk(state.picks) && !runtimeBreaks(state.picks));
+    if (read === null || read.recordedVerdicts.availability !== "AVAILABLE") return;
+    const second = read.recordedVerdicts.items[1]!;
+    expect(second.outcome).toBe(state.picks.outcome);
+    // A blocking verdict is a FAIL or INSUFFICIENT, never a PASS or WATCH; the reader derives no verdict of its own.
+    if (second.blocking) expect(["FAIL", "INSUFFICIENT"]).toContain(second.outcome);
+    // An R2 verdict has no observed value or limit on the wire, so the read has none.
+    expect(Object.keys(second).filter((k) => /observed|limit|label|threshold|comparator/i.test(k))).toEqual([]);
+  });
+});
+
+describe("L1 · matrix H · Paper Exit criterion: key x label x observed spelling x source clock", () => {
+  const base = bodyOf("paper_exit_criteria");
+  const absentMetric = { availability: "NOT_PUBLISHED", value: null, reason_code: "SOURCE_METRIC_NOT_REGISTERED" };
+  const present = (value: unknown) => ({ availability: "AVAILABLE", value, reason_code: null });
+  const absentValue = (reason: string) => ({ availability: "NOT_PUBLISHED", value: null, reason_code: reason });
+  const OBSERVED: [string, unknown, boolean][] = [
+    ["exact decimal", present("1842.000000000000000001"), true],
+    ["zero", present("0"), true],
+    ["negative zero", present("-0"), true],
+    ["negative", present("-5.25"), true],
+    ["not recorded", absentValue("SOURCE_VALUE_NOT_RECORDED"), true],
+    ["not decimal", absentValue("SOURCE_VALUE_NOT_DECIMAL"), true],
+    ["wrong absence word", absentValue("SOURCE_TEXT_NOT_RECORDED"), false],
+    ["exponent", present("1e5"), false],
+    ["leading zero", present("01"), false],
+    ["a JS number", present(1842), false],
+    ["trailing dot", present("1."), false],
+    ["empty", present(""), false],
+    ["too long", present("9".repeat(129)), false],
+  ];
+  const DIMS = [
+    dimensionOf("key", [...VOCAB.criterionKey, "absent"].map((k) => ({
+      label: k, apply: (d: Draft) => { d.criteria.items[0].criterion_key = k === "absent" ? clone(absentMetric) : present(k); },
+    }))),
+    dimensionOf("label", [...VOCAB.criterionLabel, "absent"].map((l) => ({
+      label: l, apply: (d: Draft) => { d.criteria.items[0].label_key = l === "absent" ? clone(absentMetric) : present(l); },
+    }))),
+    dimensionOf("observed", OBSERVED.map(([label, value]) => ({ label, apply: (d: Draft) => { d.criteria.items[0].observed = clone(value); } }))),
+    dimensionOf("source_time", [
+      { label: "the finding's clock", apply: () => undefined },
+      { label: "another clock", apply: (d: Draft) => { d.criteria.items[0].source_time.value = 1; } },
+      { label: "none for a finding that has one", apply: (d: Draft) => { d.criteria.items[0].source_time = absentValue("SOURCE_TIME_NOT_RECORDED"); } },
+    ]),
+  ];
+  const states = cartesian(base, DIMS);
+  const labelFits = (p: Record<string, string>) =>
+    p.key === "absent" ? p.label === "absent" : p.label === VOCAB.criterionLabel[VOCAB.criterionKey.indexOf(p.key)];
+  const observedOk = (p: Record<string, string>) => OBSERVED.find(([label]) => label === p.observed)![2];
+  const schemaOk = (p: Record<string, string>) => labelFits(p) && observedOk(p);
+
+  it("prints the matrix size and the schema/runtime split", () => {
+    console.info(describeCoverage("governanceParents H (criterion) cartesian", coverage(DIMS, states)));
+    const looser = states.filter((x) => readPaperExitParentV2(x.value) !== null && !cleanSchema("PaperExitParentReadV2", x.value));
+    const runtimeOnly = states.filter((x) => readPaperExitParentV2(x.value) === null && cleanSchema("PaperExitParentReadV2", x.value));
+    console.info(`governanceParents H: ${states.length} states, ${runtimeOnly.length} refused by the reader that the schema accepts (the source clock must be the finding's)`);
+    expect(states).toHaveLength((VOCAB.criterionKey.length + 1) * (VOCAB.criterionLabel.length + 1) * OBSERVED.length * 3);
+    expect(looser).toEqual([]);
+    expect(runtimeOnly.every((x) => x.picks.source_time !== "the finding's clock")).toBe(true);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const read = readPaperExitParentV2(state.value);
+    expect(read !== null).toBe(schemaOk(state.picks) && state.picks.source_time === "the finding's clock");
+    if (read === null || read.criteria.availability !== "AVAILABLE") return;
+    const item = read.criteria.items[0]!;
+    const wire = state.value.criteria.items[0].observed;
+    // The exact string, or the absence with its word: never a number, never 0 for a value that was not recorded.
+    if (wire.availability === "AVAILABLE") expect(item.observed).toEqual({ availability: "AVAILABLE", value: wire.value });
+    else expect(item.observed).toEqual({ availability: "NOT_PUBLISHED", reasonCode: wire.reason_code });
+    // The label is the key's own, or both are absent.
+    expect(item.labelKey.availability).toBe(item.criterionKey.availability);
+    expect(item.comparator).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "SOURCE_COMPARATOR_FIELD_NOT_RECORDED" });
+  });
+});
+
+describe("L1 · matrix I · actors: decider x viewer flags", () => {
+  const base = bodyOf("r2_recorded");
+  const DIMS = [
+    dimensionOf("decider", [
+      { label: "none", apply: (d: Draft) => { d.actors.decided_by_user_id = null; } },
+      { label: "named", apply: (d: Draft) => { d.actors.decided_by_user_id = "user_decider"; } },
+      { label: "bad id", apply: (d: Draft) => { d.actors.decided_by_user_id = "a b"; } },
+    ]),
+    dimension("viewer_is_decided_by", ["actors", "viewer_is_decided_by"], [null, true, false]),
+    dimension("viewer_is_requester", ["actors", "viewer_is_requester"], [true, false]),
+    dimension("viewer_is_artifact_creator", ["actors", "viewer_is_artifact_creator"], [true, false]),
+  ];
+  const states = cartesian(base, DIMS);
+  const accepts = (p: Record<string, string>) => p.decider !== "bad id" && (p.decider === "none") === (p.viewer_is_decided_by === "null");
+
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("governanceParents I (actors) cartesian", coverage(DIMS, states)));
+    const looser = states.filter((x) => readR2ParentV2(x.value) !== null && !cleanSchema("R2ParentReadV2", x.value));
+    expect(states).toHaveLength(3 * 3 * 2 * 2);
+    expect(looser).toEqual([]);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const read = readR2ParentV2(state.value);
+    expect(read !== null).toBe(accepts(state.picks));
+    if (read === null || read.actors.availability !== "AVAILABLE") return;
+    expect(read.actors.decidedByUserId).toBe(state.value.actors.decided_by_user_id);
+    expect(read.actors.viewerIsDecidedBy).toBe(state.value.actors.viewer_is_decided_by);
+    // The flags are the server's; the reader does not recompute "is the viewer" from ids it cannot compare, and offers no eligibility.
+    expect(Object.keys(read.actors).filter((k) => /eligib|allowed|may|sod|separation|role/i.test(k))).toEqual([]);
+  });
+});
+
+describe("L1 · matrix J · R2 decision inputs: workspace x approval x version x evidence hash order and count", () => {
+  const base = bodyOf("r2_followthrough");
+  const hash = (i: number) => `sha256:${i.toString(16).padStart(64, "0")}`;
+  const LISTS: [string, () => string[], boolean][] = [
+    ["empty", () => [], true],
+    ["one", () => [hash(1)], true],
+    ["ascending", () => [hash(1), hash(2), hash(3)], true],
+    ["descending", () => [hash(3), hash(2), hash(1)], false],
+    ["duplicate", () => [hash(1), hash(1)], false],
+    ["128", () => Array.from({ length: 128 }, (_, i) => hash(i)), true],
+    ["129", () => Array.from({ length: 129 }, (_, i) => hash(i)), false],
+  ];
+  const DIMS = [
+    dimensionOf("workspace", [
+      { label: "the parent's", apply: () => undefined },
+      { label: "another", apply: (d: Draft) => { d.decision_context.workspace_id = "ws_other"; } },
+    ]),
+    dimensionOf("approval", [
+      { label: "this one", apply: () => undefined },
+      { label: "another", apply: (d: Draft) => { d.decision_context.approval_id = "apr_other"; } },
+    ]),
+    dimensionOf("version", [
+      { label: "the parent's", apply: () => undefined },
+      { label: "next", apply: (d: Draft) => { d.decision_context.expected_approval_version = d.approval.approval_version + 1; } },
+    ]),
+    dimensionOf("hashes", LISTS.map(([label, make]) => ({ label, apply: (d: Draft) => { d.decision_context.evidence_hashes.value = make(); } }))),
+  ];
+  const states = cartesian(base, DIMS);
+  const listOk = (label: string) => LISTS.find(([l]) => l === label)![2];
+  const identityOk = (p: Record<string, string>) => p.workspace === "the parent's" && p.approval === "this one" && p.version === "the parent's";
+
+  it("prints the matrix size and the schema/runtime split", () => {
+    console.info(describeCoverage("governanceParents J (decision inputs) cartesian", coverage(DIMS, states)));
+    const looser = states.filter((x) => readR2ParentV2(x.value) !== null && !cleanSchema("R2ParentReadV2", x.value));
+    const runtimeOnly = states.filter((x) => readR2ParentV2(x.value) === null && cleanSchema("R2ParentReadV2", x.value));
+    console.info(`governanceParents J: ${states.length} states, ${runtimeOnly.length} refused by the reader that the schema accepts (identity with the parent, hash order)`);
+    expect(states).toHaveLength(2 * 2 * 2 * LISTS.length);
+    expect(looser).toEqual([]);
+    expect(runtimeOnly.every((x) => !identityOk(x.picks) || x.picks.hashes === "descending")).toBe(true);
+    // The schema accepts the descending list (it cannot compare array members): the reader is what says no.
+    expect(states.filter((x) => x.picks.hashes === "descending" && identityOk(x.picks)).every((x) => cleanSchema("R2ParentReadV2", x.value))).toBe(true);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const read = readR2ParentV2(state.value);
+    expect(read !== null).toBe(identityOk(state.picks) && listOk(state.picks.hashes));
+    if (read === null || read.decisionContext.availability !== "AVAILABLE") return;
+    const hashes = read.decisionContext.evidenceHashes;
+    // An empty list is an empty list (a value), and above 128 there is no list at all: neither is repaired into the other.
+    if (hashes.availability === "AVAILABLE") expect(hashes.value).toEqual(state.value.decision_context.evidence_hashes.value);
+    expect(read.decisionContext.planPath).toBe("/api/v1/execution/commands/plans");
+    expect(read.decisionContext.admission.state).toBe("NOT_EVALUATED");
+  });
+});
+
 /* ═════════════════════════ L2 ═════════════════════════ */
 describe("L2 · scale", () => {
   const base = bodyOf("paper_exit_extended");
@@ -489,11 +850,11 @@ describe("L2 · scale", () => {
     return body;
   };
 
-  it("all 19 published bodies are read inside the budget, repeated 50 times", () => {
+  it("all 25 published bodies are read inside the budget, repeated 50 times", () => {
     const { ms } = timed(() => {
       for (let n = 0; n < 50; n += 1) for (const b of BODIES) b.read(bodyOf(b.key));
     });
-    console.info(`governanceParents 19 bodies x 50: ${ms.toFixed(0)} ms (budget ${BUDGET_ALL_BODIES_MS} ms)`);
+    console.info(`governanceParents 25 bodies x 50: ${ms.toFixed(0)} ms (budget ${BUDGET_ALL_BODIES_MS} ms)`);
     expect(ms).toBeLessThan(BUDGET_ALL_BODIES_MS);
   });
 
@@ -520,6 +881,97 @@ describe("L2 · scale", () => {
     expect(ms).toBeLessThan(BUDGET_4096_FINDINGS_MS);
     expect(readPaperExitParentV2(withFindings(4_096, 191))).toBeNull();
     expect(violations("PaperExitParentReadV2", over).length).toBeGreaterThan(0);
+  });
+
+  describe("e19ad906 sections at their schema bounds", () => {
+    const activityRows = (n: number): Draft[] => Array.from({ length: n }, (_, i) => ({
+      decision_id: `decision_${pad(i)}`.padEnd(191, "x"), operation_id: `op_${pad(i)}`.padEnd(191, "x"), version_before: 1, version_after: 2,
+      decided_at_ms: 1_790_812_800_000 - i, kind: "R2_DECISION_RECORDED", decision: "DENY",
+    }));
+    const verdictRows = (n: number): Draft[] => cloneRows(bodyOf("r2_recorded").recorded_verdicts.items[0] as Draft, n, (row, i) => {
+      row.finding_id = `finding_${pad(i)}`;
+      row.ordinal = i;
+      row.source_ref.finding_id = row.finding_id;
+    });
+    const criterionRows = (n: number): Draft[] => {
+      const template = bodyOf("paper_exit_criteria").criteria.items[0] as Draft;
+      return cloneRows(template, n, (row, i) => {
+        row.original.finding_id = `finding_${pad(i)}`;
+        row.source_ref.finding_id = row.original.finding_id;
+      });
+    };
+
+    it("32 recorded decisions with ids at the 191 character bound are read, and 33 are refused, inside the budget", () => {
+      const body = clone(bodyOf("r2_recorded"));
+      body.recorded_activity.items = activityRows(32);
+      body.recorded_activity.has_more = true;
+      const { value, ms } = timed(() => readR2ParentV2(body));
+      expect(violations("R2ParentReadV2", body)).toEqual([]);
+      expect(value).not.toBeNull();
+      if (value!.recordedActivity.availability === "AVAILABLE") expect(value!.recordedActivity.items).toHaveLength(32);
+      expect(ms).toBeLessThan(BUDGET_4096_FINDINGS_MS);
+      body.recorded_activity.items = activityRows(33);
+      const over = timed(() => readR2ParentV2(body));
+      expect(over.value).toBeNull();
+      expect(violations("R2ParentReadV2", body).length).toBeGreaterThan(0);
+      expect(over.ms).toBeLessThan(BUDGET_4096_FINDINGS_MS);
+    });
+
+    it("64 recorded verdicts are read in ordinal order, and 65 are refused, inside the budget", () => {
+      const body = clone(bodyOf("r2_recorded"));
+      body.recorded_verdicts.items = verdictRows(64);
+      const { value, ms } = timed(() => readR2ParentV2(body));
+      expect(violations("R2ParentReadV2", body)).toEqual([]);
+      expect(value).not.toBeNull();
+      if (value!.recordedVerdicts.availability === "AVAILABLE") expect(value!.recordedVerdicts.items.map((v) => v.ordinal)).toEqual(Array.from({ length: 64 }, (_, i) => i));
+      expect(ms).toBeLessThan(BUDGET_4096_FINDINGS_MS);
+      body.recorded_verdicts.items = verdictRows(65);
+      expect(readR2ParentV2(body)).toBeNull();
+      expect(violations("R2ParentReadV2", body).length).toBeGreaterThan(0);
+    });
+
+    it("256 criteria are read, and 257 are refused, inside the budget", () => {
+      const body = clone(bodyOf("paper_exit_criteria"));
+      body.criteria.items = criterionRows(256);
+      const { value, ms } = timed(() => readPaperExitParentV2(body));
+      expect(violations("PaperExitParentReadV2", body)).toEqual([]);
+      expect(value).not.toBeNull();
+      if (value!.criteria.availability === "AVAILABLE") expect(value!.criteria.items).toHaveLength(256);
+      expect(ms).toBeLessThan(BUDGET_4096_FINDINGS_MS);
+      body.criteria.items = criterionRows(257);
+      const over = timed(() => readPaperExitParentV2(body));
+      expect(over.value).toBeNull();
+      expect(violations("PaperExitParentReadV2", body).length).toBeGreaterThan(0);
+      expect(over.ms).toBeLessThan(BUDGET_4096_FINDINGS_MS);
+    });
+
+    it("a 70,000 character id, hash, decimal or text in a new section is refused fast, not scanned", () => {
+      const cases: [Reader, string, readonly (string | number)[], string][] = [
+        [readR2ParentV2, "r2_recorded", ["actors", "requester_user_id"], "a".repeat(70_000)],
+        [readR2ParentV2, "r2_recorded", ["latest_operation", "operation_id"], "a".repeat(70_000)],
+        [readR2ParentV2, "r2_recorded", ["recorded_activity", "items", 0, "decision_id"], "a".repeat(70_000)],
+        [readR2ParentV2, "r2_followthrough", ["decision_context", "evidence_set_hash"], `sha256:${"a".repeat(70_000)}`],
+        [readR2ParentV2, "r2_followthrough", ["decision_context", "evidence_hashes", "value", 0], `sha256:${"a".repeat(70_000)}`],
+        [readPaperExitParentV2, "paper_exit_criteria", ["criteria", "items", 0, "observed", "value"], "9".repeat(70_000)],
+        [readPaperExitParentV2, "paper_exit_criteria", ["criteria", "items", 0, "observed", "value"], `1.${"9".repeat(70_000)}`],
+        [readPaperExitParentV2, "paper_exit_criteria", ["criteria", "items", 0, "unit", "value"], "a".repeat(70_000)],
+        [readPaperExitParentV2, "paper_exit_criteria", ["criteria", "items", 0, "currency", "value"], `${"a".repeat(70_000)}://`],
+      ];
+      for (const [read, key, path, text] of cases) {
+        const body = clone(bodyOf(key));
+        setPath(body, path, text);
+        const { value, ms } = timed(() => read(body));
+        expect(value, path.join(".")).toBeNull();
+        expect(ms, path.join(".")).toBeLessThan(100);
+      }
+    });
+
+    it("the URL guard on a criterion text is not a catastrophic pattern: a long run of scheme characters is refused in time", () => {
+      const body = clone(bodyOf("paper_exit_criteria"));
+      setPath(body, ["criteria", "items", 0, "unit", "value"], "a".repeat(190) + "!");
+      const { ms } = timed(() => readPaperExitParentV2(body));
+      expect(ms).toBeLessThan(100);
+    });
   });
 
   it("a fifth panel is refused (the bound is four, one per kind)", () => {
@@ -576,6 +1028,83 @@ const PLANS: Record<string, Plan> = {
     arrays: [[["evaluation", "panels"], "panel_id"], [["evaluation", "findings"], "finding_id"]],
     containers: [[], ["approval"], ["review"], ["evaluation"], ["evaluation", "panels", 0], ["evaluation", "findings", 0], ["lineage"]],
   },
+  r2_recorded: {
+    enums: [
+      [["approval", "status"], VOCAB.approvalStatus], [["latest_operation", "stored_status"], VOCAB.operationStatus], [["latest_operation", "command_type"], ["GOVERNANCE_R2_DECISION"]],
+      [["latest_operation", "availability"], ["AVAILABLE", "NOT_PUBLISHED"]], [["actors", "availability"], ["AVAILABLE", "NOT_PUBLISHED"]],
+      [["recorded_activity", "items", 0, "decision"], VOCAB.r2Decision], [["recorded_activity", "items", 0, "kind"], ["R2_DECISION_RECORDED"]],
+      [["recorded_verdicts", "items", 0, "outcome"], VOCAB.verdictOutcome], [["recorded_verdicts", "items", 0, "source_ref", "kind"], ["PORTAL_STORED_R2_FINDING"]],
+      [["recorded_verdicts", "items", 0, "observed", "reason_code"], ["SOURCE_STRUCTURED_CRITERION_NOT_RECORDED"]],
+      [["recorded_verdicts", "admission", "state"], ["NOT_EVALUATED"]],
+    ],
+    ints: [
+      ...APPROVAL_INTS, ["latest_operation", "created_at_ms"], ["latest_operation", "command_version"], ["recorded_activity", "limit"],
+      ["recorded_activity", "items", 0, "version_before"], ["recorded_activity", "items", 0, "version_after"], ["recorded_activity", "items", 0, "decided_at_ms"],
+      ["recorded_verdicts", "limit"], ["recorded_verdicts", "items", 0, "ordinal"], ["recorded_verdicts", "items", 0, "evaluated_at_ms"],
+    ],
+    strs: [
+      ...APPROVAL_STRS, ["actors", "requester_user_id"], ["actors", "artifact_creator_user_id"], ["actors", "decided_by_user_id"], ["latest_operation", "operation_id"],
+      ["recorded_activity", "items", 0, "decision_id"], ["recorded_activity", "items", 0, "operation_id"], ["recorded_verdicts", "items", 0, "finding_id"],
+      ["recorded_verdicts", "items", 0, "source_ref", "approval_id"], ["recorded_verdicts", "items", 0, "source_ref", "finding_id"],
+    ],
+    arrays: [[["recorded_activity", "items"], "decision_id"], [["recorded_verdicts", "items"], "finding_id"]],
+    containers: [
+      [], ["actors"], ["latest_operation"], ["recorded_activity"], ["recorded_activity", "items", 0], ["recorded_verdicts"], ["recorded_verdicts", "items", 0],
+      ["recorded_verdicts", "items", 0, "observed"], ["recorded_verdicts", "items", 0, "source_ref"], ["recorded_verdicts", "admission"],
+    ],
+  },
+  r2_followthrough: {
+    enums: [
+      [["latest_operation", "stored_status"], VOCAB.operationStatus], [["decision_context", "gate"], ["R2"]], [["decision_context", "command_type"], ["GOVERNANCE_R2_DECISION"]],
+      [["decision_context", "request_schema_version"], ["governance.r2-decision-plan-request.v1"]], [["decision_context", "plan_path"], ["/api/v1/execution/commands/plans"]],
+      [["decision_context", "admission", "state"], ["NOT_EVALUATED"]], [["decision_context", "evidence_hashes", "availability"], ["AVAILABLE", "NOT_PUBLISHED"]],
+    ],
+    ints: [["decision_context", "expected_approval_version"], ["approval", "approval_version"]],
+    strs: [
+      ["decision_context", "workspace_id"], ["decision_context", "approval_id"], ["decision_context", "evidence_set_hash"], ["decision_context", "evidence_hashes", "value", 0],
+    ],
+    arrays: [[["decision_context", "evidence_hashes", "value"], undefined]],
+    containers: [[], ["decision_context"], ["decision_context", "evidence_hashes"], ["decision_context", "admission"], ["latest_operation"], ["actors"]],
+  },
+  paper_exit_criteria: {
+    enums: [
+      [["criteria", "items", 0, "criterion_key", "value"], VOCAB.criterionKey], [["criteria", "items", 0, "label_key", "value"], VOCAB.criterionLabel],
+      [["criteria", "items", 0, "original", "outcome"], VOCAB.findingOutcome], [["criteria", "items", 0, "source_ref", "kind"], ["PORTAL_STORED_PAPER_EXIT_FINDING"]],
+      [["criteria", "items", 0, "op", "reason_code"], ["SOURCE_COMPARATOR_FIELD_NOT_RECORDED"]], [["criteria", "items", 1, "limit", "reason_code"], ["SOURCE_VALUE_NOT_RECORDED", "SOURCE_VALUE_NOT_DECIMAL"]],
+      [["criteria", "items", 1, "unit", "reason_code"], ["SOURCE_TEXT_NOT_RECORDED", "SOURCE_TEXT_NOT_PUBLIC_SAFE"]], [["criteria", "items", 1, "evidence", "reason_code"], ["SOURCE_EVIDENCE_HASH_NOT_RECORDED"]],
+      [["criteria", "items", 1, "source_time", "reason_code"], ["SOURCE_TIME_NOT_RECORDED"]], [["criteria", "panels", 0, "panel_kind"], VOCAB.panelKind], [["criteria", "panels", 0, "panel_state"], VOCAB.panelState],
+      [["criteria", "basis"], ["VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE"]], [["actors", "availability"], ["AVAILABLE", "NOT_PUBLISHED"]],
+    ],
+    ints: [
+      ...APPROVAL_INTS, ["criteria", "panels", 0, "ordinal"], ["criteria", "panels", 0, "poll_interval_ms"], ["criteria", "items", 0, "original", "ordinal"],
+      ["criteria", "items", 0, "original", "as_of_ms"], ["criteria", "items", 0, "source_time", "value"],
+    ],
+    strs: [
+      ...APPROVAL_STRS, ["criteria", "evaluation_policy_version"], ["criteria", "panels", 0, "panel_id"], ["criteria", "items", 0, "original", "finding_id"],
+      ["criteria", "items", 0, "source_ref", "review_id"], ["criteria", "items", 0, "source_ref", "panel_id"], ["criteria", "items", 0, "source_ref", "finding_id"],
+      ["criteria", "items", 0, "unit", "value"], ["criteria", "items", 0, "currency", "value"], ["criteria", "items", 0, "evidence", "value"],
+    ],
+    decs: [["criteria", "items", 0, "observed", "value"], ["criteria", "items", 0, "limit", "value"]],
+    arrays: [[["criteria", "panels"], "panel_id"], [["criteria", "items"], "source_ref"]],
+    containers: [
+      [], ["criteria"], ["criteria", "panels", 0], ["criteria", "items", 0], ["criteria", "items", 0, "original"], ["criteria", "items", 0, "criterion_key"],
+      ["criteria", "items", 0, "observed"], ["criteria", "items", 0, "op"], ["criteria", "items", 0, "source_ref"], ["actors"], ["latest_operation"],
+    ],
+  },
+  paper_exit_recorded: {
+    enums: [
+      [["recorded_activity", "items", 0, "decision"], VOCAB.exitDecision], [["recorded_activity", "items", 0, "kind"], ["PAPER_EXIT_DECISION_RECORDED"]],
+      [["latest_operation", "command_type"], ["GOVERNANCE_PAPER_EXIT_DECISION"]], [["latest_operation", "stored_status"], VOCAB.operationStatus],
+      [["review", "review_state"], VOCAB.reviewState], [["recorded_activity", "availability"], ["AVAILABLE", "NOT_PUBLISHED"]],
+    ],
+    ints: [
+      ["recorded_activity", "limit"], ["recorded_activity", "items", 0, "version_before"], ["recorded_activity", "items", 0, "version_after"],
+      ["recorded_activity", "items", 0, "decided_at_ms"], ["latest_operation", "created_at_ms"],
+    ],
+    strs: [["recorded_activity", "items", 0, "decision_id"], ["recorded_activity", "items", 0, "operation_id"], ["latest_operation", "operation_id"], ["actors", "decided_by_user_id"]],
+    arrays: [[["recorded_activity", "items"], "decision_id"]],
+    containers: [[], ["recorded_activity"], ["recorded_activity", "items", 0], ["latest_operation"], ["actors"]],
+  },
   live: {
     enums: [[["approval", "status"], APPROVAL_STATUSES_V2], [["family"], ["LIVE_GATE"]], [["anchors", "environment"], ["LIVE"]]],
     ints: APPROVAL_INTS, strs: [...APPROVAL_STRS, ["accepted_manager_facts", "reason_code"]], containers: [[], ["approval"], ["anchors"], ["accepted_manager_facts"], ["source"]],
@@ -611,6 +1140,10 @@ const PLANS: Record<string, Plan> = {
   },
 };
 const PLAN_BODY: Record<string, { key: string; def: string; read: Reader; schemaVersions: string[] }> = {
+  r2_recorded: { key: "r2_recorded", def: "R2ParentReadV2", read: readR2ParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_V2_SCHEMA] },
+  r2_followthrough: { key: "r2_followthrough", def: "R2ParentReadV2", read: readR2ParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_V2_SCHEMA] },
+  paper_exit_criteria: { key: "paper_exit_criteria", def: "PaperExitParentReadV2", read: readPaperExitParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_V2_SCHEMA] },
+  paper_exit_recorded: { key: "paper_exit_recorded", def: "PaperExitParentReadV2", read: readPaperExitParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_V2_SCHEMA] },
   r2: { key: "r2", def: "R2ParentReadV2", read: readR2ParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_V2_SCHEMA] },
   paper_exit_extended: { key: "paper_exit_extended", def: "PaperExitParentReadV2", read: readPaperExitParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_V2_SCHEMA] },
   live: { key: "live", def: "LiveParentReadV2", read: readLiveParentV2 as Reader, schemaVersions: [LIVE_PARENT_V2_SCHEMA] },
@@ -649,7 +1182,7 @@ describe("L3 · negative", () => {
     for (const c of CASES) by.set(c.category, (by.get(c.category) ?? 0) + 1);
     const gaps = CASES.filter((c) => c.read(c.value) !== null && violations(c.def, c.value).length > 0 && c.category !== "prototype-pollution");
     console.info(`governanceParents L3: ${CASES.length} cases over ${Object.keys(PLANS).length} bodies (${[...by.entries()].map(([k, v]) => `${k} ${v}`).join(", ")}), ${rootCases().length} root cases; ${gaps.length} accepted although schema-invalid`);
-    expect(CASES.length).toBeGreaterThan(700);
+    expect(CASES.length).toBeGreaterThan(2500);
   });
 
   it.each(CASES.map((c) => [c.name, c] as const))("%s", (_name, c) => {

@@ -13,10 +13,13 @@ import { useEffect, useId, useState, type ReactNode } from "react";
 import type { ConditionRow, ExecutionApi } from "../../../api/ports";
 import type { ReviewCaptureCapabilities } from "../../../api/reviewCapture";
 import type { DecidedRow } from "../../../screens/ApprovalInbox";
+import { formatAsOf } from "../../boundary";
 import { DockAction } from "../../Drawer";
 import { Flag } from "../../Flag";
+import type { ActorsV2, LatestOperationV2, SectionV2 } from "../../readers/governanceParents";
 import type { InboxRowV2 } from "./inboxRowV2";
 import {
+  actorText,
   instantText,
   isYours,
   NOT_PUBLISHED,
@@ -24,6 +27,7 @@ import {
   quorumCells,
   quorumText,
   separationOfDuty,
+  separationOfDutyV2,
   summarizeEvidence,
   type EvidenceKind,
   type Principal,
@@ -113,6 +117,36 @@ function Np({ text }: { text: string }) {
   return <span className="exec-ck-np">{text}</span>;
 }
 
+/** A stored actor id, or the absence as the server gave it (a section withheld for this viewer is still FE-030's datum). */
+function ActorCell({ actors, pick }: { actors: SectionV2<ActorsV2> | null; pick: (a: ActorsV2) => { id: string | null; isViewer: boolean | null } }) {
+  if (actors === null) return <Np text={NOT_PUBLISHED.decisionCall} />;
+  if (actors.availability !== "AVAILABLE") return <Np text={`${NOT_PUBLISHED.decisionCall} · ${actors.reasonCode}`} />;
+  const { id, isViewer } = pick(actors);
+  return id === null ? <>Not decided yet</> : <span className="exec-ck-id">{actorText(id, isViewer)}</span>;
+}
+
+const STORED_STATUS_WORD: Readonly<Record<LatestOperationV2["storedStatus"], string>> = { PLANNED: "planned", APPLIED: "applied", EXPIRED: "expired" };
+
+/**
+ * The approval to operation link: the newest recorded Portal plan for this
+ * approval. Its stored status is the Portal's own record, not Trading System
+ * acceptance, and not whether the plan can still be applied.
+ */
+function LatestPlanCell({ latest }: { latest: SectionV2<LatestOperationV2> | null }) {
+  if (latest === null) return <Np text={NOT_PUBLISHED.decisionCall} />;
+  if (latest.availability === "AVAILABLE") {
+    return (
+      <>
+        <span className="exec-ck-id">{latest.operationId}</span>
+        {` · stored ${STORED_STATUS_WORD[latest.storedStatus]} · created ${formatAsOf(latest.createdAt)}`}
+      </>
+    );
+  }
+  if (latest.reasonCode === "NO_RECORDED_PORTAL_OPERATION") return <>None recorded</>;
+  if (latest.reasonCode === "LATEST_RECORDED_OPERATION_NOT_PUBLIC") return <Np text={`Not published · ${latest.reasonCode}`} />;
+  return <Np text={`${NOT_PUBLISHED.decisionCall} · ${latest.reasonCode}`} />;
+}
+
 export interface RailProps {
   api: ExecutionApi;
   target: RailTarget | null;
@@ -143,7 +177,11 @@ export function Rail({ api, target, evidence, principal, workspaceId }: RailProp
   const waiver = target.waiver;
   const row = target.row;
   const creator = row?.creator ?? summary.creator;
-  const sod = separationOfDuty({ creator, serverSod: summary.serverSod, principal });
+  // A V2 parent that publishes its actors speaks for itself; a queue row's creator (compared with the signed-in person) still comes first.
+  const v2 = evidence.status === "ready" && (evidence.data.kind === "r2v2" || evidence.data.kind === "exitv2" || evidence.data.kind === "livev2");
+  const sod = creator === null && summary.actors !== null && summary.actors.availability === "AVAILABLE"
+    ? separationOfDutyV2(summary.actors)
+    : separationOfDuty({ creator, serverSod: summary.serverSod, principal });
   const met = summary.quorumMet ?? row?.quorumMet ?? null;
   const required = summary.quorumRequired ?? row?.quorumRequired ?? null;
   const cells = quorumCells(met, required);
@@ -224,6 +262,13 @@ export function Rail({ api, target, evidence, principal, workspaceId }: RailProp
             { label: "Decision", value: decided ? decided.outcome.replace(/_/g, " ").toLowerCase() : "None recorded" },
             ...(decided ? [{ label: "By", value: decided.by }, { label: "At", value: decided.at }] : []),
             { label: "Request", value: <span className="exec-ck-id">{target.id}</span> },
+            ...(v2
+              ? [
+                  { label: "Requested by", value: <ActorCell actors={summary.actors} pick={(a) => ({ id: a.requesterUserId, isViewer: a.viewerIsRequester })} /> },
+                  { label: "Created by", value: <ActorCell actors={summary.actors} pick={(a) => ({ id: a.artifactCreatorUserId, isViewer: a.viewerIsArtifactCreator })} /> },
+                  { label: "Latest plan", value: <LatestPlanCell latest={summary.latestOperation} /> },
+                ]
+              : []),
             { label: "Ladder", value: <Np text={NOT_PUBLISHED.decisionCall} /> },
             { label: "Call", value: <Np text={NOT_PUBLISHED.decisionCall} /> },
             { label: "Receipt ref", value: <Np text={NOT_PUBLISHED.decisionCall} /> },

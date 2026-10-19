@@ -10,6 +10,11 @@
  * - a V2 Paper Exit body shows its findings as published (outcome, blocking,
  *   required) and says "Gate verdict: Not published (FE-028)" instead of
  *   "Gate not met" for a verdict the body does not carry;
+ * - since Codex e19ad906 the same bodies can carry stored actor ids, the latest
+ *   recorded plan, the R2 decision inputs, the R2 recorded verdicts, the
+ *   recorded decisions and the Paper Exit criteria. Each is drawn from the
+ *   body when it is there (and says nothing the body does not say) and is
+ *   `Not published (FE-xxx)` with the server's reason when it is not;
  * - a V2 Live body shows the approval and `Not published (FE-xxx)` for the rest;
  * - an unreadable or unsupported body is a stated failure, never a half page;
  * - the V1 pane is unchanged for V1 bodies (cockpit.test.tsx).
@@ -185,6 +190,180 @@ describe("Paper Exit, V2 body", () => {
     expect(within(evidence).getByRole("region", { name: "Evaluation" }).textContent).toContain("Not published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
     expect(within(evidence).getByRole("heading", { name: "Evaluation not published" })).toBeTruthy();
     expect(evidence.textContent).not.toContain("No findings published");
+  });
+});
+
+/** A queue row with no creator, so the rail has nothing but the parent's own stored actors to go on. */
+const BARE_RAW = [
+  { ...wire("apr_r2", "R2", "Beta Two"), creator: null, requester: null },
+  { ...wire("apr_exit", "PAPER_EXIT", "Gamma Exit"), creator: null, requester: null },
+  { ...wire("apr_live", "LIVE_GATE", "Delta Live"), creator: null, requester: null },
+];
+function withBareRows(p: { api: ExecutionApi }): { api: ExecutionApi } {
+  const api = new Proxy(p.api, {
+    get(target, name, receiver) {
+      if (name === "listApprovals") return () => Promise.resolve({ ok: true, value: { ...inbox(), rawRows: BARE_RAW } });
+      return Reflect.get(target, name, receiver);
+    },
+  }) as ExecutionApi;
+  return { api };
+}
+const rail = () => screen.getByRole("complementary", { name: "Decision" });
+const receipt = () => within(rail()).getByRole("region", { name: /Receipt|Recorded/ });
+
+describe("R2, V2 body with the sections added by e19ad906", () => {
+  it("r2_followthrough: the rail names the stored actors with (you) where the server says so, and the latest plan", async () => {
+    await open(withBareRows(portAnswering((kind) => okRead(kind, parent().r2_followthrough))), "apr_r2");
+    const sod = rail().querySelector(".exec-ck-sod")!;
+    // The facts, not a verdict: no "OK" and no "you cannot decide".
+    expect(sod.textContent).toContain("Requested by user_TEST_ONLY_requester");
+    expect(sod.textContent).toContain("created by user_TEST_ONLY_creator (you)");
+    expect(sod.textContent).toContain("not stated by this read");
+    expect(sod.textContent).not.toMatch(/Separation of duty OK|cannot decide/);
+    expect(sod.getAttribute("data-state")).toBe("unknown");
+    const text = receipt().textContent!;
+    expect(text).toContain("Requested byuser_TEST_ONLY_requester");
+    expect(text).toContain("Created byuser_TEST_ONLY_creator (you)");
+    expect(text).toContain("Latest planop_TEST_ONLY_R2_EXPIRED · stored expired · created");
+    // What the body still does not carry stays named with its request.
+    for (const label of ["Ladder", "Call", "Receipt ref", "What changes"]) {
+      expect(receipt().textContent).toContain(`${label}Not published (FE-030)`);
+    }
+  });
+
+  it("r2_followthrough: the decision inputs are drawn from the body: version, evidence set, hashes, plan route, admission not evaluated", async () => {
+    const evidence = await open(portAnswering((kind) => okRead(kind, parent().r2_followthrough)), "apr_r2");
+    const inputs = within(evidence).getByRole("region", { name: "Decision inputs" });
+    expect(inputs.textContent).toContain("Stored, not an authorization");
+    expect(inputs.textContent).toContain("apr_TEST_ONLY_r2");
+    expect(inputs.textContent).toContain("Expected version1");
+    expect(inputs.textContent).toContain(`sha256:${"5".repeat(64)}`);
+    expect(inputs.textContent).toContain("2 hashes");
+    expect(inputs.textContent).toContain(`sha256:${"3".repeat(64)}`);
+    expect(inputs.textContent).toContain(`sha256:${"4".repeat(64)}`);
+    expect(inputs.textContent).toContain("/api/v1/execution/commands/plans");
+    expect(inputs.textContent).toContain("Not evaluated · CURRENT_DECISION_ADMISSION_REQUIRES_PLAN");
+    expect(inputs.textContent).not.toMatch(/READY|Ready|eligible/);
+    // There are still no capital rows on any body.
+    expect(within(evidence).getByRole("region", { name: "Capital change preview" }).textContent).toContain("Not published (FE-030)");
+  });
+
+  it("r2_followthrough_hashes_absent: more than 128 hashes is an absence with its reason, not an empty list", async () => {
+    const evidence = await open(portAnswering((kind) => okRead(kind, parent().r2_followthrough_hashes_absent)), "apr_r2");
+    const inputs = within(evidence).getByRole("region", { name: "Decision inputs" });
+    expect(inputs.textContent).toContain("Not published · EVIDENCE_HASH_LIMIT_EXCEEDED");
+    expect(inputs.textContent).not.toContain("None listed");
+  });
+
+  it("r2_recorded: four stored verdicts with their marks, and label, observed and limit named as not recorded (FE-028)", async () => {
+    const evidence = await open(portAnswering((kind) => okRead(kind, parent().r2_recorded)), "apr_r2");
+    const criteria = within(evidence).getByRole("region", { name: "Criteria" });
+    for (const word of ["Within", "Watch", "Blocker", "Insufficient"]) expect(criteria.textContent).toContain(word);
+    for (let i = 0; i < 4; i += 1) expect(criteria.textContent).toContain(`finding_TEST_ONLY_r2_${i}`);
+    expect(criteria.textContent).toContain("Blocking · Evaluated");
+    expect(criteria.textContent).toContain("Not published (FE-028) · SOURCE_STRUCTURED_CRITERION_NOT_RECORDED");
+    expect(criteria.textContent).toContain("Stored verdicts, not current gate readiness.");
+    expect(criteria.textContent).toContain("4 recorded");
+    // No number is invented for a value the source never recorded.
+    expect(criteria.querySelectorAll("tbody tr")).toHaveLength(4);
+    expect(criteria.querySelector("tbody")!.textContent).not.toMatch(/Observed|Limit/);
+  });
+
+  it("r2_recorded: the recorded decisions are listed newest first and say what they are not", async () => {
+    const evidence = await open(portAnswering((kind) => okRead(kind, parent().r2_recorded)), "apr_r2");
+    const decisions = within(evidence).getByRole("region", { name: "Recorded decisions" });
+    const rows = [...decisions.querySelectorAll("tbody tr")].map((tr) => [...tr.querySelectorAll("td")].map((td) => td.textContent));
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.slice(1)).toEqual(["deny", "2 to 3", "op_TEST_ONLY_R2_APPLIED"]);
+    expect(rows[1]!.slice(1)).toEqual(["approve with condition", "1 to 2", "op_TEST_ONLY_R2_CONDITION"]);
+    expect(decisions.textContent).toContain("Newest first");
+    expect(decisions.textContent).toContain("not source, order or stage history, and not the full history");
+  });
+
+  it("r2_recorded: a decided request names its decider in the recorded receipt, with no (you) for someone else", async () => {
+    await open(withBareRows(portAnswering((kind) => okRead(kind, parent().r2_recorded))), "apr_r2");
+    const text = receipt().textContent!;
+    expect(text).toContain("Decisiondenied");
+    expect(text).toContain("Byuser_TEST_ONLY_reviewer");
+    expect(text).not.toContain("user_TEST_ONLY_reviewer (you)");
+    expect(text).toContain("Latest planop_TEST_ONLY_R2_APPLIED · stored applied");
+  });
+
+  it("the plain r2 body keeps every new section as the server's reason, and the rail says Not published (FE-030) for the people", async () => {
+    const evidence = await open(withBareRows(portAnswering((kind) => okRead(kind, parent().r2))), "apr_r2");
+    expect(within(evidence).getByRole("region", { name: "Decision inputs" }).textContent).toContain("Not published (FE-030) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(within(evidence).getByRole("region", { name: "Recorded decisions" }).textContent).toContain("Not published (FE-030) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(within(evidence).getByRole("region", { name: "Criteria" }).textContent).toContain("Not published (FE-028) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(rail().querySelector(".exec-ck-sod")!.textContent).toContain("Not published (FE-030)");
+    expect(receipt().textContent).toContain("Requested byNot published (FE-030) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(receipt().textContent).toContain("Latest planNot published (FE-030) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+  });
+
+  it("a latest plan the server says does not exist is 'None recorded', not a missing field", async () => {
+    const body = structuredClone(parent().r2_followthrough);
+    body.latest_operation = { availability: "NOT_PUBLISHED", reason_code: "NO_RECORDED_PORTAL_OPERATION" };
+    await open(withBareRows(portAnswering((kind) => okRead(kind, body))), "apr_r2");
+    expect(receipt().textContent).toContain("Latest planNone recorded");
+  });
+});
+
+describe("Paper Exit, V2 body with the sections added by e19ad906", () => {
+  it("paper_exit_criteria: label, observed value, limit and unit are drawn exactly; the comparator is not published (FE-028)", async () => {
+    const evidence = await open(portAnswering((kind) => okRead(kind, parent().paper_exit_criteria)), "apr_exit");
+    const coverage = within(evidence).getByRole("region", { name: "Observation coverage" });
+    // Every digit, never rounded: 1842.000000000000000001 is not 1842.
+    expect(coverage.textContent).toContain("Observed 1842.000000000000000001");
+    expect(coverage.textContent).toContain("Limit 6.00");
+    expect(coverage.textContent).toContain("Unit CURRENCY USDC");
+    expect(coverage.textContent).toContain("Comparator Not published (FE-028) · SOURCE_COMPARATOR_FIELD_NOT_RECORDED");
+    expect(coverage.textContent).toContain("finding_TEST_ONLY_0");
+    expect(coverage.textContent).toContain(`Evidence sha256:${"4".repeat(64)}`);
+    expect(coverage.textContent).toContain("Source time");
+    // A published "0" is a value; a limit never recorded is an absence with its reason.
+    const drift = within(evidence).getByRole("region", { name: "Drift" });
+    expect(drift.textContent).toContain("Observed 0");
+    expect(drift.textContent).toContain("Limit Not published (FE-028) · SOURCE_VALUE_NOT_RECORDED");
+    expect(drift.textContent).toContain("Unit Not published (FE-028) · SOURCE_TEXT_NOT_RECORDED");
+    const limits = within(evidence).getByRole("region", { name: "Limits health" });
+    expect(limits.textContent).toContain("Observed Not published (FE-028) · SOURCE_VALUE_NOT_RECORDED");
+    expect(limits.textContent).not.toMatch(/Observed \d/);
+    // The gate verdict is still not a thing the body has.
+    expect(evidence.textContent).toContain("Gate verdict: Not published (FE-028)");
+    expect(evidence.textContent).not.toContain("Gate not met");
+    expect(within(evidence).getByRole("heading", { name: "Findings 1 of 4 pass" })).toBeTruthy();
+    // The criteria section is there, so the absence panel for it is not.
+    expect(within(evidence).queryByRole("region", { name: "Criteria detail" })).toBeNull();
+  });
+
+  it("paper_exit (no criteria section): the cells keep Not published (FE-028) and a panel gives the server's reason", async () => {
+    const evidence = await open(portAnswering((kind) => okRead(kind, parent().paper_exit)), "apr_exit");
+    expect(within(evidence).getByRole("region", { name: "Criteria detail" }).textContent).toContain("Not published (FE-028) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(within(evidence).getByRole("region", { name: "Drift" }).textContent).toContain("Not published (FE-028)");
+    expect(within(evidence).getByRole("region", { name: "Drift" }).querySelector("tbody")!.textContent).not.toMatch(/Observed|Comparator/);
+  });
+
+  it("paper_exit_followthrough: the rail names the decider (you) and the latest plan; the recorded receipt reads from the actors", async () => {
+    await open(withBareRows(portAnswering((kind) => okRead(kind, parent().paper_exit_followthrough))), "apr_exit");
+    const text = receipt().textContent!;
+    expect(text).toContain("Decisiondenied");
+    expect(text).toContain("Byuser_TEST_ONLY_reviewer (you)");
+    expect(text).toContain("Latest planop_TEST_ONLY_PAPER_EXIT_APPLIED · stored applied");
+    expect(text).toContain("Requested byuser_TEST_ONLY_requester");
+    expect(text).not.toContain("Requested byuser_TEST_ONLY_requester (you)");
+  });
+
+  it("paper_exit_recorded: one recorded REJECT with its version step and operation", async () => {
+    const evidence = await open(portAnswering((kind) => okRead(kind, parent().paper_exit_recorded)), "apr_exit");
+    const decisions = within(evidence).getByRole("region", { name: "Recorded decisions" });
+    const rows = [...decisions.querySelectorAll("tbody tr")].map((tr) => [...tr.querySelectorAll("td")].map((td) => td.textContent));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.slice(1)).toEqual(["reject", "1 to 2", "op_TEST_ONLY_PAPER_EXIT_APPLIED"]);
+  });
+
+  it("a Live body has no actors or plan section: the rail says Not published (FE-030) for them", async () => {
+    await open(withBareRows(portAnswering((kind) => okRead(kind, parent().live))), "apr_live");
+    expect(receipt().textContent).toContain("Requested byNot published (FE-030)");
+    expect(receipt().textContent).toContain("Latest planNot published (FE-030)");
   });
 });
 

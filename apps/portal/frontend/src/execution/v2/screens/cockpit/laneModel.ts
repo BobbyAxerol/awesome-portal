@@ -11,7 +11,7 @@ import type { PanelStatus } from "../../../contracts";
 import type { LiveReviewPayload } from "../../../api/profileRead";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../../../api/rows";
 import type { ApprovalGate, DecidedRow } from "../../../screens/ApprovalInbox";
-import type { ApprovalV2, LiveParentV2, PaperExitParentV2, R2ParentV2 } from "../../readers/governanceParents";
+import type { ActorsV2, ApprovalV2, LatestOperationV2, LiveParentV2, PaperExitParentV2, R2ParentV2, SectionV2 } from "../../readers/governanceParents";
 import { formatAsOf, readAsOf } from "../../boundary";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import type { InboxActor, InboxRowV2, InboxSlaV2 } from "./inboxRowV2";
@@ -339,6 +339,29 @@ export function separationOfDuty(input: { creator: InboxActor | null; serverSod:
   return { kind: "unknown", text: "Separation of duty: creator Not published (FE-030)." };
 }
 
+/**
+ * The separation-of-duty line for a V2 parent. The body publishes stored actor
+ * ids and whether each is the viewer (`ActorsV2`), and its basis says they are
+ * NOT a decision authorization, so this line states the facts and never says
+ * "OK" or "you cannot decide": the server rechecks the rule when a decision is
+ * planned. Without the section, the creator is `Not published (FE-030)`.
+ */
+export function separationOfDutyV2(actors: SectionV2<ActorsV2> | null): SodState {
+  if (actors === null || actors.availability !== "AVAILABLE") {
+    return { kind: "unknown", text: "Separation of duty: creator Not published (FE-030)." };
+  }
+  const you = (flag: boolean | null) => (flag ? " (you)" : "");
+  return {
+    kind: "unknown",
+    text: `Separation of duty is not stated by this read. Requested by ${actors.requesterUserId}${you(actors.viewerIsRequester)}, created by ${actors.artifactCreatorUserId}${you(actors.viewerIsArtifactCreator)}. The server rechecks it when a decision is planned.`,
+  };
+}
+
+/** A stored actor id as the rail prints it: the id, and `(you)` only where the server said the viewer is that actor. */
+export function actorText(id: string, isViewer: boolean | null): string {
+  return isViewer ? `${id} (you)` : id;
+}
+
 /* ── keys ─────────────────────────────────────────────────────────────────── */
 
 /** J moves down, K moves up; nothing selected starts at the first or last row. Out of range stays put. */
@@ -376,9 +399,15 @@ export interface EvidenceSummary {
   policyVersion: string | null;
   workspaceId: string | null;
   decided: { outcome: string; by: string; at: string } | null;
+  /** The V2 parent's stored actor ids; `null` for V1 and Live reads, which carry none. */
+  actors: SectionV2<ActorsV2> | null;
+  /** The V2 parent's latest recorded plan (the approval to operation link); `null` for V1 and Live reads. */
+  latestOperation: SectionV2<LatestOperationV2> | null;
 }
 
-const NONE: EvidenceSummary = { creator: null, serverSod: null, quorumMet: null, quorumRequired: null, policyVersion: null, workspaceId: null, decided: null };
+const NONE: EvidenceSummary = {
+  creator: null, serverSod: null, quorumMet: null, quorumRequired: null, policyVersion: null, workspaceId: null, decided: null, actors: null, latestOperation: null,
+};
 
 function published(value: string | null | undefined): string | null {
   // V1's placeholders for a missing word are not words.
@@ -395,19 +424,31 @@ function r2Summary(detail: GateR2Detail, workspaceId: string | null): EvidenceSu
     policyVersion: published(detail.policyVersion),
     workspaceId: detail.workspaceId ?? workspaceId,
     decided: null,
+    actors: null,
+    latestOperation: null,
   };
 }
 
 const DECISION_STATUSES: readonly ApprovalV2["status"][] = ["APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED"];
 
 /**
- * What a V2 approval says for the rail. No creator and no actor are published
- * (FE-030), so `creator` stays `null` and `decided.by` says so. A decision is
- * only reported for a status that is one (an EXPIRED request was not decided).
+ * What a V2 approval says for the rail. The stored actor ids are used only
+ * when the parent publishes them (`actors`); `creator` stays `null` because a
+ * V2 body has no username to compare, and the SoD line is `separationOfDutyV2`.
+ * A decision is only reported for a status that is one (an EXPIRED request was
+ * not decided), and its decider is named only when the actors section says who.
  */
-function approvalSummary(approval: ApprovalV2, workspaceId: string): EvidenceSummary {
+function approvalSummary(
+  approval: ApprovalV2,
+  workspaceId: string,
+  sections: { actors: SectionV2<ActorsV2> | null; latestOperation: SectionV2<LatestOperationV2> | null },
+): EvidenceSummary {
+  const { actors, latestOperation } = sections;
+  const decider = actors !== null && actors.availability === "AVAILABLE" && actors.decidedByUserId !== null
+    ? actorText(actors.decidedByUserId, actors.viewerIsDecidedBy)
+    : NOT_PUBLISHED.decisionCall;
   const decided = approval.decidedAt !== null && DECISION_STATUSES.includes(approval.status)
-    ? { outcome: approval.status, by: NOT_PUBLISHED.decisionCall, at: new Date(approval.decidedAt).toISOString() }
+    ? { outcome: approval.status, by: decider, at: new Date(approval.decidedAt).toISOString() }
     : null;
   return {
     ...NONE,
@@ -416,6 +457,8 @@ function approvalSummary(approval: ApprovalV2, workspaceId: string): EvidenceSum
     policyVersion: approval.policyVersion,
     workspaceId,
     decided,
+    actors,
+    latestOperation,
   };
 }
 
@@ -424,8 +467,9 @@ export function summarizeEvidence(data: EvidenceData | null): EvidenceSummary {
   switch (data.kind) {
     case "r2v2":
     case "exitv2":
+      return approvalSummary(data.parent.approval, data.parent.header.workspaceId, data.parent);
     case "livev2":
-      return approvalSummary(data.parent.approval, data.parent.header.workspaceId);
+      return approvalSummary(data.parent.approval, data.parent.header.workspaceId, { actors: null, latestOperation: null });
     case "r1": {
       const d = data.detail;
       const name = published(d.creator);
@@ -437,6 +481,8 @@ export function summarizeEvidence(data: EvidenceData | null): EvidenceSummary {
         policyVersion: published(d.policyVersion),
         workspaceId: d.workspaceId,
         decided: d.decided ? { outcome: d.decided.outcome, by: d.decided.by, at: d.decided.at } : null,
+        actors: null,
+        latestOperation: null,
       };
     }
     case "r2":

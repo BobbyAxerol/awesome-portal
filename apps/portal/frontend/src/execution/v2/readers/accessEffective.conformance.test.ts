@@ -2,8 +2,11 @@
  * Reader conformance for `accessEffective.ts` (Rules 9.8.3, tiers L0 to L3).
  *
  * L0  `execution-access.synthetic.valid.json`, verbatim: the one effective
- *     body it ships (POLICY_PENDING, no grants), and the eleven other bodies in
- *     the file, none of which may ever be read as an effective-access body.
+ *     body it ships (POLICY_PENDING, no grants), and the seventeen other bodies
+ *     in the file (six of them, `portal.self-eligibility.v1` x2 and
+ *     `portal.self-navigation.v1` x4, added by Codex e19ad906 for the C3 self
+ *     reads, which this reader does not read), none of which may ever be read
+ *     as an effective-access body. `AccessEffective` itself did not change.
  *     The file has no AVAILABLE body with grants; those four grants come from
  *     the e2e double (e2e/bffDoubleAccess.ts), which builds them on the
  *     canonical body, and they are named as such below.
@@ -78,9 +81,22 @@ describe("L0 · canonical, verbatim", () => {
   it("the file is the synthetic lane with the cases this suite thinks it has", () => {
     expect(canonical.lane).toMatch(/TEST_ONLY/);
     expect(canonical.cases.map((c) => c.type)).toEqual([
+      "AccessEligibility", "AccessEligibility", "AccessSelfNavigation", "AccessSelfNavigation", "AccessSelfNavigation", "AccessSelfNavigation",
       "AccessEffective", "AccessPreviewRequest", "AccessPreview", "AccessRevokePreview", "AccessRevokePreview", "AccessReceipt", "AccessReceipt",
       "AccessReceipt", "AccessReceipt", "AccessReceipt", "AccessReceipt", "AccessReceipt",
     ]);
+    // Exactly one effective body, so `PENDING` (found by type) is the only one the reader may read.
+    expect(canonical.cases.filter((c) => c.type === "AccessEffective")).toHaveLength(1);
+  });
+
+  it("the two C3 self-read families are other contracts: their schema_versions are named, and neither reads as effective access", () => {
+    const eligibility = canonical.cases.filter((c) => c.type === "AccessEligibility");
+    const navigation = canonical.cases.filter((c) => c.type === "AccessSelfNavigation");
+    expect(eligibility.map((c) => c.value.schema_version)).toEqual(["portal.self-eligibility.v1", "portal.self-eligibility.v1"]);
+    expect(navigation.map((c) => c.value.schema_version)).toEqual(Array(4).fill("portal.self-navigation.v1"));
+    for (const entry of [...eligibility, ...navigation]) {
+      expect(readAccessEffective(entry.value)).toEqual({ kind: "unsupported_shape", schemaVersion: entry.value.schema_version });
+    }
   });
 
   it("the effective body reads exactly as published: pending policy, no grants, owner recovery off", () => {

@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import type { ConditionRow } from "../../../api/ports";
 import type { DecidedRow } from "../../../screens/ApprovalInbox";
+import { loadCanonical } from "../../testkit/loadCanonical";
+import { readLiveParentV2, readPaperExitParentV2, readR2ParentV2 } from "../../readers/governanceParents";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import type { InboxRowV2 } from "./inboxRowV2";
 import {
+  actorText,
   deriveAccess,
   formatMinutes,
   gateItems,
@@ -19,6 +22,7 @@ import {
   quorumText,
   sameActor,
   separationOfDuty,
+  separationOfDutyV2,
   serverViewFor,
   settledPanel,
   slaView,
@@ -275,5 +279,44 @@ describe("small helpers", () => {
   });
   it("no evidence summarises to nothing published", () => {
     expect(summarizeEvidence(null)).toMatchObject({ creator: null, serverSod: null, quorumMet: null, quorumRequired: null, policyVersion: null, workspaceId: null, decided: null });
+  });
+});
+
+describe("V2 parent actors (Codex e19ad906)", () => {
+  const fixture = loadCanonical<Record<string, any>>("execution-positive-parent.synthetic");
+  const r2 = (key: string) => readR2ParentV2(fixture[key])!;
+  const exit = (key: string) => readPaperExitParentV2(fixture[key])!;
+
+  it("a stored actor is its id, and (you) only where the server said the viewer is that actor", () => {
+    expect(actorText("user_a", false)).toBe("user_a");
+    expect(actorText("user_a", null)).toBe("user_a");
+    expect(actorText("user_a", true)).toBe("user_a (you)");
+  });
+
+  it("separationOfDutyV2 states the facts and never says OK or that the viewer cannot decide", () => {
+    const sod = separationOfDutyV2(r2("r2_followthrough").actors);
+    expect(sod.kind).toBe("unknown");
+    expect(sod.text).toContain("Requested by user_TEST_ONLY_requester,");
+    expect(sod.text).toContain("created by user_TEST_ONLY_creator (you)");
+    expect(sod.text).not.toMatch(/\bOK\b|cannot decide|may not/);
+  });
+
+  it("without the actors section the creator is Not published (FE-030), as before", () => {
+    expect(separationOfDutyV2(r2("r2").actors).text).toBe("Separation of duty: creator Not published (FE-030).");
+    expect(separationOfDutyV2(null).kind).toBe("unknown");
+  });
+
+  it("summarizeEvidence carries the parent's actors and latest plan, and names the decider only when the actors do", () => {
+    const decided = summarizeEvidence({ kind: "r2v2", parent: r2("r2_recorded") });
+    expect(decided.actors).toMatchObject({ availability: "AVAILABLE", decidedByUserId: "user_TEST_ONLY_reviewer" });
+    expect(decided.latestOperation).toMatchObject({ availability: "AVAILABLE", operationId: "op_TEST_ONLY_R2_APPLIED" });
+    expect(decided.decided).toMatchObject({ outcome: "DENIED", by: "user_TEST_ONLY_reviewer" });
+    // The same status with the actors withheld: the decider is the not-published word, never a guess.
+    const withheld = structuredClone(fixture.r2_recorded);
+    withheld.actors = { availability: "NOT_PUBLISHED", reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" };
+    expect(summarizeEvidence({ kind: "r2v2", parent: readR2ParentV2(withheld)! }).decided).toMatchObject({ outcome: "DENIED", by: "Not published (FE-030)" });
+    const mine = summarizeEvidence({ kind: "exitv2", parent: exit("paper_exit_followthrough") });
+    expect(mine.decided?.by).toBe("user_TEST_ONLY_reviewer (you)");
+    expect(summarizeEvidence({ kind: "livev2", parent: readLiveParentV2(fixture.live)! }).actors).toBeNull();
   });
 });

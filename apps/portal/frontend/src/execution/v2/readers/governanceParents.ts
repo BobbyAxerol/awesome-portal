@@ -22,11 +22,24 @@
  *   version, the Portal timestamps); what it does not publish is a typed
  *   absence. An optional section is `{availability:"AVAILABLE", ...}` or
  *   `{availability:"NOT_PUBLISHED", reasonCode}`, never an empty list;
- * - what is not on the wire at all (criteria label/observed/limit, capital
- *   rows, an actor, the decision call) is NOT invented here and not inferred
- *   from what is: `notPublished` names each such datum with the FE request
- *   that will publish it, so a screen prints `Not published (FE-xxx)` from data
- *   instead of a bare dash or a "no R1 lineage" claim the body disproves;
+ * - what is not on the wire at all (R2 criteria label/observed/limit, capital
+ *   rows, the ladder, the decision call and its receipt, a criterion comparator)
+ *   is NOT invented here and not inferred from what is: `notPublished` names
+ *   each such datum with the FE request that will publish it, so a screen
+ *   prints `Not published (FE-xxx)` from data instead of a bare dash or a "no
+ *   R1 lineage" claim the body disproves. Since Codex e19ad906 the R2 and Paper
+ *   Exit parents also carry stored actor ids, the latest recorded plan, the
+ *   recorded decisions, the R2 stored decision inputs, the R2 recorded verdicts
+ *   and the Paper Exit criteria; each is a typed section (AVAILABLE, or absent
+ *   with the server's reason), and a datum is in `notPublished` only while the
+ *   section that would carry it is absent;
+ * - the runtime-only relations the schema descriptions state (and
+ *   `positive-parent.contract.ts` enforces) are applied here: unique panel
+ *   ids, kinds and ordinals, finding and panel membership, recorded activity
+ *   `version_after = version_before + 1` with unique ids and non-increasing
+ *   clocks, strictly ascending evidence hashes and finding ordinals, a
+ *   blocking verdict only FAIL or INSUFFICIENT, the stored decision inputs
+ *   naming the parent's own workspace, approval and version;
  * - Portal timestamps are Portal lifecycle clocks, not source freshness, and a
  *   decimal crosses as the exact string (`readDecimal` over `readExactDecimal`);
  * - `APPLIED` on an operation is the stored Portal state, not Trading System
@@ -145,6 +158,11 @@ export interface R2ParentV2 {
   anchors: { deploymentId: string; portfolioId: string; environment: "PAPER" };
   approval: ApprovalV2 & { gate: "R2" };
   lineage: SectionV2<R2LineageV2>;
+  actors: SectionV2<ActorsV2>;
+  latestOperation: SectionV2<LatestOperationV2>;
+  decisionContext: SectionV2<DecisionContextV2>;
+  recordedActivity: SectionV2<RecordedActivityV2>;
+  recordedVerdicts: SectionV2<RecordedVerdictsV2>;
   notPublished: NotPublishedV2;
 }
 
@@ -163,8 +181,9 @@ export interface ExitPanelV2 {
 }
 
 /**
- * One finding as published: an outcome and two flags. There is no label,
- * observed value or limit (FE-028), so none is shown.
+ * One finding as the `evaluation` section publishes it: an outcome and two
+ * flags. Its label, observed value and limit live in the `criteria` section
+ * (`ExitCriterionV2`), not here.
  */
 export interface ExitFindingV2 {
   findingId: string;
@@ -183,6 +202,147 @@ export interface ExitEvaluationV2 {
   findings: readonly ExitFindingV2[];
 }
 
+/* ── sections added by Codex e19ad906 (R2 and Paper Exit parents) ────────── */
+
+/** `{availability:"AVAILABLE", value}` or the typed absence with the server's reason; `value` is `null` only on the wire. */
+export type ScalarV2<T> = { availability: "AVAILABLE"; value: T } | { availability: "NOT_PUBLISHED"; reasonCode: string };
+
+/**
+ * Stored Portal actor ids and whether each is the viewer. Not a role, not a
+ * separation-of-duty verdict, not decision eligibility: the schema names the
+ * basis `STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION`. There is no
+ * username on the wire, so none is shown.
+ */
+export interface ActorsV2 {
+  basis: "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION";
+  requesterUserId: string;
+  artifactCreatorUserId: string;
+  /** `null` = not decided yet; `viewerIsDecidedBy` is then `null` too. */
+  decidedByUserId: string | null;
+  viewerIsRequester: boolean;
+  viewerIsArtifactCreator: boolean;
+  viewerIsDecidedBy: boolean | null;
+}
+
+export const LATEST_OPERATION_ABSENCES = ["PARENT_FIELD_PURPOSE_NOT_QUALIFIED", "NO_RECORDED_PORTAL_OPERATION", "LATEST_RECORDED_OPERATION_NOT_PUBLIC"] as const;
+
+/** The newest recorded Portal plan for this approval: its stored state is neither apply eligibility nor source settlement. */
+export interface LatestOperationV2 {
+  basis: "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY";
+  operationId: string;
+  commandVersion: 1;
+  commandType: "GOVERNANCE_R2_DECISION" | "GOVERNANCE_PAPER_EXIT_DECISION";
+  storedStatus: (typeof OPERATION_STATUSES)[number];
+  createdAt: UtcEpochMs;
+  orderBasis: "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC";
+}
+
+/** The R2 inputs a decision plan would carry. Stored facts, never READY or action authorization. */
+export interface DecisionContextV2 {
+  basis: "VERIFIED_STORED_R2_INPUTS_NOT_ACTION_AUTHORIZATION";
+  gate: "R2";
+  workspaceId: string;
+  approvalId: string;
+  expectedApprovalVersion: number;
+  evidenceSetHash: string;
+  /** Strictly ascending; absent (never a truncated or empty list) above 128 hashes. */
+  evidenceHashes: { availability: "AVAILABLE"; value: readonly string[] } | { availability: "NOT_PUBLISHED"; reasonCode: "EVIDENCE_HASH_LIMIT_EXCEEDED" };
+  commandType: "GOVERNANCE_R2_DECISION";
+  requestSchemaVersion: "governance.r2-decision-plan-request.v1";
+  planPath: "/api/v1/execution/commands/plans";
+  admission: { state: "NOT_EVALUATED"; reasonCode: "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN" };
+  sourceSideEffectRequested: false;
+}
+
+export interface RecordedDecisionV2 {
+  decisionId: string;
+  operationId: string;
+  versionBefore: number;
+  versionAfter: number;
+  decidedAt: UtcEpochMs;
+  kind: "R2_DECISION_RECORDED" | "PAPER_EXIT_DECISION_RECORDED";
+  decision: (typeof R2_DECISIONS)[number] | (typeof EXIT_DECISIONS)[number];
+}
+
+/** Bounded recent Portal decision rows, newest first. Not source, order or stage history, and not full history. */
+export interface RecordedActivityV2 {
+  basis: "IMMUTABLE_PORTAL_DECISION_ROWS_NOT_SOURCE_OR_STAGE_HISTORY";
+  orderBasis: "POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC";
+  coverage: "BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY";
+  limit: 32;
+  /** More rows exist than the 32 shown. */
+  hasMore: boolean;
+  items: readonly RecordedDecisionV2[];
+}
+
+export const RECORDED_ACTIVITY_ABSENCES = ["PARENT_FIELD_PURPOSE_NOT_QUALIFIED", "RECORDED_ACTIVITY_NOT_PUBLIC"] as const;
+export const RECORDED_VERDICT_ABSENCES = ["PARENT_FIELD_PURPOSE_NOT_QUALIFIED", "RECORDED_VERDICTS_NOT_PUBLIC"] as const;
+
+/**
+ * One stored R2 finding. The schema pins every structured criterion field
+ * (criterion key, label, observed, limit, comparator, unit, currency) to the
+ * typed absence `SOURCE_STRUCTURED_CRITERION_NOT_RECORDED`, so they are one
+ * fact here (`structuredCriterion`), not seven nulls.
+ */
+export interface RecordedVerdictV2 {
+  findingId: string;
+  ordinal: number;
+  outcome: FindingOutcomeV2;
+  /** Only FAIL or INSUFFICIENT can block (the schema's if/then). */
+  blocking: boolean;
+  evaluatedAt: UtcEpochMs;
+  structuredCriterion: { availability: "NOT_PUBLISHED"; reasonCode: "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED" };
+  sourceRef: { kind: "PORTAL_STORED_R2_FINDING"; approvalId: string; findingId: string; basis: "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE" };
+}
+
+export interface RecordedVerdictsV2 {
+  basis: "STORED_PORTAL_R2_FINDINGS_NOT_CURRENT_GATE_READINESS";
+  orderBasis: "POSTGRES_ORDINAL_ASC_FINDING_ID_C_ASC";
+  coverage: "BOUNDED_RECORDED_FINDINGS_NOT_FULL_CRITERIA_HISTORY";
+  limit: 64;
+  hasMore: boolean;
+  items: readonly RecordedVerdictV2[];
+  admission: { state: "NOT_EVALUATED"; reasonCode: "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN" };
+}
+
+export const PAPER_EXIT_LABEL_KEYS = {
+  OBSERVATION_COVERAGE: "paper_exit.observation_coverage",
+  DRIFT: "paper_exit.drift",
+  LIMITS_HEALTH: "paper_exit.limits_health",
+  PORTFOLIO_FIT: "paper_exit.portfolio_fit",
+} as const satisfies Record<PanelKindV2, string>;
+export type PaperExitLabelKeyV2 = (typeof PAPER_EXIT_LABEL_KEYS)[PanelKindV2];
+
+/**
+ * One Paper Exit finding with its stored criterion facts. `observed` and
+ * `limit` are the exact decimal strings of the wire (the unit is free text, so
+ * no unit class is guessed and nothing is rounded); the comparator is always
+ * absent on the wire, so no "at most" or "at least" is ever drawn.
+ */
+export interface ExitCriterionV2 {
+  finding: ExitFindingV2;
+  criterionKey: ScalarV2<PanelKindV2>;
+  labelKey: ScalarV2<PaperExitLabelKeyV2>;
+  observed: ScalarV2<string>;
+  limit: ScalarV2<string>;
+  comparator: { availability: "NOT_PUBLISHED"; reasonCode: "SOURCE_COMPARATOR_FIELD_NOT_RECORDED" };
+  unit: ScalarV2<string>;
+  currency: ScalarV2<string>;
+  /** `sha256:` digest of the evidence the finding was computed from. */
+  evidence: ScalarV2<string>;
+  findingFormulaVersion: ScalarV2<string>;
+  sourceTime: ScalarV2<UtcEpochMs>;
+  sourceRef: { kind: "PORTAL_STORED_PAPER_EXIT_FINDING"; reviewId: string; panelId: string; findingId: string; basis: "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE" };
+}
+
+export interface ExitCriteriaV2 {
+  basis: "VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE";
+  evaluationPolicyVersion: string;
+  evaluationFormulaVersion: string;
+  panels: readonly ExitPanelV2[];
+  items: readonly ExitCriterionV2[];
+}
+
 export interface PaperExitParentV2 {
   family: "PAPER_EXIT";
   header: ParentHeaderV2;
@@ -199,7 +359,11 @@ export interface PaperExitParentV2 {
     updatedAt: UtcEpochMs;
   };
   evaluation: SectionV2<ExitEvaluationV2>;
+  criteria: SectionV2<ExitCriteriaV2>;
   lineage: SectionV2<ExitLineageV2>;
+  actors: SectionV2<ActorsV2>;
+  latestOperation: SectionV2<LatestOperationV2>;
+  recordedActivity: SectionV2<RecordedActivityV2>;
   notPublished: NotPublishedV2;
 }
 
@@ -345,12 +509,20 @@ export type GovernanceParentV2 =
 
 /* ── what no parent body carries ──────────────────────────────────────────── */
 
+/**
+ * Data the R2 and Paper Exit schemas never carry, whatever the viewer may read:
+ * the approval ladder, the one idempotent decision call and its receipt
+ * reference (FE-030). The per-family lists below add what the schema leaves out
+ * of that family; `withAbsentSections` adds what a section would have carried
+ * and did not, so the list describes the body in hand, not the schema alone.
+ */
 const APPROVAL_GAPS = {
-  creator: "FE-030",
   ladder: "FE-030",
   decisionCall: "FE-030",
+  receiptRef: "FE-030",
 } as const;
 
+/** R2: no capital rows, no R1 state, decider or expiry, and (recorded verdicts included) no criterion label, observed value or limit. */
 const R2_NOT_PUBLISHED: NotPublishedV2 = {
   ...APPROVAL_GAPS,
   criteria: "FE-028",
@@ -359,15 +531,16 @@ const R2_NOT_PUBLISHED: NotPublishedV2 = {
   r1DecidedBy: "FE-030",
   r1Expiry: "FE-028",
 };
+/** Paper Exit: no gate verdict, no comparator on any criterion (`op` is always absent on the wire), no evidence chart. */
 const EXIT_NOT_PUBLISHED: NotPublishedV2 = {
   ...APPROVAL_GAPS,
-  criteriaLabel: "FE-028",
-  observedAndLimit: "FE-028",
   gateVerdict: "FE-028",
+  comparator: "FE-028",
   chart: "FE-029",
 };
 const LIVE_NOT_PUBLISHED: NotPublishedV2 = {
   ...APPROVAL_GAPS,
+  creator: "FE-030",
   criteria: "FE-028",
   governanceBackbone: "FE-028",
   canaryBranches: "FE-029",
@@ -384,6 +557,13 @@ const OPERATION_NOT_PUBLISHED: NotPublishedV2 = {
   operationLink: "FE-030",
   creator: "FE-030",
 };
+
+/** A datum the section would have carried is not published exactly when the section is absent. */
+function withAbsentSections(base: NotPublishedV2, sections: readonly [section: { availability: string }, datum: string, fe: string][]): NotPublishedV2 {
+  const out: Record<string, string> = { ...base };
+  for (const [section, datum, fe] of sections) if (section.availability !== "AVAILABLE") out[datum] = fe;
+  return out;
+}
 
 /* ── strict helpers ───────────────────────────────────────────────────────── */
 
@@ -541,11 +721,18 @@ function readAbsent(value: unknown, code?: string): AbsentSectionV2 | null {
 const NOT_QUALIFIED = "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
 const MANAGER_FACTS_REASON = "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION";
 
-/** An optional section: its `AVAILABLE` branch is read by `available`, its absence is the one published branch. */
-function section<T>(value: unknown, available: (r: Rec) => T | null, keys: readonly string[]): SectionV2<T> | null {
+/**
+ * An optional section: its `AVAILABLE` branch is read by `available`, its
+ * absence is the published `NOT_PUBLISHED` branch with one of `reasons` (the
+ * schema lists them per section; any other word voids the read).
+ */
+function section<T>(value: unknown, available: (r: Rec) => T | null, keys: readonly string[], reasons: readonly string[] = [NOT_QUALIFIED]): SectionV2<T> | null {
   const r = rec(value);
   if (r === null) return null;
-  if (r.availability === "NOT_PUBLISHED") return readAbsent(value, NOT_QUALIFIED);
+  if (r.availability === "NOT_PUBLISHED") {
+    const absent = readAbsent(value);
+    return absent !== null && reasons.includes(absent.reasonCode) ? absent : null;
+  }
   if (r.availability !== "AVAILABLE") return null;
   const body = closed(value, keys);
   if (body === null) return null;
@@ -557,12 +744,190 @@ function readManagerFacts(value: unknown): AbsentSectionV2 | null {
   return readAbsent(value, MANAGER_FACTS_REASON);
 }
 
+/* ── sections added by e19ad906, shared by R2 and Paper Exit ─────────────── */
+
+type Family = "R2" | "PAPER_EXIT";
+const COMMAND_OF: Readonly<Record<Family, LatestOperationV2["commandType"]>> = {
+  R2: "GOVERNANCE_R2_DECISION",
+  PAPER_EXIT: "GOVERNANCE_PAPER_EXIT_DECISION",
+};
+
+/** `actors`: schema `oneOf[AVAILABLE, NOT_PUBLISHED]`; `decided_by_user_id` is null exactly when `viewer_is_decided_by` is. */
+function readActors(value: unknown): SectionV2<ActorsV2> | null {
+  return section<ActorsV2>(value, (a) => {
+    const requesterUserId = id(a.requester_user_id);
+    const artifactCreatorUserId = id(a.artifact_creator_user_id);
+    const decidedByUserId = nullable(a.decided_by_user_id, id);
+    const viewerIsRequester = bool(a.viewer_is_requester);
+    const viewerIsArtifactCreator = bool(a.viewer_is_artifact_creator);
+    const viewerIsDecidedBy = nullable(a.viewer_is_decided_by, bool);
+    if (
+      a.basis !== "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION" || requesterUserId === null || artifactCreatorUserId === null
+      || decidedByUserId === undefined || viewerIsRequester === null || viewerIsArtifactCreator === null || viewerIsDecidedBy === undefined
+    ) return null;
+    if ((decidedByUserId === null) !== (viewerIsDecidedBy === null)) return null;
+    return {
+      basis: "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION",
+      requesterUserId, artifactCreatorUserId, decidedByUserId, viewerIsRequester, viewerIsArtifactCreator, viewerIsDecidedBy,
+    };
+  }, ["availability", "basis", "requester_user_id", "artifact_creator_user_id", "decided_by_user_id", "viewer_is_requester", "viewer_is_artifact_creator", "viewer_is_decided_by"]);
+}
+
+/** `latest_operation`: three branches (available; purpose not qualified; no recorded or no public plan). */
+function readLatestOperation(value: unknown, family: Family): SectionV2<LatestOperationV2> | null {
+  const read = section<LatestOperationV2>(value, (o) => {
+    const operationId = id(o.operation_id);
+    const storedStatus = oneOf(o.stored_status, OPERATION_STATUSES);
+    const createdAt = ms(o.created_at_ms);
+    if (
+      o.basis !== "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY" || o.order_basis !== "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC"
+      || o.command_version !== 1 || o.command_type !== COMMAND_OF[family] || operationId === null || storedStatus === null || createdAt === null
+    ) return null;
+    return {
+      basis: "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY", operationId, commandVersion: 1, commandType: COMMAND_OF[family],
+      storedStatus, createdAt, orderBasis: "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC",
+    };
+  }, ["availability", "basis", "operation_id", "command_version", "command_type", "stored_status", "created_at_ms", "order_basis"], LATEST_OPERATION_ABSENCES);
+  return read;
+}
+
+/** `decision_context` (R2 only): the stored plan inputs, correlated with the parent's own workspace, approval and version. */
+function readDecisionContext(value: unknown, workspaceId: string, approval: ApprovalV2): SectionV2<DecisionContextV2> | null {
+  return section<DecisionContextV2>(value, (c) => {
+    const ctxWorkspace = workspace(c.workspace_id);
+    const approvalId = id(c.approval_id);
+    const expectedApprovalVersion = version(c.expected_approval_version);
+    const evidenceSetHash = sha(c.evidence_set_hash);
+    const hashes = closed(c.evidence_hashes, ["availability", "value", "reason_code"]);
+    const admission = closed(c.admission, ["state", "reason_code"]);
+    if (
+      c.basis !== "VERIFIED_STORED_R2_INPUTS_NOT_ACTION_AUTHORIZATION" || c.gate !== "R2" || ctxWorkspace === null || approvalId === null
+      || expectedApprovalVersion === null || evidenceSetHash === null || hashes === null || admission === null
+      || c.command_type !== "GOVERNANCE_R2_DECISION" || c.request_schema_version !== "governance.r2-decision-plan-request.v1"
+      || c.plan_path !== "/api/v1/execution/commands/plans" || c.source_side_effect_requested !== false
+      || admission.state !== "NOT_EVALUATED" || admission.reason_code !== "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"
+    ) return null;
+    // Runtime relation: the inputs are this approval's own, at the version the parent shows.
+    if (ctxWorkspace !== workspaceId || approvalId !== approval.approvalId || expectedApprovalVersion !== approval.approvalVersion) return null;
+    let evidenceHashes: DecisionContextV2["evidenceHashes"];
+    if (hashes.availability === "AVAILABLE") {
+      if (hashes.reason_code !== null || !Array.isArray(hashes.value) || hashes.value.length > 128) return null;
+      const list: string[] = [];
+      for (const entry of hashes.value) {
+        const digest = sha(entry);
+        if (digest === null) return null;
+        list.push(digest);
+      }
+      // Runtime relation: strictly ascending lexical order (so unique); standard JSON Schema cannot say it.
+      if (list.some((digest, index) => index > 0 && !(list[index - 1]! < digest))) return null;
+      evidenceHashes = { availability: "AVAILABLE", value: list };
+    } else if (hashes.availability === "NOT_PUBLISHED" && hashes.value === null && hashes.reason_code === "EVIDENCE_HASH_LIMIT_EXCEEDED") {
+      evidenceHashes = { availability: "NOT_PUBLISHED", reasonCode: "EVIDENCE_HASH_LIMIT_EXCEEDED" };
+    } else return null;
+    return {
+      basis: "VERIFIED_STORED_R2_INPUTS_NOT_ACTION_AUTHORIZATION", gate: "R2", workspaceId: ctxWorkspace, approvalId, expectedApprovalVersion,
+      evidenceSetHash, evidenceHashes, commandType: "GOVERNANCE_R2_DECISION", requestSchemaVersion: "governance.r2-decision-plan-request.v1",
+      planPath: "/api/v1/execution/commands/plans",
+      admission: { state: "NOT_EVALUATED", reasonCode: "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN" }, sourceSideEffectRequested: false,
+    };
+  }, [
+    "availability", "basis", "gate", "workspace_id", "approval_id", "expected_approval_version", "evidence_set_hash", "evidence_hashes",
+    "command_type", "request_schema_version", "plan_path", "admission", "source_side_effect_requested",
+  ]);
+}
+
+/** `recorded_activity`: at most 32 immutable decision rows, newest first; more than shown only when exactly 32 are. */
+function readRecordedActivity(value: unknown, family: Family): SectionV2<RecordedActivityV2> | null {
+  const kind = family === "R2" ? "R2_DECISION_RECORDED" : "PAPER_EXIT_DECISION_RECORDED";
+  return section<RecordedActivityV2>(value, (a) => {
+    const hasMore = bool(a.has_more);
+    if (
+      a.basis !== "IMMUTABLE_PORTAL_DECISION_ROWS_NOT_SOURCE_OR_STAGE_HISTORY" || a.order_basis !== "POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC"
+      || a.coverage !== "BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY" || a.limit !== 32 || hasMore === null
+      || !Array.isArray(a.items) || a.items.length > 32 || (hasMore && a.items.length !== 32)
+    ) return null;
+    const items: RecordedDecisionV2[] = [];
+    for (const entry of a.items) {
+      const row = closed(entry, ["decision_id", "operation_id", "version_before", "version_after", "decided_at_ms", "kind", "decision"]);
+      if (row === null) return null;
+      const decisionId = id(row.decision_id);
+      const operationId = id(row.operation_id);
+      const versionBefore = version(row.version_before);
+      const versionAfter = version(row.version_after);
+      const decidedAt = ms(row.decided_at_ms);
+      const decision = family === "R2" ? oneOf(row.decision, R2_DECISIONS) : oneOf(row.decision, EXIT_DECISIONS);
+      if (row.kind !== kind || decisionId === null || operationId === null || versionBefore === null || versionAfter === null || decidedAt === null || decision === null) return null;
+      // Runtime relation: one decision advances the version by exactly one.
+      if (versionAfter !== versionBefore + 1) return null;
+      items.push({ decisionId, operationId, versionBefore, versionAfter, decidedAt, kind, decision });
+    }
+    // Runtime relations: unique decision and operation ids; public clocks never increase (equal milliseconds may tie in either id order).
+    if (new Set(items.map((i) => i.decisionId)).size !== items.length || new Set(items.map((i) => i.operationId)).size !== items.length) return null;
+    if (items.some((item, index) => index > 0 && items[index - 1]!.decidedAt < item.decidedAt)) return null;
+    return {
+      basis: "IMMUTABLE_PORTAL_DECISION_ROWS_NOT_SOURCE_OR_STAGE_HISTORY", orderBasis: "POSTGRES_DECIDED_AT_DESC_DECISION_ID_C_ASC",
+      coverage: "BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY", limit: 32, hasMore, items,
+    };
+  }, ["availability", "basis", "order_basis", "coverage", "limit", "has_more", "items"], RECORDED_ACTIVITY_ABSENCES);
+}
+
+/** `recorded_verdicts` (R2 only): at most 64 stored findings, ordinals strictly ascending, each naming this approval. */
+function readRecordedVerdicts(value: unknown, approvalId: string): SectionV2<RecordedVerdictsV2> | null {
+  return section<RecordedVerdictsV2>(value, (v) => {
+    const hasMore = bool(v.has_more);
+    const admission = closed(v.admission, ["state", "reason_code"]);
+    if (
+      v.basis !== "STORED_PORTAL_R2_FINDINGS_NOT_CURRENT_GATE_READINESS" || v.order_basis !== "POSTGRES_ORDINAL_ASC_FINDING_ID_C_ASC"
+      || v.coverage !== "BOUNDED_RECORDED_FINDINGS_NOT_FULL_CRITERIA_HISTORY" || v.limit !== 64 || hasMore === null || admission === null
+      || admission.state !== "NOT_EVALUATED" || admission.reason_code !== "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN"
+      || !Array.isArray(v.items) || v.items.length > 64 || (hasMore && v.items.length !== 64)
+    ) return null;
+    const items: RecordedVerdictV2[] = [];
+    for (const entry of v.items) {
+      const row = closed(entry, [
+        "finding_id", "ordinal", "outcome", "blocking", "evaluated_at_ms", "criterion_key", "label_key", "observed", "limit", "op", "unit", "currency", "source_ref",
+      ]);
+      if (row === null) return null;
+      const findingId = id(row.finding_id);
+      const ordinal = natural(row.ordinal);
+      const outcome = oneOf(row.outcome, FINDING_OUTCOMES_V2);
+      const blocking = bool(row.blocking);
+      const evaluatedAt = ms(row.evaluated_at_ms);
+      const ref = closed(row.source_ref, ["kind", "approval_id", "finding_id", "basis"]);
+      if (findingId === null || ordinal === null || outcome === null || blocking === null || evaluatedAt === null || ref === null) return null;
+      // Schema if/then: a blocking verdict is a FAIL or an INSUFFICIENT.
+      if (blocking && outcome !== "FAIL" && outcome !== "INSUFFICIENT") return null;
+      // Each structured criterion field is the one published absence.
+      for (const key of ["criterion_key", "label_key", "observed", "limit", "op", "unit", "currency"]) {
+        const field = closed(row[key], ["availability", "value", "reason_code"]);
+        if (field === null || field.availability !== "NOT_PUBLISHED" || field.value !== null || field.reason_code !== "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED") return null;
+      }
+      // Runtime relation: the reference names this finding of this approval.
+      if (ref.kind !== "PORTAL_STORED_R2_FINDING" || ref.basis !== "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE" || ref.finding_id !== findingId || ref.approval_id !== approvalId) return null;
+      items.push({
+        findingId, ordinal, outcome, blocking, evaluatedAt,
+        structuredCriterion: { availability: "NOT_PUBLISHED", reasonCode: "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED" },
+        sourceRef: { kind: "PORTAL_STORED_R2_FINDING", approvalId, findingId, basis: "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE" },
+      });
+    }
+    // Runtime relations: unique finding ids, ordinals strictly ascending.
+    if (new Set(items.map((i) => i.findingId)).size !== items.length || items.some((item, index) => index > 0 && !(items[index - 1]!.ordinal < item.ordinal))) return null;
+    return {
+      basis: "STORED_PORTAL_R2_FINDINGS_NOT_CURRENT_GATE_READINESS", orderBasis: "POSTGRES_ORDINAL_ASC_FINDING_ID_C_ASC",
+      coverage: "BOUNDED_RECORDED_FINDINGS_NOT_FULL_CRITERIA_HISTORY", limit: 64, hasMore, items,
+      admission: { state: "NOT_EVALUATED", reasonCode: "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN" },
+    };
+  }, ["availability", "basis", "order_basis", "coverage", "limit", "has_more", "items", "admission"], RECORDED_VERDICT_ABSENCES);
+}
+
 /* ── R2 ───────────────────────────────────────────────────────────────────── */
 
-const R2_KEYS = [
+/** The keys both governance parents share (`R2ParentReadV2` and `PaperExitParentReadV2`, execution-operations.v1 schema). */
+const PARENT_KEYS = [
   "schema_version", "workspace_id", "record_authority", "provenance_basis", "field_contract_revision", "observed_at_ms",
-  "source", "anchors", "approval", "family", "lineage",
+  "source", "anchors", "approval", "family", "lineage", "actors", "latest_operation",
 ];
+const R2_KEYS = [...PARENT_KEYS, "decision_context", "recorded_activity", "recorded_verdicts"];
 
 function readParentAnchors(value: unknown): { deploymentId: string; portfolioId: string; environment: "PAPER" } | null {
   const a = closed(value, ["deployment_id", "portfolio_id", "environment"]);
@@ -587,13 +952,28 @@ export function readR2ParentV2(raw: unknown): R2ParentV2 | null {
       ? null
       : { basis: "STORED_IMMUTABLE_REFERENCE", r1ApprovalId, observedRiskGrantId, currency };
   }, ["availability", "basis", "r1_approval_id", "observed_risk_grant_id", "currency"]);
-  if (header === null || anchors === null || approval === null || lineage === null) return null;
-  return { family: "R2", header, anchors, approval, lineage: lineage as SectionV2<R2LineageV2>, notPublished: R2_NOT_PUBLISHED };
+  const actors = readActors(r.actors);
+  const latestOperation = readLatestOperation(r.latest_operation, "R2");
+  if (header === null || anchors === null || approval === null || lineage === null || actors === null || latestOperation === null) return null;
+  const decisionContext = readDecisionContext(r.decision_context, header.workspaceId, approval);
+  const recordedActivity = readRecordedActivity(r.recorded_activity, "R2");
+  const recordedVerdicts = readRecordedVerdicts(r.recorded_verdicts, approval.approvalId);
+  if (decisionContext === null || recordedActivity === null || recordedVerdicts === null) return null;
+  return {
+    family: "R2", header, anchors, approval, lineage: lineage as SectionV2<R2LineageV2>, actors, latestOperation, decisionContext, recordedActivity, recordedVerdicts,
+    notPublished: withAbsentSections(R2_NOT_PUBLISHED, [
+      [actors, "creator", "FE-030"],
+      [latestOperation, "operationLink", "FE-030"],
+      [decisionContext, "decisionPins", "FE-030"],
+      [recordedActivity, "recordedDecisions", "FE-030"],
+      [recordedVerdicts, "recordedFindings", "FE-028"],
+    ]),
+  };
 }
 
 /* ── Paper Exit ───────────────────────────────────────────────────────────── */
 
-const EXIT_KEYS = [...R2_KEYS, "review", "evaluation"];
+const EXIT_KEYS = [...PARENT_KEYS, "review", "evaluation", "criteria", "recorded_activity"];
 
 function readExitPanel(value: unknown): ExitPanelV2 | null {
   const p = closed(value, [
@@ -637,30 +1017,128 @@ function readExitFinding(value: unknown): ExitFindingV2 | null {
     : { findingId, panelId, ordinal, outcome, blocking, required, asOf };
 }
 
-function readEvaluation(r: Rec): ExitEvaluationV2 | null {
-  const evaluationPolicyVersion = text(r.evaluation_policy_version);
-  const evaluationFormulaVersion = text(r.evaluation_formula_version);
-  if (evaluationPolicyVersion === null || evaluationFormulaVersion === null) return null;
-  if (!Array.isArray(r.panels) || r.panels.length > 4 || !Array.isArray(r.findings) || r.findings.length > 256) return null;
+/** At most four panels; unique ids, kinds and ordinals (the schema description's runtime relations). */
+function readPanels(value: unknown): ExitPanelV2[] | null {
+  if (!Array.isArray(value) || value.length > 4) return null;
   const panels: ExitPanelV2[] = [];
-  for (const entry of r.panels) {
+  for (const entry of value) {
     const panel = readExitPanel(entry);
     if (panel === null) return null;
     panels.push(panel);
   }
+  const unique = (pick: (panel: ExitPanelV2) => string | number) => new Set(panels.map(pick)).size === panels.length;
+  return unique((panel) => panel.panelId) && unique((panel) => panel.panelKind) && unique((panel) => panel.ordinal) ? panels : null;
+}
+
+function readEvaluation(r: Rec): ExitEvaluationV2 | null {
+  const evaluationPolicyVersion = text(r.evaluation_policy_version);
+  const evaluationFormulaVersion = text(r.evaluation_formula_version);
+  const panels = readPanels(r.panels);
+  if (evaluationPolicyVersion === null || evaluationFormulaVersion === null || panels === null) return null;
+  if (!Array.isArray(r.findings) || r.findings.length > 256) return null;
   const findings: ExitFindingV2[] = [];
   for (const entry of r.findings) {
     const finding = readExitFinding(entry);
     if (finding === null) return null;
     findings.push(finding);
   }
-  // One panel per id and per kind; a finding names a panel that is in the list.
+  // One finding id once; a finding names a panel that is in the list.
   const panelIds = new Set(panels.map((panel) => panel.panelId));
-  const kinds = new Set(panels.map((panel) => panel.panelKind));
   const findingIds = new Set(findings.map((finding) => finding.findingId));
-  if (panelIds.size !== panels.length || kinds.size !== panels.length || findingIds.size !== findings.length) return null;
+  if (findingIds.size !== findings.length) return null;
   if (findings.some((finding) => !panelIds.has(finding.panelId))) return null;
   return { evaluationPolicyVersion, evaluationFormulaVersion, panels, findings };
+}
+
+/* criteria: scalars are `{availability, value, reason_code}`, closed, with the reasons the schema lists per field */
+
+function scalar<T>(value: unknown, read: (v: unknown) => T | null, reasons: readonly string[]): ScalarV2<T> | null {
+  const s = closed(value, ["availability", "value", "reason_code"]);
+  if (s === null) return null;
+  if (s.availability === "AVAILABLE") {
+    const v = read(s.value);
+    return s.reason_code === null && v !== null ? { availability: "AVAILABLE", value: v } : null;
+  }
+  if (s.availability !== "NOT_PUBLISHED" || s.value !== null) return null;
+  const code = typeof s.reason_code === "string" && reasons.includes(s.reason_code) ? s.reason_code : null;
+  return code === null ? null : { availability: "NOT_PUBLISHED", reasonCode: code };
+}
+
+const NOT_REGISTERED = ["SOURCE_METRIC_NOT_REGISTERED"] as const;
+const VALUE_ABSENCES = ["SOURCE_VALUE_NOT_RECORDED", "SOURCE_VALUE_NOT_DECIMAL"] as const;
+const TEXT_ABSENCES = ["SOURCE_TEXT_NOT_RECORDED", "SOURCE_TEXT_NOT_PUBLIC_SAFE"] as const;
+/** `observed` / `limit`: schema string, maxLength 128, `^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$`. Kept as the exact string; `-0` is a legal spelling here. */
+const CRITERION_DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
+/** `unit` / `currency` / `finding_formula_version`: public text, no URL, no `javascript:` / `data:` / `file:` scheme, no leading slash (schema `allOf.not.pattern`). */
+const PUBLIC_TEXT_REFUSED = /[A-Za-z][A-Za-z0-9+.-]*:\/\/|^(?:[Jj][Aa][Vv][Aa][Ss][Cc][Rr][Ii][Pp][Tt]|[Dd][Aa][Tt][Aa]|[Ff][Ii][Ll][Ee]):|^[/\\]/;
+
+function criterionDecimal(value: unknown): string | null {
+  return typeof value === "string" && value.length <= 128 && CRITERION_DECIMAL.test(value) ? value : null;
+}
+function publicText(value: unknown): string | null {
+  const t = text(value);
+  return t !== null && !PUBLIC_TEXT_REFUSED.test(t) ? t : null;
+}
+function labelKeyOf(value: unknown): PaperExitLabelKeyV2 | null {
+  return oneOf(value, Object.values(PAPER_EXIT_LABEL_KEYS));
+}
+
+function readCriterion(value: unknown, reviewId: string): ExitCriterionV2 | null {
+  const c = closed(value, [
+    "original", "criterion_key", "label_key", "observed", "limit", "op", "unit", "currency", "evidence", "finding_formula_version", "source_time", "source_ref",
+  ]);
+  if (c === null) return null;
+  const finding = readExitFinding(c.original);
+  const criterionKey = scalar(c.criterion_key, (v) => oneOf(v, PANEL_KINDS_V2), NOT_REGISTERED);
+  const labelKey = scalar(c.label_key, labelKeyOf, NOT_REGISTERED);
+  const observed = scalar(c.observed, criterionDecimal, VALUE_ABSENCES);
+  const limit = scalar(c.limit, criterionDecimal, VALUE_ABSENCES);
+  const op = scalar(c.op, () => null, ["SOURCE_COMPARATOR_FIELD_NOT_RECORDED"]);
+  const unit = scalar(c.unit, publicText, TEXT_ABSENCES);
+  const currency = scalar(c.currency, publicText, TEXT_ABSENCES);
+  const evidence = scalar(c.evidence, sha, ["SOURCE_EVIDENCE_HASH_NOT_RECORDED"]);
+  const findingFormulaVersion = scalar(c.finding_formula_version, publicText, TEXT_ABSENCES);
+  const sourceTime = scalar(c.source_time, ms, ["SOURCE_TIME_NOT_RECORDED"]);
+  const ref = closed(c.source_ref, ["kind", "review_id", "panel_id", "finding_id", "basis"]);
+  if (
+    finding === null || criterionKey === null || labelKey === null || observed === null || limit === null || op === null || unit === null
+    || currency === null || evidence === null || findingFormulaVersion === null || sourceTime === null || ref === null
+    || op.availability !== "NOT_PUBLISHED" || ref.kind !== "PORTAL_STORED_PAPER_EXIT_FINDING" || ref.basis !== "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE"
+  ) return null;
+  const refReview = id(ref.review_id);
+  const refPanel = id(ref.panel_id);
+  const refFinding = id(ref.finding_id);
+  if (refReview === null || refPanel === null || refFinding === null) return null;
+  // The schema's if/then: a published key has exactly its label; an unregistered key has no label.
+  if (criterionKey.availability === "AVAILABLE" ? labelKey.availability !== "AVAILABLE" || labelKey.value !== PAPER_EXIT_LABEL_KEYS[criterionKey.value] : labelKey.availability !== "NOT_PUBLISHED") return null;
+  // Runtime relations: the reference is this review's, names the same panel and finding, and the source clock is the finding's own.
+  if (refReview !== reviewId || refPanel !== finding.panelId || refFinding !== finding.findingId) return null;
+  if ((sourceTime.availability === "AVAILABLE" ? sourceTime.value : null) !== finding.asOf) return null;
+  return {
+    finding, criterionKey, labelKey, observed, limit,
+    comparator: { availability: "NOT_PUBLISHED", reasonCode: "SOURCE_COMPARATOR_FIELD_NOT_RECORDED" },
+    unit, currency, evidence, findingFormulaVersion, sourceTime,
+    sourceRef: { kind: "PORTAL_STORED_PAPER_EXIT_FINDING", reviewId: refReview, panelId: refPanel, findingId: refFinding, basis: "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE" },
+  };
+}
+
+function readCriteria(r: Rec, reviewId: string): ExitCriteriaV2 | null {
+  const evaluationPolicyVersion = text(r.evaluation_policy_version);
+  const evaluationFormulaVersion = text(r.evaluation_formula_version);
+  const panels = readPanels(r.panels);
+  if (
+    r.basis !== "VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE" || evaluationPolicyVersion === null || evaluationFormulaVersion === null
+    || panels === null || !Array.isArray(r.items) || r.items.length > 256
+  ) return null;
+  const items: ExitCriterionV2[] = [];
+  for (const entry of r.items) {
+    const item = readCriterion(entry, reviewId);
+    if (item === null) return null;
+    items.push(item);
+  }
+  const panelIds = new Set(panels.map((panel) => panel.panelId));
+  if (new Set(items.map((item) => item.finding.findingId)).size !== items.length || items.some((item) => !panelIds.has(item.finding.panelId))) return null;
+  return { basis: "VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE", evaluationPolicyVersion, evaluationFormulaVersion, panels, items };
 }
 
 /** `GET /governance/exit-reviews/{id}` when the workspace is SCOPED_V2. */
@@ -678,6 +1156,9 @@ export function readPaperExitParentV2(raw: unknown): PaperExitParentV2 | null {
     (e) => readEvaluation(e),
     ["availability", "evaluation_policy_version", "evaluation_formula_version", "panels", "findings"],
   );
+  const actors = readActors(r.actors);
+  const latestOperation = readLatestOperation(r.latest_operation, "PAPER_EXIT");
+  const recordedActivity = readRecordedActivity(r.recorded_activity, "PAPER_EXIT");
   const lineage = section<Omit<ExitLineageV2, never>>(r.lineage, (l) => {
     const r1ApprovalId = id(l.r1_approval_id);
     const r2ApprovalId = id(l.r2_approval_id);
@@ -688,7 +1169,10 @@ export function readPaperExitParentV2(raw: unknown): PaperExitParentV2 | null {
       ? null
       : { basis: "VERIFIED_CURRENT_STORED_BYTES_NOT_SOURCE_ACCEPTANCE", r1ApprovalId, r2ApprovalId, sourceSnapshotHash, evidenceSetHash };
   }, ["availability", "basis", "r1_approval_id", "r2_approval_id", "source_snapshot_hash", "evidence_set_hash"]);
-  if (header === null || anchors === null || approval === null || review === null || evaluation === null || lineage === null) return null;
+  if (
+    header === null || anchors === null || approval === null || review === null || evaluation === null || lineage === null
+    || actors === null || latestOperation === null || recordedActivity === null
+  ) return null;
 
   const reviewId = id(review.review_id);
   const reviewState = oneOf(review.review_state, REVIEW_STATES_V2);
@@ -704,6 +1188,13 @@ export function readPaperExitParentV2(raw: unknown): PaperExitParentV2 | null {
   if (reviewId !== approval.approvalId) return null;
   const extensionDays = review.extension_days;
   if (reviewState === "EXTENDED" ? extensionDays !== 14 || extendedUntil === null : extensionDays !== null || extendedUntil !== null) return null;
+  // The criteria name this review in every source reference (runtime relation), so they are read once the review's id is known.
+  const criteria = section<ExitCriteriaV2>(
+    r.criteria,
+    (c) => readCriteria(c, reviewId),
+    ["availability", "basis", "evaluation_policy_version", "evaluation_formula_version", "panels", "items"],
+  );
+  if (criteria === null) return null;
 
   return {
     family: "PAPER_EXIT", header, anchors, approval,
@@ -712,8 +1203,16 @@ export function readPaperExitParentV2(raw: unknown): PaperExitParentV2 | null {
       extensionDays: extensionDays === 14 ? 14 : null, extendedUntil, createdAt, updatedAt,
     },
     evaluation: evaluation as SectionV2<ExitEvaluationV2>,
+    criteria,
     lineage: lineage as SectionV2<ExitLineageV2>,
-    notPublished: EXIT_NOT_PUBLISHED,
+    actors, latestOperation, recordedActivity,
+    notPublished: withAbsentSections(EXIT_NOT_PUBLISHED, [
+      [actors, "creator", "FE-030"],
+      [latestOperation, "operationLink", "FE-030"],
+      [criteria, "criteriaLabel", "FE-028"],
+      [criteria, "observedAndLimit", "FE-028"],
+      [recordedActivity, "recordedDecisions", "FE-030"],
+    ]),
   };
 }
 

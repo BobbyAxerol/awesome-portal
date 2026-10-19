@@ -8,11 +8,11 @@
  * typed `unsupported` answer with a reason, never a throw and never a partial.
  *
  * L0  every canonical body on disk goes to its own route and reads as the
- *     value that route's reader answers directly: the 19 parent bodies and 2
- *     live-source bodies (V2), the V1 reviews and operations bodies (V1), and
+ *     value that route's reader answers directly: the 25 parent bodies (six of
+ *     them added by Codex e19ad906) and 2 live-source bodies (V2), the V1 reviews and operations bodies (V1), and
  *     the activation capabilities and plans (V2 named, reader not built).
  * L1  matrices, oracle written from the route comments in dispatch.ts:
- *       A  every V2 body x every route (24 x 8): v2 only on the owning route,
+ *       A  every V2 body x every route (30 x 8): v2 only on the owning route,
  *          V2_MALFORMED on a route that knows the schema but not the family,
  *          UNKNOWN_SCHEMA_VERSION elsewhere, V2_READER_NOT_BUILT for activation
  *       B  every V1 body x every route (6 x 8): v1 only on the owning route
@@ -100,8 +100,8 @@ const route = (id: string): Route => ROUTES.find((r) => r.id === id)!;
 
 interface V2Body { key: string; owner: string | null; body: Draft }
 const V2_BODIES: V2Body[] = [
-  ...["r2", "r2_absent"].map((key) => ({ key, owner: "r2", body: parent[key] })),
-  ...["paper_exit", "paper_exit_absent", "paper_exit_extended"].map((key) => ({ key, owner: "exit", body: parent[key] })),
+  ...["r2", "r2_absent", "r2_followthrough", "r2_followthrough_hashes_absent", "r2_recorded"].map((key) => ({ key, owner: "r2", body: parent[key] })),
+  ...["paper_exit", "paper_exit_absent", "paper_exit_extended", "paper_exit_criteria", "paper_exit_followthrough", "paper_exit_recorded"].map((key) => ({ key, owner: "exit", body: parent[key] })),
   { key: "live", owner: "live", body: parent.live },
   ...["sandbox", "sandbox_absent", "sandbox_draft"].map((key) => ({ key, owner: "sandbox", body: parent[key] })),
   ...["canary", "canary_absent", "canary_revision"].map((key) => ({ key, owner: "canary", body: parent[key] })),
@@ -125,8 +125,8 @@ const REASONS: UnsupportedReason[] = ["NOT_AN_OBJECT", "UNKNOWN_SCHEMA_VERSION",
 
 /* ═════════════════════════ L0 ═════════════════════════ */
 describe("L0 · canonical, verbatim", () => {
-  it("the inventory is what this suite thinks it is: 24 V2 bodies and 6 V1 bodies", () => {
-    expect(V2_BODIES).toHaveLength(24);
+  it("the inventory is what this suite thinks it is: 30 V2 bodies and 6 V1 bodies", () => {
+    expect(V2_BODIES).toHaveLength(30);
     expect(V1_BODIES).toHaveLength(6);
     expect(ROUTES).toHaveLength(8);
   });
@@ -173,7 +173,7 @@ describe("L1 · matrix A · every V2 body x every route", () => {
   it("prints the matrix size", () => {
     const v2 = states.filter((s) => expected(s.b, s.r).kind === "v2").length;
     console.info(`dispatch A (V2 body x route): ${V2_BODIES.length} bodies x ${ROUTES.length} routes = ${states.length} states; ${v2} read as v2, ${states.length - v2} unsupported`);
-    expect(states).toHaveLength(24 * 8);
+    expect(states).toHaveLength(30 * 8);
     expect(v2).toBe(V2_BODIES.filter((b) => b.owner !== null).length);
   });
 
@@ -276,7 +276,7 @@ describe("L1 · matrix D · the sentence for every unsupported reason", () => {
 
 /* ═════════════════════════ L2 ═════════════════════════ */
 describe("L2 · scale", () => {
-  it("all 30 bodies over all 8 routes, 10 times, inside the budget", () => {
+  it("all 36 bodies over all 8 routes, 10 times, inside the budget", () => {
     const all = [...V2_BODIES.map((b) => b.body), ...V1_BODIES.map((b) => b.body)];
     const { ms } = timed(() => {
       for (let n = 0; n < 10; n += 1) for (const body of all) for (const r of ROUTES) r.fn(body);
@@ -311,7 +311,7 @@ describe("L2 · scale", () => {
 
 /* ═════════════════════════ L3 ═════════════════════════ */
 interface Case { name: string; category: string; value: unknown; probe: string | null; owner: string; body: string }
-const OWNED_BODIES = V2_BODIES.filter((b) => ["r2", "paper_exit_extended", "live", "sandbox", "canary", "r2_operation", "live_source_populated"].includes(b.key));
+const OWNED_BODIES = V2_BODIES.filter((b) => ["r2", "r2_recorded", "paper_exit_extended", "paper_exit_criteria", "live", "sandbox", "canary", "r2_operation", "live_source_populated"].includes(b.key));
 const CASES: Case[] = OWNED_BODIES.flatMap((b) => {
   const tag = (cases: ReturnType<typeof schemaVersionCases>): Case[] => cases.map((c) => ({ ...c, name: `${b.key} · ${c.name}`, owner: b.owner!, body: b.key }));
   const family = b.body.family !== undefined ? tag(enumCases(b.body, ["family"], [b.body.family as string]).filter((c) => c.value !== b.body)) : [];

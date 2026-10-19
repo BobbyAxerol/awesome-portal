@@ -53,14 +53,16 @@ describe("the canonical files are what this suite thinks they are", () => {
     }
   });
 
-  it("carries the 22 parent bodies and 2 compositions this suite covers", () => {
+  it("carries the 25 parent bodies and 3 compositions this suite covers (22 before Codex e19ad906: six new parents)", () => {
     const keys = Object.keys(parent()).filter((key) => typeof parent()[key] === "object");
     expect(keys.sort()).toEqual([
       "canary", "canary_absent", "canary_revision", "live", "live_composition", "paper_exit", "paper_exit_absent",
-      "paper_exit_composition", "paper_exit_extended", "paper_exit_operation", "paper_exit_operation_applied",
-      "paper_exit_operation_expired", "r2", "r2_absent", "r2_composition", "r2_operation", "r2_operation_applied",
-      "r2_operation_expired", "r2_operation_uncaptured", "sandbox", "sandbox_absent", "sandbox_draft",
+      "paper_exit_composition", "paper_exit_criteria", "paper_exit_extended", "paper_exit_followthrough", "paper_exit_operation",
+      "paper_exit_operation_applied", "paper_exit_operation_expired", "paper_exit_recorded", "r2", "r2_absent", "r2_composition",
+      "r2_followthrough", "r2_followthrough_hashes_absent", "r2_operation", "r2_operation_applied", "r2_operation_expired",
+      "r2_operation_uncaptured", "r2_recorded", "sandbox", "sandbox_absent", "sandbox_draft",
     ]);
+    expect(keys).toHaveLength(28);
   });
 });
 
@@ -90,9 +92,16 @@ describe("R2 parent", () => {
 
   it("names what the body never carries, with the FE request that will publish it", () => {
     const r2 = must(readR2ParentV2(parent().r2), "r2");
-    expect(r2.notPublished).toMatchObject({ criteria: "FE-028", capitalRows: "FE-030", decisionCall: "FE-030", creator: "FE-030" });
-    // It has no capital, no requested amount and no decision context: none is invented.
-    expect(JSON.stringify(r2)).not.toMatch(/capital":\[|requestedAmount|decisionContext/);
+    // Every section of the plain `r2` body is the typed absence, so every datum they would carry is named with its FE request.
+    expect(r2.notPublished).toMatchObject({
+      criteria: "FE-028", capitalRows: "FE-030", decisionCall: "FE-030", ladder: "FE-030", receiptRef: "FE-030",
+      creator: "FE-030", operationLink: "FE-030", decisionPins: "FE-030", recordedDecisions: "FE-030", recordedFindings: "FE-028",
+    });
+    for (const section of [r2.actors, r2.latestOperation, r2.decisionContext, r2.recordedActivity, r2.recordedVerdicts]) {
+      expect(section).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" });
+    }
+    // No parent carries capital rows or a requested amount: none is invented.
+    expect(JSON.stringify(r2)).not.toMatch(/capital":\[|requestedAmount/);
   });
 });
 
@@ -114,7 +123,9 @@ describe("Paper Exit parent", () => {
     // quorum is published (2), the old reader said null.
     expect(exit.approval.quorumRequired).toBe(2);
     // No label/observed/limit and no gate verdict on the wire: the model names them, never fills them.
-    expect(exit.notPublished).toMatchObject({ criteriaLabel: "FE-028", observedAndLimit: "FE-028", gateVerdict: "FE-028" });
+    // In the plain `paper_exit` body the criteria section is the typed absence, so label, observed and limit are still FE-028.
+    expect(exit.criteria).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" });
+    expect(exit.notPublished).toMatchObject({ criteriaLabel: "FE-028", observedAndLimit: "FE-028", gateVerdict: "FE-028", comparator: "FE-028" });
     expect(JSON.stringify(exit.evaluation)).not.toMatch(/label|observed|limit|gateMet/);
   });
 
@@ -124,6 +135,127 @@ describe("Paper Exit parent", () => {
     const absent = must(readPaperExitParentV2(parent().paper_exit_absent), "paper_exit_absent");
     expect(absent.evaluation).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" });
     expect(absent.lineage).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" });
+  });
+});
+
+describe("R2 parent sections added by Codex e19ad906", () => {
+  it("r2_followthrough: stored actors, the latest recorded plan and the decision inputs, as published", () => {
+    const r2 = must(readR2ParentV2(parent().r2_followthrough), "r2_followthrough");
+    expect(r2.actors).toEqual({
+      availability: "AVAILABLE", basis: "STORED_PORTAL_ACTOR_IDS_NOT_DECISION_AUTHORIZATION", requesterUserId: "user_TEST_ONLY_requester",
+      artifactCreatorUserId: "user_TEST_ONLY_creator", decidedByUserId: null, viewerIsRequester: false, viewerIsArtifactCreator: true, viewerIsDecidedBy: null,
+    });
+    expect(r2.latestOperation).toEqual({
+      availability: "AVAILABLE", basis: "LATEST_RECORDED_PORTAL_PLAN_NOT_ACTION_ELIGIBILITY", operationId: "op_TEST_ONLY_R2_EXPIRED", commandVersion: 1,
+      commandType: "GOVERNANCE_R2_DECISION", storedStatus: "EXPIRED", createdAt: 1790812800000, orderBasis: "POSTGRES_CREATED_AT_DESC_OPERATION_ID_C_ASC",
+    });
+    expect(r2.decisionContext).toMatchObject({
+      availability: "AVAILABLE", gate: "R2", workspaceId: r2.header.workspaceId, approvalId: r2.approval.approvalId,
+      expectedApprovalVersion: r2.approval.approvalVersion, evidenceSetHash: `sha256:${"5".repeat(64)}`,
+      evidenceHashes: { availability: "AVAILABLE", value: [`sha256:${"3".repeat(64)}`, `sha256:${"4".repeat(64)}`] },
+      commandType: "GOVERNANCE_R2_DECISION", planPath: "/api/v1/execution/commands/plans",
+      admission: { state: "NOT_EVALUATED", reasonCode: "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN" }, sourceSideEffectRequested: false,
+    });
+    // What the three sections now publish is no longer listed as missing; what the other two would carry still is.
+    expect(r2.notPublished).not.toHaveProperty("creator");
+    expect(r2.notPublished).not.toHaveProperty("operationLink");
+    expect(r2.notPublished).not.toHaveProperty("decisionPins");
+    expect(r2.notPublished).toMatchObject({ recordedDecisions: "FE-030", recordedFindings: "FE-028", capitalRows: "FE-030", ladder: "FE-030", receiptRef: "FE-030", criteria: "FE-028" });
+  });
+
+  it("r2_followthrough_hashes_absent: more than 128 evidence hashes is a typed absence, never a truncated or empty list", () => {
+    const r2 = must(readR2ParentV2(parent().r2_followthrough_hashes_absent), "hashes_absent");
+    if (r2.decisionContext.availability !== "AVAILABLE") throw new Error("context absent");
+    expect(r2.decisionContext.evidenceHashes).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "EVIDENCE_HASH_LIMIT_EXCEEDED" });
+    expect(r2.decisionContext.evidenceSetHash).toBe(`sha256:${"5".repeat(64)}`);
+  });
+
+  it("r2_recorded: a decided approval names its decider, the recorded decisions newest first, and four stored verdicts with no criterion fields", () => {
+    const r2 = must(readR2ParentV2(parent().r2_recorded), "r2_recorded");
+    expect(r2.approval).toMatchObject({ status: "DENIED", approvalVersion: 3 });
+    expect(r2.actors).toMatchObject({ availability: "AVAILABLE", decidedByUserId: "user_TEST_ONLY_reviewer", viewerIsDecidedBy: false, viewerIsArtifactCreator: true });
+    if (r2.recordedActivity.availability !== "AVAILABLE") throw new Error("activity absent");
+    expect(r2.recordedActivity).toMatchObject({ limit: 32, hasMore: false, coverage: "BOUNDED_RECENT_DECISIONS_NOT_FULL_HISTORY" });
+    expect(r2.recordedActivity.items.map((i) => [i.decision, i.versionBefore, i.versionAfter, i.decidedAt])).toEqual([
+      ["DENY", 2, 3, 1790812802000], ["APPROVE_WITH_CONDITION", 1, 2, 1790812801000],
+    ]);
+    if (r2.recordedVerdicts.availability !== "AVAILABLE") throw new Error("verdicts absent");
+    expect(r2.recordedVerdicts).toMatchObject({ limit: 64, hasMore: false, admission: { state: "NOT_EVALUATED" } });
+    expect(r2.recordedVerdicts.items.map((v) => [v.ordinal, v.outcome, v.blocking])).toEqual([[0, "PASS", false], [1, "WATCH", false], [2, "FAIL", true], [3, "INSUFFICIENT", true]]);
+    for (const verdict of r2.recordedVerdicts.items) {
+      expect(verdict.structuredCriterion).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "SOURCE_STRUCTURED_CRITERION_NOT_RECORDED" });
+      expect(verdict.sourceRef).toMatchObject({ approvalId: r2.approval.approvalId, findingId: verdict.findingId });
+    }
+    // No label, observed value or limit exists on an R2 verdict: none is invented, and the R2 list still names them.
+    expect(JSON.stringify(r2.recordedVerdicts)).not.toMatch(/"label|"observed|"limit":\s*"/);
+    expect(r2.notPublished).toMatchObject({ criteria: "FE-028" });
+    expect(r2.notPublished).not.toHaveProperty("recordedFindings");
+    expect(r2.notPublished).not.toHaveProperty("recordedDecisions");
+  });
+});
+
+describe("Paper Exit parent sections added by Codex e19ad906", () => {
+  it("paper_exit_criteria: label, observed value and limit as published, the comparator always absent", () => {
+    const exit = must(readPaperExitParentV2(parent().paper_exit_criteria), "paper_exit_criteria");
+    if (exit.criteria.availability !== "AVAILABLE") throw new Error("criteria absent");
+    expect(exit.criteria.basis).toBe("VERIFIED_CURRENT_STORED_FINDING_BYTES_NOT_SOURCE_ACCEPTANCE");
+    expect(exit.criteria.panels).toHaveLength(4);
+    const [first, second, third] = exit.criteria.items;
+    expect(first).toMatchObject({
+      criterionKey: { availability: "AVAILABLE", value: "OBSERVATION_COVERAGE" },
+      labelKey: { availability: "AVAILABLE", value: "paper_exit.observation_coverage" },
+      // The exact string, every digit: 1842.000000000000000001 is not 1842.
+      observed: { availability: "AVAILABLE", value: "1842.000000000000000001" },
+      limit: { availability: "AVAILABLE", value: "6.00" },
+      unit: { availability: "AVAILABLE", value: "CURRENCY" }, currency: { availability: "AVAILABLE", value: "USDC" },
+      evidence: { availability: "AVAILABLE", value: `sha256:${"4".repeat(64)}` },
+      sourceTime: { availability: "AVAILABLE", value: 1790812800000 },
+      comparator: { availability: "NOT_PUBLISHED", reasonCode: "SOURCE_COMPARATOR_FIELD_NOT_RECORDED" },
+    });
+    // A published "0" is a value; a value the source never recorded is an absence with its reason, never 0.
+    expect(second!.observed).toEqual({ availability: "AVAILABLE", value: "0" });
+    expect(second!.limit).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "SOURCE_VALUE_NOT_RECORDED" });
+    expect(third!.observed).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "SOURCE_VALUE_NOT_RECORDED" });
+    expect(third!.unit).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "SOURCE_TEXT_NOT_RECORDED" });
+    expect(third!.sourceTime).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "SOURCE_TIME_NOT_RECORDED" });
+    expect(exit.criteria.items.map((i) => [i.finding.findingId, i.finding.outcome])).toEqual([
+      ["finding_TEST_ONLY_0", "PASS"], ["finding_TEST_ONLY_1", "INSUFFICIENT"], ["finding_TEST_ONLY_2", "INSUFFICIENT"], ["finding_TEST_ONLY_3", "INSUFFICIENT"],
+    ]);
+    expect(first!.sourceRef).toEqual({ kind: "PORTAL_STORED_PAPER_EXIT_FINDING", reviewId: exit.review.reviewId, panelId: "panel_TEST_ONLY_0", findingId: "finding_TEST_ONLY_0", basis: "STORED_REFERENCE_NOT_SOURCE_ACCEPTANCE" });
+    // The label and the observed/limit are no longer missing; the comparator, the gate verdict and the chart still are.
+    expect(exit.notPublished).not.toHaveProperty("criteriaLabel");
+    expect(exit.notPublished).not.toHaveProperty("observedAndLimit");
+    expect(exit.notPublished).toMatchObject({ comparator: "FE-028", gateVerdict: "FE-028", chart: "FE-029", ladder: "FE-030", decisionCall: "FE-030" });
+  });
+
+  it("paper_exit_followthrough: a decided review names its decider and the latest plan is the Paper Exit command", () => {
+    const exit = must(readPaperExitParentV2(parent().paper_exit_followthrough), "paper_exit_followthrough");
+    expect(exit.review.reviewState).toBe("REJECTED_TO_PAPER_HELD");
+    expect(exit.approval).toMatchObject({ status: "DENIED" });
+    expect(exit.actors).toMatchObject({ availability: "AVAILABLE", decidedByUserId: "user_TEST_ONLY_reviewer", viewerIsDecidedBy: true, viewerIsArtifactCreator: false });
+    expect(exit.latestOperation).toMatchObject({ availability: "AVAILABLE", commandType: "GOVERNANCE_PAPER_EXIT_DECISION", storedStatus: "APPLIED", operationId: "op_TEST_ONLY_PAPER_EXIT_APPLIED" });
+    expect(exit.recordedActivity.availability).toBe("NOT_PUBLISHED");
+    expect(exit.notPublished).toMatchObject({ recordedDecisions: "FE-030" });
+    expect(exit.notPublished).not.toHaveProperty("creator");
+  });
+
+  it("paper_exit_recorded: one recorded REJECT, version 1 to 2", () => {
+    const exit = must(readPaperExitParentV2(parent().paper_exit_recorded), "paper_exit_recorded");
+    if (exit.recordedActivity.availability !== "AVAILABLE") throw new Error("activity absent");
+    expect(exit.recordedActivity.items).toEqual([{
+      decisionId: "decision_TEST_ONLY_exit_1", operationId: "op_TEST_ONLY_PAPER_EXIT_APPLIED", versionBefore: 1, versionAfter: 2,
+      decidedAt: 1790812801000, kind: "PAPER_EXIT_DECISION_RECORDED", decision: "REJECT",
+    }]);
+    expect(exit.notPublished).not.toHaveProperty("recordedDecisions");
+  });
+
+  it("the plain bodies keep every new section as the typed absence", () => {
+    for (const key of ["paper_exit", "paper_exit_absent", "paper_exit_extended"]) {
+      const exit = must(readPaperExitParentV2(parent()[key]), key);
+      for (const section of [exit.criteria, exit.actors, exit.latestOperation, exit.recordedActivity]) {
+        expect(section, key).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" });
+      }
+    }
   });
 });
 
@@ -232,6 +364,9 @@ describe("readGovernanceParentV2 routes every delivered body to its family", () 
     paper_exit_operation: "PAPER_EXIT", paper_exit_operation_applied: "PAPER_EXIT", paper_exit_operation_expired: "PAPER_EXIT",
     sandbox: "SANDBOX", sandbox_absent: "SANDBOX", sandbox_draft: "SANDBOX", canary: "CANARY", canary_absent: "CANARY",
     canary_revision: "CANARY", live: "LIVE_GATE",
+    // added by Codex e19ad906
+    paper_exit_criteria: "PAPER_EXIT", r2_followthrough: "R2", r2_followthrough_hashes_absent: "R2", paper_exit_followthrough: "PAPER_EXIT",
+    r2_recorded: "R2", paper_exit_recorded: "PAPER_EXIT",
   };
   it.each(Object.entries(expected))("%s -> %s", (key, family) => {
     expect(readGovernanceParentV2(parent()[key])?.family).toBe(family);
@@ -389,6 +524,210 @@ describe("L3: closed shapes and conditionals", () => {
       refuses(readR2ParentV2, (b) => { b.observed_at_ms = bad; }, "r2");
       refuses(readR2ParentV2, (b) => { b.approval.created_at_ms = bad; }, "r2");
     }
+  });
+});
+
+describe("L3: relations and closed sets of the sections added by e19ad906", () => {
+  const refuses = (reader: Reader, key: string, edit: (body: Fixture) => void, what?: string) => {
+    const body = structuredClone(parent()[key]);
+    edit(body);
+    expect(reader(body), what ?? key).toBeNull();
+  };
+  const accepts = (reader: Reader, key: string, edit: (body: Fixture) => void) => {
+    const body = structuredClone(parent()[key]);
+    edit(body);
+    expect(reader(body)).not.toBeNull();
+  };
+
+  it("actors: the decider and the viewer flag are null together and only together", () => {
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.actors.viewer_is_decided_by = true; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.actors.viewer_is_decided_by = null; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.actors.decided_by_user_id = null; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.actors.viewer_is_requester = "false"; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.actors.requester_user_id = "a b"; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.actors.username = "stan"; }, "an actor with a name is not on the wire");
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.actors.basis = "DECISION_AUTHORIZATION"; });
+    refuses(readPaperExitParentV2, "paper_exit_followthrough", (b) => { b.actors.viewer_is_decided_by = null; });
+  });
+
+  it("latest_operation: the command is this family's, the status a stored one, the absence one of three words", () => {
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.latest_operation.command_type = "GOVERNANCE_PAPER_EXIT_DECISION"; });
+    refuses(readPaperExitParentV2, "paper_exit_followthrough", (b) => { b.latest_operation.command_type = "GOVERNANCE_R2_DECISION"; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.latest_operation.stored_status = "READY"; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.latest_operation.command_version = 2; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.latest_operation.created_at_ms = -1; });
+    for (const reason of ["NO_RECORDED_PORTAL_OPERATION", "LATEST_RECORDED_OPERATION_NOT_PUBLIC", "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"]) {
+      accepts(readR2ParentV2, "r2_followthrough", (b) => { b.latest_operation = { availability: "NOT_PUBLISHED", reason_code: reason }; });
+    }
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.latest_operation = { availability: "NOT_PUBLISHED", reason_code: "RECORDED_ACTIVITY_NOT_PUBLIC" }; });
+  });
+
+  it("decision_context: the inputs are this approval's own, hashes strictly ascending and at most 128", () => {
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.workspace_id = "ws_other"; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.approval_id = "apr_other"; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.expected_approval_version = 2; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.evidence_hashes.value.reverse(); }, "descending");
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.evidence_hashes.value.push(b.decision_context.evidence_hashes.value[1]); }, "duplicate");
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.evidence_hashes.value = Array.from({ length: 129 }, (_, i) => `sha256:${i.toString(16).padStart(64, "0")}`); }, "129");
+    accepts(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.evidence_hashes.value = Array.from({ length: 128 }, (_, i) => `sha256:${i.toString(16).padStart(64, "0")}`); });
+    accepts(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.evidence_hashes.value = []; });
+    refuses(readR2ParentV2, "r2_followthrough_hashes_absent", (b) => { b.decision_context.evidence_hashes.reason_code = "SOMETHING_ELSE"; });
+    refuses(readR2ParentV2, "r2_followthrough_hashes_absent", (b) => { b.decision_context.evidence_hashes.value = []; }, "an empty list wearing an absence");
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.evidence_hashes.reason_code = "EVIDENCE_HASH_LIMIT_EXCEEDED"; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.plan_path = "/api/v1/execution/commands/apply"; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.request_schema_version = "governance.r2-decision-plan-request.v2"; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.admission = { state: "READY", reason_code: "CURRENT_DECISION_ADMISSION_REQUIRES_PLAN" }; }, "READY is never published");
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.source_side_effect_requested = true; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.gate = "PAPER_EXIT"; });
+    refuses(readR2ParentV2, "r2_followthrough", (b) => { b.decision_context.evidence_set_hash = "sha256:xyz"; });
+  });
+
+  it("recorded_activity: version +1, unique ids, clocks that do not increase, 32 rows when there are more", () => {
+    const item = (b: Fixture, i: number) => b.recorded_activity.items[i];
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 0).version_after = 4; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 1).decision_id = item(b, 0).decision_id; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 1).operation_id = item(b, 0).operation_id; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.recorded_activity.items.reverse(); }, "oldest first");
+    accepts(readR2ParentV2, "r2_recorded", (b) => { item(b, 1).decided_at_ms = item(b, 0).decided_at_ms; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.recorded_activity.has_more = true; }, "has_more with 2 rows");
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 0).kind = "PAPER_EXIT_DECISION_RECORDED"; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 0).decision = "PROMOTE"; });
+    refuses(readPaperExitParentV2, "paper_exit_recorded", (b) => { b.recorded_activity.items[0].decision = "DENY"; });
+    refuses(readPaperExitParentV2, "paper_exit_recorded", (b) => { b.recorded_activity.items[0].kind = "R2_DECISION_RECORDED"; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.recorded_activity.limit = 33; });
+    const full = (b: Fixture, n: number, more: boolean) => {
+      b.recorded_activity.items = Array.from({ length: n }, (_, i) => ({
+        decision_id: `decision_${i}`, operation_id: `op_${i}`, version_before: 1, version_after: 2, decided_at_ms: 1790812800000 - i, kind: "R2_DECISION_RECORDED", decision: "DENY",
+      }));
+      b.recorded_activity.has_more = more;
+    };
+    accepts(readR2ParentV2, "r2_recorded", (b) => full(b, 32, true));
+    accepts(readR2ParentV2, "r2_recorded", (b) => full(b, 32, false));
+    refuses(readR2ParentV2, "r2_recorded", (b) => full(b, 33, false), "33 rows");
+    refuses(readR2ParentV2, "r2_recorded", (b) => full(b, 31, true), "has_more with 31 rows");
+    for (const reason of ["RECORDED_ACTIVITY_NOT_PUBLIC", "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"]) {
+      accepts(readR2ParentV2, "r2_recorded", (b) => { b.recorded_activity = { availability: "NOT_PUBLISHED", reason_code: reason }; });
+    }
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.recorded_activity = { availability: "NOT_PUBLISHED", reason_code: "RECORDED_VERDICTS_NOT_PUBLIC" }; });
+  });
+
+  it("recorded_verdicts: a blocking verdict fails or is insufficient, ordinals ascend, each reference is this approval's finding, no criterion field is filled", () => {
+    const item = (b: Fixture, i: number) => b.recorded_verdicts.items[i];
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 0).blocking = true; }, "PASS that blocks");
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 1).blocking = true; }, "WATCH that blocks");
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 1).ordinal = 0; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.recorded_verdicts.items.reverse(); });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 1).finding_id = item(b, 0).finding_id; item(b, 1).source_ref.finding_id = item(b, 0).finding_id; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 0).source_ref.approval_id = "apr_other"; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 0).source_ref.finding_id = "finding_other"; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 0).source_ref.kind = "PORTAL_STORED_PAPER_EXIT_FINDING"; });
+    for (const field of ["criterion_key", "label_key", "observed", "limit", "op", "unit", "currency"]) {
+      refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 0)[field] = { availability: "AVAILABLE", value: "x", reason_code: null }; }, `${field} filled`);
+      refuses(readR2ParentV2, "r2_recorded", (b) => { item(b, 0)[field].reason_code = "SOURCE_VALUE_NOT_RECORDED"; }, `${field} other reason`);
+      refuses(readR2ParentV2, "r2_recorded", (b) => { delete item(b, 0)[field]; }, `${field} missing`);
+    }
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.recorded_verdicts.limit = 65; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.recorded_verdicts.has_more = true; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.recorded_verdicts.admission.state = "READY"; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.recorded_verdicts.items = Array.from({ length: 65 }, (_, i) => ({ ...structuredClone(item(b, 0)), finding_id: `f${i}`, ordinal: i, source_ref: { ...item(b, 0).source_ref, finding_id: `f${i}` } })); }, "65 rows");
+    accepts(readR2ParentV2, "r2_recorded", (b) => { b.recorded_verdicts.items = []; });
+    accepts(readR2ParentV2, "r2_recorded", (b) => { b.recorded_verdicts = { availability: "NOT_PUBLISHED", reason_code: "RECORDED_VERDICTS_NOT_PUBLIC" }; });
+    refuses(readR2ParentV2, "r2_recorded", (b) => { b.recorded_verdicts = { availability: "NOT_PUBLISHED", reason_code: "RECORDED_ACTIVITY_NOT_PUBLIC" }; });
+  });
+
+  it("criteria: the label is the key's own, the reference is this review's finding, the source clock is the finding's, no URL in a text, no comparator", () => {
+    const item = (b: Fixture, i: number) => b.criteria.items[i];
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).label_key.value = "paper_exit.drift"; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).label_key = { availability: "NOT_PUBLISHED", value: null, reason_code: "SOURCE_METRIC_NOT_REGISTERED" }; }, "key without a label");
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).criterion_key = { availability: "NOT_PUBLISHED", value: null, reason_code: "SOURCE_METRIC_NOT_REGISTERED" }; }, "label without a key");
+    accepts(readPaperExitParentV2, "paper_exit_criteria", (b) => {
+      item(b, 0).criterion_key = { availability: "NOT_PUBLISHED", value: null, reason_code: "SOURCE_METRIC_NOT_REGISTERED" };
+      item(b, 0).label_key = { availability: "NOT_PUBLISHED", value: null, reason_code: "SOURCE_METRIC_NOT_REGISTERED" };
+    });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).label_key.value = "Observation coverage"; item(b, 0).criterion_key.value = "OBSERVATION_COVERAGE"; }, "free text label");
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).source_ref.review_id = "apr_other"; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).source_ref.panel_id = "panel_TEST_ONLY_1"; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).source_ref.finding_id = "finding_TEST_ONLY_1"; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).source_time.value = 1; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 1).source_time = { availability: "AVAILABLE", value: 5, reason_code: null }; }, "a source clock for a finding with none");
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).source_time = { availability: "NOT_PUBLISHED", value: null, reason_code: "SOURCE_TIME_NOT_RECORDED" }; }, "no source clock for a finding that has one");
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).op = { availability: "AVAILABLE", value: "<=", reason_code: null }; }, "a comparator");
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).op.reason_code = "SOURCE_VALUE_NOT_RECORDED"; });
+    for (const bad of [1842, "1e5", "01", "1.", ".5", "+1", " 1", "1\n", "1,5", "NaN", "1".repeat(129)]) {
+      refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).observed.value = bad; }, `observed ${JSON.stringify(bad).slice(0, 20)}`);
+      refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).limit.value = bad; }, `limit ${JSON.stringify(bad).slice(0, 20)}`);
+    }
+    // The schema pattern allows a negative zero and a long scale; the reader keeps the exact string and does not refuse them.
+    for (const ok of ["-0", "-0.50", "0.000000000000000001", "1".repeat(128)]) {
+      accepts(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).observed.value = ok; });
+    }
+    for (const bad of ["http://evil.example", "https://x", "javascript:alert(1)", "JAVASCRIPT:1", "data:text/html,x", "file:///etc/passwd", "/etc/passwd", "\\\\share", "ab\ncd", ""]) {
+      refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).unit.value = bad; }, `unit ${JSON.stringify(bad)}`);
+      refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).currency.value = bad; }, `currency ${JSON.stringify(bad)}`);
+      refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).finding_formula_version = { availability: "AVAILABLE", value: bad, reason_code: null }; }, `formula ${JSON.stringify(bad)}`);
+    }
+    accepts(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 0).unit.value = "basis points"; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 1).observed = { availability: "NOT_PUBLISHED", value: null, reason_code: "SOURCE_TEXT_NOT_RECORDED" }; }, "a text reason on a value");
+    accepts(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 1).observed = { availability: "NOT_PUBLISHED", value: null, reason_code: "SOURCE_VALUE_NOT_DECIMAL" }; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 1).observed = { availability: "AVAILABLE", value: "1", reason_code: "SOURCE_VALUE_NOT_RECORDED" }; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 1).evidence = { availability: "AVAILABLE", value: "sha256:zz", reason_code: null }; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { item(b, 1).extra = 1; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { delete item(b, 1).limit; });
+  });
+
+  it("criteria: identities and counts (unique findings, known panels, at most 4 panels and 256 items)", () => {
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { b.criteria.items[1].original.finding_id = b.criteria.items[0].original.finding_id; b.criteria.items[1].source_ref.finding_id = b.criteria.items[0].original.finding_id; }, "duplicate finding");
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { b.criteria.items[1].original.panel_id = "panel_missing"; b.criteria.items[1].source_ref.panel_id = "panel_missing"; }, "unknown panel");
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { b.criteria.panels[1].panel_id = b.criteria.panels[0].panel_id; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { b.criteria.panels[1].panel_kind = b.criteria.panels[0].panel_kind; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { b.criteria.panels[1].ordinal = b.criteria.panels[0].ordinal; }, "duplicate panel ordinal");
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { b.criteria.basis = "SOURCE_ACCEPTANCE"; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { b.criteria.items = Array.from({ length: 257 }, (_, i) => ({ ...structuredClone(b.criteria.items[0]), original: { ...b.criteria.items[0].original, finding_id: `f${i}` }, source_ref: { ...b.criteria.items[0].source_ref, finding_id: `f${i}` } })); }, "257 items");
+    accepts(readPaperExitParentV2, "paper_exit_criteria", (b) => { b.criteria.items = []; });
+    refuses(readPaperExitParentV2, "paper_exit_criteria", (b) => { b.criteria = { availability: "NOT_PUBLISHED", reason_code: "RECORDED_ACTIVITY_NOT_PUBLIC" }; });
+  });
+
+  /*
+   * FIXED GP-7: the schema's description of `evaluation` says runtime checks
+   * unique panel ordinals too, and positive-parent.contract.ts does; the V2
+   * reader checked ids and kinds only.
+   */
+  it("FIXED GP-7: two evaluation panels with the same ordinal are refused", () => {
+    refuses(readPaperExitParentV2, "paper_exit", (b) => { b.evaluation.panels[1].ordinal = b.evaluation.panels[0].ordinal; });
+  });
+
+  it("every new container is closed: one extra key voids the read", () => {
+    const targets: [Reader, string, (string | number)[]][] = [
+      [readR2ParentV2, "r2_recorded", ["actors"]], [readR2ParentV2, "r2_recorded", ["latest_operation"]],
+      [readR2ParentV2, "r2_recorded", ["decision_context"]], [readR2ParentV2, "r2_recorded", ["decision_context", "evidence_hashes"]],
+      [readR2ParentV2, "r2_recorded", ["decision_context", "admission"]], [readR2ParentV2, "r2_recorded", ["recorded_activity"]],
+      [readR2ParentV2, "r2_recorded", ["recorded_activity", "items", 0]], [readR2ParentV2, "r2_recorded", ["recorded_verdicts"]],
+      [readR2ParentV2, "r2_recorded", ["recorded_verdicts", "items", 0]], [readR2ParentV2, "r2_recorded", ["recorded_verdicts", "items", 0, "observed"]],
+      [readR2ParentV2, "r2_recorded", ["recorded_verdicts", "items", 0, "source_ref"]], [readR2ParentV2, "r2_recorded", ["recorded_verdicts", "admission"]],
+      [readPaperExitParentV2, "paper_exit_criteria", ["criteria"]], [readPaperExitParentV2, "paper_exit_criteria", ["criteria", "panels", 0]],
+      [readPaperExitParentV2, "paper_exit_criteria", ["criteria", "items", 0]], [readPaperExitParentV2, "paper_exit_criteria", ["criteria", "items", 0, "original"]],
+      [readPaperExitParentV2, "paper_exit_criteria", ["criteria", "items", 0, "observed"]], [readPaperExitParentV2, "paper_exit_criteria", ["criteria", "items", 0, "op"]],
+      [readPaperExitParentV2, "paper_exit_criteria", ["criteria", "items", 0, "source_ref"]], [readPaperExitParentV2, "paper_exit_recorded", ["recorded_activity"]],
+      [readPaperExitParentV2, "paper_exit_followthrough", ["actors"]], [readPaperExitParentV2, "paper_exit_followthrough", ["latest_operation"]],
+    ];
+    for (const [reader, key, path] of targets) {
+      const body = structuredClone(parent()[key]);
+      let host: Fixture = body;
+      for (const step of path) host = host[step];
+      host.extra_key = "x";
+      expect(reader(body), `${key} ${path.join(".")}`).toBeNull();
+    }
+  });
+
+  it("an absent section with the wrong word is refused, and the three sections an R2 has and an Exit does not are not read on the other", () => {
+    refuses(readR2ParentV2, "r2", (b) => { b.actors.reason_code = "RECORDED_ACTIVITY_NOT_PUBLIC"; });
+    refuses(readR2ParentV2, "r2", (b) => { b.decision_context.reason_code = "NO_RECORDED_PORTAL_OPERATION"; });
+    refuses(readR2ParentV2, "r2", (b) => { delete b.recorded_verdicts; });
+    refuses(readR2ParentV2, "r2", (b) => { delete b.actors; });
+    refuses(readPaperExitParentV2, "paper_exit", (b) => { delete b.criteria; });
+    refuses(readPaperExitParentV2, "paper_exit", (b) => { b.decision_context = structuredClone(parent().r2_followthrough.decision_context); }, "an exit has no decision_context");
+    refuses(readPaperExitParentV2, "paper_exit", (b) => { b.recorded_verdicts = structuredClone(parent().r2_recorded.recorded_verdicts); }, "an exit has no recorded_verdicts");
+    refuses(readR2ParentV2, "r2", (b) => { b.criteria = { availability: "NOT_PUBLISHED", reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" }; }, "an R2 has no criteria");
   });
 });
 

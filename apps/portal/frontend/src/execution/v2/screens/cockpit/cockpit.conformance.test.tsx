@@ -379,7 +379,9 @@ describe("L1 · C2 · SLA grid, separation of duty, access", () => {
   });
 
   it("evidence with nothing read says nothing: every field null", () => {
-    expect(summarizeEvidence(null)).toEqual({ creator: null, serverSod: null, quorumMet: null, quorumRequired: null, policyVersion: null, workspaceId: null, decided: null });
+    expect(summarizeEvidence(null)).toEqual({
+      creator: null, serverSod: null, quorumMet: null, quorumRequired: null, policyVersion: null, workspaceId: null, decided: null, actors: null, latestOperation: null,
+    });
   });
 
   it("the V1 widening keeps its sentinels out of the screen: -1 is absence, never a number", () => {

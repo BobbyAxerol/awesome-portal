@@ -2,10 +2,12 @@
  * Evidence pane of the Approvals cockpit: what the review reads publish, read
  * only.
  *
- * Each kind shows what it publishes today. Observed and limit values per
- * criterion are one uniform shape in the hi-fi and not on any read yet, so the
- * cell says `Not published (FE-028)` instead of a dash or a computed number.
- * Evidence charts are out of S1 (FE-029). Nothing here writes, plans or applies.
+ * Each kind shows what it publishes today. A criterion's observed and limit
+ * values are on the Paper Exit parent's `criteria` section (Codex e19ad906) and
+ * on no other read: wherever a value is absent the cell says `Not published
+ * (FE-028)` with the server's reason instead of a dash or a computed number,
+ * and the comparator is absent on every read. Evidence charts are out of S1
+ * (FE-029). Nothing here writes, plans or applies.
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -22,7 +24,8 @@ import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { unsupportedText, type GovernanceParentRead } from "../../readers/dispatch";
 import type {
-  AbsentSectionV2, ApprovalV2, ExitFindingV2, ExitPanelV2, LiveParentV2, PaperExitParentV2, R2ParentV2,
+  AbsentSectionV2, ApprovalV2, DecisionContextV2, ExitCriterionV2, ExitFindingV2, ExitPanelV2, LiveParentV2, PaperExitLabelKeyV2, PaperExitParentV2,
+  R2ParentV2, RecordedActivityV2, RecordedVerdictsV2, ScalarV2, SectionV2,
 } from "../../readers/governanceParents";
 import { withContext } from "../../urlState";
 import { instantText, KIND_TAG, NOT_PUBLISHED, notPublishedFor, settledPanel, type EvidenceData, type EvidenceKind } from "./laneModel";
@@ -168,7 +171,15 @@ function Kv({ rows }: { rows: readonly { label: string; value: ReactNode }[] }) 
   );
 }
 
-function Criteria({ rows }: { rows: readonly { label: string; mark: Mark; note?: string | null }[] }) {
+interface CriteriaRow {
+  label: ReactNode;
+  mark: Mark;
+  note?: ReactNode;
+  /** The observed and limit cell; the shared `Not published (FE-028)` when the row has none. */
+  cell?: ReactNode;
+}
+
+function Criteria({ rows }: { rows: readonly CriteriaRow[] }) {
   if (rows.length === 0) return <div className="exec-ck-pad"><span className="exec-ck-np">No findings published</span></div>;
   return (
     <div className="exec-ck-tw">
@@ -182,13 +193,13 @@ function Criteria({ rows }: { rows: readonly { label: string; mark: Mark; note?:
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={`${index}:${row.label}`}>
+            <tr key={index}>
               <td>
                 {row.label}
                 {row.note ? <div className="exec-ck-note">{row.note}</div> : null}
               </td>
               <td><MarkFlag mark={row.mark} /></td>
-              <td><NotPublished text={NOT_PUBLISHED.criteria} /></td>
+              <td>{row.cell ?? <NotPublished text={NOT_PUBLISHED.criteria} />}</td>
             </tr>
           ))}
         </tbody>
@@ -458,13 +469,130 @@ function ApprovalPanel({ approval, observedAt }: { approval: ApprovalV2; observe
   );
 }
 
+/** The words of a decision a recorded row or a stored plan carries, as the schema spells them. */
+function decisionWord(decision: string): string {
+  return decision.replace(/_/g, " ").toLowerCase();
+}
+
+/** A scalar the criteria section publishes, or its absence with `Not published (FE-028)` and the server's reason. */
+function scalarText(scalar: ScalarV2<string>): ReactNode {
+  return scalar.availability === "AVAILABLE"
+    ? <span className="exec-ck-id">{scalar.value}</span>
+    : <span className="exec-ck-np">{`${NOT_PUBLISHED.criteria} · ${scalar.reasonCode}`}</span>;
+}
+
+/** The R2 recorded verdicts: outcome, blocking and clock as published; label, observed and limit are one absence the schema pins. */
+function R2CriteriaPanel({ verdicts }: { verdicts: SectionV2<RecordedVerdictsV2> }) {
+  if (verdicts.availability !== "AVAILABLE") {
+    return (
+      <Panel title="Criteria" right="R2 review">
+        <div className="exec-ck-pad"><NotPublished text={`${NOT_PUBLISHED.criteria} · ${verdicts.reasonCode}`} /></div>
+      </Panel>
+    );
+  }
+  return (
+    <Panel title="Criteria" right={`${verdicts.items.length} recorded${verdicts.hasMore ? " · more exist" : ""}`}>
+      <Criteria
+        rows={verdicts.items.map((verdict) => ({
+          label: verdict.findingId,
+          mark: OUTCOME_MARK[verdict.outcome],
+          note: `${verdict.blocking ? "Blocking · " : ""}Evaluated ${formatAsOf(verdict.evaluatedAt)}`,
+          cell: <span className="exec-ck-np">{`${NOT_PUBLISHED.criteria} · ${verdict.structuredCriterion.reasonCode}`}</span>,
+        }))}
+      />
+      <p className="exec-ck-note exec-ck-pad">
+        {verdicts.hasMore ? `The first ${verdicts.limit} by ordinal; more exist. ` : ""}Stored verdicts, not current gate readiness.
+      </p>
+    </Panel>
+  );
+}
+
+/** The stored R2 plan inputs. Stored facts: they do not say a decision may be made. */
+function DecisionInputsPanel({ context }: { context: SectionV2<DecisionContextV2> }) {
+  if (context.availability !== "AVAILABLE") {
+    return (
+      <Panel title="Decision inputs">
+        <div className="exec-ck-pad"><NotPublished text={`${NOT_PUBLISHED.decisionCall} · ${context.reasonCode}`} /></div>
+      </Panel>
+    );
+  }
+  const hashes = context.evidenceHashes;
+  return (
+    <Panel title="Decision inputs" right="Stored, not an authorization">
+      <Kv
+        rows={[
+          { label: "Request", value: <Id value={context.approvalId} /> },
+          { label: "Expected version", value: String(context.expectedApprovalVersion) },
+          { label: "Evidence set", value: <Id value={context.evidenceSetHash} /> },
+          {
+            label: "Evidence hashes",
+            value: hashes.availability === "AVAILABLE"
+              ? hashes.value.length === 0
+                ? "None listed"
+                : (
+                  <details>
+                    <summary>{`${hashes.value.length} hash${hashes.value.length === 1 ? "" : "es"}`}</summary>
+                    {hashes.value.map((hash) => <div key={hash}><Id value={hash} /></div>)}
+                  </details>
+                )
+              : <span className="exec-ck-np">{`Not published · ${hashes.reasonCode}`}</span>,
+          },
+          { label: "Plan route", value: <Id value={context.planPath} /> },
+          { label: "Request schema", value: <Id value={context.requestSchemaVersion} /> },
+          { label: "Admission", value: `Not evaluated · ${context.admission.reasonCode}` },
+        ]}
+      />
+    </Panel>
+  );
+}
+
+/** The bounded recent decisions the Portal recorded for this approval. Not source, order or stage history, and not full history. */
+function RecordedDecisionsPanel({ activity }: { activity: SectionV2<RecordedActivityV2> }) {
+  if (activity.availability !== "AVAILABLE") {
+    return (
+      <Panel title="Recorded decisions">
+        <div className="exec-ck-pad"><NotPublished text={`${NOT_PUBLISHED.decisionCall} · ${activity.reasonCode}`} /></div>
+      </Panel>
+    );
+  }
+  return (
+    <Panel title="Recorded decisions" right={`Newest first${activity.hasMore ? ` · ${activity.limit} shown, more exist` : ""}`}>
+      {activity.items.length === 0 ? (
+        <div className="exec-ck-pad">None recorded</div>
+      ) : (
+        <div className="exec-ck-tw">
+          <table className="exec-ck-table">
+            <thead>
+              <tr>
+                <th scope="col">Decided</th>
+                <th scope="col">Decision</th>
+                <th scope="col">Version</th>
+                <th scope="col">Operation</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activity.items.map((row) => (
+                <tr key={row.decisionId}>
+                  <td>{formatAsOf(row.decidedAt)}</td>
+                  <td>{decisionWord(row.decision)}</td>
+                  <td>{`${row.versionBefore} to ${row.versionAfter}`}</td>
+                  <td><Id value={row.operationId} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="exec-ck-note exec-ck-pad">Portal decision rows only; not source, order or stage history, and not the full history.</p>
+    </Panel>
+  );
+}
+
 function R2V2Body({ parent }: { parent: R2ParentV2 }) {
   const lineage = parent.lineage;
   return (
     <>
-      <Panel title="Criteria" right="R2 review">
-        <div className="exec-ck-pad"><NotPublished text={NOT_PUBLISHED.criteria} /></div>
-      </Panel>
+      <R2CriteriaPanel verdicts={parent.recordedVerdicts} />
       <Panel title="R1 lineage">
         {lineage.availability === "AVAILABLE" ? (
           <Kv
@@ -481,9 +609,11 @@ function R2V2Body({ parent }: { parent: R2ParentV2 }) {
           <div className="exec-ck-pad"><Absent section={lineage} /></div>
         )}
       </Panel>
+      <DecisionInputsPanel context={parent.decisionContext} />
       <Panel title="Capital change preview" right="Derived, not applied">
         <div className="exec-ck-pad"><NotPublished text={NOT_PUBLISHED.capital} /></div>
       </Panel>
+      <RecordedDecisionsPanel activity={parent.recordedActivity} />
       <ApprovalPanel approval={parent.approval} observedAt={parent.header.observedAt} />
     </>
   );
@@ -495,23 +625,73 @@ const PANEL_TITLE: Readonly<Record<ExitPanelV2["panelKind"], string>> = {
   LIMITS_HEALTH: "Limits health",
   PORTFOLIO_FIT: "Portfolio fit",
 };
+/** The four label keys the schema publishes, in the words of the panel they name. */
+const LABEL_TEXT: Readonly<Record<PaperExitLabelKeyV2, string>> = {
+  "paper_exit.observation_coverage": PANEL_TITLE.OBSERVATION_COVERAGE,
+  "paper_exit.drift": PANEL_TITLE.DRIFT,
+  "paper_exit.limits_health": PANEL_TITLE.LIMITS_HEALTH,
+  "paper_exit.portfolio_fit": PANEL_TITLE.PORTFOLIO_FIT,
+};
 const OUTCOME_MARK: Readonly<Record<ExitFindingV2["outcome"], Mark>> = { PASS: "pass", WATCH: "watch", FAIL: "fail", INSUFFICIENT: "insufficient" };
 
-/** What a V2 finding says about itself. There is no label, so the id is the honest name. */
-function findingRow(finding: ExitFindingV2) {
+const findingFlags = (finding: ExitFindingV2) => `${finding.required ? "Required" : "Not required"}${finding.blocking ? " · Blocking" : ""}`;
+
+/** A finding from the `evaluation` section: an outcome and two flags. It has no label, so the id is the honest name. */
+function findingRow(finding: ExitFindingV2): CriteriaRow {
+  return { label: finding.findingId, mark: OUTCOME_MARK[finding.outcome], note: findingFlags(finding) };
+}
+
+/**
+ * A finding from the `criteria` section. The label is the published key's own
+ * word; the observed value and limit are the exact strings (every digit); the
+ * comparator is absent on the wire, so no "at most" or "at least" is drawn.
+ */
+function criterionRow(item: ExitCriterionV2): CriteriaRow {
+  const finding = item.finding;
+  const label = item.labelKey.availability === "AVAILABLE" ? LABEL_TEXT[item.labelKey.value] : null;
+  const unit = item.unit.availability === "AVAILABLE" ? item.unit.value : null;
+  const currency = item.currency.availability === "AVAILABLE" ? item.currency.value : null;
   return {
-    label: finding.findingId,
+    label: label ?? <>{finding.findingId} <span className="exec-ck-np">{`label ${NOT_PUBLISHED.criteria} · ${item.labelKey.availability === "NOT_PUBLISHED" ? item.labelKey.reasonCode : ""}`}</span></>,
     mark: OUTCOME_MARK[finding.outcome],
-    note: `${finding.required ? "Required" : "Not required"}${finding.blocking ? " · Blocking" : ""}`,
+    note: (
+      <>
+        <div><span className="exec-ck-id">{finding.findingId}</span> · {findingFlags(finding)}</div>
+        {item.sourceTime.availability === "AVAILABLE" ? <div>{`Source time ${formatAsOf(item.sourceTime.value)}`}</div> : null}
+        {item.evidence.availability === "AVAILABLE" ? <div>Evidence <Id value={item.evidence.value} /></div> : null}
+        {item.findingFormulaVersion.availability === "AVAILABLE" ? <div>{`Formula ${item.findingFormulaVersion.value}`}</div> : null}
+      </>
+    ),
+    cell: (
+      <>
+        <div>Observed {scalarText(item.observed)}</div>
+        <div>Limit {scalarText(item.limit)}</div>
+        <div>Comparator <span className="exec-ck-np">{`${NOT_PUBLISHED.criteria} · ${item.comparator.reasonCode}`}</span></div>
+        <div>
+          Unit{" "}
+          {unit === null && currency === null
+            ? <span className="exec-ck-np">{`${NOT_PUBLISHED.criteria} · ${item.unit.availability === "NOT_PUBLISHED" ? item.unit.reasonCode : ""}`}</span>
+            : [unit, currency].filter((word) => word !== null).join(" ")}
+        </div>
+      </>
+    ),
   };
 }
 
 function ExitV2Body({ parent }: { parent: PaperExitParentV2 }) {
-  const { evaluation, lineage, review } = parent;
+  const { evaluation, criteria, lineage, review } = parent;
+  // Panels come from the evaluation, or from the criteria when that is the section the viewer may read.
+  const panels = evaluation.availability === "AVAILABLE" ? evaluation.panels : criteria.availability === "AVAILABLE" ? criteria.panels : null;
+  const rowsOf = (panel: ExitPanelV2): CriteriaRow[] =>
+    criteria.availability === "AVAILABLE"
+      ? criteria.items.filter((item) => item.finding.panelId === panel.panelId).map(criterionRow)
+      : evaluation.availability === "AVAILABLE"
+        ? evaluation.findings.filter((finding) => finding.panelId === panel.panelId).map(findingRow)
+        : [];
   return (
     <>
-      {evaluation.availability === "AVAILABLE" ? (
-        evaluation.panels.map((panel) => (
+      {panels !== null ? (
+        panels.map((panel) => (
           <Panel key={panel.panelId} title={PANEL_TITLE[panel.panelKind]} right={`${panel.sourceAuthority.toLowerCase()} · ${panel.panelState.toLowerCase()}`}>
             {panel.panelState !== "OK" ? (
               <div className="exec-ck-pad">
@@ -521,12 +701,17 @@ function ExitV2Body({ parent }: { parent: PaperExitParentV2 }) {
                 />
               </div>
             ) : null}
-            <Criteria rows={evaluation.findings.filter((finding) => finding.panelId === panel.panelId).map(findingRow)} />
+            <Criteria rows={rowsOf(panel)} />
           </Panel>
         ))
       ) : (
         <Panel title="Evaluation">
-          <div className="exec-ck-pad"><Absent section={evaluation} /></div>
+          <div className="exec-ck-pad">{evaluation.availability === "AVAILABLE" ? null : <Absent section={evaluation} />}</div>
+        </Panel>
+      )}
+      {criteria.availability === "AVAILABLE" ? null : (
+        <Panel title="Criteria detail">
+          <div className="exec-ck-pad"><NotPublished text={`${NOT_PUBLISHED.criteria} · ${criteria.reasonCode}`} /></div>
         </Panel>
       )}
       <ChartPanel />
@@ -554,6 +739,7 @@ function ExitV2Body({ parent }: { parent: PaperExitParentV2 }) {
           <div className="exec-ck-pad"><Absent section={lineage} /></div>
         )}
       </Panel>
+      <RecordedDecisionsPanel activity={parent.recordedActivity} />
       <Panel title="Recommendation">
         <div className="exec-ck-pad"><NotPublished text={NOT_PUBLISHED.criteria} /></div>
       </Panel>
@@ -637,9 +823,14 @@ function verdictOf(data: EvidenceData): { tone: Tone; headline: string; facts: s
       };
     }
     case "exitv2": {
-      const evaluation = data.parent.evaluation;
-      if (evaluation.availability !== "AVAILABLE") return { tone: "mute", headline: "Evaluation not published", facts: [evaluation.reasonCode] };
-      const findings = evaluation.findings;
+      // The findings come from the evaluation, or from the criteria when that is the section the viewer may read.
+      const { evaluation, criteria } = data.parent;
+      const findings = evaluation.availability === "AVAILABLE"
+        ? evaluation.findings
+        : criteria.availability === "AVAILABLE" ? criteria.items.map((item) => item.finding) : null;
+      if (findings === null) {
+        return { tone: "mute", headline: "Evaluation not published", facts: evaluation.availability === "AVAILABLE" ? [] : [evaluation.reasonCode] };
+      }
       const pass = findings.filter((finding) => finding.outcome === "PASS").length;
       const blocking = findings.filter((finding) => finding.blocking && finding.outcome !== "PASS").length;
       // Findings are counted as published; whether the gate is met is a verdict the body does not carry (FE-028).
