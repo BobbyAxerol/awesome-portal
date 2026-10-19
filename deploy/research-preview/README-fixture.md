@@ -29,13 +29,16 @@ the real, authenticated reads back.
    if the shell is signed in through the real `portal-api`, the user id (see "FIXTURE_USER_ID" below):
 
    ```
-   PORTAL_EXECUTION_V2_SCREENS=fleet,archived,portfolios,alpha,workbench,account,ops,profile,overview,cockpit,shell,compare,blotter,admin,users,replay
+   PORTAL_EXECUTION_V2_SCREENS=fleet,archived,portfolios,alpha,workbench,sandbox,canary,live,request,account,ops,profile,overview,cockpit,shell,compare,blotter,admin,users,replay
    FIXTURE_USER_ID=<real principal id>
    ```
 
-   `archived`, `workbench` and `replay` are reserved keys: the build accepts them and they mount nothing
-   (the Archived lens is part of `fleet`, Trade Replay is a tab of `alpha`, the V2 Paper workbench is not built),
-   so listing or omitting them changes no screen.
+   That is all 20 keys. Only `archived` and `replay` are reserved: the build accepts them and they mount
+   nothing (the Archived lens is part of `fleet`, Trade Replay is a tab of `alpha`), so listing or omitting
+   them changes no screen. `workbench` (Paper), `sandbox`, `canary`, `live` and `request` (New request) are
+   live screens: each key turns on its own V2 screen, and the cockpit's New request drawer rides `cockpit`.
+   On this overlay the stage screens read the fixture doubles, so most of their cells say `Not available` or
+   `Not published (FE-xxx)` by design.
 
    The umbrella flag `VITE_EXECUTION_PREVIEW_ENABLED` is already true in the preview overlay. Optional:
    `FIXTURE_SCALE=small|medium|large` (default `medium`), `FIXTURE_WRITES=refuse|doubles`,

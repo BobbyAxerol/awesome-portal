@@ -16,7 +16,9 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 const read = (relative) => readFileSync(join(root, relative), 'utf8');
 
 const BANNER = 'FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence';
-const V2_MANIFEST = 'fleet,archived,portfolios,alpha,workbench,account,ops,profile,overview,cockpit,shell,compare,blotter,admin,users,replay';
+// All 20 keys of EXEC_V2_SCREEN_KEYS (apps/portal/frontend/src/execution/v2/flags.ts). `workbench`, `sandbox`, `canary`, `live`
+// and `request` are live screens since S3; only `archived` and `replay` are reserved (they mount nothing).
+const V2_MANIFEST = 'fleet,archived,portfolios,alpha,workbench,sandbox,canary,live,request,account,ops,profile,overview,cockpit,shell,compare,blotter,admin,users,replay';
 const NGINX_IMAGE = 'nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de';
 const SECRET_SENTINEL = 'SENTINEL-SECRET-must-never-be-printed';
 
@@ -99,7 +101,7 @@ test('fixture on warns when the V2 manifest is empty and counts it when set', ()
   });
   withHome(({ run }) => {
     const full = run('fixture', 'on');
-    assert.match(full.stdout, /lists 16 screen\(s\)/);
+    assert.match(full.stdout, /lists 20 screen\(s\)/);
     assert.doesNotMatch(full.stderr, /is empty/);
     assert(!full.stdout.includes(V2_MANIFEST), 'the value itself is not echoed');
   }, { env: `PORTAL_EXECUTION_V2_SCREENS=${V2_MANIFEST}\n` });
