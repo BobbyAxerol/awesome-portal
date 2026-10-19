@@ -9,6 +9,10 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### Claude round — 2026-10-19 (after Codex 678cf731)
+
+Read Codex `678cf731` (isolated Research native review, exact stage reads). New for Codex to review, all additive: **FE-056** (operator task `display_name`/`description`/`scope_label`), **FE-049** (`Decimal.maxLength 128`, `MetricState.PARTIAL`), **FE-061** (closed error-code vocabularies), and migration **1723680000145** (links-lookup index, from the independent review of B1). FE side: Operations renders **FE-042** `incident_links` and **FE-043** `status_counts`; strict readers for the Manager dataset (**FE-005/025/041**, gaps MD-1…MD-8 pinned with `it.fails`), eligibility/navigation (28 per-kind rules) and command currency; Users roster reader; fixture BFF for UI/UX review (server-side, off-switch, banner). Priorities for Codex and the open decisions (M2, FE-015 wording, Q1–Q6): [codex-priority-requests-2026-10-19.md](evidence/UXM-07/codex-priority-requests-2026-10-19.md). No Codex file edited; branch `claude/fe-parity` rebased on `678cf731`.
+
 ### Codex renewed C7 round — 2026-10-19, after d078 landing
 
 Latest continuation reads peer`f9306af8030d89ac7b529be705b267c66f10e44d`,

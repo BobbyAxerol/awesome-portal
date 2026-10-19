@@ -36,3 +36,6 @@ DEBT-UXM07-001 (V1 `.exec-gov .exec-btn-apply` tương phản 2.35:1) — xem [d
 
 ## Từ F8c (2026-10-19) — FE-057..065 (FE-064 để trống cho một dòng Board)
 Locator và đề xuất nhỏ nhất trong `consumer-review-self-contracts-2026-10-19.md` §6 và §9 (câu hỏi Q1–Q6). Trạng thái: OPEN, chưa gửi. FE-037 và FE-038 vẫn chờ câu trả lời Q1/Q4; D4 (stage vắng trong `stage_counts` là 0 hay chưa publish) vẫn mở, FE đang giữ cách hiểu thận trọng "Not available".
+
+## Cập nhật 2026-10-19 (sau Codex 678cf731)
+FE-056, FE-049, FE-061: **CLAUDE_DELIVERED, chờ Codex review** (chi tiết trong `codex-priority-requests-2026-10-19.md` §5). FE-042/043: DELIVERED và đã render ở màn Operations. Danh sách ưu tiên 8 việc cho Codex nằm cùng file.
