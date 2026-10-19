@@ -293,7 +293,7 @@ export default function SandboxScreen({ api, deploymentId, workspaceId }: Sandbo
         renderLink={renderLink}
       />
       <div className="exec-sbx-actions">
-        <button type="button" className="exec-dock-btn" disabled={read.refreshing} aria-busy={read.refreshing ? "true" : undefined} onClick={reload}>
+        <button type="button" className="exec-dock-btn" disabled={read.refreshing} title={read.refreshing ? "Reading the certification again" : "Read the certification again"} aria-busy={read.refreshing ? "true" : undefined} onClick={reload}>
           Refresh
         </button>
       </div>
