@@ -42,7 +42,7 @@ import {
   type DomainFilter, type SortKey,
 } from "./listModel";
 import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId } from "./PortfolioTable";
-import { DEFAULT_ROUTES, FROM_LIST, type PortfolioRoutes } from "./routes";
+import { DEFAULT_ROUTES, FROM_LIST, joinQuery, type PortfolioRoutes } from "./routes";
 import { COMPARE_MAX, COMPARE_MIN, IN_PARAM, partitionByCurrency, selectionFrom, withSelection } from "./selection";
 import { useRead } from "./useRead";
 
@@ -188,7 +188,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   // `sort=allocated:*` in the address with no currency: sortRows has nothing to compare, so the order is the name order. Say so.
   const sortFallsBack = sort.key === "allocated" && ccy === null;
   const comparable = chosen.length >= COMPARE_MIN && chosen.length <= COMPARE_MAX && unknownChosen.length === 0;
-  const compareHref = withContext(`${routes.compare}?${IN_PARAM}=${picked.ids.join(",")}&from=${FROM_LIST}`, params);
+  const compareHref = withContext(joinQuery(routes.compare, `${IN_PARAM}=${picked.ids.join(",")}&from=${FROM_LIST}`), params);
 
   const selectionMessage = (() => {
     if (picked.ids.length === 0) return `Select ${COMPARE_MIN} to ${COMPARE_MAX} portfolios to compare`;

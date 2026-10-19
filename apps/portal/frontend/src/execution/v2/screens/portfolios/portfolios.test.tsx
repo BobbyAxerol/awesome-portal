@@ -384,7 +384,9 @@ describe("Compare selection", () => {
     fireEvent.click(box("Satellite"));
     const link = screen.getByRole("link", { name: "Compare 2" });
     const href = new URL(link.getAttribute("href")!, "http://x");
-    expect(href.pathname).toBe("/deployments/compare");
+    // The only URL the app mounts Compare on (no registry row yet): the portfolios route with ?view=compare.
+    expect(href.pathname).toBe("/deployments/portfolios");
+    expect(href.searchParams.get("view")).toBe("compare");
     expect(href.searchParams.get("in")).toBe(`${PF.core},${PF.satellite}`);
     expect(href.searchParams.get("from")).toBe("portfolios");
   });

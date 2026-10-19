@@ -22,7 +22,9 @@ const enc = encodeURIComponent;
 export const DEFAULT_ROUTES: PortfolioRoutes = {
   list: "/deployments/portfolios",
   portfolio: (id) => `/deployments/portfolios/${enc(id)}`,
-  compare: "/deployments/compare",
+  // Compare has no registry row yet (rev 7 is Codex's, DEBT-UXM07-006): it rides the portfolios route as ?view=compare,
+  // which is the only URL the app mounts it on. A path that carries its own query is joined with `joinQuery`.
+  compare: "/deployments/portfolios?view=compare",
   alpha: (id) => `/deployments/alphas/${enc(id)}`,
   fleet: "/deployments/alphas",
   account: (id) => `/deployments/accounts/${enc(id)}`,
@@ -41,3 +43,8 @@ export const DEFAULT_ROUTES: PortfolioRoutes = {
 /** `from` values these screens write and read; anything else goes back to the list. */
 export const FROM_LIST = "portfolios";
 export const FROM_PORTFOLIO_PREFIX = "portfolio:";
+
+/** Append `query` (no leading ? or &) to a route that may already carry a query string. */
+export function joinQuery(route: string, query: string): string {
+  return `${route}${route.includes("?") ? "&" : "?"}${query}`;
+}

@@ -58,7 +58,9 @@ describe("header", () => {
     await ready();
     expect(screen.getByRole("link", { name: "Portfolios" }).getAttribute("href")).toContain("/deployments/portfolios");
     const compare = new URL(screen.getByRole("link", { name: "Compare with" }).getAttribute("href")!, "http://x");
-    expect(compare.pathname).toBe("/deployments/compare");
+    // The only URL the app mounts Compare on (no registry row yet): the portfolios route with ?view=compare.
+    expect(compare.pathname).toBe("/deployments/portfolios");
+    expect(compare.searchParams.get("view")).toBe("compare");
     expect(compare.searchParams.get("in")).toBe(PF.core);
     expect(compare.searchParams.get("from")).toBe(`portfolio:${PF.core}`);
     expect(compare.searchParams.get("env")).toBe("paper");

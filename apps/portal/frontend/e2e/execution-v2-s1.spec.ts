@@ -134,3 +134,45 @@ for (const [name, route, root] of SCREENS) {
     });
   }
 }
+
+// A link must land on a screen, not only the URL the spec types in: the Compare links once pointed at a path no route
+// mounts (/deployments/compare) while every spec above entered the right URL directly.
+test("the Compare links on Portfolios and Portfolio 360 open the Compare screen", async ({ page }) => {
+  await page.clock.setFixedTime(new Date(OPERATIONS_V2_DOUBLE_NOW_ISO));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await usePreferences(page, "operations");
+  await stubPortalApi(page, "healthy");
+  await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+  await page.route("**/api/admin/access/self", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        schema_version: "portal.owner-access.v1",
+        record_authority: "PORTAL_CONTROL",
+        user_id: "principal-visual-baseline",
+        is_owner: true,
+        owner_state: "OWNER",
+        capabilities: MANAGER_CAPABILITIES,
+        mutation_requirements: { origin: "REQUIRED", csrf: "REQUIRED", step_up: "REQUIRED_FOR_DESTRUCTIVE" },
+      }),
+    }),
+  );
+  await page.goto("/deployments/portfolios");
+  await expect(page.locator('[data-screen="portfolios-v2"]').first()).toBeVisible();
+  await settle(page);
+  // The ticks live in the URL, so click and wait for the screen to re-render them rather than `check()`.
+  for (const name of [/^Select Core to compare/, /^Select Satellite to compare/]) {
+    await page.getByRole("checkbox", { name }).click();
+    await expect(page.getByRole("checkbox", { name })).toBeChecked();
+  }
+  await page.getByRole("link", { name: "Compare 2" }).click();
+  await expect(page.locator('[data-screen="compare-v2"]').first()).toBeVisible();
+  expect(new URL(page.url()).searchParams.get("view")).toBe("compare");
+
+  await page.goto("/deployments/portfolios/pf_TEST_ONLY_core");
+  await expect(page.locator('[data-screen="portfolio-360-v2"]').first()).toBeVisible();
+  await settle(page);
+  await page.getByRole("link", { name: "Compare with" }).click();
+  await expect(page.locator('[data-screen="compare-v2"]').first()).toBeVisible();
+});

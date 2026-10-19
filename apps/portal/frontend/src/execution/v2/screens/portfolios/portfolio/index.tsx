@@ -44,7 +44,7 @@ import { applyTab, resolveTab } from "../../../tabAliases";
 import { useExecUrlState, withContext } from "../../../urlState";
 import { EXPORT_REASON, PF_FE, npText } from "../fe";
 import { freshnessFlag, humanize } from "../format";
-import { DEFAULT_ROUTES, FROM_PORTFOLIO_PREFIX, type PortfolioRoutes } from "../routes";
+import { DEFAULT_ROUTES, FROM_PORTFOLIO_PREFIX, joinQuery, type PortfolioRoutes } from "../routes";
 import { IN_PARAM } from "../selection";
 import { Allocations } from "./Allocations";
 import { AccountsTab, AlphasTab } from "./AlphasAccounts";
@@ -241,7 +241,7 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
 
   const fresh = resource ? freshnessFlag(resource.freshness) : null;
   const subParts = [identity?.portfolioId ?? id, identity?.owner ?? null, identity?.baseCurrency ?? null].filter((part): part is string => part !== null);
-  const compareHref = withContext(`${routes.compare}?${IN_PARAM}=${encodeURIComponent(id)}&from=${FROM_PORTFOLIO_PREFIX}${encodeURIComponent(id)}`, params);
+  const compareHref = withContext(joinQuery(routes.compare, `${IN_PARAM}=${encodeURIComponent(id)}&from=${FROM_PORTFOLIO_PREFIX}${encodeURIComponent(id)}`), params);
 
   return (
     <div className="exec-pf-v2" data-screen="portfolio-360-v2">
