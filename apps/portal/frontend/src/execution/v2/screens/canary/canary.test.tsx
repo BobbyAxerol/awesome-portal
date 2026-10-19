@@ -247,6 +247,30 @@ describe("the four decisions (D6, D9): drawn, disabled, explained, never enabled
   });
 });
 
+describe("a body that says a source action was requested", () => {
+  it.each(["source_side_effect_requested", "runtime_activation_requested", "promotion_execution_requested"])("%s: the screen says Not trusted, as an alert", async (flag) => {
+    const body = v1Body();
+    body[flag] = true;
+    mount(canaryPort(answering(body)));
+    await ready();
+    const banner = document.querySelector('[data-banner="untrusted"]') as HTMLElement;
+    expect(banner.getAttribute("role")).toBe("alert");
+    expect(banner.textContent).toContain("Not trusted");
+  });
+
+  it("an unreadable flag is treated as requested (fail-closed); a body that says false has no such banner", async () => {
+    const body = v1Body();
+    delete body.source_side_effect_requested;
+    mount(canaryPort(answering(body)));
+    await ready();
+    expect(document.querySelector('[data-banner="untrusted"]')).toBeTruthy();
+    cleanup();
+    mount(canaryPort(answering(v1Body())));
+    await ready();
+    expect(document.querySelector('[data-banner="untrusted"]')).toBeNull();
+  });
+});
+
 describe("what is blocking and rollback readiness", () => {
   it("blockers are sentences; the codes are only under Provenance", async () => {
     mount(canaryPort(answering(v1Body())));

@@ -72,9 +72,34 @@ describe("header chips (D13): a source that does not publish is a request id, ne
   });
 });
 
+describe("trial past 90 days", () => {
+  const withDays = (day: number, duration: number) => {
+    const body = populatedV1();
+    body.lifecycle.day_index = day;
+    body.lifecycle.duration_days = duration;
+    return trialOf(viewOf(body));
+  };
+
+  it("the strip is capped at 90 ticks and 'now' is scaled onto it, never past its end", () => {
+    expect(withDays(120, 180)).toEqual({ kind: "day", day: 120, total: 180, ticks: 90, tick: 60 });
+    expect(withDays(180, 180)).toEqual({ kind: "day", day: 180, total: 180, ticks: 90, tick: 90 });
+    expect(withDays(1, 180)).toEqual({ kind: "day", day: 1, total: 180, ticks: 90, tick: 1 });
+    expect(withDays(91, 91)).toMatchObject({ ticks: 90, tick: 90 });
+    for (const day of [1, 2, 45, 89, 90, 91, 119, 120, 179, 180]) {
+      const fact = withDays(day, 180);
+      expect(fact.kind === "day" && fact.tick >= 1 && fact.tick <= fact.ticks, String(day)).toBe(true);
+    }
+  });
+
+  it("at or under 90 days one tick is one day, as before", () => {
+    expect(withDays(90, 90)).toEqual({ kind: "day", day: 90, total: 90, ticks: 90, tick: 90 });
+    expect(withDays(7, 30)).toEqual({ kind: "day", day: 7, total: 30, ticks: 30, tick: 7 });
+  });
+});
+
 describe("trial", () => {
   it("day N of M only when both are stated; ticks are the duration (at most 90)", () => {
-    expect(trialOf(viewOf(populatedV1()))).toEqual({ kind: "day", day: 6, total: 14, ticks: 14 });
+    expect(trialOf(viewOf(populatedV1()))).toEqual({ kind: "day", day: 6, total: 14, ticks: 14, tick: 6 });
     expect(trialOf(viewOf(v1Body()))).toEqual({ kind: "unstated", durationDays: 14, proposed: false });
     expect(trialOf(viewOf(parentBody()))).toEqual({ kind: "unstated", durationDays: 7, proposed: true });
   });

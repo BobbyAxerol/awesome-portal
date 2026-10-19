@@ -117,14 +117,20 @@ export const SPINE_ROUTES: Readonly<Partial<Record<SpineStageId, (deploymentId: 
 /* ── trial ────────────────────────────────────────────────────────────────── */
 
 export type TrialFact =
-  | { kind: "day"; day: number; total: number; ticks: number }
+  | { kind: "day"; day: number; total: number; ticks: number; tick: number }
   | { kind: "unstated"; durationDays: number | null; proposed: boolean };
 
-/** Day N of M only when both are published and consistent; otherwise "not stated". `ticks` is the strip length (<= 90). */
+/**
+ * Day N of M only when both are published and consistent; otherwise "not stated". `ticks` is the strip length (<= 90);
+ * `tick` is which of them is "now". Past 90 days one tick stands for several days, so "now" is scaled onto the strip
+ * instead of running off its end.
+ */
 export function trialOf(view: CanaryView): TrialFact {
   const { dayIndex, durationDays } = view;
   if (dayIndex !== null && durationDays !== null && dayIndex <= durationDays) {
-    return { kind: "day", day: dayIndex, total: durationDays, ticks: Math.min(durationDays, 90) };
+    const ticks = Math.min(durationDays, 90);
+    const tick = durationDays <= 90 ? dayIndex : Math.min(ticks, Math.max(1, Math.ceil((dayIndex * ticks) / durationDays)));
+    return { kind: "day", day: dayIndex, total: durationDays, ticks, tick };
   }
   return { kind: "unstated", durationDays, proposed: view.proposalOnly };
 }
@@ -458,6 +464,9 @@ function allPanels(view: CanaryView): readonly PanelFact[] {
 
 export function bannersOf(view: CanaryView): readonly Banner[] {
   const out: Banner[] = [];
+  if (view.sourceActed) {
+    out.push({ key: "untrusted", text: "Not trusted. This response says a source action was requested. This screen never requests one, so the figures below are not trusted." });
+  }
   if (view.proposalOnly) {
     out.push({ key: "proposal", text: "This response states the Canary proposal only. Runtime figures are not part of it." });
   }

@@ -110,7 +110,7 @@ export function blockerSentence(code: string): string {
 
 /* ── the model ────────────────────────────────────────────────────────────── */
 
-export type LiveNoticeKind = "unqualified" | "stale" | "partial" | "empty" | "retained";
+export type LiveNoticeKind = "untrusted" | "unqualified" | "stale" | "partial" | "empty" | "retained";
 export interface LiveNotice {
   kind: LiveNoticeKind;
   text: string;
@@ -246,12 +246,21 @@ export const LADDER: readonly LadderRung[] = [
   { key: "emergency-close", title: "Emergency close", note: "Closes every position now.", step: "3 of 3" },
 ];
 
-const TRIAD_LABELS: readonly { key: string; label: string; suffix?: string }[] = [
-  { key: "equity", label: "Equity", suffix: "USDT" },
-  { key: "gross", label: "Gross exposure", suffix: "USDT" },
-  { key: "positions", label: "Positions" },
-  { key: "orders", label: "Open orders" },
+const TRIAD_LABELS: readonly { key: string; label: string; money: boolean }[] = [
+  { key: "equity", label: "Equity", money: true },
+  { key: "gross", label: "Gross exposure", money: true },
+  { key: "positions", label: "Positions", money: false },
+  { key: "orders", label: "Open orders", money: false },
 ];
+
+/**
+ * The one currency the read states for its money figures: the unit every non-count KPI carries, when they agree.
+ * `null` when the read states none or two, so a row shows no unit rather than a guessed one.
+ */
+export function readCurrency(kpis: readonly { unit: string | null }[]): string | null {
+  const units = new Set(kpis.map((kpi) => kpi.unit).filter((unit): unit is string => unit !== null && unit !== "" && unit.toUpperCase() !== "COUNT"));
+  return units.size === 1 ? [...units][0]! : null;
+}
 
 /**
  * The three-column rows. The source publishes no per-figure keys today (FE-072), so with no `figures`
@@ -259,8 +268,8 @@ const TRIAD_LABELS: readonly { key: string; label: string; suffix?: string }[] =
  * through only while the broker figures are visible: a withheld figure is dropped here, before any
  * component can print it.
  */
-export function buildTriadRows(figures: readonly TriadFigure[] | null, brokerVisible: boolean): TriadRow[] {
-  if (figures === null) return TRIAD_LABELS.map((row) => ({ key: row.key, label: row.label, ...(row.suffix ? { suffix: row.suffix } : {}) }));
+export function buildTriadRows(figures: readonly TriadFigure[] | null, brokerVisible: boolean, currency: string | null = null): TriadRow[] {
+  if (figures === null) return TRIAD_LABELS.map((row) => ({ key: row.key, label: row.label, ...(row.money && currency !== null ? { suffix: currency } : {}) }));
   return figures.map((figure) => ({
     key: figure.key,
     label: figure.label,
@@ -309,7 +318,9 @@ function stageOf(declared: string | null): SpineStageId | null {
 function runtimeChip(state: string | null): StageChipValue {
   if (state === null) return { state: "not-published", id: "FE-067", detail: "Runtime state" };
   switch (state.toUpperCase()) {
+    // ACTIVE says the deployment was activated; it does not say it is running. Only the word RUNNING is "Running".
     case "ACTIVE":
+      return { state: "flag", kind: "neutral", label: "Active" };
     case "RUNNING":
       return { state: "flag", kind: "ok", label: "Running" };
     case "HALTED":
@@ -325,6 +336,11 @@ function freshnessChip(panel: LivePanel | undefined): StageChipValue {
   const envelope = panel?.envelope;
   if (envelope === undefined || envelope.freshness === null || envelope.freshness === "UNKNOWN") {
     return { state: "not-available", reason: "Freshness not published" };
+  }
+  // A panel that is withheld or failed makes no claim about its data, whatever freshness word it carries.
+  if (envelope.suppressed) return { state: "not-available", reason: "Withheld by the server" };
+  if (envelope.panelState === "unavailable" || envelope.panelState === "denied" || envelope.panelState === "terminal") {
+    return { state: "not-available", reason: "Source unavailable" };
   }
   const at = whenText(envelope.asOf);
   const suffix = at === null ? "" : ` · ${at}`;
@@ -539,6 +555,9 @@ function rowsPanelV1(live: LiveFullOperations, key: "positions" | "orders", coll
 }
 
 function noticeV1(live: LiveFullOperations, mismatch: boolean): LiveNotice | null {
+  if (live.sourceSideEffectRequested || live.runtimeActivationRequested || live.promotionExecutionRequested) {
+    return { kind: "untrusted", text: "Not trusted. This response says a source action was requested. This screen never requests one, so the figures below are not trusted." };
+  }
   if (live.sourceIntegrationState !== "SOURCE_BACKED") {
     return { kind: "unqualified", text: "Source not qualified. Figures stay unavailable until it is." };
   }
@@ -596,7 +615,7 @@ export function liveModelV1(live: LiveFullOperations): LiveModel {
       : gap === true ? { kind: "gap" } : { kind: "unavailable" },
     mismatch,
     triad: {
-      rows: buildTriadRows(null, brokerVisible),
+      rows: buildTriadRows(null, brokerVisible, readCurrency(live.kpis)),
       internal: sideOf(live.panels.internal),
       broker: brokerVisible ? sideOf(brokerPanel) : null,
       suppressed,

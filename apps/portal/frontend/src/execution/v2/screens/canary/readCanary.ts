@@ -201,6 +201,8 @@ export interface CanaryView {
   envelope: EnvelopeFact | null;
   /** V2 body: the envelope is "proposed, not effective" and the Portal published nothing about the running canary. */
   proposalOnly: boolean;
+  /** The body says the Portal asked the Trading System to act (fail-closed: an unreadable flag is `true`). A V2 body is pinned `false` by its reader. */
+  sourceActed: boolean;
   /** V2 body: why the proposal section is absent, when it is (the server's reason code). */
   proposalAbsentReason: string | null;
   kpis: Readonly<Record<KpiKey, KpiFact | null>>;
@@ -483,6 +485,7 @@ function readV1(room: CanaryControlRoom, schemaVersion: string | null): CanaryVi
     durationDays: duration !== null && duration >= 1 ? duration : null,
     envelope,
     proposalOnly: false,
+    sourceActed: room.sourceSideEffectRequested || room.runtimeActivationRequested || room.promotionExecutionRequested,
     proposalAbsentReason: null,
     kpis,
     compliance: panelFact(room.envelopeCompliance),
@@ -571,6 +574,7 @@ function readV2(parent: CanaryParentV2, schemaVersion: string | null): CanaryVie
     durationDays: duration !== null && duration >= 1 ? duration : null,
     envelope,
     proposalOnly: true,
+    sourceActed: false,
     proposalAbsentReason: !available && proposal?.availability === "NOT_PUBLISHED" && typeof proposal.reasonCode === "string" ? proposal.reasonCode.slice(0, 128) : null,
     kpis: none,
     compliance: null,

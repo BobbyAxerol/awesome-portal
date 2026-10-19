@@ -125,6 +125,44 @@ describe("L1 · the V1 state matrix", () => {
     expect(m.gapNote).toBe("A gap blocks risk-increasing actions. Protective actions stay open.");
   });
 
+  it("the freshness chip makes no claim from a withheld or failed panel, whatever freshness word it carries", () => {
+    const base = populatedV1({ freshness: "OK" });
+    expect(model(base).chips.freshness).toMatchObject({ state: "dot", tone: "ok" });
+    for (const [state, reason] of [["unavailable", "Source unavailable"], ["suppressed", "Withheld by the server"], ["error", "Source unavailable"]] as const) {
+      const raw = JSON.parse(JSON.stringify(base));
+      raw.source_panels.internal.panel_state = state;
+      expect(model(raw).chips.freshness, state).toEqual({ state: "not-available", reason });
+    }
+  });
+
+  it("the Triad units come from the read's own money KPIs, never a hard-coded USDT", () => {
+    const rows = (unit: string | null) => {
+      const raw = populatedV1();
+      for (const kpi of raw.kpis) if (kpi.key !== "open_orders") kpi.unit = unit;
+      return model(raw).triad!.rows;
+    };
+    expect(rows("USD").filter((r) => r.suffix !== undefined).map((r) => [r.key, r.suffix])).toEqual([["equity", "USD"], ["gross", "USD"]]);
+    expect(rows(null).every((r) => r.suffix === undefined)).toBe(true);
+    // Two currencies: no unit is guessed.
+    const raw = populatedV1();
+    raw.kpis[0].unit = "USD";
+    raw.kpis[1].unit = "EUR";
+    expect(model(raw).triad!.rows.every((r) => r.suffix === undefined)).toBe(true);
+    expect(buildTriadRows(null, true).every((r) => r.suffix === undefined)).toBe(true);
+    expect(buildTriadRows(null, true, "JPY").filter((r) => r.suffix === "JPY").map((r) => r.key)).toEqual(["equity", "gross"]);
+  });
+
+  it.each(["source_side_effect_requested", "runtime_activation_requested", "promotion_execution_requested"])("%s: the notice says Not trusted and outranks every other notice", (flag) => {
+    const raw = populatedV1();
+    raw[flag] = true;
+    expect(model(raw).notice).toMatchObject({ kind: "untrusted" });
+    expect(model(raw).notice!.text).toContain("Not trusted");
+    const unread = populatedV1();
+    delete unread[flag];
+    expect(model(unread).notice?.kind).toBe("untrusted");
+    expect(model(populatedV1()).notice?.kind).not.toBe("untrusted");
+  });
+
   it("the gap note follows the policy flags: a protective rule that blocks on a gap is never worded as open", () => {
     const raw = populatedV1({ gap: true });
     setPath(raw, ["command_policy", "protective", "source_gap_blocks"], true);
@@ -161,8 +199,9 @@ describe("L1 · the V1 state matrix", () => {
     expect(model(populatedV1()).spineTargets.canary).toBe("/deployments/live/dep_TEST_ONLY_live/canary");
   });
 
-  it("runtime: only a published word becomes a chip; ACTIVE is Running, HALTED is Halted, a stranger stays Unknown-worded", () => {
-    expect(model(populatedV1({ runtimeState: "ACTIVE" })).chips.runtime).toMatchObject({ state: "flag", kind: "ok", label: "Running" });
+  it("runtime: only a published word becomes a chip; ACTIVE is a neutral Active (activation is not liveness), RUNNING is Running, HALTED is Halted, a stranger stays Unknown-worded", () => {
+    expect(model(populatedV1({ runtimeState: "ACTIVE" })).chips.runtime).toMatchObject({ state: "flag", kind: "neutral", label: "Active" });
+    expect(model(populatedV1({ runtimeState: "RUNNING" })).chips.runtime).toMatchObject({ state: "flag", kind: "ok", label: "Running" });
     expect(model(populatedV1({ runtimeState: "HALTED" })).chips.runtime).toMatchObject({ state: "flag", kind: "attention", label: "Halted" });
     expect(model(populatedV1({ runtimeState: "REDUCING" })).chips.runtime).toMatchObject({ kind: "pending", label: "Reducing" });
     expect(model(populatedV1({ runtimeState: "SOMETHING_NEW" })).chips.runtime).toMatchObject({ kind: "unknown", label: "Something new" });

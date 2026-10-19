@@ -206,7 +206,7 @@ export default function CanaryScreen({ api, deploymentId, workspaceId }: CanaryS
       {header(chipsOf(result.view), result.view)}
 
       {banners.map((banner) => (
-        <div key={banner.key} className="exec-blk-banner" role="status" data-banner={banner.key}>
+        <div key={banner.key} className="exec-blk-banner" role={banner.key === "untrusted" ? "alert" : "status"} data-banner={banner.key}>
           {banner.text}
         </div>
       ))}

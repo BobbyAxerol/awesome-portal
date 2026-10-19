@@ -147,7 +147,7 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
         </p>
       ) : null}
       {model.notice ? (
-        <p className="exec-liv-banner" data-kind={model.notice.kind} role="status">
+        <p className="exec-liv-banner" data-kind={model.notice.kind} role={model.notice.kind === "untrusted" ? "alert" : "status"}>
           {model.notice.text}
         </p>
       ) : null}

@@ -18,7 +18,7 @@ export function TrialStrip({ trial }: { trial: TrialFact }) {
           <span className="exec-cny-trial-day">Trial day {trial.day} of {trial.total}</span>
           <span className="exec-cny-ticks" role="img" aria-label={`Day ${trial.day} of ${trial.total}`}>
             {Array.from({ length: trial.ticks }, (_, index) => (
-              <i key={index} data-state={index + 1 < trial.day ? "on" : index + 1 === trial.day ? "now" : undefined} />
+              <i key={index} data-state={index + 1 < trial.tick ? "on" : index + 1 === trial.tick ? "now" : undefined} />
             ))}
           </span>
         </>
