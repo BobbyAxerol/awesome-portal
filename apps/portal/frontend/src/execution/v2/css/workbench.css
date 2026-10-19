@@ -348,6 +348,10 @@
   }
 }
 @media (max-width: 660px) {
+  /* Pinned, the bar covers the cards it repeats; on a phone it is an ordinary block at the end of the page. */
+  .exec-wb-mini {
+    position: static;
+  }
   .exec-wb-head {
     grid-template-columns: minmax(0, 1fr);
   }

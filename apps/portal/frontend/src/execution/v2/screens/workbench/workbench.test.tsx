@@ -5,6 +5,9 @@
  * its request id, the states a read can be in, the role variant, the single
  * read with Refresh, and the a11y names.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -584,12 +587,20 @@ describe("the On scroll summary bar", () => {
     mount();
     await ready();
     const bar = screen.getByRole("complementary", { name: "Deployment summary" });
-    expect(bar.textContent).toContain("On scroll");
+    expect(bar.textContent).toContain("Deployment state");
+    expect(bar.textContent).not.toContain("On scroll");
     expect(bar.textContent).toContain(`${STRATEGY} · Paper monitor`);
     expect(bar.textContent).toContain("Runtime Not published (FE-067)");
     expect(bar.textContent).toContain("Reconciliation Not published (FE-067)");
     expect(bar.textContent).toContain("As of 17 Oct 09:14Z");
     expect(within(bar).getByRole("link", { name: "← Alpha" }).getAttribute("href")).toBe(`/deployments/alphas/${STRATEGY}`);
+  });
+
+  it("is pinned on a wide screen and static at phone width, where it would cover the cards it repeats", () => {
+    const css = readFileSync(join(__dirname, "../../css/workbench.css"), "utf8");
+    expect(/\.exec-wb-mini\s*\{[^}]*position:\s*sticky/.test(css)).toBe(true);
+    const phone = css.slice(css.indexOf("@media (max-width: 660px)"));
+    expect(/\.exec-wb-mini\s*\{\s*position:\s*static;/.test(phone)).toBe(true);
   });
 
   it("is absent while loading and when the page is replaced by a state", async () => {
