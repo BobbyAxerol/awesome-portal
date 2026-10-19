@@ -131,6 +131,8 @@ describe("ContextBar", () => {
     render(<ContextBar env="live" window="90D" onChange={noop} windowLock={{ reason: "w", effective: "Certification run" }} envLock={{ reason: "e", effective: "sandbox" }} />);
     expect(screen.getByText("Window fixed: Certification run")).toBeTruthy();
     expect(screen.getByText("Environment fixed: Sandbox")).toBeTruthy();
+  });
+
   it("D6: an effective environment (the path decides) is the pressed one, whatever the URL value, with the notice attached", () => {
     const onChange = vi.fn();
     render(<ContextBar env="live" window="90D" onChange={onChange} windowLock={null} envLock={{ reason: "The path sets the environment.", effective: "paper" }} />);

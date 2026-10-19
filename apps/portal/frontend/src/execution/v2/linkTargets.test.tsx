@@ -88,8 +88,8 @@ describe("the shared route builders produce mounted paths", () => {
   const SCREEN_FOR: [string, string, string][] = [
     ["portfolios list", DEFAULT_ROUTES.list, "EXECUTION_PORTFOLIO_360_SCREEN"],
     ["portfolio 360", DEFAULT_ROUTES.portfolio(ID), "EXECUTION_PORTFOLIO_360_SCREEN"],
-    ["compare", DEFAULT_ROUTES.compare, "EXECUTION_PORTFOLIO_360_SCREEN"],
-    ["compare with ids", joinQuery(DEFAULT_ROUTES.compare, "in=a,b"), "EXECUTION_PORTFOLIO_360_SCREEN"],
+    ["compare", DEFAULT_ROUTES.compare as string, "EXECUTION_PORTFOLIO_360_SCREEN"],
+    ["compare with ids", joinQuery(DEFAULT_ROUTES.compare as string, "in=a,b"), "EXECUTION_PORTFOLIO_360_SCREEN"],
     ["alpha 360", DEFAULT_ROUTES.alpha(ID), "EXECUTION_ALPHA_360_SCREEN"],
     ["fleet", DEFAULT_ROUTES.fleet, "EXECUTION_ALPHA_FLEET_LIST_SCREEN"],
     ["account 360", DEFAULT_ROUTES.account(ID), "EXECUTION_ACCOUNT_BROKER_360_SCREEN"],
