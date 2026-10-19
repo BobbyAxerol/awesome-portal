@@ -242,7 +242,7 @@ describe("search, domain, currency and sort", () => {
     expect(names()).toEqual(["Core", "Satellite"]);
     fireEvent.click(screen.getByRole("button", { name: /^Simulated/ }));
     expect(names()).toEqual(["Canary", "Core", "Pilot", "Yen-Carry", "Unallocated"]);
-    fireEvent.click(screen.getByRole("button", { name: /^All/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^All\s*\d/ }));
     expect(search().has("domain")).toBe(false);
   });
 
@@ -262,6 +262,30 @@ describe("search, domain, currency and sort", () => {
     fireEvent.click(screen.getByRole("button", { name: /Sort direction/ }));
     expect(search().get("sort")).toBe("allocated:asc");
     expect(names()).toEqual(["Canary", "Satellite", "Core", "Pilot", "Yen-Carry", "Unallocated"]);
+  });
+
+  it("sorts from the column heads: another column ascending first, the same column flips, aria-sort follows (P-B4)", async () => {
+    mount(makeApi().api);
+    await loaded();
+    const head = (name: string) => within(table()).getByRole("columnheader", { name });
+    expect(head("Owner").getAttribute("aria-sort")).toBe("none");
+    fireEvent.click(within(head("Owner")).getByRole("button"));
+    expect(search().get("sort")).toBe("owner:asc");
+    expect(head("Owner").getAttribute("aria-sort")).toBe("ascending");
+    fireEvent.click(within(head("Owner")).getByRole("button"));
+    expect(search().get("sort")).toBe("owner:desc");
+    expect(head("Owner").getAttribute("aria-sort")).toBe("descending");
+    // Money sorts inside one currency: with none chosen the head is not a control and says why.
+    expect(within(head("Allocated capital")).queryByRole("button")).toBeNull();
+    expect(head("Allocated capital").getAttribute("title")).toBe("Money sorts inside one currency; pick the currency first");
+    // The five unpublished measures never sort.
+    expect(within(head("NAV")).queryByRole("button")).toBeNull();
+  });
+
+  it("says the Context and that the rows are not filtered by it (owner decision)", async () => {
+    mount(makeApi().api);
+    await loaded();
+    expect(screen.getByText(/Context: Real-funded · showing all domains/)).toBeTruthy();
   });
 
   it("will not sort by allocated capital until a currency is chosen", async () => {

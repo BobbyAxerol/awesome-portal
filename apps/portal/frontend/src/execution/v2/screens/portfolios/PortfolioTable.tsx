@@ -10,12 +10,12 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-import { CardsTable, type CardsColumn } from "../../cardsTable";
+import { CardsTable, type CardsColumn, type CardsSort } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
 import { PF_FE, type Unpublished } from "./fe";
 import { Absent, MoneyList, Np } from "./format";
-import type { PortfolioRow } from "./listModel";
+import type { PortfolioRow, SortKey } from "./listModel";
 import type { PortfolioRoutes } from "./routes";
 import { COMPARE_MAX } from "./selection";
 
@@ -82,6 +82,15 @@ export function writeHidden(hidden: ReadonlySet<ColumnId>): string | null {
   return ids.length === 0 ? HIDE_NONE : ids.join(",");
 }
 
+/** The sort key each header drives (hi-fi th.s). State, Domain and the five unpublished measures have none. */
+const SORT_OF: Readonly<Partial<Record<ColumnId | "portfolio", SortKey>>> = {
+  portfolio: "name",
+  owner: "owner",
+  allocations: "allocations",
+  deployments: "deployments",
+  allocated: "allocated",
+};
+
 export interface PortfolioTableProps {
   rows: readonly PortfolioRow[];
   hidden: ReadonlySet<ColumnId>;
@@ -91,9 +100,13 @@ export interface PortfolioTableProps {
   selected: ReadonlySet<string>;
   onToggle(portfolioId: string, next: boolean): void;
   empty?: ReactNode;
+  /** The applied order, and the header click. Money sorts inside one currency, so Allocated capital needs `currency`. */
+  sort?: CardsSort | null;
+  onSort?(key: SortKey): void;
+  currency?: string | null;
 }
 
-export function PortfolioTable({ rows, hidden, routes, search, selected, onToggle, empty }: PortfolioTableProps) {
+export function PortfolioTable({ rows, hidden, routes, search, selected, onToggle, empty, sort, onSort, currency = null }: PortfolioTableProps) {
   const full = selected.size >= COMPARE_MAX;
   const columns: CardsColumn<PortfolioRow>[] = [
     {
@@ -119,6 +132,7 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
     {
       key: "portfolio",
       label: "Portfolio",
+      sortKey: SORT_OF.portfolio,
       render: (row) => (
         <span className="exec-pf-name">
           {row.unallocated ? (
@@ -134,6 +148,8 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
       key: c.id,
       label: c.label,
       numeric: c.numeric,
+      sortKey: c.id === "allocated" && currency === null ? undefined : SORT_OF[c.id],
+      sortOffReason: c.id === "allocated" && currency === null ? "Money sorts inside one currency; pick the currency first" : undefined,
       render: (row) => cell(c.id, row),
     })),
   ];
@@ -144,6 +160,8 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
       rows={rows}
       rowKey={(row) => row.key}
       empty={empty}
+      sort={sort}
+      onSort={onSort ? (key) => onSort(key as SortKey) : undefined}
     />
   );
 }

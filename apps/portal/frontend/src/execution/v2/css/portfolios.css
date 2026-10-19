@@ -105,6 +105,13 @@ div.exec-pf-banner {
 .exec-pf-spacer {
   flex: 1;
 }
+/* Column heads sort above 660px (CardsTable sortKey); the card layout has no head row, so its sort control shows there only. */
+.exec-pf-sortset {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
 .exec-pf-field {
   display: inline-flex;
   min-width: 0;
@@ -560,6 +567,11 @@ div.exec-pf-banner {
 .exec-pf-attn > li:last-child {
   border-bottom: 0;
 }
+.exec-pf-attn-head a {
+  padding: 1px var(--space-2);
+  border: 1px solid var(--line-strong);
+  text-decoration: none;
+}
 .exec-pf-attn-head {
   display: flex;
   flex-wrap: wrap;
@@ -649,6 +661,9 @@ div.exec-pf-banner {
   }
 }
 @media (max-width: 660px) {
+  .exec-pf-sortset {
+    display: inline-flex;
+  }
   .exec-pf-main[data-docked="true"] {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -657,5 +672,19 @@ div.exec-pf-banner {
   }
   .exec-pf-ccylist {
     align-items: flex-end;
+  }
+  /* The mixed-book flag wraps inside the card instead of pushing the amount off its left edge. */
+  .exec-pf-panel .exec-cards .exec-cards-v {
+    min-width: 0;
+  }
+  .exec-pf-alloc {
+    align-items: flex-end;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .exec-pf-alloc .exec-flag {
+    max-width: 100%;
+    white-space: normal;
+    text-align: right;
   }
 }

@@ -77,6 +77,7 @@ function ActualFacet({ env, equity, inputs, drift }: Pick<PerformanceTabProps, "
             <span>{input.basis}</span>
             {input.gapCount > 0 ? <span>{input.gapCount} {input.gapCount === 1 ? "gap" : "gaps"} the source declared</span> : null}
             <span>Windowed return: <Np id="FE-006" /></span>
+            <span>Window: <Np id="FE-025" /></span>
           </p>
         </div>
       ))}
@@ -163,9 +164,11 @@ export function PerformanceTab(props: PerformanceTabProps) {
         {view === "act" ? <ActualFacet env={env} equity={props.equity} inputs={props.inputs} drift={props.drift} /> : null}
         {view === "sim" ? <SimulatedFacet paths={props.paths} drift={props.drift} /> : null}
         {view === "oos" ? <OosFacet /> : null}
-        <p className="exec-alp2-cap">
-          <span>Window: <Np id="FE-025" /></span>
-        </p>
+        {view === "act" && props.inputs.length > 0 ? null : (
+          <p className="exec-alp2-cap">
+            <span>Window: <Np id="FE-025" /></span>
+          </p>
+        )}
       </SectionPanel>
 
       <div className="exec-alp2-grid2">

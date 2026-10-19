@@ -30,11 +30,8 @@ function StageDetail({ stage, current, rows, linkTo }: { stage: SpineStageId; cu
   const spec = SPINE_STAGES[stage];
   const here = rows.filter((r) => r.stage === stage);
   return (
+    <SectionPanel title={`${spec.label} · ${current === stage ? "Now" : "Selected"}`} level={4}>
     <div className="exec-alp2-stage-detail" data-stage={stage}>
-      <h4 className="exec-alp2-stage-title">
-        {spec.label}
-        {current === stage ? <Flag kind="operation" label="Current" size="sm" /> : null}
-      </h4>
       {spec.gate ? (
         <p className="exec-alp2-line">
           Gate review: <Np id="FE-027/028">decision, decider and criteria</Np>
@@ -73,6 +70,7 @@ function StageDetail({ stage, current, rows, linkTo }: { stage: SpineStageId; cu
         )
       ) : null}
     </div>
+    </SectionPanel>
   );
 }
 

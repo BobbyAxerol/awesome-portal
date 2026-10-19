@@ -7,6 +7,12 @@
  *
  * Numeric columns keep the V1 contract: `data-numeric="true"` on the th and
  * every td, so mono, tabular, right-aligned and never truncated.
+ *
+ * Sorting (P-B4, hi-fi `th.s`): a column that declares `sortKey`, in a table
+ * given `onSort`, prints its header as a button with `aria-sort`; the table
+ * only reports the click, the caller owns the order. Tables that pass neither
+ * are unchanged. Below 660px the header row is hidden, so a caller that sorts
+ * keeps its own control for the card layout.
  */
 import type { KeyboardEvent, ReactNode } from "react";
 
@@ -17,7 +23,18 @@ export interface CardsColumn<Row> {
   /** Header text, and the label printed on the card. */
   label: string;
   numeric?: boolean;
+  /** Makes the header a sort control for this key (needs `onSort` on the table). */
+  sortKey?: string;
+  /** Why this header does not sort right now (its title when it is not a sort control). */
+  sortOffReason?: string;
+  /** Decoration before the header text (a series swatch); hidden from assistive tech. `label` stays the accessible name. */
+  head?: ReactNode;
   render(row: Row): ReactNode;
+}
+
+export interface CardsSort {
+  key: string;
+  dir: "asc" | "desc";
 }
 
 export interface CardsTableProps<Row> {
@@ -31,6 +48,10 @@ export interface CardsTableProps<Row> {
   onRowOpen?(row: Row): void;
   /** Shown in place of the body when there are no rows. */
   empty?: ReactNode;
+  /** The order the caller applied; marks the matching `sortKey` header. */
+  sort?: CardsSort | null;
+  /** A sortable header was activated. The caller decides direction. */
+  onSort?(key: string): void;
 }
 
 /** A cell that rendered nothing says so; it is never a dash and never 0. */
@@ -38,7 +59,7 @@ function present(content: ReactNode): boolean {
   return content !== null && content !== undefined && content !== false && content !== "";
 }
 
-export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onRowOpen, empty }: CardsTableProps<Row>) {
+export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onRowOpen, empty, sort, onSort }: CardsTableProps<Row>) {
   const open = (row: Row) => (event: KeyboardEvent) => {
     // Space is prevented so the page does not scroll from under the row.
     if (event.key === "Enter" || event.key === " ") {
@@ -51,11 +72,29 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
       <table className="exec-cards" aria-label={label}>
         <thead>
           <tr>
-            {columns.map((c) => (
-              <th key={c.key} scope="col" data-numeric={c.numeric ? "true" : undefined}>
-                {c.label}
-              </th>
-            ))}
+            {columns.map((c) => {
+              const sortable = onSort !== undefined && c.sortKey !== undefined;
+              const active = sortable && sort?.key === c.sortKey ? (sort?.dir ?? null) : null;
+              const head = c.head ? <span className="exec-cards-head" aria-hidden="true">{c.head}</span> : null;
+              return (
+                <th
+                  key={c.key}
+                  scope="col"
+                  data-numeric={c.numeric ? "true" : undefined}
+                  aria-sort={sortable ? (active === "asc" ? "ascending" : active === "desc" ? "descending" : "none") : undefined}
+                  data-sortable={sortable ? "true" : undefined}
+                  title={!sortable ? c.sortOffReason : undefined}
+                >
+                  {sortable ? (
+                    <button type="button" className="exec-cards-sort" data-dir={active ?? undefined} onClick={() => onSort(c.sortKey!)}>
+                      {head}{c.label}
+                    </button>
+                  ) : (
+                    <>{head}{c.label}</>
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>

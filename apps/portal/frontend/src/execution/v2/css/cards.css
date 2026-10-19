@@ -26,6 +26,48 @@
   text-align: left;
   white-space: nowrap;
 }
+/* Sortable head (hi-fi th.s): the button wears the th's voice, an arrow follows the label. */
+.exec-cards-sort {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  text-align: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-cards-sort::after {
+  content: "\2195";
+  color: var(--ink-faint);
+}
+.exec-cards-sort[data-dir="asc"]::after {
+  content: "\25B2";
+  color: var(--accent);
+}
+.exec-cards-sort[data-dir="desc"]::after {
+  content: "\25BC";
+  color: var(--accent);
+}
+.exec-cards-sort[data-dir] {
+  color: var(--ink);
+}
+.exec-cards-sort:hover {
+  color: var(--ink);
+}
+.exec-cards-sort:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-cards-head {
+  display: inline-block;
+  margin-right: var(--space-2);
+  vertical-align: baseline;
+}
 .exec-cards tbody tr {
   color: var(--ink);
 }

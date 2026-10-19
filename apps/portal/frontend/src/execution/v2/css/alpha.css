@@ -151,7 +151,6 @@
 .exec-alp2-tab[aria-selected="true"],
 .exec-alp2-tab[data-active="true"] {
   color: var(--ink);
-  background: var(--accent-soft);
   border-bottom-color: var(--accent);
 }
 .exec-alp2-more-wrap {
@@ -350,17 +349,11 @@
 /* lifecycle detail under the spine */
 .exec-alp2-stage-wrap {
   margin-top: var(--space-4);
+}
+.exec-alp2-stage-wrap > .exec-alp2-line {
   padding: var(--space-3) var(--space-4);
   background: var(--paper);
   border: 1px solid var(--line);
-}
-.exec-alp2-stage-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-2);
-  font: var(--exec-font-section);
-  color: var(--ink);
 }
 .exec-alp2-stage-deps {
   display: flex;
@@ -414,6 +407,10 @@
   flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
+  /* R-B5: candles in the hi-fi's series voice (up = series blue, down = muted), not green and red. The V1 chart
+   * reads these two custom properties from its host, so no V1 file changes. */
+  --exec-candle-up: var(--series);
+  --exec-candle-down: var(--ink-faint);
 }
 /* The V1 replay panel in its plain-words reading (`plain`): selectors by
  * element and attribute, because the V1 class names belong to execution.css. */

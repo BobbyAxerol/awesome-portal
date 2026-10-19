@@ -92,6 +92,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
   const reasonId = useId();
+  const partsId = useId();
   const permitted = capabilities === undefined || holds(capabilities, { allOf: [V2_CAPABILITY.portfoliosRead] });
   const read = useRead(api, permitted, "list", (scoped) => scoped.listPortfolios());
   const envelope = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
@@ -114,6 +115,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   const setPicks = (ids: readonly string[]) => setParams(withSelection(params, ids.slice(0, COMPARE_MAX)), { replace: true });
   const toggle = (id: string) => setPicks(picked.ids.includes(id) ? picked.ids.filter((x) => x !== id) : [...picked.ids, id]);
 
+  const [partsOpen, setPartsOpen] = useState(false);
   const [text, setText] = useState(q ?? "");
   const setUrl = useRef(url.set);
   setUrl.current = url.set;
@@ -152,13 +154,22 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
     ...basis.apart.map(({ row, reason }) => ({ id: row.portfolioId, label: row.label, reason })),
     ...unresolved.map((id) => ({ id, label: id, reason: "Not in the loaded portfolios" })),
   ];
+  const partsSummary = [
+    basis.currency === null ? (chosen.length === 0 && unresolved.length === 0 ? "Nothing picked" : "No comparable basis") : `${basis.currency} · ${basis.domain === "simulated" ? "Simulated" : "Real-funded"} basis`,
+    apart.length > 0 ? `${apart.length} listed apart` : null,
+    "Money is never converted or combined",
+  ].filter((part): part is string => part !== null).join(" · ");
   const basisText = basis.currency === null
     ? "No comparable portfolio picked yet"
     : `Return since window start (${windowLabel}), one currency (${basis.currency}), ${basis.domain === "simulated" ? "Simulated" : "Real-funded"} books; methodology as published per source (FE-006)`;
 
   const tableColumns: CardsColumn<MetricRow>[] = [
     { key: "metric", label: "Metric", render: (m) => m.label },
-    ...chosen.map<CardsColumn<MetricRow>>((row) => ({ key: row.portfolioId, label: row.label, numeric: false, render: (m) => m.cell(row) })),
+    ...chosen.map<CardsColumn<MetricRow>>((row) => {
+      const tone = Math.max(0, toneOf(row.portfolioId));
+      // K-B5: the column head wears the series swatch of its chip (shape as well as colour), and the figures sit right.
+      return { key: row.portfolioId, label: row.label, numeric: true, head: <i className="exec-cmpr-sw" data-tone={TONES[tone]} data-glyph={GLYPHS[tone]} />, render: (m) => m.cell(row) };
+    }),
   ];
 
   return (
@@ -229,35 +240,21 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
             {picked.dropped > 0 ? <p className="exec-pf-note">{picked.dropped} entries in the address were not used: not a clean id, a repeat, or past the fourth.</p> : null}
           </section>
 
-          <SectionPanel title="Partitions" aside="Money is never converted or combined">
-            {chosen.length === 0 && unresolved.length === 0 ? (
-              <p className="exec-pf-note">Nothing is picked, so there is nothing to partition.</p>
-            ) : (
-              <div className="exec-cmpr-parts">
-                <p className="exec-pf-note" data-testid="basis-line">
-                  {basis.currency === null ? "No comparable portfolio picked yet." : `Basis: ${basis.currency}, ${basis.domain === "simulated" ? "Simulated" : "Real-funded"}, set by the first portfolio picked.`}
-                </p>
-                <ul className="exec-pf-list" aria-label="Partitions">
-                  {basis.partitions.map((part) => (
-                    <li key={part.key} data-testid="partition">
-                      <strong>{part.currency} · {part.domainLabel}</strong>
-                      <span className="exec-pf-dim"> · {part.ids.map((id) => chosen.find((r) => r.portfolioId === id)?.label ?? id).join(", ")}</span>
-                    </li>
-                  ))}
-                </ul>
-                {apart.length > 0 ? (
-                  <p className="exec-pf-note" data-testid="refusal">
-                    {apart.length === 1 ? "One pick is" : `${apart.length} picks are`} listed apart and left out of the basis, never converted or added to it. The reason is beside each name below.
-                  </p>
-                ) : null}
-              </div>
-            )}
-          </SectionPanel>
-
           <SectionPanel
             title="Series"
             aside={
               <>
+                <button
+                  type="button"
+                  className="exec-cmpr-sum"
+                  aria-expanded={partsOpen}
+                  aria-controls={partsId}
+                  data-excluded={apart.length > 0 ? "true" : undefined}
+                  onClick={() => setPartsOpen((open) => !open)}
+                >
+                  {partsSummary}
+                  <span className="exec-cmpr-sum-more">{partsOpen ? "Hide partitions" : "Partitions"}</span>
+                </button>
                 <span className="exec-pf-seg" role="group" aria-label="Series measure">
                   {([["Return", PF_FE.ret], ["Net PnL", PF_FE.netPnl]] as const).map(([label, fact]) => (
                     <button key={label} type="button" className="exec-pf-segbtn" aria-pressed="false" disabled title={npReason(fact, "No aligned series is published to draw it from.")}>
@@ -269,6 +266,30 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
               </>
             }
           >
+            <div id={partsId} className="exec-cmpr-parts" hidden={!partsOpen} aria-label="Partitions">
+              {chosen.length === 0 && unresolved.length === 0 ? (
+                <p className="exec-pf-note">Nothing is picked, so there is nothing to partition.</p>
+              ) : (
+                <>
+                  <p className="exec-pf-note" data-testid="basis-line">
+                    {basis.currency === null ? "No comparable portfolio picked yet." : `Basis: ${basis.currency}, ${basis.domain === "simulated" ? "Simulated" : "Real-funded"}, set by the first portfolio picked.`}
+                  </p>
+                  <ul className="exec-pf-list" aria-label="Partitions">
+                    {basis.partitions.map((part) => (
+                      <li key={part.key} data-testid="partition">
+                        <strong>{part.currency} · {part.domainLabel}</strong>
+                        <span className="exec-pf-dim"> · {part.ids.map((id) => chosen.find((r) => r.portfolioId === id)?.label ?? id).join(", ")}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {apart.length > 0 ? (
+                    <p className="exec-pf-note" data-testid="refusal">
+                      {apart.length === 1 ? "One pick is" : `${apart.length} picks are`} listed apart and left out of the basis, never converted or added to it. The reason is beside each name below.
+                    </p>
+                  ) : null}
+                </>
+              )}
+            </div>
             <CompareOverlay
               label="Comparison"
               series={[]}

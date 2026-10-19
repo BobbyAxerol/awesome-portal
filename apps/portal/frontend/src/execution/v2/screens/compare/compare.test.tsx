@@ -211,6 +211,33 @@ describe("basis and partitions", () => {
     expect(apart[0].textContent).toContain("Not in the loaded portfolios");
   });
 
+  it("collapses the partitions into a one-line summary in the Series head that counts what is left apart and opens the groups (owner decision)", async () => {
+    mount(makeApi().api, pick(PF.satellite, PF.yen));
+    await loaded();
+    const summary = screen.getByRole("button", { name: /listed apart/ });
+    expect(summary.textContent).toContain("USDT · Real-funded basis");
+    expect(summary.textContent).toContain("1 listed apart");
+    expect(summary.textContent).toContain("Money is never converted or combined");
+    expect(summary.getAttribute("aria-expanded")).toBe("false");
+    const region = document.getElementById(summary.getAttribute("aria-controls")!)!;
+    expect(region.hidden).toBe(true);
+    // The exclusion and its reason stay on screen while the disclosure is closed.
+    expect(screen.getAllByTestId("not-comparable")[0].textContent).toContain("Other currency (JPY)");
+    fireEvent.click(summary);
+    expect(summary.getAttribute("aria-expanded")).toBe("true");
+    expect(region.hidden).toBe(false);
+  });
+
+  it("puts each pick's series swatch in its metric column head, and the figures right-aligned (K-B5)", async () => {
+    mount(makeApi().api, pick(PF.satellite, PF.canary));
+    await loaded();
+    const heads = [...within(screen.getByRole("table", { name: "Metrics" })).getAllByRole("columnheader")];
+    expect(heads.map((h) => h.textContent)).toEqual(["Metric", "Satellite", "Canary"]);
+    expect(heads[1]!.querySelector('.exec-cmpr-sw[data-tone="series"]')).not.toBeNull();
+    expect(heads[2]!.querySelector('.exec-cmpr-sw[data-tone="series-2"]')).not.toBeNull();
+    expect(heads[1]!.getAttribute("data-numeric")).toBe("true");
+  });
+
   it("has nothing to partition before anything is picked", async () => {
     mount(makeApi().api);
     await loaded();

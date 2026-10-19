@@ -100,6 +100,31 @@ describe("row opening", () => {
   });
 });
 
+describe("CardsTable sortable headers (P-B4)", () => {
+  const sortable: CardsColumn<Row>[] = [
+    { key: "name", label: "Deployment", sortKey: "name", head: <i data-testid="sw" />, render: (r) => r.name },
+    { key: "nav", label: "NAV", numeric: true, sortKey: "nav", render: (r) => r.nav },
+    { key: "state", label: "State", sortOffReason: "Not sortable yet", render: (r) => <Flag kind={r.state} /> },
+  ];
+
+  it("is unchanged without onSort: no buttons, no aria-sort", () => {
+    const { container } = render(<CardsTable columns={sortable} rows={ROWS} rowKey={(r) => r.id} label="Deployments" />);
+    expect(container.querySelectorAll("th button")).toHaveLength(0);
+    expect(container.querySelectorAll("th[aria-sort]")).toHaveLength(0);
+  });
+
+  it("prints a button and aria-sort on sortKey columns only, reports the key, and keeps the label as the name", () => {
+    const onSort = vi.fn();
+    const { container } = render(<CardsTable columns={sortable} rows={ROWS} rowKey={(r) => r.id} label="Deployments" sort={{ key: "nav", dir: "desc" }} onSort={onSort} />);
+    const heads = [...container.querySelectorAll("th")];
+    expect(heads.map((h) => h.getAttribute("aria-sort"))).toEqual(["none", "descending", null]);
+    expect(heads[2]!.getAttribute("title")).toBe("Not sortable yet");
+    fireEvent.click(within(heads[0]!).getByRole("button", { name: "Deployment" }));
+    expect(onSort).toHaveBeenCalledWith("name");
+    expect(heads[0]!.querySelector('[data-testid="sw"]')!.parentElement!.getAttribute("aria-hidden")).toBe("true");
+  });
+});
+
 describe("cards.css", () => {
   const css = readFileSync(join(__dirname, "css/cards.css"), "utf8");
 

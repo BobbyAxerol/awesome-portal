@@ -15,7 +15,7 @@ import { SectionPanel } from "../../../blocks";
 import { Flag } from "../../../Flag";
 import { formatAsOf } from "../../../boundary";
 import { readUtcEpochMs } from "../../../../screenDataContract";
-import { PF_FE, npReason, npText, type Unpublished } from "../fe";
+import { EXPORT_REASON, PF_FE, npReason, npText, type Unpublished } from "../fe";
 import { Absent, MoneyList, Np, envWord } from "../format";
 import type { TabCtx } from "./ctx";
 import { chartState, equitySeries, serverEnvelope } from "./model";
@@ -35,6 +35,7 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
     <SectionPanel
       title="Equity"
       aside={
+        <>
         <span className="exec-pf-seg" role="group" aria-label="Series">
           {SEGMENTS.map((seg) => (
             <button
@@ -50,6 +51,11 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
             </button>
           ))}
         </span>
+        <span className="exec-pf-btnwhy">
+          <button type="button" className="exec-pf-btn" disabled title={EXPORT_REASON} aria-describedby="exec-pf-chart-export">Export</button>
+          <span id="exec-pf-chart-export" className="exec-pf-why">{EXPORT_REASON}</span>
+        </span>
+        </>
       }
     >
       <p id="exec-pf-seg-reason" className="exec-pf-sr">Net PnL: {npText(PF_FE.netPnl)}. Return: {npText(PF_FE.ret)}.</p>

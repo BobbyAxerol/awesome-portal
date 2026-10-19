@@ -34,7 +34,7 @@ import { PanelState } from "../../../components/states";
 import { utcStamp } from "../../../time";
 import { Flag } from "../../Flag";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
-import { useExecUrlState, withContext } from "../../urlState";
+import { ENV_LABEL, useExecUrlState, withContext } from "../../urlState";
 import { EXPORT_REASON, PF_FE, npText } from "./fe";
 import { freshnessFlag, humanize } from "./format";
 import {
@@ -142,6 +142,8 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
     const ids = on ? [...picked.ids, portfolioId] : picked.ids.filter((id) => id !== portfolioId);
     setParams(withSelection(params, ids.slice(0, COMPARE_MAX)), { replace: true });
   };
+  // A header click: another column sorts ascending first; the same column flips.
+  const headerSort = (key: SortKey) => url.set({ sort: writeSort({ key, dir: key === sort.key && sort.dir === "asc" ? "desc" : "asc" }) }, { replace: true });
   const clearSelection = () => setParams(withSelection(params, []), { replace: true });
   const toggleColumn = (id: ColumnId, show: boolean) => {
     const next = new Set(hidden);
@@ -207,7 +209,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
         <div>
           <h1 className="exec-pf-h1">Portfolios</h1>
           <p className="exec-pf-sub" id={`${searchId}-sub`}>
-            {envelope ? `${envelope.truncated ? `Top ${loaded.length} / ${envelope.totalPortfolios}` : loaded.length} portfolios · All environments` : "Reading the portfolio register"}
+            {envelope ? `${envelope.truncated ? `Top ${loaded.length} / ${envelope.totalPortfolios}` : loaded.length} portfolios · Context: ${ENV_LABEL[url.value.env]} · showing all domains` : "Reading the portfolio register"}
           </p>
         </div>
         <div className="exec-pf-fresh">
@@ -260,23 +262,26 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
                 {ccy !== null && !currencies.includes(ccy) ? <option value={ccy}>{ccy}</option> : null}
               </select>
             </label>
-            <label className="exec-pf-field">
-              <span className="exec-pf-sr">Sort by</span>
-              <select
-                className="exec-pf-select"
-                value={sort.key}
-                onChange={(event) => url.set({ sort: writeSort({ key: event.target.value as SortKey, dir: sort.dir }) }, { replace: true })}
-              >
-                {SORT_KEYS.map((key) => (
-                  <option key={key} value={key} disabled={key === "allocated" && ccy === null}>
-                    Sort: {SORT_LABEL[key]}{key === "allocated" && ccy === null ? " (pick a currency)" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="button" className="exec-pf-btn" aria-label={`Sort direction: ${sort.dir === "asc" ? "ascending" : "descending"}`} onClick={() => url.set({ sort: writeSort({ key: sort.key, dir: sort.dir === "asc" ? "desc" : "asc" }) }, { replace: true })}>
-              {sort.dir === "asc" ? "Ascending" : "Descending"}
-            </button>
+            {/* Above 660px the column heads sort (th.s); the cards below it have no head row, so these stay for them. */}
+            <span className="exec-pf-sortset">
+              <label className="exec-pf-field">
+                <span className="exec-pf-sr">Sort by</span>
+                <select
+                  className="exec-pf-select"
+                  value={sort.key}
+                  onChange={(event) => url.set({ sort: writeSort({ key: event.target.value as SortKey, dir: sort.dir }) }, { replace: true })}
+                >
+                  {SORT_KEYS.map((key) => (
+                    <option key={key} value={key} disabled={key === "allocated" && ccy === null}>
+                      Sort: {SORT_LABEL[key]}{key === "allocated" && ccy === null ? " (pick a currency)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" className="exec-pf-btn" aria-label={`Sort direction: ${sort.dir === "asc" ? "ascending" : "descending"}`} onClick={() => url.set({ sort: writeSort({ key: sort.key, dir: sort.dir === "asc" ? "desc" : "asc" }) }, { replace: true })}>
+                {sort.dir === "asc" ? "Ascending" : "Descending"}
+              </button>
+            </span>
             <span className="exec-pf-spacer" />
             <details className="exec-pf-pop">
               <summary className="exec-pf-btn">Columns</summary>
@@ -311,7 +316,18 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             Compare: {compareWhy || "ready"}. Export: {EXPORT_REASON}
           </p>
 
-          <PortfolioTable rows={visible} hidden={hidden} routes={routes} search={params} selected={selected} onToggle={toggleRow} empty={empty} />
+          <PortfolioTable
+            rows={visible}
+            hidden={hidden}
+            routes={routes}
+            search={params}
+            selected={selected}
+            onToggle={toggleRow}
+            empty={empty}
+            sort={sort}
+            onSort={headerSort}
+            currency={ccy}
+          />
 
           <div className="exec-pf-foot">
             <span className="exec-pf-count-line" role="status" aria-live="polite">{line ? line.text : null}</span>
