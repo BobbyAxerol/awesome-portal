@@ -23,8 +23,8 @@ export function authorization():CommandAuthorization {
 }
 const context={principal_id:actor.user_id,workspace_id:intent.workspace_id,now_ms:now,policy:{revision:intent.expected_policy_revision},
   relationsFor:()=>({qualified:true,membership:{revision:"TEST_ONLY:membership",mapping_revision:"TEST_ONLY:mapping",receipt_id:"TEST_ONLY:membership-receipt"}})} as AccessEvaluationContext;
-function record():CommandRecord{return {id:fixture.ack_only.command_id,actor:actor.user_id,hash:intentHash(actor,intent),intent,authorization:authorization(),
-  status:commandStatus.parse(fixture.ack_only),attempt:"TEST_ONLY:attempt"};}
+function record():CommandRecord{return {id:fixture.stored_ack_only.command_id,actor:actor.user_id,hash:intentHash(actor,intent),intent,authorization:authorization(),
+  status:commandStatus.parse(fixture.stored_ack_only),attempt:"TEST_ONLY:attempt"};}
 function source():SourceCommandResult {const a=authorization();return {authority_ref:a.authority_ref,profile_ref:a.profile_ref,workspace_id:intent.workspace_id,
   environment:intent.environment,operation:intent.business_payload.operation,resource_kind:intent.resource.kind,resource_id:intent.resource.id,
   idempotency_key:intent.business_payload.idempotency_key,source_intent_digest:a.source_intent_digest,delivery:"ACKNOWLEDGED",
@@ -106,7 +106,7 @@ describe("ELP2-07 strict command and status component",()=>{
         expected_versions:nextIntent.business_payload.expected_versions,intent_hash:intentHash(actor,nextIntent),
         source_intent_digest:accessDigest("TEST_ONLY:non-amount-source:"+operation).slice(7)};
       const old:CommandRecord={...record(),hash:intentHash(actor,nextIntent),intent:nextIntent,authorization:a,
-        status:commandStatus.parse({...fixture.ack_only,operation,resource})};
+        status:commandStatus.parse({...fixture.stored_ack_only,operation,resource})};
       for(const state of ["APPLIED","REJECTED"] as const){
         const raw:SourceCommandResult={...source(),operation,resource_kind:kind,resource_id:resource.id,
           source_intent_digest:a.source_intent_digest,business:{...source().business,state,amounts:null}};

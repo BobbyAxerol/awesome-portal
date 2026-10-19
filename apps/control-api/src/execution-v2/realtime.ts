@@ -96,6 +96,15 @@ export class ScopedReplayHub {
   private queuedBytes=0;
   private pending=0;
   private stopped=false;
+  private operations=0;
+  private operationIdle:Promise<void>=Promise.resolve();
+  private resolveOperationIdle:(()=>void)|undefined;
+  private beginOperation():()=>void{
+    if(this.operations++===0)this.operationIdle=new Promise(resolve=>{this.resolveOperationIdle=resolve;});
+    return()=>{
+      if(--this.operations===0){this.resolveOperationIdle?.();this.resolveOperationIdle=undefined;}
+    };
+  }
   private readonly limits:Readonly<ScopedReplayLimits>;
   private readonly native?:Readonly<NativeScopedReplayDependencies>;
   private nativeFlights=0;
@@ -110,6 +119,7 @@ export class ScopedReplayHub {
     if(this.stopped)throw new ScopedReplayError("STOPPED");
     if(this.clients.size+this.pending>=this.limits.maximumClients)throw new ScopedReplayError("RECONNECT_LIMIT");
     this.pending++;
+    const finish=this.beginOperation();
     try{
     const binding=structuredClone(scopedReplayBinding.parse(input.binding));
     if(await input.guard.currentIdentity()!==binding.principal_scope_digest)throw new ScopedReplayError("SCOPE_CHANGED");
@@ -122,7 +132,7 @@ export class ScopedReplayHub {
       queue:[],bytes:0,closed:false,busy:false};
     this.clients.set(client.id,client);
     return{id:client.id,close:()=>this.close(client)};
-    }finally{this.pending--;}
+    }finally{this.pending--;finish();}
   }
   /** Opt-in original08 physical path. No guard.write/raw write callback is
    * accepted. HTTP transport ownership belongs exclusively to SAME Candidate.
@@ -133,6 +143,7 @@ export class ScopedReplayHub {
     if(this.stopped)throw new ScopedReplayError("STOPPED");
     if(this.clients.size+this.pending>=this.limits.maximumClients)throw new ScopedReplayError("RECONNECT_LIMIT");
     this.pending++;
+    const finish=this.beginOperation();
     let stream:NativeReadEgressStream|undefined,registered=false;
     let candidate=dependencies.candidate;
     try{
@@ -159,11 +170,18 @@ export class ScopedReplayHub {
     }finally{
       this.pending--;
       if(stream&&!registered)try{nativeCandidateMethods.close.call(candidate,stream);}catch{/* original owner retains any uncertain state */}
+      finish();
     }
   }
   async poll():Promise<void>{
     if(this.stopped)return;
-    await Promise.all([...this.clients.values()].map(c=>this.pollClient(c)));
+    const finish=this.beginOperation();
+    try{
+      const settled=await Promise.allSettled([...this.clients.values()].map(c=>this.pollClient(c)));
+      const failed=settled.find((result):result is PromiseRejectedResult=>result.status==="rejected");
+      if(failed)throw failed.reason;
+    }
+    finally{finish();}
   }
   /** Explicit app-revoke notification is a fast purge hint, never the only
    * fence. Missed hints are covered by current authority before every write. */
@@ -182,6 +200,14 @@ export class ScopedReplayHub {
   async settleSourceReads():Promise<void>{
     if(!this.stopped)throw new Error("REPLAY_SOURCE_SETTLE_REQUIRES_STOP");
     await Promise.allSettled([...this.sourceSettlements]);
+  }
+  /** Lifecycle only: pending admissions and native delivery/settlement may
+   * still own the same DB pool even when there is no active source read.
+   * Stop closes admission first; do not mistake an abort race for release. */
+  async drain():Promise<void>{
+    this.stop();
+    await this.operationIdle;
+    await this.settleSourceReads();
   }
   diagnostics(){return{clients:this.clients.size,queued_bytes:this.queuedBytes,source_flights:this.flights.size,
     pending_subscriptions:this.pending,timed_out_flights:this.timedOutFlights.size,browser_source_calls:0,semantics:"NOTIFICATION_ONLY" as const};}

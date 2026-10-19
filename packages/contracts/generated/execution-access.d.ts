@@ -250,7 +250,7 @@ export interface components {
             family_check: "BUSINESS_READ_SCOPE" | "CURRENT_AUDIT_READ" | "GOVERNANCE_READER" | "GOVERNANCE_PLAN" | "TECHNICAL_READ_SCOPE" | "CAPITAL_PREVIEW" | "PENDING_CONTROL_PREVIEW" | "INSTANCE_REGISTRATION_PREVIEW";
         } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         /**
-         * @description Current own application permission facts only; target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Not a permit or TS activation.
+         * @description Current own application permission facts only; action/target-kind compatibility is checked, but target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Unsupported targets are UNAVAILABLE with ACTION_TARGET_UNSUPPORTED, or POLICY_PENDING when the current producer cannot establish policy. Not a permit or TS activation.
          * @example {
          *       "schema_version": "portal.self-eligibility.v1",
          *       "workspace_id": "ws_TEST_ONLY",
@@ -322,7 +322,7 @@ export interface components {
             /** @constant */
             advisory_only: true;
             actions: components["schemas"]["AccessEligibilityRow"][] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
-        };
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         AccessSelfNavigationItem: {
             /** @enum {unknown} */
             feature: "EXECUTION_PORTFOLIOS" | "EXECUTION_ACCOUNTS_BINDINGS" | "EXECUTION_OPERATIONS" | "EXECUTION_BLOTTER";

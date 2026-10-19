@@ -3,6 +3,21 @@
   "production_config": false,
   "cases": [
     {
+      "id": "N10-NATIVE-BASELINE-HEADERS",
+      "schema": "NativeProfileRealtimeHeaders",
+      "response": {
+        "X-Portal-Realtime-State": "NATIVE_SCOPED_BASELINE_V1",
+        "X-Portal-Realtime-Cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME"
+      }
+    },
+    {
+      "id": "N10-NATIVE-NO-STREAM-HEADERS",
+      "schema": "NativeProfileRealtimeHeaders",
+      "response": {
+        "X-Portal-Realtime-State": "NATIVE_SCOPED_STREAM_UNAVAILABLE"
+      }
+    },
+    {
       "id": "N09-REVALIDATE",
       "schema": "ScopedRealtimeFrame",
       "response": {

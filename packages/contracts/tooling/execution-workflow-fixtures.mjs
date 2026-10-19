@@ -6,7 +6,7 @@ export function workflowFixtures(f, c) {
   const copy = v => structuredClone(v), hash = `sha256:${'b'.repeat(64)}`;
   const command = JSON.parse(readFileSync(new URL('../fixtures/execution-trusted-commands.synthetic.valid.json', import.meta.url), 'utf8'));
   const parents = JSON.parse(readFileSync(new URL('../fixtures/execution-positive-parent.synthetic.valid.json', import.meta.url), 'utf8'));
-  const status = command.ack_only;
+  const status = command.stored_ack_only;
   const context = { workspace_id: 'TEST_ONLY:workspace', environment: status.environment, resource: status.resource,
     policy_revision: 'TEST_ONLY:policy', snapshot_ref: 'TEST_ONLY:snapshot', source_as_of_ms: null, observed_at_ms: 1792100000000 };
   const step = (state, receipt_ref = null) => ({ state, receipt_ref });

@@ -7,6 +7,7 @@ import {
   edgeScopedNotice,
   edgeScopedNoticeBatch,
   scopedRealtimeFrame,
+  nativeProfileRealtimeHeaders,
 } from "../../../apps/control-api/src/execution-v2/realtime.contract";
 
 const root = resolve(__dirname, "..");
@@ -24,6 +25,7 @@ const runtime: Record<string, { safeParse: (value: unknown) => { success: boolea
   EdgeScopedNotice: edgeScopedNotice,
   EdgeScopedNoticeBatch: edgeScopedNoticeBatch,
   Quality: edgeMetadataSchema.shape.quality,
+  NativeProfileRealtimeHeaders: nativeProfileRealtimeHeaders,
 };
 const validates = (name: string, value: unknown) => {
   const validator = ajv.getSchema(`${schema.$id}#/$defs/${name}`);
@@ -47,6 +49,23 @@ const frame = (eventType: string) => {
 };
 
 describe("ELP2-09 scoped notification/revocation generated contract", () => {
+  it("publishes an opt-in native header protocol without promoting READ to STREAM or changing legacy cursors",()=>{
+    const headers=sample("NativeProfileRealtimeHeaders");
+    parity("NativeProfileRealtimeHeaders",headers,true);
+    const state="X-Portal-Realtime-State",cursor="X-Portal-Realtime-Cursor";
+    parity("NativeProfileRealtimeHeaders",{[state]:"NATIVE_SCOPED_BASELINE_V1"},false);
+    parity("NativeProfileRealtimeHeaders",{...headers,[cursor]:"source:raw/sequence"},false);
+    parity("NativeProfileRealtimeHeaders",{[state]:"NATIVE_SCOPED_STREAM_UNAVAILABLE"},true);
+    parity("NativeProfileRealtimeHeaders",{...headers,[state]:"NATIVE_SCOPED_STREAM_UNAVAILABLE"},false);
+    parity("NativeProfileRealtimeHeaders",{},false);
+    const profile=load("openapi/execution-profile-realtime.openapi.json");
+    const path=profile.paths["/api/v1/execution/profiles/{environment}/realtime-snapshot"].get;
+    expect(path.responses[200].headers[cursor].schema.$ref).toContain("OpaqueNativeCursor");
+    expect(profile.components.schemas.OpaqueNativeCursor).toEqual(schema.$defs.NativeProfileRealtimeHeaders.anyOf[0].properties[cursor]);
+    const stream=profile.paths["/api/v1/execution/profiles/{environment}/stream"].get;
+    expect(stream.responses[200].content["text/event-stream"]["x-native-sse-frame"].$ref).toContain("ScopedRealtimeFrame");
+    expect(stream.responses[429].$ref).toBe("#/components/responses/Problem");
+  });
   it("publishes schema-only synthetic examples, not a mounted source feed or production policy", () => {
     expect(api.paths).toEqual({});
     expect(fixture.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");

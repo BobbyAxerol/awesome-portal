@@ -1,5 +1,14 @@
 # ELP2-10 — Performance, quality và coexistence
 
+## Current2026-10-19 — C7 runtime integration and source follow-through
+
+[Current implementation, contracts, source pins, gates and Claude handoff](c7-runtime-integration-2026-10-19.md)
+supersedes the local-integration status below, not historical receipt outcomes.
+The current-Core source successor is being reconciled with the already-landed
+Claude operational/query changes. No provider, credential, grant, runtime or
+production capacity is activated by this source batch. Whole ELP2-10 remains
+NOT_MET; ELP2-11 remains NOT_ENTRY_READY until the explicit external gates close.
+
 ## Current2026-10-18 — Claude review intake and registration terminal
 
 [FE-001…043 source review and owning-phase plan](claude-review-intake-2026-10-18.md)

@@ -12423,3 +12423,26 @@ Actual corrected qualification21:06:16.131619–21:07:29.428425UTC:348PASS (278u
   provider/authority/financial/SSE/budget/calibration/coexistence/G2 and consumer
   gates remain open; no ELP2-11, runtime activation, merge or push.
 
+### C7 completion assignment — 2026-10-19
+
+Bobby assigned the remaining ELP2-10 integration/qualification gates. Clean
+entry `35953e073f609c154ec484b19b4ceeeb09b566c8` includes the Claude landing;
+do not replay peer commits. [Current scope, task ownership, requirement/gate
+matrix and actual-result authority](execution_loop/evidence/ELP2-10/c7-runtime-integration-2026-10-19.md).
+Local provider/bootstrap/read/realtime/revoke/shutdown work is IN_PROGRESS;
+fresh source, financial/config/coexistence/G2 and consumer dispositions must
+remain distinct. No automatic HK installation, grant/credential change,
+frontend edit, preview activation, push or ELP2-11 entry.
+
+- C7 follow-through04:51UTC: real Node22buildPASS; focused disposable-PG
+  suite787PASS/3FAIL (790total), preserving the failed receipt. The three new
+  assertions confused typed error code with sanitized public copy; fix only
+  assertions, then qualify the combined batch through one normal R3. Coupled
+  PG/HTTP/SSE52PASS and real transaction-fault4PASS are subsets, not extra cases.
+  Eight protected runtimes unchanged and all own test resources disposed.
+  [Actual failure/hash, corrected-test gate, final terminal pointer, later
+  source/peer cut and exact remaining owners](execution_loop/evidence/ELP2-10/c7-runtime-integration-2026-10-19.md#first-focused-terminal-and-correction-045150z).
+  Whole ELP2-10 remains NOT_MET: current external provider, financial inputs,
+  approved budget/calibration, matched coexistence/G2 and consumer/source browser
+  acceptance are not proved by the local correctness cell. ELP2-11 not opened.
+

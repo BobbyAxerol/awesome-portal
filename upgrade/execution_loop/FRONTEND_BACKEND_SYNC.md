@@ -9,6 +9,24 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### Codex round-start — 2026-10-19
+
+Canonical clean entry `35953e073f609c154ec484b19b4ceeeb09b566c8` already contains
+the Claude landing after e19; peer read pin
+`0362285526458dddf3695ec719d82c2512dd1e1c`. No merge/replay of peer work.
+Bobby assigned remaining C7/ELP2-10 qualification. Main reviews latest requests
+and refreshes exact HK sources before using them. [Scope, gate and delegated
+ownership map](evidence/ELP2-10/c7-runtime-integration-2026-10-19.md).
+Source/consumer follow-through is IN_PROGRESS, not a new provider/runtime PASS.
+
+Peer follow-up during this round: `4f892c47dcdb984cdddc752d218e504b7a61b10e`
+adds five FE-only commits after the entry pin (58 files,+1519/−136); no new
+backend request document in that committed delta. Read-only review only; peer
+WIP is preserved. [C7 applied changes, four producer corrections, source cut and
+individual still-open requests](evidence/ELP2-10/c7-runtime-integration-2026-10-19.md).
+No peer merge while this backend batch is dirty; later landing requires Claude
+rebase and R2 on the new producer pin, per §10.11. No remote push authorized.
+
 | Nguồn | Pin đã đọc | Ngày đọc | Ghi chú |
 | --- | --- | --- | --- |
 | Portal `docs/research-loop-plan` | **tip `5291a80f`** (2026-10-18, commit pending-recall của Codex; cây Codex lại có 161 file chưa commit; trước đó `0d5ceaba`, `ff83f176`; `claude/fe-parity` đã rebase lên đây, code S0 `d891b2a5`); digest đọc ở **`ac056d46`** (đọc 2026-10-18, 19 commit trên `0aad2697`; xem [digest](design/sync/2026-10-18-codex-digest.md)); trước đó `0aad2697` ("complete scoped score history and exact PM candidate codecs"); đã đọc kỹ đến `f1f5fc7d`, commit cuối đọc ELP2-06 scoped-score-history + README 06/07 | 2026-10-17 | `claude/fe-parity` đã rebase lên `0aad2697` (docs-only, chưa có code FE V2) |

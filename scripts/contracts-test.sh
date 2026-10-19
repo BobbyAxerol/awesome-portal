@@ -168,6 +168,16 @@ cp -a "${ROOT_DIR}/apps/control-api/src/governance/positive-parent.contract.ts" 
   "${ROOT_DIR}/apps/control-api/src/governance/following-parent.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/live-parent.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/governance/"
+# Pure source/ownership regression: explicit non-secret inputs only. The SQL is
+# parsed, never executed; this does not mount an app, connect a DB or grant roles.
+mkdir -p "${WORKSPACE_DIR}/apps/control-api/migrations" \
+  "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/r2_ledger"
+cp -a "${ROOT_DIR}/apps/control-api/migrations/1723680000133_governance-portal-decisions.sql" \
+  "${WORKSPACE_DIR}/apps/control-api/migrations/"
+cp -a "${ROOT_DIR}/apps/control-api/src/governance/contracts.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/governance/"
+cp -a "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/r2_ledger/persistence-ownership.v1.json" \
+  "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/r2_ledger/"
 cp -a "${ROOT_DIR}/apps/control-api/src/activation/current-activation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/activation/contracts.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/activation/"

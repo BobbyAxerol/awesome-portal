@@ -4,7 +4,21 @@ Khởi tạo: Claude, 2026-10-18 @ `claude/fe-parity`. Codex điền **cột ngu
 
 Trạng thái: `EXISTS_MOUNTED` (đọc thật có receipt) · `SOURCE_DARK` (contract + code, chưa nguồn thật) · `SYNTHETIC_ONLY` · `MISSING` (chưa có contract/nguồn) · `UNKNOWN`.
 
-Latest four-source cut **2026-10-18T22:17–22:18UTC**:
+Latest four-source cut **2026-10-19T04:46:08Z–04:46:37Z** (prior04:16–04:21cut preserved):
+[C7 exact source/WIP pins and current gate disposition](ELP2-10/c7-runtime-integration-2026-10-19.md#fresh-hk-source-cut-and-remaining-owners).
+Edge `5f433f8c4cb39cf170248304ecde8d61b2d786f1`, PM
+`908169aaef3f64a7b0cefa8263d4c106d826a811`, TS
+`365902e1522f666ac94b717118bfc92382dac47a`, DL
+`9b42667e5afce41d8513b8c781d9203d0fd8d353`. The linked packet pins Edge/PM
+WIP and exact public locators. Current-Core integration successor is available;
+financial exports remain unmounted/unqualified and PM SSE actual credit is0.
+Portal source `35953e07` already contains B1 `afc5864e` incident/scoped-count
+repairs; older row2's no-credit note below is historical, not missing code.
+No new EXISTS_MOUNTED row or consumer acceptance follows from this source cut.
+PM metadata/WIP advanced without new finite/SSE case credit; public status
+remains SOURCE_CENSUS_PENDING_NOT_LAUNCHABLE. [Later exact WIP hash and scope](ELP2-10/c7-runtime-integration-2026-10-19.md#later-sourcepeer-observation-04460453z).
+
+Historical four-source cut **2026-10-18T22:17–22:18UTC**:
 [exact source/WIP pins and scoped successor](ELP2-10/source-truth-2026-10-18.md#19-fresh-four-source-follow-through-2026-10-18t22172218utc).
 Edgeea620d9b, PM908169aa, TSf2229d7a and DLd74f9fc4. PM now has eight finite32
 mounted cases PASS across four separate runs; this does not qualify runtime43,

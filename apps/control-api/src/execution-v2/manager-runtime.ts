@@ -69,6 +69,15 @@ export interface ManagerRuntimeInstallation {
   realtime?: ScopedReplayHub;
 }
 const key = (s: ManagerLeaseScope) => JSON.stringify([s.workspace_id,s.environment,s.profile_id]);
+// Only this module can mint a compatible delegate. Shape equality or a caller
+// supplied property is not provenance. Its publication semantics intentionally
+// differ from the original provider; this proves delegation, not equivalence.
+const trustDelegates = new WeakMap<AccessTrustProvider, AccessTrustProvider>();
+export function isManagerRuntimeTrustDelegate(
+  effective: AccessTrustProvider | undefined, original: AccessTrustProvider,
+): boolean {
+  return effective !== undefined && trustDelegates.get(effective) === original;
+}
 
 /** Registered in the real Control API lifecycle. Default is zero timers/DB/source
  * calls; an installed provider gets one serial bounded loop across its partitions.
@@ -167,7 +176,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     if (!this.installation) return base;
     if (base && base !== this.installedTrust) throw new Error("MANAGER_RUNTIME_TRUST_CONFLICT");
     const trust = this.installedTrust!;
-    return { verifyPolicy:i=>trust.verifyPolicy(i),verifyReceipt:i=>trust.verifyReceipt(i),
+    const delegate = Object.freeze<AccessTrustProvider>({ verifyPolicy:i=>trust.verifyPolicy(i),verifyReceipt:i=>trust.verifyReceipt(i),
       verifyRootReceipt:i=>trust.verifyRootReceipt?.(i) ?? Promise.resolve(null),
       qualifyDelegatedReceipt:(i,s)=>trust.qualifyDelegatedReceipt?.(i,s) ?? Promise.resolve(null),
       relations:(u,w)=>trust.relations(u,w),verifiedHumanMapping:(u,w)=>trust.verifiedHumanMapping(u,w),
@@ -186,7 +195,9 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
         try {raw=await flight;if(cancellation.signal.aborted)throw cancellation.signal.reason;}
         finally{clearTimeout(timer);this.publicationReads--;this.publicationCancellations.delete(cancellation);this.publicationFlights.delete(flight);}
         return raw===null?null:qualifyDatasetPublication(raw,copy,{purpose:"BUSINESS",commissioning:p.commissioning,nowMs:Date.now()}).authority;
-      } };
+      } });
+    trustDelegates.set(delegate, trust);
+    return delegate;
   }
   readonly scoreFence: ManagerScoreReadFence = { accepts:score=>{
     const p=this.partitions.find(p=>key(p.scope)===key(score.provenance.scope));
@@ -243,7 +254,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     // Hub poll may have settled its cancellation race while the underlying
     // source query still owns resources. Do not declare shutdown complete or
     // let the owner dispose its pool/source before those actual calls settle.
-    await this.realtime?.settleSourceReads();this.lastState="STOPPED";
+    await this.realtime?.drain();this.lastState="STOPPED";
   }
   private materializingSource(p: ManagerRuntimePartition,recalculation?:ManagerScoreRecalculation,
     restatement?:ManagerScoreRestatement,originalCustody?:ManagerOriginalCustodyLifecycle): ManagerProjectionSource {

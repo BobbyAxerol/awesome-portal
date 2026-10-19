@@ -14,6 +14,7 @@ function load(path){
 function json(s){
   const d=s._def,t=d.typeName;
   if(t==='ZodEffects')return json(d.schema);
+  if(t==='ZodUnion')return{anyOf:d.options.map(json)};
   if(t==='ZodNullable')return{anyOf:[json(d.innerType),{type:'null'}]};
   if(t==='ZodLiteral')return{const:d.value};
   if(t==='ZodBoolean')return{type:'boolean'};
@@ -37,7 +38,9 @@ const foundation=JSON.parse(readFileSync(resolve(root,'openapi/execution-v2-foun
 const ref=name=>({$ref:'#/components/schemas/'+name});
 // Scope binding is deliberately server-private, not a browser DTO or route.
 const schemas={Quality:foundation.components.schemas.Quality,EdgeScopedNotice:json(c.edgeScopedNotice),
-  EdgeScopedNoticeBatch:json(c.edgeScopedNoticeBatch),ScopedRealtimeFrame:json(c.scopedRealtimeFrame)};
+  EdgeScopedNoticeBatch:json(c.edgeScopedNoticeBatch),ScopedRealtimeFrame:json(c.scopedRealtimeFrame),
+  NativeProfileRealtimeHeaders:json(c.nativeProfileRealtimeHeaders)};
+schemas.NativeProfileRealtimeHeaders.description='Opt-in response-header projection on the existing profile snapshot route, not a new body/endpoint or STREAM grant. Header absence preserves legacy transport. Never send the legacy body cursor to native STREAM.';
 schemas.EdgeScopedNotice.properties.quality=ref('Quality');
 schemas.EdgeScopedNoticeBatch.properties.notices.items=ref('EdgeScopedNotice');
 schemas.EdgeScopedNoticeBatch.description='Server-private Edge transport batch. caught_up is a transport hint, not economic completeness or source-loss proof. Never expose this object to the browser.';
@@ -59,6 +62,8 @@ const base={schema_version:'portal.execution.scoped-realtime.v1',semantics:'NOTI
   resume_cursor:'TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME',projection_generation:'TEST_ONLY:g1',quality:null,reason_code:null};
 const notice={resume_cursor:'TEST_ONLY-private-cursor-opaque',projection_generation:'TEST_ONLY:g1',quality};
 const cases=[
+  {id:'N10-NATIVE-BASELINE-HEADERS',schema:'NativeProfileRealtimeHeaders',response:{'X-Portal-Realtime-State':'NATIVE_SCOPED_BASELINE_V1','X-Portal-Realtime-Cursor':'TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME'}},
+  {id:'N10-NATIVE-NO-STREAM-HEADERS',schema:'NativeProfileRealtimeHeaders',response:{'X-Portal-Realtime-State':'NATIVE_SCOPED_STREAM_UNAVAILABLE'}},
   {id:'N09-REVALIDATE',schema:'ScopedRealtimeFrame',response:{...base,event_type:'revalidate',quality,next_action:'READ_NAMED_SNAPSHOT'}},
   {id:'N09-HEARTBEAT',schema:'ScopedRealtimeFrame',response:{...base,event_type:'heartbeat',next_action:'RESUME_PORTAL_CURSOR'}},
   ...[['resync_required','GENERATION_CHANGED','READ_NAMED_SNAPSHOT'],['access_revoked','ACCESS_CHANGED','SIGN_IN_OR_REQUEST_ACCESS'],['unavailable','SOURCE_UNAVAILABLE','WAIT']].map(([event,reason,action])=>({

@@ -24,7 +24,7 @@ const absent = () => ({ state: "NOT_REQUIRED" as const, receipt_ref: null });
 const createInput = (patch: Partial<CreateInput> = {}): CreateInput => ({ context: context(),
   requested_economic_capital: "0", requested_initial_budget: "0", currency: "USDT",
   create: applied("registration"), fund: absent(), initial_grant: absent(), ...patch });
-const status = (patch: Partial<CommandStatus> = {}): CommandStatus => commandStatus.parse({ ...shared.ack_only, ...patch });
+const status = (patch: Partial<CommandStatus> = {}): CommandStatus => commandStatus.parse({ ...shared.stored_ack_only, ...patch });
 const business = (state: CommandStatus["business"]["state"] = "APPLIED", amounts = {
   requested: "100.000000000000000001", applied: "100.000000000000000001", pending: "0", cancelled: "0", rejected: "0",
 }): CommandStatus["business"] => ({ state, receipt_ref: "TEST_ONLY:receipt", source_event_ref: "TEST_ONLY:event",

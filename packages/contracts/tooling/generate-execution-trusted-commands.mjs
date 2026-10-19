@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 import ts from 'typescript';
 import {capitalWorkflowSchemas} from './execution-capital-workflow-schema.mjs';
+import {trustedCommandFixtures} from './execution-trusted-command-fixtures.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),require=createRequire(import.meta.url),cache=new Map();
 function load(path){if(cache.has(path))return cache.get(path).exports;const module={exports:{}};cache.set(path,module);
   const code=ts.transpileModule(readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
@@ -42,6 +43,11 @@ schemas.CommandCollection.properties.items.items={$ref:'#/components/schemas/Com
 // runtime UTF-8 byte bound. No ISO/uppercase/three-letter assumption is added.
 schemas.CommandStatus.properties.currency=structuredClone(
   foundation.components.schemas.PmaCandidateCapitalCommand.oneOf[0].properties.currency);
+// ZodEffects traversal above cannot express pmCounter's BigInt upper-bound
+// refinement. Reuse the established PM HTTP int64 grammar; never a JS Number.
+// This deliberately does not change foundation/runtime terminal-LF semantics.
+schemas.CommandStatus.properties.business.properties.revision={anyOf:[
+  structuredClone(foundation.components.schemas.PmCounter),{type:'null'}]};
 schemas.CommandStatus.description='Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema.';
 schemas.CommandCollection.description='Finite exact-resource/environment trusted-capital statuses only. Not the mixed operation queue. Current TS-accepted audit authorization precedes collection. Runtime also verifies cross-row target and page-count invariants.';
 schemas.CommandProblem={type:'object',additionalProperties:false,required:['error','request_id'],properties:{error:{type:'object',additionalProperties:false,
@@ -100,22 +106,22 @@ function refs(v){if(!v||typeof v!=='object')return;for(const [key,value] of Obje
   if(key==='$ref'&&typeof value==='string'&&value.startsWith('#/components/schemas/')){const name=value.split('/').at(-1);if(!needed.has(name)){needed.add(name);refs(schemas[name]);}}
   else refs(value);}}
 for(const name of [...needed])refs(schemas[name]);
-const commandFixture=JSON.parse(readFileSync(resolve(root,'fixtures/execution-trusted-commands.synthetic.valid.json'),'utf8'));
+const commandFixture=trustedCommandFixtures(c);
 const context={workspace_id:commandFixture.intent.workspace_id,environment:commandFixture.ack_only.environment,
   resource:commandFixture.ack_only.resource,policy_revision:'TEST_ONLY:policy',snapshot_ref:'TEST_ONLY:scoped-snapshot',
   source_as_of_ms:null,observed_at_ms:1792100000000};
 const outputs={'openapi/execution-trusted-commands.openapi.json':{openapi:'3.1.0',info:{title:'Trusted PM capital command/status bridge',version:'1.0.0'},paths,components:{securitySchemes:{PortalSession:{type:'apiKey',in:'cookie',name:'portal_session'}},schemas:Object.fromEntries(Object.entries(schemas).filter(([name])=>needed.has(name)))}},
+  'fixtures/execution-trusted-commands.synthetic.valid.json':commandFixture,
   'fixtures/execution-command-currency.synthetic.valid.json':{lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',runtime_qualified:false,
-    stored_status:commandFixture.ack_only,
-    public_status:c.publicCommandStatus.parse({...commandFixture.ack_only,currency:commandFixture.intent.business_payload.currency})},
+    stored_status:commandFixture.stored_ack_only,public_status:commandFixture.ack_only},
   'fixtures/execution-trusted-command-collection.synthetic.valid.json':{lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',
     query:{workspace_id:context.workspace_id,resource_kind:context.resource.kind,resource_id:context.resource.id,environment:context.environment},
     collection:cc.commandCollection.parse({schema_version:'portal.execution.command-collection.v1',family:'TRUSTED_CAPITAL_COMMANDS_ONLY',
       coverage:'EXACT_AUTHORIZED_RESOURCE_ONLY',resource:context.resource,environment:context.environment,
-      items:[c.publicCommandStatus.parse({...commandFixture.ack_only,currency:commandFixture.intent.business_payload.currency})],
+      items:[commandFixture.ack_only],
       page:{limit:25,returned_count:1,has_more:false,next_cursor:null}})},
   'fixtures/execution-capital-workflow.synthetic.valid.json':{lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',runtime_qualified:false,
     command_id:commandFixture.ack_only.command_id,query:{workspace_id:context.workspace_id},
-    response:wf.capitalWorkflow(context,commandFixture.intent.business_payload.currency,commandFixture.ack_only)}};
+    response:wf.capitalWorkflow(context,commandFixture.intent.business_payload.currency,commandFixture.stored_ack_only)}};
 for(const [name,value] of Object.entries(outputs)){const bytes=JSON.stringify(value,null,2)+'\n',path=resolve(root,name);
   if(process.argv.includes('--check')){if(readFileSync(path,'utf8')!==bytes)throw Error('Command contract drift '+name);}else writeFileSync(path,bytes);}

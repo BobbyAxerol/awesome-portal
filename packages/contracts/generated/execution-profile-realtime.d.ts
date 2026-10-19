@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Pins the current Portal-local projection revision before a stream opens. It does not return the profile document and does not perform a browser-to-Execution-Edge read. */
+        /** @description Pins the current Portal-local projection revision before a stream opens. The body is unchanged. An explicitly installed native selection adds X-Portal-Realtime-State and, only for NATIVE_SCOPED_BASELINE_V1, X-Portal-Realtime-Cursor. Use this HEADER cursor for the native notification-only stream, never the legacy body cursor. READ does not grant STREAM. Header absence retains legacy behavior. NATIVE_SCOPED_STREAM_UNAVAILABLE permits READ only. This is not a browser-to-Edge route or source qualification claim. */
         get: operations["executionProfileRealtimeSnapshotV1"];
         put?: never;
         post?: never;
@@ -28,7 +28,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Streams Portal-local snapshot, delta, heartbeat, auth-expired and terminal projection-gap envelopes. Cursor resume is scoped to the selected Portal profile; Last-Event-ID takes precedence over the initial cursor query. A terminal gap requires a bounded resnapshot through the same-origin snapshot route, never a direct source call. */
+        /** @description Legacy transport streams Portal-local snapshot, delta, heartbeat, auth-expired and projection-gap envelopes. For an explicitly installed native selection whose snapshot returned NATIVE_SCOPED_BASELINE_V1, each data frame is instead ScopedRealtimeFrame with NOTIFICATION_ONLY semantics: revalidate, heartbeat, resync_required, access_revoked or unavailable. Current STREAM is checked independently; READ or a cursor never grants it. Last-Event-ID takes precedence over cursor in both protocols. Terminal native frames contain no protected cursor/generation/quality. Resnapshot only via the same-origin snapshot route. Default and retained configurations do not activate native streaming. */
         get: operations["executionProfileRealtimeStreamV1"];
         put?: never;
         post?: never;
@@ -42,6 +42,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        OpaqueNativeCursor: string;
         ProfileRealtimeSnapshot: components["schemas"]["Snapshot"];
         ProfileRealtimeDelta: components["schemas"]["Delta"];
         ProfileRealtimeHeartbeat: components["schemas"]["Heartbeat"];
@@ -317,6 +318,10 @@ export interface operations {
             /** @description Current local profile observation snapshot. */
             200: {
                 headers: {
+                    /** @description Optional native protocol discriminator. Absent for legacy transport; read-only native configurations return NATIVE_SCOPED_STREAM_UNAVAILABLE without a cursor. */
+                    "X-Portal-Realtime-State"?: "NATIVE_SCOPED_BASELINE_V1" | "NATIVE_SCOPED_STREAM_UNAVAILABLE";
+                    /** @description Present only with NATIVE_SCOPED_BASELINE_V1. Opaque actor/workspace/profile/source-bound READ baseline, not STREAM authority. Never decode, share across actors or reuse after revocation/generation changes. */
+                    "X-Portal-Realtime-Cursor"?: components["schemas"]["OpaqueNativeCursor"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -334,11 +339,11 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Initial Portal-local opaque projection cursor. Required only when Last-Event-ID is absent. */
-                cursor?: components["schemas"]["Cursor"];
+                cursor?: components["schemas"]["Cursor"] | components["schemas"]["OpaqueNativeCursor"];
             };
             header?: {
                 /** @description Last delivered Portal-local cursor. It takes precedence over cursor on EventSource reconnect. */
-                "Last-Event-ID"?: components["schemas"]["Cursor"];
+                "Last-Event-ID"?: components["schemas"]["Cursor"] | components["schemas"]["OpaqueNativeCursor"];
             };
             path: {
                 environment: components["parameters"]["ProfileEnvironment"];
@@ -360,6 +365,7 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };

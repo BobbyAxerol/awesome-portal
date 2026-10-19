@@ -6,7 +6,7 @@ import {commandIntent,commandPreview,publicCommandStatus as commandStatus,comman
 import {commandCollection,commandCollectionQuery} from "../../../apps/control-api/src/execution-v2/command-collection.contract";
 const root=resolve(__dirname,".."),load=(p:string)=>JSON.parse(readFileSync(resolve(root,p),"utf8"));
 const currencyFixture=load("fixtures/execution-command-currency.synthetic.valid.json");
-const api=load("openapi/execution-trusted-commands.openapi.json"),fixture={...load("fixtures/execution-trusted-commands.synthetic.valid.json"),ack_only:currencyFixture.public_status};
+const api=load("openapi/execution-trusted-commands.openapi.json"),fixture=load("fixtures/execution-trusted-commands.synthetic.valid.json");
 const collectionFixture=load("fixtures/execution-trusted-command-collection.synthetic.valid.json");
 const ajv=new Ajv2020({strict:false});
 const compile=(name:string)=>ajv.compile(JSON.parse(JSON.stringify({$ref:"#/components/schemas/"+name,components:{schemas:api.components.schemas}})));
@@ -14,6 +14,12 @@ describe("ELP2-07 generated command contract",()=>{
   it("publishes verified intent currency while retaining exact historical storage grammar",()=>{
     expect(currencyFixture.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
     expect(currencyFixture.runtime_qualified).toBe(false);
+    // Validate the real canonical fixture, never hide producer drift by
+    // substituting another fixture's public status in the test loader.
+    expect(fixture.stored_ack_only).toEqual(currencyFixture.stored_status);
+    expect(fixture.ack_only).toEqual(currencyFixture.public_status);
+    expect(storedCommandStatus.safeParse(fixture.stored_ack_only).success).toBe(true);
+    expect(storedCommandStatus.safeParse(fixture.ack_only).success).toBe(false);
     expect(storedCommandStatus.safeParse(currencyFixture.stored_status).success).toBe(true);
     expect(storedCommandStatus.safeParse(currencyFixture.public_status).success).toBe(false);
     expect(commandStatus.safeParse(currencyFixture.stored_status).success).toBe(false);
@@ -108,5 +114,35 @@ describe("ELP2-07 generated command contract",()=>{
     expect(validate({...fixture.intent,business_payload:{...fixture.intent.business_payload,expected_versions:{budget:9007199254740992,source:"2",parent:"3"}}})).toBe(false);
     expect(validate({...fixture.intent,business_payload:{...fixture.intent.business_payload,actor_id:"spoof"}})).toBe(false);
     expect(api.components.schemas.CommandIntent.properties.business_payload.$ref).toContain("PmaCandidateCapitalCommand");
+  });
+  it("keeps nullable business revision within exact PM int64 bounds in every public status nesting",()=>{
+    const workflowApi=load("openapi/execution-workflows.openapi.json");
+    const workflow=load("fixtures/execution-capital-workflow.synthetic.valid.json").response;
+    const validateStatus=compile("CommandStatus"),validateCollection=compile("CommandCollection"),validateWorkflow=compile("WorkflowCapital");
+    const validateOtherWorkflow=new Ajv2020({strict:false}).compile({$ref:"#/components/schemas/WorkflowCapital",
+      components:{schemas:workflowApi.components.schemas}});
+    const foundation=load("openapi/execution-v2-foundation.openapi.json");
+    expect(api.components.schemas.CommandStatus.properties.business.properties.revision)
+      .toEqual({anyOf:[foundation.components.schemas.PmCounter,{type:"null"}]});
+    const withRevision=(revision:unknown)=>({...fixture.ack_only,business:revision===null ?
+      {...fixture.ack_only.business,revision} : {state:"APPLIED",revision,
+        receipt_ref:"TEST_ONLY:owning-receipt",source_event_ref:"TEST_ONLY:owning-event",
+        amounts:{requested:"100",applied:"100",pending:"0",cancelled:"0",rejected:"0"}}});
+    for(const revision of [null,"0","9007199254740993","9223372036854775807"]){
+      const status=withRevision(revision);
+      expect(commandStatus.safeParse(status).success).toBe(true);
+      expect(validateStatus(status),JSON.stringify(validateStatus.errors)).toBe(true);
+      expect(validateCollection({...collectionFixture.collection,items:[status]})).toBe(true);
+      expect(validateWorkflow({...workflow,status})).toBe(true);
+      expect(validateOtherWorkflow({...workflow,status})).toBe(true);
+    }
+    for(const revision of ["9223372036854775808","9999999999999999999","10000000000000000000","-1","01","1e3",9007199254740992]){
+      const status=withRevision(revision);
+      expect(commandStatus.safeParse(status).success).toBe(false);
+      expect(validateStatus(status)).toBe(false);
+      expect(validateCollection({...collectionFixture.collection,items:[status]})).toBe(false);
+      expect(validateWorkflow({...workflow,status})).toBe(false);
+      expect(validateOtherWorkflow({...workflow,status})).toBe(false);
+    }
   });
 });

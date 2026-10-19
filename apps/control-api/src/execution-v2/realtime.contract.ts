@@ -3,6 +3,14 @@ import { edgeMetadataSchema, executionEnvironment, utcMilliseconds } from "./fou
 
 const text=z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$(?![\s\S])/);
 export const replayOpaqueToken=z.string().min(1).max(4096).regex(/^[A-Za-z0-9._~-]+$(?![\s\S])/);
+/** Projection of the TWO opt-in HTTP response headers, not a new response body.
+ * A READ baseline is not a STREAM grant. Absence of these headers means the
+ * unchanged legacy protocol; UNAVAILABLE never carries a usable cursor. */
+export const nativeProfileRealtimeHeaders=z.union([
+  z.object({"X-Portal-Realtime-State":z.literal("NATIVE_SCOPED_BASELINE_V1"),
+    "X-Portal-Realtime-Cursor":replayOpaqueToken}).strict(),
+  z.object({"X-Portal-Realtime-State":z.literal("NATIVE_SCOPED_STREAM_UNAVAILABLE")}).strict(),
+]);
 /** Exact source ChangeNotice semantics, not a financial/order lifecycle event. */
 export const edgeScopedNotice=z.object({resume_cursor:replayOpaqueToken,
   projection_generation:text,quality:edgeMetadataSchema.shape.quality}).strict();
@@ -40,3 +48,4 @@ export const scopedRealtimeFrame=z.object({schema_version:z.literal("portal.exec
 export type ScopedReplayBinding=z.infer<typeof scopedReplayBinding>;
 export type EdgeScopedNoticeBatch=z.infer<typeof edgeScopedNoticeBatch>;
 export type ScopedRealtimeFrame=z.infer<typeof scopedRealtimeFrame>;
+export type NativeProfileRealtimeHeaders=z.infer<typeof nativeProfileRealtimeHeaders>;

@@ -2,7 +2,7 @@ import { ResearchRunSyncService } from "./facade/run-sync.service";
 import { ExecutionDurableMirrorIntegrityController } from "./execution/durable-mirror-integrity.controller";
 import { ExecutionLocalReadAuthority } from "./execution/local-read-authority";
 import { ExecutionRetainedReviewController } from "./execution/retained-review.controller";
-import { DynamicModule, Module } from "@nestjs/common";
+import { DynamicModule, Inject, Module, type OnApplicationShutdown } from "@nestjs/common";
 import { Pool } from "pg";
 import { AuthController } from "./auth/auth.controller";
 import { ProfileController } from "./auth/profile.controller";
@@ -21,6 +21,10 @@ import type { PendingControlTrust } from "./execution-v2/pending-control.trust";
 import type { AccessTrustProvider } from "./execution-v2/access-trust";
 import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "./execution-v2/manager-runtime";
 import type { CurrentHumanMutations } from "./execution-v2/current-human-mutations";
+import { composeNativeCore,nativeCoreManagerReadConsumer } from "./execution-v2/native-core-composition";
+import { NativeManagerReadConsumer } from "./execution-v2/native-manager-consumer";
+import { ScopedReplayCursorCodec } from "./execution-v2/scoped-replay-cursor";
+import type { ScopedReplayLimits } from "./execution-v2/realtime";
 import { ExecutionReadScopes } from "./execution-v2/read-scope";
 import { AuthService } from "./auth/auth.service";
 import { Argon2CredentialService } from "./auth/argon";
@@ -89,7 +93,7 @@ import { AuthoritativeEventLedgerRepository } from "./execution/authoritative-ev
 import { ExecutionMarketCandlesController } from "./execution/market-candles.controller";
 import { ExecutionMarketCandlesService } from "./execution/market-candles.service";
 import { ExecutionProfileProjectionWorker } from "./execution/profile-projection.worker";
-import { ExecutionProfileRealtimeService } from "./execution/profile-realtime.service";
+import { ExecutionProfileRealtimeService, NATIVE_MANAGER_REALTIME_COORDINATOR } from "./execution/profile-realtime.service";
 import { ExecutionProductReadSource } from "./execution/product-read-source";
 import { ExecutionProfileHistoryController } from "./execution/profile-history.controller";
 import { ExecutionProfileHistoryService } from "./execution/profile-history.service";
@@ -246,12 +250,28 @@ export interface ControlApiDependencies {
   /** Explicit private candidate composition, never an environment switch or
    * browser input. It must share the candidate's bounded Core pool. */
   currentHumanMutations?: CurrentHumanMutations;
+  /** Genuine private composition only; never reconstructed from HTTP or ENV. */
+  nativeManagerRead?: Awaited<ReturnType<typeof composeNativeCore>>;
+  /** Private explicit connected budget only; no automatic runtime/source commissioning. */
+  nativeManagerRealtimeLimits?: ScopedReplayLimits;
 }
 
 @Module({})
-export class AppModule {
+export class AppModule implements OnApplicationShutdown {
+  constructor(@Inject("EXECUTION_POOL_LIFECYCLE") private readonly executionPoolLifecycle: {
+    closeOwnedPool(): Promise<void>;
+  }) {}
+
+  /** Nest invokes the module class AFTER all same-module provider shutdown
+   * hooks have fulfilled. A peer provider failure must skip this finalizer. */
+  onApplicationShutdown(): Promise<void> { return this.executionPoolLifecycle.closeOwnedPool(); }
+
   static register(config: ControlApiConfig, pool: Pool, executionPool?: Pool,
     dependencies: ControlApiDependencies = {}): DynamicModule {
+    if (dependencies.nativeManagerRealtimeLimits !== undefined && dependencies.nativeManagerRead === undefined)
+      throw new Error("NATIVE_MANAGER_REALTIME_COMPOSITION_REQUIRED");
+    const nativeRealtimeLimits = dependencies.nativeManagerRealtimeLimits === undefined
+      ? undefined : Object.freeze({...dependencies.nativeManagerRealtimeLimits});
     if (dependencies.allowTestOnlyExecutionAccess && config.NODE_ENV !== "test")
       throw new Error("TEST_ONLY Execution authority requires an isolated test application.");
     if (dependencies.currentHumanMutations && !dependencies.currentHumanMutations.usesPool(pool))
@@ -260,8 +280,19 @@ export class AppModule {
     if (dependencies.executionManagerRuntime && (executionPool === pool || !executionPool && !config.EXECUTION_DATABASE_URL))
       throw new Error("MANAGER_RUNTIME_EXECUTION_POOL_REQUIRED");
     const domainPool = executionPool ?? (config.EXECUTION_DATABASE_URL ? buildExecutionPool(config) : pool);
+    let executionPoolClose: Promise<void> | undefined;
+    const executionPoolLifecycle = Object.freeze({closeOwnedPool: (): Promise<void> => {
+      if (!ownsExecutionPool) return Promise.resolve();
+      // Publish ownership before invoking pg, including a synchronous throw.
+      return executionPoolClose ??= Promise.resolve().then(() => domainPool.end());
+    }});
     const managerRuntime = new ExecutionManagerRuntime(domainPool,dependencies.executionManagerRuntime);
     const accessTrust = managerRuntime.accessTrust(dependencies.executionAccessTrust);
+    const nativeManagerRead = dependencies.nativeManagerRead;
+    // Check the effective provider actually injected into ExecutionAccessService,
+    // not only a raw input which an installed ManagerRuntime may wrap.
+    const nativeManagerAuthority = Object.freeze({executionAccessTrust:accessTrust,
+      currentHumanMutations:dependencies.currentHumanMutations});
     const workspaceProvisioner = dependencies.currentHumanMutations
       ? new CurrentHumanWorkspaceProvisioner(pool, dependencies.currentHumanMutations) : undefined;
     return {
@@ -352,9 +383,7 @@ export class AppModule {
         { provide: CONTROL_API_CONFIG, useValue: config },
         { provide: CONTROL_API_POOL, useValue: pool },
         { provide: EXECUTION_DATA_POOL, useValue: domainPool },
-        { provide: "EXECUTION_POOL_LIFECYCLE", useValue: {
-          onApplicationShutdown: async () => { if (ownsExecutionPool) await domainPool.end(); },
-        } },
+        { provide: "EXECUTION_POOL_LIFECYCLE", useValue: executionPoolLifecycle },
         {
           provide: AuthService,
           useFactory: (cfg: ControlApiConfig, db: Pool) =>
@@ -574,6 +603,17 @@ export class AppModule {
         { provide: EXECUTION_DURABLE_MIRROR_WRITER, useExisting: ExecutionDurableMirrorRepository },
         ExecutionProfileProjectionRepository,
         ExecutionProfileProjectionWorker,
+        ...(nativeManagerRead !== undefined ? [{
+          provide: NativeManagerReadConsumer,
+          useFactory: (operations:MaximumDataOperationService,scopes:ExecutionReadScopes,
+            repository:ExecutionProfileProjectionRepository,cfg:ControlApiConfig) => nativeCoreManagerReadConsumer(
+            nativeManagerRead,pool,operations,nativeManagerAuthority,nativeRealtimeLimits === undefined ? undefined : {
+              scopes,repository,limits:nativeRealtimeLimits,
+              codec:new ScopedReplayCursorCodec(cfg.QUERY_CURSOR_ACTIVE_KEY_ID,querySigningKeys(cfg),
+                Math.min(300_000,cfg.QUERY_CURSOR_TTL_SECONDS*1000)),
+            }),
+          inject: [MaximumDataOperationService,ExecutionReadScopes,ExecutionProfileProjectionRepository,CONTROL_API_CONFIG],
+        },{provide:NATIVE_MANAGER_REALTIME_COORDINATOR,useExisting:NativeManagerReadConsumer}] : []),
         ExecutionProfileRealtimeService,
         ExecutionProductReadSource,
         ExecutionProfileHistoryService,

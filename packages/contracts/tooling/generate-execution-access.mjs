@@ -78,6 +78,35 @@ const eligibilityRules={
   'capital.apply_pending':['PENDING_CONTROL_PREVIEW',true],'capital.cancel_remaining':['PENDING_CONTROL_PREVIEW',true],
   'deployment.register':['INSTANCE_REGISTRATION_PREVIEW',true],
 };
+// Exact existing RULES[action].kinds from self-eligibility.ts. These are
+// request-target compatibility, never resource existence or a source permit.
+const eligibilityKinds={
+  'alpha.read':['ALPHA','ALPHA_VERSION','DEPLOYMENT'],
+  'portfolio.read':['PORTFOLIO'],'portfolio.read_restricted':['PORTFOLIO'],
+  'portfolio.discover_linked':['PORTFOLIO'],'account.read':['ACCOUNT'],'binding.read':['BINDING'],
+  'audit.read':['ROOT','PORTFOLIO','DEPLOYMENT','ACCOUNT'],
+  ...Object.fromEntries(['governance.r1.read','governance.r2.read','governance.canary.read','governance.live.read',
+    'governance.r1.decide','governance.r2.decide','governance.canary.decide','governance.live.decide']
+    .map(action=>[action,['PORTFOLIO','DEPLOYMENT']])),
+  ...Object.fromEntries(['maintenance.read','development.read'].map(action=>[action,
+    ['ROOT','PORTFOLIO','DEPLOYMENT','ACCOUNT','ALPHA','ALPHA_VERSION','BINDING']])),
+  ...Object.fromEntries(['capital.fund','capital.initial_grant','capital.top_up','capital.immediate_decrease',
+    'capital.recall_partial','capital.recall_full','capital.adjust_target_budget','capital.set_root_limit']
+    .map(action=>[action,['ROOT','PORTFOLIO','DEPLOYMENT']])),
+  'capital.apply_pending':['PORTFOLIO','DEPLOYMENT'],'capital.cancel_remaining':['PORTFOLIO','DEPLOYMENT'],
+  'deployment.register':['PORTFOLIO'],
+};
+const matchingEligibilityAction=(action,properties)=>({properties:{actions:{items:{
+  if:{properties:{action:{const:action}},required:['action']},then:{properties}}}}});
+const eligibilityTargetRules=eligibilityActions.map(action=>({
+  if:{properties:{resource:{properties:{kind:{enum:eligibilityKinds[action]}},required:['kind']}},required:['resource']},
+  then:matchingEligibilityAction(action,{reason_class:{not:{const:'ACTION_TARGET_UNSUPPORTED'}}}),
+  // An unready policy deliberately replaces unsupported-target copy in the
+  // current producer. Keep that closed alternative instead of inventing one
+  // mandatory reason that the server does not always publish.
+  else:matchingEligibilityAction(action,{permission:{const:'UNAVAILABLE'},
+    reason_class:{enum:['ACTION_TARGET_UNSUPPORTED','POLICY_PENDING']}}),
+}));
 const featureIds=['EXECUTION_PORTFOLIOS','EXECUTION_ACCOUNTS_BINDINGS','EXECUTION_OPERATIONS','EXECUTION_BLOTTER'];
 const eligibilityTokens=eligibilityActions.map(action=>action.replaceAll('.','\\.'));
 const eligibilityCsv={type:'string',minLength:1,maxLength:1024,
@@ -122,7 +151,8 @@ const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector
     actions:{type:'array',minItems:1,maxItems:16,items:ref('AccessEligibilityRow'),
       allOf:eligibilityActions.map(action=>({contains:{type:'object',properties:{action:{const:action}},required:['action']},
         minContains:0,maxContains:1}))}}),
-    description:'Current own application permission facts only; target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Not a permit or TS activation.'},
+    allOf:eligibilityTargetRules,
+    description:'Current own application permission facts only; action/target-kind compatibility is checked, but target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Unsupported targets are UNAVAILABLE with ACTION_TARGET_UNSUPPORTED, or POLICY_PENDING when the current producer cannot establish policy. Not a permit or TS activation.'},
   AccessSelfNavigationItem:selfNavigationItem,
   AccessSelfNavigation:{...obj({schema_version:{const:'portal.self-navigation.v1'},workspace_id:scopedText,environment,
     current_only:{const:true},advisory_only:{const:true},

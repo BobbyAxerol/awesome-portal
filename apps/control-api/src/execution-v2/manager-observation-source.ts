@@ -23,7 +23,7 @@ function hash(value:string|null):string{
   if(typeof value!=="string"||!/^(?:sha256:)?[a-f0-9]{64}$(?![\s\S])/.test(value))return invalid("SOURCE_COVERAGE_UNPROVED");
   return value.startsWith("sha256:")?value:"sha256:"+value;
 }
-function sourceDigest(selection:ManagerObservationSelection,head:ManagerObservationHead):string{
+export function managerObservationSourceSetDigest(selection:ManagerObservationSelection,head:ManagerObservationHead):string{
   if(!head.sourceEpoch||head.sourceContractRevision!==selection.source_contract_revision||
     hash(head.sourceCatalogueSha256)!==hash(selection.source_catalogue_sha256))return invalid("SCOPE_CHANGED");
   return accessDigest({schema_version:"portal.manager-observation.source-set.v1",
@@ -42,7 +42,7 @@ export function managerObservationBaseline(snapshot:ProfileProjectionSnapshot,se
   if(d.workspace_id!==selection.workspace_id||d.environment!==selection.environment||d.profile_id!==selection.profile_id||
     hash(d.source_catalogue_sha256??null)!==hash(snapshot.sourceCatalogueSha256)||
     !Number.isSafeInteger(snapshot.projectionSequence)||snapshot.projectionSequence<1)return invalid("SOURCE_COVERAGE_UNPROVED");
-  const head={...snapshot,sourceContractRevision:d.source_contract_revision},source_set_digest=sourceDigest(selection,head);
+  const head={...snapshot,sourceContractRevision:d.source_contract_revision},source_set_digest=managerObservationSourceSetDigest(selection,head);
   const snapshot_id=accessDigest({schema_version:"portal.manager-observation.snapshot.v1",query_digest:managerObservationQueryDigest(selection),
     source_set_digest,projection_epoch:snapshot.projectionEpoch,sequence:snapshot.projectionSequence,payload_digest:hash(snapshot.payloadDigest)});
   return Object.freeze({snapshot_id,source_set_digest,projection_generation:snapshot.projectionEpoch,
@@ -82,7 +82,7 @@ export class ManagerObservationNoticeSource implements ScopedNoticeSource {
       if(signal?.aborted)return invalid("SOURCE_UNAVAILABLE");
       if(!head)return invalid("SOURCE_UNAVAILABLE");
       if(head.projectionEpoch!==c.projection_epoch)return invalid("GENERATION_CHANGED");
-      if(sourceDigest(s,head)!==binding.source_set_digest)return invalid("SCOPE_CHANGED");
+      if(managerObservationSourceSetDigest(s,head)!==binding.source_set_digest)return invalid("SCOPE_CHANGED");
       if(!Number.isSafeInteger(head.projectionSequence)||head.projectionSequence<c.after_sequence)
         return invalid("SOURCE_COVERAGE_UNPROVED");
       const count=Math.min(requestedLimit,this.maximumNotices,head.projectionSequence-c.after_sequence);

@@ -48,6 +48,15 @@ export interface components {
             next_action: "READ_NAMED_SNAPSHOT" | "RESUME_PORTAL_CURSOR" | "SIGN_IN_OR_REQUEST_ACCESS" | "WAIT";
             reason_code: ("SNAPSHOT_REQUIRED" | "CURSOR_INVALID_OR_EXPIRED" | "SCOPE_CHANGED" | "GENERATION_CHANGED" | "SOURCE_COVERAGE_UNPROVED" | "SOURCE_UNAVAILABLE" | "SLOW_CLIENT" | "ACCESS_CHANGED" | "RECONNECT_LIMIT" | "STOPPED") | null;
         } & (unknown & unknown & unknown & unknown & unknown & unknown);
+        /** @description Opt-in response-header projection on the existing profile snapshot route, not a new body/endpoint or STREAM grant. Header absence preserves legacy transport. Never send the legacy body cursor to native STREAM. */
+        NativeProfileRealtimeHeaders: {
+            /** @constant */
+            "X-Portal-Realtime-State": "NATIVE_SCOPED_BASELINE_V1";
+            "X-Portal-Realtime-Cursor": string;
+        } | {
+            /** @constant */
+            "X-Portal-Realtime-State": "NATIVE_SCOPED_STREAM_UNAVAILABLE";
+        };
     };
     responses: never;
     parameters: never;

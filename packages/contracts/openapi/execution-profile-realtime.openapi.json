@@ -11,13 +11,24 @@
     "/api/v1/execution/profiles/{environment}/realtime-snapshot": {
       "get": {
         "operationId": "executionProfileRealtimeSnapshotV1",
-        "description": "Pins the current Portal-local projection revision before a stream opens. It does not return the profile document and does not perform a browser-to-Execution-Edge read.",
+        "description": "Pins the current Portal-local projection revision before a stream opens. The body is unchanged. An explicitly installed native selection adds X-Portal-Realtime-State and, only for NATIVE_SCOPED_BASELINE_V1, X-Portal-Realtime-Cursor. Use this HEADER cursor for the native notification-only stream, never the legacy body cursor. READ does not grant STREAM. Header absence retains legacy behavior. NATIVE_SCOPED_STREAM_UNAVAILABLE permits READ only. This is not a browser-to-Edge route or source qualification claim.",
         "parameters": [
           { "$ref": "#/components/parameters/ProfileEnvironment" }
         ],
         "responses": {
           "200": {
             "description": "Current local profile observation snapshot.",
+            "headers": {
+              "X-Portal-Realtime-State": {
+                "description": "Optional native protocol discriminator. Absent for legacy transport; read-only native configurations return NATIVE_SCOPED_STREAM_UNAVAILABLE without a cursor.",
+                "schema": { "type": "string", "enum": ["NATIVE_SCOPED_BASELINE_V1", "NATIVE_SCOPED_STREAM_UNAVAILABLE"] }
+              },
+              "X-Portal-Realtime-Cursor": {
+                "description": "Present only with NATIVE_SCOPED_BASELINE_V1. Opaque actor/workspace/profile/source-bound READ baseline, not STREAM authority. Never decode, share across actors or reuse after revocation/generation changes.",
+                "schema": { "$ref": "#/components/schemas/OpaqueNativeCursor" }
+              }
+            },
+            "x-native-header-contract": { "$ref": "../schemas/execution-scoped-realtime.v1.schema.json#/$defs/NativeProfileRealtimeHeaders" },
             "content": {
               "application/json": {
                 "schema": { "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Snapshot" }
@@ -35,7 +46,7 @@
     "/api/v1/execution/profiles/{environment}/stream": {
       "get": {
         "operationId": "executionProfileRealtimeStreamV1",
-        "description": "Streams Portal-local snapshot, delta, heartbeat, auth-expired and terminal projection-gap envelopes. Cursor resume is scoped to the selected Portal profile; Last-Event-ID takes precedence over the initial cursor query. A terminal gap requires a bounded resnapshot through the same-origin snapshot route, never a direct source call.",
+        "description": "Legacy transport streams Portal-local snapshot, delta, heartbeat, auth-expired and projection-gap envelopes. For an explicitly installed native selection whose snapshot returned NATIVE_SCOPED_BASELINE_V1, each data frame is instead ScopedRealtimeFrame with NOTIFICATION_ONLY semantics: revalidate, heartbeat, resync_required, access_revoked or unavailable. Current STREAM is checked independently; READ or a cursor never grants it. Last-Event-ID takes precedence over cursor in both protocols. Terminal native frames contain no protected cursor/generation/quality. Resnapshot only via the same-origin snapshot route. Default and retained configurations do not activate native streaming.",
         "parameters": [
           { "$ref": "#/components/parameters/ProfileEnvironment" },
           {
@@ -43,14 +54,14 @@
             "in": "query",
             "required": false,
             "description": "Initial Portal-local opaque projection cursor. Required only when Last-Event-ID is absent.",
-            "schema": { "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Cursor" }
+            "schema": { "anyOf": [{ "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Cursor" }, { "$ref": "#/components/schemas/OpaqueNativeCursor" }] }
           },
           {
             "name": "Last-Event-ID",
             "in": "header",
             "required": false,
             "description": "Last delivered Portal-local cursor. It takes precedence over cursor on EventSource reconnect.",
-            "schema": { "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Cursor" }
+            "schema": { "anyOf": [{ "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Cursor" }, { "$ref": "#/components/schemas/OpaqueNativeCursor" }] }
           }
         ],
         "responses": {
@@ -59,6 +70,7 @@
             "content": {
               "text/event-stream": {
                 "schema": { "type": "string" },
+                "x-native-sse-frame": { "$ref": "../schemas/execution-scoped-realtime.v1.schema.json#/$defs/ScopedRealtimeFrame" },
                 "x-sse-events": {
                   "snapshot": { "$ref": "#/components/schemas/ProfileRealtimeSnapshot" },
                   "delta": { "$ref": "#/components/schemas/ProfileRealtimeDelta" },
@@ -73,6 +85,7 @@
           "401": { "$ref": "#/components/responses/Problem" },
           "403": { "$ref": "#/components/responses/Problem" },
           "404": { "$ref": "#/components/responses/Problem" },
+          "429": { "$ref": "#/components/responses/Problem" },
           "503": { "$ref": "#/components/responses/Problem" }
         }
       }
@@ -101,6 +114,10 @@
       }
     },
     "schemas": {
+      "OpaqueNativeCursor": {
+        "type": "string", "minLength": 1, "maxLength": 4096,
+        "pattern": "^[A-Za-z0-9._~-]+$(?![\\s\\S])"
+      },
       "ProfileRealtimeSnapshot": {
         "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Snapshot"
       },

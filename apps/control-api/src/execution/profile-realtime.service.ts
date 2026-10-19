@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnApplicationShutdown } from "@nestjs/common";
+import { BeforeApplicationShutdown, Inject, Injectable, OnApplicationShutdown, Optional } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
@@ -12,6 +12,11 @@ import {
   PROFILE_OBSERVATION_OPERATION_ID,
   profileObservationRevalidation,
 } from "./profile-projection.catalog";
+
+import type { NativeManagerReadConsumer } from "../execution-v2/native-manager-consumer";
+
+/** Alias to the SAME native consumer; a value import would cycle through retained-operation-page. */
+export const NATIVE_MANAGER_REALTIME_COORDINATOR = Symbol("NATIVE_MANAGER_REALTIME_COORDINATOR");
 
 const CURSOR = /^([0-9a-f-]{36}):(\d+)$/;
 const REPLAY_LIMIT = 1_000;
@@ -115,12 +120,17 @@ interface ScopeGroup {
 
 /** One SGP-local projection tail per scope; browser count never increases AWS-HK reads. */
 @Injectable()
-export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
+export class ExecutionProfileRealtimeService implements BeforeApplicationShutdown, OnApplicationShutdown {
   private readonly groups = new Map<string, ScopeGroup>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private readonly jobs = new Map<string, Promise<unknown>>();
   private readonly pending = new Map<string, number>();
   private stopped = false;
+  private shutdown?: Promise<void>;
+  private nativeFlight: Promise<void> | null = null;
+  private actualReads = 0;
+  private actualReadsIdle = Promise.resolve();
+  private resolveActualReadsIdle?: () => void;
   private readonly counters = {
     groupsStarted: 0,
     subscriptions: 0,
@@ -139,6 +149,7 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
+    @Optional() @Inject(NATIVE_MANAGER_REALTIME_COORDINATOR) private readonly nativeManager?: NativeManagerReadConsumer,
   ) {}
 
   async snapshot(
@@ -146,15 +157,34 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
     environment: ProjectionEnvironment,
     profileId: string,
   ): Promise<LocalRealtimeEnvelope> {
+    return (await this.prepareSnapshot(workspaceId, environment, profileId)).envelope;
+  }
+
+  /** Capture once: finite body and native continuation describe the SAME snapshot. */
+  async prepareSnapshot(workspaceId: string, environment: ProjectionEnvironment, profileId: string) {
+    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
+    return this.serialize(scopeKey(workspaceId, environment, profileId), () =>
+      this.prepareSnapshotLocked(workspaceId, environment, profileId));
+  }
+
+  private async prepareSnapshotLocked(workspaceId: string, environment: ProjectionEnvironment, profileId: string) {
+    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
     const snapshot = await this.requiredSnapshot(workspaceId, environment, profileId);
-    const health = await localRead(this.repository.refreshHealth(workspaceId, environment, profileId));
-    return envelope(
+    const health = await this.localRead(() => this.repository.refreshHealth(workspaceId, environment, profileId));
+    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
+    return { snapshot, envelope: envelope(
       "snapshot",
       snapshot,
       cursorPayload(snapshot),
       this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS,
       health,
-    );
+    ) };
+  }
+
+  /** Start the existing shared cadence only AFTER genuine native registration. */
+  startNativePolling(): void {
+    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
+    if (this.nativeManager?.hasRealtimeClients()) this.ensureTimer();
   }
 
   async subscribe(
@@ -181,9 +211,11 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
     }
     // A join cannot advance past deltas owed to already attached subscribers.
     if (existing) await this.tickGroup(key, existing);
+    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
     const active = this.groups.get(key);
     const snapshot = active?.snapshot ?? await this.requiredSnapshot(workspaceId, environment, profileId);
-    const health = active?.health ?? await localRead(this.repository.refreshHealth(workspaceId, environment, profileId));
+    const health = active?.health ?? await this.localRead(() => this.repository.refreshHealth(workspaceId, environment, profileId));
+    if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
     const cursor = parseCursor(rawCursor);
     if (cursor && (cursor.epoch !== snapshot.projectionEpoch || cursor.sequence > snapshot.projectionSequence)) {
       emit(gap(snapshot, "N31_CURSOR_EPOCH_OR_SEQUENCE_MISMATCH",
@@ -202,9 +234,10 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
       this.counters.snapshotEmissions += 1;
     } else if (cursor.sequence < snapshot.projectionSequence) {
       this.counters.resumedSubscriptions += 1;
-      const replay = (await localRead(this.repository.journalAfter(
+      const replay = (await this.localRead(() => this.repository.journalAfter(
         workspaceId, environment, profileId, cursor.epoch, cursor.sequence, REPLAY_LIMIT,
       ))).filter(entry => entry.projectionSequence <= snapshot.projectionSequence);
+      if (this.stopped) throw new LocalRealtimeError("N31_SERVICE_STOPPED", 503);
       if (!contiguous(replay, cursor.sequence, snapshot.projectionSequence)) {
         emit(gap(snapshot, "N31_CURSOR_HISTORY_EVICTED",
           this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS, health));
@@ -243,7 +276,7 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
     return () => {
       group!.subscribers.delete(subscriber);
       if (group!.subscribers.size === 0 && this.groups.get(key) === group) this.groups.delete(key);
-      if (this.groups.size === 0 && this.timer) {
+      if (this.groups.size === 0 && !this.nativeManager?.hasRealtimeClients() && this.timer) {
         clearInterval(this.timer);
         this.timer = null;
       }
@@ -278,12 +311,37 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
     };
   }
 
-  onApplicationShutdown(): void {
+  /** Nest awaits this phase BEFORE the owned pool's onApplicationShutdown.
+   * Cache before invoking any subscriber/native callback: repeated entries and
+   * re-entrant shutdown join exactly one original-I/O barrier, even on failure.
+   * Caller timeouts/abort and failed drain never authorize pool disposal. */
+  beforeApplicationShutdown(): Promise<void> {
+    if (this.shutdown) return this.shutdown;
     this.stopped = true;
+    let resolve!: () => void, reject!: (error: unknown) => void;
+    this.shutdown = new Promise<void>((done, failed) => { resolve = done; reject = failed; });
+    void this.stopAndDrain().then(resolve, reject);
+    return this.shutdown;
+  }
+
+  onApplicationShutdown(): Promise<void> { return this.beforeApplicationShutdown(); }
+
+  private async stopAndDrain(): Promise<void> {
+    let nativeStop: Promise<void>;
+    try { nativeStop = this.nativeManager?.stopRealtime() ?? Promise.resolve(); }
+    catch (error) { nativeStop = Promise.reject(error); }
     for (const group of this.groups.values()) this.terminate(group, "N31_SERVICE_STOPPED");
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
     this.groups.clear();
+    // Jobs may legitimately reject SERVICE_STOPPED; their ORIGINAL reads are
+    // joined below. A failed native drain is different: retain and propagate
+    // its failure after all pending work settles, never release the pool.
+    const joined = await Promise.allSettled([nativeStop, ...this.jobs.values(),
+      ...(this.nativeFlight ? [this.nativeFlight] : [])]);
+    await this.actualReadsIdle;
+    const native = joined[0]!;
+    if (native.status === "rejected") throw native.reason;
   }
 
   /**
@@ -335,6 +393,15 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
   }
 
   private async tick(): Promise<void> {
+    if (this.stopped) return;
+    if (!this.nativeFlight && this.nativeManager?.hasRealtimeClients()) {
+      const flight = this.nativeManager.pollRealtime().catch(() => undefined);
+      this.nativeFlight = flight;
+      void flight.finally(() => {
+        if (this.nativeFlight === flight) this.nativeFlight = null;
+        this.stopIdleTimer();
+      });
+    }
     // Independent bounded scopes: one slow Paper read cannot block Live/Sandbox.
     await Promise.all([...this.groups].map(([key, group]) => {
       if (this.jobs.has(key)) return Promise.resolve();
@@ -342,13 +409,20 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
         this.terminate(group, "N31_LOCAL_READ_FAILED");
       });
     }));
+    this.stopIdleTimer();
+  }
+
+  private stopIdleTimer(): void {
+    if (!this.groups.size && !this.nativeManager?.hasRealtimeClients() && this.timer) {
+      clearInterval(this.timer); this.timer = null;
+    }
   }
 
   private async tickGroup(key: string, group: ScopeGroup): Promise<void> {
     if (this.groups.get(key) !== group || this.stopped) return;
     try {
       this.counters.metadataReads += 1;
-      const metadata = await localRead(this.repository.snapshotMetadata(group.workspaceId, group.environment, group.profileId));
+      const metadata = await this.localRead(() => this.repository.snapshotMetadata(group.workspaceId, group.environment, group.profileId));
       if (this.groups.get(key) !== group || this.stopped) return;
       if (!metadata) { this.terminate(group, "N31_PROJECTION_NOT_READY"); return; }
       if (metadata.projectionEpoch !== group.epoch || metadata.projectionSequence < group.sequence) {
@@ -356,18 +430,19 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
       }
       let snapshot: ProfileProjectionSnapshot = { ...group.snapshot, ...metadata };
       if (Date.now() >= group.nextHealthCheckAt) {
-        group.health = await localRead(this.repository.refreshHealth(group.workspaceId, group.environment, group.profileId));
+        group.health = await this.localRead(() => this.repository.refreshHealth(group.workspaceId, group.environment, group.profileId));
         group.nextHealthCheckAt = Date.now() + HEALTH_CHECK_MS;
       }
       if (this.groups.get(key) !== group || this.stopped) return;
       if (snapshot.projectionSequence > group.sequence) {
         // Full provenance/relation count is reloaded only on a real revision.
-        const changed = await localRead(this.repository.snapshot(group.workspaceId,group.environment,group.profileId));
+        const changed = await this.localRead(() => this.repository.snapshot(group.workspaceId,group.environment,group.profileId));
+        if (this.groups.get(key) !== group || this.stopped) return;
         if (!changed || changed.projectionEpoch !== group.epoch) { this.terminate(group,"N31_PROJECTION_EPOCH_CHANGED"); return; }
         snapshot = changed;
         this.counters.journalReads += 1;
         // A commit after the metadata read is handled next tick, not a false gap.
-        const entries = (await localRead(this.repository.journalAfter(
+        const entries = (await this.localRead(() => this.repository.journalAfter(
           group.workspaceId, group.environment, group.profileId, group.epoch, group.sequence, REPLAY_LIMIT,
         ))).filter(entry => entry.projectionSequence <= snapshot.projectionSequence);
         if (this.groups.get(key) !== group || this.stopped) return;
@@ -400,7 +475,7 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
     group.subscribers.clear();
     const key = scopeKey(group.workspaceId, group.environment, group.profileId);
     if (this.groups.get(key) === group) this.groups.delete(key);
-    if (!this.groups.size && this.timer) { clearInterval(this.timer); this.timer = null; }
+    this.stopIdleTimer();
   }
 
   private broadcast(group: ScopeGroup, event: LocalRealtimeEnvelope): void {
@@ -427,7 +502,7 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
     // browser subscription.
     if (group.subscribers.size === 0) {
       this.groups.delete(scopeKey(group.workspaceId, group.environment, group.profileId));
-      if (this.groups.size === 0 && this.timer) {
+      if (this.groups.size === 0 && !this.nativeManager?.hasRealtimeClients() && this.timer) {
         clearInterval(this.timer);
         this.timer = null;
       }
@@ -443,9 +518,22 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
       throw new LocalRealtimeError("N31_LOCAL_PROJECTION_DISABLED", 503);
     }
     this.counters.bootstrapReads += 1;
-    const snapshot = await localRead(this.repository.snapshot(workspaceId, environment, profileId));
+    const snapshot = await this.localRead(() => this.repository.snapshot(workspaceId, environment, profileId));
     if (!snapshot) throw new LocalRealtimeError("N31_PROJECTION_NOT_READY", 503);
     return snapshot;
+  }
+
+  /** A timeout ends the caller, not underlying repository I/O. Retain its lifetime until real settlement. */
+  private localRead<T>(read: () => Promise<T>): Promise<T> {
+    if (this.stopped) return Promise.reject(new LocalRealtimeError("N31_SERVICE_STOPPED", 503));
+    if (this.actualReads++ === 0) this.actualReadsIdle = new Promise(resolve => { this.resolveActualReadsIdle = resolve; });
+    const finish = () => {
+      if (--this.actualReads === 0) { this.resolveActualReadsIdle?.(); this.resolveActualReadsIdle = undefined; }
+    };
+    let actual: Promise<T>;
+    try { actual = read(); } catch (error) { finish(); return Promise.reject(error); }
+    void actual.then(finish, finish);
+    return localRead(actual);
   }
 }
 

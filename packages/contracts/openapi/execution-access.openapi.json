@@ -3862,7 +3862,2264 @@
             ]
           }
         },
-        "description": "Current own application permission facts only; target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Not a permit or TS activation.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ALPHA",
+                        "ALPHA_VERSION",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "alpha.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "alpha.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "portfolio.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "portfolio.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "portfolio.read_restricted"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "portfolio.read_restricted"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "portfolio.discover_linked"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "portfolio.discover_linked"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ACCOUNT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "account.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "account.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "BINDING"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "binding.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "binding.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ROOT",
+                        "PORTFOLIO",
+                        "DEPLOYMENT",
+                        "ACCOUNT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "audit.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "audit.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.r1.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.r1.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.r2.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.r2.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.canary.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.canary.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.live.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.live.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.r1.decide"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.r1.decide"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.r2.decide"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.r2.decide"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.canary.decide"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.canary.decide"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.live.decide"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "governance.live.decide"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ROOT",
+                        "PORTFOLIO",
+                        "DEPLOYMENT",
+                        "ACCOUNT",
+                        "ALPHA",
+                        "ALPHA_VERSION",
+                        "BINDING"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "maintenance.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "maintenance.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ROOT",
+                        "PORTFOLIO",
+                        "DEPLOYMENT",
+                        "ACCOUNT",
+                        "ALPHA",
+                        "ALPHA_VERSION",
+                        "BINDING"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "development.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "development.read"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ROOT",
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.fund"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.fund"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ROOT",
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.initial_grant"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.initial_grant"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ROOT",
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.top_up"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.top_up"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ROOT",
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.immediate_decrease"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.immediate_decrease"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ROOT",
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.recall_partial"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.recall_partial"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ROOT",
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.recall_full"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.recall_full"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ROOT",
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.adjust_target_budget"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.adjust_target_budget"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "ROOT",
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.set_root_limit"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.set_root_limit"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.apply_pending"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.apply_pending"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO",
+                        "DEPLOYMENT"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.cancel_remaining"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "capital.cancel_remaining"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "PORTFOLIO"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "required": [
+                "resource"
+              ]
+            },
+            "then": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "deployment.register"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "reason_class": {
+                          "not": {
+                            "const": "ACTION_TARGET_UNSUPPORTED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "actions": {
+                  "items": {
+                    "if": {
+                      "properties": {
+                        "action": {
+                          "const": "deployment.register"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "permission": {
+                          "const": "UNAVAILABLE"
+                        },
+                        "reason_class": {
+                          "enum": [
+                            "ACTION_TARGET_UNSUPPORTED",
+                            "POLICY_PENDING"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "description": "Current own application permission facts only; action/target-kind compatibility is checked, but target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Unsupported targets are UNAVAILABLE with ACTION_TARGET_UNSUPPORTED, or POLICY_PENDING when the current producer cannot establish policy. Not a permit or TS activation.",
         "examples": [
           {
             "schema_version": "portal.self-eligibility.v1",

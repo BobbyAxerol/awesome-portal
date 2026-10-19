@@ -614,6 +614,67 @@ describe("ELP2-09 bounded ownership — slow clients, reconnects and uncooperati
     expect(h.hub.diagnostics().source_flights).toBe(0);expect(h.authority.writes).toBe(0);
     expect(JSON.stringify(h.frames)).not.toContain("TEST_ONLY_LATE_PRIVATE_SOURCE_FAILURE");
   });
+  it("drains pending admission before source teardown and rejects a late subscription", async () => {
+    const h=harness(),identity=deferred<string>();
+    h.guard.currentIdentity=()=>identity.promise;
+    const admission=h.subscribe();
+    // Attach the rejection observer before stop releases the held operation.
+    const refused=expect(admission).rejects.toMatchObject({code:"STOPPED"});
+    let drained=false;
+    const drain=h.hub.drain().then(()=>{drained=true;});
+    try{
+      await flush();expect(drained).toBe(false);
+      expect(h.hub.diagnostics().pending_subscriptions).toBe(1);
+      expect(h.read).not.toHaveBeenCalled();
+    }finally{identity.resolve(binding().principal_scope_digest);await refused;await drain;}
+    expect(h.hub.diagnostics().pending_subscriptions).toBe(0);
+    await expect(h.subscribe()).rejects.toMatchObject({code:"STOPPED"});
+    await expect(h.hub.drain()).resolves.toBeUndefined();
+    expect(h.write).not.toHaveBeenCalled();
+  });
+  it("does not finish drain while the in-flight current-authority check owns resources", async () => {
+    const h=harness();await h.subscribe();
+    const identity=deferred<string>();h.guard.currentIdentity=()=>identity.promise;
+    const poll=h.hub.poll();let drained=false;
+    const drain=h.hub.drain().then(()=>{drained=true;});
+    try{
+      await flush();expect(drained).toBe(false);
+      expect(h.read).not.toHaveBeenCalled();
+    }finally{identity.resolve(binding().principal_scope_digest);await poll;await drain;}
+    expect(drained).toBe(true);expect(h.authority.writes).toBe(0);
+    expect(h.frames).toHaveLength(1);terminal(h.frames[0],"STOPPED","unavailable");
+  });
+  it("waits for every peer even if another poller rejects inside its error adapter", async () => {
+    const h=harness(),held=deferred<string>();
+    const first:ReplayDeliveryGuard={currentIdentity:async()=>binding().principal_scope_digest,write:h.guard.write};
+    const peer:ReplayDeliveryGuard={currentIdentity:async()=>binding().principal_scope_digest,write:h.guard.write};
+    await h.subscribe({guard:first});await h.subscribe({guard:peer});
+    first.currentIdentity=async()=>{throw{status:Symbol("TEST_ONLY-malformed-status")};};
+    peer.currentIdentity=()=>held.promise;
+    let polled=false,drained=false;
+    const result=h.hub.poll().then(()=>{polled=true;return undefined;},error=>{polled=true;return error;});
+    await flush();
+    const drain=h.hub.drain().then(()=>{drained=true;});
+    try{
+      await flush();expect(polled).toBe(false);expect(drained).toBe(false);
+      expect(h.read).not.toHaveBeenCalled();
+    }finally{held.resolve(binding().principal_scope_digest);await result;await drain;}
+    expect(polled).toBe(true);expect(drained).toBe(true);
+    expect(h.authority.writes).toBe(0);
+  });
+  it("does not finish drain when abort settled poll but the source ignored cancellation", async () => {
+    const h=harness(),source=deferred<EdgeScopedNoticeBatch>();
+    h.read.mockReturnValueOnce(source.promise);await h.subscribe();
+    const poll=h.hub.poll();await flush();let drained=false;
+    const drain=h.hub.drain().then(()=>{drained=true;});
+    try{
+      await poll;await flush();expect(drained).toBe(false);
+      expect(h.hub.diagnostics().source_flights).toBe(1);
+    }finally{source.resolve(batch());await drain;}
+    expect(h.hub.diagnostics().source_flights).toBe(0);
+    expect(h.authority.writes).toBe(0);
+    await expect(h.hub.drain()).resolves.toBeUndefined();
+  });
   it("requires stop before the source lifecycle join, then settles an empty source set", async () => {
     const h=harness();
     await expect(h.hub.settleSourceReads()).rejects.toThrow("REPLAY_SOURCE_SETTLE_REQUIRES_STOP");

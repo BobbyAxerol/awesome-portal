@@ -39,6 +39,7 @@ TRACKED = (
     "generated/execution-workflows.d.ts",
     "fixtures/execution-workflows.synthetic.valid.json",
     "tooling/generate-execution-trusted-commands.mjs",
+    "tooling/execution-trusted-command-fixtures.mjs",
     "tooling/generate-execution-instance-registration.mjs",
     "openapi/execution-instance-registration.openapi.json",
     "generated/execution-instance-registration.d.ts",

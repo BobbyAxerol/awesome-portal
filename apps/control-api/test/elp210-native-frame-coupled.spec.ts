@@ -13,7 +13,9 @@ import { readFile } from "node:fs/promises";
 import { createServer, request, type ClientRequest, type ServerResponse } from "node:http";
 import { createServer as createHttpsServer, type Server as HttpsServer } from "node:https";
 import { Socket } from "node:net";
+import { Agent, fetch as fixtureFetch } from "undici";
 import type { Duplex } from "node:stream";
+import type { FastifyReply } from "fastify";
 import { join } from "node:path";
 import { generateKeyPair, jwtVerify, type KeyLike } from "jose";
 import { Pool, type PoolClient } from "pg";
@@ -37,7 +39,14 @@ import { CurrentHumanCandidate, type CurrentHumanNativeHTTPConfig } from "../src
 import { NativeManagerReadConsumer } from "../src/execution-v2/native-manager-consumer";
 import { composeNativeCore, type NativeCoreSelection } from "../src/execution-v2/native-core-composition";
 import { MaximumDataOperationService } from "../src/execution/maximum-data-operation.service";
-import { SelectedNativeBusinessReadSource } from "../src/execution-v2/native-business-read-selected-source";
+import { MAXIMUM_DATA_DEPLOYMENT_OPERATION } from "../src/execution/maximum-data-operation.registry";
+import { managerRelationOperationByRoute } from "../src/execution/eds11r-manager-relation.registry";
+import { ExecutionCurrentSourceProxy } from "../src/execution/current-source.proxy";
+import { WorkspacesRepository } from "../src/repos/workspaces";
+import { createControlApiApp } from "../src/app";
+import { ExecutionProfileProjectionRepository,type ProfileProjectionDocument } from "../src/execution/profile-projection.repository";
+import { ExecutionProfileProjectionWorker } from "../src/execution/profile-projection.worker";
+import { SelectedNativeBusinessReadSource,selectedNativeBusinessReadSelection } from "../src/execution-v2/native-business-read-selected-source";
 import { prepareNativeBusinessReadRequest, nativeBusinessReadUtcMicroseconds } from "../src/execution-v2/native-business-read-codec";
 import { SessionsRepository } from "../src/repos/sessions";
 import { commonName, testCertificate } from "./fixtures/elp210-test-certificates";
@@ -162,7 +171,9 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
         expect(req.method).toBe("POST");expect(["issue","enter","status","unknown","cancel-unentered","resolve"]).toContain(action);
         // Real selected-source calls must never run with a Core client held.
         expect(pool.idleCount).toBe(pool.totalCount);
-        expect(input.manager_intent).toMatchObject({schema_version:"pma.manager-read-intent.v2",action:"scoped_notice"});
+        expect(input.manager_intent).toMatchObject(input.manager_intent.schema_version==="pma.manager-read-intent.v2"
+          ?{schema_version:"pma.manager-read-intent.v2",action:"scoped_notice"}
+          :{schema_version:"pma.manager-read-intent.v1",action:"relation_page"});
         calls.push({action,lease_id:leaseId});
         const common={schema_version:"pma.native-business-read.result.v1",binding:input.binding,component:"NATIVE_BUSINESS_READ_ONLY"};
         if(action==="issue"||action==="enter"){
@@ -203,7 +214,9 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
             attempt_id:input.binding.attempt_id,workload_id:input.binding.workload_id,binding_digest:encoded.binding_digest,
             source_digest:raw("f"),operation:"READ"});
           expect(["SERVED","ABORTED"]).toContain(jwt.payload.phase);
-          const kind=jwt.payload.phase==="SERVED"?"FINAL_SSE_FRAME_WRITE_COMPLETED":"FINAL_SSE_FRAME_ABORT_CONFIRMED";
+          const isFrame=input.manager_intent.schema_version==="pma.manager-read-intent.v2";
+          const kind=isFrame?(jwt.payload.phase==="SERVED"?"FINAL_SSE_FRAME_WRITE_COMPLETED":"FINAL_SSE_FRAME_ABORT_CONFIRMED"):
+            (jwt.payload.phase==="SERVED"?"FINAL_HTTP_SEND_COMPLETED":"FINAL_HTTP_ABORT_CONFIRMED");
           expect(jwt.payload.evidence_kind).toBe(kind);terminalKinds.push(kind);
           const receipt=String(jwt.payload.receipt_id)+":"+String(jwt.payload.receipt_digest),previous=receipts.get(leaseId);
           if(previous)expect(receipt).toBe(previous);
@@ -612,7 +625,8 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
     {environment:"paper",profileId:domain.profile_id},config.selected_source);
   const managerSelection=(selectedConfig=config):NativeCoreSelection=>({selector:{
     portal_user_id:actor.user_id,human_issuer:selectedInput.pins.binding.human_issuer,
-    subject:actor.user_id,workspace_id:workspace,environment:"paper",domain:{...domain}},config:selectedConfig});
+    subject:actor.user_id,workspace_id:workspace,environment:"paper",
+    domain:{...selectedNativeBusinessReadSelection(selectedConfig.selected_source).domain}},config:selectedConfig});
   function managerConsumer(selections=[managerSelection()],selected=candidate){
     // Only the composition LOOKUP is a test spy. Scope minting, selected-source
     // construction, Candidate and pool are genuine. No physical delivery or
@@ -621,17 +635,225 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
     return {lookup,consumer:new NativeManagerReadConsumer(pool,app.app.get(MaximumDataOperationService),
       {selectedCandidate:lookup},selections)};
   }
-  async function currentComposition(){
+  async function currentComposition(selectedConfig=config){
     const actual=(await pool.query<{database_name:string;database_system_identifier:string;role_name:string}>(
       "SELECT current_database() AS database_name, system_identifier::text AS database_system_identifier, current_user AS role_name FROM pg_control_system()")).rows[0];
     const target={...actual,protected_owner_user_id:owner,workspace_id:workspace,
       principal_workspace_pins:[{user_id:actor.user_id,workspace_id:workspace}]};
     return composeNativeCore(pool,new TestOnlyReadTrust(publication),{
-      expected_workload_id:selectedInput.pins.binding.workload_id,selections:[managerSelection()],retained_recovery:[],
+      expected_workload_id:selectedInput.pins.binding.workload_id,selections:[managerSelection(selectedConfig)],retained_recovery:[],
       owner_intakes:[{artifact_path:"/TEST_ONLY-never-opened-owner-intake",approved_sha256:raw("a"),target,
         intake_not_before_ms:Date.now()-1000,intake_not_after_ms:Date.now()+60000}],
       mutation_limits:{maximum_intents:16,maximum_recoveries_per_request:16}});
   }
+  /** Existing production route and actual local committed projection. PM
+   * remains the TEST_ONLY mTLS protocol fixture described at the file header. */
+  async function mountedObservation(withStream=true){
+    const repo=new AccessRepository(pool),original=await repo.policy(workspace);
+    if(!original)throw Error("TEST_ONLY_CURRENT_POLICY_REQUIRED");
+    const actualDomain={...domain,profile_id:"PAPER_BINANCE_USDM",
+      catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256.slice(7)};
+    const policy={...original,revision:original.revision+"-observation",
+      manager_read_domains:[{...original.manager_read_domains![0]!,domain:actualDomain}]};
+    const grant=(await repo.storedGrants(workspace)).find(row=>row.kind==="MANAGER_DOMAIN");
+    if(!grant||grant.kind!=="MANAGER_DOMAIN")throw Error("TEST_ONLY_DOMAIN_GRANT_REQUIRED");
+    await repo.putPolicy(policy);await repo.saveManagerDomainGrant({...grant.fact,
+      revision:grant.fact.revision+"-observation",policy_revision:policy.revision,domain:actualDomain});
+    await managerOnly();if(!withStream)await revokeDomain("stream.subscribe");
+    const selectedSource=new SelectedNativeBusinessReadSource({...selectedInput,pins:{...selectedInput.pins,domain:actualDomain}});
+    const composition=await currentComposition({...config,selected_source:selectedSource});
+    const cookie="TEST_ONLY-native-observation-cookie";
+    await pool.query("UPDATE auth_sessions SET session_token_hash=$2 WHERE session_id=$1",
+      [actor.session_id,createHash("sha256").update(cookie).digest("hex")]);
+    await app.app.get(WorkspacesRepository).ensurePersonal(actor.user_id,"TEST_ONLY-native-observation");
+    // A local fixture supplies committed rows. Stop/join only its actual local
+    // worker before enabling read availability; no upstream source is contacted.
+    const cfg:typeof app.config={...app.config,FEATURE_EXECUTION_LOCAL_PROJECTION:"true" as const,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER:"false" as const,FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE:"false" as const,
+      FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX:"false" as const,FEATURE_EXECUTION_CURRENT_SOURCE_LIVE:"false" as const,
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID:workspace,EXECUTION_EDGE_PAPER_PROFILE_ID:actualDomain.profile_id};
+    const mounted=await createControlApiApp(cfg,pool,undefined,{...composition.dependencies,nativeManagerRead:composition,
+      nativeManagerRealtimeLimits:{maximumClients:2,maximumEntriesPerClient:4,maximumFrameBytes:16384,
+        maximumClientBytes:65536,maximumTotalBytes:131072,maximumNoticesPerRead:2,readTimeoutMs:2000}});
+    await mounted.get(ExecutionProfileProjectionWorker).onApplicationShutdown();
+    cfg.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER="true";
+    const consumer=mounted.get(NativeManagerReadConsumer),repository=mounted.get(ExecutionProfileProjectionRepository);
+    const served=vi.spyOn(consumer,"serveProfileSnapshot"),poll=vi.spyOn(consumer,"pollRealtime");
+    const aborters=new Set<AbortController>();
+    const dispatcher=new Agent({connections:2,pipelining:1});
+    const commit=async(step:number,sourceEpoch="TEST_ONLY-observation-source")=>{
+      const document:ProfileProjectionDocument={schema_version:"portal.execution.profile-projection.v1",workspace_id:workspace,
+        environment:"paper",profile_id:actualDomain.profile_id,source_contract_revision:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceContractRevision,
+        source_catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256,relations:{
+          "TEST_ONLY-source:TEST_ONLY-observation":{source_id:"TEST_ONLY-source",relation:"TEST_ONLY-observation",
+            availability:"AVAILABLE",reason_code:null,as_of:null,freshness:"UNKNOWN",completeness:"UNKNOWN",
+            source_catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256,
+            items:[{lineage:{workspace_id:workspace,profile_id:actualDomain.profile_id,
+              source_contract_revision:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceContractRevision,
+              source_catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256},fields:{TEST_ONLY_revision:step}}]}}};
+      return repository.commit(document,{sourceEpoch,sourceCursor:"TEST_ONLY-private-cursor-"+step,sourceAsOf:null,
+        receivedAt:new Date(),completeness:"UNKNOWN",retentionSeconds:600,maximumJournalEntries:16});
+    };
+    try{
+      await commit(1);await mounted.listen(0,"127.0.0.1");
+      const address=mounted.getHttpServer().address();if(!address||typeof address==="string")throw Error("TEST_ONLY_LISTENER_REQUIRED");
+      const origin=`http://127.0.0.1:${address.port}/api/v1/execution/profiles/paper`,headers={cookie:`__Host-portal_session=${cookie}`};
+      const snapshot=async()=>{
+        const response=await bounded(fixtureFetch(origin+`/realtime-snapshot?workspace_id=${workspace}`,{headers,dispatcher}));
+        const body=await response.json();
+        // Join actual finite delivery/settlement, not only flushed HTTP bytes.
+        const last=served.mock.results.at(-1);if(last?.type==="return")await last.value;
+        return {response,body,token:response.headers.get("x-portal-realtime-cursor")!};
+      };
+      const stream=(token:string,lastEventId?:string)=>{
+        const abort=new AbortController();aborters.add(abort);
+        const response=fixtureFetch(origin+`/stream?workspace_id=${workspace}&cursor=${encodeURIComponent(token)}`,{
+          headers:{...headers,...(lastEventId?{"last-event-id":lastEventId}:{})},signal:abort.signal,dispatcher});
+        return {response,abort};
+      };
+      const frame=async(response:Awaited<ReturnType<typeof fixtureFetch>>)=>{
+        const reader=response.body!.getReader();let text="";
+        while(!text.includes("\n\n")){const next=await bounded(reader.read());if(next.done)throw Error("TEST_ONLY_FRAME_MISSING");
+          text+=Buffer.from(next.value).toString("utf8");}
+        const flight=poll.mock.results.at(-1);if(flight?.type==="return")await flight.value;
+        return {text,reader,eventId:text.match(/^id: (.+)$/m)?.[1]};
+      };
+      return {mounted,consumer,repository,commit,snapshot,stream,frame,poll,
+        close:async()=>{for(const abort of aborters)abort.abort();await consumer.stopRealtime();
+          await dispatcher.destroy();await mounted.close();}};
+    }catch(error){for(const abort of aborters)abort.abort();await consumer.stopRealtime();
+      await dispatcher.destroy();await mounted.close();throw error;}
+  }
+  it("mounted observation READ baseline is not STREAM permission, actual session/PG/HTTP",async()=>{
+    const f=await mountedObservation(false);try{
+      const read=await f.snapshot();expect(read.response.status).toBe(200);expect(read.token).toMatch(/^sr1\./);
+      expect(read.body).toMatchObject({schema_version:"portal.execution.profile-realtime.v1",projection_sequence:1});
+      const issues=actionCount("issue"),attempt=f.stream(read.token),response=await bounded(attempt.response);
+      expect([403,404,503]).toContain(response.status);await response.arrayBuffer();
+      expect(actionCount("issue")).toBe(issues);expect(f.consumer.hasRealtimeClients()).toBe(false);
+      expect((await f.snapshot()).response.status).toBe(200);
+    }finally{await f.close();}
+  });
+  it("actual Manager scope and PG metadata preparation stay joined until shutdown settles",async()=>{
+    const f=await mountedObservation(),entered=deferred<void>(),release=deferred<void>();
+    try{
+      const baseline=await f.snapshot(),issues=actionCount("issue"),actual=f.repository.snapshotMetadata.bind(f.repository);
+      vi.spyOn(f.repository,"snapshotMetadata").mockImplementation(async(...args)=>{
+        const result=await actual(...args);entered.resolve();await release.promise;return result;
+      });
+      await exchange(async({response,body})=>{
+        const opening=f.consumer.serveProfileStream(principal,"paper","PAPER_BINANCE_USDM",baseline.token,
+          {raw:response,hijack:()=>undefined} as unknown as FastifyReply);
+        const refused=expect(opening).rejects.toMatchObject({code:"NATIVE_MANAGER_READ_UNAVAILABLE"});
+        await bounded(entered.promise);let ended=false;const stop=f.consumer.stopRealtime().then(()=>{ended=true;});
+        try{
+          await new Promise<void>(done=>setImmediate(done));expect(ended).toBe(false);
+          expect(response.headersSent).toBe(false);expect(actionCount("issue")).toBe(issues);
+        }finally{release.resolve();await refused;await bounded(stop);}
+        expect(body()).toHaveLength(0);expect(f.consumer.hasRealtimeClients()).toBe(false);expect(await pending()).toBe(0);
+      });
+    }finally{release.resolve();await f.close();}
+  });
+  it("mounted observation resumes original baseline after commit and Last-Event-ID, actual PG/socket",async()=>{
+    const f=await mountedObservation();try{
+      const baseline=await f.snapshot();expect(baseline.response.status).toBe(200);
+      const opened=f.stream(baseline.token);await f.commit(2);const response=await bounded(opened.response);
+      expect(response.status).toBe(200);const first=await f.frame(response);expect(first.eventId).toMatch(/^sr1\./);
+      expect(first.text).not.toContain("TEST_ONLY-private-cursor");expect(first.text).not.toContain("TEST_ONLY_revision");
+      opened.abort.abort();await first.reader.cancel().catch(()=>undefined);
+      await until(()=>!f.consumer.hasRealtimeClients());
+      await f.commit(3);const resumed=f.stream(baseline.token,first.eventId),next=await bounded(resumed.response);
+      expect(next.status).toBe(200);const second=await f.frame(next);expect(second.eventId).not.toBe(first.eventId);
+      expect(second.text).not.toContain("TEST_ONLY-private-cursor");resumed.abort.abort();await second.reader.cancel().catch(()=>undefined);
+      expect(await pending()).toBe(0);
+    }finally{await f.close();}
+  });
+  it("mounted observation STREAM revoke stops further native issue while finite READ survives",async()=>{
+    const f=await mountedObservation();try{
+      const baseline=await f.snapshot(),opened=f.stream(baseline.token);await f.commit(2);
+      const first=await f.frame(await bounded(opened.response)),issues=actionCount("issue");
+      await revokeDomain("stream.subscribe");await f.commit(3);
+      await until(()=>!f.consumer.hasRealtimeClients());
+      const flight=f.poll.mock.results.at(-1);if(flight?.type==="return")await flight.value;
+      expect(actionCount("issue")).toBe(issues);expect(f.consumer.hasRealtimeClients()).toBe(false);
+      opened.abort.abort();await first.reader.cancel().catch(()=>undefined);
+      expect((await f.snapshot()).response.status).toBe(200);expect(await pending()).toBe(0);
+    }finally{await f.close();}
+  });
+  it.each(["cursor","generation"] as const)("mounted observation rejects changed %s before native issue",async mode=>{
+    const f=await mountedObservation();try{
+      const baseline=await f.snapshot(),issues=actionCount("issue");
+      if(mode==="generation")await f.commit(2,"TEST_ONLY-new-source-epoch");
+      const opened=f.stream(mode==="cursor"?baseline.token.slice(0,-3)+"bad":baseline.token),response=await bounded(opened.response);
+      expect(response.status).toBe(409);await response.arrayBuffer();expect(actionCount("issue")).toBe(issues);
+      expect(f.consumer.hasRealtimeClients()).toBe(false);
+    }finally{await f.close();}
+  });
+  it.each(["deployments","relation"] as const)("mounted %s uses actual SessionGuard/HTTP/native egress and current revoke, TEST_ONLY source",async route=>{
+    // Add the route's canonical profile only in this disposable fixture.
+    // The original generic/entity/Manager/SSE cases keep their original scope.
+    const repo=new AccessRepository(pool),original=await repo.policy(workspace);
+    if(!original)throw Error("TEST_ONLY_CURRENT_POLICY_REQUIRED");
+    const actualDomain={...domain,profile_id:"PAPER_BINANCE_USDM",
+      catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256.slice(7)};
+    const policy={...original,revision:original.revision+"-http",
+      manager_read_domains:[{...original.manager_read_domains![0]!,domain:actualDomain}]};
+    const grant=(await repo.storedGrants(workspace)).find(row=>row.kind==="MANAGER_DOMAIN");
+    if(!grant||grant.kind!=="MANAGER_DOMAIN")throw Error("TEST_ONLY_DOMAIN_GRANT_REQUIRED");
+    await repo.putPolicy(policy);
+    await repo.saveManagerDomainGrant({...grant.fact,revision:grant.fact.revision+"-http",
+      policy_revision:policy.revision,domain:actualDomain});
+    const selectedSource=new SelectedNativeBusinessReadSource({...selectedInput,
+      pins:{...selectedInput.pins,domain:actualDomain}});
+    const composition=await currentComposition({...config,selected_source:selectedSource});
+    const cookie="TEST_ONLY-native-mounted-cookie";
+    await pool.query("UPDATE auth_sessions SET session_token_hash=$2 WHERE session_id=$1",
+      [actor.session_id,createHash("sha256").update(cookie).digest("hex")]);
+    await app.app.get(WorkspacesRepository).ensurePersonal(actor.user_id,"TEST_ONLY-native-mounted");
+    const mounted=await createControlApiApp(app.config,pool,undefined,
+      {...composition.dependencies,nativeManagerRead:composition});
+    try{
+      const operations=mounted.get(MaximumDataOperationService),consumer=mounted.get(NativeManagerReadConsumer);
+      expect(consumer.uses(pool,operations)).toBe(true);
+      const nativeServe=vi.spyOn(consumer,"serve");
+      const legacyDeployment=vi.spyOn(operations,"deploymentPage"),legacyRelation=vi.spyOn(operations,"relationPage");
+      const relation=route==="deployments"?MAXIMUM_DATA_DEPLOYMENT_OPERATION.relation:
+        managerRelationOperationByRoute("account-balances")!.relation;
+      const response={schema_version:"portal.execution.current-source-bff.v2",authority:"PORTAL_CONTROL_API",
+        requested_environment:"paper",source_environment:"paper",profile_id:actualDomain.profile_id,
+        source:{contract_version:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceContractRevision,authority:"EXECUTION_CELL",
+          profile_id:actualDomain.profile_id,catalogue_sha256:MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256,
+          availability:"AVAILABLE",freshness:"FRESH",completeness:"COMPLETE",as_of:new Date().toISOString(),
+          data:{relation:{schema:"public",relation},items:[],next_cursor:null}}};
+      const source=mounted.get(ExecutionCurrentSourceProxy);
+      const sourceDeployment=vi.spyOn(source,"relationForNamedOperation").mockResolvedValue(response),
+        sourceRelation=vi.spyOn(source,"relationForCataloguedOperation").mockResolvedValue(response);
+      await mounted.listen(0,"127.0.0.1");
+      const address=mounted.getHttpServer().address();
+      if(!address||typeof address==="string")throw Error("TEST_ONLY_MOUNT_LISTENER_REQUIRED");
+      const path=route==="deployments"?"deployments":"current/account-balances";
+      const url=`http://127.0.0.1:${address.port}/api/v1/execution/manager/${path}?workspace_id=${workspace}&environment=paper`;
+      const unauthenticated=await fetch(url);expect(unauthenticated.status).toBe(401);await unauthenticated.arrayBuffer();
+      expect(calls).toEqual([]);expect(sourceDeployment).not.toHaveBeenCalled();expect(sourceRelation).not.toHaveBeenCalled();
+      const served=await fetch(url,{headers:{cookie:`__Host-portal_session=${cookie}`}});
+      expect(served.status).toBe(200);expect(served.headers.get("cache-control")).toContain("no-store");
+      const dto=await served.json();expect(JSON.stringify(dto)).not.toContain("TEST_ONLY-native-frame-pm");
+      // Reading HTTP bytes is earlier than the real native terminal ACK.
+      // Join the actual call-through promise, without borrowing this Core
+      // pool concurrently with the fixture's independent native peer checks.
+      expect(nativeServe).toHaveBeenCalledTimes(1);
+      await expect(nativeServe.mock.results[0]!.value).resolves.toBe(true);
+      expect(await rows()).toHaveLength(1);expect((await rows())[0]).toMatchObject({phase:"SERVED",source_reconciled:true,lifecycle_kind:"MANAGER_HTTP"});
+      expect(terminalKinds).toEqual(["FINAL_HTTP_SEND_COMPLETED"]);expect(await pending()).toBe(0);
+      expect(legacyDeployment).not.toHaveBeenCalled();expect(legacyRelation).not.toHaveBeenCalled();
+      expect(sourceDeployment.mock.calls.length+sourceRelation.mock.calls.length).toBe(1);
+      await revokeDomain("business.read_all");
+      const denied=await fetch(url,{headers:{cookie:`__Host-portal_session=${cookie}`}});
+      expect([403,404]).toContain(denied.status);await denied.arrayBuffer();
+      expect(sourceDeployment.mock.calls.length+sourceRelation.mock.calls.length).toBe(1);
+      expect(actionCount("issue")).toBe(1);expect(legacyDeployment).not.toHaveBeenCalled();expect(legacyRelation).not.toHaveBeenCalled();
+    }finally{await mounted.close();}
+  });
   function selfLogout(composition:Awaited<ReturnType<typeof currentComposition>>,applied:()=>void){
     // TEST_ONLY current self-session eligibility, not operator/financial power.
     // Both checks and UPDATE use the coordinator's actual held PG transaction.
@@ -740,6 +962,25 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
     const scope=await managerCurrent(),binding=await managerBinding();
     return scopes.prepareManagerNativeNotice(scope,codec,managerInput(stream,binding));
   }
+  it("native Hub drain joins accepted genuine Manager authorization before registration",async()=>{
+    await managerOnly();const scope=await managerCurrent(),binding=await managerBinding(),release=deferred<typeof scope>();
+    const read=vi.fn(async()=>({notices:[],next_cursor:"TEST_ONLY.manager0",caught_up:true}));
+    const hub=new ScopedReplayHub({read},codec,{maximumClients:2,maximumEntriesPerClient:4,maximumFrameBytes:16384,
+      maximumClientBytes:65536,maximumTotalBytes:131072,maximumNoticesPerRead:2,readTimeoutMs:2000},{candidate,scopes});
+    try{await exchange(async({response,body})=>{
+      const opening=hub.subscribeNative({kind:"MANAGER",binding,response,current:()=>release.promise,
+        baselineCursor:"TEST_ONLY.manager0"});
+      const refused=expect(opening).rejects.toMatchObject({code:"STOPPED"});
+      let ended=false;const stop=hub.drain().then(()=>{ended=true;});
+      try{
+        await new Promise<void>(done=>setImmediate(done));expect(ended).toBe(false);
+        expect(hub.diagnostics().pending_subscriptions).toBe(1);expect(read).not.toHaveBeenCalled();
+      }finally{release.resolve(scope);await refused;await bounded(stop);}
+      expect(response.headersSent).toBe(false);expect(body()).toHaveLength(0);
+      expect(hub.diagnostics()).toMatchObject({clients:0,pending_subscriptions:0,source_flights:0});
+      expect(calls).toEqual([]);expect(await rows()).toEqual([]);
+    });}finally{release.resolve(scope);await hub.drain();}
+  });
   async function revokeDomain(action:"business.read_all"|"stream.subscribe"){
     const repo=new AccessRepository(pool),row=(await repo.storedGrants(workspace)).find(
       row=>row.kind==="MANAGER_DOMAIN"&&row.fact.action===action);

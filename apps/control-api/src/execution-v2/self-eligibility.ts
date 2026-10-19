@@ -183,7 +183,18 @@ export const eligibilityResult = z.object({ schema_version: z.literal("portal.se
   current_only: z.literal(true), advisory_only: z.literal(true),
   actions: z.array(rowSchema).min(1).max(16)
     .refine(rows => new Set(rows.map(row => row.action)).size === rows.length, "DUPLICATE_ACTION"),
-}).strict();
+}).strict().superRefine((value, ctx) => {
+  for (const [index, row] of value.actions.entries()) {
+    const supported = RULES[row.action].kinds.includes(value.resource.kind);
+    // projectRow gives policy readiness precedence over target mismatch.
+    // Neither branch turns this advisory response into a family permit.
+    if (supported ? row.reason_class === "ACTION_TARGET_UNSUPPORTED" :
+      row.permission !== "UNAVAILABLE" ||
+      !["ACTION_TARGET_UNSUPPORTED", "POLICY_PENDING"].includes(row.reason_class))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["actions", index],
+        message: "ELIGIBILITY_TARGET_INCONSISTENT" });
+  }
+});
 
 function assertOwnMember(context: AccessEvaluationContext, workspace: string) {
   // No protected-owner membership exception for this NEW self projection.

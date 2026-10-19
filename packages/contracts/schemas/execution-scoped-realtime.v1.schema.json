@@ -417,6 +417,42 @@
           }
         }
       ]
+    },
+    "NativeProfileRealtimeHeaders": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "X-Portal-Realtime-State": {
+              "const": "NATIVE_SCOPED_BASELINE_V1"
+            },
+            "X-Portal-Realtime-Cursor": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^[A-Za-z0-9._~-]+$(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "X-Portal-Realtime-State",
+            "X-Portal-Realtime-Cursor"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "X-Portal-Realtime-State": {
+              "const": "NATIVE_SCOPED_STREAM_UNAVAILABLE"
+            }
+          },
+          "required": [
+            "X-Portal-Realtime-State"
+          ]
+        }
+      ],
+      "description": "Opt-in response-header projection on the existing profile snapshot route, not a new body/endpoint or STREAM grant. Header absence preserves legacy transport. Never send the legacy body cursor to native STREAM."
     }
   }
 }

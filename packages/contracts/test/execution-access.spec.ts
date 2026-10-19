@@ -448,7 +448,7 @@ describe("C3 current self projection — canonical TEST_ONLY schemas, never inst
     expect(spec.components.schemas.AccessAction.enum).toEqual([...ACCESS_ACTIONS]);
     const good = fixture("AccessEligibility");
     for (const action of ROW_ACTIONS)
-      parity("AccessEligibility", { ...good, actions: [{ ...good.actions[0], action,
+      parity("AccessEligibility", { ...good, resource: { ...good.resource, kind: RULES[action].kinds[0] }, actions: [{ ...good.actions[0], action,
         family_check: RULES[action].family, step_up_required: RULES[action].stepUp }] }, true);
     for (const action of ["*", "capital.*", "owner.recovery", "capital.return_capital", "report.export", "execution.accounts.read"])
       parity("AccessEligibility", { ...good, actions: [{ ...good.actions[0], action }] }, false);
@@ -461,11 +461,12 @@ describe("C3 current self projection — canonical TEST_ONLY schemas, never inst
     for (const action of ROW_ACTIONS) {
       const rule = RULES[action];
       const row = { ...good.actions[0], action, family_check: rule.family, step_up_required: rule.stepUp };
-      parity("AccessEligibility", { ...good, actions: [row] }, true);
+      const target = { ...good, resource: { ...good.resource, kind: rule.kinds[0] } };
+      parity("AccessEligibility", { ...target, actions: [row] }, true);
       const otherFamily = rule.family === "BUSINESS_READ_SCOPE" ? "CURRENT_AUDIT_READ" : "BUSINESS_READ_SCOPE";
-      parity("AccessEligibility", { ...good, actions: [{ ...row, family_check: otherFamily }] }, false);
+      parity("AccessEligibility", { ...target, actions: [{ ...row, family_check: otherFamily }] }, false);
       for (const step_up_required of [true, false, null]) if (step_up_required !== rule.stepUp)
-        parity("AccessEligibility", { ...good, actions: [{ ...row, step_up_required }] }, false);
+        parity("AccessEligibility", { ...target, actions: [{ ...row, step_up_required }] }, false);
     }
   });
 
@@ -489,10 +490,36 @@ describe("C3 current self projection — canonical TEST_ONLY schemas, never inst
             for (const grant_ref of [null, "acg_TEST_ONLY_OWN"]) {
               const expected = public_copy_key === reason_class && (permission === "ALLOWED" ?
                 reason_class === "FAMILY_CHECK_REQUIRED" && grant_ref !== null && authority_mode !== "NOT_ESTABLISHED" :
-                reason_class !== "FAMILY_CHECK_REQUIRED" && grant_ref === null && authority_mode === "NOT_ESTABLISHED");
+                reason_class !== "FAMILY_CHECK_REQUIRED" && reason_class !== "ACTION_TARGET_UNSUPPORTED" &&
+                grant_ref === null && authority_mode === "NOT_ESTABLISHED");
               parity("AccessEligibility", { ...good, actions: [{ ...good.actions[0], permission, reason_class,
                 public_copy_key, authority_mode, grant_ref }] }, expected);
             }
+  });
+
+  it("action/target kind matches the current producer and never claims unsupported permission", () => {
+    const good = fixture("AccessEligibility");
+    const kinds = ["ROOT", "PORTFOLIO", "ALPHA", "ALPHA_VERSION", "DEPLOYMENT", "ACCOUNT", "BINDING", "USER"] as const;
+    for (const action of ROW_ACTIONS) for (const kind of kinds) {
+      const rule = RULES[action], supported = rule.kinds.includes(kind);
+      const value = { ...good, resource: { ...good.resource, kind } };
+      const allowed = { ...good.actions[0], action, family_check: rule.family, step_up_required: rule.stepUp };
+      parity("AccessEligibility", { ...value, actions: [allowed] }, supported);
+      const absent = { ...allowed, permission: "UNAVAILABLE", grant_ref: null, authority_mode: "NOT_ESTABLISHED" };
+      for (const reason_class of ["ACTION_TARGET_UNSUPPORTED", "POLICY_PENDING", "NO_CURRENT_PERMISSION", "FIELD_POLICY_PENDING"]) {
+        const expected = supported ? reason_class !== "ACTION_TARGET_UNSUPPORTED" :
+          reason_class === "ACTION_TARGET_UNSUPPORTED" || reason_class === "POLICY_PENDING";
+        parity("AccessEligibility", { ...value, actions: [{ ...absent, reason_class, public_copy_key: reason_class }] }, expected);
+      }
+    }
+    // Conditions apply to every row, not merely the first action in a page.
+    const read = good.actions[0];
+    const unsupported = { ...read, action: "account.read", family_check: RULES["account.read"].family,
+      step_up_required: RULES["account.read"].stepUp };
+    parity("AccessEligibility", { ...good, actions: [read, unsupported] }, false);
+    parity("AccessEligibility", { ...good, actions: [read, { ...unsupported, permission: "UNAVAILABLE",
+      reason_class: "ACTION_TARGET_UNSUPPORTED", public_copy_key: "ACTION_TARGET_UNSUPPORTED",
+      grant_ref: null, authority_mode: "NOT_ESTABLISHED" }] }, true);
   });
 
   it("opaque own grant refs preserve canonical codepoints rather than caller-selector UTF8 bytes", () => {
