@@ -23295,6 +23295,554 @@ pending at that cut; no Bobby session, source activation or connected operation
 is inferred. Compatible semantics now have focused peer evidence; actual joint
 runtime proof still requires reviewed matching releases/private references.
 
+### Original08 installed Core binding and connected identity — 2026-10-19
+
+**Status BEFORE implementation: IN_PROGRESS, owner-approved original08 round2.**
+Bobby supplied the installed Core return and approved continuation of the existing
+goal with bounded parallel agents. This supersedes the earlier source-only pause,
+not the original acceptance requirements. Tool goal status remains BLOCKED at
+intake; no tool-state transition is invented. Scope follows
+[guide08](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls),
+[official SDK packet](integration/execution-native-read-v1/research-identity-intake/README.md)
+and Core's `upgrade/execution_loop/evidence/ELP2-10/CORE_INSTALLED_EDGE_HANDOFF_2026-10-19.md`
+on `/home/bobby/portal-research`, `docs/research-loop-plan`. HK received it at
+`/home/bobby/secure/portal-core-c7-return-20261019-f46439157fe2-HANDOFF.md`.
+
+**Accepted input, not connected acceptance:** Core implementationf46439157fe2,
+actual image16bf254b5e8b9fb7781cd9f08379706f5a9c06577e48f8b5d2603dacabfdc5e5,
+Compose configb3213d8c2aa6a156123b93d92841cad204f6bbbe748a31b9e98eb428ccec87b9;
+Research system7688673963308855330/ledger128/forward134 and registered custody
+installed, reverse10.70.0.1:28444 READY, no temporary session at handoff.
+Private PM-only manifest SHA256
+15d94c6fae07e0cbb251d5193eb89bf74ca9682a2adebf43e1192955031eb4b2
+at `/home/bobby/secure/portal-core-c7-return-20261019-f46439157fe2/`.
+Transferred trust is not mapping/READ/STREAM authority. Retain genuine human
+issuer `portal-control-api.native-manager-read`, not the candidate Core URN.
+Use Edge6adc398b helper SHA5f1a0f293311f752d934de72666f8b2e9d671c899eec115d08d7ccd30265dec2;
+never reapply44ee/551a or draft78b7. Independent subagent checked9file hashes,
+10file0600/dir0700, CA/SAN/PM client chain, distinct matching PM TLS/signer pairs,
+JWKS/peer signer,4receipt hashes and actual Core image/config/restart0. Those are
+read-only checks, not an independent physical DB/identity transaction.
+
+**Owned implementation:** minimum operator composition reusing official PM
+verifier/candidate/client/recovery and current Edge helper, not a new framework.
+Recovery READY before JIT genuine30s assertion; exact unchanged request bytes,
+single original attempt and owning task. Obsolete draft has incompatible40s
+freshness, stale helper pins and incomplete recovery/retirement draining; do not
+execute it by changing only its hashes. Validate affected operator isolated,
+then publish exact source/ACK pins and use one finite official transaction on
+TS system7674585245102796834 with real Core terminal ACK. Verify original roles/
+caps/physical receipt, drain handlers, retire exact fourth-role window and logout
+only the temporary Core session. UNKNOWN or ambiguous OPEN/RETIRE retains actual
+process/pool/key/custody for original-attempt recovery/physical readback; no
+timeout, lost reply or cancellation means rollback. No installed schema/role
+recreation, provider28445 change, SQL identity/grant seed, command/financial
+activation, stable/dev/main change or peer overwrite. Separate source READ and
+Core READ/STREAM policy/finite/revoke/cache/cursor/SSE follow settled identity;
+identity is not business authority. Other goal seams retain07/03/01/06 ownership.
+
+**Test/exit/rollback:** affected pure/operator and disposable PG15/TLS/SDK cases,
+then actual installed Core same-attempt COMMIT/ACK and receipt/ACL/session return.
+Prior89distinct helper tests are reused only for unchanged code; no adding
+overlapping Core200 to its1141contracts/8309API gate. Inspect user/root leases
+and physical jobs before every heavy launch. The initial HK foreign lease
+claude-idr128-ab-3afd932 was released during read-only review; its foreign
+anonymous cell subsequently disappeared, not stopped by Edge. Reserve a new
+quiet slot; isolated/model PASS never substitutes connected acceptance.
+Operational bound<=2CPU/1536MiB/initial300s is not permission to kill UNKNOWN.
+Rollback stops new admission, settles receipt/ACK, drains handler/pool, restores
+only the exact fourth role, logs out exact temporary session and cleans owned
+listener/test artifacts. No audit/schema/business-row deletion or old native
+role change; no uncoordinated old-Core rollback. Inventory active/explicit
+rollback retention and old test image3515df81; cleanup only after quiet readback
+with disk/runtime evidence. Full08NOT_MET;09connectedNOT_STARTED until actual
+dependent acceptance, not merely installed Core or this preparation.
+
+**13:17:54UTC cleanup slice COMPLETE:** reviewed the exact post-hook peer delta:
+old V1 DL stopped, two existing KN query cells restarted, P184 writer container/
+config replaced by its owner. These four differences predate this cleanup; no
+peer runtime is restored/reverted. Fresh40-runtime snapshot stayed identical
+through exact removal of unreferenced test-only image
+3515df81301bc6b40fbce4a40ecce16780d39bd50377aef1c4105a61c814d5f0
+(reported5,768,982B, not exclusive reclaimed bytes). Original hook/log/source
+provenance, tag/user/OCI identity and zero container references were rechecked.
+All cache IDs unchanged, own2min lease removed, active/explicit rollback/private/
+source/data/volume/peer resources retained. Shared free253725573120→253722693632B;
+no exclusive reclaim claim on a shared host. Bounded controller/receipt:
+`/tmp/epg10-08-installed-binding-a6IAddq8/cleanup_previous_hook.py` and
+`previous-hook-cleanup.json`. This closes the prior6adc hook cleanup deferral,
+not the connected identity/READ gate. No SGP cleanup or mutation in this slice.
+
+**13:55UTC isolated SGP overlay BEFORE further code changes:** W12's actual
+ABBA controller3622701 completed13:49:57UTC and released its lease; a new
+foreign HK lease claude-f3-knrd lasts until16:20:24UTC. HK remains read-only.
+Do not remove either owner's resources or call the new window a quiet slot.
+To finish independent owned work, the six public source/test/main-plan files
+were copied unchanged to SGP /tmp/epg10-08-operator-unit-sgp-9webn1pg, archive
+083c031192d48864153caac84b4c6d62aa7948d6d3bd9e33ddc0ad6f62eca8e6
+(648421B). No secret, DB data, dependency archive, checkout or runtime change.
+This is a disposable qualification overlay, NOT landed/published HK source;
+its exact tested diff/receipts must join the canonical plan before commit.
+SGP has no root/user measurement lease, but two foreign Core test cells
+control-api-test-{node,postgres}-1411782 remain live: source preparation only;
+no test launch until their actual terminal and fresh physical/lease guard.
+Fix the reviewed same-task cancellation/backoff, unused/listener cleanup and
+honest listener readiness; pin all17 transitive official PM files before
+imports, with package/namespace origin validation. Correct TEST_ONLY teardown
+and affected negative/recovery tests; no helper/SDK/DDL authority changes.
+Use existing Python3.10.12/cryptography3.4.8 only for explicit model/unit cases,
+in a bounded isolated transient test scope, no source DB/operational trust.
+Prior89helper cases remain attributed/reused, not new connected evidence.
+Cleanup exact owned test scope/copies after capturing bounded source/receipt
+provenance; retain no Docker image/cache because none is built or pulled.
+Core IPC13:33 remained READY/unresolved0/callbacks0; source window not opened.
+Goal is now ACTIVE (13:27 actual tool read), full08NOT_MET/09NOT_STARTED.
+
+**14:07UTC preparation and owner seam review (NOT qualification):** Remote
+operator76543083cc819500ebbbcb31fc5adf49dea40a41db63e2d49430678e30b2b91d
+has954lines; its exact14-hunk patch used fuzz0 and full-byte/AST checks only.
+Affected test overlay is still under review; no test/identity/listener launched.
+Disposable unit controller is prepared only, with private network, hidden home/
+runtime IPC, read-only source, exact writable temporary directory and finite
+1CPU/512MiB/32-task/90s TEST_ONLY limits. These limits are not production budget
+or permission to kill an operational UNKNOWN custody process. Recheck actual
+foreign Core test terminal and both leases before using it.
+
+Read-only review found one genuine Core owner repair before issuing identity:
+installed private reverse-bootstrap.cjs SHA256
+e997debdcbc0500dd91252f6ff5a79ad31f5571d3ddbd6caae077ec2fb298cea
+records ISSUED before socket delivery. Lost issue reply before PM prepare has
+no source attempt; beginDrain retires ISSUED, but finish still insists on a
+source-terminal receipt and cannot logout the exact unused session. No issue
+was called, so this is a proven code-path risk, not an actual orphan session.
+Core owner must add a separate exact-bound unused RETIRED/no-attempt/no-receipt/
+no-obligation/no-callback finish disposition for exact session logout/endDrain,
+with lost-reply/repeated-finish and concurrent-ENTER/UNKNOWN refusal tests.
+Keep ownedTerminal source-proof predicate unchanged; never call this source
+ROLLED_BACK or invent an attempt/receipt. Existing Core RETIRED/FINISHED states
+suffice; no schema/public enum change is required. Source is current-human-
+candidate.ts74aa99af7e02056dd5552185069b4ed5195a3f2f40ea8398d709f8d8102bedd3.
+Edge does not patch/restart installed Core behind its owner. This delta blocks
+only actual issue/identity activation, not finishing owned source/unit review,
+publication preparation or the independent READ-binding design. Goal ACTIVE;
+full08NOT_MET,09connectedNOT_STARTED; no new phase or repeated general approval.
+
+**Core owner packet (actual readback 2026-10-19T14:17:45.908788+00:00):** [exact unused-finish repair](evidence/execution-edge-v1_2/EPG10-08/CORE_UNUSED_IDENTITY_FINISH_OWNER_ACTION.md) records installed pins, the lost issue-reply path, strict unused-only eligibility, negative/concurrency tests and required actual return. This packet is owned preparation, not a Core source/runtime mutation or acceptance. It remains in the SGP disposable overlay pending exact source mirroring when HK's foreign window ends.
+
+**Correctness-only SGP scheduling decision — 2026-10-19T14:19:47.550093+00:00:** Both SGP root/user
+measurement leases remain absent; actual known Core functional test pair
+db72a53ab316/27dab355600d is still running with3CPU/3GiB and1CPU/1GiB caps;
+MemAvailable4413020KiB at14:18:44UTC. Blanket waiting for unrelated functional
+tests was an executor overrestriction, not guide08 or rule34a. It is superseded
+ONLY for this source-pinned pure unit suite: no DB, network, private input,
+latency/capacity/SLO or production measurement. Admit under0.5CPU/256MiB/32tasks/
+90s disposable systemd sandbox, with a fresh no-active-lease check, exact peer
+handle allowlist and >=1GiB observed headroom. Unknown/new test or foreign
+measurement lease still refuses admission; never touch peer jobs. Record peer
+coexecution explicitly and make NO performance claim. Rule34a is not bypassed.
+HK now has an actual IDR129 Query RSS driver a5b8248fe4fd and matching user
+lease claude-idr129-query-rss14:15:25→17:05:25UTC, superseding earlier f3 lease;
+HK remains read-only, including canonical hook/commit/publication work.
+
+Remote operator e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424
+(1025lines), test fb5ddf563acb61297d5861330a17495d81c02384e5ffce51908bcd455d06cf21
+(1313lines/65methods) are now ready for first isolated execution, NOT yet PASS.
+Setup failures now clean partial pool/signal custody; actual socket fileno and
+strict read-only Server._active_count cover pre-handler TLS. Installed Python3.10
+transport closes its socket before Server._detach; missing/unsupported observation
+fails closed, never timing-based closure. SDK/helper remain unchanged.
+
+**Owned operator slice isolated PASS / cleanup — 2026-10-19T14:26:59.030357+00:00:** Sourcee108a0a7
+and testfb5ddf56 executed once14:19:59→14:20:20UTC:65PASS,0FAIL/SKIP,
+Python3.10.12/cryptography3.4.8. Explicit TEST_ONLY lifecycle doubles and generated
+in-memory crypto, no actual SDK/Core/DB/TLS serving qualification. Reused89
+unchanged helper cases are NOT added to this65 count. [Source-pinned bounded
+operator evidence](integration/execution-native-read-v1/research-identity-intake/operator-qualification.json)
+records all65 IDs, exact5file pins, controller/log/original receipt hashes,
+sandbox and known functional coexecution (NO performance claim).
+Actual disposable unit inactive/dead, own lease removed, empty exact test TMPDIR
+removed.52runtime tuples and324image IDs identical through the unit;0images/
+cache built or pulled. Shared cache inventory1368579B hashed read-only, no prune.
+Shared free156127453184→156120502272B
+through test is not exclusive reclaimed space. Closeout initially refused after
+successful empty TMPDIR removal because shared cache metadata exceeded1MiB;
+fixed by bounded-memory hashing and actual removed-path readback, no test rerun.
+Retain only bounded public overlay/receipts until canonical mirror+ordinary
+hook/publication is possible; then remove exact disposable copy. No operational
+source role, session, listener, credential, DB row or runtime changed. Source is
+NOT yet landed or published: canonical HK remains under actual IDR129 measurement.
+
+[Connected READ binding owner action](evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md)
+freezes inspected next path: append Research READ acceptance via official
+BusinessRootReadMaintenance under unchanged protected owner; separately review
+scalar current28445 trust/six bindings and Core business.read_all+stream.subscribe
+policy/native composition. Installed Core currently mounts identity only.
+Do not swap global leaf/JWKS, infer READ from identity, rerun schema install or
+create permanent per-user services. Connected finite/revoke/cache/cursor/SSE
+proof still follows real identity settlement using existing machinery.
+
+**Publication-doc copy boundary:** auto-review rejected copying seven extra
+internal tracking Markdown/qualification baselines from HK to SGP (specific
+payload not yet approved). No rejected file was sent and no alternate route is
+used. User informed; owned evidence/cleanup in the already-approved overlay
+continues. Canonical tracking edits can happen once HK actual measurement ends.
+Full goal ACTIVE,08NOT_MET,09connectedNOT_STARTED; Core-unused-finish repair is
+its exact owner input, not another general phase approval.
+
+**Final read-only reconciliation for this coherent slice — 2026-10-19T14:32:35.305729+00:00:** Exact
+17file frozen PM byte closure still matches; aggregate SHA256
+e96f2f3e449fed1d405c0e32c7e13c92851c3b5df824691d5a12048f8c89dfec.
+Provider28445 image28ea3958/configf33f19ca/restart0, source DB image6343bdc8/
+configd04bc81f/restart0, projectioncf78e766/config79c88b6a/restart0 remain the
+observed retained operational set. Core IPC14:31:21UTC still READY/unresolved0/
+callbacks0, exact67e606f8 container/image16bf254b/configb3213d8c/restart0 unchanged.
+No identity issue/session/role OPEN occurred; dormant-role/receipt counts were
+NOT freshly queried under HK measurement, so earlier07:13 observation is not
+misreported as current DB proof. Source/restore/rollback/private artifacts stay.
+
+Parallel owner audit14:23UTC: PM2bd25d88 retained dataset18 metadata only,
+runtime_enabled=false/actual_accepted_source=false.07transport still07d91334,
+no qualified runtime cells/native targets or mounted authenticated submit/status,
+human/workload COMMIT authority/retention NOT_PUBLISHED.03TSnext0cd356da native
+publication remains SOURCE_DARK/no owner-generation fence;14/15 original input
+pins match but rust/Cargo.lock changed, so only original proof scope is reused.
+01/06matched-manifest17unapproved inputs and14Edgeproduction budget groups still
+lack approved target/bounds. New writer/TS/DL inheritance/group-commit/KN evidence
+does not close those independent authority/publication/capacity seams. Run each
+owned binding/drill immediately when its actual input arrives; no blanket ban.
+
+HK driver a5b8248fe4fd is now absent, but actual peer RSS quota/cache handles
+de60f479188d/681e770c7467 remain and its17:05:25 lease is still active. This is
+NOT quiet-host proof. Never remove its lease/resources or run canonical hooks
+there. Current canonical/mother remains portal-execution-manager-v2,
+feat/manager-v2-paper-read@54c6f5f3; owned feature portal-execution-edge-upgrade-v1_2,
+feat/execution-edge-upgrade-v1_2@6adc398b. Stable release path is retained under
+/srv/primus/portal/releases/501d27a3702f82cc8d7792ffa6e870485a5dbc09; unchanged old
+Manager/Source Proxy/Edge and explicit rollback images are not cleanup targets.
+No new commit/push/merge or claimed release in this slice. Unrelated execution-v2,
+native-read-egress test and score-review untracked files in HK remain untouched.
+
+Exact SGP temporary inventory is12regular files,2003923B before this journal
+append, no symlink/orig/rej or home reject. Retain only these public source/
+bounded receipts for pending canonical mirror, normal hook/publication and
+Core owner review; temporary source is NOT a runtime deployment/worktree archive.
+Own unit is collected/not-found, empty unit TMPDIR gone, own lease gone;0owned
+containers/images/build-cache/network/volume/DB-row artifacts. Metadata receipts
+were tightened to0600 inside0700 tree without byte changes; no test rerun.
+After quiet-host canonical mirroring/publication, remove the exact owned SGP
+copy and bounded HK specimens; preserve operational/private/rollback and peers.
+Next permitted actions: Core repairs exact unused-finish seam and prepares
+existing native READ/STREAM composition; Edge mirrors/publishes its65PASS source
+when HK is actually released, then binds the real same-attempt identity and
+connected finite/revoke/cache/cursor/SSE in original08. Full goal ACTIVE;
+08connectedNOT_MET,09connectedNOT_STARTED, no source-only completion claim.
+
+**14:42UTC BEFORE test changes — real CPython loopback drain qualification:**
+Original08 scope, following [guide08](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls).
+Fresh SGP root and Bobby measurement leases are both ABSENT. HK remains under
+foreign IDR129 measurement; no canonical HK edit, hook, build or runtime action.
+The existing65case source e108a0a7/testfb5ddf56 result proves modeled control
+flow, not physical socket/detach behavior. Add exactly two TEST_ONLY cases in
+the same remote test file: actual CPython3.10 asyncio TLS server with incomplete
+handshake counted before any SDK handler; actual TLS handler returns while its
+socket remains open, so drain cannot PASS until physical close and detach.
+Use only generated short-lived test certificates, a scoped TemporaryDirectory,
+127.0.0.1 ephemeral port0 in the unit's private network and bounded tracked task/
+writer cleanup. Never use Core, PM SDK mutations, DB, operational trust, session,
+credential, shared listener or production runtime. Production operator e108a0a7
+stays unchanged unless a concrete defect is separately reviewed by root.
+Update test provenance to distinguish actual loopback transport from doubled
+SDK/lifecycle cases. Source preparation uses exact patch fuzz0/byte+AST checks;
+no tests start in this edit transaction. Root will review and run the resulting
+67case suite in the existing controller with AF_INET allowed only inside its
+PrivateNetwork sandbox and existing0.5CPU/256MiB bounds. Correctness only: no
+capacity, real Core mTLS, identity COMMIT or connected08 acceptance claim.
+Exit: exactly67cases pass on pinned files, actual sockets/server/tasks closed,
+temporary certificate/key files removed by scoped context and unitTMP cleanup;
+record source/runner/receipt pins and exact resource cleanup before publication.
+Failure cleanup closes only these loopback sockets/tasks/certificate directory,
+never an operational UNKNOWN custody process or peer resources. Preserve earlier
+65case receipt as historical attribution, not a second distinct65cases count.
+Full08NOT_MET/09connectedNOT_STARTED; no new phase, release or traffic activation.
+
+**Actual CPython loopback transport slice PASS / cleanup — 2026-10-19T14:48:07.084861+00:00:**
+The same operator remains SHAe108a0a7; test-only harness now SHAa9ea6d20,
+1510lines/67methods. Exactly two new real TLS1.3 loopback cases prove incomplete
+handshake transport remains attached even after Server.close/wait_closed, and
+returned SDK test handler plus empty task set cannot release a still-open actual
+socket. Drain completes only after real descriptor close and Server detach.
+No count/socket metadata is faked in those two cases; callbacks remain explicit
+TEST_ONLY, not actual PM/Core/DB/identity or operational mTLS qualification.
+Generated short-lived CA/IP-SAN cert/key files used only exact protected TMPDIR.
+
+Actual run14:45:25.352264–14:45:36.951711UTC: **67PASS,0FAIL/SKIP**,
+including65 overlapping regression cases; do NOT add previous65 again or the
+unchanged89helper evidence. Controller SHAd3c64bf05e3396e9a82ec18bd8d184262da05e3e04f58df9821d4edf3bd58fdd reused the
+same bounded correctness runner,0.5CPU/256MiB/32tasks/90s. PrivateNetwork=true,
+AF_UNIX+AF_INET only,127.0.0.1:0,zero host ports/private runtime mounts.
+[Exact source/67case/cleanup receipt](integration/execution-native-read-v1/research-identity-intake/operator-real-tls-qualification.json)
+pins loga275f4b3 and original receipt4118aa93; prior65receipt stays unchanged.
+Unit epg10-08-operator-unit-9webn1pg-run-110231zt actually collected/not-found,
+inactive/dead; own lease and empty TMPDIR removed, all generated test key/cert
+files gone.52runtime tuples/324image IDs unchanged through run and post-cleanup.
+No image/container/build-cache/network/volume/DB/role/session artifact created;
+private test network namespace ended with its terminal unit. Shared cache
+inventory1368571B/SHA42678916 read only,no prune. Shared free during test
+156158865408→156158685184B; cleanup/inventory156174766080→156096036864B;
+these shared-host movements are NOT exclusive reclaim or capacity evidence.
+
+Only exact public source and bounded receipts remain for quiet-HK canonical
+mirror, ordinary hook/commit/publication, then scoped removal; never erase the
+unique qualified source before mirror. Canonical HK still has foreign IDR129
+reservation until17:05:25UTC; latest physical trial changes do not release it.
+No HK files/jobs, Core/source DB/business grants or current provider28445 changed.
+Core installed image16bf254b/configb3213d8c remains the observed identity-only
+composition: unused-issuance finish repair and subsequent native READ/STREAM
+commissioning remain the exact two owner-action packets already linked above.
+Source publication is still pending on feat/execution-edge-upgrade-v1_2@6adc398b,
+not a landed/pushed commit or runtime release. Full goal ACTIVE,08NOT_MET,
+09connectedNOT_STARTED. Next owned action is canonical mirror+tracking+normal
+hook/publication once the actual foreign measurement reservation is released;
+then real same-attempt identity/ACK and connected tests on accepted Core return.
+
+**14:55UTC BEFORE owner-packet documentation synchronization:** same approved
+original08 preparation; only the two existing [Core unused-finish owner action](evidence/execution-edge-v1_2/EPG10-08/CORE_UNUSED_IDENTITY_FINISH_OWNER_ACTION.md)
+and [connected READ binding owner action](evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md)
+are synchronized to the already-qualified remote operator/test/evidence.
+Operator e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424;
+test a9ea6d20d3574cc63ef30666d91143a8ccc1d20f938d57a6a3f99c856e4d47b5;
+67PASS includes65 overlapping cases plus2 real loopback TLS cases. Original
+receipt108cd0ec4aeb532a7907c72fb3ee1ad9d16c0e4d4acaf00b117802d7c1e08be0
+and prior65/89 evidence stay immutable and attributed. Current main input
+852d0eddee60b13e9405bf9ee1ddba6c3049aeec81d5590184168ff5d8341269.
+Fresh SGP root/user leases were absent14:53:48UTC; recheck before each write.
+No Core predicates/READ scope/trust/authority, HK checkout, DB, session,
+provider28445, runtime or test execution changes. Validate exact new links,
+full-byte content, zero-fuzz patch and whitespace; docs-only needs no rerun.
+Rollback reverts only this owned documentation delta, never receipts/source/
+history/custody or peer state. Canonical hook/commit/publication still pending
+on6adc398b while HK foreign measurement is active. Full08NOT_MET;09NOT_STARTED.
+
+**14:57UTC owner-packet synchronization COMPLETE (remote docs only):**
+Core unused-finish packet SHA5a70c133acfacb4e03f96bc573e859f13427e1dc0cea419f015c6165e3124aed,
+106lines, changed28+/2−; READ binding packet
+SHAf71aa8a575bd069a2859160ec988b05b58507302f7005a52d2054728c7351607,
+191lines, changed26+/0−. Both now name exact operator e108a0a7/test a9ea6d20
+and [67case source/cleanup evidence](integration/execution-native-read-v1/research-identity-intake/operator-real-tls-qualification.json)
+SHA108cd0ec4aeb532a7907c72fb3ee1ad9d16c0e4d4acaf00b117802d7c1e08be0;
+the former 'finishing' status is IMPLEMENTED/ISOLATED_QUALIFIED_NOT_PUBLISHED.
+67 includes65 overlapping cases plus2 real loopback TLS, not67 new SDK/Core/
+DB cases; previous65 receipt and unchanged89 helper evidence remain attributed.
+Both added3links resolve3/3; exact full bytes,0600/Bobby/single-link custody,
+changed-line whitespace and unchanged Core/READ authority sections verified.
+Dry-run then actual patch used fuzz0. First prewrite guard refused root-path
+permission before any write; corrected sudo read-only guard passed. Initial
+read-only link regex returned0 and was corrected to require the exact3targets;
+only final explicit3/3 checks are credited. No tests rerun for docs-only work.
+Root's genuine read-only IPC14:54:56UTC READY/unresolved0/callbacks0 is current
+observation, not issue/finish, identity terminal or unused-session cleanup proof.
+
+**Remaining work partition:** independent owned operator implementation/tests,
+real-loopback transport checks and these two owner packets are finished.
+Canonical source/tracking mirror, ordinary hook/commit/publication and scoped
+public-copy removal wait on the actual HK foreign measurement/lease release;
+do not discard the sole qualified remote source before a verified mirror.
+Actual identity waits specifically for the installed Core unused-finish repair
+owner return, then the original finite source/ACK window; native READ/STREAM
+requires the exact existing source acceptance/provider and Core composition
+described in the READ packet.07command/03publication/01-06capacity still await
+their genuine producer inputs, not additional blanket approval. Core packet
+receipt/implementation is an owner handoff, not a repeated request for phase08.
+Root notes repeated-blocker audit eligibility; any goal tool-state transition
+is PENDING_ROOT_ONLY. Goal remains ACTIVE at this record;08NOT_MET/09NOT_STARTED.
+
+**Publication preflight retained:** root verified core.hooksPath is unset and
+default mother pre-commit absent. Use the existing unmodified hook explicitly
+as `git -c core.hooksPath=.githooks commit` once HK is writable; a plain commit
+would not run that gate. Old publish.py still expects HEAD551a/old10paths:
+never execute it unchanged for current6adc/new paths. No source/runtime change,
+new test/image/cache/key/DB/session resource or cleanup/prune in this docs slice.
+
+**Publication authentication read-only preflight — 2026-10-19T15:00:23.604092+00:00:**
+Plain configured HTTPS ls-remote refused with terminal prompts disabled; no
+credential was requested, stored or printed. Existing Bobby SSH identity plus
+already-pinned GitHub known_hosts succeeded on the SAME approved awesome-portal
+repository: remote feat/execution-edge-upgrade-v1_2 is exactly
+6adc398b573e297b731863e5ed93f0f7f59ab2fd. Use that existing pinned SSH transport
+for the approved feature push after ordinary hook/commit; no remote/global
+configuration or new key is required. This is remote visibility only, not
+publication of the current e108/a9ea source. No fetch/index/source/runtime write
+or push/merge occurred in this preflight. Preserve unrelated source/WIP.
+
+**Repeated external-input audit before tool-state transition:** identical
+connected Core/owner return and HK foreign measurement dependencies remain
+across the consecutive goal turns ending14:48,14:52 and this current review.
+Actual current driver e550e43a/PID3920325 remained live14:57:07, not merely a
+lock file; its owner controls the17:05:25 reservation. Installed Core bootstrap
+still e997debd at14:59, with genuine status14:54:56 READY/unresolved0/callbacks0.
+There is no delivered unused-ISSUED finish repair/native READ composition.
+All runnable owned operator/code/67case qualification/cleanup/owner-packet and
+publication preflight work is complete; no additional safe owned implementation
+remains independent of those inputs. Do not invent another test/phase, bypass
+a foreign lock, issue an unsafe assertion or overwrite Core/PM/TS source.
+
+Exact unblock actions: HK owner releases its actual job/reservation (then Edge
+mirrors qualified source+tracking, runs explicit unmodified hook and pushes the
+same feature); Core returns adopted/qualified/installed unused-finish repair
+and existing native READ/STREAM composition/policy/trust pins from the two owner
+packets; then Edge executes the genuine same-attempt source/ACK and connected
+revoke/cache/cursor/SSE. The broader approved goal remains unchanged:07still
+needs authenticated mounted submit/status+COMMIT authority,03accepted native
+publisher fence,01/06approved matched inputs, then09connected→10→11. Latest
+14:51 audit found PMbc0946f4 docs-only,07same07d91334/unmounted/no targets,
+N03SOURCE_DARK owner_accepted=false/image_digest=null,17capacityinputsnull and
+14Edgebudgetgroupsunapproved. No source/runtime acceptance is inferred.
+
+Goal BLOCKED audit threshold is met and root tool transition is now requested;
+this text does not claim the tool returned a status before it actually does.
+Full08NOT_MET/09connectedNOT_STARTED. This is an external handoff/scheduling
+impasse, not completed work, a reduced objective or a user-requested PAUSE.
+Retain exactly the15public source/bounded-receipt files (about2.12MB) pending
+verified canonical mirror/publication and Core review; active/private/rollback/
+peer resources stay untouched. No new test/build/container/cache/key/DB/role/
+session/listener or cleanup/prune in this documentation transaction.
+
+**CURRENT goal tool state — 2026-10-19T15:00:57.927196+00:00: BLOCKED (actual returned status).**
+The full original objective is preserved verbatim by the goal tool, not completed,
+shrunk or paused. The preceding repeated-input audit and two Core owner packets
+name the exact external unblocks. No further goal work runs pending owner return/
+actual HK release and user resume. This final append records returned tool state
+only; no code/test/runtime/DB/session/credential/publication/cleanup change.
+Canonical HK has NOT yet received this remote journal or the qualified overlay.
+
+### Original08 operator publication and connected preparation — renewed assignment19Oct
+
+Status BEFORE work: IN_PROGRESS. Bobby explicitly assigns canonical mirror of
+operator/tests/67-case evidence, main-plan reconciliation, ordinary hook/commit/
+approved feature publication, and current-manifest/connected-runner preparation.
+Installed Core008 repair is the activation dependency, not a blocker for owned
+publication. Tool goal state is not changed or reported resumed by this scoped
+assignment. Follow original guide08 and current identity/operator packet; no
+new phase/framework, command, arbitrary DB/Redis/SQL or product-mode restriction.
+
+HK remains read-only under IDR129 reservation until17:05:25UTC. SGP overlay
+source preparation is allowed with fresh absent root/user leases; never use
+SGP as canonical deployment or erase the only qualified source. Main journal
+read-only diff shows additions after the13:17 cleanup paragraph plus trailing
+blank separators only; do not replace any unrelated local content during mirror.
+Owned canonical scope: exact operator/test, immutable65/67evidence, the two owner
+packets, this main journal and existing identity/native entrypoint/guide/backend
+tracking links, plus one bounded publication-preflight JSON. Preserve unrelated
+execution-v2/native-egress/score WIP and the original unchanged helper/SDK.
+
+Entry pins: Edge6adc398b; operator e108a0a7/tests a9ea6d20;67receipt108cd0ec.
+Current Core return c6c61135 at ELP2-10/CORE_EDGE_REQUEST_008_009_RETURN_2026-10-19.md
+ACKs008/009 only:008 IN_PROGRESS/NOT_DELIVERED;009 NOT_COMPOSED. Core source
+f4643915/bootstrap e997debd unchanged. Do not issue assertion from that ACK.
+Prepare existing recovery28446/core28444 composition using exact original
+subject/workspace/issuer/physical targets and unmodified helper. Provider28445
+with six stable bindings, old native roles, stable/dev/main and all custody stay.
+
+Tests/exit: verify qualified bytes and applicable67receipt without rerunning
+unchanged cases; inspect canonical diff/staged allowlist and secret boundaries;
+use explicit unmodified `git -c core.hooksPath=.githooks commit`, then same-feature
+non-force push and exact ls-remote proof. Hook requires a quiet actual HK host,
+lease, bounded resources and exact runtime/image/cache before/after cleanup.
+No normal-hook bypass, old publish.py or new permanent/test service. Connected
+identity/READ/STREAM/revoke/cache/cursor/SSE require genuine installed Core pins;
+UNKNOWN retains original attempt/pool/receipt/Core ACK custody, never force kill.
+Rollback source-only preparation preserves qualified inputs; failed hook/push
+is not source publication. Preserve active/explicit rollback/private/data/peer
+resources; remove exact disposable public copy only after verified mirror and
+publication and no remaining consumer dependence.
+
+Recorded 2026-10-19 23:11:41 Asia/Saigon (2026-10-19T16:11:41.917129+00:00).
+
+**Publication/binding source preflight COMPLETE, execution still gated:**
+Independent read-only closure audit16:11UTC found17/17 frozen PM/current-PM
+files and3/3 Edge dependency files matching the qualified operator. Parent
+verified role_credentials.py SHA89ed42edec78454142f8b1310e48d903b75fde9bdf667f8f8c0509359d30a707
+at canonical native-db-commissioning source; an immutable operational helper
+root remains selected/verified at activation, not inferred from a source path.
+No dependency change requires repeating67cases. Parent reviewed existing
+operator load_closure/validate_intake: pinned bytes, owner ACK and actual
+manifest are separate; base EDGE_COMMIT is not a new-HEAD rejection.
+Core fresh return still008NOT_DELIVERED/009NOT_COMPOSED; no wire delta.
+The read-only main diff confirms only appended remote evidence and terminal
+blank-separator differences; preserve local preexisting text when mirroring.
+The bounded [publication preflight](integration/execution-native-read-v1/research-identity-intake/operator-publication-preflight.json)
+records source pins and binding order; it is not a fabricated operational ACK.
+No new test/build/container/credential/session/DB/listener was created; no
+cleanup required for this metadata-only slice. Actual canonical mirror/hook/
+commit/push waits for foreign HK reservation AND its actual jobs to release.
+No Core/PM/TS checkout edits, rollout or broad cleanup; reused2agents/new0.
+
+**Fresh Core008 source-only intake, 2026-10-19T16:29:14.933277+00:00:** Current owner-return
+SHAc4b89b8c52e115531d152c2002ff8f1642c019dafce8ff779ea0e04833af645c now supplies APPLIED_UNCOMMITTED /
+NOT_INSTALLED repair. Candidate a2bd8435ed79eba998ca436e312826c463a0b532bf6aaa4672f22f1473a9c8b0,
+reproducible bootstrap cc6ae429c0283105818b1c8ab7133a5380fbe49f6834fe5910daa1eb9dd1c5f4.
+Independent read-only review confirms no e108 operator wire/input change: the
+new authority_revision is internal original issuance custody, not an extra IPC
+response key. Durable issue-start marker, original revision fsync and exact
+unused eligibility preserve existing terminal/UNKNOWN fences and logout order.
+Core reports28modelPASS; real-PG terminal and ordinary landing/install remain
+pending. Historical installed e997debd/image16bf254b is NOT this repair.
+Activation requires matching published source/image/bootstrap/config/custody
+and real READY; do not use a source-only acknowledgement to issue a token.
+009 remains uncomposed; its58b6/e150 HK WIP locators are superseded by the exact
+qualified e108/a9ea/67receipt inputs, still awaiting canonical publication.
+Existing preflight JSON remains an immutable dated input snapshot; this newer
+intake supersedes its earlier ACK-only source status, not actual runtime state.
+No repeated67tests or operator edits; HK remains read-only under foreign lease.
+
+**Fresh Core receipt/runtime boundary,19Oct16:40UTC:** Owner-return SHA
+7b9e7c98a84cb7eb91404abb91467bf1fe9672331948960caa8df4323516c4fc now reports
+28modelPASS, focused PG311PASS/1connection-timeout, then only native-file31PASS
+with30overlap. Preserve the failure; never call this343unique or one312/312PASS.
+Focused657file typecheck passed; small-heap whole-project check OOM and prior
+normal R3 failure are not waived. Still SOURCE_IMPLEMENTED_TESTED_UNCOMMITTED /
+NOT_INSTALLED. Source pins e108 operator/a9ea tests/a2bd candidate/cc6a bootstrap
+remain unchanged, so no repeated Edge67cases. Core independently reports old
+16bf runtime exited1 at16:12:11UTC after peer preview restart, startup refused
+custody review. Old READY snapshot is historical, not present runtime health.
+No assertion/window until Core owner resolves actual custody and returns a
+coherent installed008/READY/config receipt. Edge must not unlink/reset socket,
+delete state, restart Core, increase capacity or invent zero obligations. This
+is Core-owned runtime recovery, not an Edge publication blocker.009 remains
+NOT_COMMISSIONED. No new test/build/session/key/DB/listener or cleanup here.
+
+**HK canonical mirror completed19Oct16:48UTC; ordinary publication gate pending.**
+The foreign lease was actually removed early at16:43:44UTC. Subsequent physical
+guards detected short foreign jobs and refused admission; no hook was started.
+After those jobs ended, an exclusive45min publication reservation was acquired
+at16:45:50UTC (until17:30:50UTC); physical quiet verified16:46:23UTC. A tiny
+publication directory was created after one failed guard without starting any
+job; it is now the explicitly owned staging/evidence directory, not an active
+runtime or accepted measurement. No peer lease/container/process was stopped.
+
+Exactly8public files copied SGP→isolated HK staging; hashes and no-symlink/extra-
+file inventory passed. Remote main starts with all preexisting local text apart
+from terminal blank separators;438new journal lines appended mechanically,
+never overwriting unrelated local content. Canonical e108 operator/a9ea tests,
+immutable65/67 receipts and dated preflight now match qualified inputs. Current
+entrypoints/guide/backend tracking link them without reusing old44ee/58b6 pins.
+Three parallel read-only reviews verified source closure, exact67log hash chain
+and existing binding/cleanup boundaries; no owned code/test defect found.
+67cases are65overlap+2new real loopbackTLS, explicit TEST_ONLY callbacks; no
+rerun, doubled count, genuine COMMIT/Core ACK or production capacity claim.
+
+Owned commit allowlist is13files:main,2operator/test,3bounded JSON receipts,
+2owner packets and5existing tracking/guide files. Original qualification.json,
+unchanged SDK/helpers, three unrelated untracked WIP files and peer indices
+stay untouched. Normal hook copies the dirty Control API source/test context;
+its result is not ownership/publication of those unrelated files. Run exact
+unmodified hook with Bobby identity; persist true terminal result, runtime/
+image/cache inventory and staged-secret checks before source publication.
+Lease is retained until the hook job physically ends; never unlink on observer
+failure or infer cleanup from empty handlers. Source-only rollback is reviewed
+forward revert, not runtime/DB rollback. Full08NOT_MET;09connectedNOT_STARTED.
+
+
 
 
 

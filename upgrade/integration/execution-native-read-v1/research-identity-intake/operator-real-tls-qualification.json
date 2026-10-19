@@ -1,0 +1,112 @@
+{
+  "build_cache": {
+    "action": "READ_ONLY_NO_PRUNE",
+    "owned_created": 0,
+    "stdout_bytes": 1368571,
+    "stdout_sha256": "4267891604986609979f1b91b8abd6e4d9baa468f0fdc0685d68fbc81d7245ad"
+  },
+  "canonical_source_base_commit": "6adc398b573e297b731863e5ed93f0f7f59ab2fd",
+  "cleanup": {
+    "exclusive_reclaim_claim": false,
+    "generated_test_certificates_keys_removed": true,
+    "no_operational_db_role_session_listener_or_data_created": true,
+    "own_leases_absent": true,
+    "owned_containers_images_cache_volumes_created": 0,
+    "retention": "EXACT_PUBLIC_SOURCE_AND_BOUNDED_RECEIPTS_PENDING_QUIET_HK_MIRROR_NORMAL_HOOK_PUBLICATION_THEN_SCOPED_REMOVAL",
+    "shared_free_after_inventory": 156096036864,
+    "shared_free_before_empty_directory_removal": 156174766080,
+    "test_network_namespace_gone": true,
+    "test_tmp_removed": true,
+    "unit_collected": true
+  },
+  "coexecution": "KNOWN_CORE_FUNCTIONAL_TESTS_ALLOWED_NO_PERFORMANCE_CLAIM",
+  "controller_sha256": "d3c64bf05e3396e9a82ec18bd8d184262da05e3e04f58df9821d4edf3bd58fdd",
+  "cryptography": "3.4.8",
+  "ended_utc": "2026-10-19T14:45:36.951711+00:00",
+  "executed_cases": 67,
+  "failed": 0,
+  "full_connected_acceptance": "NOT_MET",
+  "images": {
+    "before_after_unchanged": true,
+    "count": 324,
+    "owned_created_or_pulled": 0
+  },
+  "log_bytes": 7954,
+  "log_sha256": "a275f4b3527e55d374bb9f5fa633bd9ae2e487e86e21e253d453d0190df6ff5a",
+  "new_distinct_cases": [
+    "test_real_tls_incomplete_handshake_stays_counted_after_listener_close",
+    "test_real_tls_returned_handler_keeps_original_socket_until_close_and_detach"
+  ],
+  "next09_connected": "NOT_STARTED",
+  "not_proven": [
+    "ACTUAL_PM_CORE_MTLS_COMPOSITION",
+    "GENUINE_SOURCE_IDENTITY_COMMIT_AND_CORE_ACK",
+    "BUSINESS_READ_OR_STREAM_GRANTS",
+    "CONNECTED_REVOKE_CACHE_CURSOR_SSE",
+    "COMMAND07",
+    "NATIVE_PUBLICATION03",
+    "PRODUCTION_CAPACITY01_06"
+  ],
+  "operational_mtls_qualified": false,
+  "original_receipt_sha256": "4118aa93c66fbd8517ae657e1e0bb23dccab8df98b04efc61007a3dbd044dd9b",
+  "overlap_with_previous_65": 65,
+  "passed": 67,
+  "performance_claim": false,
+  "phase": "EPG10-08",
+  "previous_65_receipt": "operator-qualification.json",
+  "previous_65_receipt_sha256": "2a300555c0056a54d94913eb52a069fea6371d3da6173f8852d41b1f403503f4",
+  "publication": {
+    "canonical_mirror_pending": true,
+    "new_commit": null,
+    "ordinary_hook_required": true,
+    "pushed": false
+  },
+  "python": "3.10.12",
+  "recorded_at_utc": "2026-10-19T14:48:07.084861+00:00",
+  "runtime": {
+    "before_after_unchanged": true,
+    "count": 52,
+    "encoding": "SORTED_UTF8_LINES_WITH_FINAL_LF",
+    "restart_or_deploy_by_edge": false,
+    "tuples_sha256": "52ba4fb3db5e4fd00e7bcd708a45f56e1b8ba1b8d48513819b78d08ebb2f6813"
+  },
+  "sandbox": {
+    "address_families": [
+      "AF_UNIX",
+      "AF_INET"
+    ],
+    "bind_address": "127.0.0.1",
+    "cpu_quota": "50%",
+    "host_ports": 0,
+    "memory_max_bytes": 268435456,
+    "port": 0,
+    "private_network": true,
+    "protect_home": true,
+    "protect_system": "strict",
+    "runtime_max_seconds": 90,
+    "secrets_or_operational_mounts": false,
+    "tasks_max": 32,
+    "writable_paths": "EXACT_OWN_TEST_TMPDIR_ONLY"
+  },
+  "schema_version": "edge.research-identity-operator-real-tls-qualification.v1",
+  "sdk_callbacks": "TEST_ONLY_NOT_ACTUAL_PM_SDK_CORE_OR_DB",
+  "skipped": 0,
+  "source_lines": {
+    "identity_operator.py": 1025,
+    "test_identity_operator.py": 1510
+  },
+  "source_revision": "REMOTE_PUBLIC_OVERLAY_NOT_YET_CANONICAL_OR_PUBLISHED",
+  "source_sha256": {
+    "identity_intake.py": "375b3305124113087b6d7231d8037274feda8c972f229141078d294b5dddfc27",
+    "identity_operator.py": "e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424",
+    "identity_role_window.py": "5f1a0f293311f752d934de72666f8b2e9d671c899eec115d08d7ccd30265dec2",
+    "receipt_installation.py": "7d03ef66085446dee55637fabeb52ccb607897c88a7bc7ea85d2efc544cf4975",
+    "test_identity_operator.py": "a9ea6d20d3574cc63ef30666d91143a8ccc1d20f938d57a6a3f99c856e4d47b5"
+  },
+  "started_utc": "2026-10-19T14:45:25.352264+00:00",
+  "status": "ISOLATED_LOOPBACK_TLS_AND_UNIT_PASS_NOT_CONNECTED",
+  "transport_provenance": "REAL_CPYTHON_ASYNCIO_TLS13_GENERATED_TEST_ONLY_CA_IP_SAN_CERTIFICATE_LOOPBACK_PORT_ZERO",
+  "unchanged_prior_89_helper_cases": "REUSED_BY_EXACT_SOURCE_PIN_NOT_RERUN_OR_ADDED_TO_67",
+  "unit": "epg10-08-operator-unit-9webn1pg-run-110231zt",
+  "unit_status": "LoadState=not-found\nActiveState=inactive\nSubState=dead"
+}

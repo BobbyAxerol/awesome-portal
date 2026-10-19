@@ -1017,6 +1017,17 @@ Fixture sử dụng dữ liệu giả/deterministic đã redact; không copy pro
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Current operator publication/binding,19Oct/20Oct:** [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct)
+and [current operator packet](../integration/execution-native-read-v1/research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
+pin operator e108a0a7/tests a9ea6d20 and67PASS:65 overlapping regressions plus2
+real loopback TLS lifecycle cases, explicit TEST_ONLY SDK/Core/DB callbacks.
+Do not sum the65/67 receipts, repeat unchanged tests or call them actual mTLS/
+current-human/COMMIT acceptance. Mirror/ordinary-hook/commit/push evidence stays
+separate from installed Core008 and genuine READ/STREAM/revoke/cache/cursor/SSE.
+Use READY → original identity COMMIT/Core ACK → drain/retire/logout, retaining
+UNKNOWN custody; no patch replay, new framework, broad grant or provider28445
+change. Full connected08NOT_MET;09connectedNOT_STARTED. Requirements below stay.
+
 **19Oct finite identity-role window:** [original08 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-acl-window--2026-10-19-asiasaigon)
 and [private operator packet](../integration/execution-native-read-v1/research-identity-intake/README.md#finite-identity-role-window--independently-implemented19oct)
 record40new PG15/SCRAM +18baseline +14regression PASS, not genuine Core/human

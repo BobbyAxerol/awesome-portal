@@ -7,6 +7,15 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 operator publication/binding,19Oct/20Oct — ISOLATED_QUALIFIED:**
+  [current packet](../integration/execution-native-read-v1/research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
+  and [main journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct)
+  pin unchanged e108 operator/a9ea tests and67PASS (65 overlap+2 real loopback
+  TLS cases, TEST_ONLY SDK/Core/DB callbacks). Normal-hook source publication
+  is separate from installed Core008/009 and genuine READ/STREAM/revoke/cache/
+  cursor/SSE. Existing recovery/retirement/logout is reused, UNKNOWN retains
+  custody. Full08NOT_MET/09connectedNOT_STARTED; no stable/provider28445 change.
+
 - **Original08 pre-ENTER recovery,19Oct — IMPLEMENTED / ISOLATED_QUALIFIED:**
   [same-phase helper/test journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-pre-enter-identity-window-recovery--2026-10-19-asiasaigon)
   and [packet](../integration/execution-native-read-v1/research-identity-intake/README.md).

@@ -1,5 +1,38 @@
 # Original08 — exact Research identity prerequisite
 
+## Current operator and connected binding — 19Oct/20Oct Asia/Saigon
+
+Use `identity_operator.py` and `test_identity_operator.py` from this same Git
+revision: SHA256 `e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424`
+and `a9ea6d20d3574cc63ef30666d91143a8ccc1d20f938d57a6a3f99c856e4d47b5`.
+The [67-case qualification](operator-real-tls-qualification.json) supersedes the
+[65-case run](operator-qualification.json):65 overlapping regressions plus2 new
+real loopback TLS lifecycle cases, not132 independent cases. SDK/Core/DB callbacks
+are TEST_ONLY. These receipts prove isolated operator behavior, not operational
+mTLS, human identity, native authority or full connected08. The unchanged89
+helper cases are reused by exact pin, not rerun or added to67.
+
+The [publication journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct)
+owns actual mirror/normal-hook/commit/push results. The dated
+[preflight](operator-publication-preflight.json) is an immutable input snapshot,
+not an activation/configuration ACK. Core008 source-only fixes do not authorize
+assertion issuance on its old installed bootstrap. See the exact
+[Core008 owner action](../../../evidence/execution-edge-v1_2/EPG10-08/CORE_UNUSED_IDENTITY_FINISH_OWNER_ACTION.md)
+and [connected READ/STREAM owner action](../../../evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md).
+
+Bind only matching installed Core source/image/bootstrap/config/custody and
+current trust. Keep the existing order: durable recovery READY28446, then JIT
+identity assertion, original-attempt physical COMMIT/readback and real Core ACK,
+drain and exact identity-role retirement, then exact temporary-session logout.
+UNKNOWN or lost ACK retains original attempt and recovery custody; EOF, elapsed
+deadline or a returned handler does not prove physical socket/job termination.
+Separate native READ acceptance and Core READ/STREAM composition precede actual
+revoke/cache/cursor/SSE tests. No new framework, broad grants, command activation,
+stable rollout or provider28445 change is implied. Full08NOT_MET;09connected
+NOT_STARTED until genuine connected evidence passes. Older entries below are
+dated provenance; do not activate the earlier44ee/58b6 operator or reapply a Core
+patch already adopted atd0789674.
+
 This is a **private operator integration packet**, not a new public API, Rust
 data-plane replacement, user directory, permission grant or command interface.
 The [main plan](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-intake-preparation--2026-10-19-asiasaigon)

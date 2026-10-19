@@ -2,6 +2,18 @@
 
 ## Current entrypoint — 19Oct Asia/Saigon
 
+**Latest operator:** use the [current operator packet](research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
+and [67-case receipt](research-identity-intake/operator-real-tls-qualification.json),
+not the unpublished58b6/e150 drafts or old44ee helper. Operator e108a0a7 and
+tests a9ea6d20 are unchanged qualified bytes;67 comprises65 reused cases plus2
+real loopback TLS cases. SDK/Core/DB callbacks remain TEST_ONLY, not actual
+connected acceptance. [Publication/binding journal](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct)
+records the normal hook and publication separately. Core008 must be genuinely
+installed, not merely source-only;009 still requires actual native READ and
+Core READ/STREAM composition. Existing recovery/retirement/logout machinery is
+reused. Full08NOT_MET;09connectedNOT_STARTED. Historical pins below are not
+current activation instructions.
+
 **Core source adoption is DONE at`d0789674`. Do not apply an old patch below
 over the adopted native files or subsequent Core WIP.** Runtime commissioning
 is separate and full connected08 remains **NOT_MET**;09connected NOT_STARTED.

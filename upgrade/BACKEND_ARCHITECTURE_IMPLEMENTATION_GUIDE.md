@@ -650,6 +650,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 current operator publication/binding,19Oct/20Oct — ISOLATED_QUALIFIED:**
+[current packet](integration/execution-native-read-v1/research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
+pins operator e108a0a7/tests a9ea6d20 and67PASS (65 overlap+2 new real loopback
+TLS lifecycle cases; SDK/Core/DB callbacks TEST_ONLY). [Main journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct)
+tracks exact canonical mirror/ordinary-hook/feature publication, separately
+from actual installed Core008/009 binding. Reuse existing READY → original
+COMMIT/Core ACK → drain/retire/logout machinery. No operational identity,
+business READ/STREAM, connected revoke/cache/cursor/SSE or full08 acceptance
+follows from isolated tests/source-only Core returns. Full08NOT_MET;
+09connectedNOT_STARTED; provider28445/stable/old native roles untouched.
+
 **Original08 pre-ENTER recovery,19Oct — IMPLEMENTED / ISOLATED_QUALIFIED:**
 [approved helper/test slice](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-pre-enter-identity-window-recovery--2026-10-19-asiasaigon)
 repairs OPEN followed by expiry/cancellation before SDK ENTER. Same original
