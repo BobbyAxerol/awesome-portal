@@ -30,7 +30,7 @@ Back theo nguồn; rail nav 7–9 mục (`applyV2Nav` chỉ dùng cho ⌘K); red
 ---
 # Phần 2 — Audit route/URL độc lập (cùng ngày, HEAD `855ad7c0`)
 
-Manifest đầy đủ: `fleet,archived,portfolios,alpha,workbench,account,ops,profile,overview,cockpit,shell,compare,blotter,admin,users,replay`; `archived`, `workbench`, `replay` là reserved (không mount). Registry rev 7: chỉ thêm `navigation.scoped_v2_replacement` cho `APPROVALS` (FE-039); các mục C-2…C-7 của review2/07 (tắt `show_in_sidebar` Paper/Sandbox/Live/Exit Reviews, hai screen mới Archived và Compare, đổi nhãn) **chưa có trong registry**.
+Manifest đầy đủ lúc audit (`855ad7c0`): `fleet,archived,portfolios,alpha,workbench,account,ops,profile,overview,cockpit,shell,compare,blotter,admin,users,replay`; `archived`, `workbench`, `replay` là reserved (không mount). **Cập nhật sau S3 (`ef9014f3`): `workbench` đã live (Paper workbench V2 mount sau khoá `workbench`); manifest nay có 20 khoá (thêm `sandbox`, `canary`, `live`, `request`); chỉ `archived` và `replay` còn là khoá dành riêng.** Registry rev 7: chỉ thêm `navigation.scoped_v2_replacement` cho `APPROVALS` (FE-039); các mục C-2…C-7 của review2/07 (tắt `show_in_sidebar` Paper/Sandbox/Live/Exit Reviews, hai screen mới Archived và Compare, đổi nhãn) **chưa có trong registry**.
 
 ## Lỗi route xếp theo ảnh hưởng
 **Cao**
@@ -50,3 +50,51 @@ Không route V2 nào render dữ liệu ngoài BFF; không tham số nào đổi
 
 ## Quyết định URL còn mở
 Bobby: nối `applyV2Nav` vào Sidebar ngay hay chờ Codex tắt `show_in_sidebar`; path hay bar thắng về env; rail mang `workspace_id`/env/window như ⌘K; redirect `/governance/exit-reviews` và lane vào URL; Archived là route hay `?tab=archived`; Compare là `/deployments/compare` hay `?view=compare`; redirect `/backtests/approvals`; ý nghĩa window `all`/`24h`/`from..to`; `ctx` thay `from`. Codex: khóa hai screen mới và cờ nav (registry), Q4/FE-038, C-9 stage xuyên env, binding→account lookup, FE-037, nguồn href command-center.
+
+---
+# Trạng thái sau sửa (cập nhật 2026-10-19, tip `21af6792`)
+
+Cách đọc: **FIXED (commit)** = đã sửa trong cây này, có test của commit đó; **OPEN** = chưa sửa; **DECIDED** = đã chốt có chủ ý, không sửa ở FE. Nguồn: thông điệp commit và mã hiện hành (đã đối chiếu `git log 35953e07..HEAD`); chưa chạy lại hành trình bằng tay trên bản build mới. Các commit: FF-A `e6127770` (route/URL, sau cờ `shell`), FF-B1 `65a5f74e`, FF-B2 `82943cfb`, crawler `dd4fab21` (+`2404c164`), W0a `9735d803`, integrate `ef9014f3`, `8b9f361a` (drawer New request).
+
+## Mười lỗi luồng
+| # | Lỗi | Trạng thái | Commit / lý do |
+| --- | --- | --- | --- |
+| 1 | Session thật của owner không có `execution.*` | **DECIDED** (fail-closed giữ nguyên) | Không đổi luật trung thực; V2 giữ tắt ở stack có session thật tới khi Codex trả lời FE-037/058; preview fixture cấp capability. Ghi ở debt DEBT-UXM07-005 |
+| 2 | Link chết trong Admin (`/execution/portfolios`) | **FIXED** | `65a5f74e` (mặc định `/deployments/portfolios`, `/execution/operations`, không `?source=admin`); `dd4fab21` sửa "Open Portfolios"; crawler giữ |
+| 3 | Researcher mở request của mình lại thấy danh sách | **FIXED** | `82943cfb` (request của chính mình mở read-only theo path) |
+| 4 | Mất `workspace_id`/ngữ cảnh khi Esc ở cockpit và khi dùng sidebar | **FIXED** | `e6127770` (Esc giữ context, bỏ `sel`; rail mang `workspace_id`/env/window/ccy qua `withContext`) |
+| 5 | Mục tiêu Operations là chữ thường, không phải link | **FIXED** | `65a5f74e` (`targetHrefFor` + `withContext`; chữ thường chỉ khi không có route) |
+| 6 | Href server phát (`?operation_id=`, `?filter=…`) không được đọc | **FIXED** (một phần là DECIDED) | `65a5f74e`: `?operation_id=` → `?operation=`; `?filter=findings\|broker_sync` được giữ và Operations V2 nói hàng đợi không có bộ lọc đó (nguồn href vẫn của Codex) |
+| 7 | Researcher không có đường đi; Alpha 360 thiếu Request archive / gate review | **FIXED** | `65a5f74e` (Overview researcher: tên alpha là link, panel link Alpha Fleet) + `82943cfb` (hai điều khiển tắt kèm lý do, FE-020/034) |
+| 8 | Back không biết nguồn | **FIXED** | `82943cfb` (`from` + `back` qua `v2/backTo.ts` cho Fleet, Alpha 360, Account 360, Trade Replay) |
+| 9 | Bộ chọn env là nút giả | **FIXED** (khoá có lý do) | `e6127770` (màn bỏ qua env thì khoá kèm lý do; route có env trong path hiện env của path kèm notice); `ef9014f3` khoá theo deployment cho năm màn stage. `pickLens` đặt `env` theo lens: chưa kiểm |
+| 10 | D9 (disabled + lý do + My access) thiếu ở Cockpit, Blotter, Admin, Users | **FIXED** | `e6127770` (link My access qua `withContext`), `65a5f74e` (panel denied của Overview/Operations) |
+
+Ghi thêm của audit luồng: link Canary nhầm → **FIXED** `9735d803` (`alpha/model.ts`, `portfolios/routes.ts` trỏ `/deployments/live/{id}/canary`; D5 của S3). `/deployments/alphas/archived` → **FIXED** `e6127770` (redirect sang `?tab=archived`). `<a href>` gây tải lại trang ở Alpha/Blotter → **FIXED** `82943cfb`, `65a5f74e`. Filter/lens/range của Operations và lane/lens của Cockpit trong `useState` → **FIXED** `65a5f74e` (Operations), `82943cfb` (Cockpit). `?binding=B` không redirect sang `/accounts/:id?view=physical` → **OPEN** (cần Codex: binding→account lookup, FE-050). Quản lý focus theo route → **OPEN** (không có commit nào xử lý; không kiểm lại).
+
+## Lỗi route D1–D7 và M1–M13
+(Audit route chỉ đánh số M1…M13; không có M14.)
+| Mã | Trạng thái | Commit / lý do |
+| --- | --- | --- |
+| D1 Rail không dùng overlay V2 | **FIXED** | `e6127770`: `Sidebar` gọi `applyV2Nav` khi cờ `shell` bật và ẩn mục `APPROVALS` mang `navigation.scoped_v2_replacement` (FE-039). **Chạm file dùng chung `Sidebar.tsx`, `PortalShell`, `PortalRoutes.tsx`, `navigation`: cần Bobby xác nhận** (README mục "Cần Bobby quyết") |
+| D2 Profile & Access trống khi vào từ rail | **FIXED** | `65a5f74e`: dùng workspace của session khi có, ngược lại copy chính xác |
+| D3 Esc cockpit mất query; path vs `?sel=` mâu thuẫn | **FIXED** | `e6127770` |
+| D4 Admin: mặc định chết, `?source=admin`, thiếu `accessHref` | **FIXED** | `65a5f74e` + `e6127770` |
+| D5 Link incident từ Portfolio 360 dùng `?sel=<incidentId>` | **FIXED** | `65a5f74e`: `/execution/operations/incidents/<id>`; operation dùng `?operation=` |
+| D6 Context bar: env sai trên Paper; nút env bị bỏ qua | **FIXED** | `e6127770`, `ef9014f3` (+ W0a `EnvLock.effective`, `9735d803`) |
+| D7 Giá trị URL sai bị nuốt im lặng; `?view=foo` ở Fleet → skeleton | **FIXED** | `e6127770` (tham số bị từ chối được gọi tên, không echo, có Dismiss); `82943cfb` (view Fleet lạ đọc như bảng) |
+| M1 notice tab lạ của Account 360 biến mất | **FIXED** | `82943cfb` |
+| M2 nút Compare hiện dù cờ `compare` tắt | **FIXED** | `e6127770` (`RouteFeatures`), `65a5f74e` (`routes.compare` có thể null: không link, nút tắt kèm lý do) |
+| M3 Operations giữ filter trong `useState`, `?operation=` push history | **FIXED** | `65a5f74e` (URL, `replace`; `?operation=` tiêu thụ một lần) |
+| M4 Canary dẫn vào `/live/:id` | **FIXED** (hai nơi đã kiểm; nơi thứ ba chưa kiểm) | `9735d803` (`alpha/model.ts`, `portfolios/routes.ts`), `82943cfb` (link account Canary) |
+| M5 alias tab Alpha làm rơi hash | **FIXED** | `82943cfb` |
+| M6 "← Alpha Fleet results" mất bộ lọc | **FIXED** | `82943cfb` (Back theo nguồn) |
+| M7 `<a href>` gây tải lại trang | **FIXED** | `82943cfb` (Alpha, Account, Cockpit, Fleet, Drawer), `65a5f74e` (Blotter) |
+| M8 Drawer đóng để lại history trùng | **FIXED** | `82943cfb` (và `051ce4f7`: focus chỉ khi người dùng đóng) |
+| M9 `/governance/exit-reviews` root và lane không nằm trong URL | **FIXED** | `e6127770` (redirect root sang `approvals?view=exit-reviews`), `82943cfb` (lane/lens/waiver trong URL) |
+| M10 Blotter V2 đọc `status`, V1 dùng `filter` | **FIXED** | `65a5f74e` (V1 `filter` đọc như `status`, từ lạ được nói ra) |
+| M11 href server phát bị Operations bỏ qua | **FIXED** / DECIDED | như lỗi luồng #6 |
+| M12 Admin V2 bỏ `operation/action/binding/cmd` | **FIXED** | `65a5f74e` (đọc, chọn sẵn task theo id/catalogue key, không chạy gì) |
+| M13 `workspace_id` không nhất quán (rail bỏ, ⌘K giữ) | **FIXED** | `e6127770` |
+
+Mức thấp L1–L7: L4 (`withContext` nhận href lạ) **FIXED** `e6127770`; L1 `/governance/approvals/new` nay có nút "New request" trên cockpit **FIXED** `ef9014f3`; L2, L3, L5, L6, L7 **OPEN / không kiểm lại**. Quyết định URL còn mở ở trên (Compare route riêng cần registry rev 7, `ctx` thay `from`, ý nghĩa window `all`/`24h`/`from..to`, redirect `/backtests/approvals`) vẫn **OPEN**; "applyV2Nav vào Sidebar ngay" đã được làm theo hướng "ngay, sau cờ `shell`" và cần Bobby xác nhận.
