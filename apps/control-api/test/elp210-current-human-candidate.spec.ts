@@ -502,4 +502,177 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.test_receipts")).rows[0].n).toBe(1);
     expect((await state()).drain_id).toBeNull();
   });
+
+  // Real disposable Core PG + TEST_ONLY signing keys; not a physical PM receipt
+  // or genuine Research session/provider qualification by itself.
+  it.each(["ISSUED", "RETIRED"])("acknowledges only genuine signed source rollback before ENTER from %s", async initial => {
+    const lease = await candidate.issue(actor, binding);
+    if (initial === "RETIRED") await candidate.beginDrain("test-only-unentered-drain");
+    const terminal = await proof(lease.lease_id, "ROLLED_BACK");
+    expect(await candidate.resolve(terminal)).toEqual({ phase: "ROLLED_BACK", replayed: false });
+    const row = (await pool.query("SELECT phase,attempt_id,terminal_receipt_digest FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0];
+    expect(row).toEqual({ phase: "RETIRED", attempt_id: null, terminal_receipt_digest: null });
+    const events = (await pool.query("SELECT phase,attempt_id,terminal_receipt_digest FROM elp210_candidate.events WHERE lease_id=$1 ORDER BY event_id", [lease.lease_id])).rows;
+    expect(events.map(e => e.phase)).toEqual(["ISSUED", "RETIRED", "SOURCE_ROLLED_BACK_UNENTERED"]);
+    expect(events[2]).toMatchObject({ attempt_id: `test-only-attempt-${lease.lease_id}` });
+    expect(events[2].terminal_receipt_digest).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(events.some(e => e.phase === "ENTERED")).toBe(false);
+    expect(await candidate.resolve(terminal)).toEqual({ phase: "ROLLED_BACK", replayed: true });
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.events WHERE lease_id=$1", [lease.lease_id])).rows[0].n).toBe(3);
+    await expect(pool.query("UPDATE elp210_candidate.events SET phase='ROLLED_BACK' WHERE lease_id=$1", [lease.lease_id]))
+      .rejects.toThrow("CURRENT_HUMAN_HISTORY_IMMUTABLE");
+  });
+
+  it.each([
+    ["ISSUED", "UNKNOWN"], ["ISSUED", "COMMITTED"],
+    ["RETIRED", "UNKNOWN"], ["RETIRED", "COMMITTED"],
+  ] as const)("never accepts %s source %s as an unentered rollback", async (initial, terminal) => {
+    const lease = await candidate.issue(actor, binding);
+    if (initial === "RETIRED") await candidate.beginDrain("test-only-unentered-denial");
+    await expect(candidate.resolve(await proof(lease.lease_id, terminal)))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_RESOLUTION_NOT_AVAILABLE" });
+    expect(await phase(lease.lease_id)).toBe(initial);
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.events WHERE lease_id=$1 AND phase='SOURCE_ROLLED_BACK_UNENTERED'", [lease.lease_id])).rows[0].n).toBe(0);
+  });
+
+  it.each(["attempt_id", "source_receipt_id", "source_receipt_digest"])("refuses conflicting unentered terminal %s", async key => {
+    const lease = await candidate.issue(actor, binding);
+    await candidate.resolve(await proof(lease.lease_id, "ROLLED_BACK"));
+    const value = key === "source_receipt_digest" ? `sha256:${"c".repeat(64)}` : "test-only-conflicting";
+    await expect(candidate.resolve(await proof(lease.lease_id, "ROLLED_BACK", { [key]: value })))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_TERMINAL_CONFLICT" });
+    expect(await phase(lease.lease_id)).toBe("RETIRED");
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.events WHERE lease_id=$1 AND phase='SOURCE_ROLLED_BACK_UNENTERED'", [lease.lease_id])).rows[0].n).toBe(1);
+  });
+
+  it.each(["workspace_id", "environment", "workload_id", "request_digest"])("binds unentered rollback to exact %s", async key => {
+    const lease = await candidate.issue(actor, binding);
+    const value = key === "request_digest" ? `sha256:${"c".repeat(64)}` : key === "environment" ? "live" : "test-only-other";
+    await expect(candidate.resolve(await proof(lease.lease_id, "ROLLED_BACK", { [key]: value })))
+      .rejects.toMatchObject({ code: key === "workload_id" ? "CURRENT_HUMAN_SOURCE_PROOF_INVALID" : "CURRENT_HUMAN_BINDING_MISMATCH" });
+    expect(await phase(lease.lease_id)).toBe("ISSUED");
+  });
+
+  it("refuses human-key or malformed rollback proof without retiring the issued lease", async () => {
+    const lease = await candidate.issue(actor, binding);
+    await expect(candidate.resolve(await proof(lease.lease_id, "ROLLED_BACK", {}, humanKey.privateKey)))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_SOURCE_PROOF_INVALID" });
+    await expect(candidate.resolve("{}"))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_SOURCE_PROOF_INVALID" });
+    expect(await phase(lease.lease_id)).toBe("ISSUED");
+  });
+
+  it("does not authorize late ENTER or repeat source execution after an unentered terminal", async () => {
+    const lease = await candidate.issue(actor, binding);
+    await candidate.resolve(await proof(lease.lease_id, "ROLLED_BACK"));
+    await expect(candidate.enter(lease.token, await proof(lease.lease_id)))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
+    expect(await candidate.recoverableAttempts()).toEqual([]);
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.events WHERE lease_id=$1 AND phase='ENTERED'", [lease.lease_id])).rows[0].n).toBe(0);
+  });
+
+  it("serializes simultaneous identical unentered terminal deliveries into one immutable receipt", async () => {
+    const lease = await candidate.issue(actor, binding), terminal = await proof(lease.lease_id, "ROLLED_BACK");
+    const replies = await Promise.all([candidate.resolve(terminal), candidate.resolve(terminal)]);
+    expect(replies.map(r => r.replayed).sort()).toEqual([false, true]);
+    expect(replies.every(r => r.phase === "ROLLED_BACK")).toBe(true);
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.events WHERE lease_id=$1 AND phase='SOURCE_ROLLED_BACK_UNENTERED'", [lease.lease_id])).rows[0].n).toBe(1);
+  });
+
+  it("rolls back lease retirement if the immutable source receipt append fails", async () => {
+    const lease = await candidate.issue(actor, binding);
+    await pool.query(`CREATE FUNCTION elp210_candidate.test_only_abort_append_failure() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF NEW.phase='SOURCE_ROLLED_BACK_UNENTERED' THEN RAISE EXCEPTION 'TEST_ONLY_ABORT_APPEND_FAILED'; END IF; RETURN NEW; END $$;
+      CREATE TRIGGER test_only_abort_append_failure BEFORE INSERT ON elp210_candidate.events
+      FOR EACH ROW EXECUTE FUNCTION elp210_candidate.test_only_abort_append_failure()`);
+    await expect(candidate.resolve(await proof(lease.lease_id, "ROLLED_BACK"))).rejects.toThrow("TEST_ONLY_ABORT_APPEND_FAILED");
+    expect(await phase(lease.lease_id)).toBe("ISSUED");
+    expect((await pool.query("SELECT phase FROM elp210_candidate.events WHERE lease_id=$1 ORDER BY event_id", [lease.lease_id])).rows.map(r => r.phase)).toEqual(["ISSUED"]);
+  });
+
+  it("replays exact unentered terminal after a response is lost following real Core COMMIT", async () => {
+    const lease = await candidate.issue(actor, binding), terminal = await proof(lease.lease_id, "ROLLED_BACK");
+    const lostReply = new Error("TEST_ONLY_TRANSPORT_REPLY_LOST_AFTER_COMMIT");
+    const transport = async () => { await candidate.resolve(terminal); throw lostReply; };
+    await expect(transport()).rejects.toBe(lostReply);
+    expect(await phase(lease.lease_id)).toBe("RETIRED");
+    expect(await candidate.resolve(terminal)).toEqual({ phase: "ROLLED_BACK", replayed: true });
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.events WHERE lease_id=$1 AND phase='SOURCE_ROLLED_BACK_UNENTERED'", [lease.lease_id])).rows[0].n).toBe(1);
+  });
+  // Same-key reconstruction may recover old attempts but cannot issue or
+  // enter after installation expiry. No fake DB time or transport ACK.
+
+  it.each(["COMMITTED", "ROLLED_BACK"] as const)(
+    "recreates an expired same-key installation for %s recovery, never new issue or ENTER",
+    async terminalPhase => {
+      const validUntil = Date.now() + 20_000;
+      const scoped: CurrentHumanCandidateConfig = { ...config,
+        installation_scope: { workspace_id: binding.workspace_id, environment: "paper", valid_until_ms: validUntil } };
+      candidate = await CurrentHumanCandidate.create(pool, scoped);
+      const entered = await enter();
+      const unused = await candidate.issue(actor, binding);
+      const before = (await pool.query(`SELECT
+        (SELECT count(*)::int FROM elp210_candidate.leases) AS leases,
+        (SELECT count(*)::int FROM elp210_candidate.events) AS events,
+        (SELECT row_to_json(s) FROM auth_sessions s WHERE session_id=$1) AS session`, [actor.session_id])).rows[0];
+
+      try {
+        // Only JS Date advances: pg/network timers and the actual database
+        // remain real. The old human JWT expires, but source readback signs a
+        // new short-lived proof for the SAME persisted source attempt.
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(validUntil + 1000);
+        const restarted = await CurrentHumanCandidate.create(pool, scoped);
+        expect((await pool.query(`SELECT
+          (SELECT count(*)::int FROM elp210_candidate.leases) AS leases,
+          (SELECT count(*)::int FROM elp210_candidate.events) AS events,
+          (SELECT row_to_json(s) FROM auth_sessions s WHERE session_id=$1) AS session`, [actor.session_id])).rows[0])
+          .toEqual(before);
+        expect(await restarted.recoverableAttempts()).toEqual([
+          { lease_id: entered.lease_id, attempt_id: `test-only-attempt-${entered.lease_id}`,
+            ...binding, human_issuer: config.issuer, subject: actor.user_id,
+            session_id: actor.session_id, session_revision: 7, authority_revision: 0,
+            expires_at: entered.expires_at_ms / 1000 },
+        ]);
+        await expect(restarted.issue(actor, binding)).rejects.toMatchObject({
+          code: "CURRENT_HUMAN_INSTALLATION_SCOPE_INVALID" });
+        await expect(restarted.enter(unused.token, await proof(unused.lease_id))).rejects.toMatchObject({
+          code: "CURRENT_HUMAN_INSTALLATION_SCOPE_INVALID" });
+        expect(await phase(unused.lease_id)).toBe("ISSUED");
+        expect(await phase(entered.lease_id)).toBe("ENTERED");
+
+        // Construction did not relax trust or exact source-attempt bindings.
+        await expect(restarted.resolve(await proof(entered.lease_id, terminalPhase, {}, humanKey.privateKey)))
+          .rejects.toMatchObject({ code: "CURRENT_HUMAN_SOURCE_PROOF_INVALID" });
+        await expect(restarted.resolve(await proof(entered.lease_id, terminalPhase,
+          { attempt_id: "test-only-different-attempt" })))
+          .rejects.toMatchObject({ code: "CURRENT_HUMAN_BINDING_MISMATCH" });
+        await expect(restarted.resolve(await proof(entered.lease_id, terminalPhase,
+          { workspace_id: "test-only-different-workspace" })))
+          .rejects.toMatchObject({ code: "CURRENT_HUMAN_INSTALLATION_SCOPE_INVALID" });
+        expect(await phase(entered.lease_id)).toBe("ENTERED");
+
+        const terminal = await proof(entered.lease_id, terminalPhase);
+        expect(await restarted.resolve(terminal)).toEqual({ phase: terminalPhase, replayed: false });
+        expect(await restarted.resolve(terminal)).toEqual({ phase: terminalPhase, replayed: true });
+        expect(await phase(entered.lease_id)).toBe(terminalPhase);
+        expect(await restarted.recoverableAttempts()).toEqual([]);
+        // Drain can retire the never-entered unused token, without expiry
+        // pretending that the genuinely entered source attempt was terminal.
+        expect(await restarted.beginDrain("test-only-expired-restart")).toMatchObject({
+          status: "DRAIN_READY", pending: 0 });
+        expect(await phase(unused.lease_id)).toBe("RETIRED");
+        expect((await pool.query("SELECT row_to_json(s) AS session FROM auth_sessions s WHERE session_id=$1",
+          [actor.session_id])).rows[0].session).toEqual(before.session);
+      } finally { vi.useRealTimers(); }
+    });
+
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+    "still rejects malformed installation valid_until_ms %s at construction",
+    async validUntil => {
+      await expect(CurrentHumanCandidate.create(pool, { ...config,
+        installation_scope: { workspace_id: binding.workspace_id, environment: "paper", valid_until_ms: validUntil } }))
+        .rejects.toMatchObject({ code: "CURRENT_HUMAN_INSTALLATION_SCOPE_INVALID" });
+      expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(0);
+    });
 });
