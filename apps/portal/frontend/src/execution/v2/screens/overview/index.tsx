@@ -52,7 +52,7 @@ import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { isInternalPath, withContext } from "../../urlState";
 import {
-  FE_CAPITAL, FE_CONTRIBUTORS, FE_DIGEST, FE_MONEY, FE_RESEARCHER, KIND_FLAG, currencyFacts, fleetCells, humanize, modeOf,
+  FE_CAPITAL, FE_CONTRIBUTORS, FE_DIGEST, FE_MONEY, FE_RESEARCHER, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
   needsAttention, openIncidents, ownRows, stageCounts, streamSentence, todayRows, triageRows, type CurrencyFact, type OwnRow,
 } from "./overviewModel";
 import { MeasureSeg } from "./MeasureSeg";
@@ -95,9 +95,10 @@ function Cell({ label, children, note }: { label: string; children: ReactNode; n
   );
 }
 
-function MoneyCell({ value }: { value: CurrencyFact["allocation"] }) {
+/** `signed` is for a P&L column only: allocation and exposure are sizes, and a green size reads as a gain. */
+function MoneyCell({ value, signed = false }: { value: CurrencyFact["allocation"]; signed?: boolean }) {
   if (value === null) return <span className="exec-ov-na">Not available</span>;
-  return <span className="exec-ov-num" title={value.full} data-tone={value.tone === "neutral" ? undefined : value.tone}>{value.display}</span>;
+  return <span className="exec-ov-num" title={value.full} data-tone={signed && value.tone !== "neutral" ? value.tone : undefined}>{value.display}</span>;
 }
 
 const STATE_FLAG: Record<string, { kind: FlagKind; label: string }> = {
@@ -138,7 +139,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   const fleet = reads.fleet.phase === "ready" ? reads.fleet.value : null;
   const facts = useMemo(() => currencyFacts(fleet?.summary ?? null), [fleet]);
   const stages = useMemo(() => stageCounts(fleet?.summary ?? null), [fleet]);
-  const triage = useMemo(() => triageRows(snapshot?.needsYou ?? null, utcStamp), [snapshot]);
+  const triage = useMemo(() => triageRows(snapshot?.needsYou ?? null, utcStamp, reads.composition.phase === "ready" ? reads.composition.value.readAt : null), [snapshot, reads.composition]);
   const own = useMemo(() => ownRows(fleet?.items ?? []), [fleet]);
   const gate = streamGate(snapshot);
   const live = reads.stream.live;
@@ -184,7 +185,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   const fresh = freshnessFlag(needs?.freshness ?? null);
   const operations = reads.operations.phase === "ready" ? reads.operations.value : null;
   const unacknowledged = operations !== null && operations !== "unsupported" ? operations.page.filteredCount : null;
-  const cells = fleetCells(snapshot?.fleet ?? null);
+  const { deployments: cells, issues } = fleetCellGroups(snapshot?.fleet ?? null);
   const today = todayRows(snapshot?.today ?? null);
   const ctx = (href: string) => withContext(canonicalHref(href) ?? href, params);
   // A href the server published is data, not ours: anything that is not an app path (absolute URL, scheme,
@@ -207,7 +208,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
     { key: "ccy", label: "Currency", render: (r) => r.currency },
     { key: "allocation", label: "Allocation", numeric: true, render: (r) => <MoneyCell value={r.allocation} /> },
     { key: "exposure", label: "Exposure", numeric: true, render: (r) => <MoneyCell value={r.exposure} /> },
-    { key: "pnl", label: "Open-position PnL, net", numeric: true, render: (r) => <MoneyCell value={r.netPositionPnl} /> },
+    { key: "pnl", label: "Open-position PnL, net", numeric: true, render: (r) => <MoneyCell value={r.netPositionPnl} signed /> },
   ];
 
   return (
@@ -372,25 +373,45 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
       {fundWide ? (
         <div className="exec-ov-grid2">
           <SectionPanel title="Fleet by stage" aside={stages.length > 0 ? "An alpha in two stages is counted in each" : undefined}>
-            {stages.length === 0 && cells.length === 0 ? (
+            {stages.length === 0 && cells.length === 0 && issues.length === 0 ? (
               <PanelState status={snapshot?.fleet?.state === "unavailable" ? "unavailable" : "empty"} reason="No stage counts are published." />
             ) : (
               <>
                 {stages.length > 0 ? (
-                  <ul className="exec-ov-cells" aria-label="Alphas by stage">
-                    {stages.map((s) => <li key={s.stage}><span className="exec-ov-cell-label">{s.label}</span>{s.count === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{s.count}</span>}</li>)}
-                  </ul>
+                  <>
+                    <p className="exec-ov-cells-cap" id="exec-ov-cap-alphas">Alphas by stage <span className="exec-ov-cells-unit">(count of alphas, from the Fleet summary)</span></p>
+                    <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-alphas">
+                      {stages.map((s) => <li key={s.stage}><span className="exec-ov-cell-label">{s.label}</span>{s.count === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{s.count}</span>}</li>)}
+                    </ul>
+                  </>
                 ) : null}
                 {cells.length > 0 ? (
-                  <ul className="exec-ov-cells" aria-label="Deployments by state">
-                    {cells.map((c) => (
-                      <li key={c.label}>
-                        <span className="exec-ov-cell-label">{c.label}</span>
-                        {c.value === null ? <span className="exec-ov-na">Not available</span> : c.href && serverTo(c.href) !== null ? <Link className="exec-ov-kpi exec-ov-link" to={serverTo(c.href)!}>{c.value}</Link> : <span className="exec-ov-kpi">{c.value}</span>}
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    <p className="exec-ov-cells-cap" id="exec-ov-cap-deployments">Deployments by state <span className="exec-ov-cells-unit">(count of deployments, from the Command Centre snapshot)</span></p>
+                    <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-deployments">
+                      {cells.map((c) => (
+                        <li key={c.label}>
+                          <span className="exec-ov-cell-label">{c.label}</span>
+                          {c.value === null ? <span className="exec-ov-na">Not available</span> : c.href && serverTo(c.href) !== null ? <Link className="exec-ov-kpi exec-ov-link" to={serverTo(c.href)!}>{c.value}</Link> : <span className="exec-ov-kpi">{c.value}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
                 ) : null}
+                {issues.length > 0 ? (
+                  <>
+                    <p className="exec-ov-cells-cap" id="exec-ov-cap-issues">Open issues <span className="exec-ov-cells-unit">(not deployments)</span></p>
+                    <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-issues">
+                      {issues.map((c) => (
+                        <li key={c.label}>
+                          <span className="exec-ov-cell-label">{c.label}</span>
+                          {c.value === null ? <span className="exec-ov-na">Not available</span> : c.href && serverTo(c.href) !== null ? <Link className="exec-ov-kpi exec-ov-link" to={serverTo(c.href)!}>{c.value}</Link> : <span className="exec-ov-kpi">{c.value}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+                {stages.length > 0 && cells.length > 0 ? <p className="exec-ov-note">Alphas and deployments are different units from different reads; one alpha can have several deployments, so the rows are not expected to match.</p> : null}
                 {snapshot?.fleet ? <p className="exec-ov-note">Deployments: {snapshot.fleet.totalDeployments === null ? "not counted" : `${snapshot.fleet.exactTotal ? "" : "~"}${snapshot.fleet.totalDeployments}`}. Counts only; amounts live on the 360 screens.</p> : null}
               </>
             )}

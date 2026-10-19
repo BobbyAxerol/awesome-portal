@@ -21,6 +21,7 @@ const FLEET = "execution-alpha-fleet-list.v2";
 const digests = [...NAMES, FLEET].map((n) => [n, canonicalDigest(n)] as const);
 const snapshotOf = (v: (typeof VARIANTS)[number]) => readCommandCenter(loadCanonical(`execution-command-center.${v}`))!;
 const stamp = (iso: string) => iso;
+const READ = "2026-08-22T12:00:00.000Z";
 
 describe("L0 canonical snapshots", () => {
   it("reads all five", () => {
@@ -33,22 +34,34 @@ describe("L0 canonical snapshots", () => {
 
 describe("triage", () => {
   it("keeps the server's order and adds no second ranking", () => {
-    const rows = triageRows(snapshotOf("busy").needsYou, stamp);
+    const rows = triageRows(snapshotOf("busy").needsYou, stamp, READ);
     expect(rows.map((r) => r.id)).toEqual(["inc_44", "op_1251", "AP-352"]);
     expect(rows.map((r) => r.rank)).toEqual([1, 2, 3]);
     const shuffled = snapshotOf("busy").needsYou!;
     const reversed = { ...shuffled, items: [...shuffled.items].reverse() };
-    expect(triageRows(reversed, stamp).map((r) => r.id)).toEqual(["AP-352", "op_1251", "inc_44"]);
+    expect(triageRows(reversed, stamp, READ).map((r) => r.id)).toEqual(["AP-352", "op_1251", "inc_44"]);
   });
   it("words the deadline with the server's state and time, never a ticking clock", () => {
-    const [first] = triageRows(snapshotOf("busy").needsYou, (iso) => `T(${iso})`);
+    const [first] = triageRows(snapshotOf("busy").needsYou, (iso) => `T(${iso})`, READ);
     expect(first!.sla).toBe("Overdue (since T(2026-08-22T11:58:00.000Z))");
     expect(first!.age).toBe("10 min");
     expect(first!.slaShort).toBe("Overdue since 22 Aug 11:58Z, age 10 min");
   });
+  it("drops the age when the read time the page states is not the moment the age was measured at (no browser clock)", () => {
+    const needs = snapshotOf("busy").needsYou!;
+    const [far] = triageRows(needs, stamp, "2026-10-17T12:04:00.000Z");
+    expect(far!.age).toBeNull();
+    expect(far!.slaShort).toBe("Overdue since 22 Aug 11:58Z");
+    expect(far!.slaShort).not.toMatch(/age/);
+    expect(far!.sla).toContain("Age not shown");
+    expect(triageRows(needs, stamp, null)[0]!.age).toBeNull();
+    const noAsOf = { ...needs, items: [{ ...needs.items[0]!, asOf: null }] };
+    expect(triageRows(noAsOf, stamp, READ)[0]!.age).toBeNull();
+    expect(triageRows(needs, stamp, "2026-08-22T12:04:00.000Z")[0]!.age).toBe("10 min");
+  });
   it("an item with no deadline says none was published", () => {
     const base = snapshotOf("busy").needsYou!;
-    const [row] = triageRows({ ...base, items: [{ ...base.items[0]!, slaState: null, slaDueAt: null }] }, stamp);
+    const [row] = triageRows({ ...base, items: [{ ...base.items[0]!, slaState: null, slaDueAt: null }] }, stamp, READ);
     expect(row!.sla).toBe("No deadline published");
   });
   it("age labels are coarse words with units and never negative", () => {
@@ -59,7 +72,7 @@ describe("triage", () => {
     expect(ageLabel(null)).toBeNull();
   });
   it("is empty for no panel", () => {
-    expect(triageRows(null, stamp)).toEqual([]);
+    expect(triageRows(null, stamp, READ)).toEqual([]);
   });
 });
 

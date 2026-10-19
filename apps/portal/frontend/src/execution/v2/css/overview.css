@@ -273,6 +273,14 @@ a.exec-ov-what-title {
   flex-direction: column;
   gap: 2px;
 }
+.exec-ov-cells-cap {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-ov-cells-unit {
+  color: var(--ink-faint);
+}
 .exec-ov-cell-label {
   font: var(--exec-font-meta);
   color: var(--ink-faint);

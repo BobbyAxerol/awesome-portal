@@ -130,6 +130,9 @@ describe("BUSY", () => {
     expect(usdt.querySelector("td[data-l='Exposure']")?.textContent).toBe("84,210.125");
     const usd = rows[0]!;
     expect(usd.querySelector("td[data-l='Open-position PnL, net']")?.textContent).toBe("0.00001234");
+    // Only the signed P&L column carries a sign colour; a green size would read as a gain.
+    for (const row of rows) for (const col of ["Allocation", "Exposure"]) expect(row.querySelector(`td[data-l='${col}'] [data-tone]`), col).toBeNull();
+    expect(usd.querySelector("td[data-l='Open-position PnL, net'] [data-tone='positive']")).not.toBeNull();
     expect(panel("Current by currency").textContent).toContain("Current facts, not a window");
     expect(panel("Current by currency").textContent).not.toMatch(/total/i);
   });
@@ -137,10 +140,17 @@ describe("BUSY", () => {
   it("fleet by stage: stage counts from the summary, deployment cells from the snapshot, and the double-count caveat", async () => {
     mount();
     await loaded();
-    const stages = within(panel("Fleet by stage")).getByRole("list", { name: "Alphas by stage" });
+    const stages = within(panel("Fleet by stage")).getByRole("list", { name: /^Alphas by stage/ });
     expect(within(stages).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Paper1", "Sandbox1", "CanaryNot available", "Live1"]);
-    const cells = within(panel("Fleet by stage")).getByRole("list", { name: "Deployments by state" });
+    const cells = within(panel("Fleet by stage")).getByRole("list", { name: /^Deployments by state/ });
     expect(within(cells).getAllByRole("listitem").map((li) => li.textContent)).toContain("Live42");
+    // Each row names its unit; broker-sync and findings are issues, not deployments.
+    expect(within(panel("Fleet by stage")).getByText(/Alphas by stage/).textContent).toContain("count of alphas");
+    expect(within(panel("Fleet by stage")).getByText(/Deployments by state/).textContent).toContain("count of deployments");
+    const issues = within(panel("Fleet by stage")).getByRole("list", { name: /Open issues/ });
+    expect(within(issues).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Broker sync1", "Findings3"]);
+    expect(within(cells).queryByText("Broker sync")).toBeNull();
+    expect(panel("Fleet by stage").textContent).toContain("Alphas and deployments are different units");
     expect(panel("Fleet by stage").textContent).toContain("Deployments: 182");
     expect(panel("Fleet by stage").textContent).toContain("An alpha in two stages is counted in each");
   });

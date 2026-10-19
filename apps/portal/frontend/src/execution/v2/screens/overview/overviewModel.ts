@@ -85,7 +85,24 @@ function shortInstant(iso: string): string {
   return m && month ? `${Number(m[2])} ${month} ${m[3]}Z` : iso;
 }
 
-export function triageRows(panel: NeedsYouPanel | null, stamp: (iso: string) => string): TriageView[] {
+/** The server's age is measured at the item's own `as_of`; beyond this gap from the read time the page states, the two do not describe the same moment. */
+export const AGE_COMPARABLE_MS = 5 * 60 * 1000;
+
+/**
+ * An item's age is `age_seconds` at its `as_of`. It sits beside "Overdue since ..." and the page's
+ * read time, so it is shown only when that `as_of` and the stated read time are within a few
+ * minutes of each other. A missing or unparseable instant, or a larger gap, is "not comparable":
+ * the age is dropped, never re-computed from the browser clock.
+ */
+export function comparableAge(item: Pick<TriageItem, "ageSeconds" | "asOf">, readAt: string | null): string | null {
+  if (item.ageSeconds === null || item.asOf === null || readAt === null) return null;
+  const at = Date.parse(item.asOf);
+  const read = Date.parse(readAt);
+  if (!Number.isFinite(at) || !Number.isFinite(read) || Math.abs(read - at) > AGE_COMPARABLE_MS) return null;
+  return ageLabel(item.ageSeconds);
+}
+
+export function triageRows(panel: NeedsYouPanel | null, stamp: (iso: string) => string, readAt: string | null): TriageView[] {
   if (panel === null) return [];
   // Order is the server's. See commandCenter.ts, rule 1.
   return panel.items.slice(0, ROW_CAP).map((item: TriageItem) => {
@@ -94,14 +111,14 @@ export function triageRows(panel: NeedsYouPanel | null, stamp: (iso: string) => 
     const shortDue = item.slaDueAt
       ? item.slaState === "OVERDUE" ? ` since ${shortInstant(item.slaDueAt)}` : item.slaState === "DUE_SOON" ? `, by ${shortInstant(item.slaDueAt)}` : `, due ${shortInstant(item.slaDueAt)}`
       : "";
-    const age = ageLabel(item.ageSeconds);
+    const age = comparableAge(item, readAt);
     return {
       id: item.id,
       kind: item.kind,
       title: item.title,
       summary: item.summary,
       severity: item.severity,
-      sla: `${word}${due}`,
+      sla: `${word}${due}${age === null && item.ageSeconds !== null ? ". Age not shown: its as-of time is not comparable with the read time" : ""}`,
       slaShort: `${word}${shortDue}${age ? `, age ${age}` : ""}`,
       slaState: item.slaState,
       rank: item.rank,
@@ -197,8 +214,19 @@ export function stageCounts(summary: AlphaFleetSummary | null): { stage: string;
 
 /* ── command center panels ─────────────────────────────────────────────── */
 
-export function fleetCells(panel: FleetPanel | null): { label: string; value: number | null; href: string | null }[] {
-  return panel === null ? [] : panel.cells.map((cell) => ({ label: cell.label, value: cell.value, href: cell.href }));
+export interface FleetCellView { label: string; value: number | null; href: string | null; code: string | null }
+
+export function fleetCells(panel: FleetPanel | null): FleetCellView[] {
+  return panel === null ? [] : panel.cells.map((cell) => ({ label: cell.label, value: cell.value, href: cell.href, code: cell.code }));
+}
+
+/** Cells that count something other than deployments: they are never part of the deployment total. */
+const ISSUE_CODES: readonly string[] = ["BROKER_SYNC_ISSUES", "OPEN_FINDINGS"];
+
+/** The Command Centre fleet cells in two units: deployments (by state) and open issues. Never merged, never summed. */
+export function fleetCellGroups(panel: FleetPanel | null): { deployments: FleetCellView[]; issues: FleetCellView[] } {
+  const cells = fleetCells(panel);
+  return { deployments: cells.filter((c) => c.code === null || !ISSUE_CODES.includes(c.code)), issues: cells.filter((c) => c.code !== null && ISSUE_CODES.includes(c.code)) };
 }
 
 export function todayRows(panel: TodayPanel | null): TodayPanel["items"] {
