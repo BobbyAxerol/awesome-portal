@@ -96,8 +96,8 @@
   "default GET /compositions/admin-action-drawer": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "977f5a8be0f0044271578aa7382aee4c33b540076908ff56d697896400ef62bd",
-   "bytes": 31412,
+   "sha256": "38114106b157317c968a0e4b5cedaefdf7a5d84b3b384f78089b7e903fb4764a",
+   "bytes": 35659,
    "gap": false
   },
   "default GET /compositions/not-a-surface": {
@@ -838,8 +838,8 @@
   "default GET /commands/tasks": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "2f03e1af2c6136c4a4c04c95e3f25c44ef27ad5de954d5e82900cbe6ea1bdf0d",
-   "bytes": 29706,
+   "sha256": "449f6fc4f9862880bc288b971473ad9618a2bae7cb341ff7167ce552c9cd5c62",
+   "bytes": 33953,
    "gap": false
   },
   "default GET /commands/catalog": {
@@ -1594,8 +1594,8 @@
   "operationsV2 GET /compositions/admin-action-drawer": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "977f5a8be0f0044271578aa7382aee4c33b540076908ff56d697896400ef62bd",
-   "bytes": 31412,
+   "sha256": "38114106b157317c968a0e4b5cedaefdf7a5d84b3b384f78089b7e903fb4764a",
+   "bytes": 35659,
    "gap": false
   },
   "operationsV2 GET /compositions/not-a-surface": {
@@ -2336,8 +2336,8 @@
   "operationsV2 GET /commands/tasks": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "2f03e1af2c6136c4a4c04c95e3f25c44ef27ad5de954d5e82900cbe6ea1bdf0d",
-   "bytes": 29706,
+   "sha256": "449f6fc4f9862880bc288b971473ad9618a2bae7cb341ff7167ce552c9cd5c62",
+   "bytes": 33953,
    "gap": false
   },
   "operationsV2 GET /commands/catalog": {
@@ -3106,8 +3106,8 @@
   "screensV2 GET /compositions/admin-action-drawer": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83da3dec45e7fc6f4166ec3169fdfff24a2657f4f7286bea7fce9ab410f1c114",
-   "bytes": 31666,
+   "sha256": "2ab07090da6c5ed5bf725ad63af3169d4e15fa44267d138c0e040abbf8a84f9f",
+   "bytes": 35913,
    "gap": false
   },
   "screensV2 GET /compositions/not-a-surface": {
@@ -3848,8 +3848,8 @@
   "screensV2 GET /commands/tasks": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "2f03e1af2c6136c4a4c04c95e3f25c44ef27ad5de954d5e82900cbe6ea1bdf0d",
-   "bytes": 29706,
+   "sha256": "449f6fc4f9862880bc288b971473ad9618a2bae7cb341ff7167ce552c9cd5c62",
+   "bytes": 33953,
    "gap": false
   },
   "screensV2 GET /commands/catalog": {
@@ -4688,8 +4688,8 @@
   "operationsV2+screensV2 GET /compositions/admin-action-drawer": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83da3dec45e7fc6f4166ec3169fdfff24a2657f4f7286bea7fce9ab410f1c114",
-   "bytes": 31666,
+   "sha256": "2ab07090da6c5ed5bf725ad63af3169d4e15fa44267d138c0e040abbf8a84f9f",
+   "bytes": 35913,
    "gap": false
   },
   "operationsV2+screensV2 GET /compositions/not-a-surface": {
@@ -5430,8 +5430,8 @@
   "operationsV2+screensV2 GET /commands/tasks": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "2f03e1af2c6136c4a4c04c95e3f25c44ef27ad5de954d5e82900cbe6ea1bdf0d",
-   "bytes": 29706,
+   "sha256": "449f6fc4f9862880bc288b971473ad9618a2bae7cb341ff7167ce552c9cd5c62",
+   "bytes": 33953,
    "gap": false
   },
   "operationsV2+screensV2 GET /commands/catalog": {

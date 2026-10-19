@@ -203,8 +203,9 @@ describe("L1 · readAsOf and the decimal unit axis", () => {
   });
 
   it("the PARTIAL and DENIED words come from the schema vocabulary the screens share", () => {
-    // MetricState in the fleet schema publishes AVAILABLE, EMPTY, UNAVAILABLE; EMPTY is not a reader state here.
-    expect(schemaEnum("execution-alpha-fleet-list.v2", "/$defs/MetricState/properties/state")).toEqual(["AVAILABLE", "EMPTY", "UNAVAILABLE"]);
+    // MetricState in the fleet schema publishes AVAILABLE, EMPTY, PARTIAL, UNAVAILABLE (PARTIAL since FE-049, which the
+    // server already emitted for equity_series_30d / max_drawdown_30d); EMPTY is not a reader state here.
+    expect(schemaEnum("execution-alpha-fleet-list.v2", "/$defs/MetricState/properties/state")).toEqual(["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"]);
   });
 });
 
