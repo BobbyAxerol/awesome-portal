@@ -23842,6 +23842,74 @@ Lease is retained until the hook job physically ends; never unlink on observer
 failure or infer cleanup from empty handlers. Source-only rollback is reviewed
 forward revert, not runtime/DB rollback. Full08NOT_MET;09connectedNOT_STARTED.
 
+**Actual source publication and bounded cleanup COMPLETE,19Oct17:06UTC.**
+Status `SOURCE_PUBLISHED_NORMAL_HOOK_PASS`; not full phase08 closure. Source
+commit `81058c8c3fcb5372bc3c847d9fe8d6ccf67ec7f0`, BobbyAxerol identity,
+13files/+3810/-0, was non-force pushed to the canonical awesome-portal feature
+ref and independently verified by ls-remote. No merge, dev/main promotion,
+runtime rollout or other remote update. [Actual bounded publication receipt](integration/execution-native-read-v1/research-identity-intake/operator-publication.json)
+records source pins, qualified scope, hook result and exact two-host cleanup.
+
+The unmodified explicit `.githooks` commit gate physically ended exit0:
+130contract tests,717API tests/72files, TypeScript build and PostgreSQL
+dump/restore drill PASS. Hook log SHA256
+`9d3e7cf8fa3541a400df218106d452220cde88e155e89d2a228361ea079e4ae5`.
+The qualified67cases were not repeated or added to717;65overlap+2loopback TLS
+retain TEST_ONLY SDK/Core/DB callbacks. All staged bytes matched review;
+0private-key/credential-DSN/literal-live-JWT findings. Three unrelated WIP
+files remain untracked, hash-preserved and uncommitted, although normal hook
+tests copied their dirty app context. This is source validation, not release
+or genuine connected authorization/COMMIT/capacity proof.
+
+HK: all70container tuples unchanged (40running/30retained stopped),92baseline
+image IDs and318BuildKit IDs retained. Only new, unreferenced hook test image
+`sha256:db106d753beed5e0a24befcc14b3bb2133f2c5dd412cdce1ec8d7f7b854ea7ab`
+was removed after actual job end;0newcache IDs. Shared free bytes before hook /
+after hook / after image cleanup:243091910656/242762170368/242713776128.
+Published8-file HK incoming mirror removed (1917756bytes), free bytes
+243893817344→243895738368. Bounded audit receipt/log/inventory retained at
+`/tmp/epg10-08-operator-publication-WccnC2E2/`; not a runtime/source backup.
+No exclusive disk-reclaim claim on this shared data-producing host.
+
+SGP: independently delegated exact cleanup finished17:02:54UTC after both
+leases were absent and physical quiet/hash/no-symlink/open-user checks passed.
+Removed only16public source/test/log/receipt files (2136988bytes),9empty child
+directories and root `/tmp/epg10-08-operator-unit-sgp-9webn1pg`; target absent.
+Shared available154292551680→154294771712bytes. All60container tuples,
+390image tag/digest tuples and3826cache IDs unchanged;0prune. Manifest/runtime/
+retention digests are in the receipt. Private trust/frozen PM/custody/install
+inputs, provider28445, original native roles, dormant identity role/schema and
+peer resources were not touched. No restart, DB/auth/grant/session/listener
+mutation. Two independent reviewers and exact cleanup executor had disjoint
+scope; parent alone owned source/index/journal/publication.
+
+Fresh cross-owner check17:01–17:06UTC: PMc7466087 command handoff still has
+no authenticated runtime target/mount/listener/trust (UNCONFIGURED_FAIL_CLOSED).
+TS0cd356da native fence sources unchanged; EDS remains
+OWNER_IMPLEMENTED_SOURCE_DARK_NOT_ACCEPTED; PM publication PREPARED_NOT_RUN.
+Capacity inputs still17null/14unapproved budget groups. Isolated census/fixture
+results do not supply connected03/07/01+06 authority or capacity. Core HEAD
+f4643915/008+009 return7b9e7c98/installed bootstrape997debd unchanged at17:06;
+no new installed/config/READY return. No applicable new input is being deferred.
+
+**Runnable now:** persist this actual receipt/main/packet link through the same
+ordinary metadata hook, source-only commit/push, then remove only its newly
+created unreferenced test image and release our lease after physical job end.
+This metadata receipt records the completed81058source gate; the subsequent
+receipt-publication hook is a distinct gate, not extra67-case qualification.
+Preserve qualified source and unrelated WIP; rollback is a reviewed forward
+source revert, never runtime or DB rollback. No new implementation framework.
+**Genuinely blocked:** Core must land normal R3 and install008 coherently,
+review actual custody and return image/bootstrap/config/schema/READY pins;
+009 must provide actual independent native READ/Core READ/STREAM composition
+and finite config/owner ACK. Then reuse this published operator immediately:
+READY recovery28446→JIT original identity→physical COMMIT/readback+real Core
+ACK→drain/retire/logout→separate READ/STREAM→revoke/cache/cursor/SSE. Never
+activate old bootstrap, reset custody, infer zero obligations or borrow stable
+identity/provider trust. No fresh generic approval requested; exact original08
+binding/drill remains approved. Owned publication work is complete, connected
+original08NOT_MET,09connectedNOT_STARTED; no new phase/release claimed.
+
 
 
 

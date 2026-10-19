@@ -20,6 +20,15 @@ assertion issuance on its old installed bootstrap. See the exact
 [Core008 owner action](../../../evidence/execution-edge-v1_2/EPG10-08/CORE_UNUSED_IDENTITY_FINISH_OWNER_ACTION.md)
 and [connected READ/STREAM owner action](../../../evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md).
 
+**Published source:** `81058c8c3fcb5372bc3c847d9fe8d6ccf67ec7f0` on
+`BobbyAxerol/awesome-portal:feat/execution-edge-upgrade-v1_2`, non-force push
+verified. [Actual publication and two-host cleanup](operator-publication.json):
+unmodified normal hook130contracts/717API PASS, build/restore PASS. Exact test
+source copies and the new unreferenced hook image were cleaned; operational
+resources/custody unchanged. Core008 remains source-only/not installed and009
+not composed; these source results do not authorize assertion issuance or
+claim full08/connected09. Core should consume these pins, not old44ee/551a.
+
 Bind only matching installed Core source/image/bootstrap/config/custody and
 current trust. Keep the existing order: durable recovery READY28446, then JIT
 identity assertion, original-attempt physical COMMIT/readback and real Core ACK,

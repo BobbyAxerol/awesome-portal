@@ -1,0 +1,132 @@
+{
+  "schema_version": "epg10-08.operator-source-publication.v1",
+  "status": "SOURCE_PUBLISHED_NORMAL_HOOK_PASS",
+  "recorded_utc": "2026-10-19T17:08:00Z",
+  "qualification_scope": "ISOLATED_OPERATOR_NOT_CONNECTED_ACCEPTANCE",
+  "source": {
+    "repository": "BobbyAxerol/awesome-portal",
+    "worktree": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+    "branch": "feat/execution-edge-upgrade-v1_2",
+    "commit": "81058c8c3fcb5372bc3c847d9fe8d6ccf67ec7f0",
+    "files": 13,
+    "insertions": 3810,
+    "deletions": 0,
+    "push": "NON_FORCE_VERIFIED",
+    "merged": false,
+    "operator_sha256": "e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424",
+    "test_sha256": "a9ea6d20d3574cc63ef30666d91143a8ccc1d20f938d57a6a3f99c856e4d47b5"
+  },
+  "qualified_tests": {
+    "receipt": "operator-real-tls-qualification.json",
+    "passed": 67,
+    "overlap_with_previous65": 65,
+    "new_real_loopback_tls_cases": 2,
+    "sdk_core_db_callbacks": "TEST_ONLY",
+    "rerun_for_publication": false,
+    "connected_core_db_acceptance": false
+  },
+  "publication_gate": {
+    "source_commit": "81058c8c3fcb5372bc3c847d9fe8d6ccf67ec7f0",
+    "source_push_verified": true,
+    "source_remote_ref": "refs/heads/feat/execution-edge-upgrade-v1_2",
+    "normal_hook_exit_code": 0,
+    "normal_hook_log_sha256": "9d3e7cf8fa3541a400df218106d452220cde88e155e89d2a228361ea079e4ae5",
+    "contract_passed": 130,
+    "api_passed": 717,
+    "api_files_passed": 72,
+    "build_and_restore": "PASS",
+    "runtime_all_container_tuples": 70,
+    "runtime_running": 40,
+    "runtime_stopped_retained": 30,
+    "runtime_unchanged": true,
+    "runtime_tuple_sha256": "437bdd2527ff8a8b94f84423fe222df0d8f870fa2a7eac784dab15f9b85d85e6",
+    "retained_image_ids": 92,
+    "retained_image_ids_sha256": "514b671dd130f4f731516e49f9a0309cb0ddcbfecdd937da2ba1aabf9c019295",
+    "new_test_image_removed": "sha256:db106d753beed5e0a24befcc14b3bb2133f2c5dd412cdce1ec8d7f7b854ea7ab",
+    "new_cache_ids": 0,
+    "baseline_cache_records": 318,
+    "shared_free_before_hook_bytes": 243091910656,
+    "shared_free_after_hook_bytes": 242762170368,
+    "shared_free_after_image_cleanup_bytes": 242713776128,
+    "exclusive_reclaim_claim": false,
+    "recorded_utc": "2026-10-19T16:58:38.711146+00:00"
+  },
+  "cleanup": {
+    "hk_public_source_copy": {
+      "files_removed": 8,
+      "source_bytes_removed": 1917756,
+      "removed_path": "/tmp/epg10-08-operator-publication-WccnC2E2/incoming",
+      "shared_free_before_bytes": 243893817344,
+      "shared_free_after_bytes": 243895738368,
+      "exclusive_reclaim_claim": false,
+      "source_commit": "81058c8c3fcb5372bc3c847d9fe8d6ccf67ec7f0"
+    },
+    "sgp_public_overlay": {
+      "schema_version": "epg10-08.exact-sgp-public-overlay-cleanup.v1",
+      "status": "COMPLETE",
+      "started_utc": "2026-10-19T17:02:43.960216+00:00",
+      "ended_utc": "2026-10-19T17:02:54.967189+00:00",
+      "path": "/tmp/epg10-08-operator-unit-sgp-9webn1pg",
+      "files_removed": 16,
+      "child_directories_removed": 9,
+      "root_removed": true,
+      "file_bytes_removed": 2136988,
+      "manifest_sha256": "9e6b285a5aaf292bbd042d2efec8791406c675f5643fd085e56d6bfcb5fd5318",
+      "guards": {
+        "root_and_bobby_leases": "ABSENT",
+        "actual_bobby_uid": 1000,
+        "all_hashes_verified": true,
+        "symlinks_hardlinks_open_users": 0,
+        "physical_foreign_jobs": 0
+      },
+      "retention_before_equals_after": {
+        "all_container_tuples": {
+          "count": 60,
+          "sha256": "6e4e974be33d0662c38077a80cdd86dda43351e6dbd3f71eca75804b0d4e8102"
+        },
+        "image_tag_digest_tuples": {
+          "count": 390,
+          "sha256": "118323723b2be3e02c0106897ac18f3d42ce373d7fc3630fc35d1867b9bddb2b"
+        },
+        "cache_ids": {
+          "count": 3826,
+          "sha256": "2aee001f45344db69b21669d062a0f5f7634cbb53162e17bd04ee95c1ca95bf9"
+        }
+      },
+      "shared_available_bytes_before": 154292551680,
+      "shared_available_bytes_after": 154294771712,
+      "exclusive_reclaim_claim": false,
+      "images_cache_containers_volumes_pruned": 0,
+      "private_frozen_pm_installation_custody_peer_resources": "UNTOUCHED"
+    },
+    "retained": "All baseline runtime/rollback images, custody, source receipts, private references, frozen PM and peer resources. Bounded audit logs/inventories outside source retained; no test source copies or new test images retained.",
+    "shared_disk_deltas_are_not_exclusive_reclaim": true
+  },
+  "core_dependency": {
+    "owner_return": "upgrade/execution_loop/evidence/ELP2-10/CORE_EDGE_REQUEST_008_009_RETURN_2026-10-19.md",
+    "owner_return_sha256": "7b9e7c98a84cb7eb91404abb91467bf1fe9672331948960caa8df4323516c4fc",
+    "request008": "SOURCE_IMPLEMENTED_TESTED_UNCOMMITTED_NOT_INSTALLED",
+    "request009": "NOT_COMPOSED_NOT_COMMISSIONED",
+    "candidate_sha256": "a2bd8435ed79eba998ca436e312826c463a0b532bf6aaa4672f22f1473a9c8b0",
+    "bootstrap_sha256": "cc6ae429c0283105818b1c8ab7133a5380fbe49f6834fe5910daa1eb9dd1c5f4",
+    "next_owner_input": "Core normal R3 commit and coherent installed image/bootstrap/config/schema + actual custody/READY proof; separately actual009 native READ/Core READ and STREAM composition/config ACK. No assertion on old runtime.",
+    "core_tests": {
+      "orchestration_model_pass": 28,
+      "pg_first_pass": 311,
+      "pg_first_connection_timeout": 1,
+      "retake_native_file_pass": 31,
+      "retake_overlap": 30,
+      "normal_R3": "PENDING",
+      "full_build": "NOT_PROVEN"
+    }
+  },
+  "remaining": {
+    "owned_publication_code_gap": "NONE",
+    "full_original08": "NOT_MET",
+    "connected09": "NOT_STARTED",
+    "command07": "NO_AUTHENTICATED_RUNTIME_TARGET_RETURN",
+    "publication03": "SOURCE_DARK_UNACCEPTED",
+    "capacity01_06": "NO_CONNECTED_TARGET_OR_APPROVED_NUMERIC_BOUNDS",
+    "do_not": "Do not forge ACK/receipt/finished; do not reset custody, raise provider28445 capacity or grant STREAM through READ."
+  }
+}
