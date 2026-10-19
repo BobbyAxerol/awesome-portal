@@ -18,6 +18,9 @@ COPY features/roadmap-task-board/frontend features/roadmap-task-board/frontend
 # contracts workspace is a build input rather than a runtime dependency.
 COPY packages/contracts/generated packages/contracts/generated
 COPY packages/contracts/fixtures packages/contracts/fixtures
+# src/fixtureBff tests import the standalone fixture BFF sources; the frontend's tsc -b typechecks them, so the
+# sources must be in the build context. Build stage only: nothing from this directory reaches the served image.
+COPY apps/portal/fixture-bff apps/portal/fixture-bff
 COPY apps/portal/frontend apps/portal/frontend
 ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=false
 ARG ROADMAP_TASK_BOARD_PERSISTENCE=v1
