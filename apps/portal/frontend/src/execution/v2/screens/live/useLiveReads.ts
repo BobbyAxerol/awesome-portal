@@ -8,8 +8,11 @@
  * continuation, issued by the server for that panel, and the continuation is passed back unchanged
  * (opaque, never parsed, never put in the page URL). A page answers all eleven panels, so only the
  * requested one is taken; the others are ignored, not merged. A continuation the server no longer
- * accepts (409, which the port answers as `unavailable`) restarts THAT panel from its first page and
- * says so; if the restart fails too the rows already shown stay and the failure is reported.
+ * accepts (a refusal that carries a cursor code: `CURSOR_EXPIRED`, `INVALID_CURSOR`,
+ * `EXECUTION_READ_CURSOR_INVALID`) restarts THAT panel from its first page and says so; any other failure
+ * (network, 404, 5xx, denied) is reported as it is and the rows already shown stay, as they do when the
+ * restart itself fails. At most `ROW_CAP` rows are ever held for a panel: past that the screen sends the
+ * operator to the Blotter instead of growing the list without bound.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -17,7 +20,8 @@ import type { ExecutionApi, Result } from "../../../api/ports";
 import type { PanelStatus } from "../../../contracts";
 import { unsupportedText, type LiveFullVersionRead } from "../../readers/dispatch";
 import type { LiveSourceOperationsV2, LiveSourcePanelName, LiveSourceRecordV2 } from "../../readers/liveSourceOperations";
-import { panelTitle } from "./model";
+import { readCursorFailure } from "../../../cursorFailure";
+import { ROW_CAP, panelTitle } from "./model";
 
 export type LiveReadState =
   | { phase: "loading" }
@@ -75,6 +79,14 @@ export interface PanelPage {
   notice: string | null;
 }
 
+/**
+ * Whether a refusal says the continuation itself is no longer usable. Anything else is not a reason to
+ * throw the loaded rows away: it is an error to report. Codes are matched as whole tokens.
+ */
+export function isCursorRestart(reason: string): boolean {
+  return readCursorFailure(reason) !== null || /(^|[^A-Z_])EXECUTION_READ_CURSOR_INVALID([^A-Z_]|$)/.test(reason);
+}
+
 export interface PanelPaging {
   page(name: LiveSourcePanelName): PanelPage;
   loadMore(name: LiveSourcePanelName): void;
@@ -127,7 +139,7 @@ export function usePanelPaging(api: ExecutionApi, deploymentId: string, workspac
       const base = baseRef.current;
       const current = ownRef.current[name] ?? firstPage(base, name);
       const after = current.nextCursor;
-      if (base === null || after === null || busy.current.has(name)) return;
+      if (base === null || after === null || busy.current.has(name) || current.records.length >= ROW_CAP) return;
       busy.current.add(name);
       const abort = controller.current ?? new AbortController();
       const scoped = api.withReadSignal?.(abort.signal) ?? api;
@@ -151,13 +163,16 @@ export function usePanelPaging(api: ExecutionApi, deploymentId: string, workspac
           if (!("failure" in got)) {
             patch(name, base, (c) => {
               const known = new Set(c.records.map((r) => r.observationId));
-              return { ...c, records: [...c.records, ...got.records.filter((r) => !known.has(r.observationId))], hasMore: got.hasMore, nextCursor: got.nextCursor, loading: false, error: null, notice: null };
+              const merged = [...c.records, ...got.records.filter((r) => !known.has(r.observationId))];
+              // Never hold more than the cap; rows cut off here are still "more available".
+              const records = merged.slice(0, ROW_CAP);
+              return { ...c, records, hasMore: got.hasMore || records.length < merged.length, nextCursor: got.nextCursor, loading: false, error: null, notice: null };
             });
             return;
           }
-          // An expired continuation answers 409 (`unavailable`). Restart THIS panel from its first page; any other
-          // refusal (denied, rate limited, terminal) is reported as it is.
-          if (!result.ok && result.status === "unavailable") {
+          // A continuation the server rejects by its cursor code: restart THIS panel from its first page. Any other
+          // failure (network, 404, 5xx, denied, rate limited, terminal) is reported and the loaded rows stay.
+          if (!result.ok && isCursorRestart(result.reason)) {
             const again = take(await scoped.getLiveFullVersioned(deploymentId, options(null)));
             if (abort.signal.aborted) return;
             if (!("failure" in again)) {

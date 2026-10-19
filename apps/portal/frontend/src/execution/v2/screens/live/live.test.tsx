@@ -542,9 +542,11 @@ describe("V2 body (retained observations)", () => {
 
 describe("V2 · 200 rows and keyset Load more", () => {
   const PAGES = 5;
+  /** Smaller than the 200 cap so Load more has somewhere to go: five pages of 60. */
+  const SIZE = 60;
   /** Five pages of orders; each carries the cursor of the next; every other panel answers its first page. */
   const pagesOf = () => {
-    const bodies = Array.from({ length: PAGES }, (_, i) => withRecords(v2Populated(), "orders", 200, i < PAGES - 1 ? cursorFor("orders", i + 1) : null, i * 200));
+    const bodies = Array.from({ length: PAGES }, (_, i) => withRecords(v2Populated(), "orders", SIZE, i < PAGES - 1 ? cursorFor("orders", i + 1) : null, i * SIZE));
     const handler: Handler = (_id, options) => {
       if (options?.panel === "orders" && options.cursor !== undefined) {
         const at = Array.from({ length: PAGES - 1 }, (_, i) => cursorFor("orders", i + 1)).indexOf(options.cursor);
@@ -556,29 +558,43 @@ describe("V2 · 200 rows and keyset Load more", () => {
   };
   const ordersPanel = () => screen.getByRole("region", { name: "Orders" });
   const more = () => within(ordersPanel()).getByRole("button", { name: /Load more|Try again|Loading more/ });
+  const rowCount = () => within(screen.getByRole("table", { name: "Orders" })).getAllByRole("row").length - 1;
 
-  it("draws 200 rows, says 200 loaded with the total not published and offers Load more", async () => {
+  it("a page below the cap says what is loaded, that the total is not published, and offers Load more", async () => {
     mount(pagesOf());
     await loaded();
-    expect(within(screen.getByRole("table", { name: "Orders" })).getAllByRole("row")).toHaveLength(201);
-    expect(ordersPanel().textContent).toContain("200 orders loaded · total not published · more available");
+    expect(rowCount()).toBe(SIZE);
+    expect(ordersPanel().textContent).toContain(`${SIZE} orders loaded · total not published · more available`);
     expect(more().textContent).toBe("Load more");
   });
 
-  it("each Load more sends that panel's own cursor back unchanged; five pages later there is no button and at most 200 rows are drawn", async () => {
+  it("a first page already at the 200 cap has no Load more and says where the rest is", async () => {
+    const full = withRecords(v2Populated(), "orders", 200, cursorFor("orders", 1));
+    const m = mount(() => ok(v2Read(full)));
+    await loaded();
+    expect(rowCount()).toBe(200);
+    expect(within(ordersPanel()).queryByRole("button")).toBeNull();
+    expect(ordersPanel().textContent).toContain("First 200 shown of 200 loaded · more available; use Blotter for the full list");
+    expect(ordersPanel().textContent).not.toMatch(/N\/A|—/);
+    expect(m.calls).toHaveLength(1);
+  });
+
+  it("each Load more sends that panel's own cursor back unchanged; at the cap the button goes, the list stops at 200 and nothing more is requested", async () => {
     const m = mount(pagesOf());
     await loaded();
-    for (let i = 1; i < PAGES; i += 1) {
+    // 60, 120, 180, then the fourth page would make 240: it is cut at 200 and the button is gone.
+    for (let i = 1; i < 4; i += 1) {
       fireEvent.click(more());
       await waitFor(() => expect(m.calls).toHaveLength(i + 1));
-      await waitFor(() => expect(ordersPanel().textContent).toContain(`${(i + 1) * 200} orders loaded`));
+      await waitFor(() => expect(rowCount()).toBe(Math.min((i + 1) * SIZE, 200)));
     }
     expect(m.calls.slice(1).map((c) => c.options)).toEqual(
-      Array.from({ length: PAGES - 1 }, (_, i) => ({ panel: "orders", cursor: cursorFor("orders", i + 1) })),
+      Array.from({ length: 3 }, (_, i) => ({ panel: "orders", cursor: cursorFor("orders", i + 1) })),
     );
-    expect(ordersPanel().textContent).toContain("Top 200 of 1000 orders loaded · total not published · no further page");
-    expect(within(ordersPanel()).queryByRole("button", { name: "Load more" })).toBeNull();
-    expect(within(screen.getByRole("table", { name: "Orders" })).getAllByRole("row")).toHaveLength(201);
+    expect(ordersPanel().textContent).toContain("First 200 shown of 200 loaded · more available; use Blotter for the full list");
+    expect(within(ordersPanel()).queryByRole("button")).toBeNull();
+    expect(rowCount()).toBe(200);
+    expect(m.calls).toHaveLength(4);
   });
 
   it("the cursor and the panel are read parameters: neither is ever in the page URL", async () => {
@@ -586,7 +602,7 @@ describe("V2 · 200 rows and keyset Load more", () => {
     await loaded();
     fireEvent.click(more());
     await waitFor(() => expect(m.calls).toHaveLength(2));
-    await waitFor(() => expect(ordersPanel().textContent).toContain("400 orders loaded"));
+    await waitFor(() => expect(ordersPanel().textContent).toContain(`${2 * SIZE} orders loaded`));
     expect(where()).toBe(`/deployments/live/${DEPLOYMENT_ID}`);
   });
 
@@ -600,56 +616,79 @@ describe("V2 · 200 rows and keyset Load more", () => {
     fireEvent.click(more());
     expect(m.calls).toHaveLength(2);
     release?.();
-    await waitFor(() => expect(ordersPanel().textContent).toContain("400 orders loaded"));
+    await waitFor(() => expect(ordersPanel().textContent).toContain(`${2 * SIZE} orders loaded`));
   });
 
-  it("an expired cursor (409) restarts THAT panel from its first page and says so; other panels are untouched", async () => {
-    const first = withRecords(v2Populated(), "orders", 200, cursorFor("orders", 1));
+  it.each([
+    ["CURSOR_EXPIRED", "CURSOR_EXPIRED: Query cursor has expired."],
+    ["INVALID_CURSOR", "INVALID_CURSOR: bad cursor"],
+    ["EXECUTION_READ_CURSOR_INVALID", "EXECUTION_READ_CURSOR_INVALID: the page reference no longer applies"],
+  ])("a cursor refusal (%s) restarts THAT panel from its first page and says so; other panels are untouched", async (_code, reason) => {
+    const first = withRecords(v2Populated(), "orders", SIZE, cursorFor("orders", 1));
     const restart = withRecords(v2Populated(), "orders", 3, null, 5000);
-    const m = mount((_id, options) => (options?.cursor !== undefined ? refused("unavailable", "409: cursor expired") : ok(v2Read(options?.panel === "orders" ? restart : first))));
+    const m = mount((_id, options) => (options?.cursor !== undefined ? refused("unavailable", reason) : ok(v2Read(options?.panel === "orders" ? restart : first))));
     await loaded();
     fireEvent.click(more());
     await waitFor(() => expect(ordersPanel().textContent).toContain("The continuation for orders expired, so the list restarted from its first page."));
     expect(m.calls.slice(1).map((c) => c.options)).toEqual([{ panel: "orders", cursor: cursorFor("orders", 1) }, { panel: "orders" }]);
-    expect(within(screen.getByRole("table", { name: "Orders" })).getAllByRole("row")).toHaveLength(4);
+    expect(rowCount()).toBe(3);
     expect(ordersPanel().textContent).toContain("3 orders loaded · total not published · no further page");
     expect(screen.getByRole("table", { name: "Positions" })).toBeTruthy();
   });
 
-  it("if the restart fails too, the rows stay and the failure is reported (Try again)", async () => {
-    const first = withRecords(v2Populated(), "orders", 200, cursorFor("orders", 1));
-    mount((_id, options) => (options?.panel !== undefined ? refused("unavailable", "503: down") : ok(v2Read(first))));
+  it.each([
+    ["a network failure", "The live operations never reached the Portal: network failure."],
+    ["a 404", "NOT_FOUND: no such deployment"],
+    ["a 5xx", "503: down"],
+    ["a 409 that is not about the cursor", "409: the workflow moved"],
+  ])("%s is reported and the loaded rows stay; the panel is NOT restarted", async (_what, reason) => {
+    const first = withRecords(v2Populated(), "orders", SIZE, cursorFor("orders", 1));
+    const m = mount((_id, options) => (options?.cursor !== undefined ? refused("unavailable", reason) : ok(v2Read(first))));
     await loaded();
     fireEvent.click(more());
-    await waitFor(() => expect(within(ordersPanel()).getByRole("alert").textContent).toContain("Could not load more orders. 503: down"));
-    expect(within(screen.getByRole("table", { name: "Orders" })).getAllByRole("row")).toHaveLength(201);
+    await waitFor(() => expect(within(ordersPanel()).getByRole("alert").textContent).toContain(reason));
+    // One failed continuation request, no first-page refetch, the 60 rows still there, no "expired" notice.
+    expect(m.calls).toHaveLength(2);
+    expect(m.calls[1]!.options).toEqual({ panel: "orders", cursor: cursorFor("orders", 1) });
+    expect(rowCount()).toBe(SIZE);
+    expect(ordersPanel().textContent).not.toContain("restarted from its first page");
+    expect(more().textContent).toBe("Try again");
+  });
+
+  it("a cursor refusal whose restart fails too keeps the rows and reports the failure (Try again)", async () => {
+    const first = withRecords(v2Populated(), "orders", SIZE, cursorFor("orders", 1));
+    mount((_id, options) => (options?.cursor !== undefined ? refused("unavailable", "CURSOR_EXPIRED: expired") : options?.panel !== undefined ? refused("unavailable", "503: down") : ok(v2Read(first))));
+    await loaded();
+    fireEvent.click(more());
+    await waitFor(() => expect(within(ordersPanel()).getByRole("alert").textContent).toContain("Could not load more orders. CURSOR_EXPIRED: expired"));
+    expect(rowCount()).toBe(SIZE);
     expect(more().textContent).toBe("Try again");
   });
 
   it("a refusal that is not an expiry (denied, rate limited) is reported as it is and does not restart the panel", async () => {
     for (const status of ["denied", "stale"] as const) {
       cleanup();
-      const first = withRecords(v2Populated(), "orders", 200, cursorFor("orders", 1));
+      const first = withRecords(v2Populated(), "orders", SIZE, cursorFor("orders", 1));
       const m = mount((_id, options) => (options?.cursor !== undefined ? refused(status, `${status}: nope`) : ok(v2Read(first))));
       await loaded();
       fireEvent.click(more());
       await waitFor(() => expect(within(ordersPanel()).getByRole("alert").textContent).toContain(`${status}: nope`));
       expect(m.calls).toHaveLength(2);
-      expect(within(screen.getByRole("table", { name: "Orders" })).getAllByRole("row")).toHaveLength(201);
+      expect(rowCount()).toBe(SIZE);
     }
   });
 
   it("a later page that is the other version, or unsupported, is not shown", async () => {
-    const first = withRecords(v2Populated(), "orders", 200, cursorFor("orders", 1));
+    const first = withRecords(v2Populated(), "orders", SIZE, cursorFor("orders", 1));
     mount((_id, options) => (options?.cursor !== undefined ? ok({ kind: "unsupported", schemaVersion: "later.v9", reason: "UNKNOWN_SCHEMA_VERSION" }) : ok(v2Read(first))));
     await loaded();
     fireEvent.click(more());
     await waitFor(() => expect(within(ordersPanel()).getByRole("alert").textContent).toContain("later.v9"));
-    expect(within(screen.getByRole("table", { name: "Orders" })).getAllByRole("row")).toHaveLength(201);
+    expect(rowCount()).toBe(SIZE);
   });
 
   it("Load more on another panel uses that panel's name, not orders'", async () => {
-    const body = withRecords(withRecords(v2Populated(), "orders", 2, null), "fills", 200, cursorFor("fills", 1));
+    const body = withRecords(withRecords(v2Populated(), "orders", 2, null), "fills", SIZE, cursorFor("fills", 1));
     const m = mount(() => ok(v2Read(body)));
     await loaded();
     fireEvent.click(within(screen.getByRole("region", { name: "Fills" })).getByRole("button", { name: "Load more" }));

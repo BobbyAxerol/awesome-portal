@@ -195,6 +195,8 @@ export function PanelSection({ panel, page, onMore }: PanelSectionProps) {
   const aside = panel.state === "PARTIAL" ? <Flag kind="partial" label="Partial" size="sm" /> : <Flag kind="na" label="Not published" size="sm" />;
   const columns = panelColumns(page.records);
   const shown = page.records.slice(0, ROW_CAP);
+  // Past the cap Load more would only add rows nobody can see: say so and point at the Blotter.
+  const atCap = page.hasMore && page.records.length >= ROW_CAP;
   const cols: CardsColumn<LiveSourceRecordV2>[] = columns.map((column) => ({
     key: column.field,
     label: column.label,
@@ -212,8 +214,12 @@ export function PanelSection({ panel, page, onMore }: PanelSectionProps) {
       <>
         <CardsTable columns={cols} rows={shown} rowKey={(record) => record.observationId} label={title} />
         <div className="exec-liv-more">
-          <span className="exec-liv-cap">{capCaption({ shown: shown.length, loaded: page.records.length, total: null, hasMore: page.hasMore, noun })}</span>
-          {page.hasMore ? (
+          <span className="exec-liv-cap">
+            {atCap
+              ? `First ${shown.length} shown of ${page.records.length} loaded · more available; use Blotter for the full list`
+              : capCaption({ shown: shown.length, loaded: page.records.length, total: null, hasMore: page.hasMore, noun })}
+          </span>
+          {page.hasMore && !atCap ? (
             <button type="button" className="exec-blk-btn" aria-busy={page.loading ? "true" : undefined} onClick={() => { if (!page.loading) onMore(); }}>
               {page.loading ? "Loading more" : page.error ? "Try again" : "Load more"}
             </button>
