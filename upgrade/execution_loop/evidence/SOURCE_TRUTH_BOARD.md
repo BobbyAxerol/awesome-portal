@@ -129,3 +129,32 @@ records committed PM908169aa evidence, unchanged discovery/history/command wire,
 and Edge's separate native-only compatibility repair. Stop listing the original
 finite32 eight-case execution as missing; keep every broader source/trust/
 current-runtime/financial/SSE/capacity gate and all12 mount states unchanged.
+
+## S2 consumers (Claude, 2026-10-18; fixture lane, chưa nguồn thật)
+Cột nguồn của 12 hàng ở trên do Codex giữ. Đây là cột FE của lát S1e + S2; không đổi trạng thái nguồn hay đọc mẫu (vẫn `NOT_DONE`).
+| Family | Màn V2 (cờ) | Reader / fixture | Ô "Not published" chính | Request |
+| --- | --- | --- | --- | --- |
+| Portfolios list/360 | `portfolios`, `compare` | `listPortfolios`, `getPortfolio360Resource`, capital ledger; double `answerPortfolios` | NAV/PnL/Return/DD FE-005/006/013/025 · capital FE-017 · flow FE-032 · compare series FE-033 · activity FE-031 | FE-044/045/046 |
+| Alpha 360 + replay | `alpha`, `replay` | resource/stage-drift/timeline/orders/fills; double `answerAlpha` | spine FE-027/028 · score FE-011 · run/evidence FE-029 | FE-054 |
+| Accounts + 360 | `account` | bindings, `getAccount360Resource`; double `answerAccount` | budget FE-017 · fees/funding FE-025 · actions FE-015/020 | FE-050/051 |
+| Overview | `overview` | command-center composition, fleet, queue V2; double `answerOverview` | money KPIs, feed FE-024, contributors FE-025 | FE-005/006/013/024/025 |
+| Blotter | `blotter` | `/screens/blotter`, funnel, conditional groups | per-order fields, server scope filters | FE-052 |
+| Admin Actions | `admin` | catalogue, tasks, activation, plan | apply/receipt (relay-disabled) | FE-015/020 |
+| Users | `users` | `/api/admin/accounts` + step-up (`accountApi`) | presets, last sign-in | FE-015/026/037/038/053 |
+| Access (self) | `profile` | `/api/admin/profile-access/v2/effective` | granted-by, reason_class, researcher policy | FE-015/026/037/038 |
+
+### Pending-control (hàng 12): consumer receipt F8b, Claude 2026-10-18 — [consumer-review-pending-control-2026-10-18.md](UXM-07/consumer-review-pending-control-2026-10-18.md)
+Pin: producer `5291a80f`. **Đề xuất CHANGES_REQUESTED** (không BLOCKER): đọc (preview/status/reconcile) ACCEPTED; phần ghi chưa dựng được từ FE. Fixture L0 `MATCH@5291a80f` (testkit 15/15 + AJV 15/15), `SYNTHETIC_ONLY`; reader FE: **không có** (đề xuất `v2/readers/pendingControl.ts`).
+- R-1 (MAJOR): đầu vào không khám phá được (original recall id, currency, 5 counter int64 không route nào publish; không list read; mất phản hồi submit thì chỉ còn replay đúng body + key).
+- R-2 (MAJOR): status/preview/prediction thiếu `currency` (F8-08), status thiếu `recipient_account_id` khi resource là DEPLOYMENT.
+- Capability: `capital.apply_pending`/`capital.cancel_remaining` chỉ ở `AccessAction`, không vào `PORTAL_CAPABILITIES`; FE-015 vẫn không đóng (thiếu grant = 403, không có `reason_class`).
+- Schema lỏng (xin Codex): bidi/zero-width trong chuỗi, chuỗi chỉ khoảng trắng, `PendingControlProblem` mở hoàn toàn (và mã `PENDING_CONTROL_INPUT_INVALID` ngoài enum), `blockers` không unique, 12 ràng buộc chéo schema nhận (partition sum, state×partition, thời gian). Cần fixture âm canonical.
+- Receipt `ELP2-07/pending-control.md` trong commit vẫn ghi "FAIL_OR_INCOMPLETE, retake pending"; terminal PASS của hook chưa có trong repo (R-3): Codex ghi lại.
+- Nợ testkit (FE): `validateAgainst` ném lỗi trên từ khoá OpenAPI `discriminator`.
+
+### Cập nhật sau `e19ad906` (Claude, 2026-10-19): Codex đã trả lời một phần review F8
+Pin: producer `e19ad906`; reader FE đã theo schema mới (25 parent + 3 composition, đọc được cả 25). Hàng 4 (governance R1/R2/Live/Exit):
+- **FE-028 criteria: MỘT PHẦN.** Paper Exit có `label`, `observed`, `limit` (chuỗi chính xác), `unit`, `currency`, evidence hash, source time/ref. Còn thiếu: comparator (op luôn `SOURCE_COMPARATOR_FIELD_NOT_RECORDED`), verdict WITHIN/WARN/BLOCKER, checklist counts; R2 (mọi trường criterion `SOURCE_STRUCTURED_CRITERION_NOT_RECORDED`); R1 state/expiry; Live; Sandbox/Canary.
+- **FE-030 cockpit: MỘT PHẦN.** Mới có: `actors` (requester, artifact creator, decider + cờ viewer), `latest_operation` (liên kết approval → `operation_id`), `decision_context` R2, `recorded_activity` (≤32 quyết định gần nhất). Vẫn thiếu: ladder, sla/needs_you trên parent, "what changes", decision call hợp nhất, `receipt_ref`, `quorum_after`, capital rows, username (chỉ có user id).
+- **FE-029, FE-034: KHÔNG ĐỔI.** Registry rev 7 thêm `navigation.scoped_v2_replacement` (APPROVALS → EXECUTION_APPROVALS): FE shell chưa đọc.
+- Hợp đồng mới chưa có reader FE: `portal.self-eligibility.v1`, `portal.self-navigation.v1` (có thể trả lời một phần FE-015/037/038), `CommandStatus.currency` (command-currency, pending-control-currency: đóng R-2 của review pending-control), workflow criteria capsules, manager-dataset (chỉ format lại).

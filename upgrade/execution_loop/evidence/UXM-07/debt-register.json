@@ -38,6 +38,20 @@
       "where": "hifi-comparison-2026-10-18.md section 'Chua lam'; per-row ids in hifi-review-A/B/C",
       "consequence": "visual polish only; no data or authority effect",
       "owner": "Claude (rows without a Codex/owner dependency); owner/Codex for P-B7, Compare Partitions panel, EquityPanel Y labels (exact-decimal display rule)"
+    },
+    {
+      "id": "DEBT-UXM07-009",
+      "title": "r2Ledger red on the Codex tip e19ad906",
+      "where": "apps/portal/frontend/src/execution/r2Ledger.test.ts:117 (governance_approval_decision_inbox is named in control-api SQL and has no row in r2_ledger/persistence-ownership.v1.json)",
+      "evidence": "fails after the rebase with no FE change; same class as DEBT-UXM07-002 (closed by Codex 5291a80f)",
+      "owner": "Codex"
+    },
+    {
+      "id": "DEBT-UXM07-010",
+      "title": "One load-flaky V2 incident test",
+      "where": "v2/screens/operations/incident.test.tsx 'MITIGATED marks Open done...'",
+      "evidence": "fails in the wide run, passes alone (16/16) twice",
+      "owner": "Claude: find the timing dependency when the test lane is next touched"
     }
   ],
   "closed": [

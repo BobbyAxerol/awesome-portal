@@ -171,5 +171,12 @@
     "vitest": "213 files / 17,547 pass / 2 expected-fail / 0 red",
     "browser_v2": "34/34",
     "pinned_image_visual": "377 passed / 15 failed / 16 skipped; the 15 are exactly the set already red on pristine Codex 5291a80f (DEBT-UXM07-007: surface-audit x10, EL-V2-05, c06 probe x4); no baseline differs because of this branch"
+  },
+  "rebase_e19ad906": {
+    "date": "2026-10-19",
+    "control_api": "scripts/control-api-test.sh operational + f0 collection specs: 117/117 + restore drill",
+    "contracts_generators": "operation-reader and operational-current-reader --check exit 0; snapshot regenerated (479 files)",
+    "vitest_wide": "23,323 pass / 2 expected-fail / red: r2Ledger (Codex) + one load-flaky incident test (passes alone)",
+    "adapted": "governance parent readers + cockpit to the enriched contracts; registry revision 7 pinned"
   }
 }

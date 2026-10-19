@@ -61,6 +61,9 @@ PM hiện `b9fae791` (vượt `673ce7cf` và `e62b6825`, FE-019 coi là hết hi
 
 **Tác động lên thiết kế (đã chấp nhận):** hàng đợi Operations V2 grain `operation_id` (xác nhận R3) nhưng không có assignee/actor ack-resolve/SLA; `assigned_to=me` trả 400 → lens "Mine", Acknowledge, Resolve hiện bị tắt kèm lý do (D9). Incident chỉ có root hiện tại → timeline/evidence là "Not available". Source health, journal, canary twin đều UNAVAILABLE.
 
+### 0d. Sau `e19ad906` (2026-10-19)
+Codex trả lời một phần review F8: R2/Paper Exit parent có actors, latest_operation (approval → operation_id), decision_context, recorded_activity, criteria (Paper Exit: label/observed/limit/unit); FE-028 và FE-030 **MỘT PHẦN** (xem Board). Registry rev 7. Hợp đồng mới chưa đọc: self-eligibility, self-navigation, command-currency. `r2Ledger` đỏ do bảng `governance_approval_decision_inbox` (DEBT-UXM07-009, Codex).
+
 ### 0c. Codex đã tiếp nhận FE-001…043 và chia lại việc (2026-10-18, từ `evidence/ELP2-10/claude-review-intake-2026-10-18.md`, file chưa commit trong cây Codex)
 Codex đọc ledger này tại `3b6dad16`, xếp mọi yêu cầu `ACCEPTED_FOR_IMPLEMENTATION` vào packet phase (**chưa DELIVERED**), trừ các điều chỉnh sau (tôi đã đọc, chưa phản hồi chính thức):
 | Mục | Ý kiến Codex | Hệ quả cho FE |
