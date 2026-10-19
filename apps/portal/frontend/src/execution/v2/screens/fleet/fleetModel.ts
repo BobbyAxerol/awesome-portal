@@ -244,24 +244,68 @@ export function fleetKpis(summary: AlphaFleetSummary | null): readonly Kpi[] {
 
 export interface LensCount { text: string | null; approximate: boolean }
 
+/** What a tab prints when the summary does not carry that stage: never a guessed zero (Rules 3.3). */
+export const COUNT_NOT_AVAILABLE = "Not available";
+
 /**
  * Tab counts from the summary, which covers every authorized alpha whatever
  * the filters. `stage_counts` counts alphas per stage they are in, so the
  * Real-funded sum can count an alpha in both Canary and Live twice: it is an
  * upper bound and printed with `~`. Archived has no count: it is not published.
+ *
+ * A stage the summary does not list is "Not available", not 0: the schema does
+ * not say whether the source omits stages that hold none or stages it did not
+ * publish (DEFECT D4, a question for Codex). Real-funded needs both Canary and
+ * Live, so it is not available when either is missing. If Codex answers that
+ * absence means zero, this line relaxes.
  */
 export function lensCounts(summary: AlphaFleetSummary | null): Readonly<Record<FleetLens, LensCount>> {
   const none: LensCount = { text: null, approximate: false };
   if (!summary) return { all: none, real: none, sandbox: none, paper: none, archived: none };
-  const n = (stage: string): number => summary.stageCounts[stage] ?? 0;
+  const missing: LensCount = { text: COUNT_NOT_AVAILABLE, approximate: false };
+  const n = (stage: string): number | null => summary.stageCounts[stage] ?? null;
   const canary = n("CANARY");
   const live = n("LIVE");
-  const both = canary > 0 && live > 0;
+  const sandbox = n("SANDBOX");
+  const paper = n("PAPER");
   return {
     all: { text: String(summary.alphaCount), approximate: false },
-    real: { text: String(canary + live), approximate: both },
-    sandbox: { text: String(n("SANDBOX")), approximate: false },
-    paper: { text: String(n("PAPER")), approximate: false },
+    real: canary === null || live === null ? missing : { text: String(canary + live), approximate: canary > 0 && live > 0 },
+    sandbox: sandbox === null ? missing : { text: String(sandbox), approximate: false },
+    paper: paper === null ? missing : { text: String(paper), approximate: false },
     archived: none,
   };
 }
+
+/* ── columns popover (HIFI Columns menu) ───────────────────────────────── */
+
+/** The columns a reader can switch off. Alpha is always shown, as in the HIFI. */
+export const FLEET_COLUMNS = [
+  { key: "owner", label: "Owner" },
+  { key: "portfolios", label: "Portfolios" },
+  { key: "stage", label: "Stage" },
+  { key: "health", label: "Health" },
+  { key: "deployments", label: "Deployments" },
+] as const;
+export type FleetColumnKey = (typeof FLEET_COLUMNS)[number]["key"];
+
+/** The URL names the columns that are switched off, so the default (all on) leaves the URL clean. */
+export const HIDDEN_COLUMNS_PARAM = "hide";
+
+export function parseHiddenColumns(value: string | null): ReadonlySet<FleetColumnKey> {
+  const known = new Set<string>(FLEET_COLUMNS.map((c) => c.key));
+  return new Set((value ?? "").split(",").map((part) => part.trim()).filter((part): part is FleetColumnKey => known.has(part)));
+}
+
+export function serializeHiddenColumns(hidden: ReadonlySet<FleetColumnKey>): string | null {
+  const keys = FLEET_COLUMNS.map((c) => c.key).filter((key) => hidden.has(key));
+  return keys.length === 0 ? null : keys.join(",");
+}
+
+/** Columns the HIFI menu lists that need data the backend has not published: shown disabled, with the request id. */
+export const UNPUBLISHED_COLUMNS: readonly { label: string; fact: UnpublishedFact }[] = [
+  { label: "Net PnL", fact: FE.window },
+  // FE-013 is not in `FE`: the shared blocks table mirrors that object one for one.
+  { label: "Equity", fact: { fe: "FE-013", what: "Equity series" } },
+  { label: "Readiness", fact: FE.readiness },
+];

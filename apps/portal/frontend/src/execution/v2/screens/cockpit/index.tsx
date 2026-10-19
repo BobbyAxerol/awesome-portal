@@ -55,6 +55,7 @@ import {
   type Principal,
   type QueueItem,
 } from "./laneModel";
+import { KeysHelp } from "./KeysHelp";
 import { Queue, MAX_QUEUE_DOM, type WaiverFilter } from "./Queue";
 import { Rail, type RailTarget } from "./Rail";
 
@@ -328,6 +329,7 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   const [lens, setLens] = useState<Lens>("open");
   const [waiverFilter, setWaiverFilter] = useState<WaiverFilter>("ALL");
   const [announcement, setAnnouncement] = useState("");
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // The waiver lane keeps the gate queue loaded (all gates) so the header counts and any selected gate stay honest.
   const inbox = useInbox(api, serverViewFor(lane === "waiver" ? "all" : lane), workspaceId);
@@ -342,6 +344,18 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
     [lane, lens, inbox.rows, decided.rows, waivers.rows, principal],
   );
   const counts = useMemo(() => (lane === "waiver" ? null : countLenses(inbox.rows, lane, principal)), [lane, inbox.rows, principal]);
+
+  // Lane chips carry a count (HIFI). The server publishes no per-lane count, so it is taken from the last page the
+  // All lane loaded and kept while another lane is open; it is an at-least number when that page had more.
+  const [allPage, setAllPage] = useState<{ rows: readonly InboxRowV2[]; more: boolean } | null>(null);
+  useEffect(() => {
+    if (lane === "all" && inbox.status === "ready") setAllPage({ rows: inbox.rows, more: inbox.hasMore });
+  }, [lane, inbox.status, inbox.rows, inbox.hasMore]);
+  const laneCounts = useMemo(() => {
+    if (allPage === null) return null;
+    const open = (id: Exclude<Lane, "waiver">) => gateItems({ rows: allPage.rows, decided: [], lane: id, lens: "open", principal }).length;
+    return { all: open("all"), r1: open("r1"), r2: open("r2"), exit: open("exit"), live: open("live") };
+  }, [allPage, principal]);
 
   const selectedKey = url.value.sel ?? pathSelection?.id ?? null;
 
@@ -391,6 +405,9 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   /* keys: J/K move, Esc clears, A/R/N announce why they do nothing */
   const keyState = useRef({ keys: [] as string[], selectedKey: null as string | null, hadSel: false });
   keyState.current = { keys: items.slice(0, MAX_QUEUE_DOM).map((item) => item.key), selectedKey, hadSel: url.value.sel !== null };
+  // While the shortcut list is open it owns the keyboard (it closes itself on Esc).
+  const helpRef = useRef(false);
+  helpRef.current = helpOpen;
   const urlSet = url.set;
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -399,7 +416,11 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
       if (target instanceof HTMLElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
       const { keys, selectedKey: current, hadSel } = keyState.current;
       const key = event.key.toLowerCase();
-      if (key === "j" || key === "k") {
+      if (helpRef.current) return;
+      if (event.key === "?") {
+        event.preventDefault();
+        setHelpOpen(true);
+      } else if (key === "j" || key === "k") {
         event.preventDefault();
         const next = stepSelection(keys, current, key === "j" ? "next" : "previous");
         if (next !== null && next !== current) urlSet({ sel: next }, { replace: true });
@@ -461,6 +482,9 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
         </div>
         <div className="exec-ck-ctrls">
           <CountLine counts={inbox.counts} status={inbox.status} />
+          <button type="button" className="exec-ck-btn" aria-haspopup="dialog" onClick={() => setHelpOpen(true)}>
+            <kbd>?</kbd> Keys
+          </button>
         </div>
       </div>
       <p className="exec-ck-banner" role="note">Preview build. Decisions are shown here, not recorded.</p>
@@ -480,6 +504,9 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
           failure={failure}
           partialNote={partialNote}
           lensCounts={counts}
+          laneCounts={laneCounts}
+          laneCountsAtLeast={allPage?.more === true}
+          onHelp={() => setHelpOpen(true)}
           moreAvailable={lane !== "waiver" && inbox.hasMore && inbox.rows.length < MAX_LOADED_ROWS}
           onMore={inbox.loadMore}
           moreBusy={inbox.moreBusy}
@@ -500,14 +527,8 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
         </aside>
       </div>
 
-      <div className="exec-ck-keys">
-        <span><kbd>J</kbd> <kbd>K</kbd> move</span>
-        <span><kbd>Esc</kbd> clear</span>
-        <span><kbd>A</kbd> approve</span>
-        <span><kbd>R</kbd> deny</span>
-        <span><kbd>N</kbd> note</span>
-      </div>
       <p className="exec-ck-live" role="status" aria-live="polite">{announcement}</p>
+      {helpOpen ? <KeysHelp onClose={() => setHelpOpen(false)} /> : null}
     </div>
   );
 }

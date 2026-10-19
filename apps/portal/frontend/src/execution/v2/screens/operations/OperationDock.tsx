@@ -10,7 +10,7 @@ import { formatAsOf } from "../../boundary";
 import type { InstantV2, OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
 import { PanelState } from "../../../components/states";
-import { FE, NotPublished, notPublishedReason } from "./notPublished";
+import { ACCESS_PATH, FE, NotPublished, notPublishedReason } from "./notPublished";
 import {
   CHECK_ORIGINAL_COPY, humanize, receiptOutcome, severityWord, TARGET_LABEL, triageOutcome,
 } from "./outcome";
@@ -48,8 +48,8 @@ export function OperationDock({ operationId, row, loading, mode, onClose }: Oper
   const actions = (
     <>
       {outcomeUnknown ? <DockAction label="Send again" reason={SEND_AGAIN_REASON} /> : null}
-      <DockAction label="Acknowledge" reason={ACK_REASON} />
-      <DockAction label="Resolve" reason={RESOLVE_REASON} />
+      <DockAction label="Acknowledge" reason={ACK_REASON} accessHref={ACCESS_PATH} />
+      <DockAction label="Resolve" reason={RESOLVE_REASON} accessHref={ACCESS_PATH} />
     </>
   );
   if (row === null) {

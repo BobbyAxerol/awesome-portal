@@ -1,10 +1,12 @@
 /**
- * The commands table: four columns, each backed by a published field.
+ * The commands table, in the kit's column order: Time, Target and operation,
+ * Intent, Receipt, Display, Next.
  *
  * Time is `created_at`; Target + operation is the target and `command_key`;
  * Receipt is `source_status` with `verification_result`; Next is
- * `triage_state`. The kit's Intent and Display columns have no source, so they
- * are not columns: the panel above the table says so, with the request id.
+ * `triage_state`. Intent (FE-020) and Display (FE-032) have no source yet, so
+ * they stay columns, as in the kit, and each cell says "Not published" with its
+ * request id instead of the table silently losing two of its six columns.
  */
 import { useMemo, type MouseEvent, type ReactNode } from "react";
 
@@ -13,6 +15,7 @@ import { Flag } from "../../Flag";
 import { formatAsOf } from "../../boundary";
 import type { OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
+import { FE, NotPublished } from "./notPublished";
 import { axesText, commandLabel, receiptOutcome, severityWord, TARGET_LABEL, triageOutcome } from "./outcome";
 
 import "../../css/operations.css";
@@ -37,6 +40,11 @@ function columnsFor(onOpen: (row: OperationV2) => void): readonly CardsColumn<Op
       ),
     },
     {
+      key: "intent",
+      label: "Intent",
+      render: () => <NotPublished id={FE.intent} />,
+    },
+    {
       key: "receipt",
       label: "Receipt",
       render: (row) => {
@@ -48,6 +56,11 @@ function columnsFor(onOpen: (row: OperationV2) => void): readonly CardsColumn<Op
           </span>
         );
       },
+    },
+    {
+      key: "display",
+      label: "Display",
+      render: () => <NotPublished id={FE.receipts} />,
     },
     {
       key: "next",

@@ -23,12 +23,14 @@ import { Kpi, KpiStrip } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { serializeUrlParams, useExecUrlState } from "../../urlState";
+import { ColumnsMenu, FilterChips, type FilterChip } from "./fleetControls";
 import { FleetDrawer } from "./FleetDrawer";
 import { FleetTable } from "./FleetTable";
 import {
-  ARCHIVED_TAB, FE, FLEET_LENSES, ROW_CAP, SORT_OPTIONS, fleetKpis, humanize, inStages, lensCounts,
-  lensForStages, lensLabel, healthView, notPublished, queryKey, fleetQuery, sortValueOf, stagesForLens, toFleetRow,
-  type FleetFilters, type FleetLens,
+  ARCHIVED_TAB, FE, FLEET_LENSES, HIDDEN_COLUMNS_PARAM, ROW_CAP, SORT_OPTIONS, fleetKpis, humanize, inStages, lensCounts,
+  lensForStages, lensLabel, healthView, notPublished, parseHiddenColumns, queryKey, fleetQuery, serializeHiddenColumns,
+  sortValueOf, stageLabel, stagesForLens, toFleetRow,
+  type FleetColumnKey, type FleetFilters, type FleetLens,
 } from "./fleetModel";
 import { useFleetRead } from "./useFleetRead";
 
@@ -73,6 +75,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
   const archived = tab === ARCHIVED_TAB;
   const lens: FleetLens | null = archived ? "archived" : lensForStages(stage);
   const tableView = view === null || view === "table";
+  const hiddenColumns = useMemo(() => parseHiddenColumns(params.get(HIDDEN_COLUMNS_PARAM)), [params]);
 
   const filters: FleetFilters = useMemo(
     () => ({ q, stages: stage, owner, health, sort: sortValueOf(sort) }),
@@ -100,6 +103,16 @@ export default function FleetScreen({ api }: FleetScreenProps) {
   const healthOptions = useMemo(() => mergeSeen(seenHealths, health ? [health] : []), [seenHealths, health]);
 
   /* ── url writers ─────────────────────────────────────────────────── */
+  const setColumn = (column: FleetColumnKey, shown: boolean) => {
+    const next = new Set(hiddenColumns);
+    if (shown) next.delete(column);
+    else next.add(column);
+    const value = serializeHiddenColumns(next);
+    const params2 = new URLSearchParams(params);
+    if (value === null) params2.delete(HIDDEN_COLUMNS_PARAM);
+    else params2.set(HIDDEN_COLUMNS_PARAM, value);
+    setParams(params2, { replace: true });
+  };
   const setLocal = (name: "owner" | "health", value: string) => {
     const next = new URLSearchParams(params);
     if (value === "") next.delete(name);
@@ -132,6 +145,21 @@ export default function FleetScreen({ api }: FleetScreenProps) {
   const commitNow = () => url.set({ q: text.trim() === "" ? null : text.trim(), sel: null }, { replace: true });
 
   const filtered = q !== null || owner !== null || health !== null || stage.length > 0;
+  // One chip per thing the URL filters by, as the HIFI #chips row; each clears only itself.
+  const chips: FilterChip[] = [];
+  if (archived) chips.push({ id: "lens", name: "lens", value: "Archived", clear: () => pickLens("all") });
+  else if (stage.length > 0) {
+    chips.push({
+      id: "lens",
+      name: lens === null ? "stage" : "lens",
+      value: lens === "real" ? "Real-funded (Canary + Live)" : lens === null ? stage.map((s) => stageLabel(s)).join(", ") : lensLabel(lens),
+      clear: () => pickLens("all"),
+    });
+  }
+  if (owner !== null) chips.push({ id: "owner", name: "owner", value: owner, clear: () => setLocal("owner", "") });
+  if (health !== null) chips.push({ id: "health", name: "health", value: healthView(health).label, clear: () => setLocal("health", "") });
+  if (q !== null) chips.push({ id: "q", name: "search", value: q, clear: () => url.set({ q: null, sel: null }, { replace: true }) });
+  const urlText = params.toString() === "" ? "No parameters" : `?${decodeURIComponent(params.toString().replace(/\+/g, " "))}`;
   const customStage = lens === null;
   const envelope = read.envelope;
   const fresh = envelope ? freshnessFlag(envelope.freshness) : null;
@@ -294,8 +322,10 @@ export default function FleetScreen({ api }: FleetScreenProps) {
             </label>
             <button type="button" className="exec-fleet-btn" disabled title={notPublished(FE.window)} aria-describedby={reasonId}>Window</button>
             <button type="button" className="exec-fleet-btn" disabled title={notPublished(FE.compare)} aria-describedby={reasonId}>Compare</button>
-            {filtered ? <button type="button" className="exec-fleet-btn" onClick={clearFilters}>Clear filters</button> : null}
+            <span className="exec-fleet-grow" />
+            <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />
           </div>
+          <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} />
           <p id={reasonId} className="exec-fleet-unpub">
             Not published yet: {NOT_PUBLISHED_LIST.map((fact) => `${fact.what} (${fact.fe})`).join(", ")}.
           </p>
@@ -324,6 +354,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
               <>
                 <FleetTable
                   rows={visible}
+                  hidden={hiddenColumns}
                   selectedKey={selection}
                   onOpen={(row) => select(row.alphaId)}
                   empty={emptyBlock}

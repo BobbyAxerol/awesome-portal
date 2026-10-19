@@ -58,6 +58,12 @@ export interface QueueProps {
   partialNote: string | null;
   /** Counts over the loaded page, not the queue. */
   lensCounts: Readonly<Record<Exclude<Lens, "closed">, number>> | null;
+  /** Open requests per gate lane, counted over the last page the All lane loaded; `null` until that page has been read. */
+  laneCounts?: Readonly<Record<Exclude<Lane, "waiver">, number>> | null;
+  /** The All page had more rows than it loaded, so each lane count is an at-least number. */
+  laneCountsAtLeast?: boolean;
+  /** Opens the shortcut list (the `?` in the keys footer). */
+  onHelp?: () => void;
   /** More pages exist, so the counts above are at-least numbers. */
   moreAvailable: boolean;
   onMore(): void;
@@ -156,7 +162,7 @@ function WaiverItem({ item }: { item: Extract<QueueItem, { kind: "waiver" }> }) 
 export function Queue(props: QueueProps) {
   const {
     lane, onLane, lens, onLens, waiverFilter, onWaiverFilter, items, selectedKey, onSelect, loading, failure, partialNote,
-    lensCounts, moreAvailable, onMore, moreBusy, moreError, footer, principal, historyNote,
+    lensCounts, laneCounts = null, laneCountsAtLeast = false, onHelp, moreAvailable, onMore, moreBusy, moreError, footer, principal, historyNote,
   } = props;
   const shown = items.slice(0, MAX_QUEUE_DOM);
   const selected = useRef<HTMLButtonElement | null>(null);
@@ -176,6 +182,7 @@ export function Queue(props: QueueProps) {
         {LANES.map((id) => (
           <button key={id} type="button" className="exec-ck-chip" aria-pressed={lane === id} onClick={() => onLane(id)}>
             {LANE_LABEL[id]}
+            {id !== "waiver" && laneCounts ? ` ${laneCounts[id]}${laneCountsAtLeast ? "+" : ""}` : ""}
           </button>
         ))}
         {UNPUBLISHED_LANES.map((entry) => (
@@ -247,6 +254,15 @@ export function Queue(props: QueueProps) {
         ) : null}
         {moreBusy ? <span id="exec-ck-more-busy" className="exec-ck-note">Reading the next page</span> : null}
         {moreError ? <span className="exec-ck-note" role="status">{moreError}</span> : null}
+      </div>
+
+      <div className="exec-ck-keys">
+        <span><kbd>J</kbd> <kbd>K</kbd> move</span>
+        <span><kbd>Esc</kbd> clear</span>
+        <span><kbd>A</kbd> approve</span>
+        <span><kbd>R</kbd> deny</span>
+        <span><kbd>N</kbd> note</span>
+        {onHelp ? <button type="button" className="exec-ck-keys-help" onClick={onHelp}><kbd>?</kbd> help</button> : <span><kbd>?</kbd> help</span>}
       </div>
     </section>
   );

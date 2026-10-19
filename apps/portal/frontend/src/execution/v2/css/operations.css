@@ -100,6 +100,36 @@
   border: 1px dashed var(--warn);
 }
 
+/* A KPI cell that holds a state word: the body role, on the 32px line the numerals sit on (OP-9). */
+.exec-ops-kpi-word {
+  display: inline-block;
+  padding: 7px 0;
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+
+/* Source health summary and per-profile table (OP-7) */
+.exec-ops-sum {
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+.exec-ops-profiles {
+  width: 100%;
+  margin: var(--space-2) 0;
+  border-collapse: collapse;
+  font: var(--exec-font-body);
+}
+.exec-ops-profiles th {
+  padding: 4px var(--space-3) 4px 0;
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+  text-align: left;
+}
+.exec-ops-profiles td {
+  padding: 4px var(--space-3) 4px 0;
+  border-top: 1px solid var(--line);
+}
+
 /* ---- toolbar ------------------------------------------------------------ */
 
 .exec-ops-tool {
@@ -288,6 +318,33 @@
   margin-top: 0;
 }
 
+/* The incident's four unpublished panels (INC-3): a name and one line each, side by side where there is room. */
+.exec-ops-gaps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
+}
+.exec-ops-gap {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
+}
+.exec-ops-gap-title {
+  margin: 0;
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+}
+.exec-ops-gap-assignee {
+  margin: var(--space-2) 0 0;
+}
+.exec-ops-gap-assignee .exec-ops-gap-title {
+  display: inline;
+}
+.exec-dock-priority .exec-ops-np-reason {
+  margin-top: var(--space-2);
+}
+
 .exec-ops-rail {
   display: flex;
   flex-wrap: wrap;
@@ -302,6 +359,17 @@
   color: var(--ink-soft);
   background: var(--paper);
   border: 1px solid var(--line);
+}
+/* The rail is followed by its one-line caveat, then the facts: keep a gap between them. */
+.exec-ops-rail + .exec-ops-reason {
+  margin-bottom: var(--space-3);
+}
+.exec-ops-subline {
+  display: block;
+  margin-top: 2px;
+}
+.exec-ops-tool + .exec-ops-reason {
+  margin: var(--space-1) 0 var(--space-2);
 }
 .exec-ops-rail li + li {
   margin-left: -1px;

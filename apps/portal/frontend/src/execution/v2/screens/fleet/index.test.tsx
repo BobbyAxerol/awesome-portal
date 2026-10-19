@@ -332,6 +332,123 @@ describe("search, owner, health, sort", () => {
   });
 });
 
+describe("Columns menu (FL-7)", () => {
+  const headers = () => [...table().querySelectorAll("th")].map((th) => th.textContent);
+
+  it("lists the published columns checked, and the unpublished ones disabled with their request id", async () => {
+    const { api } = makeApi();
+    mount(api);
+    await loaded();
+    fireEvent.click(screen.getByRole("button", { name: /Columns/ }));
+    const menu = screen.getByRole("group", { name: "Columns" });
+    for (const name of ["Owner", "Portfolios", "Stage", "Health", "Deployments"]) {
+      expect((within(menu).getByRole("checkbox", { name: new RegExp(`^${name}`) }) as HTMLInputElement).checked, name).toBe(true);
+    }
+    for (const [name, fe] of [["Net PnL", "FE-025"], ["Equity", "FE-013"], ["Readiness", "FE-027, FE-028"]] as const) {
+      const box = within(menu).getByRole("checkbox", { name: new RegExp(`^${name}`) }) as HTMLInputElement;
+      expect(box.disabled, name).toBe(true);
+      expect(box.closest("label")?.textContent, name).toContain(`Not published (${fe})`);
+    }
+  });
+
+  it("unchecking a column hides it, writes ?hide=, and the URL carries it back", async () => {
+    const { api } = makeApi();
+    mount(api);
+    await loaded();
+    expect(headers()).toEqual(["Alpha", "Owner", "Portfolios", "Stage", "Health", "Deployments"]);
+    fireEvent.click(screen.getByRole("button", { name: /Columns/ }));
+    fireEvent.click(within(screen.getByRole("group", { name: "Columns" })).getByRole("checkbox", { name: /^Owner/ }));
+    expect(headers()).toEqual(["Alpha", "Portfolios", "Stage", "Health", "Deployments"]);
+    expect(search().get("hide")).toBe("owner");
+    fireEvent.click(within(screen.getByRole("group", { name: "Columns" })).getByRole("checkbox", { name: /^Owner/ }));
+    expect(headers()).toContain("Owner");
+    expect(where()).toBe("/execution/fleet");
+  });
+
+  it("opens from a link that names hidden columns; an unknown name is ignored; Alpha cannot be hidden", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?hide=stage,alpha,bogus");
+    await loaded();
+    expect(headers()).toEqual(["Alpha", "Owner", "Portfolios", "Health", "Deployments"]);
+  });
+
+  it("Esc closes the menu and returns focus to its button", async () => {
+    const { api } = makeApi();
+    mount(api);
+    await loaded();
+    const button = screen.getByRole("button", { name: /Columns/ });
+    fireEvent.click(button);
+    expect(screen.getByRole("group", { name: "Columns" })).toBeTruthy();
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.queryByRole("group", { name: "Columns" })).toBeNull();
+    expect(document.activeElement).toBe(button);
+  });
+});
+
+describe("active filter chips (FL-8)", () => {
+  const chips = () => within(screen.getByRole("list", { name: "Active filters" })).getAllByRole("listitem").map((li) => li.textContent);
+
+  it("shows no chip row content but the URL disclosure when nothing filters", async () => {
+    const { api } = makeApi();
+    mount(api);
+    await loaded();
+    expect(screen.queryByRole("list", { name: "Active filters" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull();
+    expect(screen.getByText("URL")).toBeTruthy();
+  });
+
+  it("one chip per filter in the URL, named as the kit names them", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?stage=canary,live&owner=Lan-002&health=READY&q=carry");
+    await loaded();
+    expect(chips()).toEqual([
+      "lens: Real-funded (Canary + Live)✕",
+      "owner: Lan-002✕",
+      "health: Ready✕",
+      "search: carry✕",
+    ]);
+  });
+
+  it("a stage set that is not a lens is a stage chip", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?stage=paper,canary");
+    await loaded();
+    expect(chips()).toEqual(["stage: Paper, Canary✕"]);
+  });
+
+  it("each chip's cross clears only that filter", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?stage=paper&owner=Bobby-001&health=READY");
+    await loaded();
+    fireEvent.click(screen.getByRole("button", { name: "Clear owner" }));
+    await waitFor(() => expect(search().get("owner")).toBeNull());
+    expect(search().get("stage")).toBe("paper");
+    expect(search().get("health")).toBe("READY");
+    fireEvent.click(screen.getByRole("button", { name: "Clear lens" }));
+    await waitFor(() => expect(search().get("stage")).toBeNull());
+    expect(search().get("health")).toBe("READY");
+    fireEvent.click(screen.getByRole("button", { name: "Clear health" }));
+    await waitFor(() => expect(where()).toBe("/execution/fleet"));
+  });
+
+  it("Clear all resets every filter and keeps the column choice", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?stage=paper&owner=Bobby-001&hide=owner");
+    await loaded();
+    fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+    await waitFor(() => expect(search().get("stage")).toBeNull());
+    expect(search().get("owner")).toBeNull();
+    expect(search().get("hide")).toBe("owner");
+  });
+
+  it("the URL disclosure prints the query the page is at", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?stage=paper&owner=Bobby-001");
+    await loaded();
+    expect(screen.getByText("URL").closest("details")?.textContent).toContain("?stage=paper&owner=Bobby-001");
+  });
+});
+
 describe("paging", () => {
   const twoAtATime = (params: URLSearchParams) => {
     params.set("limit", "2");
@@ -496,7 +613,8 @@ describe("states", () => {
     mount(api);
     expect(await screen.findByText("Nothing to show")).toBeTruthy();
     expect(screen.getByText("The fleet read published no alphas.")).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /^Paper/ }).textContent).toBe("Paper0");
+    // stage_counts is empty here: a stage the summary does not list is Not available, not a guessed 0 (D4).
+    expect(screen.getByRole("tab", { name: /^Paper/ }).textContent).toBe("PaperNot available");
   });
 
   it("partial is flagged and never green", async () => {

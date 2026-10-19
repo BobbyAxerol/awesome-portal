@@ -111,7 +111,10 @@ describe("root content", () => {
     expect(steps.map((s) => s.textContent?.trim())).toEqual(["Open", "Mitigated", "Resolved"]);
     expect(steps.map((s) => s.getAttribute("data-step"))).toEqual(["current", "todo", "todo"]);
     expect(steps[0].getAttribute("aria-current")).toBe("step");
-    expect(within(drawer).getByText("Warning")).toBeTruthy();
+    // State and severity ride one flag in the header (INC-7), as the kit's "Open · Critical".
+    const headFlag = drawer.querySelector(".exec-dock-head .exec-flag") as HTMLElement;
+    expect(headFlag.textContent).toContain("Open · Warning");
+    expect(headFlag.getAttribute("data-k")).toBe("attention");
     expect(within(drawer).getByText(/Account acc_TEST_ONLY_operational/, { selector: ".exec-ops-mono" })).toBeTruthy();
     expect(within(drawer).getByText("Not acknowledged")).toBeTruthy();
     expect(within(drawer).getByText("Not mitigated")).toBeTruthy();
@@ -145,26 +148,35 @@ describe("root content", () => {
     expect(railFor("RESOLVED").map((s) => s.step)).toEqual(["done", "done", "current"]);
   });
 
-  it("evidence, operations, gates, timeline and assignee are Not published with their request and reason code", async () => {
+  it("evidence, operations, gates and timeline each keep a named panel that is Not published (FE-031); assignee is FE-030 (INC-3)", async () => {
     drawerOnly(api().port);
     const drawer = await screen.findByRole("complementary");
-    const items = within(drawer).getAllByRole("listitem").filter((li) => li.textContent?.includes("Not published"));
-    expect(items.map((li) => li.textContent)).toEqual([
-      "Not published (FE-031) Evidence.ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED",
-      "Not published (FE-031) Operations taken.ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED",
-      "Not published (FE-031) Resolution gates.ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED",
-      "Not published (FE-031) Timeline.ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED",
-      "Not published (FE-030) Assignee.ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED",
-    ]);
-    // The block rides the Drawer's priority slot, so it sits above the long facts table.
     const priority = drawer.querySelector(".exec-dock-priority") as HTMLElement;
-    expect(priority.textContent).toContain("Not published (FE-031) Evidence.");
+    for (const name of ["Evidence", "Operations taken", "Resolution gates", "Timeline"]) {
+      const panel = within(priority).getByRole("region", { name });
+      expect(within(panel).getByRole("heading", { name }), name).toBeTruthy();
+      expect(panel.textContent, name).toContain("Not published (FE-031)");
+      // The server's reason code is the same for all four, so it is not repeated inside each.
+      expect(panel.textContent, name).not.toContain("ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED");
+    }
+    expect(priority.textContent).toContain("Assignee");
+    expect(priority.textContent).toContain("Not published (FE-030)");
+    expect(priority.textContent?.match(/ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED/g)).toHaveLength(1);
+    // The block rides the Drawer's priority slot, so it sits above the long facts table.
     const facts = drawer.querySelector(".exec-ops-facts") as HTMLElement;
     expect(priority.compareDocumentPosition(facts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // No timeline is drawn from nothing: no list of events, no gate verdicts.
     expect(drawer.textContent).not.toMatch(/gates are not met|0 references|2 events/);
     expect(drawer.textContent).not.toMatch(/[—–]/);
     expect(drawer.textContent).not.toContain("N/A");
+  });
+
+  it("every blocked action links to My access, the Access screen's real route (INC-8)", async () => {
+    drawerOnly(api().port);
+    const drawer = await screen.findByRole("complementary");
+    const links = within(drawer).getAllByRole("link", { name: "My access" });
+    expect(links).toHaveLength(4);
+    for (const link of links) expect(link.getAttribute("href")).toBe("/administration/profile-access");
   });
 
   it("every action is disabled and points at its reason", async () => {

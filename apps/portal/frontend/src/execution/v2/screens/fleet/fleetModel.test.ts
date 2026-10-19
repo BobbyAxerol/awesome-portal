@@ -157,8 +157,18 @@ describe("lenses and stages", () => {
     expect(counts.sandbox.text).toBe("2");
     expect(counts.real).toEqual({ text: "5", approximate: true });
     expect(counts.archived.text).toBeNull();
-    expect(lensCounts({ ...summary, stageCounts: { LIVE: 3 } }).real).toEqual({ text: "3", approximate: false });
-    expect(lensCounts({ ...summary, stageCounts: { LIVE: 3 } }).paper.text).toBe("0");
+  });
+
+  it("a stage the summary does not list is Not available, never a zero (D4)", () => {
+    const summary = { ...envelope.summary!, alphaCount: 9, stageCounts: { LIVE: 3 } };
+    const counts = lensCounts(summary);
+    expect(counts.paper).toEqual({ text: "Not available", approximate: false });
+    expect(counts.sandbox.text).toBe("Not available");
+    // Real-funded needs Canary and Live both; with Canary missing the sum would be a guess.
+    expect(counts.real.text).toBe("Not available");
+    expect(counts.all.text).toBe("9");
+    // A stage the summary does list as 0 is a published zero and prints 0.
+    expect(lensCounts({ ...summary, stageCounts: { PAPER: 0, SANDBOX: 0, CANARY: 0, LIVE: 0 } }).paper.text).toBe("0");
   });
 });
 

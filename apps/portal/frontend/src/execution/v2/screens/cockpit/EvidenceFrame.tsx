@@ -797,13 +797,22 @@ function titleOf(header: EvidenceHeader, data: EvidenceData | null): string {
   }
 }
 
-function verdictOf(data: EvidenceData): { tone: Tone; headline: string; facts: string[] } {
+interface Verdict {
+  tone: Tone;
+  headline: string;
+  facts: string[];
+  /** One mark per criterion, in the order published: the segmented meter (CK-7). Absent where no per-criterion marks are published. */
+  meter?: readonly Mark[];
+}
+
+function verdictOf(data: EvidenceData): Verdict {
   switch (data.kind) {
     case "r1": {
       const marks = countMarks(data.detail.checklist.map((item) => ({ mark: item.outcome })));
       const facts = [`${marks.pass} within`, `${marks.watch} watch`, `${marks.fail} blocking`];
-      if (data.detail.decided) return { tone: "mute", headline: `Decided · ${data.detail.decided.outcome}`, facts };
-      return { tone: marks.fail > 0 ? "bad" : marks.watch > 0 ? "warn" : "ok", headline: `Checklist ${marks.pass} of ${marks.total}`, facts };
+      const meter = data.detail.checklist.map((item) => item.outcome);
+      if (data.detail.decided) return { tone: "mute", headline: `Decided · ${data.detail.decided.outcome}`, facts, meter };
+      return { tone: marks.fail > 0 ? "bad" : marks.watch > 0 ? "warn" : "ok", headline: `Checklist ${marks.pass} of ${marks.total}`, facts, meter };
     }
     case "exit": {
       const d = data.detail;
@@ -838,11 +847,22 @@ function verdictOf(data: EvidenceData): { tone: Tone; headline: string; facts: s
         tone: blocking > 0 ? "warn" : "mute",
         headline: `Findings ${pass} of ${findings.length} pass`,
         facts: [`${blocking} blocking`, `Gate verdict: ${NOT_PUBLISHED.criteria}`, `Promotes to ${data.parent.review.promoteTo.replace(/_/g, " ").toLowerCase()}`],
+        meter: findings.map((finding) => OUTCOME_MARK[finding.outcome]),
       };
     }
     case "livev2":
       return { tone: "mute", headline: "Evidence ready · Live decisions are closed", facts: [`Approval ${STATUS_WORD[data.parent.approval.status].toLowerCase()}`] };
   }
+}
+
+/** The HIFI verdict meter: one 30x8 segment per criterion, coloured by its mark. The words are in the facts line; this is the shape of it. */
+function Meter({ marks }: { marks: readonly Mark[] }) {
+  const n = (mark: Mark) => marks.filter((m) => m === mark).length;
+  return (
+    <div className="exec-ck-meter" role="img" aria-label={`${marks.length} criteria: ${n("pass")} within, ${n("watch")} watch, ${n("fail")} blocking, ${n("insufficient")} insufficient`}>
+      {marks.map((mark, index) => <i key={index} data-m={mark} />)}
+    </div>
+  );
 }
 
 /* ── the frame ────────────────────────────────────────────────────────────── */
@@ -892,6 +912,7 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason }: Evidenc
         <div className="exec-ck-verdict" data-tone={verdict.tone}>
           <h3 className="exec-ck-vh">{verdict.headline}</h3>
           {verdict.facts.length > 0 ? <div className="exec-ck-meta">{verdict.facts.map((fact) => <span key={fact}>{fact}</span>)}</div> : null}
+          {verdict.meter && verdict.meter.length > 0 ? <Meter marks={verdict.meter} /> : null}
         </div>
       ) : null}
 

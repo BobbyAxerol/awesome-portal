@@ -38,6 +38,8 @@ interface Options {
   /** Overrides the page size the screen asked for, to make a second page exist. */
   limit?: number;
   queue?: (query: OperationalQueueQueryV2, call: number) => Result<OperationalQueueReadV2> | Promise<Result<OperationalQueueReadV2>>;
+  /** Per-profile source health the `operations` composition answers with; absent = the port has no such read. */
+  profiles?: readonly { profile: string; state: string | null; reasonCode: string | null }[] | "fails";
 }
 
 function fakeApi(options: Options = {}) {
@@ -47,8 +49,19 @@ function fakeApi(options: Options = {}) {
     if (options.queue) return options.queue(query, calls.length);
     return fromDouble({ ...query, limit: options.limit ?? query.limit });
   });
-  const api = { listOperationalQueueV2: queue, getIncidentRootV2: vi.fn() } as unknown as ExecutionApi;
-  return { api, calls, queue };
+  const getOperationalComposition = vi.fn(async (name: string, query?: Record<string, string | number | undefined>) => {
+    void name;
+    void query;
+    return options.profiles === "fails"
+      ? { ok: false as const, status: "unavailable" as const, reason: "COMPOSITION_UNAVAILABLE" }
+      : { ok: true as const, value: { sourceHealth: { profiles: options.profiles ?? [] } } };
+  });
+  const api = {
+    listOperationalQueueV2: queue,
+    getIncidentRootV2: vi.fn(),
+    ...(options.profiles === undefined ? {} : { getOperationalComposition }),
+  } as unknown as ExecutionApi;
+  return { api, calls, queue, getOperationalComposition };
 }
 
 function Where() {
@@ -91,11 +104,11 @@ describe("loaded queue", () => {
     expect(screen.getByRole("button", { name: "Needs attention" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("renders Time, Target and operation, Receipt and Next from published fields", async () => {
+  it("renders the kit's six columns: Time, Target and operation, Intent, Receipt, Display, Next (OP-6)", async () => {
     const { api } = fakeApi();
     mount(api);
     const t = await table();
-    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Receipt", "Next"]);
+    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Intent", "Receipt", "Display", "Next"]);
     const row = within(t).getByText(/Account acc_TEST_ONLY_operational/).closest("tr") as HTMLElement;
     expect(within(row).getByText("22 Aug 12:00Z")).toBeTruthy();
     expect(within(row).getByText(/Sync · Paper · Warning/)).toBeTruthy();
@@ -103,6 +116,9 @@ describe("loaded queue", () => {
     // Next is an action, not a repeat of the lens: the default lens is all UNACKNOWLEDGED.
     expect(within(row).queryByText("Unacknowledged")).toBeNull();
     expect(within(row).getByRole("button", { name: "Review" })).toBeTruthy();
+    // Intent and Display have no source yet: the cell says so with its request id; it is not empty and not a dash.
+    expect(within(row).getByText("(FE-020)", { exact: false }).closest("td")?.getAttribute("data-l")).toBe("Intent");
+    expect(within(row).getByText("(FE-032)", { exact: false }).closest("td")?.getAttribute("data-l")).toBe("Display");
   });
 
   it("prints no dash, no N/A, and says Not published with the request ids", async () => {
@@ -126,6 +142,54 @@ describe("loaded queue", () => {
     await table();
     expect(document.querySelector("details")?.textContent).toContain("Not published (FE-021)");
     expect(document.querySelector("details")?.textContent).toContain("unavailable");
+  });
+});
+
+describe("Source health summary (OP-7)", () => {
+  const PROFILES = [
+    { profile: "paper_binance_usdm", state: "AVAILABLE", reasonCode: null },
+    { profile: "sandbox_binance_usdm", state: "PARTIAL", reasonCode: "SOURCE_PARTIAL" },
+    { profile: "real_funded_binance_usdm", state: "PARTIAL", reasonCode: null },
+  ] as const;
+
+  it("prints the per-profile states the Overview prints, and counts the partial ones in the summary", async () => {
+    const { api, getOperationalComposition } = fakeApi({ profiles: PROFILES });
+    mount(api, { workspaceId: "ws_1" });
+    await table();
+    await waitFor(() => expect(document.querySelector("summary")?.textContent).toContain("2 of 3 partial"));
+    expect(getOperationalComposition).toHaveBeenCalledWith("operations", { workspace_id: "ws_1" });
+    const profiles = screen.getByRole("table", { name: "Source health by profile" });
+    expect(within(profiles).getAllByRole("row").slice(1).map((r) => r.textContent)).toEqual([
+      "Paper binance usdm✓OK: Available",
+      "Sandbox binance usdm◐PartialSOURCE_PARTIAL",
+      "Real funded binance usdm◐Partial",
+    ]);
+    // The journal sentence stays: it is about the journal, not the profiles.
+    expect(document.querySelector("details")?.textContent).toContain("Not published (FE-021)");
+  });
+
+  it("a failed or absent composition read says Not available in the summary, never a healthy profile", async () => {
+    const failed = fakeApi({ profiles: "fails" });
+    mount(failed.api);
+    await table();
+    await waitFor(() => expect(document.querySelector("summary")?.textContent).toContain("Not available"));
+    expect(screen.queryByRole("table", { name: "Source health by profile" })).toBeNull();
+    cleanup();
+    const absent = fakeApi();
+    mount(absent.api);
+    await table();
+    await waitFor(() => expect(document.querySelector("summary")?.textContent).toContain("Not available"));
+  });
+});
+
+describe("a state word is not drawn as a number (OP-9)", () => {
+  it("the Read cell holds its word in the body role, not the KPI numeral", async () => {
+    const { api } = fakeApi();
+    mount(api);
+    await table();
+    const read = within(document.querySelector(".exec-blk-kpis") as HTMLElement).getByText("Read").nextElementSibling as HTMLElement;
+    expect(read.querySelector(".exec-ops-kpi-word")?.textContent).toBe("Available");
+    expect(read.querySelector(".exec-blk-num")).toBeNull();
   });
 });
 

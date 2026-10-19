@@ -305,13 +305,30 @@ describe("queue, lanes and lenses", () => {
   it("a lane chip re-reads with that lane's server view and keeps only its gates", async () => {
     const p = standardPort();
     await mount(p);
-    fireEvent.click(within(queue()).getByRole("button", { name: "Exit" }));
+    fireEvent.click(within(queue()).getByRole("button", { name: /^Exit/ }));
     await settle();
     expect(p.called("listApprovals").at(-1)).toEqual([{ filter: "EXIT_REVIEWS", limit: 50 }]);
     const items = within(queue()).getAllByRole("listitem");
     expect(items).toHaveLength(1);
     expect(items[0].textContent).toContain("Gamma Exit");
-    expect(within(queue()).getByRole("button", { name: "Exit" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(queue()).getByRole("button", { name: /^Exit/ }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("lane chips carry an open count taken from the last All page, and keep it while another lane is open (CK-5)", async () => {
+    const p = standardPort();
+    await mount(p);
+    const names = () => [...(queue().querySelector('[aria-label="Lane"]') as HTMLElement).querySelectorAll(".exec-ck-chip")].map((el) => el.textContent?.trim());
+    expect(names().slice(0, 6)).toEqual(["All gates 4", "R1 1", "R2 1", "Exit 1", "Live 1", "Waiver"]);
+    fireEvent.click(within(queue()).getByRole("button", { name: /^Exit/ }));
+    await settle();
+    // The Exit read holds one row, but the other lanes keep the count the All page gave.
+    expect(names().slice(0, 6)).toEqual(["All gates 4", "R1 1", "R2 1", "Exit 1", "Live 1", "Waiver"]);
+  });
+
+  it("a lane count is an at-least number when the All page had more rows than it loaded", async () => {
+    const p = standardPort({}, inbox(ROWS, { rawRows: RAW }, { hasMore: true, nextCursor: "c1", totalCount: 48, filteredCount: 48 }));
+    await mount(p);
+    expect(within(queue()).getByRole("button", { name: "All gates 4+" })).toBeTruthy();
   });
 
   it("Archive, Reactivation and Capital are shown disabled and say Not published (FE-034)", async () => {
@@ -474,6 +491,16 @@ describe("evidence frame", () => {
     expect(within(checklist).getByText("Watch")).toBeTruthy();
     expect(within(evidence).getByText("Not published (FE-029)")).toBeTruthy();
     expect(within(evidence).getByRole("region", { name: "Artifact passport" })).toBeTruthy();
+  });
+
+  it("the verdict carries a segmented meter, one segment per checklist item, coloured by its mark (CK-7)", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    const meter = within(screen.getByRole("region", { name: "Evidence" })).getByRole("img", { name: /criteria:/ });
+    const segments = [...meter.querySelectorAll("i")];
+    expect(segments.length).toBeGreaterThan(0);
+    expect(segments.map((i) => i.getAttribute("data-m"))).toContain("watch");
+    expect(segments.map((i) => i.getAttribute("data-m"))).toEqual(["pass", "watch", "insufficient"]);
+    expect(meter.getAttribute("aria-label")).toBe("3 criteria: 1 within, 1 watch, 0 blocking, 1 insufficient");
   });
 
   it("the evidence frame keeps the V1 review URLs, with the context params carried", async () => {
@@ -795,12 +822,36 @@ describe("keyboard", () => {
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 
-  it("the key legend names A, R and N as bound to the preview actions", async () => {
+  it("the key legend names A, R and N as bound to the preview actions, and is the queue panel's footer (CK-4)", async () => {
     await mount(standardPort());
     const legend = document.querySelector(".exec-ck-keys") as HTMLElement;
     expect(legend.textContent).toContain("approve");
     expect(legend.textContent).toContain("deny");
     expect(legend.textContent).toContain("note");
+    expect(legend.textContent).toContain("help");
+    expect(queue().contains(legend)).toBe(true);
+  });
+
+  it("the Keys button and ? open the shortcut list; Esc closes it and keeps the selection (CK-3)", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    expect(screen.queryByRole("dialog", { name: "Keys" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Keys/ }));
+    const dialog = screen.getByRole("dialog", { name: "Keys" });
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    // The list says what A, R and N do in this build; it does not promise a recorded decision.
+    expect(dialog.textContent).toContain("Preview · not recorded");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await settle();
+    expect(screen.queryByRole("dialog", { name: "Keys" })).toBeNull();
+    expect(where()).toContain("sel=apr_a");
+    fireEvent.keyDown(document.body, { key: "?" });
+    expect(screen.getByRole("dialog", { name: "Keys" })).toBeTruthy();
+    // J does not move the selection while the list is open.
+    fireEvent.keyDown(document.body, { key: "j" });
+    await settle();
+    expect(where()).toContain("sel=apr_a");
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Keys" })).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog", { name: "Keys" })).toBeNull();
   });
 });
 

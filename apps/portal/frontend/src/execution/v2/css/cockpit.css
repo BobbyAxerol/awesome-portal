@@ -201,6 +201,29 @@
   margin: 0 0 var(--space-1);
   font: var(--exec-font-section);
 }
+/* Segmented meter (HIFI .meter): one 30x8 segment per criterion, gap 3px, colour by its mark. */
+.exec-ck-meter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  margin-top: var(--space-2);
+}
+.exec-ck-meter i {
+  display: block;
+  width: 30px;
+  height: 8px;
+  background: var(--accent);
+}
+.exec-ck-meter i[data-m="watch"] {
+  background: var(--warn);
+}
+.exec-ck-meter i[data-m="fail"] {
+  background: var(--bad);
+}
+.exec-ck-meter i[data-m="insufficient"] {
+  background: var(--ink-faint);
+}
 
 .exec-ck-tw {
   min-width: 0;
@@ -439,7 +462,7 @@
   cursor: pointer;
 }
 
-/* keys and announcements */
+/* keys and announcements. The key strip is the queue panel's footer (HIFI .keys): sunken, a strong rule above. */
 .exec-ck-keys {
   display: flex;
   flex-wrap: wrap;
@@ -448,14 +471,88 @@
   font: var(--exec-font-id);
   color: var(--ink-soft);
   background: var(--paper-sunken);
-  border: 1px solid var(--line);
+  border-top: 1px solid var(--line-strong);
 }
-.exec-ck-keys kbd {
+.exec-ck-keys kbd,
+.exec-ck-btn kbd,
+.exec-ck-helptable kbd {
   padding: 0 5px;
   font: var(--exec-font-label);
   color: var(--ink);
   background: var(--paper-raised);
   border: 1px solid var(--line-strong);
+}
+.exec-ck-keys-help,
+.exec-ck-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-ck-btn {
+  padding: 2px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-ck-keys-help:focus-visible,
+.exec-ck-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The shortcut list: a small modal over a scrim (HIFI #ck-helpbox). */
+.exec-ck-help-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 120px var(--space-4) var(--space-4);
+  background: var(--scrim);
+}
+.exec-ck-help {
+  box-sizing: border-box;
+  width: min(380px, 100%);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-ck-help:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.exec-ck-helptable {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-body);
+}
+.exec-ck-helptable th,
+.exec-ck-helptable td {
+  padding: var(--space-2) var(--space-4);
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--line);
+}
+.exec-ck-helptable th {
+  white-space: nowrap;
+  font-weight: inherit;
+}
+.exec-ck-helptable kbd + kbd {
+  margin-left: var(--space-1);
+}
+.exec-ck-helpfoot {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--line);
 }
 .exec-ck-live {
   min-height: 16px;

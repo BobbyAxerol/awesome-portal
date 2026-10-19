@@ -24,7 +24,7 @@ import { formatAsOf } from "../../boundary";
 import type { IncidentRootReadV2, IncidentRootV2, IncidentStateV2, InstantV2 } from "../../readers/operationalQueue";
 import { INCIDENT_STATES_V2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
-import { FE, NotPublished, notPublishedReason } from "./notPublished";
+import { ACCESS_PATH, FE, NotPublished, notPublishedReason } from "./notPublished";
 import { humanize, TARGET_LABEL } from "./outcome";
 
 import "../../css/operations.css";
@@ -53,6 +53,9 @@ const STATE_FLAG: Readonly<Record<IncidentStateV2, { kind: FlagKind; label: stri
   // A Portal record. It is never green: the source may still be diverged.
   RESOLVED: { kind: "neutral", label: "Resolved in the Portal" },
 };
+
+/** The four panels of the HIFI incident page that have no published source yet, in its order. */
+const GAP_PANELS = ["Evidence", "Operations taken", "Resolution gates", "Timeline"] as const;
 
 export interface StepView {
   state: IncidentStateV2;
@@ -98,12 +101,13 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
     return () => { live = false; };
   }, [api, incidentId, workspaceId]);
 
+  // D9: a blocked action says why and where to see the missing grant.
   const actions = (
     <>
-      <DockAction label="Acknowledge" reason={INCIDENT_ACTION_REASONS.acknowledge} />
-      <DockAction label="Assign to me" reason={INCIDENT_ACTION_REASONS.assign} />
-      <DockAction label="Mark mitigated" reason={INCIDENT_ACTION_REASONS.mitigate} />
-      <DockAction label="Mark resolved" reason={INCIDENT_ACTION_REASONS.resolve} variant="primary" />
+      <DockAction label="Acknowledge" reason={INCIDENT_ACTION_REASONS.acknowledge} accessHref={ACCESS_PATH} />
+      <DockAction label="Assign to me" reason={INCIDENT_ACTION_REASONS.assign} accessHref={ACCESS_PATH} />
+      <DockAction label="Mark mitigated" reason={INCIDENT_ACTION_REASONS.mitigate} accessHref={ACCESS_PATH} />
+      <DockAction label="Mark resolved" reason={INCIDENT_ACTION_REASONS.resolve} variant="primary" accessHref={ACCESS_PATH} />
     </>
   );
 
@@ -125,23 +129,35 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
   const incident = load.incident;
   const flag = STATE_FLAG[incident.workflowState];
   const children = incident.historicalChildren;
-  // The facts table below is long: what is missing goes in the drawer's priority slot, above it.
+  // The facts table below is long: what is missing goes in the drawer's priority slot, above it. The HIFI has
+  // four panels here (Evidence, Operations taken, Resolution gates, Timeline), so each keeps its place with its
+  // own name and one line; the reason code the server gave is the same for all of them and is printed once.
   const notPublished = (
     <>
       <h3 className="exec-ops-section">Not published</h3>
-      <ul className="exec-ops-np-list">
-        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Evidence.</NotPublished></li>
-        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Operations taken.</NotPublished></li>
-        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Resolution gates.</NotPublished></li>
-        <li><NotPublished id={FE.events} reasonCode={children.reasonCode}>Timeline.</NotPublished></li>
-        <li><NotPublished id={FE.assignee} reasonCode={children.reasonCode}>Assignee.</NotPublished></li>
-      </ul>
+      <div className="exec-ops-gaps">
+        {GAP_PANELS.map((panel) => (
+          <section key={panel} className="exec-ops-gap" aria-label={panel}>
+            <h4 className="exec-ops-gap-title">{panel}</h4>
+            <p className="exec-ops-np"><NotPublished id={FE.events} /></p>
+          </section>
+        ))}
+      </div>
+      <p className="exec-ops-np exec-ops-gap-assignee">
+        <span className="exec-ops-gap-title">Assignee</span> <NotPublished id={FE.assignee} />
+      </p>
+      {children.reasonCode ? <p className="exec-ops-np-reason">Reason: {children.reasonCode}</p> : null}
     </>
   );
   return (
     <Drawer
       title={`Incident ${incident.incidentId}`}
-      subtitle={`${TARGET_LABEL[incident.targetType]} ${incident.targetId} · ${ENV_LABEL[incident.environment]}`}
+      subtitle={(
+        <>
+          <Flag kind={flag.kind} label={`${flag.label} · ${humanize(incident.severity)}`} size="sm" />
+          <span className="exec-ops-subline">{TARGET_LABEL[incident.targetType]} {incident.targetId} · {ENV_LABEL[incident.environment]}</span>
+        </>
+      )}
       onClose={onClose}
       mode={mode}
       actions={actions}
@@ -159,10 +175,6 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
         Forward only. Mitigated and resolved are Portal records; they do not say the position or the source is safe.
       </p>
       <dl className="exec-ops-facts">
-        <dt>State</dt>
-        <dd><Flag kind={flag.kind} label={flag.label} size="sm" /></dd>
-        <dt>Severity</dt>
-        <dd>{humanize(incident.severity)}</dd>
         <dt>Target</dt>
         <dd><span className="exec-ops-mono">{TARGET_LABEL[incident.targetType]} {incident.targetId}</span></dd>
         <dt>Environment</dt>

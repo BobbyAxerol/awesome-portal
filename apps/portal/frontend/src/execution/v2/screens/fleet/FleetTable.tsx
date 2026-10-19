@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { JourneySpine, SPINE_STAGE_IDS, type SpineStageId } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { notPublished, type FleetRow } from "./fleetModel";
+import { notPublished, type FleetColumnKey, type FleetRow } from "./fleetModel";
 
 import "../../css/fleet.css";
 
@@ -85,10 +85,12 @@ export interface FleetTableProps {
   selectedKey?: string | null;
   onOpen(row: FleetRow): void;
   empty?: ReactNode;
+  /** Columns the reader switched off in the Columns menu; Alpha is always shown. */
+  hidden?: ReadonlySet<FleetColumnKey>;
 }
 
-export function FleetTable({ rows, selectedKey, onOpen, empty }: FleetTableProps) {
-  const columns: readonly CardsColumn<FleetRow>[] = [
+export function FleetTable({ rows, selectedKey, onOpen, empty, hidden }: FleetTableProps) {
+  const all: readonly (CardsColumn<FleetRow> & { key: "alpha" | FleetColumnKey })[] = [
     { key: "alpha", label: "Alpha", render: (row) => <AlphaCell row={row} /> },
     { key: "owner", label: "Owner", render: (row) => row.owner },
     {
@@ -100,6 +102,7 @@ export function FleetTable({ rows, selectedKey, onOpen, empty }: FleetTableProps
     { key: "health", label: "Health", render: (row) => <HealthCell row={row} /> },
     { key: "deployments", label: "Deployments", render: (row) => <DeploymentsCell row={row} /> },
   ];
+  const columns = all.filter((column) => column.key === "alpha" || !hidden?.has(column.key));
   return (
     <CardsTable
       label="Alpha fleet"

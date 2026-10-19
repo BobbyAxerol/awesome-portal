@@ -25,6 +25,9 @@ export const FE = {
   eligibility: "FE-015",
 } as const;
 
+/** The Access screen's route (D9: where a blocked action shows which grant is missing). Kept here so the queue does not import that screen. */
+export const ACCESS_PATH = "/administration/profile-access";
+
 export type FeId = (typeof FE)[keyof typeof FE];
 
 /** The sentence a disabled control carries. */

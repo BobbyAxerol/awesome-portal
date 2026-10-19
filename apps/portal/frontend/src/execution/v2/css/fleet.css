@@ -166,6 +166,102 @@
   background: var(--accent-soft);
   border-color: var(--accent);
 }
+.exec-fleet-grow {
+  flex: 1 1 0;
+}
+
+/* Columns menu: HIFI .pop .menu, a right-aligned list of checkboxes under the button. */
+.exec-fleet-pop {
+  position: relative;
+  display: inline-block;
+}
+.exec-fleet-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  margin-top: 4px;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-menuitem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px 0;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.exec-fleet-menuitem[data-disabled="true"] {
+  cursor: not-allowed;
+}
+.exec-fleet-menuitem input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Active filter chips (HIFI #chips): name: value, a clear button, Clear all, and the URL disclosure. */
+.exec-fleet-chiprow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-fleet-chips {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-fleet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-chipx,
+.exec-fleet-link {
+  padding: 0 6px;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-fleet-link {
+  color: var(--accent);
+}
+.exec-fleet-chipx:focus-visible,
+.exec-fleet-link:focus-visible,
+.exec-fleet-url > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-fleet-url {
+  margin-left: auto;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-fleet-url > summary {
+  cursor: pointer;
+}
+.exec-fleet-urltext {
+  display: block;
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+
 .exec-fleet-unpub {
   margin: 0;
   font: var(--exec-font-caption);
@@ -366,6 +462,11 @@ a.exec-fleet-open {
 }
 
 @media (max-width: 660px) {
+  /* The toolbar wraps and Columns lands at the left edge: the menu opens rightwards from it, not off-screen. */
+  .exec-fleet-menu {
+    right: auto;
+    left: 0;
+  }
   .exec-fleet-main[data-docked="true"] {
     grid-template-columns: minmax(0, 1fr);
   }

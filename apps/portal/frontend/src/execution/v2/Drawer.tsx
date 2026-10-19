@@ -65,7 +65,8 @@ export interface DrawerProps {
   open?: boolean;
   onClose: () => void;
   title: string;
-  subtitle?: string;
+  /** Text, or a Flag with text (INC-7); it sits in a `<p>`, so inline content only. */
+  subtitle?: ReactNode;
   children: ReactNode;
   /**
    * Footer, usually `DockAction`s: one row of buttons, then one line per blocked

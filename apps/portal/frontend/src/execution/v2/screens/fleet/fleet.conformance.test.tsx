@@ -15,7 +15,7 @@
  * L3  negative payloads: never a throw, never a leak, unknown words never `ok`.
  *     Where the reader is looser than the published schema the gap is counted
  *     and printed. D1 to D3 were fixed in F5b and are ordinary tests; D4 (a stage missing from
- *     stage_counts) is blocked on a Codex answer and stays an `it.fails`.
+ *     stage_counts) is answered on the FE side: a missing stage prints Not available.
  */
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -652,17 +652,20 @@ describe("documented defects", () => {
   });
 
   /*
-   * DEFECT D4 (profileRead.ts readFleetSummary via fleetModel.lensCounts): a
-   * stage absent from stage_counts prints as `0`. Whether the source omits
-   * zero stages or omits unpublished ones is not stated in the schema; until it
-   * is, `0` may be an invented zero (Rules 3.3). Raised to Codex as a question.
-   * Blocked on Codex answer; not fixable in the reader.
+   * Was DEFECT D4 (profileRead.ts readFleetSummary via fleetModel.lensCounts): a
+   * stage absent from stage_counts printed as `0`. Whether the source omits
+   * zero stages or omits unpublished ones is not stated in the schema, so `0`
+   * may be an invented zero (Rules 3.3). Fixed on the FE side: a missing stage
+   * prints "Not available". The question stays with Codex; if absence means 0
+   * this expectation relaxes.
    */
-  it.fails("DEFECT D4: a stage missing from stage_counts is not counted as 0", () => {
+  it("D4: a stage missing from stage_counts is Not available, not 0", () => {
     const env = structuredClone(canonical);
     env.summary.stage_counts = { PAPER: 1 };
     const counts = lensCounts(readAlphaFleet(env)!.summary!);
-    expect(counts.sandbox.text).toBeNull();
+    expect(counts.paper.text).toBe("1");
+    expect(counts.sandbox.text).toBe("Not available");
+    expect(counts.real.text).toBe("Not available");
   });
 });
 

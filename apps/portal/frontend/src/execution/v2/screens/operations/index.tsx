@@ -21,6 +21,7 @@ import type { PanelStatus } from "../../../contracts";
 import { useDockMode, useDockSelection } from "../../Drawer";
 import { Kpi, KpiStrip } from "../../blocks";
 import { formatAsOf } from "../../boundary";
+import { Flag } from "../../Flag";
 import {
   SEVERITIES_V2, TARGET_TYPES_V2, TRIAGE_STATES_V2, VERIFICATION_RESULTS_V2,
   type OperationalQueueQueryV2, type OperationalQueueV2, type OperationV2, type SeverityV2,
@@ -32,6 +33,7 @@ import { FE, NotPublished, notPublishedReason } from "./notPublished";
 import { OperationDock } from "./OperationDock";
 import { humanize, TARGET_LABEL } from "./outcome";
 import { QueueTable } from "./QueueTable";
+import { partialProfiles, useSourceHealth } from "./useSourceHealth";
 
 import "../../css/operations.css";
 
@@ -155,6 +157,7 @@ export default function OperationsV2({
   const navigate = useNavigate();
   const location = useLocation();
   const mineReasonId = useId();
+  const sourceHealth = useSourceHealth(api, workspaceId);
 
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [draftKey, setDraftKey] = useState("");
@@ -295,15 +298,50 @@ export default function OperationsV2({
           <Kpi label="In scope" value={number(ready.queue.page.totalCount)} basis="Operations you may see, before filters" />
           <Kpi label="Matching" value={number(ready.queue.page.filteredCount)} basis="After the filters below" />
           <Kpi label="Loaded" value={number(ready.rows.length)} basis={`of ${number(ready.queue.page.filteredCount)} matching`} />
-          <Kpi label="Read" value={humanize(ready.queue.readTruth.state)} basis={ready.queue.readTruth.reasonCode ?? "For this request"} />
+          <div className="exec-blk-kpi">
+            <dt className="exec-blk-kpi-label">Read</dt>
+            <dd className="exec-blk-kpi-body">
+              {/* A state word, not a figure: body role, not the 24px KPI numeral (OP-9). */}
+              <span className="exec-blk-kpi-value"><span className="exec-ops-kpi-word">{humanize(ready.queue.readTruth.state)}</span></span>
+              <span className="exec-blk-kpi-note">{ready.queue.readTruth.reasonCode ?? "For this request"}</span>
+            </dd>
+          </div>
         </KpiStrip>
       ) : null}
 
       <details className="exec-ops-panel">
-        <summary>Source health</summary>
+        <summary>
+          Source health
+          {sourceHealth.phase === "ready" && sourceHealth.profiles.length > 0 ? (
+            <span className="exec-ops-sum"> · {partialProfiles(sourceHealth.profiles)} of {sourceHealth.profiles.length} partial</span>
+          ) : sourceHealth.phase === "loading" ? null : (
+            <span className="exec-ops-sum"> · Not available</span>
+          )}
+        </summary>
+        {sourceHealth.phase === "ready" && sourceHealth.profiles.length > 0 ? (
+          <table className="exec-ops-profiles" aria-label="Source health by profile">
+            <thead>
+              <tr><th scope="col">Profile</th><th scope="col">State</th></tr>
+            </thead>
+            <tbody>
+              {sourceHealth.profiles.map((p) => {
+                const state = (p.state ?? "").toUpperCase();
+                return (
+                  <tr key={p.profile}>
+                    <td>{humanize(p.profile)}</td>
+                    <td>
+                      <Flag kind={state === "AVAILABLE" ? "ok" : state === "PARTIAL" ? "partial" : "unknown"} label={p.state ? humanize(p.state) : "State not stated"} size="sm" />
+                      {p.reasonCode ? <span className="exec-ops-np-reason">{p.reasonCode}</span> : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : null}
         <p className="exec-ops-np">
           <NotPublished id={FE.audit}>
-            Source integration is {ready ? humanize(ready.queue.sourceIntegrationState).toLowerCase() : "unavailable"}; no source journal is qualified, so nothing is assumed healthy.
+            Source journal: integration is {ready ? humanize(ready.queue.sourceIntegrationState).toLowerCase() : "unavailable"}; no source journal is qualified, so nothing is assumed healthy.
           </NotPublished>
         </p>
       </details>
@@ -441,11 +479,6 @@ export default function OperationsV2({
                   </form>
                 </div>
                 <p id={mineReasonId} className="exec-ops-reason">Mine: {MINE_REASON}</p>
-
-                <ul className="exec-ops-np-list" aria-label="Not published on this table">
-                  <li><NotPublished id={FE.intent}>Intent axis.</NotPublished></li>
-                  <li><NotPublished id={FE.receipts}>Display axis and amounts.</NotPublished></li>
-                </ul>
 
                 {notice ? <p className="exec-ops-banner" role="status">{notice}</p> : null}
                 {ready?.stale ? (
