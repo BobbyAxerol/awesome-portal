@@ -169,6 +169,13 @@ describe("what is not served", () => {
     }
   });
 
+  it("a path segment that cannot be decoded is 400, not a crash", async () => {
+    const answered = await call(base, { method: "GET", url: "/api/v1/execution/resources/alphas/%E0%A4%A" });
+    expect(answered.status).toBe(400);
+    expect(JSON.parse(answered.text)).toEqual({ error: "FIXTURE_BAD_REQUEST" });
+    expect(answered.headers.get("x-fixture-lane")).toBe("FIXTURE_LAB");
+  });
+
   it("a write the doubles do not model on an unserved path is 404", async () => {
     const answered = await call(base, { method: "POST", url: "/api/v1/execution/governance/r2/capture", body: {} });
     expect(answered.status).toBe(404);

@@ -198,9 +198,14 @@ export function createFixtureServer(config: FixtureConfig): Server {
   applyConfig(config);
 
   const server = createServer((incoming, response) => {
-    void handle(config, incoming, response).catch(() => {
-      if (!response.headersSent) send(response, config, 500, { error: "FIXTURE_INTERNAL" });
-      else response.destroy();
+    void handle(config, incoming, response).catch((error: unknown) => {
+      if (response.headersSent) {
+        response.destroy();
+        return;
+      }
+      // A path segment the doubles cannot decode (a lone %) is the caller's mistake; anything else is ours.
+      if (error instanceof URIError) send(response, config, 400, { error: "FIXTURE_BAD_REQUEST" });
+      else send(response, config, 500, { error: "FIXTURE_INTERNAL" });
     });
   });
   // A slow client must not hold a socket: a preview lane has no use for one.
