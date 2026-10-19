@@ -292,8 +292,12 @@
       }
     },
     "commits_by_writer": {
-      "S3_W0a_shared_frame": ["9735d803"],
-      "S3_W0b_versioned_ports": ["855ad7c0"],
+      "S3_W0a_shared_frame": [
+        "9735d803"
+      ],
+      "S3_W0b_versioned_ports": [
+        "855ad7c0"
+      ],
       "S3_five_screens": {
         "Paper_workbench": "913ff641",
         "Sandbox": "93b33116",
@@ -301,23 +305,104 @@
         "Live": "2b831cb8",
         "New_request": "a2af09bc"
       },
-      "S3_W_INTEG": ["ef9014f3"],
-      "S3_W_E2E": ["fcca44ed"],
-      "S3_drawer_delivery_policy_fix": ["8b9f361a"],
-      "FF_A_route_url_contract": ["e6127770"],
-      "FF_B1_flow_fixes_ops_admin_overview_blotter_access_portfolios": ["65a5f74e"],
-      "FF_B2_flow_fixes_alpha_account_cockpit_fleet_drawer": ["82943cfb"],
-      "link_crawler": ["dd4fab21", "2404c164"],
-      "reader_fixes_sandbox_canary_live": ["94402566"],
-      "ledger_refresh_N29_EDS12": ["21af6792", "4954dc01", "0160bf20", "ccfb100a"],
-      "fe_contract_backend_and_strict_readers": ["e086cb9a", "c460b693", "595cfc2b", "a8d29672", "1686ec86", "e1178c46"],
-      "fixture_bff_and_research_preview": ["9c1af6bf", "2b3ec764", "578c10b3", "c9f8d259", "4d566307", "44ffa34b", "718d4667", "f4098dba", "fbfc804a", "3ca367fe", "a7f7b0fd", "7cecb7b8"],
-      "pre_s3_flow_and_shell": ["8791b1d2", "42a6959d", "649ecef9", "e926b09a", "142946e3", "b46a6fdb"],
-      "audit_round_and_f5_close": ["8e051084", "d519232e", "e5ba9eaf", "a2f45299", "76e19168", "8c4dc9e3", "f8a9f73e", "807e40aa", "a9a09efc"],
-      "fidelity_pass2_and_f8c": ["4b12bb0c", "59f7ac51", "1801ec3c", "03f15c9f", "d2e43db3"],
-      "r2_final_and_fix_wave_2": ["b1fe1aa6", "e4b92aa6", "35268995", "051ce4f7", "31e702c0", "cb8ca689", "4f6473cc"],
-      "docs_plan_audits_landing": ["ec243b92", "e4a7fe33", "7ce1be27", "eb79bc5b"],
-      "codex_not_ours": ["d0789674", "678cf731"]
+      "S3_W_INTEG": [
+        "ef9014f3"
+      ],
+      "S3_W_E2E": [
+        "fcca44ed"
+      ],
+      "S3_drawer_delivery_policy_fix": [
+        "8b9f361a"
+      ],
+      "FF_A_route_url_contract": [
+        "e6127770"
+      ],
+      "FF_B1_flow_fixes_ops_admin_overview_blotter_access_portfolios": [
+        "65a5f74e"
+      ],
+      "FF_B2_flow_fixes_alpha_account_cockpit_fleet_drawer": [
+        "82943cfb"
+      ],
+      "link_crawler": [
+        "dd4fab21",
+        "2404c164"
+      ],
+      "reader_fixes_sandbox_canary_live": [
+        "94402566"
+      ],
+      "ledger_refresh_N29_EDS12": [
+        "21af6792",
+        "4954dc01",
+        "0160bf20",
+        "ccfb100a"
+      ],
+      "fe_contract_backend_and_strict_readers": [
+        "e086cb9a",
+        "c460b693",
+        "595cfc2b",
+        "a8d29672",
+        "1686ec86",
+        "e1178c46"
+      ],
+      "fixture_bff_and_research_preview": [
+        "9c1af6bf",
+        "2b3ec764",
+        "578c10b3",
+        "c9f8d259",
+        "4d566307",
+        "44ffa34b",
+        "718d4667",
+        "f4098dba",
+        "fbfc804a",
+        "3ca367fe",
+        "a7f7b0fd",
+        "7cecb7b8"
+      ],
+      "pre_s3_flow_and_shell": [
+        "8791b1d2",
+        "42a6959d",
+        "649ecef9",
+        "e926b09a",
+        "142946e3",
+        "b46a6fdb"
+      ],
+      "audit_round_and_f5_close": [
+        "8e051084",
+        "d519232e",
+        "e5ba9eaf",
+        "a2f45299",
+        "76e19168",
+        "8c4dc9e3",
+        "f8a9f73e",
+        "807e40aa",
+        "a9a09efc"
+      ],
+      "fidelity_pass2_and_f8c": [
+        "4b12bb0c",
+        "59f7ac51",
+        "1801ec3c",
+        "03f15c9f",
+        "d2e43db3"
+      ],
+      "r2_final_and_fix_wave_2": [
+        "b1fe1aa6",
+        "e4b92aa6",
+        "35268995",
+        "051ce4f7",
+        "31e702c0",
+        "cb8ca689",
+        "4f6473cc"
+      ],
+      "docs_plan_audits_landing": [
+        "ec243b92",
+        "e4a7fe33",
+        "7ce1be27",
+        "eb79bc5b"
+      ],
+      "codex_not_ours": [
+        "d0789674",
+        "678cf731"
+      ]
     },
     "diff_35953e07_to_21af6792": "444 files, +64540/-1182; Claude-only part (678cf731..21af6792) 360 files, +55940/-976; Codex part (35953e07..678cf731) 93 files, +8604/-210",
     "diff_by_category_claude_part": {
@@ -360,5 +445,40 @@
         "node --test scripts/research-preview/fixture-bff-config.test.mjs (15 pass, 0 fail, 3 s; no docker needed for the static checks)"
       ]
     }
+  },
+  "s3_final_2026_10_19": {
+    "tree": "claude/fe-parity after merging Codex f4643915 (merge a802adb9) plus the independent-review fixes (FF-D..FF-I)",
+    "tsc": {
+      "command": "npx tsc --noEmit -p .",
+      "exit": 0
+    },
+    "vitest": {
+      "command": "npx vitest run --maxWorkers=3 (apps/portal/frontend)",
+      "passed": 43310,
+      "failed": 5,
+      "expected_fail": 8,
+      "skipped": 2,
+      "failed_detail": "src/execution/realtimeProducerConsumer.test.tsx only: common_1.Optional is not a function (Codex env test, red on the Codex tip too)"
+    },
+    "playwright_v2": {
+      "command": "e2e/execution-v2-s1.spec.ts e2e/execution-v2-links.spec.ts --project=chromium-v2",
+      "passed": 76,
+      "note": "the two-levels-deep crawl failed once on Canary's account link (fixture gap, now an allow-listed row); passed alone after that"
+    },
+    "visual_pinned_image": {
+      "command": "scripts/portal-web-visual.sh --workers=2 (verify mode)",
+      "passed": 418,
+      "failed": 16,
+      "skipped": 16,
+      "failed_detail": "surface-audit 11, _preview-governance-c06 4, EL-V2-05 1; the same families as the 2026-10-18 Codex-tip baseline (17 red). Run before FF-G/H/I and the shared-file edits (TradeReplayEvents, presentation, Drawer): to be re-run on the final SHA",
+      "snapshots_changed": 0
+    },
+    "ledgers": "refresh-release-integrity-ledgers.sh --write: current, no change",
+    "not_run": [
+      "full pre-commit hook on the final SHA (runs on the commit that carries this file)",
+      "visual suite on the final SHA",
+      "browser check of fixes after FF-G/H/I (preview session endpoint down, see incident-2026-10-19-preview-control-api.md)",
+      "landing: Codex checkout has 78 uncommitted files"
+    ]
   }
 }
