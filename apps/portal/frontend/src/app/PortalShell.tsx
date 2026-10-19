@@ -9,7 +9,7 @@
  * the registry. A registry failure is therefore a terminal bootstrap state
  * with its request id, not an empty sidebar.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 import { StateView } from "../components/ui";
@@ -19,12 +19,20 @@ import { breadcrumbsFor, type NavOptions } from "../portal/navigation";
 import { useSession } from "../auth/session";
 import { PortalPresentationProvider } from "./presentation";
 import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
+import { opensV2CommandBar } from "./commandRouting";
 import { PortalContext } from "./context";
 import { PortalRoutes } from "./PortalRoutes";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { usePreferences } from "./preferences";
 import { installPrintLightTheme } from "./printTheme";
+
+// V2 command bar (concept C1). Lazy on the RAW env string, like the other V2 mounts, so a build
+// without the manifest emits no V2 chunk and never evaluates this module. Whether it is used on
+// a given route is `opensV2CommandBar` (shell flag + Execution route); otherwise V1's palette.
+const V2CommandBar = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/shell/ExecCommandBar").then((m) => ({ default: m.ExecCommandBar })))
+  : null;
 
 export function PortalShell() {
   const location = useLocation();
@@ -50,7 +58,15 @@ export function PortalShell() {
   }, [mobileNavOpen]);
   /* T-D1/T-D2: print is the light palette whatever the theme. */
   useEffect(() => installPrintLightTheme(), []);
-  const openPalette = useCallback(() => setPaletteOpen(true), []);
+  const [v2BarOpen, setV2BarOpen] = useState(false);
+  // One shortcut, one overlay: on an Execution route with the shell flag on, Cmd/Ctrl+K (and the
+  // topbar search button) open the V2 bar; everywhere else, and always with the flag off, the V1 palette.
+  const v2Route = V2CommandBar !== null && opensV2CommandBar(registry.data ?? null, location.pathname);
+  const openPalette = useCallback(() => (v2Route ? setV2BarOpen(true) : setPaletteOpen(true)), [v2Route]);
+  // Leaving the routes the V2 bar owns closes it, so it cannot reappear on the next Execution visit.
+  useEffect(() => {
+    if (!v2Route) setV2BarOpen(false);
+  }, [v2Route]);
   useCommandPaletteShortcut(openPalette);
 
   const environment = summary.data?.environment ?? null;
@@ -171,6 +187,16 @@ export function PortalShell() {
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
         />
+        {V2CommandBar && v2Route ? (
+          <Suspense fallback={null}>
+            <V2CommandBar
+              registry={registry.data}
+              options={navOptions}
+              open={v2BarOpen}
+              onClose={() => setV2BarOpen(false)}
+            />
+          </Suspense>
+        ) : null}
       </div>
       </PortalPresentationProvider>
     </PortalContext.Provider>

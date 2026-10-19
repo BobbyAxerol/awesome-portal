@@ -16,7 +16,7 @@ Digest Codex `design/sync/2026-10-18-codex-digest.md` (Portal `ac056d46`, tip hi
 | U6 Reader | `readDecimal`, `readMetric`, `readAsOf`, `formatAsOf` | `v2/boundary.ts` |
 | U7 Tích hợp | export `PreviewFrame` + một dòng có điều kiện; `productBoundary` duyệt `v2/`; `v2Hygiene`; test cờ tắt/bật | `ExecutionPreviewRoute.tsx`, `productBoundary.test.ts`, `v2/v2Hygiene.test.ts`, `flagOff/flagOn.test.tsx` |
 
-Chưa gắn vào `PortalShell`/`Sidebar` (đợi registry rev 7 và capability, FE-037/039); `CommandBar` chưa thay palette.
+Chưa gắn vào `Sidebar` (đợi registry rev 7 và capability, FE-037/039). `ContextBar` gắn trong `PreviewFrame`; `CommandBar` không ở đó mà ở `PortalShell` (từ 2026-10-19, `ExecCommandBar` lazy, chỉ khi cờ `shell` bật và route là Execution; ngoài ra palette V1 giữ nguyên).
 
 ## Chứng cứ cờ tắt không đổi
 - DOM của `PreviewFrame` khi cờ tắt = snapshot chụp từ markup V1 trước khi thêm nhánh V2 (`flagOff.test.tsx`).

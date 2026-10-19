@@ -185,6 +185,13 @@
   color: var(--ink-faint);
 }
 
+.exec-cmdbar-notice {
+  font: var(--exec-font-meta);
+  padding: var(--space-2) var(--space-4);
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--line);
+}
+
 .exec-cmdbar-empty {
   font: var(--exec-font-body);
   padding: var(--space-3) var(--space-4);

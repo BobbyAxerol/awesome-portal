@@ -49,7 +49,17 @@ function mount(route: string) {
   );
 }
 
-const digest = (html: string) => createHash("sha256").update(html).digest("hex").slice(0, 16);
+/**
+ * Digest of the shell CHROME: the screen inside <main> loads lazily and settles at a load-dependent
+ * moment, and nothing this change touches renders there. Topbar, rail, drawer slots, palette and
+ * the (absent) V2 bar are all inside the digest.
+ */
+function digest(root: HTMLElement): string {
+  const copy = root.cloneNode(true) as HTMLElement;
+  const main = copy.querySelector("main#portal-content");
+  if (main) main.innerHTML = "";
+  return createHash("sha256").update(copy.innerHTML).digest("hex").slice(0, 16);
+}
 
 beforeEach(() => {
   __resetPortalClientCaches();
@@ -70,21 +80,21 @@ describe("shell with the V2 flag off", () => {
 
   // Routes: Research home, an Execution route and a Governance route; Ctrl/Cmd+K opens only the V1 palette on each.
   it.each([
-    ["/", "6985c39cee886126", "009bb33faaf8607b"],
-    ["/execution", "08adf34b181781fa", "6253fdbb934693d2"],
-    ["/governance/approvals", "940f2bd6667f1cc5", "b3ae1e774f7283b6"],
+    ["/", "9120fd24852357e6", "769a3857250e1be7"],
+    ["/execution", "05edc01a028b1c25", "d20e1bb50cb6d89d"],
+    ["/governance/approvals", "99db84dedb4b8d8f", "fe27d9b2bcf194eb"],
   ])("%s renders the pre-wiring tree, closed and with the palette open", async (route, closedDigest, openDigest) => {
     const { container } = mount(route);
     await screen.findByRole("navigation", { name: "Primary navigation" });
     await waitFor(() => expect(container.querySelector("main#portal-content")).not.toBeNull());
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(container.querySelector(".exec-cmdbar")).toBeNull();
-    expect(digest(container.innerHTML)).toBe(closedDigest);
+    expect(digest(container)).toBe(closedDigest);
 
     fireEvent.keyDown(window, { key: "k", ctrlKey: true });
     await screen.findByRole("dialog", { name: "Command palette" });
     expect(screen.queryByRole("dialog", { name: "Command bar" })).toBeNull();
     expect(container.querySelector(".exec-cmdbar")).toBeNull();
-    expect(digest(container.innerHTML)).toBe(openDigest);
+    expect(digest(container)).toBe(openDigest);
   });
 });

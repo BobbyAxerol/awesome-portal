@@ -194,3 +194,21 @@ describe("CommandBar focus", () => {
     expect(document.activeElement).toBe(input);
   });
 });
+
+describe("CommandBar hint and notice", () => {
+  it("keeps the entity-search placeholder and shows no notice unless the caller supplies one", () => {
+    const { input } = openBar();
+    expect(input.getAttribute("placeholder")).toBe("Search alphas, portfolios, accounts, operations, approvals");
+    expect(input.getAttribute("aria-describedby")).toBeNull();
+    expect(document.querySelector(".exec-cmdbar-notice")).toBeNull();
+  });
+
+  it("takes its own placeholder and describes the input with the notice", () => {
+    render(
+      <CommandBar open onClose={() => undefined} entries={ENTRIES} onSelect={() => undefined} placeholder="Jump to a screen" searchNotice="Not published (FE-023)" />,
+    );
+    const input = screen.getByRole("combobox");
+    expect(input.getAttribute("placeholder")).toBe("Jump to a screen");
+    expect(document.getElementById(input.getAttribute("aria-describedby") ?? "")?.textContent).toBe("Not published (FE-023)");
+  });
+});

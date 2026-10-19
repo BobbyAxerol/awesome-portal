@@ -31,9 +31,14 @@ export interface CommandBarProps {
   /** `false` when `entries` are already the server's answer for the query. */
   filterLocally?: boolean;
   onQueryChange?(query: string): void;
+  /** Input hint; defaults to the entity-search wording for a bar that has a server search. */
+  placeholder?: string;
+  /** Says why a kind of result is absent (e.g. "Not published (FE-023)"); read out with the input. */
+  searchNotice?: string;
 }
 
 const DEFAULT_LIMIT = 12;
+const DEFAULT_PLACEHOLDER = "Search alphas, portfolios, accounts, operations, approvals";
 const FOCUSABLE = 'input, a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function matches(entry: CommandEntry, needle: string): boolean {
@@ -51,9 +56,20 @@ function byGroup(entries: readonly CommandEntry[]): { name: string; items: Comma
   return groups;
 }
 
-export function CommandBar({ open, onClose, entries, onSelect, limit = DEFAULT_LIMIT, filterLocally = true, onQueryChange }: CommandBarProps) {
+export function CommandBar({
+  open,
+  onClose,
+  entries,
+  onSelect,
+  limit = DEFAULT_LIMIT,
+  filterLocally = true,
+  onQueryChange,
+  placeholder = DEFAULT_PLACEHOLDER,
+  searchNotice,
+}: CommandBarProps) {
   const base = useId();
   const listId = `${base}-list`;
+  const noticeId = `${base}-notice`;
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -147,7 +163,8 @@ export function CommandBar({ open, onClose, entries, onSelect, limit = DEFAULT_L
           aria-activedescendant={shown.length > 0 ? optionId(current) : undefined}
           aria-autocomplete="list"
           autoComplete="off"
-          placeholder="Search alphas, portfolios, accounts, operations, approvals"
+          aria-describedby={searchNotice ? noticeId : undefined}
+          placeholder={placeholder}
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -155,6 +172,11 @@ export function CommandBar({ open, onClose, entries, onSelect, limit = DEFAULT_L
             onQueryChange?.(event.target.value);
           }}
         />
+        {searchNotice ? (
+          <div id={noticeId} className="exec-cmdbar-notice">
+            {searchNotice}
+          </div>
+        ) : null}
         {shown.length > 0 ? (
           <div id={listId} className="exec-cmdbar-list" role="listbox" aria-label="Results">
             {groups.map((group, groupIndex) => (

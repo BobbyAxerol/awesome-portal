@@ -81,7 +81,7 @@ const ENFORCED_CAPABILITIES = new Set([
   "administration.profile_access.manage",
 ]);
 
-function isNavigable(feature: PortalFeatureDefinition, options: NavOptions): boolean {
+export function isNavigable(feature: PortalFeatureDefinition, options: NavOptions): boolean {
   if (feature.maturity === "HIDDEN") return false;
   const enforced = feature.permissions.filter((permission) =>
     ENFORCED_CAPABILITIES.has(permission),
