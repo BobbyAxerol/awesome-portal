@@ -199,6 +199,31 @@
 .exec-ov-item[data-sla="OVERDUE"] .exec-ov-item-sla {
   color: var(--bad);
 }
+/* Performance measure switch (disabled: FE-025). Modelled on .exec-ops-seg; disabled keeps its contrast. */
+.exec-ov-seg {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+}
+.exec-ov-segbtn {
+  padding: 2px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+}
+.exec-ov-segbtn:last-of-type {
+  border-right: 0;
+}
+.exec-ov-segbtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-ov-segbtn:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
 .exec-ov-nowrap {
   white-space: nowrap;
 }

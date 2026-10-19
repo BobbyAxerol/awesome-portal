@@ -53,6 +53,7 @@ import {
   FE_CAPITAL, FE_CONTRIBUTORS, FE_DIGEST, FE_MONEY, FE_RESEARCHER, KIND_FLAG, currencyFacts, fleetCells, humanize, modeOf,
   needsAttention, openIncidents, ownRows, stageCounts, streamSentence, todayRows, triageRows, type CurrencyFact, type OwnRow,
 } from "./overviewModel";
+import { MeasureSeg } from "./MeasureSeg";
 import { useOverviewReads } from "./useOverviewReads";
 
 import "../../css/blocks.css";
@@ -242,7 +243,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
           </dl>
 
           <div className="exec-ov-grid2">
-            <SectionPanel title="Performance" aside={<>Window: <Gap ids="FE-025" /></>}>
+            <SectionPanel title="Performance" lead={<MeasureSeg />} aside={<>Window: <Gap ids="FE-025" /></>}>
               <EquityPanel
                 label="Fund performance"
                 points={[]}
@@ -351,7 +352,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
               <>
                 {stages.length > 0 ? (
                   <ul className="exec-ov-cells" aria-label="Alphas by stage">
-                    {stages.map((s) => <li key={s.stage}><span className="exec-ov-cell-label">{s.label}</span><span className="exec-ov-kpi">{s.count}</span></li>)}
+                    {stages.map((s) => <li key={s.stage}><span className="exec-ov-cell-label">{s.label}</span>{s.count === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{s.count}</span>}</li>)}
                   </ul>
                 ) : null}
                 {cells.length > 0 ? (

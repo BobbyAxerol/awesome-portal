@@ -130,7 +130,7 @@ describe("BUSY", () => {
     mount();
     await loaded();
     const stages = within(panel("Fleet by stage")).getByRole("list", { name: "Alphas by stage" });
-    expect(within(stages).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Paper1", "Sandbox1", "Live1"]);
+    expect(within(stages).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Paper1", "Sandbox1", "CanaryNot available", "Live1"]);
     const cells = within(panel("Fleet by stage")).getByRole("list", { name: "Deployments by state" });
     expect(within(cells).getAllByRole("listitem").map((li) => li.textContent)).toContain("Live42");
     expect(panel("Fleet by stage").textContent).toContain("Deployments: 182");

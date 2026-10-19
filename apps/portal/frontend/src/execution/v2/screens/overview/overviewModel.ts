@@ -182,11 +182,17 @@ export function currencyFacts(summary: AlphaFleetSummary | null): CurrencyFact[]
 /** Stage words in the lifecycle order, then any other the server sent. */
 const STAGE_ORDER = ["PAPER", "SANDBOX", "CANARY", "LIVE"] as const;
 
-export function stageCounts(summary: AlphaFleetSummary | null): { stage: string; label: string; count: number }[] {
+/**
+ * One entry per lifecycle stage, plus any other stage the server sent. A stage
+ * the summary does not list has `count: null` ("Not available"), never 0: the
+ * schema does not say whether the source omits stages that hold none or stages
+ * it did not publish (the fleet lens counts, DEFECT D4, follow the same rule).
+ * A published 0 stays 0. Nothing downstream adds these up.
+ */
+export function stageCounts(summary: AlphaFleetSummary | null): { stage: string; label: string; count: number | null }[] {
   if (summary === null) return [];
-  const known: string[] = STAGE_ORDER.filter((stage) => stage in summary.stageCounts);
-  const rest = Object.keys(summary.stageCounts).filter((stage) => !known.includes(stage)).sort();
-  return [...known, ...rest].map((stage) => ({ stage, label: humanize(stage), count: summary.stageCounts[stage] ?? 0 }));
+  const rest = Object.keys(summary.stageCounts).filter((stage) => !(STAGE_ORDER as readonly string[]).includes(stage)).sort();
+  return [...STAGE_ORDER, ...rest].map((stage) => ({ stage, label: humanize(stage), count: summary.stageCounts[stage] ?? null }));
 }
 
 /* ── command center panels ─────────────────────────────────────────────── */

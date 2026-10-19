@@ -115,10 +115,25 @@ export interface NotPublishedProps {
   reasonCode?: string | null;
   /** What exactly is missing, in a few words ("Days in stage"). */
   children?: ReactNode;
+  /**
+   * Repeated gap inside a dense card (the lifecycle spine): only the short label
+   * is visible; the full "Not published (id)" stays in the text (visually
+   * hidden), and the surface prints the sentence ONCE. Never a way to drop the id.
+   */
+  compact?: boolean;
 }
 
 /** Inline: "Not published (FE-021)" plus what it means. */
-export function NotPublished({ id, reasonCode, children }: NotPublishedProps) {
+export function NotPublished({ id, reasonCode, children, compact = false }: NotPublishedProps) {
+  if (compact) {
+    return (
+      <span className="exec-blk-np" data-compact="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}`}>
+        <span className="exec-blk-sr">{notPublishedText(id)} </span>
+        <span className="exec-blk-np-short">{children ?? NOT_PUBLISHED}</span>
+        {reasonCode ? <span className="exec-blk-np-reason">{reasonCode}</span> : null}
+      </span>
+    );
+  }
   return (
     <span className="exec-blk-np" title={feLabel(id)}>
       <span className="exec-blk-np-word">{NOT_PUBLISHED}</span> (<span className="exec-blk-np-id">{id}</span>)

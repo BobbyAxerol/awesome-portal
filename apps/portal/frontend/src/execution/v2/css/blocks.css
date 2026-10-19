@@ -24,6 +24,26 @@
 .exec-blk-np-id {
   white-space: nowrap;
 }
+/* Compact gap (JourneySpine cards): the full "Not published (id)" is in the text for assistive tech and copy, the short label is the visible part. */
+.exec-blk-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.exec-blk-np[data-compact] {
+  color: var(--ink-soft);
+}
+.exec-blk-np-short {
+  color: var(--ink-soft);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
 .exec-blk-np-reason {
   margin-left: var(--space-2);
   font: var(--exec-font-id);
@@ -132,10 +152,33 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+/* Title + optional lead (a control that belongs to the heading, e.g. a measure switch). */
+.exec-blk-ph-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
 .exec-blk-ph-aside {
   font: var(--exec-font-meta);
   color: var(--ink-faint);
   overflow-wrap: anywhere;
+}
+/* Narrow: the head may wrap; the title keeps its natural width and the aside flows under it. */
+@media (max-width: 660px) {
+  .exec-blk-ph {
+    flex-wrap: wrap;
+  }
+  .exec-blk-ph-title {
+    flex: 0 0 auto;
+  }
+  .exec-blk-ph-aside {
+    min-width: 0;
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
 }
 .exec-blk-panel-body {
   padding: var(--space-4);

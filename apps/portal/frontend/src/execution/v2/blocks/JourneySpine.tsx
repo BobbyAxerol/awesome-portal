@@ -150,7 +150,7 @@ function Facts({ id, state, facts }: { id: SpineStageId; state: SpineNodeState; 
   if (state === "unknown") {
     return (
       <span className="exec-blk-spine-line">
-        <NotPublished id="FE-027/028">Stage history</NotPublished>
+        <NotPublished id="FE-027/028" compact>Stage history</NotPublished>
       </span>
     );
   }
@@ -164,7 +164,7 @@ function Facts({ id, state, facts }: { id: SpineStageId; state: SpineNodeState; 
         {spec.gate ? <span className="exec-blk-spine-big">Approved</span> : null}
         {facts?.line ? <span className="exec-blk-spine-line">{facts.line}</span> : null}
         <span className="exec-blk-spine-line">
-          {by ? `By ${by}` : <NotPublished id="FE-027/028">Decided by</NotPublished>}
+          {by ? `By ${by}` : <NotPublished id="FE-027/028" compact>Decided by</NotPublished>}
         </span>
       </>
     );
@@ -172,22 +172,33 @@ function Facts({ id, state, facts }: { id: SpineStageId; state: SpineNodeState; 
   return (
     <>
       <span className="exec-blk-spine-big">
-        {days === null ? <NotPublished id="FE-027/028">Days in stage</NotPublished> : <>{count(days)}<small> days in stage</small></>}
+        {days === null ? <NotPublished id="FE-027/028" compact>Days in stage</NotPublished> : <>{count(days)}<small> days in stage</small></>}
       </span>
       {spec.gate || id === "live" ? null : criteria ? (
         <Meter {...criteria} />
       ) : (
         <span className="exec-blk-spine-line">
-          <NotPublished id="FE-027/028">Gate criteria</NotPublished>
+          <NotPublished id="FE-027/028" compact>Gate criteria</NotPublished>
         </span>
       )}
       {id === "live" ? <span className="exec-blk-spine-line">No exit gate</span> : null}
       {state === "blk" && facts?.blockedReason ? <span className="exec-blk-spine-line">{facts.blockedReason}</span> : null}
       <span className="exec-blk-spine-line">
-        {who ? `Decides: ${who}` : <NotPublished id="FE-027/028">Decider</NotPublished>}
+        {who ? `Decides: ${who}` : <NotPublished id="FE-027/028" compact>Decider</NotPublished>}
       </span>
     </>
   );
+}
+
+/** Does this card print a compact gap? Mirrors `Facts`, so the one note under the list appears exactly when a card needed it. */
+function cardHasGap(state: SpineNodeState, id: SpineStageId, facts: SpineStageFacts | undefined): boolean {
+  if (state === "ahead") return false;
+  if (state === "unknown") return true;
+  if (state === "done") return !facts?.decidedBy;
+  const spec = SPINE_STAGES[id];
+  const days = isCount(facts?.daysInStage);
+  const criteria = !!facts?.criteria && isCount(facts.criteria.met) && isCount(facts.criteria.total);
+  return !days || (!spec.gate && id !== "live" && !criteria) || !facts?.decider;
 }
 
 function accessibleName(id: SpineStageId, state: SpineNodeState): string {
@@ -223,6 +234,13 @@ export function JourneySpine({
       <NotPublished id="FE-027/028">Current stage</NotPublished>
     </p>
   ) : null;
+
+  const gapNote =
+    variant === "full" && SPINE_STAGE_IDS.some((id, i) => cardHasGap(states[i], id, stages?.[id])) ? (
+      <p className="exec-blk-spine-note">
+        <NotPublished id="FE-027/028">Days in stage, gate criteria and decider are not published</NotPublished>
+      </p>
+    ) : null;
 
   return (
     <div className="exec-blk-spine" data-variant={variant}>
@@ -279,6 +297,7 @@ export function JourneySpine({
           );
         })}
       </ol>
+      {gapNote}
     </div>
   );
 }

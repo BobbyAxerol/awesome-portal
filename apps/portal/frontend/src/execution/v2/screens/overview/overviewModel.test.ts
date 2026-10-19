@@ -157,8 +157,12 @@ describe("current facts per currency", () => {
     expect(currencyFacts(null)).toEqual([]);
   });
   it("stage counts follow the lifecycle order, unknown stages after", () => {
-    expect(stageCounts(summary({ stage_counts: { LIVE: 2, ZED: 1, PAPER: 5, CANARY: 3 } })).map((s) => s.stage)).toEqual(["PAPER", "CANARY", "LIVE", "ZED"]);
+    expect(stageCounts(summary({ stage_counts: { LIVE: 2, ZED: 1, PAPER: 5, CANARY: 3, SANDBOX: 4 } })).map((s) => [s.stage, s.count])).toEqual([["PAPER", 5], ["SANDBOX", 4], ["CANARY", 3], ["LIVE", 2], ["ZED", 1]]);
     expect(stageCounts(null)).toEqual([]);
+  });
+  it("a stage the summary does not list is null (Not available), never 0; a published 0 stays 0", () => {
+    const rows = stageCounts(summary({ stage_counts: { PAPER: 0, LIVE: 3 } }));
+    expect(rows.map((s) => [s.stage, s.count])).toEqual([["PAPER", 0], ["SANDBOX", null], ["CANARY", null], ["LIVE", 3]]);
   });
 });
 

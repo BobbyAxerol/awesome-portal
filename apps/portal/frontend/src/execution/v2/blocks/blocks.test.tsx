@@ -490,3 +490,69 @@ describe("hygiene of the block sources", () => {
     }
   });
 });
+
+describe("JourneySpine gap note (L-B2)", () => {
+  it("prints the gap once, under the list, and every card keeps the full text for assistive tech", () => {
+    const { container } = render(<JourneySpine current="sandbox" />);
+    const list = screen.getByRole("list", { name: "Lifecycle" });
+    const visible = [...container.querySelectorAll(".exec-blk-np")].filter((n) => !n.hasAttribute("data-compact") && !list.contains(n));
+    const notes = container.querySelectorAll(".exec-blk-spine-note");
+    // one note for the whole spine: no current-stage note here, only the gap note
+    expect(notes).toHaveLength(1);
+    expect(visible).toHaveLength(1);
+    expect(notes[0].textContent).toContain("Not published (FE-027/028)");
+    expect(notes[0].nextElementSibling).toBeNull();
+    expect(list.nextElementSibling).toBe(notes[0]);
+    const compact = list.querySelectorAll("[data-compact]");
+    expect(compact.length).toBeGreaterThan(0);
+    for (const item of within(list).getAllByRole("listitem")) {
+      if (item.getAttribute("data-s") === "ahead") continue;
+      expect(item.textContent).toContain("Not published (FE-027/028)");
+      expect(item.querySelector(".exec-blk-sr")?.textContent).toContain("Not published (FE-027/028)");
+    }
+    // the visible short labels carry no id of their own
+    for (const short of container.querySelectorAll(".exec-blk-np-short")) expect(short.textContent).not.toContain("FE-");
+  });
+
+  it("with the current stage missing keeps its note and adds the gap note", () => {
+    const { container } = render(<JourneySpine />);
+    expect(container.querySelectorAll(".exec-blk-spine-note")).toHaveLength(2);
+    expect(container.textContent).toContain("Current stage");
+  });
+
+  it("a published current stage still leaves the earlier stages unknown, so the note stays; compact and mini add none", () => {
+    const full = render(
+      <JourneySpine current="live" stages={{ live: { daysInStage: 4, decider: "Manager" } }} />,
+    );
+    expect(full.container.querySelectorAll(".exec-blk-spine-note")).toHaveLength(1);
+    cleanup();
+    const compact = render(<JourneySpine variant="compact" />);
+    expect(compact.container.querySelector("[data-compact]")).toBeNull();
+    expect(compact.container.querySelectorAll(".exec-blk-spine-note")).toHaveLength(1); // the missing-current note only
+    cleanup();
+    const mini = render(<JourneySpine variant="mini" />);
+    expect(mini.container.querySelector(".exec-blk-spine-note")).toBeNull();
+  });
+});
+
+describe("PanelHead lead (OV-6)", () => {
+  it("keeps the heading's accessible name equal to the title when a lead is given", () => {
+    render(
+      <SectionPanel title="Performance" lead={<button type="button">Net PnL</button>} aside="meta">
+        <p>body</p>
+      </SectionPanel>,
+    );
+    expect(screen.getByRole("region", { name: "Performance" })).toBeTruthy();
+    const heading = screen.getByRole("heading", { name: "Performance" });
+    expect(heading.parentElement?.className).toBe("exec-blk-ph-main");
+    expect(heading.nextElementSibling?.textContent).toBe("Net PnL");
+    expect(heading.parentElement?.nextElementSibling?.className).toBe("exec-blk-ph-aside");
+  });
+
+  it("without a lead the head is exactly what it was", () => {
+    const { container } = render(<PanelHead title="Trade log" level={4} id="x" aside="n" />);
+    expect(container.innerHTML).toBe(
+      '<header class="exec-blk-ph"><h4 id="x" class="exec-blk-ph-title">Trade log</h4><span class="exec-blk-ph-aside">n</span></header>',
+    );
+  });
+});
