@@ -403,13 +403,31 @@ export function robustRange(prices: readonly number[]): { lo: number; hi: number
 
 /* ── the primitive ───────────────────────────────────────────────────── */
 
+/** Which side of the pane a level lies beyond when it is pinned to the edge; null = drawn at its true price. */
+export type LevelEdge = "above" | "below" | null;
+
+/**
+ * Pin a pane-pixel y to the pane when it lies outside 0..height. The returned y is a screen position
+ * only, not a price: callers must say so (see `offScaleLabel`). A y already inside the pane is untouched.
+ */
+export function clampLevel(y: number, height: number): { y: number; edge: LevelEdge } {
+  if (y < 0) return { y: 6, edge: "above" };
+  if (y > height) return { y: Math.max(6, height - 6), edge: "below" };
+  return { y, edge: null };
+}
+
+/** The text of a pinned level: the exact formatted level as built in the scene, an arrow toward the real price and the words "off scale". */
+export function offScaleLabel(label: string, edge: Exclude<LevelEdge, null>): string {
+  return `${edge === "above" ? "▲" : "▼"} ${label} · off scale`;
+}
+
 interface Drawn {
   markers: { m: SceneMarker; x: number; y: number; off: boolean }[];
-  legs: { l: SceneLeg; x1: number; x2: number; y: number }[];
+  legs: { l: SceneLeg; x1: number; x2: number; y: number; edge: LevelEdge }[];
   trips: { tr: SceneTrip; x0: number; y0: number; x1: number; y1: number }[];
   rejects: { r: SceneReject; x: number; y: number; count: number }[];
   brackets: { b: SceneBracket; x0: number; x1: number; yEntry: number; yTp: number | null; ySl: number | null; yTps: number[]; ySls: number[]; open: boolean }[];
-  legEnds: { e: SceneLegEnd; x: number; y: number }[];
+  legEnds: { e: SceneLegEnd; x: number; y: number; edge: LevelEdge }[];
   ladder: { l: SceneLadder; x1: number; x2: number; y: number }[];
   ladderHidden: number;
   contingencies: { c: SceneContingency; x0: number; x1: number; ys: { y: number; waiting: boolean; side: string | null }[] }[];
@@ -524,12 +542,21 @@ class TradesRenderer implements IPrimitivePaneRenderer {
       }
       ctx.globalAlpha = 1;
       // legs: dashed level while the order was working, label when there is room
-      for (const { l, x1, x2, y } of d.legs) {
+      for (const { l, x1, x2, y, edge } of d.legs) {
         ctx.strokeStyle = l.role === "TP" ? pal.good : pal.bad;
         ctx.lineWidth = 1;
-        ctx.setLineDash([6, 4]);
+        // a pinned level is dotted so it is not mistaken for a pane border or a price
+        ctx.setLineDash(edge === null ? [6, 4] : [1.5, 3]);
         ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
-        if (x2 - x1 >= 70) {
+        if (edge !== null) {
+          // always labelled: the line position is not the price, the words carry the exact level
+          ctx.setLineDash([]);
+          ctx.fillStyle = l.role === "TP" ? pal.good : pal.bad;
+          const text = offScaleLabel(l.label, edge);
+          const w = ctx.measureText(text).width;
+          ctx.textAlign = "left";
+          ctx.fillText(text, Math.max(4, Math.min(x1 + 4, d.width - 4 - w)), edge === "above" ? y + 12 : y - 6);
+        } else if (x2 - x1 >= 70) {
           ctx.setLineDash([]);
           ctx.fillStyle = l.role === "TP" ? pal.good : pal.bad;
           ctx.textAlign = "left";
@@ -538,12 +565,17 @@ class TradesRenderer implements IPrimitivePaneRenderer {
       }
       ctx.setLineDash([]);
       // how a leg ended: ◇ triggered, ⊣ cancelled
-      for (const { e, x, y } of d.legEnds) {
+      for (const { e, x, y, edge } of d.legEnds) {
         const colour = e.kind === "TRIGGER" ? (this.owner.legRole(e.legId) === "TP" ? pal.good : pal.bad) : pal.mute;
         ctx.strokeStyle = colour; ctx.fillStyle = pal.bg; ctx.lineWidth = hi === e.id || hi === e.legId ? 2 : 1.2;
         ctx.beginPath();
         if (e.kind === "TRIGGER") { ctx.moveTo(x, y - 5); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 5); ctx.lineTo(x - 5, y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
         else { ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 5); ctx.moveTo(x - 4, y); ctx.lineTo(x, y); ctx.stroke(); }
+        if (edge !== null) {
+          ctx.fillStyle = pal.mute; ctx.textAlign = "left";
+          const text = offScaleLabel(money(String(e.level)), edge);
+          ctx.fillText(text, Math.max(4, Math.min(x + 8, d.width - 4 - ctx.measureText(text).width)), edge === "above" ? y + 14 : y - 8);
+        }
       }
       // rejects: × — one per bar, with the count when several share it
       for (const { r, x, y, count } of d.rejects) {
@@ -600,6 +632,11 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
   scene: ReplayScene = { markers: [], legs: [], trips: [], rejects: [], brackets: [], legEnds: [], ladder: [], contingencies: [], packages: [], ledger: [], planned: [], lastT: null, bracketSource: "none" };
   times: readonly number[] = [];
   intervalMs: number | null = null;
+  /**
+   * Default true: every in-view TP / SL level joins the price autoscale (V1). When false and candles
+   * exist the candles alone set the scale and a level beyond it is pinned to the pane edge, labelled.
+   */
+  levelsInAutoscale = true;
   palette: ChartPalette | null = null;
   drawn: Drawn | null = null;
   /** the marker / leg / bracket the reader is on (hover or selection) */
@@ -659,9 +696,11 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
   /** Prices of the trades inside the visible logical range join the autoscale; far-off prints do not. */
   autoscaleInfo(start: Logical, end: Logical): AutoscaleInfo | null {
     const inView = (t: number) => { const l = this.logical(t); return l >= start - 1 && l <= end + 1; };
+    // with candles and the flag off, levels do not stretch the axis; with no candles the legs are all there is to scale by
+    const withLevels = this.levelsInAutoscale || this.intervalMs === null;
     const prices = [
       ...this.scene.markers.filter((m) => inView(m.t)).map((m) => m.price),
-      ...this.scene.legs.filter((l) => this.logical(l.from) <= end + 1 && this.logical(l.to ?? this.scene.lastT ?? l.from) >= start - 1).map((l) => l.level),
+      ...(!withLevels ? [] : this.scene.legs.filter((l) => this.logical(l.from) <= end + 1 && this.logical(l.to ?? this.scene.lastT ?? l.from) >= start - 1).map((l) => l.level)),
     ];
     const range = robustRange(prices);
     if (!range) return null;
@@ -686,7 +725,8 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
     };
     const y = (price: number) => p.series.priceToCoordinate(price);
     const clampY = (v: number) => Math.max(6, Math.min(height - 6, v));
-    const range = robustRange([...this.scene.markers.map((m) => m.price), ...this.scene.legs.map((l) => l.level)]);
+    const pin = !this.levelsInAutoscale && this.intervalMs !== null;
+    const range = robustRange([...this.scene.markers.map((m) => m.price), ...(pin ? [] : this.scene.legs.map((l) => l.level))]);
     const markers: Drawn["markers"] = [];
     for (const m of this.scene.markers) {
       const mx = x(m.t);
@@ -700,8 +740,14 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
       const x1 = x(l.from);
       const x2 = x(l.to ?? this.scene.lastT ?? l.from);
       const ly = y(l.level);
-      if (x1 === null || x2 === null || ly === null || x2 < 0 || x1 > width || ly < 0 || ly > height) continue;
-      legs.push({ l, x1: Math.max(0, x1), x2: Math.min(width, x2), y: ly });
+      if (x1 === null || x2 === null || ly === null || x2 < 0 || x1 > width) continue;
+      if (!pin) {
+        if (ly < 0 || ly > height) continue;
+        legs.push({ l, x1: Math.max(0, x1), x2: Math.min(width, x2), y: ly, edge: null });
+        continue;
+      }
+      const c = clampLevel(ly, height);
+      legs.push({ l, x1: Math.max(0, x1), x2: Math.min(width, x2), y: c.y, edge: c.edge });
     }
     const trips: Drawn["trips"] = [];
     for (const tr of this.scene.trips) {
@@ -735,8 +781,14 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
     const legEnds: Drawn["legEnds"] = [];
     for (const e of this.scene.legEnds) {
       const ex = x(e.t), ey = y(e.level);
-      if (ex === null || ey === null || ex < 0 || ex > width || ey < 0 || ey > height) continue;
-      legEnds.push({ e, x: ex, y: ey });
+      if (ex === null || ey === null || ex < 0 || ex > width) continue;
+      if (!pin) {
+        if (ey < 0 || ey > height) continue;
+        legEnds.push({ e, x: ex, y: ey, edge: null });
+        continue;
+      }
+      const c = clampLevel(ey, height);
+      legEnds.push({ e, x: ex, y: c.y, edge: c.edge });
     }
     const ladderAll: Drawn["ladder"] = [];
     for (const l of this.scene.ladder) {
@@ -862,6 +914,11 @@ export interface ReplayCandleChartProps {
   focusId?: string | null;
   /** the source's order groups / packages / ledgers when it publishes them (read ahead; EMPTY_GROUPS today) */
   groups?: ReplayGroups;
+  /**
+   * Default true (V1): TP / SL levels stretch the price axis. False: with candles the candles set the
+   * scale and a level beyond it is pinned to the edge, dotted and labelled "off scale" with its exact value.
+   */
+  levelsInAutoscale?: boolean;
 }
 const EDGE_BARS = 40;
 export type ChartStatus = "loading" | "ready" | "unavailable";
@@ -877,7 +934,7 @@ const reducedMotion = () => (typeof window !== "undefined" && (window.matchMedia
 type Runtime = { lib: Lib; chart: IChartApi; series: ISeriesApi<"Candlestick">; prim: TradesPrimitive; mark: IPriceLine | null };
 
 export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChartProps>(function ReplayCandleChart(
-  { bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, notice, ariaLabel, onHover, onSelect, selectedId = null, onKeyDown, onStatus, onRangeEdge, focusId = null, groups = EMPTY_GROUPS },
+  { bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, notice, ariaLabel, onHover, onSelect, selectedId = null, onKeyDown, onStatus, onRangeEdge, focusId = null, groups = EMPTY_GROUPS, levelsInAutoscale = true },
   ref,
 ) {
   const edgeRef = useRef(onRangeEdge);
@@ -1028,6 +1085,7 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
     edgeArmed.current = false;
     const arm = setTimeout(() => { edgeArmed.current = true; }, 700);
     r.series.setData(data);
+    r.prim.levelsInAutoscale = levelsInAutoscale;
     r.prim.set(scene, times, withBars ? intervalMs : null, r.prim.palette ?? readPalette(host.current!)!);
     const mark = num(markPrice);
     if (mark !== null) {
@@ -1049,7 +1107,7 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
     }
     return () => { clearTimeout(arm); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, focusId, groups]);
+  }, [status, bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, focusId, groups, levelsInAutoscale]);
 
   useEffect(() => {
     const r = rt.current;

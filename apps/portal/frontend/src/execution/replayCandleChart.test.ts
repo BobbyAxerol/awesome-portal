@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { BRACKET_PAIRING_MS, buildScene, logicalOf, robustRange } from "./components/ReplayCandleChart";
+import { BRACKET_PAIRING_MS, buildScene, clampLevel, logicalOf, offScaleLabel, robustRange, TradesPrimitive } from "./components/ReplayCandleChart";
 import { resolveFocus, sceneIdOfRow, stepFill } from "./components/TradeReplayEvents";
 import { buildLog } from "./components/tradeReplayModel";
 import { legLevels, pairRoundTrips, readReplayFills, readReplayOrders } from "./components/tradeReplayModel";
@@ -226,5 +226,56 @@ describe("interval from the strategy id (DERIVED until BR-EX-80)", () => {
   it("routes the candles query to the deployment's venue", () => {
     expect(marketCandlesPath({ venue: "OKX", symbol: "ETHUSDT", interval: "30m" })).toBe("/market/venue-candles?environment=paper&venue=OKX&market=SWAP&symbol=ETHUSDT&interval=30m&limit=500");
     expect(marketCandlesPath({ symbol: "ETHUSDT", interval: "1h" })).toContain("venue=BINANCE&market=USDM");
+  });
+});
+
+describe("TradesPrimitive.autoscaleInfo — levelsInAutoscale is opt-in", () => {
+  const scene = buildScene(FILLS.slice(0, 2), ORDERS, pairRoundTrips(FILLS.slice(0, 2), ORDERS), legLevels(ORDERS));
+  const T0 = scene.markers[0]!.t;
+  const TIMES = [T0 - 3_600_000, T0, T0 + 3_600_000, T0 + 7_200_000];
+  // fills 1850 / 1800, legs TP 1800 / SL 1900; add a wide leg far from the prints so the difference is visible
+  const wide = { ...scene, legs: [...scene.legs, { ...scene.legs[0]!, id: "leg:far", level: 2150 }] };
+  const prim = (withCandles: boolean, flag?: boolean) => {
+    const p = new TradesPrimitive();
+    p.set(wide, TIMES, withCandles ? 3_600_000 : null, {} as never);
+    if (flag !== undefined) p.levelsInAutoscale = flag;
+    return p;
+  };
+  const span = (p: TradesPrimitive) => p.autoscaleInfo(-5 as never, 10 as never)!.priceRange!;
+
+  it("defaults to true and includes every in-view leg level (V1 behaviour)", () => {
+    expect(new TradesPrimitive().levelsInAutoscale).toBe(true);
+    expect(span(prim(true)).maxValue).toBeGreaterThan(2100);
+  });
+
+  it("with the flag off and candles present the legs no longer stretch the axis", () => {
+    const r = span(prim(true, false));
+    expect(r.maxValue).toBeLessThan(2100);
+    expect(r.minValue).toBeLessThanOrEqual(1800);
+    expect(r.maxValue).toBeGreaterThanOrEqual(1850);
+  });
+
+  it("with the flag off and no candles the legs stay in: they are all there is to scale by", () => {
+    expect(span(prim(false, false)).maxValue).toBeGreaterThan(2100);
+  });
+});
+
+describe("clampLevel / offScaleLabel — a pinned level is not a price", () => {
+  it("leaves a y inside the pane (edges included) untouched, with no edge", () => {
+    expect(clampLevel(120, 400)).toEqual({ y: 120, edge: null });
+    expect(clampLevel(0, 400)).toEqual({ y: 0, edge: null });
+    expect(clampLevel(400, 400)).toEqual({ y: 400, edge: null });
+  });
+  it("pins above / below the pane 6 px inside the edge and records which side", () => {
+    expect(clampLevel(-1, 400)).toEqual({ y: 6, edge: "above" });
+    expect(clampLevel(-900, 400)).toEqual({ y: 6, edge: "above" });
+    expect(clampLevel(401, 400)).toEqual({ y: 394, edge: "below" });
+    expect(clampLevel(5000, 400)).toEqual({ y: 394, edge: "below" });
+  });
+  it("labels the exact formatted level with an arrow toward the real price and says off scale", () => {
+    const leg = buildScene(FILLS, ORDERS, [], legLevels(ORDERS)).legs[0]!;
+    expect(leg.label).toBe("TP 1,800.00");
+    expect(offScaleLabel(leg.label, "above")).toBe("▲ TP 1,800.00 · off scale");
+    expect(offScaleLabel(leg.label, "below")).toBe("▼ TP 1,800.00 · off scale");
   });
 });

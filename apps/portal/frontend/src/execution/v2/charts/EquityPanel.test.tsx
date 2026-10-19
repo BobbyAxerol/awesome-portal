@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { at, DAY, epoch, rng, series, walk } from "./chartKit";
-import { EquityPanel } from "./EquityPanel";
+import { EquityPanel, wrapLines } from "./EquityPanel";
 import { EventRibbon } from "./EventRibbon";
 import { domainOfSeries } from "./model";
 
@@ -346,5 +346,85 @@ describe("EquityPanel · scale", () => {
     );
     expect(screen.getByTestId("envelope").textContent).toContain("Server: 4 of 90,000 points, LTTB");
     expect(container.querySelector('.exec-flag[data-k="partial"]')!.textContent).toContain("server reduction does not guarantee extrema");
+  });
+});
+
+describe("wrapLines", () => {
+  const COPY = "Not published (FE-051) · portfolio drawdown is not in the contract yet";
+
+  it("splits on the separator first, then on words, and concatenates back to the copy", () => {
+    expect(wrapLines(COPY, 200).join("")).toBe(COPY);
+    expect(wrapLines(COPY, 200)).toEqual(["Not published (FE-051) · ", "portfolio drawdown is not in the contract yet"]);
+    for (const n of [1, 5, 12, 20, 33, 80]) expect(wrapLines(COPY, n).join("")).toBe(COPY);
+  });
+
+  it("respects the width unless a single word is longer, and never cuts a word", () => {
+    const lines = wrapLines(COPY, 20);
+    expect(lines.length).toBeGreaterThan(2);
+    for (const l of lines) expect(l.trimEnd().length <= 20 || !l.trimEnd().includes(" ")).toBe(true);
+    expect(wrapLines("supercalifragilistic", 5)).toEqual(["supercalifragilistic"]);
+    expect(wrapLines("", 10)).toEqual([""]);
+  });
+
+  it("keeps a trailing space on every line but the last", () => {
+    const lines = wrapLines(COPY, 20);
+    lines.slice(0, -1).forEach((l) => expect(l.endsWith(" ")).toBe(true));
+    expect(lines[lines.length - 1].endsWith(" ")).toBe(false);
+  });
+});
+
+describe("EquityPanel · phone width (390px viewport, 340px plot)", () => {
+  const COPY = "Not published (FE-051)";
+  const REASON = "portfolio drawdown is not part of the equity contract yet, so the pane stays empty rather than derive one from the curve";
+
+  function atWidth(w: number, run: () => void) {
+    const spy = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(w);
+    try {
+      run();
+    } finally {
+      spy.mockRestore();
+    }
+  }
+
+  it("keeps x tick labels a label width apart", () => {
+    atWidth(340, () => {
+      const pts = series(["1000.00", "1010.50", "990.25", "1020.75", "1030.00", "1040.00", "1050.00"]);
+      const { container } = render(<EquityPanel label="Equity" points={pts} />);
+      expect(container.querySelector("svg")!.getAttribute("width")).toBe("340");
+      const ticks = [...container.querySelectorAll(".exec-c2-xaxis text")];
+      expect(ticks.length).toBeGreaterThanOrEqual(1);
+      const xs = ticks.map((t) => Number(t.getAttribute("x")));
+      const widths = ticks.map((t) => (t.textContent ?? "").length * 6.6);
+      for (let i = 1; i < xs.length; i += 1) expect(xs[i] - xs[i - 1]).toBeGreaterThanOrEqual((widths[i] + widths[i - 1]) / 2 + 12);
+      ticks.forEach((_t, i) => {
+        expect(xs[i] - widths[i] / 2).toBeGreaterThanOrEqual(0);
+        expect(xs[i] + widths[i] / 2).toBeLessThanOrEqual(340);
+      });
+    });
+  });
+
+  it("wraps the drawdown-absent copy into several lines with the same text, and grows the pane", () => {
+    atWidth(340, () => {
+      const copy = `${COPY} · ${REASON}`;
+      const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "absent", copy: COPY, reason: REASON }} />);
+      const text = container.querySelector('[data-testid="drawdown-pane"] .exec-c2-dd-absent text')!;
+      const spans = [...text.querySelectorAll("tspan")];
+      expect(spans.length).toBeGreaterThan(1);
+      expect(text.textContent).toBe(copy);
+      const rect = container.querySelector(".exec-c2-dd-absent rect")!;
+      const paneH = Number(rect.getAttribute("height"));
+      expect(paneH).toBe(Math.max(84, spans.length * 14 + 24));
+      expect(paneH).toBeGreaterThan(84);
+      // the SVG is as tall as plot + gap + the grown pane
+      expect(Number(container.querySelector("svg")!.getAttribute("height"))).toBe(280 + 22 + paneH);
+      // each line fits inside the plot (iw = 340 - 156), at 6.6 px a character
+      for (const sp of spans) expect((sp.textContent ?? "").trimEnd().length * 6.6).toBeLessThanOrEqual(340 - 156 - 10);
+    });
+  });
+
+  it("keeps the 84 px pane and one line at the default width", () => {
+    const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "absent", copy: COPY }} />);
+    expect(container.querySelectorAll(".exec-c2-dd-absent tspan")).toHaveLength(1);
+    expect(container.querySelector(".exec-c2-dd-absent rect")!.getAttribute("height")).toBe("84");
   });
 });

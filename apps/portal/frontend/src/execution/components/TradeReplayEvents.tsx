@@ -289,6 +289,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             onRangeEdge={onRangeEdge}
             focusId={focusTarget}
             groups={groups}
+            levelsInAutoscale={!plain}
           />
         </div>
         <div className="exec-rp-legend">
@@ -298,6 +299,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
           <span>─ ─ <span data-tone="good">TP</span> / <span data-tone="bad">SL</span> leg at trigger_price · ◇ triggered · ⊣ cancelled · ┈ resting limit level</span>
           <span data-tone="bad">× rejected ({rejects})</span>
           <span className="exec-rp-mute">╌ round trip · {bars.length > 0 ? "▮ venue candle up / down" : "no candles"} · hover a marker for its card · click ↔ log row · ← → step fills</span>
+          {plain && bars.length > 0 ? <span className="exec-rp-mute">▲ / ▼ ┈ Off-scale levels are pinned to the edge with their value; the line position is not their price.</span> : null}
           {plain ? null : provenance}
         </div>
         {plain ? (

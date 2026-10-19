@@ -104,6 +104,33 @@ export function YAxis({ frame, ticks, y, unit }: { frame: Frame; ticks: ValueTic
   );
 }
 
+/** Label glyph width and the clear gap kept between two x labels, in px (the tick font is monospaced). */
+export const X_TICK_CHAR_W = 6.6;
+export const X_TICK_PAD = 12;
+
+/**
+ * Indices of the x ticks to keep. A tick is kept only when its label fits inside 0..W and its centre is
+ * at least the two half-widths plus `pad` from the previous kept centre; the first fitting tick wins
+ * the greedy pass. At least one index is always returned. Ticks are scale marks, so dropping one
+ * loses no published data.
+ */
+export function thinTicks(positions: readonly number[], labels: readonly string[], charW: number, pad: number, W: number): number[] {
+  const kept: number[] = [];
+  let prevX = 0;
+  let prevW = 0;
+  for (let i = 0; i < positions.length; i += 1) {
+    const w = labels[i].length * charW;
+    const cx = positions[i];
+    if (cx - w / 2 < 0 || cx + w / 2 > W) continue;
+    if (kept.length > 0 && cx - prevX < (prevW + w) / 2 + pad) continue;
+    kept.push(i);
+    prevX = cx;
+    prevW = w;
+  }
+  if (kept.length === 0 && positions.length > 0) kept.push(0);
+  return kept;
+}
+
 export function XAxis({ frame, from, to }: { frame: Frame; from: number; to: number }) {
   const iw = plotWidth(frame);
   // One label when the plot is narrower than two 'dd Mon hh:mmZ' labels (phone width), never two that touch.
@@ -111,9 +138,10 @@ export function XAxis({ frame, from, to }: { frame: Frame; from: number; to: num
   const ticks = timeTicks(from, to, max);
   const span = to - from;
   const x = (t: number) => frame.ml + (span === 0 ? iw / 2 : ((t - from) / span) * iw);
+  const keep = thinTicks(ticks.map((tick) => x(tick.t)), ticks.map((tick) => tick.label), X_TICK_CHAR_W, X_TICK_PAD, frame.W);
   return (
     <g className="exec-c2-xaxis">
-      {ticks.map((tick) => (
+      {keep.map((i) => ticks[i]).map((tick) => (
         <g key={tick.t}>
           <line className="exec-c2-tickmark" x1={x(tick.t)} x2={x(tick.t)} y1={frame.bottom} y2={frame.bottom + 4} />
           <text className="exec-c2-tick" x={x(tick.t)} y={frame.bottom + 18} textAnchor="middle">

@@ -68,9 +68,40 @@ export interface EquityPanelProps {
 
 const DD_HEIGHT = 84;
 const DD_GAP = 22;
+const DD_LINE = 14;
 const MAX_PINS = 24;
 const MAX_MARKS = 40;
 const charW = 6.6;
+
+/**
+ * Break copy into lines of at most `maxChars`: first on ' · ' separators, then on spaces. A word longer
+ * than the width gets its own line (never cut). Every line but the last keeps one trailing space, so
+ * the lines concatenate back to exactly `text`.
+ */
+export function wrapLines(text: string, maxChars: number): string[] {
+  const limit = Math.max(1, Math.floor(maxChars));
+  const chunks: string[] = [];
+  const parts = text.split(" · ");
+  parts.forEach((part, i) => chunks.push(i < parts.length - 1 ? `${part} ·` : part));
+  const lines: string[] = [];
+  for (const chunk of chunks) {
+    if (chunk.length <= limit) {
+      lines.push(chunk);
+      continue;
+    }
+    const words = chunk.split(" ");
+    let cur = "";
+    for (const word of words) {
+      const next = cur === "" ? word : `${cur} ${word}`;
+      if (cur !== "" && next.length > limit) {
+        lines.push(cur);
+        cur = word;
+      } else cur = next;
+    }
+    lines.push(cur);
+  }
+  return lines.map((l, i) => (i < lines.length - 1 ? `${l} ` : l));
+}
 
 function latestDrawable(model: SeriesModel): number {
   for (let i = model.obs.length - 1; i >= 0; i -= 1) if (model.obs[i].s !== null) return i;
@@ -128,10 +159,18 @@ export function EquityPanel(props: EquityPanelProps) {
   const x1 = domain.to as number;
 
   const hasDd = drawdown !== undefined;
-  const ddH = hasDd ? DD_HEIGHT : 0;
   const gap = hasDd ? DD_GAP : 0;
   const frame: Frame = { W, ml: CHART_MARGIN.l, mr: CHART_MARGIN.r, top: CHART_MARGIN.t, bottom: height - CHART_MARGIN.b };
   const iw = W - frame.ml - frame.mr;
+  // The drawdown-absent copy wraps inside the plot width and the pane grows with it, instead of clipping.
+  const ddAbsentCopy =
+    hasDd && !(ddModel && ddModel.drawable > 0)
+      ? drawdown?.kind === "absent"
+        ? `${drawdown.copy}${drawdown.reason ? ` · ${drawdown.reason}` : ""}`
+        : "Not available · no published value in this window"
+      : null;
+  const ddLines = ddAbsentCopy === null ? [] : wrapLines(ddAbsentCopy, Math.floor((iw - 20) / charW));
+  const ddH = hasDd ? Math.max(DD_HEIGHT, ddLines.length * DD_LINE + 24) : 0;
   const ih = frame.bottom - frame.top;
   const x = linear(x0, x1, frame.ml, frame.ml + iw);
 
@@ -403,8 +442,10 @@ export function EquityPanel(props: EquityPanelProps) {
               ) : (
                 <g className="exec-c2-dd-absent">
                   <rect x={frame.ml} y={ddTop} width={iw} height={ddH} fill={`url(#${id}-hgap)`} />
-                  <text x={frame.ml + 10} y={ddTop + ddH / 2 + 4}>
-                    {drawdown?.kind === "absent" ? `${drawdown.copy}${drawdown.reason ? ` · ${drawdown.reason}` : ""}` : "Not available · no published value in this window"}
+                  <text x={frame.ml + 10} y={ddTop + ddH / 2 + 4 - ((ddLines.length - 1) * DD_LINE) / 2}>
+                    {ddLines.map((l, i) => (
+                      <tspan key={i} x={frame.ml + 10} dy={i === 0 ? 0 : DD_LINE}>{l}</tspan>
+                    ))}
                   </text>
                 </g>
               )}
