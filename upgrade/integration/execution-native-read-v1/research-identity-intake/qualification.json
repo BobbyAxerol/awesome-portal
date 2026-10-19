@@ -16,7 +16,7 @@
     "skip": 0,
     "positive_control": "TEST_ONLY_LIFECYCLE_DOUBLE_NOT_REAL_IDENTITY",
     "negative_verifier": "REAL_PM_ED25519_VERIFIER",
-    "log_sha256": "94ae292f3d0b118faded0117dbd7859db826c86252f8a63a217eeaef37e6e0b4",
+    "log_sha256": "d62eb179700474018b920a4d3d713536dd16dfed375eeedd302ec375137c7af7",
     "earlier_setup_error_cases_retained": 14
   },
   "isolated_pg15_gate": {
@@ -37,6 +37,27 @@
     "inactive_status_not_reactivated": true,
     "observation_ended_utc": "2026-10-19T06:58:53.045029+00:00",
     "log_sha256": "221cb0d32b7b0f369f57899459a3dc415c7aef0e5c2c62d15cee7770188b2e6b"
+  },
+  "isolated_identity_role_window_gate": {
+    "pass": 40,
+    "reused_pg15_baseline_pass": 18,
+    "fail": 0,
+    "skip": 0,
+    "ended_utc": "2026-10-19T07:40:37.202455+00:00",
+    "log_sha256": "364dc22d8f1f4533ff8fc54a015227c94570d920ef8659f4bf51519f7096a36b",
+    "independent_effective_acl_receipt_sha256": "dfe6994059e2c6b29780e28c1f18de32078227203a40d12e0e1e2487ca6bd500",
+    "reused_scram_helper_sha256": "89ed42edec78454142f8b1310e48d903b75fde9bdf667f8f8c0509359d30a707",
+    "postgres_auth": "REAL_DISPOSABLE_PG15_SCRAM",
+    "identity_and_receipt_sql": "OFFICIAL_PM_SDK",
+    "core_enter_and_ack": "TEST_ONLY_AUTHENTICATED_DISPOSABLE_KEYS_NOT_REAL_CORE",
+    "lost_ack_or_unknown_retains_recovery": true,
+    "borrowed_pool_not_force_closed": true,
+    "inactive_mapping_preserved": true,
+    "known_terminal_exact_retirement": true,
+    "real_human_or_connected_acceptance": false,
+    "production_mutations": 0,
+    "earlier_failed_specimens_retained": 3,
+    "foreign_job_preflight_abort_retained": 1
   },
   "actual_source_preparation": {
     "state": "RECEIPT_AND_DORMANT_ROLE_PREPARED",
@@ -61,8 +82,8 @@
     "new_build_cache_ids": 0,
     "protected_runtime_tuples": 41,
     "protected_runtime_unchanged": true,
-    "shared_pg_test_free_before_bytes": 214414528512,
-    "shared_pg_test_free_after_bytes": 214394884096,
+    "shared_pg_test_free_before_bytes": 212605419520,
+    "shared_pg_test_free_after_bytes": 212839006208,
     "exclusive_reclaimed_bytes_claimed": false
   },
   "not_claimed": [

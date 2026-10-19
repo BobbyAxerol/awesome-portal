@@ -650,6 +650,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 finite identity-role window,19Oct14:40Asia/Saigon — CURRENT:**
+[operator/SDK packet](integration/execution-native-read-v1/research-identity-intake/README.md#finite-identity-role-window--independently-implemented19oct)
+now includes one-shot exact ACL/SCRAM/pool lifecycle,40real-PG15 cases +18baseline
+and14regression PASS. Real Core ACKs are NOT claimed: test endpoints use explicit
+TEST_ONLY keys. UNKNOWN/lost ACK retain recovery; only matching terminal receipt+
+ACK+drained pool can restore NOLOGIN/password NULL/exact grants. Effective-ACL
+pin handles PostgreSQL implicit→explicit owner ACLs without modifying catalogues
+or weakening old SDK pins. No actual activation: pinned TS readback still shows
+NOLOGIN/no-writer/0receipts, native role caps2/2/1 unchanged. Test cells/network/
+lease gone,0newimages/cache,41runtime tuples unchanged. [Original08 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-acl-window--2026-10-19-asiasaigon).
+Core reviewed composition/private session remains exact binding input; full08
+NOT_MET/09connected NOT_STARTED. No stable/peer/financial/command changes.
+
 **Original08 exact Research identity prerequisite,19Oct — CURRENT:**
 [private operator packet](integration/execution-native-read-v1/research-identity-intake/README.md)
 reuses the official PM SDK;14wrapper tests and18fresh-PG15 cases PASS.

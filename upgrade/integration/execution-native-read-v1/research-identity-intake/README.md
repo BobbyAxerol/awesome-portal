@@ -107,6 +107,56 @@ measurement guards and bounded orchestration/cleanup remain mandatory.
 
 ## Next connected work, still original08
 
+### Finite identity-role window — independently implemented19Oct
+
+`identity_role_window.py` owns exactly **one** verified official SDK request and
+one min0/max1 checked pool. It is private operator glue, not a Python data plane,
+HTTP listener, generic role manager or replacement for Core authority. Use the
+already-reviewed `role_credentials.py` pure SCRAM helpers from the sibling
+`native-db-commissioning` packet; never use its three-native-role finalizer for
+this isolated fourth role. No production credential has yet been generated.
+
+Required composition, in order:
+
+1. Core's real reverse client/trust/session and durable recovery listener must
+   already be available. Load actual private references only in operator memory.
+   Never share this one-shot candidate/credential with another caller/listener.
+2. Build `ReceiptPreparation(...,semantic_acl=True)` using the independent PG15
+   effective-ACL receipt pin
+   `dfe6994059e2c6b29780e28c1f18de32078227203a40d12e0e1e2487ca6bd500`,
+   original reviewed native pin/SQL/physical target and finite operator window.
+   The historical raw-ACL prerequisite pin remains recorded separately. Effective
+   ACL comparison handles PostgreSQL's NULL→explicit owner ACL after GRANT/REVOKE;
+   it omits no grants and does not alter a system catalogue or old SDK encoder.
+3. `identity_pool(private_dsn,preparation)` creates an empty checked pool. Every
+   physical connection, including recovery, must match the exact role/DB/system;
+   an owner DSN fails before serving SQL. `IdentityRoleWindow(...)` performs the
+   existing verifier/request/selection prepare before any grants or Core ENTER.
+4. `open(owner_connection,password)` grants only schema USAGE, ts_users SELECT,
+   INSERT(issuer,subject,display_name), UPDATE(user_id) for SDK row locks,
+   receipt SELECT/INSERT and pg_control_system EXECUTE. The original immutable
+   identity trigger still rejects changing user_id. Status/display/version
+   updates, business/native authority, financial, membership and DDL stay denied.
+   The role has one connection and 3s statement/500ms lock/10s idle bounds.
+   Existing credentials or role drift are never overwritten.
+5. `run()` uses the actual SDK context and final COMMIT/ACK checks. A failed
+   or uncertain result releases no usable mapping. `recover()` invokes the same
+   official fenced readback and real Core terminal ACK, not a new identity run.
+6. `retire()` requires SDK-finished + known COMMITTED/ROLLED_BACK + positive ACK,
+   the matching immutable physical receipt, no borrowed pool connections, then
+   a closed pool and zero role sessions. It restores only this role's exact ACLs,
+   NOLOGIN/password NULL/defaults; leaves mapping/receipts/schema/history intact.
+   UNKNOWN/unacknowledged/borrowed cases retain recovery. No clock-based expiry,
+   force-close, force-revoke or old-role mutation. Ambiguous ACL DDL COMMIT or
+   peer catalogue drift is operator readback/review, never an automatic retry.
+
+`test_identity_role_window.py` reuses the18-case PG baseline and exercises real
+SCRAM/defaults, exact privilege denials, actual SDK identity/immutable receipts,
+lost terminal ACK, UNKNOWN under a real held source fence, safe recovery,
+inactive mapping preservation and repeated windows. Its Core endpoint uses
+explicit **TEST_ONLY** keys/ACK fixtures: this is NOT genuine Core/current-human
+or connected08 acceptance. See [bounded measured results](qualification.json).
+
 Core owns its new registered schema/release overlay/current session and reverse
 listener. Bind only that reviewed actual composition. This packet supplies no
 preview session and does not reset a password, stop Research, deploy stable,

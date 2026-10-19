@@ -1017,6 +1017,14 @@ Fixture sử dụng dữ liệu giả/deterministic đã redact; không copy pro
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**19Oct finite identity-role window:** [original08 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-acl-window--2026-10-19-asiasaigon)
+and [private operator packet](../integration/execution-native-read-v1/research-identity-intake/README.md#finite-identity-role-window--independently-implemented19oct)
+record40new PG15/SCRAM +18baseline +14regression PASS, not genuine Core/human
+acceptance. Exact one-shot ACL/pool/recovery/retirement is implemented; UNKNOWN
+does not revoke recovery. Actual role remains dormant/no-writer; real Core
+composition/session and connected revoke/cache/cursor/SSE remain original08.
+Full connected08NOT_MET;09connected NOT_STARTED. No phase/gate weakening.
+
 **Original08 Research prerequisite (19Oct):** [main journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-intake-preparation--2026-10-19-asiasaigon)
 and [official-SDK intake/receipt packet](../integration/execution-native-read-v1/research-identity-intake/README.md):
 14helper+18PG15 cases PASS; approved one receipt schema + isolated NOLOGIN/

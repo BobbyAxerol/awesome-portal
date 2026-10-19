@@ -81,17 +81,12 @@ def request_digest(raw):
                                request_limit=MAX_REQUEST_BYTES)
 
 
-async def resolve_identity(candidate, selection, human_token, raw_request):
-    """One real reverse-current-human operation, never a generic user creator.
-
-    Caller owns the candidate's real recovery listener/pool until every physical
-    outcome is settled. Cancellation/UNKNOWN propagate; neither is a rollback.
-    A returned identity grants no READ, STREAM, membership or financial right.
-    """
+def prepare_identity(candidate, selection, human_token, raw_request):
+    """Verify one pinned request before opening its private DB role window."""
     require(type(candidate) is PortalHumanCandidate
             and type(selection) is ResearchIdentitySelection,
             "IDENTITY_INTAKE_DEPENDENCIES_REQUIRED")
-    nonce = request_id(raw_request)
+    request_id(raw_request)
     prepared = candidate.prepare(human_token, request_digest=request_digest(raw_request))
     attempt = prepared.attempt
     require(type(attempt) is SourceAttempt and
@@ -99,6 +94,15 @@ async def resolve_identity(candidate, selection, human_token, raw_request):
              attempt.environment, attempt.workload_id) ==
             (selection.issuer, selection.subject, selection.workspace_id,
              "paper", selection.workload_id), "IDENTITY_INTAKE_SCOPE_DENIED")
+    return prepared
+
+
+async def resolve_prepared_identity(prepared, selection, raw_request):
+    """Shared context/COMMIT boundary; private caller retains recovery custody."""
+    nonce = request_id(raw_request)
+    attempt = prepared.attempt
+    require(attempt.request_digest == request_digest(raw_request),
+            "IDENTITY_INTAKE_SCOPE_DENIED")
     async with prepared.authorized_identity() as (user, _conn, principal):
         require(isinstance(user, TSUser) and type(principal) is VerifiedHuman
                 and (user.issuer, user.subject) == (selection.issuer, selection.subject)
@@ -128,3 +132,14 @@ async def resolve_identity(candidate, selection, human_token, raw_request):
             "phase": "COMMITTED", "portal_acknowledged": True,
             "source_receipt_id": terminal.source_receipt_id,
             "source_receipt_digest": terminal.source_receipt_digest}
+
+
+async def resolve_identity(candidate, selection, human_token, raw_request):
+    """One real reverse-current-human operation, never a generic user creator.
+
+    Caller owns the candidate's real recovery listener/pool until every physical
+    outcome is settled. Cancellation/UNKNOWN propagate; neither is a rollback.
+    A returned identity grants no READ, STREAM, membership or financial right.
+    """
+    prepared = prepare_identity(candidate, selection, human_token, raw_request)
+    return await resolve_prepared_identity(prepared, selection, raw_request)

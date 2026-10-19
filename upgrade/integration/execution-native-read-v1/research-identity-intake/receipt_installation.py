@@ -34,7 +34,7 @@ def pin(value):
     return value
 
 
-async def receipt_catalogue(conn):
+async def receipt_catalogue(conn, *, semantic_acl=False):
     """Same PM metadata encoder, extended only for this exact new schema ACL.
 
     The expected digest must be generated on independent disposable PG15,
@@ -58,6 +58,21 @@ async def receipt_catalogue(conn):
         SELECT c.relname,pg_get_indexdef(i.indexrelid) AS definition
         FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid
         WHERE i.indrelid=to_regclass($1) ORDER BY c.relname''', TABLE)]
+    if semantic_acl:
+        # GRANT/REVOKE may materialize an implicit owner ACL. Compare effective
+        # entries, not NULL versus owner-only text; NEVER alter pg_catalog.
+        for group,kind,catalogue,owner,acl,selector in (
+            ('schema','n','pg_namespace','nspowner','nspacl','nspname=$1'),
+            ('classes','r','pg_class','relowner','relacl',"relnamespace=to_regnamespace($1) AND relname=$2"),
+            ('functions','f','pg_proc','proowner','proacl',"pronamespace=to_regnamespace($1) AND proname=$2")):
+            for row in value[group]:
+                args = (SCHEMA,) if group == 'schema' else (SCHEMA,row.get('relname',row.get('proname')))
+                row['acl'] = [dict(r) for r in await conn.fetch('''SELECT
+                    CASE WHEN x.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(x.grantee) END AS grantee,
+                    pg_get_userbyid(x.grantor) AS grantor,x.privilege_type,x.is_grantable
+                    FROM '''+catalogue+''' CROSS JOIN LATERAL aclexplode(COALESCE('''+acl+
+                    ",acldefault('"+kind+"',"+owner+'''))) x WHERE '''+selector+'''
+                    ORDER BY grantee,grantor,privilege_type,is_grantable''', *args)]
     raw = json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()
     require(len(raw) <= 65536, 'IDENTITY_PREPARE_CATALOGUE_BOUND')
     return sha256(raw).hexdigest()
@@ -84,7 +99,8 @@ async def dormant_role(conn):
 
 class ReceiptPreparation:
     def __init__(self, sql, *, receipt_sha256, native_sha256, registry_sha256,
-                 system_identifier, window_start, window_end, test_only=False):
+                 system_identifier, window_start, window_end, test_only=False,
+                 semantic_acl=False):
         require(type(sql) is bytes and sha256(sql).hexdigest() == SQL_SHA256,
                 'IDENTITY_PREPARE_SQL_DRIFT')
         self.sql = sql.decode('utf-8')
@@ -104,6 +120,8 @@ class ReceiptPreparation:
                 and 0 < (window_end-window_start).total_seconds() <= 1800,
                 'IDENTITY_PREPARE_WINDOW_REQUIRED')
         self.system, self.test_only = system_identifier, test_only
+        require(type(semantic_acl) is bool, 'IDENTITY_PREPARE_ACL_MODE_INVALID')
+        self.semantic_acl = semantic_acl
         self.start, self.end = window_start, window_end
 
     async def prepare(self, conn):
@@ -144,7 +162,7 @@ class ReceiptPreparation:
                 await conn.execute('CREATE ROLE ts_portal_research_identity NOLOGIN NOSUPERUSER '
                     'NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 1')
             await dormant_role(conn)
-            require(await receipt_catalogue(conn) == self.receipt,
+            require(await receipt_catalogue(conn,semantic_acl=self.semantic_acl) == self.receipt,
                     'IDENTITY_PREPARE_RECEIPT_DRIFT')
             await preservation()
             require(self.start <= datetime.now(timezone.utc) < self.end,

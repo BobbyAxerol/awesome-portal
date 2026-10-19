@@ -22959,6 +22959,140 @@ revoke/cache/cursor/SSE in original08. This remaining binding is IN_PROGRESS,
 not independent code falsely declared complete/debt. Full08NOT_MET,09connected
 NOT_STARTED;07command/03publisher/01+06capacity remain their distinct inputs.
 
+### Original08 Research identity ACL window — 2026-10-19 Asia/Saigon
+
+**Previous goal turn = PROGRESS:** actual receipt/dormant-role prerequisite
+COMMITTED and7d625891e8c9f40871bfd6849f9ee8f51d89ab7b published/remote-verified
+on the same awesome-portal feature.12files/+1260, Bobby identity, normal hook
+130contract+717API PASS/0FAIL/SKIP/build/scoped restore PASS. Actual terminal
+07:22:43UTC, logSHAdacef8251b48beeaceeeb13bee1baa0fc96a9d3a8ce19dc567e7e8e36972faf6;
+receipt /tmp/epg10-08-core-stable39-JezaG4cB/research-identity-journal-20261019T071511Z/receipt.json.
+Own41runtime tuples unchanged,0newcache, own lease removed. Exact cleanup
+07:22:48 removed only new testimage318d8f52e251601d0b37c88158ca5674c42bcd84b54aa41317f5f3159cf871e7;
+shared free213984747520→213982658560B (not exclusive reclaimed bytes). All
+preexisting active/rollback/source/private/cache resources retained; no new
+SGP disposable resources were created. Current owned tree is clean apart from
+the same3unrelated untracked entries; never stage/delete them.
+
+**Fresh parallel input:** Core stilld078+owned Research install WIP, no private
+Research bundle; owning c7 selects an existing genuine Bobby session via private
+file, path pending there. Do not repeat that question or substitute preview.
+PM53222a70 keeps source SDK/installer pins unchanged. TS-next advanced toc928b898:
+DLv2.2.4 publication/certified writer is real new input, NOT an N03 native
+publisher return; its frozen Event source ruling remains source-dark. Canonical
+DL /home/bobby/data_layer@5bf5cd5; old quant-data-layer-v2-authority worktree is
+gone, do not recreate it. DL IDR-128 workload isolation remains OPEN; stage100
+with Portal paused is not matched TS/DL/Research coexistence acceptance.
+
+**Owned runnable scope BEFORE code:** implement/test the finite identity-role
+ACL/credential lifecycle now, without waiting for Core private inputs. This is
+the exact already-approved isolated role, not a fourth native authority role.
+Reuse PM SDK, original receipt/target verification and existing SCRAM utility.
+Open only one bounded operator window with exact SELECT + INSERT(identity
+columns) + UPDATE(user_id) row-lock permission, receipt SELECT/INSERT and
+physical-target metadata access; no financial/table/role/DDL escape. Preserve
+original native/old-role pins and distinguish temporary ACL delta from READ
+authority. Do NOT activate on actual TS until the real Core reverse composition
+and session are available. No serving admin DSN, business grant or generic API.
+
+**Verification and rollback:** independent PG15 real auth/defaults, exact role
+privileges, official identity/receipt SQL under the role, wrong target/window/
+password/drift and denied financial/status/update/delete paths. TEST_ONLY Core
+ACK fixtures, if needed, are NOT genuine human/connected acceptance. Restore
+only after actual SDK request finished + known terminal ACK/receipt, pool fully
+closed and no remaining role DB sessions; UNKNOWN refuses teardown and retains
+recovery. No forced termination, wall-clock clearance or automatic credential
+expiry. Publish coherent code/tests/three tracking indices; inventory and clean
+only exact disposable cells/network/new hook image/cache, preserve receipts.
+Original08IN_PROGRESS/connectedNOT_MET,09connectedNOT_STARTED. Scope requires
+no additional generic approval and does not authorize Core/PM peer edits.
+
+**Coherent implemented/tested slice,14:40Asia/Saigon (07:40UTC):**
+`research-identity-intake/identity_role_window.py` now provides the approved
+one-shot role lifecycle, not a serving admin identity or generic role manager.
+It reuses the existing SCRAM utility and official SDK prepare/context/recover;
+each min0/max1 physical pool connection checks actual role/DB/system. Exact
+temporary grants are SELECT + identity-column INSERT + user_id UPDATE solely
+for SDK row locks, immutable receipt SELECT/INSERT and metadata EXECUTE. Original
+native roles/provider, business/membership/financial/command grants stay untouched.
+One request/current task only. Role configuration bounds are3s/500ms/10s,cap1;
+existing credentials are refused, never rotated. Core ACK/transport/trust remain
+the real owning composition, not a local boolean provider.
+
+`run()` releases mapping only beyond physical SDK context/COMMIT+terminal ACK.
+`recover()` performs official same-fence readback. `retire()` requires actual
+finished request + terminal ACK + matching immutable physical receipt, no
+borrowed pool, completed pool close and zero role sessions. It restores only
+the exact isolated role's ACLs/defaults/NOLOGIN/password NULL; immutable mapping,
+receipt history/schema remain. UNKNOWN/lost ACK/cancellation are NOT rollback;
+no forced connection close, clock expiry or guessed absence clears recovery.
+An uncertain ACL DDL COMMIT remains UNCONFIRMED for operator readback, no
+automatic repeat/rotation. Trusted operator must not share the one-shot
+candidate/credential or expose it as concurrent ingress.
+
+**ACL correctness decision:** PostgreSQL legitimately materializes NULL ACL as
+an explicit owner ACL on GRANT/REVOKE. Added explicit `semantic_acl=True` mode
+using complete aclexplode/default entries for the new receipt objects; default
+historical raw mode/pin and original PM SDK encoder remain unchanged. Independent
+PG15 effective-ACL pin is
+dfe6994059e2c6b29780e28c1f18de32078227203a40d12e0e1e2487ca6bd500.
+Ownership, definitions, triggers, indexes and all effective grants stay pinned;
+no direct system catalogue write, observed-target self-certification or native
+role exclusion added. Repeated real windows restore the same independent pin.
+
+**Actual commands/results:**
+`python3 -B /tmp/epg10-08-research-identity-l688lWRi/run.py`:
+14regression PASS/0FAIL/SKIP, exact existing verifier/request behavior preserved;
+unit-073908.log SHAd62eb179700474018b920a4d3d713536dd16dfed375eeedd302ec375137c7af7.
+Same controller `--acl-pg`:18reused baseline +40new cases PASS/0FAIL/SKIP,
+receipt-pg-074028.log SHA364dc22d8f1f4533ff8fc54a015227c94570d920ef8659f4bf51519f7096a36b.
+Real SCRAM/defaults, owner-DSN rejection, wrong target/window/pins/password,
+denied status/display/version/delete/truncate/DDL/authority, actual SDK identity
+and repeat mapping, protected immutable user_id, COMMIT with lost Core ACK,
+real held source fence→UNKNOWN, recovery after fence release, rejected ENTER,
+borrowed-pool retention and inactive mapping/no-reactivation all exercised.
+Core endpoint is explicitly TEST_ONLY disposable Ed25519/ACK fixture, NOT
+genuine human/Core/revocation/SSE or production capacity evidence.72distinct
+final cases total, not counting intermediate reruns. Three earlier specimens
+073607/073635/073654 failed stale error-class/code expectations; each fixed
+against original SDK/SQLSTATE, all failed cells cleaned, receipts retained.
+073929 aborted after a transient foreign job appeared between preflights;
+no cell started/no PASS credited, finally removed own lease. No lock bypass.
+
+**Runtime/cleanup:** final test own cell+PG tmpfs+internal network+lease removed,
+0newimages/cache; all41protected image/config/start/restart tuples unchanged.
+Shared free212605419520→212839006208B (not exclusive reclaimed-byte claim).
+No SGP source/test transfer, build or test artifacts created in this slice.
+Exact READ ONLY source post-check still confirms live_data_executor physical
+system7674585245102796834, isolated roleNOLOGIN/cap1/no writer,0receipt rows;
+original role caps2/2/1/non-super/non-createrole/non-bypass unchanged. Actual
+new-role login/grants/password/identity operation were NOT activated. Keep
+approved persistent schema/dormant role, old releases/private/rollback/source.
+Canonical HK manager-v2-paper-read@54c6f5f3 and all7documented active worktrees
+retained; owned feature at entry7d625891, ordinary feature publication only.
+Provider28445 image28ea3958/configd18c5557, stablee4fd release and HK a9b10385
+release/explicit prior rollback sets are retained, not cleanup candidates.
+
+Fresh SGP read-only inspect (same source-only slice): stable main image
+d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263/
+config26c0d954d1f3af2133b2a528f39430f814e3c35d350095aecf7178f3bc90cedb;
+Research imaged13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d/
+config42a9f3ad29ba77eeab6683f99070469673bb2f78824f3c4191093f8ee664306d;
+old dev image8400439b/config963a3d84. All three original StartedAt unchanged,
+restart0; dev is not the consumer or authority-security qualification target.
+
+**Exact next boundary:** latest Core owning journal stilld078+uncommitted
+installation WIP, private Research native bundle absent. Its selected genuine
+Bobby private session file remains pending in the owning Core session; don't
+repeat the same user question. Owned ACL/credential preparation is now runnable
+and tested, not debt postponed behind Core. Remaining operation genuinely
+depends on Core's reviewed reverse/listener/trust/session + registered schema134
+composition. Bind this helper immediately to that return, settle the official
+identity operation, then separate Research READ + STREAM policy and connected
+revoke/cache/cursor/SSE. Full08NOT_MET/09connectedNOT_STARTED; no new phase or
+generic approval. Source/plan/qualification/guide/two backend indices must ship
+together through normal hooks; exact hook image/cache cleanup follows terminal.
+
 
 
 

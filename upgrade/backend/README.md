@@ -7,6 +7,18 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 finite identity-role window,19Oct14:40Asia/Saigon — CURRENT:**
+  [one-shot official SDK/ACL packet](../integration/execution-native-read-v1/research-identity-intake/README.md#finite-identity-role-window--independently-implemented19oct),
+  40new actual-PG15/SCRAM +18baseline +14regression PASS; explicit TEST_ONLY
+  Core ACK fixtures, not genuine current-human acceptance. Lost ACK/UNKNOWN
+  retain recovery; matching terminal ACK/receipt and drained pool precede exact
+  retirement. No old native roles/SDK pins changed; effective-ACL pin accounts
+  for owner-ACL materialization. Actual TS remains NOLOGIN/no-writer/0receipts;
+  41runtime tuples unchanged, own cells/network/lease removed,0newimages/cache.
+  [Original08 execution journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-acl-window--2026-10-19-asiasaigon)
+  distinguishes owned preparation from Core's real composition/session input.
+  Full08NOT_MET,09connected NOT_STARTED; stable/commands/financial untouched.
+
 - **Original08 Research identity prerequisite,19Oct — CURRENT:**
   [official SDK/operator packet](../integration/execution-native-read-v1/research-identity-intake/README.md),
   14wrapper+18real-disposable-PG15 cases PASS. Actual pinned TS read-only lookup:
