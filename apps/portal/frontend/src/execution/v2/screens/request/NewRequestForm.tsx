@@ -4,9 +4,11 @@
  * Sections, as the hi-fi has them: Alpha, Evidence run (+ Run Library), Methodology claim (+ "Ids · edit by hand"),
  * Summary with a live counter, then the "Still needed" bar with the one Submit button, then the outcome.
  *
- * What is deliberately not here: no auto-submit anywhere. The only call to the port is `state.submit()`, and the
- * only caller of that is the submit button's click (or the form's submit event, which a disabled default button
- * cannot raise). Prefill from a link fills the fields and stops.
+ * What is deliberately not here: no auto-submit anywhere, and no form-level submit. The only call to the port is
+ * `state.submit()` (or `state.retry()` for an uncertain send), and the only callers are button clicks. The form's
+ * submit event is swallowed and Enter in an id field is swallowed, so a keystroke can never send a request. The Submit
+ * button is aria-disabled, not disabled, so focus stays on it while a send is in flight. Prefill from a link fills the
+ * fields and stops.
  */
 import { useId } from "react";
 import { Link } from "react-router-dom";
@@ -45,6 +47,10 @@ function IdInput({ label, value, onChange, disabled, hint }: { label: string; va
         aria-invalid={bad || undefined}
         aria-describedby={bad ? errorId : undefined}
         onChange={(e) => onChange(e.target.value)}
+        // Enter in a single-line field must never send the request: the click on Submit is the only road.
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.preventDefault();
+        }}
       />
       {bad ? <p id={errorId} className="exec-rq-error">Not a valid id: use {ID_RULE}, up to 191 characters.</p> : null}
     </div>
@@ -56,7 +62,8 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
   const f = state.fields;
   const { runs, validation, gate } = state;
   const settled = state.settled;
-  const locked = settled || state.submitting;
+  // An uncertain send locks the payload: its idempotency key belongs to exactly these fields.
+  const locked = settled || state.submitting || state.uncertain;
   const listReady = runs.status === "ok";
   const alphaListed = state.alphas.some((a) => a.id === f.alphaId);
   const runListed = state.runOptions.some((o) => o.runId === f.runId);
@@ -75,6 +82,8 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
     if (gate.open) return <Flag kind="ok" label="Ready" />;
     if (gate.kind === "policy") return <Flag kind="attention" label="Not enabled" />;
     if (gate.kind === "sending") return <Flag kind="pending" label="Sending" />;
+    if (gate.kind === "uncertain") return <Flag kind="unknown" label="Unconfirmed" />;
+    if (gate.kind === "held") return <Flag kind="na" label="On hold" />;
     return <Flag kind="na" label="Incomplete" />;
   })();
   const sentence = gate.open
@@ -83,9 +92,11 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
       ? gate.reason
       : gate.kind === "sending"
         ? "Sending the request. It is shown as created only when the server says so."
-        : gate.kind === "settled"
-          ? "This request is recorded."
-          : stillNeeded(validation.needs);
+        : gate.kind === "uncertain" || gate.kind === "held"
+          ? gate.reason
+          : gate.kind === "settled"
+            ? "This request is recorded."
+            : stillNeeded(validation.needs);
 
   return (
     <form
@@ -93,10 +104,8 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
       data-variant={variant}
       noValidate
       aria-label="New approval request"
-      onSubmit={(e) => {
-        e.preventDefault();
-        state.submit();
-      }}
+      // No form-level submit: a native submit event (Enter in a field, a script) is swallowed and goes nowhere.
+      onSubmit={(e) => e.preventDefault()}
     >
       {state.notices.length > 0 ? (
         <ul className="exec-rq-notices" aria-label="About the link you came from">
@@ -134,7 +143,10 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
           <div className="exec-rq-fld">
             <label htmlFor={`${base}-run`} className="exec-rq-label">
               <span>Evidence run</span>
-              <Link className="exec-rq-link" to={RUN_LIBRARY_HREF}>Run Library</Link>
+              {/* A new tab: navigating away would silently lose the typed summary and ids. */}
+              <Link className="exec-rq-link" to={RUN_LIBRARY_HREF} target="_blank" rel="noopener noreferrer">
+                Run Library<span className="exec-rq-sr"> (opens in a new tab)</span>
+              </Link>
             </label>
             <select
               id={`${base}-run`}
@@ -218,7 +230,16 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
       </div>
 
       {state.outcome !== null ? (
-        <OutcomePanel outcome={state.outcome} requestKey={state.requestKey} onDismiss={state.dismissOutcome} onNew={state.reset} accessHref={accessHref} />
+        <OutcomePanel
+          outcome={state.outcome}
+          requestKey={state.requestKey}
+          busy={state.submitting}
+          onDismiss={state.dismissOutcome}
+          onNew={state.reset}
+          onRetry={state.retry}
+          onDiscardUncertain={state.discardUncertain}
+          accessHref={accessHref}
+        />
       ) : null}
 
       {settled ? null : (
@@ -228,16 +249,20 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
             <p id={needId} className="exec-rq-need">{sentence}</p>
           </div>
           <div className="exec-rq-bar-act">
+            {/* aria-disabled, not disabled: a disabled button drops keyboard focus to the page while a send is in flight. */}
             <button
-              type="submit"
+              type="button"
               className="exec-rq-submit"
-              disabled={!gate.open}
+              aria-disabled={!gate.open}
               aria-describedby={gate.open ? undefined : reasonId}
               title={gate.open ? undefined : gate.reason}
+              onClick={() => {
+                if (gate.open) state.submit();
+              }}
             >
               {SUBMIT_LABEL}
             </button>
-            <span id={reasonId} className="exec-rq-why">{gate.open ? "Submitting twice creates one request." : gate.reason}</span>
+            <span id={reasonId} className="exec-rq-why" role={gate.open ? undefined : "status"}>{gate.open ? "Nothing is sent until you click Submit." : gate.reason}</span>
           </div>
         </div>
       )}

@@ -60,6 +60,29 @@ const HOSTILE_RANGES: readonly (readonly [number, number])[] = [
   [0x200b, 0x200f], [0x2028, 0x202e], [0x2060, 0x206f], [0xfeff, 0xfeff], [0xfff9, 0xfffb], [0xe0000, 0xe007f], [0xd800, 0xdfff],
 ];
 
+/**
+ * Invisible fillers: they render as nothing (or as a blank), so they must not count toward the summary minimum, but they are
+ * not direction-changing and a legitimate text can carry one, so they are not refused outright. The hostile ranges above
+ * (zero-width, direction marks, soft hyphen, BOM, tags, ...) are refused; these are only not counted. Also not counted: any
+ * Unicode space other than the ASCII space, tab and line breaks (no-break, em and ideographic spaces).
+ */
+const FILLER_RANGES: readonly (readonly [number, number])[] = [
+  [0x034f, 0x034f], [0x115f, 0x1160], [0x17b4, 0x17b5], [0x2800, 0x2800], [0x3164, 0x3164], [0xffa0, 0xffa0],
+  [0x00a0, 0x00a0], [0x1680, 0x1680], [0x2000, 0x200a], [0x202f, 0x202f], [0x205f, 0x205f], [0x3000, 0x3000],
+];
+
+function isFiller(cp: number): boolean {
+  for (const [lo, hi] of FILLER_RANGES) if (cp >= lo && cp <= hi) return true;
+  return false;
+}
+
+/** Code points of `text` that a reader can see: fillers are left out. */
+export function visibleCount(text: string): number {
+  let n = 0;
+  for (const ch of text) if (!isFiller(ch.codePointAt(0) ?? 0)) n += 1;
+  return n;
+}
+
 function isHostile(cp: number): boolean {
   for (const [lo, hi] of HOSTILE_RANGES) if (cp >= lo && cp <= hi) return true;
   return false;
@@ -113,7 +136,7 @@ export type SummaryState = "empty" | "short" | "ok" | "long" | "hostile";
 
 export interface SummaryCheck {
   state: SummaryState;
-  /** Characters counted the way the counter prints them: code points of the trimmed text (UTF-16 units when that is larger and the limit is the question). */
+  /** Characters counted the way the counter prints them: VISIBLE code points of the trimmed text (invisible fillers are not counted; UTF-16 units when that is larger and the limit is the question). */
   count: number;
   /** Hostile code points found, `U+202E`-style, at most four. */
   hostile: readonly string[];
@@ -125,12 +148,13 @@ export function checkSummary(raw: string): SummaryCheck {
   if (text.length > MAX_SUMMARY * 8) return { state: "long", count: text.length, hostile: [] };
   const hostile = hostileCharacters(text);
   const points = codePointCount(text);
+  const visible = visibleCount(text);
   const units = Math.max(points, text.length);
-  if (hostile.length > 0) return { state: "hostile", count: points, hostile };
+  if (hostile.length > 0) return { state: "hostile", count: visible, hostile };
   if (units > MAX_SUMMARY) return { state: "long", count: units, hostile };
-  if (points === 0) return { state: "empty", count: 0, hostile };
-  if (points < MIN_SUMMARY) return { state: "short", count: points, hostile };
-  return { state: "ok", count: points, hostile };
+  if (visible === 0) return { state: "empty", count: 0, hostile };
+  if (visible < MIN_SUMMARY) return { state: "short", count: visible, hostile };
+  return { state: "ok", count: visible, hostile };
 }
 
 export interface Validation {
@@ -196,14 +220,26 @@ export function summaryCounter(check: SummaryCheck): string {
 
 export type SubmitGate =
   | { open: true }
-  | { open: false; kind: "policy" | "sending" | "settled" | "incomplete"; reason: string };
+  | { open: false; kind: "policy" | "sending" | "settled" | "uncertain" | "held" | "incomplete"; reason: string };
 
-export function submitGate(input: { validation: Validation; submitting: boolean; settled: boolean; writeBlockedReason: string | null | undefined }): SubmitGate {
+export function submitGate(input: {
+  validation: Validation;
+  submitting: boolean;
+  settled: boolean;
+  writeBlockedReason: string | null | undefined;
+  /** The last send was not confirmed: only a same-key retry or a discard is allowed. */
+  uncertain?: boolean;
+  /** Why the host holds Submit for now (a pending "Discard this request?" question); null/undefined when it does not. */
+  held?: string | null;
+}): SubmitGate {
   // Order matters: the policy answer is the most basic one, and "sending" must not be hidden behind a field list.
   const policy = input.writeBlockedReason?.trim();
   if (policy) return { open: false, kind: "policy", reason: policy };
   if (input.settled) return { open: false, kind: "settled", reason: "This request is already recorded. Start a new request to send another." };
-  if (input.submitting) return { open: false, kind: "sending", reason: "Sending. A second click would not create a second request." };
+  if (input.submitting) return { open: false, kind: "sending", reason: "Sending. A second click is ignored until the server answers." };
+  if (input.uncertain) return { open: false, kind: "uncertain", reason: "The last send was not confirmed. Retry it with the same key, or discard it, before sending anything else." };
+  const held = input.held?.trim();
+  if (held) return { open: false, kind: "held", reason: held };
   if (!input.validation.ready) return { open: false, kind: "incomplete", reason: "Fill the missing fields first." };
   return { open: true };
 }
@@ -308,6 +344,9 @@ export function claimHint(c: RunClaim): string {
 
 /* ── the server's answer ─────────────────────────────────────────────────── */
 
+/** The reason the HTTP port and `readOutcome` give for a 2xx whose body is not a created approval. */
+export const UNREADABLE_REASON = "The create response could not be read.";
+
 const FAILED_STATUS = ["loading", "empty", "partial", "stale", "denied", "unavailable", "insufficient_data", "terminal"] as const;
 
 /**
@@ -315,7 +354,8 @@ const FAILED_STATUS = ["loading", "empty", "partial", "stale", "denied", "unavai
  * documented shapes is a failed read, never a guess at a created approval.
  */
 export function readOutcome(raw: unknown): ApprovalCreateOutcome {
-  const unreadable: ApprovalCreateOutcome = { kind: "failed", status: "unavailable", reason: "The create response could not be read." };
+  // An answer that exists but cannot be read is NOT "the server said no": the request may have been created. Uncertain.
+  const unreadable: ApprovalCreateOutcome = { kind: "failed", status: "unavailable", reason: UNREADABLE_REASON, offline: true };
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return unreadable;
   const o = raw as Record<string, unknown>;
   const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
@@ -386,10 +426,14 @@ export type FailureKind = "denied" | "uncertain" | "refused" | "unavailable";
 const DENIED_CODES: ReadonlySet<string> = new Set(["WORKSPACE_ACCESS_DENIED", "SESSION_REQUIRED", "CSRF_INVALID", "ORIGIN_DENIED"]);
 
 export function failureKind(outcome: Extract<ApprovalCreateOutcome, { kind: "failed" }>): FailureKind {
-  if (outcome.offline === true) return "uncertain";
+  // Uncertain = the request may have been created: the network dropped, the answer timed out (408), the server failed after
+  // it may have acted (5xx), or a 2xx came back unreadable. Only a definite refusal leaves the key free to be replaced.
+  if (outcome.offline === true || outcome.reason === UNREADABLE_REASON) return "uncertain";
   const { code } = splitReason(outcome.reason);
+  const http = code !== null ? /^HTTP_(\d{3})$/.exec(code) : null;
+  if (http !== null && (http[1] === "408" || http[1]![0] === "5")) return "uncertain";
   if (outcome.status === "denied" || (code !== null && DENIED_CODES.has(code))) return "denied";
-  // A typed answer from the server is a refusal. A bare sentence from the port (no delivery policy, an unreadable body) or an HTTP_5xx is "could not".
+  // A typed answer from the server is a refusal. A bare sentence from the port (no delivery policy) or an HTTP_4xx without a typed code is "could not": the server did not create it.
   if (code !== null && !code.startsWith("HTTP_")) return "refused";
   return "unavailable";
 }

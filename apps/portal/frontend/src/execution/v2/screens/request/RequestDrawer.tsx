@@ -24,6 +24,7 @@ import { useSearchParams } from "react-router-dom";
 import type { ExecutionApi } from "../../../api/ports";
 import { Drawer, useDockMode } from "../../Drawer";
 import { NewRequestForm } from "./NewRequestForm";
+import { DISCARD_WARNING } from "./OutcomePanel";
 import { WhatNextDisclosure, WorkspaceNote } from "./parts";
 import { readPrefill, type PrefillRead } from "./model";
 import { useNewRequest } from "./useNewRequest";
@@ -46,9 +47,10 @@ export interface RequestDrawerProps {
 export function RequestDrawer({ api, open, onClose, writeBlockedReason, accessHref = DRAWER_ACCESS_HREF, prefill }: RequestDrawerProps) {
   const [params] = useSearchParams();
   const [everOpened, setEverOpened] = useState(open);
-  const state = useNewRequest({ api, writeBlockedReason, runsEnabled: everOpened });
-  const mode = useDockMode();
   const [confirming, setConfirming] = useState(false);
+  // The discard question is not modal, so Submit would stay clickable behind it: hold it while the question is on screen.
+  const state = useNewRequest({ api, writeBlockedReason, runsEnabled: everOpened, holdReason: confirming ? "Answer the question above first: keep editing, or discard." : null });
+  const mode = useDockMode();
   const keep = useRef<HTMLButtonElement>(null);
   const seed = state.seed;
 
@@ -81,7 +83,7 @@ export function RequestDrawer({ api, open, onClose, writeBlockedReason, accessHr
       return;
     }
     // While a request is in flight the draft stays in memory and the answer is waiting on reopen; there is nothing to ask.
-    if (state.dirty && !state.submitting) {
+    if ((state.dirty || state.uncertain) && !state.submitting) {
       setConfirming(true);
       return;
     }
@@ -105,7 +107,11 @@ export function RequestDrawer({ api, open, onClose, writeBlockedReason, accessHr
         confirming ? (
           <div className="exec-rq-confirm" role="alertdialog" aria-labelledby="exec-rq-confirm-t" aria-describedby="exec-rq-confirm-d">
             <p id="exec-rq-confirm-t" className="exec-rq-confirm-title">Discard this request?</p>
-            <p id="exec-rq-confirm-d" className="exec-rq-meta">What you typed has not been sent. Closing now loses it.</p>
+            <p id="exec-rq-confirm-d" className="exec-rq-meta">
+              {state.uncertain
+                ? `${DISCARD_WARNING} Discarding forgets its request key.`
+                : "Nothing has been created from what you typed. Closing now loses it."}
+            </p>
             <div className="exec-rq-acts">
               <button ref={keep} type="button" className="exec-rq-btn" data-variant="primary" onClick={() => setConfirming(false)}>Keep editing</button>
               <button type="button" className="exec-rq-btn" onClick={discard}>Discard and close</button>

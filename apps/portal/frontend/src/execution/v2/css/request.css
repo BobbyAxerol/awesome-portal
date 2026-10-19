@@ -265,7 +265,8 @@ textarea.exec-rq-control {
   border: 1px solid var(--accent-strong);
   cursor: pointer;
 }
-.exec-rq-submit:disabled {
+.exec-rq-submit:disabled,
+.exec-rq-submit[aria-disabled="true"] {
   color: var(--ink-faint);
   background: var(--paper-sunken);
   border-color: var(--line);
@@ -370,6 +371,12 @@ textarea.exec-rq-control {
   color: var(--on-accent);
   background: var(--accent-strong);
   border-color: var(--accent-strong);
+}
+.exec-rq-btn[aria-disabled="true"] {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
 }
 
 /* ---- what happens next ---------------------------------------------------- */

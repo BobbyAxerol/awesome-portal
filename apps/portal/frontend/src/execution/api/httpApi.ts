@@ -302,7 +302,8 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       let body: unknown = null;
       try { body = await response.json(); } catch { /* handled below */ }
       const outcome = readApprovalCreated(body);
-      return outcome ?? { kind: "failed", status: "unavailable", reason: "The create response could not be read." };
+      // A 2xx whose body is not a created approval: the server answered, so the request may well exist. Uncertain, not "not sent".
+      return outcome ?? { kind: "failed", status: "unavailable", reason: "The create response could not be read.", offline: true };
     }
     let body: unknown = null;
     try { body = await response.json(); } catch { /* status alone still types the failure */ }
@@ -315,6 +316,9 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       kind: "failed",
       status: response.status === 409 ? "unavailable" : panelStatusForHttp(response.status),
       reason: `${problemBody.code}: ${problemBody.message}`,
+      // 408 and 5xx: the server may have acted before it failed, so the outcome is unknown (same class as a dropped network).
+      // A definite 4xx refusal carries no flag: the server did not create the request.
+      ...(response.status === 408 || response.status >= 500 ? { offline: true } : {}),
     };
   };
 

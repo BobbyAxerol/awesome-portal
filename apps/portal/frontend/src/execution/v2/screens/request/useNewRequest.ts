@@ -2,9 +2,15 @@
  * The state behind New request: the page and the drawer both use it, so the two cannot
  * drift apart on validation, on the request key, or on what a double click does.
  *
- * Request-key discipline (N29 section 2, kept from V1): a key is minted per submit INTENT.
- * It survives only to retry the SAME payload (a lost answer replays by key, so it never creates
- * two requests); change any field and the next submit is a new intent with a new key.
+ * Request-key discipline (N29 section 2, kept from V1): a key is minted per submit INTENT, and an intent is a payload.
+ * The key lives in a session-wide table keyed by the payload (so a drawer that was unmounted during the POST finds it
+ * again) and is dropped only by a DEFINITE answer: created, replayed, duplicate or a refusal. While the last answer is
+ * UNCERTAIN (network, timeout, 5xx, an unreadable 2xx) the payload is locked: the only ways on are a same-key retry,
+ * which re-sends the stored payload verbatim, or a confirmed discard. A definite refusal leaves the form editable and a
+ * new key allowed, because the server did not create it.
+ *
+ * Every send carries an attempt number. An answer that arrives after Discard (or after unmount) updates the key table
+ * but never the screen, so a late answer cannot land on a fresh form.
  *
  * Double submit: `inFlight` is a ref, not state. React batches a double click's handlers before
  * state lands, so the second click must be refused synchronously. `submitting` (state) only drives
@@ -21,6 +27,7 @@ import {
   alphaChoices,
   claimView,
   EMPTY_FIELDS,
+  failureKind,
   payloadIdentity,
   readOutcome,
   runChoices,
@@ -31,6 +38,7 @@ import {
   type Prefill,
   type RequestFields,
   type SubmitGate,
+  type SubmitPayload,
   type Validation,
 } from "./model";
 
@@ -48,6 +56,8 @@ export interface UseNewRequestOptions {
   prefillNotices?: readonly string[];
   /** Start reading the Run Library. The drawer passes false until it has been opened once. */
   runsEnabled?: boolean;
+  /** Why the host holds Submit for now (the drawer's pending "Discard this request?" question), or null/undefined. */
+  holdReason?: string | null;
 }
 
 export interface NewRequest {
@@ -73,12 +83,18 @@ export interface NewRequest {
   requestKey: string | null;
   /** Hides a duplicate or a refusal and returns to the form with the fields as they were. An uncertain outcome is not dismissible. */
   dismissOutcome(): void;
+  /** The last answer is uncertain: the fields are locked and only `retry` or `discardUncertain` move on. */
+  uncertain: boolean;
+  /** Re-sends the stored payload of an uncertain send, verbatim, under the SAME key. No-op in any other state. */
+  retry(): void;
+  /** Forgets an uncertain send (its key included) and unlocks the form with the fields as they were. The caller shows the warning first. */
+  discardUncertain(): void;
   /** created or replayed: the request is recorded and the form is done. */
   settled: boolean;
   /** The reader has typed or picked something, so closing would lose it. */
   dirty: boolean;
   submit(): void;
-  /** Back to an empty form, a new intent and no outcome. */
+  /** Back to an empty form, a new intent and no outcome. A send still in flight keeps its key; its late answer is ignored by the screen. */
   reset(): void;
 }
 
@@ -88,6 +104,23 @@ function mintKey(): string {
     : `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
+interface StoredIntent {
+  key: string;
+  /** What was sent, verbatim: a retry re-sends this object, not whatever the fields say now. */
+  payload: SubmitPayload;
+}
+
+/**
+ * Keys of sends by payload fingerprint, for the life of the page. A host that unmounts during the POST and mounts again
+ * with the same payload finds the key here. Only a definite answer removes an entry.
+ */
+const INTENTS = new Map<string, StoredIntent>();
+
+/** Forgets every stored key. For tests and for a sign-out; never needed in normal use. */
+export function clearRequestIntents(): void {
+  INTENTS.clear();
+}
+
 const NOT_SENT: ApprovalCreateOutcome = {
   kind: "failed",
   status: "unavailable",
@@ -95,21 +128,28 @@ const NOT_SENT: ApprovalCreateOutcome = {
   offline: true,
 };
 
-export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices, runsEnabled = true }: UseNewRequestOptions): NewRequest {
+function isUncertain(o: ApprovalCreateOutcome | null): boolean {
+  return o !== null && o.kind === "failed" && failureKind(o) === "uncertain";
+}
+
+export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices, runsEnabled = true, holdReason }: UseNewRequestOptions): NewRequest {
   const [fields, setFields] = useState<RequestFields>(() => ({
     alphaId: prefill?.alphaId ?? "",
     runId: prefill?.runId ?? "",
     claimId: prefill?.claimId ?? "",
     summary: "",
   }));
-  const [touched, setTouched] = useState(false);
   const [notices, setNotices] = useState<readonly string[]>(prefillNotices ?? []);
   const [outcome, setOutcome] = useState<ApprovalCreateOutcome | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [requestKey, setRequestKey] = useState<string | null>(null);
   const runs = useRunSuggestions(runsEnabled);
 
-  const intent = useRef<{ identity: string; key: string } | null>(null);
+  /** The send the screen is showing: its identity, key and verbatim payload. */
+  const lastSent = useRef<{ identity: string; key: string; payload: SubmitPayload } | null>(null);
+  const attempt = useRef(0);
+  /** The ids a link named: the form is "untouched" while it still equals them. */
+  const baseline = useRef<Prefill>({ alphaId: prefill?.alphaId ?? "", runId: prefill?.runId ?? "", claimId: prefill?.claimId ?? "" });
   const inFlight = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -122,10 +162,13 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
 
   const settled = outcome !== null && (outcome.kind === "created" || outcome.kind === "replayed");
 
-  /** An edit ends a refusal or a duplicate answer (they were about the old content). An uncertain outcome stays until it is settled. */
+  const uncertain = isUncertain(outcome);
+  const uncertainRef = useRef(uncertain);
+  uncertainRef.current = uncertain;
+
+  /** An edit ends a refusal or a duplicate answer (they were about the old content). An uncertain outcome never ends by an edit: the fields are locked while it stands. */
   const afterEdit = useCallback(() => {
-    setTouched(true);
-    setOutcome((o) => (o !== null && (o.kind === "duplicate" || (o.kind === "failed" && o.offline !== true)) ? null : o));
+    setOutcome((o) => (o !== null && (o.kind === "duplicate" || (o.kind === "failed" && !isUncertain(o))) ? null : o));
   }, []);
 
   const optionsRef = useRef<readonly RunOption[]>([]);
@@ -133,6 +176,8 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
 
   const setAlpha = useCallback(
     (alphaId: string) => {
+      // The payload of an uncertain send is not editable: its key belongs to exactly that payload.
+      if (uncertainRef.current) return;
       afterEdit();
       setFields((f) => {
         if (f.alphaId === alphaId) return f;
@@ -146,6 +191,8 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
   );
   const setRun = useCallback(
     (runId: string) => {
+      // The payload of an uncertain send is not editable: its key belongs to exactly that payload.
+      if (uncertainRef.current) return;
       afterEdit();
       setFields((f) => {
         if (f.runId === runId) return f;
@@ -158,6 +205,8 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
   );
   const setClaim = useCallback(
     (claimId: string) => {
+      // The payload of an uncertain send is not editable: its key belongs to exactly that payload.
+      if (uncertainRef.current) return;
       afterEdit();
       setFields((f) => ({ ...f, claimId }));
     },
@@ -165,6 +214,8 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
   );
   const setSummary = useCallback(
     (summary: string) => {
+      // The payload of an uncertain send is not editable: its key belongs to exactly that payload.
+      if (uncertainRef.current) return;
       afterEdit();
       setFields((f) => ({ ...f, summary }));
     },
@@ -182,11 +233,12 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
   const shown = useMemo<RequestFields>(() => (fields.claimId === "" && only !== null ? { ...fields, claimId: only } : fields), [fields, only]);
 
   const validation = useMemo(() => validateFields(shown), [shown]);
-  const gate = submitGate({ validation, submitting, settled, writeBlockedReason });
+  const gate = submitGate({ validation, submitting, settled, writeBlockedReason, uncertain, held: holdReason });
 
   const seed = useCallback((p: Prefill, n: readonly string[] = []) => {
-    if (seeded.current) return;
+    if (seeded.current || uncertainRef.current) return;
     seeded.current = true;
+    baseline.current = { alphaId: p.alphaId ?? "", runId: p.runId ?? "", claimId: p.claimId ?? "" };
     setNotices(n);
     setFields((f) => ({
       ...f,
@@ -201,50 +253,86 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
   const payloadRef = useRef(validation.payload);
   payloadRef.current = validation.payload;
 
+  /** The one road to the port, shared by a first send and a same-key retry. Never reached without an explicit click. */
+  const send = useCallback(
+    (identity: string, key: string, payload: SubmitPayload) => {
+      inFlight.current = true;
+      const mine = ++attempt.current;
+      INTENTS.set(identity, { key, payload });
+      lastSent.current = { identity, key, payload };
+      setRequestKey(key);
+      setSubmitting(true);
+      let pending: Promise<unknown>;
+      try {
+        pending = Promise.resolve(api.createApprovalRequest({ requestKey: key, ...payload }));
+      } catch {
+        pending = Promise.resolve(NOT_SENT);
+      }
+      void pending.catch(() => NOT_SENT).then((raw) => {
+        const answer = readOutcome(raw);
+        // A definite answer frees the key (the server either recorded the request or refused it). An uncertain one keeps it.
+        if (!isUncertain(answer) && INTENTS.get(identity)?.key === key) INTENTS.delete(identity);
+        // After Discard, or after unmount, the answer belongs to nobody on screen.
+        if (attempt.current !== mine || !mounted.current) return;
+        inFlight.current = false;
+        setOutcome(answer);
+        setSubmitting(false);
+      });
+    },
+    [api],
+  );
+
   const submit = useCallback(() => {
-    // The explicit click is the only road to the port. Re-checked here so Enter in a field, a stale render or a test cannot bypass the button.
+    // The explicit click is the only road to the port. Re-checked here so a stale render or a test cannot bypass the button.
     const payload = payloadRef.current;
     if (inFlight.current || !gateRef.current.open || payload === null) return;
-    inFlight.current = true;
     const identity = payloadIdentity(payload);
-    if (!intent.current || intent.current.identity !== identity) intent.current = { identity, key: mintKey() };
-    const key = intent.current.key;
-    setRequestKey(key);
-    setSubmitting(true);
-    let pending: Promise<unknown>;
-    try {
-      pending = Promise.resolve(api.createApprovalRequest({ requestKey: key, ...payload }));
-    } catch {
-      pending = Promise.resolve(NOT_SENT);
-    }
-    void pending.catch(() => NOT_SENT).then((raw) => {
-      inFlight.current = false;
-      if (!mounted.current) return;
-      setOutcome(readOutcome(raw));
-      setSubmitting(false);
-    });
-  }, [api]);
+    send(identity, INTENTS.get(identity)?.key ?? mintKey(), payload);
+  }, [send]);
+
+  const retry = useCallback(() => {
+    const sent = lastSent.current;
+    if (inFlight.current || !uncertainRef.current || sent === null) return;
+    // The stored payload, verbatim, under the stored key: never what the form says now.
+    send(sent.identity, sent.key, sent.payload);
+  }, [send]);
 
   const dismissOutcome = useCallback(() => {
-    setOutcome((o) => (o !== null && (o.kind === "duplicate" || (o.kind === "failed" && o.offline !== true)) ? null : o));
+    setOutcome((o) => (o !== null && (o.kind === "duplicate" || (o.kind === "failed" && !isUncertain(o))) ? null : o));
+  }, []);
+
+  const discardUncertain = useCallback(() => {
+    if (inFlight.current || !uncertainRef.current) return;
+    const sent = lastSent.current;
+    if (sent !== null) INTENTS.delete(sent.identity);
+    lastSent.current = null;
+    setRequestKey(null);
+    setOutcome(null);
   }, []);
 
   const reset = useCallback(() => {
-    intent.current = null;
+    // A send still in flight keeps its key in INTENTS (it may land); anything else is forgotten here.
+    const sent = lastSent.current;
+    if (sent !== null && !inFlight.current) INTENTS.delete(sent.identity);
+    lastSent.current = null;
+    attempt.current += 1;
+    inFlight.current = false;
+    setSubmitting(false);
+    baseline.current = { alphaId: "", runId: "", claimId: "" };
     // A fresh form may be seeded again by the next opening of the drawer.
     seeded.current = false;
     setRequestKey(null);
     setOutcome(null);
     setFields(EMPTY_FIELDS);
-    setTouched(false);
     setNotices([]);
   }, []);
 
-  const dirty = touched || fields.summary.trim() !== "";
+  const b = baseline.current;
+  const dirty = fields.summary.trim() !== "" || fields.alphaId !== (b.alphaId ?? "") || fields.runId !== (b.runId ?? "") || fields.claimId !== (b.claimId ?? "");
 
   return {
     fields: shown, setAlpha, setRun, setClaim, setSummary, seed,
     runs, alphas, runOptions, claim, notices,
-    validation, gate, submitting, outcome, requestKey, dismissOutcome, settled, dirty, submit, reset,
+    validation, gate, submitting, outcome, requestKey, dismissOutcome, uncertain, retry, discardUncertain, settled, dirty, submit, reset,
   };
 }

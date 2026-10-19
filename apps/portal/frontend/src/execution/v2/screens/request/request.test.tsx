@@ -16,6 +16,7 @@ import { useExecUrlState } from "../../urlState";
 import NewRequestPage, { REQUEST_SCREEN_KEY } from "./index";
 import { RequestDrawer, type RequestDrawerProps } from "./RequestDrawer";
 import { OWN_WORKSPACE_NOTE } from "./parts";
+import { clearRequestIntents } from "./useNewRequest";
 
 const u = (n: number): string => String.fromCodePoint(n);
 const RLO = u(0x202e);
@@ -39,6 +40,7 @@ const net: Net = { calls: [] };
 let runsAnswer: () => Response = () => new Response(JSON.stringify(RUNS), { status: 200, headers: { "content-type": "application/json" } });
 
 beforeEach(() => {
+  clearRequestIntents();
   net.calls = [];
   runsAnswer = () => new Response(JSON.stringify(RUNS), { status: 200, headers: { "content-type": "application/json" } });
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -122,6 +124,8 @@ const alphaSel = () => screen.getByRole("combobox", { name: /^Alpha/ });
 const runSel = () => screen.getByRole("combobox", { name: /^Evidence run/ });
 const summaryBox = () => screen.getByRole("textbox", { name: /^Summary/ });
 const submitBtn = () => screen.getByRole("button", { name: "Submit for R1 review" });
+/** Submit and the outcome buttons are aria-disabled (focus stays on them), never `disabled`. */
+const down = (el: HTMLElement) => el.getAttribute("aria-disabled") === "true";
 const needText = () => document.querySelector(".exec-rq-need")?.textContent ?? "";
 
 async function loaded() {
@@ -159,7 +163,7 @@ describe("the page: what it shows", () => {
     expect(screen.queryByText(/Preview the result states/)).toBeNull();
     expect(screen.queryByText(/Fresh/)).toBeNull();
     expect(screen.queryByText(/All authorized|Your alphas/i)).toBeNull();
-    expect(screen.getByRole("link", { name: "Run Library" }).getAttribute("href")).toBe("/research/quantbt/runs");
+    expect(screen.getByRole("link", { name: /^Run Library/ }).getAttribute("href")).toBe("/research/quantbt/runs");
   });
 
   it("offers alphas from COMPLETED runs only, once each, and nothing for a failed run", async () => {
@@ -194,7 +198,7 @@ describe("the page: what it shows", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Evidence run id" }), { target: { value: "run_TEST_ONLY_typed" } });
     fireEvent.change(screen.getByRole("textbox", { name: "Claim id" }), { target: { value: "claim_TEST_ONLY_typed" } });
     fireEvent.change(summaryBox(), { target: { value: "A typed request the server will check." } });
-    expect(submitBtn().matches(":disabled")).toBe(false);
+    expect(down(submitBtn())).toBe(false);
     fireEvent.click(submitBtn());
     await screen.findByText("apr_TEST_ONLY_203");
     expect(createApprovalRequest).toHaveBeenCalledWith(expect.objectContaining({ alphaId: "alpha_TEST_ONLY_typed", evidenceRunId: "run_TEST_ONLY_typed", methodologyClaimId: "claim_TEST_ONLY_typed" }));
@@ -216,7 +220,7 @@ describe("the form: pickers and the 'Still needed' bar", () => {
     expect(needText()).toBe("Still needed: an alpha, an evidence run, a methodology claim, a summary of 8+ characters (0 so far).");
     expect(screen.getByText("Incomplete")).toBeTruthy();
     const btn = submitBtn();
-    expect(btn).toHaveProperty("disabled", true);
+    expect(down(btn)).toBe(true);
     const reason = document.getElementById(btn.getAttribute("aria-describedby") ?? "");
     expect(reason?.textContent).toBe("Fill the missing fields first.");
     fireEvent.click(btn);
@@ -236,11 +240,11 @@ describe("the form: pickers and the 'Still needed' bar", () => {
     expect(needText()).toBe("Still needed: a summary of 8+ characters (0 so far).");
     fireEvent.change(summaryBox(), { target: { value: "1234567" } });
     expect(needText()).toBe("Still needed: a summary of 8+ characters (7 so far).");
-    expect(submitBtn().matches(":disabled")).toBe(true);
+    expect(down(submitBtn())).toBe(true);
     fireEvent.change(summaryBox(), { target: { value: "12345678" } });
     expect(needText()).toBe("Everything needed is filled.");
     expect(screen.getByText("Ready")).toBeTruthy();
-    expect(submitBtn().matches(":disabled")).toBe(false);
+    expect(down(submitBtn())).toBe(false);
   });
 
   it("the counter is live and prints the minimum", async () => {
@@ -314,8 +318,8 @@ describe("submit: the one road to the port", () => {
     expect(screen.queryByText("Created")).toBeNull();
     expect(screen.queryByText("apr_TEST_ONLY_203")).toBeNull();
     expect(screen.getByText("Sending")).toBeTruthy();
-    expect(submitBtn().matches(":disabled")).toBe(true);
-    expect(document.getElementById(submitBtn().getAttribute("aria-describedby") ?? "")?.textContent).toMatch(/Sending\. A second click would not create a second request/);
+    expect(down(submitBtn())).toBe(true);
+    expect(document.getElementById(submitBtn().getAttribute("aria-describedby") ?? "")?.textContent).toMatch(/Sending\. A second click is ignored until the server answers/);
     await act(async () => gate.resolve(CREATED));
     expect(await screen.findByText("Created")).toBeTruthy();
   });
@@ -383,7 +387,7 @@ describe("submit: the one road to the port", () => {
     expect(panel.textContent).toContain("An open approval already exists for this alpha and evidence run.");
     // The form stays editable and the submit bar stays.
     expect(summaryBox().matches(":disabled")).toBe(false);
-    expect(submitBtn().matches(":disabled")).toBe(false);
+    expect(down(submitBtn())).toBe(false);
   });
 
   it("duplicate without an id falls back to the queue, not to a guessed id", async () => {
@@ -407,7 +411,7 @@ describe("submit: the one road to the port", () => {
     expect(summaryBox()).toHaveProperty("value", "Momentum with a venue calendar.");
     fireEvent.click(within(panel).getByRole("button", { name: "Change the request" }));
     expect(screen.queryByRole("alert", { name: "Request refused" })).toBeNull();
-    expect(submitBtn().matches(":disabled")).toBe(false);
+    expect(down(submitBtn())).toBe(false);
   });
 
   it("refused with a code this screen has no sentence for: the server's own words are the headline", async () => {
@@ -465,9 +469,9 @@ describe("submit: the one road to the port", () => {
     expect(within(panel).getByRole("link", { name: "Check original request" }).getAttribute("href")).toBe("/governance/approvals");
     expect(screen.queryByText("Created")).toBeNull();
     first = false;
-    // Retry is the same button, enabled, and it is the same intent.
-    expect(submitBtn().matches(":disabled")).toBe(false);
-    fireEvent.click(submitBtn());
+    // While uncertain, Submit is down and the only way on is the panel's same-key retry.
+    expect(down(submitBtn())).toBe(true);
+    fireEvent.click(within(panel).getByRole("button", { name: "Retry with the same key" }));
     await screen.findByRole("status", { name: "Request already created" });
     expect(createApprovalRequest).toHaveBeenCalledTimes(2);
     const [a, b] = createApprovalRequest.mock.calls.map((c) => c[0]);
@@ -501,17 +505,18 @@ describe("submit: the one road to the port", () => {
     expect(await screen.findByRole("alert", { name: "Request outcome uncertain" })).toBeTruthy();
   });
 
-  it("an answer of the wrong shape is a failed read, never a created approval", async () => {
+  it("an answer of the wrong shape is a failed read, never a created approval; it may have landed, so it is uncertain", async () => {
     const { api } = port(() => ({ kind: "created" }));
     mountPage(api);
     await fillValid();
     fireEvent.click(submitBtn());
-    const panel = await screen.findByRole("alert", { name: "Request not sent" });
-    expect(within(panel).getByText("The create response could not be read.")).toBeTruthy();
+    const panel = await screen.findByRole("alert", { name: "Request outcome uncertain" });
+    expect(within(panel).getByText(/The create response could not be read\./)).toBeTruthy();
     expect(screen.queryByText("Created")).toBeNull();
+    expect(screen.queryByRole("alert", { name: "Request not sent" })).toBeNull();
   });
 
-  it("the same fields keep one key across a refusal; any edit makes a new intent with a new key", async () => {
+  it("a definite refusal frees the key: the server did not create it, so the same fields may go again under a new key; any edit too", async () => {
     const { api, createApprovalRequest } = port(() => ({ kind: "failed", status: "unavailable", reason: "EVIDENCE_RUN_NOT_ELIGIBLE: no" }));
     mountPage(api);
     await fillValid();
@@ -521,7 +526,7 @@ describe("submit: the one road to the port", () => {
     fireEvent.click(submitBtn());
     await waitFor(() => expect(createApprovalRequest).toHaveBeenCalledTimes(2));
     await screen.findByRole("alert", { name: "Request refused" });
-    expect(createApprovalRequest.mock.calls[1]![0].requestKey).toBe(createApprovalRequest.mock.calls[0]![0].requestKey);
+    expect(createApprovalRequest.mock.calls[1]![0].requestKey).not.toBe(createApprovalRequest.mock.calls[0]![0].requestKey);
     fireEvent.change(summaryBox(), { target: { value: "Momentum with a venue calendar, reworded." } });
     expect(screen.queryByRole("alert", { name: "Request refused" })).toBeNull();
     fireEvent.click(submitBtn());
@@ -546,21 +551,53 @@ describe("submit: the one road to the port", () => {
     expect(createApprovalRequest).toHaveBeenCalledTimes(1);
   });
 
-  it("Enter in a field, raised as form submits in one batch, is one request", async () => {
+  it("M1: a form-level submit event sends nothing, even on a complete and valid form", async () => {
+    const { api, createApprovalRequest } = port(() => CREATED);
+    mountPage(api);
+    await fillValid();
+    expect(down(submitBtn())).toBe(false);
+    const form = document.querySelector("form") as HTMLFormElement;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(createApprovalRequest).not.toHaveBeenCalled();
+  });
+
+  it("M1: Enter in each id field never calls the port (default prevented), and a textarea keeps its newline", async () => {
+    const { api, createApprovalRequest } = port(() => CREATED);
+    mountPage(api);
+    await fillValid();
+    for (const name of ["Alpha id", "Evidence run id", "Claim id"]) {
+      const input = screen.getByRole("textbox", { name });
+      // fireEvent returns false when the event was default-prevented: that is what stops the browser's implicit submit.
+      expect(fireEvent.keyDown(input, { key: "Enter", code: "Enter" }), name).toBe(false);
+      expect(fireEvent.keyPress(input, { key: "Enter", code: "Enter", charCode: 13 })).toBe(true);
+    }
+    expect(fireEvent.keyDown(summaryBox(), { key: "Enter", code: "Enter" })).toBe(true);
+    expect(createApprovalRequest).not.toHaveBeenCalled();
+  });
+
+  it("M1: the form has no native submit button, so the browser has no implicit submission to run", async () => {
+    mountPage(port(() => CREATED).api);
+    await fillValid();
+    const form = document.querySelector("form") as HTMLFormElement;
+    expect(form.querySelector('button[type="submit"], input[type="submit"]')).toBeNull();
+    expect(submitBtn().getAttribute("type")).toBe("button");
+  });
+
+  it("a double click is one request, and a recorded request cannot be sent again from the same form", async () => {
     const gate = deferred<unknown>();
     const { api, createApprovalRequest } = port(() => gate.promise);
     mountPage(api);
     await fillValid();
-    const form = document.querySelector("form") as HTMLFormElement;
     await act(async () => {
-      fireEvent.submit(form);
-      fireEvent.submit(form);
+      fireEvent.click(submitBtn());
+      fireEvent.click(submitBtn());
     });
     expect(createApprovalRequest).toHaveBeenCalledTimes(1);
     await act(async () => gate.resolve(CREATED));
     await screen.findByRole("status", { name: "Request created" });
-    // A recorded request cannot be sent again from the same form.
-    fireEvent.submit(form);
+    expect(screen.queryByRole("button", { name: "Submit for R1 review" })).toBeNull();
+    fireEvent.submit(document.querySelector("form") as HTMLFormElement);
     expect(createApprovalRequest).toHaveBeenCalledTimes(1);
   });
 
@@ -586,7 +623,7 @@ describe("policy: submit is enabled only when the policy allows writes", () => {
     const { api, createApprovalRequest } = port(() => CREATED);
     mountPage(api, "/governance/approvals/new", { writeBlockedReason: reason });
     await fillValid();
-    expect(submitBtn().matches(":disabled")).toBe(true);
+    expect(down(submitBtn())).toBe(true);
     expect(screen.getByText("Not enabled")).toBeTruthy();
     expect(needText()).toBe(reason);
     expect(document.getElementById(submitBtn().getAttribute("aria-describedby") ?? "")?.textContent).toBe(reason);
@@ -599,7 +636,7 @@ describe("policy: submit is enabled only when the policy allows writes", () => {
     const { api } = port(() => CREATED);
     mountPage(api, "/governance/approvals/new", { writeBlockedReason: null });
     await fillValid();
-    expect(submitBtn().matches(":disabled")).toBe(false);
+    expect(down(submitBtn())).toBe(false);
   });
 });
 
@@ -608,7 +645,7 @@ describe("hostile and oversized text (L3)", () => {
     const { api, createApprovalRequest } = port(() => CREATED);
     mountPage(api);
     await fillValid(`Harmless text ${RLO}txt.exe is fine here`);
-    expect(submitBtn().matches(":disabled")).toBe(true);
+    expect(down(submitBtn())).toBe(true);
     expect(needText()).toContain("a summary without hidden or direction-changing characters (U+202E)");
     expect(summaryBox().getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByText(/Remove hidden or direction-changing characters \(U\+202E\)/)).toBeTruthy();
@@ -620,7 +657,7 @@ describe("hostile and oversized text (L3)", () => {
     const { api, createApprovalRequest } = port(() => CREATED);
     mountPage(api);
     await fillValid(`A summary with ${u(cp)} inside it`);
-    expect(submitBtn().matches(":disabled")).toBe(true);
+    expect(down(submitBtn())).toBe(true);
     expect(needText()).toContain(label);
     fireEvent.submit(document.querySelector("form") as HTMLFormElement);
     expect(createApprovalRequest).not.toHaveBeenCalled();
@@ -631,7 +668,7 @@ describe("hostile and oversized text (L3)", () => {
     mountPage(api);
     await fillValid("a".repeat(70_000));
     expect(screen.getByText("70,000 · max 2,000")).toBeTruthy();
-    expect(submitBtn().matches(":disabled")).toBe(true);
+    expect(down(submitBtn())).toBe(true);
     expect(needText()).toContain("a summary of 2,000 characters or fewer (70,000 now)");
     expect(screen.getByText("Too long: 2,000 characters at most.")).toBeTruthy();
     fireEvent.submit(document.querySelector("form") as HTMLFormElement);
@@ -643,9 +680,9 @@ describe("hostile and oversized text (L3)", () => {
   it("2,000 characters is accepted and 2,001 is not", async () => {
     mountPage(port(() => CREATED).api);
     await fillValid("b".repeat(2000));
-    expect(submitBtn().matches(":disabled")).toBe(false);
+    expect(down(submitBtn())).toBe(false);
     fireEvent.change(summaryBox(), { target: { value: "b".repeat(2001) } });
-    expect(submitBtn().matches(":disabled")).toBe(true);
+    expect(down(submitBtn())).toBe(true);
   });
 
   it("a server message with a direction override is shown with the character spelled out, never interpreted", async () => {
@@ -905,7 +942,7 @@ describe("the drawer: draft, close, focus", () => {
     const { api, createApprovalRequest } = port(() => CREATED);
     mountDrawer(api, "/governance/approvals?compose=request", { writeBlockedReason: "Recording is disabled for this screen." });
     await fillValid();
-    expect(submitBtn().matches(":disabled")).toBe(true);
+    expect(down(submitBtn())).toBe(true);
     fireEvent.submit(document.querySelector("form") as HTMLFormElement);
     expect(createApprovalRequest).not.toHaveBeenCalled();
   });
@@ -922,7 +959,7 @@ describe("accessibility (structure)", () => {
     expect(alphaSel().id).not.toBe("");
     expect(summaryBox().getAttribute("aria-describedby")).toMatch(/\S+ \S+/);
     for (const id of (summaryBox().getAttribute("aria-describedby") ?? "").split(" ")) expect(document.getElementById(id), id).toBeTruthy();
-    const disabled = Array.from(document.querySelectorAll<HTMLButtonElement>("button:disabled"));
+    const disabled = Array.from(document.querySelectorAll<HTMLButtonElement>("button:disabled, button[aria-disabled=\"true\"]"));
     expect(disabled.length).toBeGreaterThan(0);
     for (const b of disabled) {
       const ref = b.getAttribute("aria-describedby");
@@ -999,5 +1036,372 @@ describe("workspace honesty (the port posts with no workspace; the server uses t
     mountDrawer(port(() => CREATED).api, "/governance/approvals?compose=request");
     await loaded();
     expect(screen.queryByText(OWN_WORKSPACE_NOTE)).toBeNull();
+  });
+});
+
+/* ═════════════════════════════════════════════════════════════════════════
+ * WRITE-safety review (M1-M4 and the minor findings)
+ * ═════════════════════════════════════════════════════════════════════════ */
+
+const OFFLINE = { kind: "failed", status: "unavailable", reason: "The request never reached the Portal - network failure.", offline: true } as const;
+const sentKeys = (fn: { mock: { calls: { 0: ApprovalCreateInput }[] } }) => fn.mock.calls.map((c) => c[0].requestKey);
+
+describe("M2: an uncertain outcome keeps its key and its payload", () => {
+  async function uncertain(api: ExecutionApi) {
+    mountPage(api);
+    await fillValid();
+    fireEvent.click(submitBtn());
+    return screen.findByRole("alert", { name: "Request outcome uncertain" });
+  }
+
+  it("locks every payload field while uncertain (selects, id inputs, summary) and puts Submit down with its reason", async () => {
+    const { api } = port(() => OFFLINE);
+    await uncertain(api);
+    for (const el of [alphaSel(), runSel(), summaryBox(), screen.getByRole("textbox", { name: "Alpha id" }), screen.getByRole("textbox", { name: "Evidence run id" }), screen.getByRole("textbox", { name: "Claim id" })]) {
+      expect(el.matches(":disabled"), el.outerHTML.slice(0, 60)).toBe(true);
+    }
+    expect(down(submitBtn())).toBe(true);
+    expect(document.getElementById(submitBtn().getAttribute("aria-describedby") ?? "")?.textContent).toMatch(/not confirmed\. Retry it with the same key, or discard it/);
+    expect(screen.getByText("Unconfirmed")).toBeTruthy();
+  });
+
+  it("an edit that gets through anyway changes nothing: the retry sends the stored payload verbatim under the stored key", async () => {
+    const { api, createApprovalRequest } = port(() => OFFLINE);
+    const panel = await uncertain(api);
+    // A disabled control cannot be typed in; a scripted change event is ignored by the state too.
+    fireEvent.change(summaryBox(), { target: { value: "A different, longer summary." } });
+    expect(summaryBox()).toHaveProperty("value", "Momentum with a venue calendar.");
+    expect(screen.getByRole("alert", { name: "Request outcome uncertain" })).toBe(panel);
+    fireEvent.click(screen.getByRole("button", { name: "Retry with the same key" }));
+    await waitFor(() => expect(createApprovalRequest).toHaveBeenCalledTimes(2));
+    const [a, b] = createApprovalRequest.mock.calls.map((c) => c[0]);
+    expect(b).toEqual(a);
+  });
+
+  it("the Submit button itself does nothing while uncertain", async () => {
+    const { api, createApprovalRequest } = port(() => OFFLINE);
+    await uncertain(api);
+    fireEvent.click(submitBtn());
+    fireEvent.submit(document.querySelector("form") as HTMLFormElement);
+    expect(createApprovalRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it("the uncertain copy claims 'never creates two' nowhere; the same-key retry says what it does", async () => {
+    const { api } = port(() => OFFLINE);
+    const panel = await uncertain(api);
+    expect(panel.textContent).not.toMatch(/never creates two/i);
+    expect(panel.textContent).toContain("Retrying sends the same request again under the same key");
+    expect(document.body.textContent).not.toMatch(/never creates two|Submitting twice creates one/i);
+  });
+
+  it.each([
+    ["HTTP 503", { kind: "failed", status: "unavailable", reason: "HTTP_503: The request failed." }],
+    ["HTTP 502 with the port's flag", { kind: "failed", status: "unavailable", reason: "BAD_GATEWAY: upstream", offline: true }],
+    ["HTTP 504", { kind: "failed", status: "unavailable", reason: "HTTP_504: The request failed." }],
+    ["HTTP 408", { kind: "failed", status: "unavailable", reason: "HTTP_408: The request failed." }],
+    ["a 2xx whose body could not be read", { kind: "failed", status: "unavailable", reason: "The create response could not be read." }],
+  ])("%s is uncertain, not 'could not send'", async (_n, answer) => {
+    const { api, createApprovalRequest } = port(() => answer);
+    const panel = await uncertain(api);
+    expect(screen.queryByRole("alert", { name: "Request not sent" })).toBeNull();
+    expect(within(panel).getByRole("button", { name: "Retry with the same key" })).toBeTruthy();
+    expect(summaryBox().matches(":disabled")).toBe(true);
+    fireEvent.click(within(panel).getByRole("button", { name: "Retry with the same key" }));
+    await waitFor(() => expect(createApprovalRequest).toHaveBeenCalledTimes(2));
+    expect(sentKeys(createApprovalRequest)[1]).toBe(sentKeys(createApprovalRequest)[0]);
+  });
+
+  it("a definite 4xx stays editable and a new key is allowed: the server did not create it, and the copy does not promise otherwise", async () => {
+    const { api, createApprovalRequest } = port(() => ({ kind: "failed", status: "unavailable", reason: "HTTP_404: The request failed." }));
+    mountPage(api);
+    await fillValid();
+    fireEvent.click(submitBtn());
+    const panel = await screen.findByRole("alert", { name: "Request not sent" });
+    expect(panel.textContent).not.toMatch(/never creates two/i);
+    expect(panel.textContent).toContain("did not create a request from this attempt");
+    expect(summaryBox().matches(":disabled")).toBe(false);
+    fireEvent.change(summaryBox(), { target: { value: "Momentum with a venue calendar, reworded." } });
+    fireEvent.click(submitBtn());
+    await waitFor(() => expect(createApprovalRequest).toHaveBeenCalledTimes(2));
+    expect(sentKeys(createApprovalRequest)[1]).not.toBe(sentKeys(createApprovalRequest)[0]);
+  });
+
+  it("Discard from uncertain shows the warning first, keeps the key until confirmed, and a confirmed discard unlocks the form with a new key", async () => {
+    const { api, createApprovalRequest } = port(() => OFFLINE);
+    const panel = await uncertain(api);
+    fireEvent.click(within(panel).getByRole("button", { name: "Discard" }));
+    const ask = screen.getByRole("alertdialog", { name: "Discard this uncertain request?" });
+    expect(ask.textContent).toContain("This request may already exist. Check the queue before creating another.");
+    expect(within(ask).getByRole("link", { name: "Check the queue" }).getAttribute("href")).toBe("/governance/approvals");
+    expect(document.activeElement).toBe(within(ask).getByRole("button", { name: "Keep the request" }));
+    // Nothing was dropped yet: the fields are still locked and Keep returns to the retry.
+    expect(summaryBox().matches(":disabled")).toBe(true);
+    fireEvent.click(within(ask).getByRole("button", { name: "Keep the request" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.getByRole("button", { name: "Retry with the same key" })).toBeTruthy();
+    // Confirm.
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard anyway" }));
+    expect(screen.queryByRole("alert", { name: "Request outcome uncertain" })).toBeNull();
+    expect(summaryBox().matches(":disabled")).toBe(false);
+    expect(summaryBox()).toHaveProperty("value", "Momentum with a venue calendar.");
+    expect(down(submitBtn())).toBe(false);
+    fireEvent.click(submitBtn());
+    await waitFor(() => expect(createApprovalRequest).toHaveBeenCalledTimes(2));
+    expect(sentKeys(createApprovalRequest)[1]).not.toBe(sentKeys(createApprovalRequest)[0]);
+  });
+
+  it("a retry that is answered 'replayed' settles the form; the key it used is the original", async () => {
+    let first = true;
+    const { api, createApprovalRequest } = port(() => (first ? OFFLINE : { ...CREATED, kind: "replayed" }));
+    const panel = await uncertain(api);
+    first = false;
+    fireEvent.click(within(panel).getByRole("button", { name: "Retry with the same key" }));
+    await screen.findByRole("status", { name: "Request already created" });
+    expect(sentKeys(createApprovalRequest)[1]).toBe(sentKeys(createApprovalRequest)[0]);
+  });
+
+  it("while a retry is in flight its buttons wait and a second click is ignored", async () => {
+    let first = true;
+    const gate = deferred<unknown>();
+    const { api, createApprovalRequest } = port(() => (first ? OFFLINE : gate.promise));
+    const panel = await uncertain(api);
+    first = false;
+    const retry = within(panel).getByRole("button", { name: "Retry with the same key" });
+    await act(async () => {
+      fireEvent.click(retry);
+      fireEvent.click(retry);
+    });
+    expect(createApprovalRequest).toHaveBeenCalledTimes(2);
+    expect(down(retry)).toBe(true);
+    expect(down(within(panel).getByRole("button", { name: "Discard" }))).toBe(true);
+    await act(async () => gate.resolve(CREATED));
+    await screen.findByRole("status", { name: "Request created" });
+  });
+
+  it("the drawer: closing while uncertain asks with the warning, and Discard and close forgets the key", async () => {
+    const { api, createApprovalRequest } = port(() => OFFLINE);
+    mountDrawer(api, "/governance/approvals?compose=request");
+    await fillValid();
+    fireEvent.click(submitBtn());
+    await screen.findByRole("alert", { name: "Request outcome uncertain" });
+    fireEvent.keyDown(document, { key: "Escape" });
+    const ask = screen.getByRole("alertdialog", { name: "Discard this request?" });
+    expect(ask.textContent).toContain("This request may already exist. Check the queue before creating another.");
+    expect(ask.textContent).not.toContain("has not been sent");
+    // Keep editing leaves the key and the lock alone.
+    fireEvent.click(within(ask).getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("alert", { name: "Request outcome uncertain" })).toBeTruthy();
+    expect(summaryBox().matches(":disabled")).toBe(true);
+    // Confirm: closed, forgotten; the same payload typed again is a new intent.
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: "Discard and close" }));
+    fireEvent.click(screen.getByRole("button", { name: "New request" }));
+    await fillValid();
+    fireEvent.click(submitBtn());
+    await waitFor(() => expect(createApprovalRequest).toHaveBeenCalledTimes(2));
+    expect(sentKeys(createApprovalRequest)[1]).not.toBe(sentKeys(createApprovalRequest)[0]);
+  });
+
+  it("the drawer's ordinary discard text no longer claims what it cannot know", async () => {
+    mountDrawer(port(() => CREATED).api, "/governance/approvals?compose=request");
+    await fillValid("A draft.....");
+    fireEvent.keyDown(document, { key: "Escape" });
+    const ask = screen.getByRole("alertdialog", { name: "Discard this request?" });
+    expect(ask.textContent).toContain("Nothing has been created from what you typed. Closing now loses it.");
+  });
+});
+
+describe("M2: the key outlives a host that unmounts during the POST", () => {
+  it("reopening with the same payload reuses the key; a different payload does not", async () => {
+    const gate = deferred<unknown>();
+    const first = port(() => gate.promise);
+    const view = mountPage(first.api);
+    await fillValid();
+    fireEvent.click(submitBtn());
+    expect(first.createApprovalRequest).toHaveBeenCalledTimes(1);
+    view.unmount();
+    // The answer arrives after the host is gone: nobody on screen, and it is not definite.
+    await act(async () => gate.resolve(OFFLINE));
+    const second = port(() => CREATED);
+    mountPage(second.api);
+    await fillValid();
+    fireEvent.click(submitBtn());
+    await waitFor(() => expect(second.createApprovalRequest).toHaveBeenCalledTimes(1));
+    expect(second.createApprovalRequest.mock.calls[0]![0].requestKey).toBe(first.createApprovalRequest.mock.calls[0]![0].requestKey);
+    await screen.findByRole("status", { name: "Request created" });
+    cleanup();
+    // The definite answer freed the key.
+    const third = port(() => CREATED);
+    mountPage(third.api);
+    await fillValid();
+    fireEvent.click(submitBtn());
+    await waitFor(() => expect(third.createApprovalRequest).toHaveBeenCalledTimes(1));
+    expect(third.createApprovalRequest.mock.calls[0]![0].requestKey).not.toBe(first.createApprovalRequest.mock.calls[0]![0].requestKey);
+  });
+
+  it("a different payload gets its own key", async () => {
+    const gate = deferred<unknown>();
+    const first = port(() => gate.promise);
+    const view = mountPage(first.api);
+    await fillValid();
+    fireEvent.click(submitBtn());
+    view.unmount();
+    await act(async () => gate.resolve(OFFLINE));
+    const second = port(() => CREATED);
+    mountPage(second.api);
+    await fillValid("Another summary entirely.");
+    fireEvent.click(submitBtn());
+    await waitFor(() => expect(second.createApprovalRequest).toHaveBeenCalledTimes(1));
+    expect(second.createApprovalRequest.mock.calls[0]![0].requestKey).not.toBe(first.createApprovalRequest.mock.calls[0]![0].requestKey);
+  });
+});
+
+describe("the hook: stale answers, sticky dirty", () => {
+  const wrapper = ({ children }: { children: React.ReactNode }) => <MemoryRouter>{children}</MemoryRouter>;
+
+  it("an answer that arrives after a reset does not land on the fresh form, and the fresh form can send at once", async () => {
+    const { useNewRequest } = await import("./useNewRequest");
+    const gate = deferred<unknown>();
+    const { api, createApprovalRequest } = port((input) => (input.summary === "Momentum with a venue calendar." ? gate.promise : CREATED));
+    const { renderHook } = await import("@testing-library/react");
+    const hook = renderHook(() => useNewRequest({ api, runsEnabled: false }), { wrapper });
+    const fill = (summary: string) => {
+      act(() => {
+        hook.result.current.setAlpha("alpha_TEST_ONLY_a");
+        hook.result.current.setRun("run_TEST_ONLY_a1");
+        hook.result.current.setClaim("claim_TEST_ONLY_a1");
+        hook.result.current.setSummary(summary);
+      });
+    };
+    fill("Momentum with a venue calendar.");
+    act(() => hook.result.current.submit());
+    expect(hook.result.current.submitting).toBe(true);
+    act(() => hook.result.current.reset());
+    expect(hook.result.current.submitting).toBe(false);
+    expect(hook.result.current.fields.summary).toBe("");
+    await act(async () => gate.resolve(CREATED));
+    expect(hook.result.current.outcome).toBeNull();
+    expect(hook.result.current.settled).toBe(false);
+    expect(hook.result.current.fields.summary).toBe("");
+    fill("A second request, other words.");
+    act(() => hook.result.current.submit());
+    await waitFor(() => expect(hook.result.current.settled).toBe(true));
+    expect(createApprovalRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it("dirty follows the current values: typing then clearing is clean again, and a link's ids are not a draft", async () => {
+    const { useNewRequest } = await import("./useNewRequest");
+    const { renderHook } = await import("@testing-library/react");
+    const { api } = port(() => CREATED);
+    const hook = renderHook(() => useNewRequest({ api, runsEnabled: false, prefill: { alphaId: "alpha_TEST_ONLY_a", runId: "run_TEST_ONLY_a1" } }), { wrapper });
+    expect(hook.result.current.dirty).toBe(false);
+    act(() => hook.result.current.setSummary("something"));
+    expect(hook.result.current.dirty).toBe(true);
+    act(() => hook.result.current.setSummary(""));
+    expect(hook.result.current.dirty).toBe(false);
+    act(() => hook.result.current.setAlpha("alpha_TEST_ONLY_b"));
+    expect(hook.result.current.dirty).toBe(true);
+    act(() => hook.result.current.setAlpha("alpha_TEST_ONLY_a"));
+    expect(hook.result.current.dirty).toBe(false);
+  });
+});
+
+describe("the drawer: cleared fields close without asking; Submit waits while the question is on screen; focus stays on Submit", () => {
+  const esc = () => fireEvent.keyDown(document, { key: "Escape" });
+
+  it("typing and then clearing the fields leaves nothing to lose", async () => {
+    mountDrawer(port(() => CREATED).api, "/governance/approvals?compose=request");
+    await fillValid("Typed then cleared.");
+    fireEvent.change(summaryBox(), { target: { value: "" } });
+    fireEvent.change(alphaSel(), { target: { value: "" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Evidence run id" }), { target: { value: "" } });
+    esc();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.queryByRole("complementary", { name: "New approval request" })).toBeNull();
+  });
+
+  it("Submit is down while 'Discard this request?' is shown, and up again after Keep editing", async () => {
+    const { api, createApprovalRequest } = port(() => CREATED);
+    mountDrawer(api, "/governance/approvals?compose=request");
+    await fillValid();
+    expect(down(submitBtn())).toBe(false);
+    esc();
+    screen.getByRole("alertdialog", { name: "Discard this request?" });
+    expect(down(submitBtn())).toBe(true);
+    expect(screen.getByText("On hold")).toBeTruthy();
+    fireEvent.click(submitBtn());
+    expect(createApprovalRequest).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(down(submitBtn())).toBe(false);
+  });
+
+  it("keyboard focus stays on the Submit button while the send is in flight (aria-disabled, not disabled)", async () => {
+    const gate = deferred<unknown>();
+    const { api } = port(() => gate.promise);
+    mountPage(api);
+    await fillValid();
+    const btn = submitBtn();
+    btn.focus();
+    fireEvent.click(btn);
+    expect(down(btn)).toBe(true);
+    expect(btn.hasAttribute("disabled")).toBe(false);
+    expect(document.activeElement).toBe(btn);
+    expect(document.getElementById(btn.getAttribute("aria-describedby") ?? "")?.getAttribute("role")).toBe("status");
+    await act(async () => gate.resolve(CREATED));
+    await screen.findByRole("status", { name: "Request created" });
+  });
+});
+
+describe("M3: result links open the caller's own workspace record", () => {
+  it("created: 'Open request' keeps env and window but drops workspace_id; the note stays", async () => {
+    mountPage(port(() => CREATED).api, "/governance/approvals/new?workspace_id=ws_other&env=paper&window=30d");
+    await fillValid();
+    fireEvent.click(submitBtn());
+    const panel = await screen.findByRole("status", { name: "Request created" });
+    const href = within(panel).getByRole("link", { name: "Open request" }).getAttribute("href") ?? "";
+    expect(href).not.toContain("workspace_id");
+    expect(href.startsWith("/governance/approvals/apr_TEST_ONLY_203/r1?")).toBe(true);
+    expect(href).toContain("env=paper");
+    expect(href).toContain("window=30d");
+    expect(screen.getAllByText(OWN_WORKSPACE_NOTE)).toHaveLength(1);
+  });
+
+  it("created without a usable id: 'Open the approvals queue' drops workspace_id too", async () => {
+    mountPage(port(() => ({ ...CREATED, approvalId: "../evil/ id" })).api, "/governance/approvals/new?workspace_id=ws_other");
+    await fillValid();
+    fireEvent.click(submitBtn());
+    const panel = await screen.findByRole("status", { name: "Request created" });
+    expect(within(panel).getByRole("link", { name: "Open the approvals queue" }).getAttribute("href")).toBe("/governance/approvals");
+  });
+
+  it("duplicate and uncertain links drop workspace_id as well", async () => {
+    mountPage(port(() => ({ kind: "duplicate", existingApprovalId: "apr_TEST_ONLY_9", reason: "dup" })).api, "/governance/approvals/new?workspace_id=ws_other&env=paper");
+    await fillValid();
+    fireEvent.click(submitBtn());
+    const dup = await screen.findByRole("alert", { name: "Duplicate request" });
+    const href = within(dup).getByRole("link", { name: "Open apr_TEST_ONLY_9" }).getAttribute("href") ?? "";
+    expect(href).not.toContain("workspace_id");
+    expect(href).toContain("env=paper");
+    cleanup();
+    mountPage(port(() => OFFLINE).api, "/governance/approvals/new?workspace_id=ws_other");
+    await fillValid();
+    fireEvent.click(submitBtn());
+    const unc = await screen.findByRole("alert", { name: "Request outcome uncertain" });
+    expect(within(unc).getByRole("link", { name: "Check original request" }).getAttribute("href")).toBe("/governance/approvals");
+  });
+});
+
+describe("M4: the Run Library link does not take the typed form away", () => {
+  it("opens in a new tab with noopener noreferrer, says so, and does not navigate this one", async () => {
+    mountPage(port(() => CREATED).api, "/governance/approvals/new");
+    await fillValid("Typed before the click.");
+    const link = screen.getByRole("link", { name: /^Run Library/ });
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.textContent).toContain("(opens in a new tab)");
+    fireEvent.click(link);
+    expect(screen.getByTestId("where").textContent).toBe("/governance/approvals/new");
+    expect(summaryBox()).toHaveProperty("value", "Typed before the click.");
   });
 });
