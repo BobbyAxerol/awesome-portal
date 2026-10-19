@@ -56,7 +56,7 @@ export function CapGauge({ ratio, label, fe = "FE-071", showText = true }: CapGa
   if (ratio === undefined) {
     return (
       <span className="exec-gauge-wrap" data-state="not-published">
-        <NotPublished id={fe}>Used</NotPublished>
+        <NotPublished id={fe} collapsible>Used</NotPublished>
       </span>
     );
   }

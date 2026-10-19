@@ -9,7 +9,7 @@
  * value (D9, review2/04). The ids are the open requests in
  * FRONTEND_BACKEND_SYNC.md.
  */
-import type { ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 
 import "../css/blocks.css";
 
@@ -117,6 +117,49 @@ export const FE_FLEET = {
 /** `Not published (FE-012, FE-027)` for a Fleet fact. */
 export const notPublishedFact = (fact: UnpublishedFact): string => notPublishedText(fact.fe);
 
+/**
+ * One panel, one printing of a request id. A panel (`SectionPanel`, `KpiStrip`) opens a scope; the cells that opt in
+ * (`Kpi`, `CapGauge`, via `collapsible`) print `Not published (FE-071)` for the FIRST cell of an id in the scope and
+ * plain `Not published` for the later ones, whose tooltip still names the id and the request. A cell's own words
+ * ("Used", "Consumed") are kept, so a distinct gap is never merged: only the repeated id is. Outside a scope every
+ * cell prints its id. The id is never dropped from a panel: if the first cell goes away, the next one prints it.
+ */
+interface Scope {
+  /** Render-time claim: true when `owner` is the first live cell of `id`. */
+  claim(id: string, owner: string): boolean;
+  release(id: string, owner: string): void;
+}
+/** `version` changes when the first printing of an id leaves, so consumers re-render (an unchanged `children` element would not). */
+const ScopeContext = createContext<{ scope: Scope; version: number } | null>(null);
+
+export function NotPublishedScope({ children }: { children: ReactNode }) {
+  const owners = useRef(new Map<string, string[]>());
+  const [version, bump] = useState(0);
+  const scope = useMemo<Scope>(
+    () => ({
+      claim(id, owner) {
+        const list = owners.current.get(id) ?? [];
+        if (!list.includes(owner)) list.push(owner);
+        owners.current.set(id, list);
+        return list[0] === owner;
+      },
+      release(id, owner) {
+        const list = owners.current.get(id);
+        if (!list) return;
+        const wasFirst = list[0] === owner;
+        const rest = list.filter((o) => o !== owner);
+        if (rest.length === 0) owners.current.delete(id);
+        else owners.current.set(id, rest);
+        // The first printing went away: the next cell must print the id now.
+        if (wasFirst && rest.length > 0) bump((n) => n + 1);
+      },
+    }),
+    [],
+  );
+  const value = useMemo(() => ({ scope, version }), [scope, version]);
+  return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>;
+}
+
 export interface NotPublishedProps {
   /** The request that will publish the value. */
   id: NotPublishedId;
@@ -130,10 +173,30 @@ export interface NotPublishedProps {
    * hidden), and the surface prints the sentence ONCE. Never a way to drop the id.
    */
   compact?: boolean;
+  /** Print the id only for the first such cell of the enclosing `NotPublishedScope` (see there). Default false. */
+  collapsible?: boolean;
 }
 
 /** Inline: "Not published (FE-021)" plus what it means. */
-export function NotPublished({ id, reasonCode, children, compact = false }: NotPublishedProps) {
+export function NotPublished({ id, reasonCode, children, compact = false, collapsible = false }: NotPublishedProps) {
+  const ctx = useContext(ScopeContext);
+  const scope = ctx === null ? null : ctx.scope;
+  const owner = useId();
+  const tracked = collapsible && !compact && scope !== null;
+  const first = tracked ? scope.claim(id, owner) : true;
+  useEffect(() => {
+    if (!tracked) return;
+    return () => scope.release(id, owner);
+  }, [tracked, scope, id, owner]);
+  if (!first) {
+    return (
+      <span className="exec-blk-np" data-repeat="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}`}>
+        <span className="exec-blk-np-word">{NOT_PUBLISHED}</span>
+        {children ? <> {children}</> : null}
+        {reasonCode ? <span className="exec-blk-np-reason">{reasonCode}</span> : null}
+      </span>
+    );
+  }
   if (compact) {
     return (
       <span className="exec-blk-np" data-compact="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}`}>

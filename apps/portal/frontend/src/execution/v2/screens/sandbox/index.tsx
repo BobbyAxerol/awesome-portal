@@ -242,7 +242,14 @@ export default function SandboxScreen({ api, deploymentId, workspaceId }: Sandbo
   const capability: NoteCapability = view === null || (noteWorkspace === null && runtime === null) ? { state: "loading" } : asked;
 
   const renderLink = (to: string, children: ReactNode) => <Link to={withContext(to, params)}>{children}</Link>;
-  const crumb = (id: string) => [{ label: "Alpha Fleet", to: FLEET_HREF }, { label: id }, { label: "Sandbox" }];
+  // The portfolio is linked only when the read published its id. The account is an external reference and the alpha id is
+  // not in this read: neither is linked.
+  const crumb = (id: string, portfolioId?: string | null) => [
+    { label: "Alpha Fleet", to: FLEET_HREF },
+    { label: id },
+    ...(portfolioId ? [{ label: portfolioId, to: `/deployments/portfolios/${encodeURIComponent(portfolioId)}` }] : []),
+    { label: "Sandbox" },
+  ];
 
   if (read.phase === "loading") {
     return (
@@ -284,7 +291,7 @@ export default function SandboxScreen({ api, deploymentId, workspaceId }: Sandbo
     <div className="exec-sbx-v2" data-screen="sandbox-v2" data-version={view.version} data-refreshing={read.refreshing ? "true" : undefined}>
       <StageHeader
         stage="sandbox"
-        crumb={crumb(shownId)}
+        crumb={crumb(shownId, view.portfolioId)}
         title="Sandbox certification"
         subtitle={subtitleOf(view, deploymentId)}
         chips={chipsOf(view)}

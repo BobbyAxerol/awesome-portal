@@ -18,7 +18,7 @@
  * Plain props in, markup out: no router, no store. Crumb links render as plain anchors
  * unless the screen passes `renderLink` (react-router `Link`).
  */
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import { Flag } from "../Flag";
 import type { FlagKind } from "../flagKinds";
@@ -154,6 +154,15 @@ export function StageChipRow({ chips }: { chips: StageChips }) {
 /** The guard frame. */
 export function StageHeader({ stage, crumb, title, subtitle, chips, spine, extra, renderLink }: StageHeaderProps) {
   const guard = STAGE_GUARD[stage];
+  // At phone width the compact spine scrolls inside its own box; bring the current stage into view on mount so a
+  // stage past the right edge (Canary, Live) is not left clipped. Horizontal only (`block: "nearest"`), and a
+  // no-op where the DOM has no scrollIntoView (jsdom).
+  const spineBox = useRef<HTMLDivElement>(null);
+  const currentStage = spine?.current ?? null;
+  useEffect(() => {
+    const node = spineBox.current?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (node && typeof node.scrollIntoView === "function") node.scrollIntoView({ inline: "center", block: "nearest", behavior: "auto" });
+  }, [currentStage]);
   return (
     <header className="exec-stage-guard" data-stage={stage} data-frame={guard.frame}>
       <div>
@@ -182,7 +191,7 @@ export function StageHeader({ stage, crumb, title, subtitle, chips, spine, extra
           <StageChipRow chips={chips} />
         </div>
       </div>
-      <div className="exec-stage-spine">
+      <div className="exec-stage-spine" ref={spineBox}>
         <JourneySpine variant="compact" {...spine} />
       </div>
       {extra ? <div className="exec-stage-extra">{extra}</div> : null}

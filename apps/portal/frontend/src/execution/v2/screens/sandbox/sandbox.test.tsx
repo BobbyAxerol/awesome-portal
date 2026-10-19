@@ -141,6 +141,14 @@ describe("the V2 following-parent body", () => {
     expect(within(crumb).getByText("Sandbox").closest("li")?.getAttribute("aria-current")).toBe("page");
   });
 
+  it("links the portfolio the body published and nothing it did not (no account or alpha link)", async () => {
+    mount(fakeApi());
+    await ready();
+    const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(within(crumb).getByRole("link", { name: "pf_TEST_ONLY_parent" }).getAttribute("href")).toBe("/deployments/portfolios/pf_TEST_ONLY_parent");
+    expect(within(crumb).getAllByRole("link").map((a) => a.textContent)).toEqual(["Alpha Fleet", "pf_TEST_ONLY_parent"]);
+  });
+
   it("every fact the body does not carry is Not published with its request id, and none is a number", async () => {
     mount(fakeApi());
     await ready();

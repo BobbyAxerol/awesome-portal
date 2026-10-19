@@ -250,3 +250,17 @@
     align-items: flex-start;
   }
 }
+
+/* A decision this portal does not offer is native-disabled (never a write). It reads as closed, not as a quiet live
+ * button: muted, dashed frame. Its reason is the line under it, shown in full (wrapped): a touch screen has no hover
+ * to reveal an ellipsised line. Scoped to this screen; the shared dock keeps its look. */
+.exec-cny-v2 .exec-dock-btn:disabled {
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+}
+.exec-cny-v2 .exec-dock-reason {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}

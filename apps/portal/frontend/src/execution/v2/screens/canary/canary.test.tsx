@@ -379,7 +379,9 @@ describe("V2 following-parent body: the proposal only", () => {
     expect(screen.getByText("This response states the Canary proposal only. Runtime figures are not part of it.")).toBeTruthy();
     const kpis = within(screen.getByRole("group", { name: "Canary figures" }));
     const gaps = Array.from(screen.getByRole("group", { name: "Canary figures" }).querySelectorAll(".exec-blk-np"));
-    expect(gaps.map((g) => g.textContent)).toEqual(Array(5).fill("Not published (FE-072)"));
+    // One strip, one id: the first cell prints FE-072, the other four read Not published and carry the id in their tooltip.
+    expect(gaps.map((g) => g.textContent)).toEqual(["Not published (FE-072)", ...Array(4).fill("Not published")]);
+    expect(gaps.slice(1).every((g) => g.getAttribute("title")?.startsWith("Not published (FE-072)"))).toBe(true);
     expect(kpis.getByText("Capital consumed")).toBeTruthy();
     const table = screen.getByRole("table", { name: "Canary envelope caps" });
     expect(within(table).getByRole("columnheader", { name: "Proposed" })).toBeTruthy();
@@ -520,6 +522,16 @@ describe("tabs and navigation", () => {
     expect(within(crumb).getByRole("link", { name: "Alpha Fleet" }).getAttribute("href")).toBe("/deployments/alphas");
     expect(crumb.textContent).toContain(DEP);
     expect(document.querySelector(".exec-stage-sub")!.textContent).toContain("Not published (FE-066)");
+  });
+
+  it("the crumb links the portfolio and the account the read published; there is no Alpha link (the alpha id is not in the read)", async () => {
+    mount(canaryPort(answering(v1Body())));
+    await ready();
+    const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(within(crumb).getByRole("link", { name: "pf_crypto" }).getAttribute("href")).toBe("/deployments/portfolios/pf_crypto");
+    expect(within(crumb).getByRole("link", { name: "acct_canary_grid" }).getAttribute("href")).toBe("/deployments/accounts/acct_canary_grid");
+    expect(within(crumb).queryByRole("link", { name: /alpha$/i })).toBeNull();
+    expect(within(crumb).getByText("Canary").closest("li")?.getAttribute("aria-current")).toBe("page");
   });
 });
 

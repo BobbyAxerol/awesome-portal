@@ -201,3 +201,15 @@
   font: var(--exec-font-meta);
   color: var(--ink-faint);
 }
+
+/* Closed decisions (see canary.css): native-disabled, muted with a dashed frame, the reason shown in full. */
+.exec-liv-v2 .exec-dock-btn:disabled {
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+}
+.exec-liv-v2 .exec-dock-reason {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}

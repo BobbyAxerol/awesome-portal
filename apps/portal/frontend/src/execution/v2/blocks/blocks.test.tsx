@@ -79,6 +79,46 @@ describe("NotPublished and the one FE table", () => {
 });
 
 describe("Kpi", () => {
+  it("a strip prints a request id once: later cells with the same id read Not published (the id stays in their tooltip); a different id prints", () => {
+    render(
+      <KpiStrip label="Live figures">
+        <Kpi label="Equity" notPublished="FE-072" />
+        <Kpi label="Net PnL" notPublished="FE-072" />
+        <Kpi label="Fills" notPublished="FE-072" />
+        <Kpi label="Runtime" notPublished="FE-067" />
+      </KpiStrip>,
+    );
+    const values = [...document.querySelectorAll(".exec-blk-kpi-value")].map((v) => v.textContent);
+    expect(values).toEqual(["Not published (FE-072)", "Not published", "Not published", "Not published (FE-067)"]);
+    const tips = [...document.querySelectorAll(".exec-blk-kpi-value .exec-blk-np")].map((n) => n.getAttribute("title"));
+    expect(tips[1]).toBe(`Not published (FE-072): ${FE_REQUEST_LABEL["FE-072"]}`);
+    // Every term keeps its own label, so a distinct gap is never merged.
+    expect([...document.querySelectorAll("dt")].map((t) => t.textContent)).toEqual(["Equity", "Net PnL", "Fills", "Runtime"]);
+  });
+
+  it("the id moves to the next cell when the cell that carried it goes away", () => {
+    const view = (first: boolean) => (
+      <KpiStrip label="Figures">
+        {first ? <Kpi label="A" notPublished="FE-072" /> : null}
+        <Kpi label="B" notPublished="FE-072" />
+      </KpiStrip>
+    );
+    const { rerender } = render(view(true));
+    expect([...document.querySelectorAll(".exec-blk-kpi-value")].map((v) => v.textContent)).toEqual(["Not published (FE-072)", "Not published"]);
+    rerender(view(false));
+    expect([...document.querySelectorAll(".exec-blk-kpi-value")].map((v) => v.textContent)).toEqual(["Not published (FE-072)"]);
+  });
+
+  it("a Kpi outside any strip or panel prints its id", () => {
+    render(
+      <dl>
+        <Kpi label="A" notPublished="FE-072" />
+        <Kpi label="B" notPublished="FE-072" />
+      </dl>,
+    );
+    expect([...document.querySelectorAll(".exec-blk-kpi-value")].map((v) => v.textContent)).toEqual(["Not published (FE-072)", "Not published (FE-072)"]);
+  });
+
   it("keeps a 29-digit decimal exact: float digits never appear, the original rides on title", () => {
     render(
       <KpiStrip label="Totals">

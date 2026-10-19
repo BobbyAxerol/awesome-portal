@@ -101,9 +101,13 @@ export default function CanaryScreen({ api, deploymentId, workspaceId }: CanaryS
   useContextFacts({ ccy: view === null ? undefined : (view.envelope?.currency ?? null) });
 
   const linkTo = (href: string) => withContext(href, params);
+  // The portfolio and the account are linked only when the read published their ids; the alpha id is not in this
+  // read, so there is no Alpha link (never a link built from a guess).
   const crumb: readonly StageCrumb[] = [
     { label: "Alpha Fleet", to: linkTo("/deployments/alphas") },
     { label: deploymentId },
+    ...(view?.portfolioId ? [{ label: view.portfolioId, to: linkTo(`/deployments/portfolios/${encodeURIComponent(view.portfolioId)}`) }] : []),
+    ...(view?.accountId ? [{ label: view.accountId, to: linkTo(`/deployments/accounts/${encodeURIComponent(view.accountId)}`) }] : []),
     { label: "Canary" },
   ];
   const retry = (

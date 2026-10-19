@@ -9,7 +9,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 import type { Metric } from "../boundary";
 import { MetricText } from "./metric";
-import { NotPublished, type NotPublishedId } from "./notPublished";
+import { NotPublished, NotPublishedScope, type NotPublishedId } from "./notPublished";
 import "../css/blocks.css";
 
 export interface KpiProps {
@@ -45,7 +45,7 @@ export function Kpi({ label, metric, notPublished, value, suffix, basis, signed 
       <dd className="exec-blk-kpi-body">
         <span className="exec-blk-kpi-value">
           {notPublished ? (
-            <NotPublished id={notPublished} />
+            <NotPublished id={notPublished} collapsible />
           ) : value !== undefined ? (
             <span className="exec-blk-num">{value}</span>
           ) : (
@@ -74,7 +74,7 @@ export function KpiStrip({ label, columns, children }: KpiStripProps) {
   return (
     <div role="group" aria-label={label}>
       <dl className="exec-blk-kpis" style={style}>
-        {children}
+        <NotPublishedScope>{children}</NotPublishedScope>
       </dl>
     </div>
   );

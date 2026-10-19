@@ -12,6 +12,7 @@ import {
   CapGauge,
   FE_REQUEST_LABEL,
   REAL_CAPITAL_AT_RISK,
+  SectionPanel,
   STAGE_CHIP_LABELS,
   STAGE_GUARD,
   StageHeader,
@@ -175,6 +176,28 @@ describe("StageHeader · compact spine slot", () => {
     render(header({ spine: { current: "sandbox", blocked: true } }));
     expect(screen.getByRole("img", { name: "Sandbox, Blocked" })).toBeTruthy();
     expect(screen.queryAllByRole("button")).toHaveLength(0);
+  });
+
+  it("brings the current stage into view on mount, horizontally only; no throw where scrollIntoView does not exist (jsdom)", () => {
+    // jsdom: the method is absent, the header still renders.
+    expect(typeof HTMLElement.prototype.scrollIntoView).not.toBe("function");
+    expect(() => render(header({ stage: "canary", spine: { current: "canary" } }))).not.toThrow();
+    cleanup();
+    const seen: Array<{ stage: string | null; opts: unknown }> = [];
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement, opts?: boolean | ScrollIntoViewOptions) {
+      seen.push({ stage: this.getAttribute("data-stage"), opts });
+    };
+    try {
+      render(header({ stage: "live", spine: { current: "live" } }));
+      expect(seen).toEqual([{ stage: "live", opts: { inline: "center", block: "nearest", behavior: "auto" } }]);
+      cleanup();
+      seen.length = 0;
+      // No published current stage: nothing is marked current, nothing is scrolled.
+      render(header());
+      expect(seen).toEqual([]);
+    } finally {
+      delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
   });
 });
 
@@ -369,6 +392,33 @@ describe("UrlTabs · ?tab= through tabAliases", () => {
 });
 
 /* ── CapGauge ─────────────────────────────────────────────────────────── */
+
+describe("CapGauge · one printing of a request id per panel", () => {
+  it("inside a SectionPanel only the first not-published gauge prints the id; the others read Not published and keep it in the tooltip", () => {
+    render(
+      <SectionPanel title="Envelope">
+        <CapGauge label="Capital" />
+        <CapGauge label="Gross" />
+        <CapGauge label="Daily loss" fe="FE-072" />
+      </SectionPanel>,
+    );
+    const cells = [...document.querySelectorAll<HTMLElement>(".exec-gauge-wrap")];
+    expect(cells.map((c) => c.textContent)).toEqual(["Not published (FE-071) Used", "Not published Used", "Not published (FE-072) Used"]);
+    expect(cells[1]!.querySelector(".exec-blk-np")!.getAttribute("title")).toBe(`Not published (FE-071): ${FE_REQUEST_LABEL["FE-071"]}`);
+    // The gap is still on every cell as a words-first statement, never a dash or a zero.
+    expect(document.body.textContent).not.toMatch(DASHES);
+  });
+
+  it("outside a panel every gauge prints its own id", () => {
+    render(
+      <>
+        <CapGauge label="Capital" />
+        <CapGauge label="Gross" />
+      </>,
+    );
+    expect([...document.querySelectorAll(".exec-gauge-wrap")].map((c) => c.textContent)).toEqual(["Not published (FE-071) Used", "Not published (FE-071) Used"]);
+  });
+});
 
 describe("CapGauge · D7: only a server-published ratio draws a bar", () => {
   it("with no ratio it says Not published (FE-071) and draws nothing", () => {

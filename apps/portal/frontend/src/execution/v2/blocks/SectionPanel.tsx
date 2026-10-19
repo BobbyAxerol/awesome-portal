@@ -7,6 +7,7 @@
  */
 import { createElement, useId, type ReactNode } from "react";
 
+import { NotPublishedScope } from "./notPublished";
 import "../css/blocks.css";
 
 export type PanelHeadLevel = 2 | 3 | 4 | 5;
@@ -61,7 +62,9 @@ export function SectionPanel({ title, level = 3, aside, lead, flush = false, chi
   return (
     <section className="exec-blk-panel" aria-labelledby={id} data-flush={flush ? "true" : undefined}>
       <PanelHead title={title} level={level} id={id} aside={aside} lead={lead} />
-      <div className="exec-blk-panel-body">{children}</div>
+      <div className="exec-blk-panel-body">
+        <NotPublishedScope>{children}</NotPublishedScope>
+      </div>
     </section>
   );
 }
