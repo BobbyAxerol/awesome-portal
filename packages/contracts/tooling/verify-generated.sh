@@ -43,6 +43,8 @@ node tooling/execution-operation-reader.mjs --check
 node tooling/generate-execution-resource-scoped.mjs --check
 node tooling/generate-execution-retained-scoped.mjs --check
 node tooling/generate-execution-analytics-scoped.mjs --check
+node tooling/generate-execution-stage-drift.mjs --check
+generate_and_compare openapi/execution-stage-drift.openapi.json generated/execution-stage-drift.d.ts
 generate_and_compare openapi/execution-resource-scoped.openapi.json generated/execution-resource-scoped.d.ts
 generate_and_compare openapi/execution-scoped-records.openapi.json generated/execution-scoped-records.d.ts
 generate_and_compare openapi/execution-history.openapi.json generated/execution-history.d.ts

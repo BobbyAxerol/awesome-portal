@@ -17,6 +17,7 @@ import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {isReadStoreUnavailable} from "../db/read-unavailable";
 import { CurrentHumanWorkspaceProvisioner } from "../execution-v2/current-human-workspace";
+import { nativeResearchReview, nativeResearchReadAllowed } from "../execution/native-review-profile";
 
 /**
  * Authenticated-session guard for façade routes. Attaches the portal user
@@ -62,11 +63,27 @@ export class SessionGuard implements CanActivate {
     if (!user || user.status !== "ACTIVE" || user.mustChangePassword) {
       throw new UnauthorizedException("Invalid session.");
     }
-    let workspaceId = this.currentHumanWorkspace
-      ? await this.currentHumanWorkspace.ensure({ user_id: user.userId,
-          session_id: session.sessionId, session_generation: session.sessionVersion })
-      : await this.workspaces.ensurePersonal(user.userId, user.username);
+    const nativeReview = nativeResearchReview(this.config) && executionRead;
+    if (nativeReview && !nativeResearchReadAllowed(this.config!, request.method,
+      request.url.split("?")[0], (request.query ?? {}) as Record<string, unknown>))
+      throw new ForbiddenException("NATIVE_RESEARCH_REVIEW_ROUTE_NOT_COMMISSIONED");
+    let workspaceId:string;
+    if(nativeReview){
+      const configured=this.config!.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
+      if(!await this.workspaces.canReadExecution(configured,user.userId,"paper"))
+        throw new NotFoundException("Workspace not found.");
+      const existing=await this.workspaces.personalWorkspace(user.userId);
+      if(!existing)throw new NotFoundException("Workspace not found.");
+      workspaceId=existing.workspaceId;
+    }else workspaceId = this.currentHumanWorkspace
+        ? await this.currentHumanWorkspace.ensure({ user_id: user.userId,
+            session_id: session.sessionId, session_generation: session.sessionVersion })
+        : await this.workspaces.ensurePersonal(user.userId, user.username);
     const viewerWorkspaceId = workspaceId;
+    if (nativeReview) {
+      const configured = this.config!.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
+      workspaceId = configured;
+    }
     if (retainedReview(this.config) && executionRead) {
       if (request.method !== "GET" && request.method !== "HEAD") throw new ForbiddenException("UDB_RETAINED_REVIEW_MUTATION_DISABLED");
       const query = request.query as Record<string, unknown>;

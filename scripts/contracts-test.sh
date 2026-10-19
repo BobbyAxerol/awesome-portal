@@ -78,6 +78,7 @@ mkdir -p \
   "${WORKSPACE_DIR}/apps/control-api/src/repos" \
   "${WORKSPACE_DIR}/apps/control-api/src/auth" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution-v2" \
+  "${WORKSPACE_DIR}/apps/control-api/src/execution" \
   "${WORKSPACE_DIR}/apps/control-api/src/manager-lists" \
   "${WORKSPACE_DIR}/apps/control-api/src/resource-read" \
   "${WORKSPACE_DIR}/apps/portal/backend/src/portal_api/domain" \
@@ -106,6 +107,8 @@ cp -a \
   "${ROOT_DIR}/apps/control-api/src/operations/f0-read.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations/"
 # ELP2-01 validates its runtime parser against the identical published fixtures.
+cp -a "${ROOT_DIR}/apps/control-api/src/execution/stage-drift.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/execution/"
 # Copy only this pure validator and compatibility dictionary, not app config,
 # credentials, node_modules or any runtime mount. The test cell stays networkless.
 cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \

@@ -4,6 +4,15 @@ Khởi tạo: Claude, 2026-10-18 @ `claude/fe-parity`. Codex điền **cột ngu
 
 Trạng thái: `EXISTS_MOUNTED` (đọc thật có receipt) · `SOURCE_DARK` (contract + code, chưa nguồn thật) · `SYNTHETIC_ONLY` · `MISSING` (chưa có contract/nguồn) · `UNKNOWN`.
 
+Research commissioning update2026-10-19: Bobby approved a distinct exact-identity
+Paper READ/STREAM installation. Official readonly PM mapping observation at
+06:50:22UTC returned **NO_ACTIVE_MAPPING** for Research Bobby, whose subject
+differs from stable. Native-only Portal profile/offline schema/overlay source
+exists but is not installed. [Exact target/source hashes, actual tests and
+continuation](ELP2-10/c7-closeout-followthrough-2026-10-19.md#research-only-native-composition--implementation-and-actual-observations).
+No row is promoted to EXISTS_MOUNTED by that observation or isolated tests;
+all12 family/consumer columns and older receipts below remain intact.
+
 Latest four-source cut **2026-10-19T04:46:08Z–04:46:37Z** (prior04:16–04:21cut preserved):
 [C7 exact source/WIP pins and current gate disposition](ELP2-10/c7-runtime-integration-2026-10-19.md#fresh-hk-source-cut-and-remaining-owners).
 Edge `5f433f8c4cb39cf170248304ecde8d61b2d786f1`, PM

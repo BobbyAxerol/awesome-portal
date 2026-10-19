@@ -42,6 +42,7 @@ compose() {
   # sudo strips caller environment. Forward only these non-secret source
   # stamps, including cmd_build's temporary assignment, not the whole env.
   local compose_docker=("${DOCKER[@]}")
+  local native_env=()
   local domain_overlay=()
   if [[ -f "$ENV_DIR/execution-store.enabled" ]]; then
     [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview ]] || {
@@ -53,11 +54,23 @@ compose() {
       echo 'preview: retained review requires the fixed isolated Execution store' >&2; return 1; }
     domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.retained-review.yaml")
   fi
+  if [[ -f "$ENV_DIR/execution-native.enabled" ]]; then
+    [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview && -f "$ENV_DIR/execution-store.enabled" ]] || {
+      echo 'preview: native review requires the fixed isolated Research Execution store' >&2; return 1; }
+    local native_file="$ENV_DIR/execution-native/runtime.env"
+    [[ -f "$native_file" && ! -L "$native_file" && "$(stat -c '%a' "$native_file")" == 600 &&
+      "$(stat -c '%u' "$native_file")" == "$(id -u)" ]] || {
+      echo 'preview: native review requires its owner-only Research environment file' >&2; return 1; }
+    native_env=(--env-file "$native_file")
+    # Last overlay overrides retained flags deliberately. The retained marker
+    # stays available for rollback; it is not an auto-restoration of grants.
+    domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.native-review.yaml")
+  fi
   if [[ "${DOCKER[0]}" == sudo ]]; then
     compose_docker=(sudo -n env "PORTAL_BUILD_COMMIT=${PORTAL_BUILD_COMMIT:-unknown}" \
       "PORTAL_BUILD_DIRTY=${PORTAL_BUILD_DIRTY:-false}" docker)
   fi
-  "${compose_docker[@]}" compose -p "$PROJECT" --project-directory "$ROOT" --env-file "$ENV_FILE" \
+  "${compose_docker[@]}" compose -p "$PROJECT" --project-directory "$ROOT" --env-file "$ENV_FILE" "${native_env[@]}" \
     -f "$ROOT/compose.yaml" \
     -f "$ROOT/deploy/compose.research-progress.yaml" \
     -f "$ROOT/deploy/research-preview/compose.research-preview.yaml" "${domain_overlay[@]}" "$@"

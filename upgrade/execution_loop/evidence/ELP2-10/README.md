@@ -2,6 +2,12 @@
 
 ## Current2026-10-19 — C7 runtime integration and source follow-through
 
+[Renewed source/commissioning audit and exact FE-054 successor](c7-closeout-followthrough-2026-10-19.md)
+records the actual preceding R3PASS, current HK target mismatch, remaining local
+assembly work and separately pending operational inputs. Exact-stage source is
+implemented with fast diagnostics, not yet normal-hook/PG or consumer acceptance.
+No new runtime authority is implied; current assignment still NOT_MET.
+
 [Current implementation, contracts, source pins, gates and Claude handoff](c7-runtime-integration-2026-10-19.md)
 supersedes the local-integration status below, not historical receipt outcomes.
 The current-Core source successor is being reconciled with the already-landed

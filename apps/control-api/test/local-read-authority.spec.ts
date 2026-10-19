@@ -17,7 +17,7 @@ describe("BE-R2-8 authenticated local read authority", () => {
     "/realtime/diagnostics",
     "/profiles/paper/realtime-snapshot", "/profiles/paper/stream",
     "/adapters/paper/broker-acknowledgement", "/history/paper/manager.performance:account_equity_snapshots",
-    "/alphas/equity-sparklines", "/alphas/a/stage-drift",
+    "/alphas/equity-sparklines", "/alphas/a/stage-drift", "/alphas/a/stage-drift?numeric_format=DECIMAL_STRING",
     "/alphas/a/query-analytics", "/deployments/d/query-analytics", "/portfolios/p/query-analytics",
     "/portfolios/p/correlation", "/portfolios/p/capital-ledger", "/portfolios/p/cross-equity",
     "/views/observed-timeline?environment=paper&subject_kind=alpha&subject_id=a",
@@ -56,7 +56,7 @@ describe("BE-R2-8 authenticated local read authority", () => {
     await ctx.pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES ($1,$2,'MEMBER')", [workspace, actors["ar01-member"].userId]);
     vi.spyOn(ctx.app.get(ExecutionProfileProjectionRepository), "snapshot").mockImplementation(read);
     vi.spyOn(ctx.app.get(ExecutionProfileRealtimeService), "snapshot").mockImplementation(read);
-    for (const method of ["query", "observedTimeline", "equitySparklines", "stageDrift"] as const) {
+    for (const method of ["query", "observedTimeline", "equitySparklines", "stageDrift", "stageDriftExact"] as const) {
       vi.spyOn(ctx.app.get(LocalQueryAnalyticsService), method).mockImplementation(read);
     }
     for (const method of ["correlation", "capitalLedger", "crossEquity"] as const) {

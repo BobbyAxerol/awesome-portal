@@ -18,7 +18,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AppModule, type ControlApiDependencies } from "../src/app.module";
 import type { ControlApiConfig } from "../src/config";
 import { nativeCoreRuntimeReference, prepareNativeCoreRuntime,
-  NativeCoreRuntimeError } from "../src/execution-v2/native-core-runtime";
+  NativeCoreRuntimeError, nativeResearchSchemaReference, prepareNativeResearchSchemaInstall } from "../src/execution-v2/native-core-runtime";
 import { composeOwnedNativeCoreRuntime } from "../src/execution-v2/native-core-bootstrap";
 import { NativeManagerReadConsumer } from "../src/execution-v2/native-manager-consumer";
 import { MaximumDataOperationService } from "../src/execution/maximum-data-operation.service";
@@ -28,6 +28,8 @@ import { CONTROL_API_CONFIG } from "../src/tokens";
 import { MaximumDataOperationController } from "../src/execution/maximum-data-operation.controller";
 import type { WorkspacesRepository } from "../src/repos/workspaces";
 import { MAXIMUM_DATA_DEPLOYMENT_OPERATION } from "../src/execution/maximum-data-operation.registry";
+import { loadConfig } from "../src/config";
+import {ExecutionProfileProjectionWorker} from "../src/execution/profile-projection.worker";
 
 const raw = (s: string) => s.repeat(64);
 const digest = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -115,6 +117,80 @@ function instantiate(provider: FactoryProvider, operations: MaximumDataOperation
 }
 
 describe("TEST_ONLY private bootstrap real leaf / real signing-key checks", () => {
+  it("loads schema-only intent independently of the future private TLS/mapping/runtime bundle",async()=>{
+    const f=await fixture();
+    const value={schema_version:"portal.native-research-schema-install.v1",environment:"paper",profile_id:"PAPER_BINANCE_USDM",
+      pool_profile:f.value.pool_profile,target:f.target};
+    const pin=await f.leaf("schema-only.json",JSON.stringify(value));
+    const env={CONTROL_API_NATIVE_SCHEMA_TARGET_FILE:pin.path,CONTROL_API_NATIVE_SCHEMA_TARGET_SHA256:pin.sha256,
+      CONTROL_API_NATIVE_CORE_CONFIG_FILE:"MALFORMED-FUTURE-RUNTIME-NOT-READ"};
+    const selected=nativeResearchSchemaReference(env)!;
+    expect(await prepareNativeResearchSchemaInstall(selected,f.workspace)).toEqual({poolProfile:value.pool_profile,target:value.target});
+    expect(nativeResearchSchemaReference({})).toBeUndefined();
+    expect(()=>nativeResearchSchemaReference({CONTROL_API_NATIVE_SCHEMA_TARGET_FILE:pin.path})).toThrow(safe.message);
+  });
+  it("rejects schema-only intent with wrong scope, multiple principals, unsafe pools or authority fields",async()=>{
+    const f=await fixture();
+    const value={schema_version:"portal.native-research-schema-install.v1",environment:"paper",profile_id:"PAPER_BINANCE_USDM",
+      pool_profile:f.value.pool_profile,target:f.target};
+    const bad=[{...value,environment:"live"},{...value,profile_id:"OTHER"},{...value,composition:{}},
+      {...value,target:{...f.target,principal_workspace_pins:[...f.target.principal_workspace_pins,...f.target.principal_workspace_pins]}},
+      {...value,target:{...f.target,principal_workspace_pins:[{user_id:f.actor,workspace_id:"OTHER"}]}},
+      {...value,pool_profile:{...value.pool_profile,max:11}},
+      {...value,pool_profile:{...value.pool_profile,query_timeout:value.pool_profile.statement_timeout}}];
+    for(let i=0;i<bad.length;i++){
+      const pin=await f.leaf(`schema-bad-${i}.json`,JSON.stringify(bad[i]));
+      await expect(prepareNativeResearchSchemaInstall(pin,f.workspace)).rejects.toMatchObject(safe);
+    }
+    const pin=await f.leaf("schema-wrong-workspace.json",JSON.stringify(value));
+    await expect(prepareNativeResearchSchemaInstall(pin,"OTHER")).rejects.toMatchObject(safe);
+  });
+  it("enforces private canonical file/hash rules on the independent schema intent",async()=>{
+    const f=await fixture();
+    const value={schema_version:"portal.native-research-schema-install.v1",environment:"paper",profile_id:"PAPER_BINANCE_USDM",
+      pool_profile:f.value.pool_profile,target:f.target};
+    const pin=await f.leaf("schema-rules.json",JSON.stringify(value));
+    await expect(prepareNativeResearchSchemaInstall({...pin,sha256:raw("0")},f.workspace)).rejects.toMatchObject(safe);
+    const link=join(f.root,"schema-link.json");await symlink(pin.path,link);
+    await expect(prepareNativeResearchSchemaInstall({...pin,path:link},f.workspace)).rejects.toMatchObject(safe);
+    await chmod(pin.path,0o640);
+    await expect(prepareNativeResearchSchemaInstall(pin,f.workspace)).rejects.toMatchObject(safe);
+    const padded=await f.leaf("schema-padded.json",JSON.stringify(value)+"\n");
+    await expect(prepareNativeResearchSchemaInstall(padded,f.workspace)).rejects.toMatchObject(safe);
+  });
+  it("keeps ordinary defaults unchanged and refuses native commissioning outside its isolated local Paper ceiling",()=>{
+    const base={PORTAL_ENV:"local",AUTH_MODE:"dev",DATABASE_URL:"postgres://TEST_ONLY/TEST_ONLY_core"};
+    expect(loadConfig(base).EXECUTION_READ_PROFILE).toBe("source_current_v1");
+    const review={...base,EXECUTION_READ_PROFILE:"native_manager_review_v1",
+      EXECUTION_DATABASE_URL:"postgres://TEST_ONLY/TEST_ONLY_execution",EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID:"TEST_ONLY_workspace",
+      FEATURE_EXECUTION_EDGE:"true",FEATURE_EXECUTION_CURRENT_SOURCE_PAPER:"true",FEATURE_EXECUTION_LOCAL_PROJECTION:"true",
+      EXECUTION_EDGE_PRIVATE_KEY_FILE:"/TEST_ONLY/not-read.key",EXECUTION_EDGE_CA_FILE:"/TEST_ONLY/not-read.ca",
+      EXECUTION_EDGE_CLIENT_CERT_FILE:"/TEST_ONLY/not-read.crt",EXECUTION_EDGE_CLIENT_KEY_FILE:"/TEST_ONLY/not-read.client-key",
+      EXECUTION_EDGE_PAPER_ORIGIN:"https://TEST-ONLY.invalid",EXECUTION_EDGE_PAPER_PROFILE_ID:"PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_PAPER_AUDIENCE:"portal-execution-edge-paper"};
+    expect(loadConfig(review).EXECUTION_READ_PROFILE).toBe("native_manager_review_v1");
+    expect(()=>loadConfig({...review,EXECUTION_DATABASE_URL:base.DATABASE_URL})).toThrow("EXECUTION_DATABASE_MUST_BE_ISOLATED");
+    for(const key of ["FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX","FEATURE_EXECUTION_CURRENT_SOURCE_LIVE",
+      "FEATURE_EXECUTION_REALTIME_SSE","FEATURE_EXECUTION_DURABLE_MIRROR","FEATURE_EXECUTION_COMMAND_RELAY"])
+      expect(()=>loadConfig({...review,[key]:"true"})).toThrow();
+    expect(()=>loadConfig({...review,EXECUTION_EDGE_LIVE_PROFILE_ID:"LIVE_BINANCE_USDM"})).toThrow("NATIVE_RESEARCH_REVIEW_FORBIDS_OTHER_PROFILES_AND_LEGACY_WORKERS");
+    expect(()=>loadConfig({...review,PORTAL_ENV:"live"})).toThrow();
+  });
+  it("refuses the explicit Research profile before provider construction without genuine native composition", () => {
+    const db=poolFixture({database_name:"TEST_ONLY-core",role_name:"TEST_ONLY-runtime",database_system_identifier:"1"});
+    expect(()=>AppModule.register({EXECUTION_READ_PROFILE:"native_manager_review_v1"} as ControlApiConfig,db.pool))
+      .toThrow("NATIVE_RESEARCH_REVIEW_COMPOSITION_REQUIRED");
+    expect(db.query).not.toHaveBeenCalled();
+  });
+  it("requires independent realtime limits and exact single Paper actor/workspace for Research",async()=>{
+    const f=await fixture(),prepared=await prepareNativeCoreRuntime(await f.manifest());
+    expect(()=>prepared.researchReviewTarget(f.workspace)).toThrow(safe.message);
+    const withRealtime={...f.value,realtime_limits:{maximumClients:2,maximumEntriesPerClient:8,maximumFrameBytes:65536,
+      maximumClientBytes:131072,maximumTotalBytes:262144,maximumNoticesPerRead:20,readTimeoutMs:1000}};
+    const selected=await prepareNativeCoreRuntime(await f.leaf("runtime-review.json",JSON.stringify(withRealtime)));
+    expect(selected.researchReviewTarget(f.workspace)).toEqual(f.target);
+    expect(()=>selected.researchReviewTarget("OTHER-workspace")).toThrow(safe.message);
+  });
   it("leaves absent selection inert; refuses partial selection instead of fallback", () => {
     expect(nativeCoreRuntimeReference({})).toBeUndefined();
     expect(() => nativeCoreRuntimeReference({ CONTROL_API_NATIVE_CORE_CONFIG_FILE: "/TEST_ONLY/not-read" })).toThrow(safe.message);
@@ -180,6 +256,26 @@ describe("TEST_ONLY compose failure disposal, no app or active native custody", 
 });
 
 describe("TEST_ONLY actual Nest DI of exact AppModule native provider, not full app init", () => {
+  it("never starts the legacy ingestion worker in native-only Research",async()=>{
+    const cfg={EXECUTION_READ_PROFILE:"native_manager_review_v1",FEATURE_EXECUTION_LOCAL_PROJECTION:"true"} as ControlApiConfig;
+    const worker=new ExecutionProfileProjectionWorker(cfg,{} as never,{} as never);
+    const run=vi.spyOn(worker,"runOnce");
+    worker.onApplicationBootstrap();
+    expect(run).not.toHaveBeenCalled();
+    await expect(worker.runOnce()).resolves.toBeUndefined();
+    await worker.onApplicationShutdown();
+  });
+  it("denies unknown native people instead of invoking either legacy Manager reader",async()=>{
+    const operations={deploymentPage:vi.fn(),relationPage:vi.fn()} as unknown as MaximumDataOperationService;
+    const consumer={serve:vi.fn(async()=>false)} as unknown as NativeManagerReadConsumer;
+    const workspaces={canReadExecution:vi.fn(async()=>true)} as unknown as WorkspacesRepository;
+    const controller=new MaximumDataOperationController(operations,workspaces,consumer,
+      {EXECUTION_READ_PROFILE:"native_manager_review_v1"} as ControlApiConfig);
+    const request={portalUser:{userId:"TEST_ONLY-unselected"},portalSession:{},portalWorkspaceId:"TEST_ONLY-workspace"} as never;
+    await expect(controller.deployments(request,{},{} as FastifyReply)).rejects.toMatchObject({code:"NATIVE_MANAGER_READ_DENIED",status:403});
+    await expect(controller.currentRelation(request,"account-balances",{},{} as FastifyReply)).rejects.toMatchObject({code:"NATIVE_MANAGER_READ_DENIED",status:403});
+    expect(operations.deploymentPage).not.toHaveBeenCalled();expect(operations.relationPage).not.toHaveBeenCalled();
+  });
   it("accepts only the original genuine composition and refuses lookalike/pool/trust/coordinator substitutions", async () => {
     const f = await fixture(), db = poolFixture(f.target), prepared = await prepareNativeCoreRuntime(await f.manifest());
     const deps = await composeOwnedNativeCoreRuntime(prepared, db.pool);

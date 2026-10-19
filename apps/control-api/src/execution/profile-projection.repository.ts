@@ -589,10 +589,46 @@ export class ExecutionProfileProjectionRepository {
     };
   }
 
+  /** Exact successor: inspect the latest row even when its value is malformed;
+   * never silently replace a bad close with an earlier apparently valid row.
+   * The extra row is a refusal witness, not a partial/truncated response. */
+  async stageEquityDailyCloses(
+    workspaceId: string, environment: ProjectionEnvironment, profileId: string,
+    query: { from: string; strategyId: string; maximumRows: number; scope?: AuthorizedExecutionReadScope },
+  ): Promise<Array<{ strategyId: string; accountId: string; day: string; value: string | null; currency: string | null }>> {
+    const relation = "manager.performance:account_equity_snapshots";
+    if (!Number.isInteger(query.maximumRows) || query.maximumRows < 1 || query.maximumRows > 20_000)
+      throw new Error("STAGE_EQUITY_ROW_BOUND_INVALID");
+    if (query.scope) {
+      this.assertHistoryScope(query.scope, workspaceId, environment, profileId, relation, { from: query.from });
+      for (const field of ["equity", "currency", "strategy_id", "account_id"])
+        if (query.scope.mode === "SCOPED_V2" && !scopeAllowsQueryField(query.scope, field))
+          throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+    }
+    const predicate = query.scope ? projectionScopeSql(query.scope, "fields", 8) : { sql: "TRUE", values: [] };
+    const result = await this.retainedDataQuery<{
+      strategy_id: string; account_id: string; day: string; value: string | null; currency: string | null;
+    }>(
+      `SELECT DISTINCT ON (fields->>'account_id', (ts AT TIME ZONE 'UTC')::date)
+              fields->>'strategy_id' AS strategy_id, left(fields->>'account_id', 193) AS account_id,
+              to_char((ts AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS day,
+              CASE WHEN jsonb_typeof(fields->'equity')='string' THEN left(fields->>'equity', 129) ELSE NULL END AS value,
+              CASE WHEN jsonb_typeof(fields->'currency')='string' THEN left(fields->>'currency', 33) ELSE NULL END AS currency
+         FROM ${this.historyTable()}
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4
+          AND ts >= $5::timestamptz AND fields->>'strategy_id'=$6
+          AND fields->>'account_id' IS NOT NULL AND ${predicate.sql}
+        ORDER BY fields->>'account_id', (ts AT TIME ZONE 'UTC')::date, ts DESC, row_id DESC
+        LIMIT $7`,
+      [workspaceId, environment, profileId, relation, query.from, query.strategyId, query.maximumRows + 1, ...predicate.values],
+    );
+    return result.rows.map(row => ({ strategyId: row.strategy_id, accountId: row.account_id,
+      day: row.day, value: row.value, currency: row.currency }));
+  }
+
   /**
-   * §14 E1: per-(strategy, account) daily closes from the mirror — the
-   * bounded statistical feed for cross-alpha correlation and drawdown
-   * analytics. One real row per account per day (the last of the day).
+   * §14 E1 legacy statistical feed, deliberately unchanged for V1 consumers.
+   * The exact-stage successor above must not inherit its value filtering.
    */
   async timeSeriesDailyCloses(
     workspaceId: string,

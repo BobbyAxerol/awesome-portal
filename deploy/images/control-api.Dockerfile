@@ -24,6 +24,7 @@ WORKDIR /opt/control-api
 COPY --chown=node:node --from=build /opt/control-api/node_modules ./node_modules
 COPY --chown=node:node --from=build /opt/control-api/dist ./dist
 COPY --chown=node:node apps/control-api/migrations ./migrations
+COPY --chown=node:node apps/control-api/src/execution-v2/current-human-candidate.sql ./native-schema/current-human-candidate.sql
 COPY --chown=node:node apps/control-api/package.json ./
 COPY --chown=node:node deploy/control-api/bootstrap-users.yaml ./bootstrap-users.yaml
 

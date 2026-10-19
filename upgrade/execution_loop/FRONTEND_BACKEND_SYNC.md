@@ -9,6 +9,35 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### Codex renewed C7 round — 2026-10-19, after d078 landing
+
+Latest continuation reads peer`f9306af8030d89ac7b529be705b267c66f10e44d`,
+including`0f58115a` reader SE-1/CC-1/CC-2 follow-through and ledger refresh.
+No new request in that committed delta; peer staged receipt WIP untouched.
+Research-only installation is now approved by Bobby. Explicit native profile,
+registered offline schema and private preview overlay are implemented but NOT
+installed. Actual official readonly lookup returned NO_ACTIVE_MAPPING for
+the exact Research Bobby, not stable Bobby. [Implementation, preserved failed
+focused gate, corrected diagnostic and next operational work](evidence/ELP2-10/c7-closeout-followthrough-2026-10-19.md#research-only-native-composition--implementation-and-actual-observations).
+No consumer/browser or connected finite/SSE PASS inferred; FE-054 other
+subrequests and each FE-057…063/065 remain individually OPEN. Reused3agents,
+0new. No frontend edits, peer merge, push, dev/main or stable action.
+
+Clean canonical `d0789674afdff9e9a168a5a6f75e0f582c96ba54`; peer read pin
+`4f892c47dcdb984cdddc752d218e504b7a61b10e` plus active frontend/ledger WIP.
+No peer merge/edit. Previous actual normal hook PASS is reused for unchanged
+paths, not called genuine source acceptance. [Current task map, ACT_NOW /
+NEXT_GATE / INFO intake and scope](evidence/ELP2-10/c7-closeout-followthrough-2026-10-19.md).
+FE-054 remains an actual exact-decimal producer gap; the individually open
+FE-057…063/065 and current source gates are reviewed, not declared delivered.
+
+Renewed follow-through: peer repinned read-only to
+`a23c9d34e334d0485448e3ee5527b3939f40c476` (FE-only F5 closeout); no merge.
+FE-054 decimal subrequest has opt-in source/schema/generated/fixture and fast
+diagnostics, normal R3/PG pending. Timeline outcome/replay route remain OPEN;
+no whole-request or consumer ACK. [Exact operation, invariants, test boundaries
+and Claude next](evidence/ELP2-10/c7-closeout-followthrough-2026-10-19.md#fe-054-decimal-subrequest--source-implemented-normal-gate-pending).
+
 ### Codex round-start — 2026-10-19
 
 Canonical clean entry `35953e073f609c154ec484b19b4ceeeb09b566c8` already contains

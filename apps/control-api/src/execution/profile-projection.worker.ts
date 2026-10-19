@@ -20,6 +20,7 @@ import {
 } from "./eds11r-manager-relation.registry";
 import { legacyHistoryWriteEnabled } from "./durable-mirror-mode";
 import { retainedReview } from "./retained-read-profile";
+import { nativeResearchReview } from "./native-review-profile";
 
 const SOURCE_CONTRACT_REVISION = MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision;
 const SOURCE_CATALOGUE_SHA256 = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
@@ -475,7 +476,8 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     };
   }
 
-  private enabled(): boolean { return this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true" && !retainedReview(this.config); }
+  private enabled(): boolean { return this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true" &&
+    !retainedReview(this.config) && !nativeResearchReview(this.config); }
 
   /**
    * A transient upstream rejection never restarts this profile's whole cycle.

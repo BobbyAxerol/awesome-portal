@@ -101,10 +101,14 @@ export class ExecutionAnalyticsController {
   /** One alpha's equity in every stage it runs in, on one calendar. */
   @Get("/alphas/:alphaId/stage-drift")
   async stageDrift(@Req() request: AnalyticsRequest, @Param("alphaId") id: string, @Query() raw: unknown) {
-    const query = SparklineQuerySchema.omit({ environment: true }).safeParse(raw);
+    const query = SparklineQuerySchema.omit({ environment: true })
+      .extend({ numeric_format: z.literal("DECIMAL_STRING").optional() }).safeParse(raw);
     if (!query.success) throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
     // No `days` means everything the mirror holds: the charts default to All.
     const authorized = await this.readAuthority.authorize(request);
+    if (query.data.numeric_format === "DECIMAL_STRING") {
+      return this.invoke(() => this.localAnalytics.stageDriftExact(authorized, id, query.data.days));
+    }
     return this.invoke(() => this.localAnalytics.stageDrift(
       authorized, id, query.data.days,
     ));

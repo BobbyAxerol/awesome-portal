@@ -4,13 +4,21 @@ import { buildPool } from "./db/pool";
 import { createControlApiApp } from "./app";
 import { nativeCoreRuntimeReference, prepareNativeCoreRuntime } from "./execution-v2/native-core-runtime";
 import { composeOwnedNativeCoreRuntime, NativeCoreApplicationOwner } from "./execution-v2/native-core-bootstrap";
+import { nativeResearchReview } from "./execution/native-review-profile";
+import { assertRegisteredResearchCurrentHumanSchema } from "./execution-v2/current-human-schema";
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
   const reference = nativeCoreRuntimeReference();
   const native = reference ? await prepareNativeCoreRuntime(reference) : undefined;
+  const reviewTarget=nativeResearchReview(config)
+    ? native?.researchReviewTarget(config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!) : undefined;
+  if(nativeResearchReview(config)&&!reviewTarget)throw new Error("NATIVE_RESEARCH_REVIEW_COMPOSITION_REQUIRED");
   const pool = buildPool(config.DATABASE_URL, native?.poolProfile);
-  const dependencies = native ? await composeOwnedNativeCoreRuntime(native, pool) : undefined;
+  const dependencies = native ? await composeOwnedNativeCoreRuntime({compose:async ownedPool=>{
+    if(reviewTarget)await assertRegisteredResearchCurrentHumanSchema(ownedPool,reviewTarget);
+    return native.compose(ownedPool);
+  }}, pool) : undefined;
   const owner = native ? new NativeCoreApplicationOwner(pool) : undefined;
   try {
     const app = await createControlApiApp(config, pool, undefined, dependencies, owner);

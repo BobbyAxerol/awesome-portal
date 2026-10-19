@@ -29,7 +29,7 @@ const resources: AccessResource[] = [...new Map(tuples.flatMap(t => [
   { kind: "ACCOUNT" as const, id: t.account_id },
 ]).map(r => [JSON.stringify(r), r])).values()];
 const fields = ["alpha_id", "alpha_version_id", "deployment_id", "portfolio_id", "account_id", "strategy_id",
-  "order_id", "status", "created_at", "equity", "timestamp_ms", "display_name"];
+  "order_id", "status", "created_at", "equity", "currency", "timestamp_ms", "display_name"];
 const principal = {
   user: { userId: USER, username: USER, displayName: USER, role: "USER", status: "ACTIVE",
     mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
@@ -108,6 +108,13 @@ function fixture(options: { legacy?: boolean; omitEquity?: boolean } = {}) {
         { ...peer, strategy_id: "str-peer", value: "99999", day: "2026-01-02" } ];
       return rows.filter(r => !query.scope || projectionRowVisible(query.scope, r))
         .map(r => ({ strategyId: r.strategy_id, accountId: r.account_id, day: r.day, value: r.value }));
+    }),
+    stageEquityDailyCloses: vi.fn(async (...args: unknown[]): Promise<Awaited<ReturnType<ExecutionProfileProjectionRepository["stageEquityDailyCloses"]>>> => {
+      const query = args[3] as { scope?: Parameters<typeof projectionRowVisible>[0] };
+      const rows = [{ ...own, strategy_id: "str-own", value: "9007199254740993.03" },
+        { ...peer, strategy_id: "str-peer", value: "99999" }];
+      return rows.filter(r => !query.scope || projectionRowVisible(query.scope, r))
+        .map(r => ({ strategyId: r.strategy_id, accountId: r.account_id, day: "2026-01-01", value: r.value, currency: "USD" }));
     }),
   };
   return { service: new LocalQueryAnalyticsService(config, repository as unknown as ExecutionProfileProjectionRepository, scopes),
@@ -201,6 +208,35 @@ describe("ELP2 scoped analytics and history boundaries", () => {
       return [];
     });
     await expect(f.service.equitySparklines(principal, "paper")).rejects.toBeInstanceOf(ExecutionReadScopeError);
+  });
+  it("exact stage read uses actual minted scopes, preserving own decimal and excluding the shared-account peer", async () => {
+    const f = fixture();
+    const value = await f.service.stageDriftExact(principal, own.alpha_id);
+    expect(value.stages.paper.series).toEqual(["9007199254740993.03"]);
+    expect(JSON.stringify(value)).not.toContain("99999");
+    const scope = (f.repository.stageEquityDailyCloses.mock.calls[0][3] as { scope: { mode: string } }).scope;
+    expect(scope.mode).toBe("SCOPED_V2");
+  });
+  it("exact stage read refuses missing currency field policy before reading history", async () => {
+    const f = fixture();
+    f.context.policy!.researcher_fields.fields = fields.filter(field => field !== "currency");
+    // A repository must independently check every queried field, so exercise
+    // the real repository method before its DB call with the minted scope.
+    f.repository.stageEquityDailyCloses.mockImplementation(async (...args) => {
+      const real = new ExecutionProfileProjectionRepository({ query: vi.fn() } as unknown as Pool);
+      return real.stageEquityDailyCloses(args[0] as string, args[1] as "paper", args[2] as string, args[3] as never);
+    });
+    await expect(f.service.stageDriftExact(principal, own.alpha_id))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_FIELD_POLICY_PENDING" });
+  });
+  it("exact stage read fences revoke after a failed history read, not just successful reads", async () => {
+    const f = fixture();
+    f.repository.stageEquityDailyCloses.mockImplementation(async () => {
+      f.grant.revoked_at_ms = NOW - 1;
+      throw new Error("TEST_ONLY source failure after revoke");
+    });
+    await expect(f.service.stageDriftExact(principal, own.alpha_id))
+      .rejects.toBeInstanceOf(ExecutionReadScopeError);
   });
   it("does not report withheld financial sums as exact zero", async () => {
     const f = fixture();

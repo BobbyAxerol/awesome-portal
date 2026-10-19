@@ -9676,6 +9676,18 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**2026-10-19 renewed return:** [fresh source/target and operational prerequisites,
+actual preceding R3PASS, local assembly gaps and FE-054 exact-stage successor](execution_loop/evidence/ELP2-10/c7-closeout-followthrough-2026-10-19.md).
+Whole10 remains NOT_MET. Bobby subsequently approved an exact Research-only
+installation (not production budget/calibration). Explicit native-only profile,
+offline registered-schema installer and private overlay are implemented;
+focused Node22 build passed,284PASS/1test-expectationFAIL preserved/corrected.
+Actual official PM lookup found no ACTIVE mapping for exact Research Bobby;
+stable subject is different and is not reused. [Current implementation,
+tests, target, mapping observation, continuation and rollback](execution_loop/evidence/ELP2-10/c7-closeout-followthrough-2026-10-19.md#research-only-native-composition--implementation-and-actual-observations).
+Normal R3 and genuine installation/finite/SSE/revoke/recovery remain pending;
+no runtime activation, push, ELP2-11 or peer merge by this return.
+
 - **Goal/dependency:** selected changed reads/workflows/streams; approved target/quota/threshold trước load. Không dùng máy TS/DL đang đo làm test cell.
 - **To-do:** query plans/pools, source amplification, queues/bytes/retention/WAL/RSS/CPU, correction cadence, lease/DR, cashflow-only oracle; Score P3 calibration; classify old receipts reusable vs impacted.
 - **Claude:** UXM-10 browser latency/overflow/a11y, multi-tab/reconnect and no per-browser upstream workload.

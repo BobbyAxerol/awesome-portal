@@ -23,6 +23,7 @@ import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "./exec
 import type { CurrentHumanMutations } from "./execution-v2/current-human-mutations";
 import { composeNativeCore,nativeCoreManagerReadConsumer } from "./execution-v2/native-core-composition";
 import { NativeManagerReadConsumer } from "./execution-v2/native-manager-consumer";
+import { nativeResearchReview } from "./execution/native-review-profile";
 import { ScopedReplayCursorCodec } from "./execution-v2/scoped-replay-cursor";
 import type { ScopedReplayLimits } from "./execution-v2/realtime";
 import { ExecutionReadScopes } from "./execution-v2/read-scope";
@@ -268,6 +269,9 @@ export class AppModule implements OnApplicationShutdown {
 
   static register(config: ControlApiConfig, pool: Pool, executionPool?: Pool,
     dependencies: ControlApiDependencies = {}): DynamicModule {
+    if (nativeResearchReview(config) && (!dependencies.nativeManagerRead || !dependencies.nativeManagerRealtimeLimits ||
+      !dependencies.currentHumanMutations || !dependencies.executionAccessTrust))
+      throw new Error("NATIVE_RESEARCH_REVIEW_COMPOSITION_REQUIRED");
     if (dependencies.nativeManagerRealtimeLimits !== undefined && dependencies.nativeManagerRead === undefined)
       throw new Error("NATIVE_MANAGER_REALTIME_COMPOSITION_REQUIRED");
     const nativeRealtimeLimits = dependencies.nativeManagerRealtimeLimits === undefined

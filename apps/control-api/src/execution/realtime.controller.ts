@@ -34,6 +34,7 @@ import { ExecutionLocalReadAuthority } from "./local-read-authority";
 import { retainedReview, localProfileReadable } from "./retained-read-profile";
 import { ExecutionReadScopes, ExecutionReadScopeError, type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
 import { NativeManagerReadConsumer } from "../execution-v2/native-manager-consumer";
+import { nativeResearchReview } from "./native-review-profile";
 import { ScopedReplayError } from "../execution-v2/scoped-replay-cursor";
 import { MaximumDataOperationError } from "./maximum-data-operation.service";
 import { technicalDiagnosticsSchema } from "../execution-v2/technical-read.contract";
@@ -186,6 +187,7 @@ export class ExecutionRealtimeController {
           environment,profileId,this.localRealtime,reply)) return;
       } catch (error) { throw localHttpError(error); }
     }
+    if (nativeResearchReview(this.config)) throw new LocalRealtimeError("NATIVE_MANAGER_READ_DENIED",403);
     if (retainedReview(this.config)) {
       // No resumable cursor exists in this profile. A 204 is intentional
       // absence, not a successful heartbeat or an upstream error. Older
@@ -225,6 +227,7 @@ export class ExecutionRealtimeController {
         catch { reply.raw.destroy(); }
         return;
       }
+      if (nativeResearchReview(this.config)) throw new LocalRealtimeError("NATIVE_MANAGER_READ_DENIED",403);
       await this.legacyStream(request, workspaceId);
       reply.hijack();
       reply.raw.writeHead(200, {

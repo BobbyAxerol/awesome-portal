@@ -185,12 +185,12 @@
     {
       "id": "projection_worker",
       "file": "apps/control-api/src/execution/profile-projection.worker.ts",
-      "sha256": "sha256:2c572a2051619e0876170ba2a02ecdf3cda437e110fec4215b11e3c631681a1c"
+      "sha256": "sha256:788f7245f16c3956dc4d7afb41536679a32d6e27f4543f5f80959c911f4a9269"
     },
     {
       "id": "projection_repository",
       "file": "apps/control-api/src/execution/profile-projection.repository.ts",
-      "sha256": "sha256:9d78acdf02e8943ec6674d91189b00cadde04f66e2085ceeddc41f02f01f94a9"
+      "sha256": "sha256:1d609b5a0bdb65c474090b6446abe4a7f2e6ca6bc5f0dba478a5fcba34435c57"
     },
     {
       "id": "market_context_intake",

@@ -1728,6 +1728,28 @@ describe("Daily closes for cross-alpha statistics (§14 E1)", () => {
       { strategyId: "alpha_x", accountId: "acc_b", day: "2026-09-02", value: "512" },
     ]);
   });
+
+  it("exact stage successor keeps a malformed LATEST close and exact currency/decimal text, with an overflow witness", async () => {
+    const samples = [
+      { rowId: "exact_earlier", ts: "2026-09-01T08:00:00Z", fields: { strategy_id: "exact_alpha", account_id: "exact_a", equity: "1.2", currency: "USD" } },
+      { rowId: "exact_latest", ts: "2026-09-01T23:00:00Z", fields: { strategy_id: "exact_alpha", account_id: "exact_a", equity: "not-a-decimal", currency: "USD" } },
+      { rowId: "exact_next_day", ts: "2026-09-02T00:00:00Z", fields: { strategy_id: "exact_alpha", account_id: "exact_a", equity: "9007199254740993.03", currency: "USD" } },
+      { rowId: "exact_number", ts: "2026-09-03T00:00:00Z", fields: { strategy_id: "exact_alpha", account_id: "exact_a", equity: 0.3, currency: 123 } },
+      { rowId: "exact_peer", ts: "2026-09-02T00:00:00Z", fields: { strategy_id: "other_alpha", account_id: "peer", equity: "999", currency: "USD" } },
+    ];
+    await repository.appendTimeSeriesHistory(workspaceId, "paper", profileId, equityKey, samples as never);
+    const args = { from: "2026-08-31T00:00:00Z", strategyId: "exact_alpha", maximumRows: 20_000 };
+    const rows = await repository.stageEquityDailyCloses(workspaceId, "paper", profileId, args);
+    expect(rows).toEqual([
+      { strategyId: "exact_alpha", accountId: "exact_a", day: "2026-09-01", value: "not-a-decimal", currency: "USD" },
+      { strategyId: "exact_alpha", accountId: "exact_a", day: "2026-09-02", value: "9007199254740993.03", currency: "USD" },
+      { strategyId: "exact_alpha", accountId: "exact_a", day: "2026-09-03", value: null, currency: null },
+    ]);
+    // A caller with cap1 gets TWO as refusal witness; never a silent first-page sum.
+    expect(await repository.stageEquityDailyCloses(workspaceId, "paper", profileId, { ...args, maximumRows: 1 })).toHaveLength(2);
+    await expect(repository.stageEquityDailyCloses(workspaceId, "paper", profileId, { ...args, maximumRows: 20_001 }))
+      .rejects.toThrow("STAGE_EQUITY_ROW_BOUND_INVALID");
+  });
 });
 
 describe("P4-D window ladder merge", () => {

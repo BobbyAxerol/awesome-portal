@@ -10,6 +10,9 @@ import {
 } from "./maximum-data-operation.service";
 import { browserManagerRelationOperationManifest } from "./eds11r-manager-relation.registry";
 import { NativeManagerReadConsumer } from "../execution-v2/native-manager-consumer";
+import { CONTROL_API_CONFIG } from "../tokens";
+import type { ControlApiConfig } from "../config";
+import { nativeResearchReview } from "./native-review-profile";
 
 const DeploymentPageQuerySchema = z.object({
   workspace_id: z.string().trim().min(1).max(96).optional(),
@@ -38,6 +41,7 @@ export class MaximumDataOperationController {
     @Inject(MaximumDataOperationService) private readonly operations: MaximumDataOperationService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Optional() @Inject(NativeManagerReadConsumer) private readonly nativeRead?: NativeManagerReadConsumer,
+    @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig,
   ) {}
 
   @Get("/deployments")
@@ -58,6 +62,7 @@ export class MaximumDataOperationController {
           ...(query.data.cursor?{cursor:query.data.cursor}:{})},
       },reply))return;
     }
+    if (nativeResearchReview(this.config)) throw new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403);
     return this.operations.deploymentPage(
       { user: request.portalUser, session: request.portalSession, workspaceId,
         viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
@@ -108,6 +113,7 @@ export class MaximumDataOperationController {
           ...(query.data.cursor?{cursor:query.data.cursor}:{})},
       },reply))return;
     }
+    if (nativeResearchReview(this.config)) throw new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403);
     return this.operations.relationPage(
       { user: request.portalUser, session: request.portalSession, workspaceId,
         viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },

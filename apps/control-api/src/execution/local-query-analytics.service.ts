@@ -8,6 +8,8 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { KeysetCursorCodec, QueryContractError, queryFingerprint } from "../query";
 import { AnalyticsPrincipal, AnalyticsProxyError, QueryAnalyticsSubjectKind } from "./analytics.proxy";
 import { panelEnvelope, utcEpochMs, type PanelEnvelope } from "./contract-authority";
+import { exactStageDrift, stageDriftCurrency, stageDriftDecimal, stageDriftReason,
+  STAGE_DRIFT_MAX_BYTES, STAGE_DRIFT_MAX_ROWS, type ExactStageDrift, type StageDriftReason } from "./stage-drift.contract";
 import {
   ExecutionProfileProjectionRepository,
   ProfileProjectionSnapshot,
@@ -666,6 +668,96 @@ export class LocalQueryAnalyticsService {
        */
       research_binding: { state: "UNAVAILABLE", reason_code: "N28_RESEARCH_EVIDENCE_JOIN_NOT_ACTIVATED", run_id: null, artifact_digest: null },
     };
+  }
+
+  /** Opt-in exact successor; legacy V1 wire is deliberately unchanged. */
+  async stageDriftExact(principal: AnalyticsCaller, alphaId: string, days?: number): Promise<ExactStageDrift> {
+    if (!/^[A-Za-z0-9._:-]{1,192}$(?![\s\S])/.test(alphaId))
+      throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
+    if (days !== undefined && (!Number.isInteger(days) || days < 2 || days > 365))
+      throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
+    if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
+    const from = days === undefined ? new Date(0).toISOString() : new Date(Date.now() - days * 86_400_000).toISOString();
+    type Stage = { deployed: boolean; reason: StageDriftReason | null; currency: string | null;
+      values: Map<string, string>; absent: Map<string, StageDriftReason> };
+    const stages = {} as Record<ProjectionEnvironment, Stage>;
+    const calendar = new Set<string>();
+    const contexts: LocalAnalyticsContext[] = [];
+    // Current authority/source fences apply to refusal outcomes too: a query
+    // failure or overflow must not disclose source state after a revoke.
+    try {
+    for (const environment of ["paper", "sandbox", "live"] as const) {
+      const stage: Stage = { deployed: false, reason: null, currency: null, values: new Map(), absent: new Map() };
+      stages[environment] = stage;
+      let context: LocalAnalyticsContext;
+      try {
+        context = await this.localContext(environment, principal, analyticsRequirement("alpha", alphaId));
+        contexts.push(context);
+      } catch (error) {
+        if (error instanceof ExecutionReadScopeError) throw error;
+        const reason = error instanceof AnalyticsProxyError ? stageDriftReason.safeParse(error.code) : null;
+        stage.reason = reason?.success ? reason.data : "PROFILE_UNAVAILABLE";
+        continue;
+      }
+      const strategyId = resolveStrategyId(context.snapshot, alphaId);
+      stage.deployed = (context.snapshot.document.relations[SOURCE.deployments]?.items ?? [])
+        .some(row => row.fields.strategy_id === strategyId);
+      if (!stage.deployed) { stage.reason = "NO_DEPLOYMENT_IN_STAGE"; continue; }
+      if (typeof this.repository.stageEquityDailyCloses !== "function") {
+        stage.reason = "HISTORY_MIRROR_NOT_AVAILABLE"; continue;
+      }
+      const rows = await this.repository.stageEquityDailyCloses(context.workspaceId, environment, context.profileId,
+        { from, strategyId, maximumRows: STAGE_DRIFT_MAX_ROWS, scope: await this.historyScope(context, SOURCE.accountEquity) });
+      if (rows.length > STAGE_DRIFT_MAX_ROWS) throw new AnalyticsProxyError("ANALYTICS_RESPONSE_TOO_LARGE", 503);
+      const seen = new Set<string>(), currencies = new Set<string>();
+      for (const row of rows) {
+        // Repository bugs or a broken source grain must not produce a partial
+        // plausible sum, leak a peer calendar, or double-count an account.
+        if (row.strategyId !== strategyId || typeof row.accountId !== "string" || row.accountId.length < 1 || row.accountId.length > 192 ||
+          !/^\d{4}-\d{2}-\d{2}$(?![\s\S])/.test(row.day) ||
+          !Number.isFinite(Date.parse(`${row.day}T00:00:00Z`)) || new Date(`${row.day}T00:00:00Z`).toISOString().slice(0, 10) !== row.day ||
+          seen.has(JSON.stringify([row.accountId, row.day])))
+          throw new AnalyticsProxyError("ANALYTICS_HISTORY_INCONSISTENT", 503);
+        seen.add(JSON.stringify([row.accountId, row.day]));
+        calendar.add(row.day);
+        const currency = stageDriftCurrency.safeParse(row.currency);
+        const value = stageDriftDecimal.safeParse(row.value);
+        if (currency.success) currencies.add(currency.data);
+        else stage.absent.set(row.day, "EQUITY_CURRENCY_NOT_PUBLISHED");
+        if (!value.success) stage.absent.set(row.day, "EQUITY_DECIMAL_INVALID");
+        if (currency.success && value.success) {
+          const sum = addDecimal(stage.values.get(row.day) ?? "0", value.data);
+          if (!stageDriftDecimal.safeParse(sum).success)
+            throw new AnalyticsProxyError("ANALYTICS_RESPONSE_TOO_LARGE", 503);
+          stage.values.set(row.day, sum);
+        }
+      }
+      if (!rows.length) stage.reason = "NO_EQUITY_IN_WINDOW";
+      else if (currencies.size > 1) stage.reason = "MIXED_CURRENCIES_NOT_AGGREGATED";
+      else stage.currency = currencies.values().next().value ?? null;
+    }
+    const grid = [...calendar].sort();
+    if (grid.length > STAGE_DRIFT_MAX_ROWS) throw new AnalyticsProxyError("ANALYTICS_RESPONSE_TOO_LARGE", 503);
+    const response = exactStageDrift.parse({
+      schema_version: "portal.execution.alpha-stage-drift.v2", alpha_id: alphaId,
+      qualification: "RETAINED_OBSERVATIONS_NOT_FINANCIAL_CERTIFICATION",
+      window: { days: grid.length > 1 ? Math.round((Date.parse(grid.at(-1)!) - Date.parse(grid[0])) / 86_400_000) + 1 : grid.length,
+        requested_days: days ?? null, basis: "PORTAL_SGP_HISTORY_MIRROR",
+        daily_basis: "LAST_CLOSE_PER_DAY_SUMMED_ACROSS_ACCOUNTS_SAME_CURRENCY" }, calendar: grid,
+      stages: Object.fromEntries(Object.entries(stages).map(([environment, stage]) => {
+        const reasons = grid.map(day => stage.reason ?? stage.absent.get(day) ??
+          (stage.values.has(day) ? null : "NO_EQUITY_FOR_DAY"));
+        return [environment, { deployed: stage.deployed, reason_code: stage.reason, currency: stage.currency,
+          series: grid.map((day, index) => reasons[index] === null ? stage.values.get(day)! : null), series_reason_codes: reasons }];
+      })),
+      research_binding: { state: "UNAVAILABLE", reason_code: "N28_RESEARCH_EVIDENCE_JOIN_NOT_ACTIVATED", run_id: null, artifact_digest: null },
+    });
+    if (Buffer.byteLength(JSON.stringify(response), "utf8") > STAGE_DRIFT_MAX_BYTES)
+      throw new AnalyticsProxyError("ANALYTICS_RESPONSE_TOO_LARGE", 503);
+    return response;
+    } finally {
+      for (const context of contexts) await this.finish(context, undefined);
+    }
   }
 
   private async portfolioStatistics(
