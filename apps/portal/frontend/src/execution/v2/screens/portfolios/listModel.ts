@@ -212,3 +212,19 @@ export function degradedBranches(env: PortfolioListEnvelope): readonly { environ
     .filter(([, branch]) => branch.state === "UNAVAILABLE" || branch.state === "PARTIAL")
     .map(([environment, branch]) => ({ environment, state: branch.state, reasonCode: branch.reasonCode }));
 }
+
+/**
+ * Branch reason codes the server sends, in words. A code that is not here reads as "not in this
+ * build's dictionary"; the code itself only ever goes in a hover title, never as the visible text.
+ */
+export const BRANCH_REASON_COPY: Readonly<Record<string, string>> = {
+  N31_PROJECTION_LAGGING: "the data feed is running behind",
+  N31_PROJECTION_NOT_READY: "the data feed has not produced a first read yet",
+  N31_PROJECTION_STALE_CEILING_EXCEEDED: "the data feed is older than its allowed age",
+  N31_PROJECTION_HISTORY_GAP: "the data feed has a gap in its history",
+};
+
+export function branchReasonText(code: string): { text: string; known: boolean } {
+  const text = Object.hasOwn(BRANCH_REASON_COPY, code) ? BRANCH_REASON_COPY[code] : undefined;
+  return text === undefined ? { text: "reason not in this build's dictionary", known: false } : { text, known: true };
+}

@@ -172,7 +172,10 @@ describe("header, banners and footer", () => {
     expect(screen.getByText("Fresh")).toBeTruthy();
     expect(screen.getByText(/As of 2026-10-17/)).toBeTruthy();
     expect(screen.getByText(/The read is partial/)).toBeTruthy();
-    expect(screen.getByText(/Paper: Partial \(N31_PROJECTION_LAGGING\)/)).toBeTruthy();
+    const branch = screen.getByText(/Paper: Partial \(the data feed is running behind\)/);
+    expect(branch).toBeTruthy();
+    expect(branch.textContent).not.toMatch(/N31_|_LAGGING/);
+    expect(branch.getAttribute("title")).toBe("Reason code: N31_PROJECTION_LAGGING");
     expect(screen.getByText(/Names and allocation only/)).toBeTruthy();
   });
 
@@ -560,5 +563,14 @@ describe("scale", () => {
     await loaded();
     expect(bodyRows()).toHaveLength(200);
     expect(screen.getByText(/Showing the first 200 rows/)).toBeTruthy();
+  });
+});
+
+describe("branch reason copy", () => {
+  it("words known N31 codes and never prints an unknown code as the visible text", async () => {
+    const { branchReasonText } = await import("./listModel");
+    expect(branchReasonText("N31_PROJECTION_NOT_READY")).toEqual({ text: "the data feed has not produced a first read yet", known: true });
+    expect(branchReasonText("N31_SOMETHING_NEW")).toEqual({ text: "reason not in this build's dictionary", known: false });
+    expect(branchReasonText("__proto__").known).toBe(false);
   });
 });

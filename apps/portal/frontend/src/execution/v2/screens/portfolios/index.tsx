@@ -38,7 +38,7 @@ import { ENV_LABEL, useExecUrlState, withContext } from "../../urlState";
 import { EXPORT_REASON, PF_FE, npText } from "./fe";
 import { DOMAIN_LABEL, freshnessFlag, humanize } from "./format";
 import {
-  ROW_CAP, SORT_KEYS, countLine, currenciesOf, degradedBranches, filterRows, parseSort, readDomainFilter, sortRows, toRows, writeSort,
+  ROW_CAP, SORT_KEYS, branchReasonText, countLine, currenciesOf, degradedBranches, filterRows, parseSort, readDomainFilter, sortRows, toRows, writeSort,
   type DomainFilter, type SortKey,
 } from "./listModel";
 import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId } from "./PortfolioTable";
@@ -242,7 +242,11 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
           ) : null}
           {degraded.length > 0 ? (
             <p className="exec-pf-banner-line">
-              <Flag kind="partial" label="Branch not whole" size="sm" /> {degraded.map((d) => `${humanize(d.environment)}: ${humanize(d.state)}${d.reasonCode ? ` (${d.reasonCode})` : ""}`).join(" · ")}
+              <Flag kind="partial" label="Branch not whole" size="sm" /> {degraded.map((d, i) => (
+                <span key={d.environment} className="exec-pf-branch" title={d.reasonCode ? `Reason code: ${d.reasonCode}` : undefined}>
+                  {i > 0 ? " · " : ""}{humanize(d.environment)}: {humanize(d.state)}{d.reasonCode ? ` (${branchReasonText(d.reasonCode).text})` : ""}
+                </span>
+              ))}
             </p>
           ) : null}
         </div>
