@@ -428,7 +428,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                   <PanelState status="empty" reason="This account has no recorded operations." />
                 ) : (
                   <ol className="exec-usr-history" aria-label="Account history">
-                    {history.history.map((entry) => (
+                    {history.history.slice(0, ROW_CAP).map((entry) => (
                       <li key={`${entry.operationId}:${entry.occurredAt}`}>
                         <span className="exec-usr-meta">{utcStamp(entry.occurredAt)}</span>
                         <span>{entry.action}</span>
@@ -443,6 +443,9 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                     ))}
                   </ol>
                 )}
+                {history.phase === "ready" && history.history.length > ROW_CAP ? (
+                  <span className="exec-usr-note">{`Showing ${ROW_CAP} of ${history.history.length} history entries`}</span>
+                ) : null}
               </Drawer>
             ) : null}
           </div>

@@ -22,16 +22,26 @@
  *   `locked` or `account_revision`; a `role` or `account_state` outside the
  *   published enum (no word is guessed to be "User" or "Disabled"); a revision
  *   that is not a non-negative safe integer; a string over 256 characters; a
- *   control or bidirectional-control character in `user_id`, `username` or
- *   `display_name`; a repeated `user_id`;
+ *   control or bidirectional-control character in `user_id` or `username`
+ *   (identity: a repaired id would name a different account); a repeated
+ *   `user_id`;
  * - `display_name` may be absent, null or only spaces (the account has none; the
- *   screen then shows the username) but not any other type;
+ *   screen then shows the username) but not any other type or over 256
+ *   characters. It is display text, not identity, and the server accepts any
+ *   trimmed 1..120 character string (only U+0000-001F and U+007F are barred
+ *   there), so a name with a control, a line separator or a bidirectional mark
+ *   is a valid account whose name is shown with each such character replaced by
+ *   U+FFFD, never refused: refusing it would lock every admin out of the whole
+ *   roster. The raw string never reaches the DOM or an error. The history's
+ *   `rollback_description` is read the same way;
  * - unknown extra keys are ignored: they are never read, so they never reach
  *   the screen.
  *
  * The history in the drawer is read the same way: a malformed history is the
  * drawer's "unavailable" state, not a list with blanks, and an `occurred_at`
- * that is not an ISO instant is refused rather than printed raw.
+ * that is not a real UTC instant (month 1-12, a day the month has, hour below
+ * 24, minute and second below 60, offset hour below 24) is refused rather than
+ * printed raw.
  */
 import { AuthRequestError } from "../../../../auth/authApi";
 import type { AccountRole, AccountState, AccountSummary, HistoryEntry } from "../../../../features/admin/accountApi";
@@ -47,7 +57,22 @@ const OUTCOMES: readonly string[] = ["APPLIED", "REPLAYED", "CONFLICT", "DENIED"
 /** C0, DEL, C1, line and paragraph separators, and the bidirectional marks, embeddings, overrides and isolates. */
 // eslint-disable-next-line no-control-regex
 const UNSAFE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
-const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+const UNSAFE_ALL = new RegExp(UNSAFE.source, "g");
+const INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:Z|[+-](\d{2}):(\d{2}))$/;
+const REPLACEMENT = "\uFFFD";
+
+/** A real calendar instant, not just the shape of one: '2026-13-45T99:99Z' is refused. */
+export function isRealInstant(value: string): boolean {
+  const m = INSTANT.exec(value);
+  if (m === null) return false;
+  const [year, month, day, hour, minute] = [m[1], m[2], m[3], m[4], m[5]].map(Number) as [number, number, number, number, number];
+  const second = m[6] === undefined ? 0 : Number(m[6]);
+  if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59) return false;
+  if (m[7] !== undefined && (Number(m[7]) > 23 || Number(m[8]) > 59)) return false;
+  const calendar = new Date(Date.UTC(2000, month - 1, day));
+  calendar.setUTCFullYear(year);
+  return day >= 1 && calendar.getUTCFullYear() === year && calendar.getUTCMonth() === month - 1 && calendar.getUTCDate() === day;
+}
 
 /** A body the reader refused. `where` names a position and a field, never a value. */
 export class RosterMalformed extends Error {
@@ -64,7 +89,7 @@ export class RosterMalformed extends Error {
 type Obj = Record<string, unknown>;
 const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value);
 
-function text(raw: Obj, key: string, fail: (field: string) => never, options: { required: boolean; max?: number }): string {
+function text(raw: Obj, key: string, fail: (field: string) => never, options: { required: boolean; max?: number; display?: boolean }): string {
   const value = raw[key];
   if (value === undefined || value === null) {
     if (options.required) fail(key);
@@ -73,7 +98,7 @@ function text(raw: Obj, key: string, fail: (field: string) => never, options: { 
   if (typeof value !== "string") return fail(key);
   if (value.trim() === "") return options.required ? fail(key) : "";
   if (value.length > (options.max ?? MAX_TEXT)) return fail(key);
-  if (UNSAFE.test(value)) return fail(key);
+  if (UNSAFE.test(value)) return options.display ? value.replace(UNSAFE_ALL, REPLACEMENT) : fail(key);
   return value;
 }
 
@@ -90,7 +115,7 @@ export function readRoster(body: unknown): AccountSummary[] {
     if (seen.has(userId)) return fail("user_id (repeated)");
     seen.add(userId);
     const username = text(row, "username", fail, { required: true });
-    const displayName = text(row, "display_name", fail, { required: false });
+    const displayName = text(row, "display_name", fail, { required: false, display: true });
     if (typeof row.role !== "string" || !ROLES.includes(row.role)) return fail("role");
     if (typeof row.account_state !== "string" || !STATES.includes(row.account_state)) return fail("account_state");
     if (typeof row.must_change_password !== "boolean") return fail("must_change_password");
@@ -126,9 +151,9 @@ export function readHistory(body: unknown): HistoryEntry[] {
     if (typeof expected !== "number" || !Number.isSafeInteger(expected) || expected < 0) return fail("expected_revision");
     const resulting = raw.resulting_revision;
     if (resulting !== undefined && resulting !== null && (typeof resulting !== "number" || !Number.isSafeInteger(resulting) || resulting < 0)) return fail("resulting_revision");
-    const rollback = text(raw, "rollback_description", fail, { required: false, max: MAX_REASON });
+    const rollback = text(raw, "rollback_description", fail, { required: false, max: MAX_REASON, display: true });
     const at = raw.occurred_at;
-    if (at !== undefined && at !== null && (typeof at !== "string" || !INSTANT.test(at))) return fail("occurred_at");
+    if (at !== undefined && at !== null && (typeof at !== "string" || !isRealInstant(at))) return fail("occurred_at");
     return {
       operationId,
       action,

@@ -426,9 +426,9 @@ describe("roster reader: the V2 contract on each field the screen shows", () => 
   describe.each([
     ["user_id", () => stringCases(goodBody(), ["accounts", 1, "user_id"]), refusedAll],
     ["username", () => stringCases(goodBody(), ["accounts", 1, "username"]), refusedAll],
-    ["display_name (absent, null or blank = not stated, the rest refused)", () => stringCases(goodBody(), ["accounts", 1, "display_name"]), (c: NegativeCase) => {
+    ["display_name (absent, null, blank, or text up to 256 characters with unsafe characters replaced = read; wrong type or longer = refused)", () => stringCases(goodBody(), ["accounts", 1, "display_name"]), (c: NegativeCase) => {
       const v = getPath(c.value, ["accounts", 1, "display_name"]);
-      return v === undefined || v === null || (typeof v === "string" && v.trim() === "");
+      return v === undefined || v === null || (typeof v === "string" && (v.trim() === "" || v.length <= 256));
     }],
     ["role", () => enumCases(goodBody(), ["accounts", 1, "role"], ["ADMIN", "USER"]), refusedAll],
     ["account_state", () => enumCases(goodBody(), ["accounts", 1, "account_state"], ["ACTIVE", "INVITED", "DISABLED", "ARCHIVED"]), refusedAll],
@@ -501,9 +501,11 @@ describe("roster reader: the V2 contract on each field the screen shows", () => 
     if (!v.ok) expect(v.error.where).toBe("row 3, user_id (repeated)");
   });
 
-  it("control and bidirectional characters are refused in ids, usernames and names; ordinary Unicode (Vietnamese, ZWJ emoji, RTL words without marks) is kept exactly", () => {
-    for (const bad of ["a\u0000b", "a\nb", "a\tb", "a\u007fb", "a\u0085b", "a\u2028b", "a\u202eb", "a\u202ab", "a\u2066b", "a\u2069b", "a\u200eb", "a\u200fb", "a\u061cb"]) {
-      for (const field of ["user_id", "username", "display_name"]) {
+  const UNSAFE_SAMPLES = ["a\u0000b", "a\nb", "a\tb", "a\u007fb", "a\u0085b", "a\u2028b", "a\u2029b", "a\u202eb", "a\u202ab", "a\u2066b", "a\u2069b", "a\u200eb", "a\u200fb", "a\u061cb"];
+
+  it("control and bidirectional characters are refused in ids and usernames (identity); ordinary Unicode (Vietnamese, ZWJ emoji, RTL words without marks) is kept exactly", () => {
+    for (const bad of UNSAFE_SAMPLES) {
+      for (const field of ["user_id", "username"]) {
         const v = verdict({ accounts: [goodRow(1, { [field]: bad })] });
         expect(v.ok, `${field} <- ${JSON.stringify(bad)}`).toBe(false);
       }
@@ -511,6 +513,29 @@ describe("roster reader: the V2 contract on each field the screen shows", () => 
     const fine = "Nguy\u1ec5n V\u0103n A \u{1F468}\u200D\u{1F4BB} \u05e9\u05dc\u05d5\u05dd";
     const v = verdict({ accounts: [goodRow(1, { display_name: fine })] });
     expect(v.ok && v.rows[0]!.displayName).toBe(fine);
+  });
+
+  it("a display name with controls, separators or bidi marks is a valid account: it reads, each unsafe character becomes U+FFFD, and the raw string is gone", () => {
+    for (const bad of [...UNSAFE_SAMPLES, "\u05e9\u05dc\u05d5\u05dd\u200f", "A\u0085B", "A\tB"]) {
+      const v = verdict({ accounts: [goodRow(1, { display_name: bad })] });
+      expect(v.ok, JSON.stringify(bad)).toBe(true);
+      const shown = v.ok ? v.rows[0]!.displayName : "";
+      expect(shown, JSON.stringify(bad)).toContain("\uFFFD");
+      expect(shown).toHaveLength(bad.length);
+      expect(/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/.test(shown)).toBe(false);
+    }
+    expect(verdict({ accounts: [goodRow(1, { display_name: "A\u0085B" })] })).toMatchObject({ ok: true, rows: [{ displayName: "A\uFFFDB" }] });
+  });
+
+  it("a display name of the wrong type or over 256 characters is still refused, and the refusal never echoes the value", () => {
+    for (const bad of [5, true, {}, ["x"], "x".repeat(257), `${PROBE}\u200f`.padEnd(300, "z")]) {
+      const v = verdict({ accounts: [goodRow(1, { display_name: bad })] });
+      expect(v.ok).toBe(false);
+      if (!v.ok) {
+        expect(v.error.where).toBe("row 1, display_name");
+        expect(v.error.message).not.toContain(PROBE);
+      }
+    }
   });
 
   it("oversize: 256 characters are kept, 257 and 70,000 are refused (user_id, username, display_name)", () => {
@@ -572,7 +597,8 @@ describe("the screen on a malformed roster: unavailable, never a table that look
     ["a revision of null", { accounts: [goodRow(1, { account_revision: null })] }, "row 1, account_revision"],
     ["a non-boolean locked", { accounts: [goodRow(1, { locked: 1 })] }, "row 1, locked"],
     ["a 70,000 character username", { accounts: [goodRow(1, { username: `${PROBE}${"x".repeat(70_000)}` })] }, "row 1, username"],
-    ["a bidi override in a display name", { accounts: [goodRow(1, { display_name: `${PROBE}\u202eevil` })] }, "row 1, display_name"],
+    ["a display name of the wrong type", { accounts: [goodRow(1, { display_name: { [PROBE]: 1 } })] }, "row 1, display_name"],
+    ["a bidi override in a username", { accounts: [goodRow(1, { username: `${PROBE}\u202eevil` })] }, "row 1, username"],
     ["a control character in an id", { accounts: [goodRow(1, { user_id: `${PROBE}\u0000` })] }, "row 1, user_id"],
     ["duplicate ids", { accounts: [goodRow(1), goodRow(1)] }, "row 2, user_id (repeated)"],
   ];
@@ -683,6 +709,17 @@ describe("the drawer's history read: timestamps and entries (same refusal contra
     ["an expected revision as text", { history: [entry({ expected_revision: "0" })] }, "entry 1, expected_revision"],
     ["a negative resulting revision", { history: [entry({ resulting_revision: -1 })] }, "entry 1, resulting_revision"],
     ["a reason code that is an object", { history: [entry({ reason_code: {} })] }, "entry 1, reason_code"],
+    ["a month 13", { history: [entry({ occurred_at: "2026-13-45T99:99Z" })] }, "entry 1, occurred_at"],
+    ["a day the month does not have", { history: [entry({ occurred_at: "2026-02-30T08:00:00Z" })] }, "entry 1, occurred_at"],
+    ["29 February in a common year", { history: [entry({ occurred_at: "2026-02-29T08:00:00Z" })] }, "entry 1, occurred_at"],
+    ["day 31 of a 30-day month", { history: [entry({ occurred_at: "2026-04-31T08:00:00Z" })] }, "entry 1, occurred_at"],
+    ["month 00", { history: [entry({ occurred_at: "2026-00-10T08:00:00Z" })] }, "entry 1, occurred_at"],
+    ["day 00", { history: [entry({ occurred_at: "2026-09-00T08:00:00Z" })] }, "entry 1, occurred_at"],
+    ["hour 24", { history: [entry({ occurred_at: "2026-09-30T24:00:00Z" })] }, "entry 1, occurred_at"],
+    ["minute 60", { history: [entry({ occurred_at: "2026-09-30T08:60:00Z" })] }, "entry 1, occurred_at"],
+    ["second 60", { history: [entry({ occurred_at: "2026-09-30T08:00:60Z" })] }, "entry 1, occurred_at"],
+    ["an offset hour 24", { history: [entry({ occurred_at: "2026-09-30T08:00:00+24:00" })] }, "entry 1, occurred_at"],
+    ["an offset minute 60", { history: [entry({ occurred_at: "2026-09-30T08:00:00+07:60" })] }, "entry 1, occurred_at"],
     ["an oversize rollback text", { history: [entry({ rollback_description: "r".repeat(70_000) })] }, "entry 1, rollback_description"],
   ] as const)("%s is refused whole, naming %s", (_name, body, where) => {
     const v = history(body);
@@ -696,6 +733,20 @@ describe("the drawer's history read: timestamps and entries (same refusal contra
   it("a null or absent timestamp stays a gap (empty), never a made-up instant, and null resulting revision stays null (not 0)", () => {
     const v = history({ history: [entry({ occurred_at: null, resulting_revision: null }), entry({ operation_id: "op_2", occurred_at: undefined, reason_code: "ACCOUNT_REVISION_STALE" })] });
     expect(v.ok && v.rows.map((r) => [r.occurredAt, r.resultingRevision, r.reasonCode])).toEqual([["", null, null], ["", 1, "ACCOUNT_REVISION_STALE"]]);
+  });
+
+  it("real instants are kept: a leap day, the last second of the year, fractions, and an offset", () => {
+    for (const at of ["2028-02-29T23:59:59.999999999Z", "2026-12-31T23:59:59Z", "2026-09-30T08:00Z", "2026-09-30T08:00:00-11:30", "2000-02-29T00:00:00Z"]) {
+      const v = history({ history: [entry({ occurred_at: at })] });
+      expect(v.ok && v.rows[0]!.occurredAt, at).toBe(at);
+    }
+  });
+
+  it("a rollback description with controls or bidi marks reads, with U+FFFD in their place; reason_code and action stay strict", () => {
+    const v = history({ history: [entry({ rollback_description: "Undo\u202e it\u0085now\t" })] });
+    expect(v.ok && v.rows[0]!.rollbackDescription).toBe("Undo\uFFFD it\uFFFDnow\uFFFD");
+    expect(history({ history: [entry({ reason_code: "X\u200f" })] }).ok).toBe(false);
+    expect(history({ history: [entry({ action: "a\u0085b" })] }).ok).toBe(false);
   });
 
   it("offset timestamps and extra keys are kept and ignored respectively", () => {
@@ -729,5 +780,35 @@ describe("the drawer's history read: timestamps and entries (same refusal contra
     const list = await within(dock).findByRole("list", { name: "Account history" });
     expect(list.textContent).toContain("not published");
     expect(list.textContent).not.toMatch(/1970|Invalid Date|NaN/);
+  });
+
+  it.each([[200, null], [201, "Showing 200 of 201 history entries"], [500, "Showing 200 of 500 history entries"]] as const)(
+    "caps the history at 200 rows: %i entries show 200 and the label %s",
+    async (count, label) => {
+      const entries = Array.from({ length: count }, (_, i) => entry({ operation_id: `op_${i}`, occurred_at: "2026-09-30T08:00:00Z" }));
+      const dock = await openDrawer({ history: entries });
+      const list = await within(dock).findByRole("list", { name: "Account history" });
+      expect(within(list).getAllByRole("listitem")).toHaveLength(200);
+      if (label) expect(within(dock).getByText(label)).toBeTruthy();
+      else expect(dock.textContent).not.toMatch(/history entries/);
+    },
+  );
+});
+
+describe("the screen on a hostile display name: shown with U+FFFD, the raw bidi character never reaches the DOM", () => {
+  it("the roster is reachable, the name has U+FFFD in place of the mark, and nothing unsafe is in the page", async () => {
+    await mountWith({ accounts: [goodRow(1, { display_name: "\u05e9\u05dc\u05d5\u05dd\u200f" }), goodRow(2, { display_name: "A\u0085B" }), goodRow(3)] });
+    expect(unavailable()).toBeNull();
+    expect(rowsOf()).toHaveLength(3);
+    expect(document.body.textContent).toContain("\u05e9\u05dc\u05d5\u05dd\uFFFD");
+    expect(document.body.textContent).toContain("A\uFFFDB");
+    expect(/[\u0085\u200f\u202e]/.test(document.body.textContent ?? "")).toBe(false);
+  });
+
+  it("an identity field with the same character still refuses the whole roster, without echoing it", async () => {
+    await mountWith({ accounts: [goodRow(1), goodRow(2, { username: `${PROBE}\u200f` })] });
+    expect(unavailable()).not.toBeNull();
+    expect(document.body.textContent).toContain("row 2, username");
+    expect(document.body.textContent).not.toContain(PROBE);
   });
 });
