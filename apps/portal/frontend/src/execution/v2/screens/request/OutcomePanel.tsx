@@ -154,10 +154,10 @@ export function OutcomePanel({ outcome, requestKey, busy = false, onDismiss, onN
         ) : (
           <div className="exec-rq-acts">
             <Link className="exec-rq-btn" to={here(QUEUE_HREF)}>Check original request</Link>
-            <button type="button" className="exec-rq-btn" data-variant="primary" aria-disabled={busy} onClick={() => { if (!busy) onRetry?.(); }}>
+            <button type="button" className="exec-rq-btn" data-variant="primary" aria-disabled={busy} title={busy ? "A send is in progress; wait for its answer." : undefined} onClick={() => { if (!busy) onRetry?.(); }}>
               Retry with the same key
             </button>
-            <button type="button" className="exec-rq-btn" aria-disabled={busy} onClick={() => { if (!busy) setAsking(true); }}>Discard</button>
+            <button type="button" className="exec-rq-btn" aria-disabled={busy} title={busy ? "A send is in progress; wait for its answer." : undefined} onClick={() => { if (!busy) setAsking(true); }}>Discard</button>
           </div>
         )}
         <details className="exec-rq-prov">
