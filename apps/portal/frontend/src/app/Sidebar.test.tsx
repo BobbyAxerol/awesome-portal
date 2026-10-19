@@ -73,14 +73,18 @@ describe("flag on", () => {
     }
   });
 
-  it("capability filtering: a researcher loses Portfolios, Accounts and Operations; no capability loses Approvals too", () => {
+  it("capability filtering: a researcher loses Portfolios, Accounts and Operations; no capability loses the scoped Approvals (the old stub stays)", () => {
     const researcher = labels(rail(true, [...V2_ROLE_PRESETS.researcher]).links);
     expect(researcher).toEqual(expect.arrayContaining(["Overview", "Alpha Fleet", "Approvals"]));
     for (const gone of ["Portfolios", "Accounts", "Operations"]) expect(researcher).not.toContain(gone);
     cleanup();
     const nobody = labels(rail(true, []).links);
     expect(nobody).toEqual(expect.arrayContaining(["Overview", "Alpha Fleet"]));
-    for (const gone of ["Portfolios", "Accounts", "Operations", "Approvals"]) expect(nobody).not.toContain(gone);
+    for (const gone of ["Portfolios", "Accounts", "Operations"]) expect(nobody).not.toContain(gone);
+    // The scoped Approvals is hidden for this caller, so the registry stub it replaces is kept (one Approvals, never zero).
+    const hrefs = rail(true, []).links.map((l) => l.href);
+    expect(hrefs).not.toContain("/governance/approvals");
+    expect(hrefs).toContain("/backtests/approvals");
   });
 
   it("FE-039: the old APPROVALS entry is hidden, so there is one Approvals and it is the governance one", () => {
@@ -89,6 +93,31 @@ describe("flag on", () => {
     expect(approvals.map((l) => l.href.split("?")[0])).toEqual(["/governance/approvals"]);
     expect(links.map((l) => l.href.split("?")[0])).not.toContain("/backtests/approvals");
     // The flag-off rail still lists both (asserted above): the replacement is a V2 rail rule, not a registry change.
+  });
+
+  it("FE-039: a caller who cannot see the scoped Approvals keeps the old stub, so Approvals does not vanish", () => {
+    const { links } = rail(true, []);
+    expect(links.map((l) => l.href.split("?")[0])).toContain("/backtests/approvals");
+    expect(links.map((l) => l.href.split("?")[0])).not.toContain("/governance/approvals");
+  });
+
+  it("only the exact route is current: /execution/operations marks Operations, not Overview", () => {
+    const current = (url: string, v2Shell = true) => {
+      const view = render(
+        <MemoryRouter initialEntries={[url]}>
+          <Sidebar registry={registry} options={{ capabilities: [...V2_ROLE_PRESETS.manager] }} collapsed={false} v2Shell={v2Shell} />
+        </MemoryRouter>,
+      );
+      const active = [...view.container.querySelectorAll("a.portal-navitem-active")].map((a) => a.querySelector(".portal-navitem-label")?.textContent);
+      cleanup();
+      return active;
+    };
+    expect(current("/execution")).toEqual(["Overview"]);
+    expect(current("/execution?env=paper&workspace_id=ws_1")).toEqual(["Overview"]);
+    expect(current("/execution/operations")).toEqual(["Operations"]);
+    expect(current("/execution/operations?operation=op_1")).toEqual(["Operations"]);
+    // Flag off: the rail is what it was (prefix match), so the parent entry still lights up on a child route.
+    expect(current("/execution/operations", false)).toHaveLength(2);
   });
 
   it("Research and Planning entries keep their registry labels and plain hrefs", () => {

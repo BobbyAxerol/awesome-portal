@@ -3,9 +3,24 @@
  * Copy follows the hi-fi (new-approval.html); the Digest line says what the server does, because the form
  * never carries a digest (N29 section 3).
  */
+import { useSearchParams } from "react-router-dom";
+
 import { SectionPanel } from "../../blocks";
 
 import "../../css/request.css";
+
+/**
+ * The port posts a new request with no workspace, so the server files it in the caller's own workspace. When the
+ * page is showing another one (`?workspace_id=` on the URL) the reader is told so, once, in one line. Nothing is
+ * changed or claimed beyond that: no selector, no promise about where a later version will file it.
+ */
+export const OWN_WORKSPACE_NOTE = "This request is created in your own workspace, not in the one this page is showing.";
+
+export function WorkspaceNote() {
+  const [params] = useSearchParams();
+  if ((params.get("workspace_id") ?? "").trim() === "") return null;
+  return <p className="exec-rq-note" data-notice="own-workspace">{OWN_WORKSPACE_NOTE}</p>;
+}
 
 export function StepBar() {
   return (

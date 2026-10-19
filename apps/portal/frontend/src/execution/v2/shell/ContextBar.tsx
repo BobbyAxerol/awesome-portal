@@ -18,6 +18,7 @@
  * only when it knows them; the bar never derives either from a role.
  */
 import { useId } from "react";
+import { Link } from "react-router-dom";
 
 import {
   ENV_LABEL,
@@ -139,7 +140,7 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
           {accessHref ? (
             <>
               {" "}
-              <a href={accessHref}>My access</a>
+              <Link to={accessHref}>My access</Link>
             </>
           ) : null}
         </span>

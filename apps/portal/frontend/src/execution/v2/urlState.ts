@@ -180,10 +180,12 @@ export const RAIL_CONTEXT_KEYS = ["env", "window", "ccy", "workspace_id"] as con
 
 /**
  * True for an app-internal path: starts with one `/` and is not protocol-relative (`//host`, `/\host`).
+ * Control characters (tab, CR, LF, NUL ...) and backslashes are refused anywhere in the string: browsers strip
+ * tab/CR/LF while parsing, so `/<TAB>/evil.com` would otherwise resolve to `//evil.com`.
  * Anything else (absolute URL, `mailto:`, `javascript:`, bare or query-only text) is not ours to decorate.
  */
 export function isInternalPath(href: string): boolean {
-  return href.startsWith("/") && !href.startsWith("//") && !href.startsWith("/\\");
+  return href.startsWith("/") && !href.startsWith("//") && !/[\u0000-\u001f\u007f\\]/.test(href);
 }
 
 /**

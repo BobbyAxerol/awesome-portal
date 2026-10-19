@@ -28,7 +28,7 @@
  * URL: `q`, `sel` (the account's user id), and the screen-local `role` and `state`.
  */
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { stepUp, type AccountSummary, type HistoryEntry, type StepUpState } from "../../../../features/admin/accountApi";
 import { useSession } from "../../../../auth/session";
@@ -39,7 +39,7 @@ import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { SectionPanel } from "../../blocks";
 import { Drawer, DockAction, useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
-import { useExecUrlState } from "../../urlState";
+import { useExecUrlState, withContext } from "../../urlState";
 import { readDetailFromServer, readRosterFromServer } from "./rosterReader";
 import {
   ACCOUNT_ROLES, ACCOUNT_STATES, PAGE_SIZE, PRESET_REQUESTS, ROLE_LABEL, ROW_CAP, STATE_VIEW,
@@ -273,7 +273,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
               {stepView.until ? <span className="exec-usr-meta">until {utcStamp(stepView.until)}</span> : null}
             </span>
           )}
-          {legacyHref ? <a className="exec-usr-link" href={legacyHref}>Open the current Users screen</a> : null}
+          {legacyHref ? <Link className="exec-usr-link" to={legacyHref}>Open the current Users screen</Link> : null}
         </div>
       </header>
 
@@ -285,7 +285,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
           reason={roster.reason}
           actions={
             roster.status === "denied"
-              ? accessHref ? <a className="exec-usr-link" href={accessHref}>My access</a> : undefined
+              ? accessHref ? <Link className="exec-usr-link" to={withContext(accessHref, params)}>My access</Link> : undefined
               : <button type="button" className="exec-usr-btn" onClick={reload_}>Try again</button>
           }
         />

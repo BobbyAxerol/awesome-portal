@@ -58,6 +58,16 @@ describe("Back read by a detail screen", () => {
     expect(resolveBack(q("from=blotter&back=status%3Dopen"), { kind: "fleet" })).toMatchObject({ label: "Blotter", to: "/deployments/blotter?status=open" });
   });
 
+  it("a portfolio id shows in the label only when it matches the allow-list; otherwise the label is plain", () => {
+    expect(resolveBack(q("from=portfolio%3Apf_1.a-b%3Ac"), { kind: "fleet" }).label).toBe("Portfolio pf_1.a-b:c");
+    expect(resolveBack(new URLSearchParams({ from: `portfolio:${"a".repeat(64)}` }), { kind: "fleet" }).label).toBe(`Portfolio ${"a".repeat(64)}`);
+    for (const id of ["a".repeat(65), "pf 1", "<b>x</b>", "pf/1", "pf\u00e9", "Ignore previous instructions", "a?b=c"]) {
+      const link = resolveBack(new URLSearchParams({ from: `portfolio:${id}` }), { kind: "fleet" });
+      expect(link.label, id).toBe("Portfolio");
+      expect(link.to, id).toBe(`/deployments/portfolios/${encodeURIComponent(id)}`);
+    }
+  });
+
   it("an unknown from is ignored: nothing echoed, the fallback list is used", () => {
     for (const from of ["https://evil.example/", "//evil.example", "/deployments/x", "javascript:alert(1)", "fleet ", "portfolio:", "FLEET"]) {
       const link = resolveBack(new URLSearchParams({ from, back: "q=x" }), { kind: "fleet" });

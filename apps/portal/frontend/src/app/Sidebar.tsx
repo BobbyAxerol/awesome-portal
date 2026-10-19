@@ -25,6 +25,8 @@ interface RailItem {
   feature: PortalFeatureDefinition;
   label: string;
   to: string;
+  /** NavLink `end`: only the exact route is current. */
+  end: boolean;
 }
 interface RailGroup {
   id: string;
@@ -48,7 +50,7 @@ export function railGroups(
     return base.map(({ group, features }) => ({
       id: group.id,
       label: group.label,
-      items: features.map((feature) => ({ feature, label: feature.label, to: feature.canonical_route })),
+      items: features.map((feature) => ({ feature, label: feature.label, to: feature.canonical_route, end: feature.canonical_route === "/" })),
     }));
   }
   return applyV2Nav(base, new Set(options.capabilities ?? [])).map((group) => ({
@@ -58,6 +60,9 @@ export function railGroups(
       feature: item.feature,
       label: item.label,
       to: item.carriesContext ? withContext(item.route, search, RAIL_CONTEXT_KEYS) : item.route,
+      // Overview (`/execution`) is the parent path of Operations (`/execution/operations`): without `end` both
+      // would read as current on an Operations page. Exact match for it only; the flag-off rail is untouched.
+      end: item.route === "/" || item.featureId === "EXECUTION_COMMAND_CENTER",
     })),
   }));
 }
@@ -91,7 +96,7 @@ export function Sidebar({
             <div className="portal-navgroup-label">{group.label}</div>
           )}
           <ul>
-            {group.items.map(({ feature, label, to }) => {
+            {group.items.map(({ feature, label, to, end }) => {
               const presentation = maturityPresentation(feature.maturity);
               const Icon = iconFor(feature.navigation.icon_key);
               // A route the user can open RIGHT NOW as a fixture preview must
@@ -110,7 +115,7 @@ export function Sidebar({
                 <li key={feature.id}>
                   <NavLink
                     to={to}
-                    end={feature.canonical_route === "/"}
+                    end={end}
                     className={({ isActive }) => `portal-navitem${isActive ? " portal-navitem-active" : ""}`}
                     style={{ opacity: previewMounted ? 1 : presentation.opacity }}
                     title={collapsed ? `${label} — ${feature.description}` : feature.description}

@@ -11,6 +11,7 @@ import { BLOTTER_DOUBLE_COUNT, resetOverviewDouble, setOverviewDoubleVariants } 
 import { httpApi, serveDoubles, type Call } from "../../../../../e2e/screensV2Harness";
 import { readProfileEnvelope } from "../../../api/profileRead";
 import type { ExecutionApi } from "../../../api/ports";
+import { resolveBack } from "../../backTo";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import { cloneRows, pad } from "../../testkit/scale";
 import { useContextFactsValue } from "../../shell/contextFacts";
@@ -278,6 +279,26 @@ describe("V1 filter alias and router links (M10, M7)", () => {
     // A router link is handled in the page: the click is cancelled (a plain anchor would be left to the browser).
     expect(fireEvent.click(links[0]!)).toBe(false);
     await waitFor(() => expect(where()).toMatch(/^\/deployments\/alphas\//));
+  });
+
+  it("Open on chart carries the Blotter's own filters as `back`, only the allow-listed keys, so Replay's Back restores them", async () => {
+    mount("/execution/blotter?env=paper&status=ALL&q=carry&sort=-ts&order=ord_00137&evil=1");
+    await loaded();
+    await waitFor(() => expect(document.querySelector("a.exec-blt2-link")).not.toBeNull());
+    const url = new URL(document.querySelector("a.exec-blt2-link")!.getAttribute("href")!, "http://x");
+    expect(url.searchParams.get("from")).toBe("blotter");
+    const back = new URLSearchParams(url.searchParams.get("back") ?? "");
+    expect(Object.fromEntries(back)).toEqual({ q: "carry", status: "ALL", sort: "-ts" });
+    expect(resolveBack(url.searchParams, { kind: "fleet" }).to).toBe("/deployments/blotter?q=carry&status=ALL&sort=-ts");
+  });
+
+  it("with no filters on the Blotter there is no `back`, only `from=blotter`", async () => {
+    mount("/execution/blotter?env=paper&order=ord_00137");
+    await loaded();
+    await waitFor(() => expect(document.querySelector("a.exec-blt2-link")).not.toBeNull());
+    const url = new URL(document.querySelector("a.exec-blt2-link")!.getAttribute("href")!, "http://x");
+    expect(url.searchParams.get("from")).toBe("blotter");
+    expect(url.searchParams.has("back")).toBe(false);
   });
 
   it("the denied state's link is a router link that keeps the context", async () => {

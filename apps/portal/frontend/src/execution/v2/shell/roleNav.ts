@@ -138,13 +138,26 @@ export function applyV2Nav(groups: readonly NavGroup[], capabilities: ReadonlySe
   const execution: { item: V2NavItem; order: number }[] = [];
   let executionAt = -1;
 
+  // The registry says a legacy stub may be suppressed only with a VISIBLE replacement. "Visible" is decided in
+  // this same pass: the replacement is a feature the groups list, its rule puts it in the rail and the caller
+  // holds what that rule needs.
+  const visibleInRail = new Set<string>();
+  for (const { features } of groups) {
+    for (const feature of features) {
+      const rule = RULE_BY_FEATURE.get(feature.id);
+      if (rule?.surface === "nav" && rule.label !== undefined && holds(capabilities, rule.needs)) visibleInRail.add(feature.id);
+    }
+  }
+
   for (const { group, features } of groups) {
     const kept: V2NavItem[] = [];
     let contributed = false;
     for (const feature of features) {
       // FE-039: the registry says this entry has a scoped V2 replacement (the old APPROVALS stub next to
-      // EXECUTION_APPROVALS). With the V2 nav on, the replacement is the one Approvals the rail lists.
-      if (feature.navigation.scoped_v2_replacement != null) continue;
+      // EXECUTION_APPROVALS). The stub is dropped only while that replacement is itself listed; a caller who
+      // cannot see the replacement keeps the stub, so Approvals never vanishes from the rail altogether.
+      const replacement = feature.navigation.scoped_v2_replacement;
+      if (replacement != null && visibleInRail.has(replacement.feature_id)) continue;
       const rule = RULE_BY_FEATURE.get(feature.id);
       if (rule === undefined) {
         kept.push(toItem(feature, feature.label));

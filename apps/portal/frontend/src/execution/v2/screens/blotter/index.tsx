@@ -44,6 +44,7 @@ import { Flag } from "../../Flag";
 import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { useMediaQuery } from "../../useMediaQuery";
+import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
@@ -89,8 +90,13 @@ function FoldPanel({ title, aside, defaultOpen = false, children }: { title: str
 /** The `from` value a link out of the Blotter carries; the destination owns what Back does with it. */
 export const FROM_BLOTTER = "blotter";
 
-function defaultChartHref(order: BlotterOrder): string | null {
-  return order.alphaId ? `/deployments/alphas/${encodeURIComponent(order.alphaId)}?tab=Trade%20Replay&focus=order:${encodeURIComponent(order.orderId)}&from=${FROM_BLOTTER}` : null;
+/**
+ * The V1 Trade Replay link for an order, with the origin: `from=blotter` and `back=<the Blotter's own filters>`
+ * (backTo's allow-list: q, status, side, symbol, venue, sort), so Replay's Back lands on the same filtered list.
+ */
+function defaultChartHref(order: BlotterOrder, origin: URLSearchParams): string | null {
+  if (!order.alphaId) return null;
+  return withOrigin(`/deployments/alphas/${encodeURIComponent(order.alphaId)}?tab=Trade%20Replay&focus=order:${encodeURIComponent(order.orderId)}`, { kind: "blotter" }, origin);
 }
 
 const SCOPE_KEYS = ["deployment", "account", "alpha", "order", "fill"] as const;
@@ -103,8 +109,9 @@ type GroupRead =
   | { phase: "ready"; groupId: string; read: ConditionalGroupRead }
   | { phase: "error"; groupId: string; status: "denied" | "unavailable" | "empty" | "partial" | "stale" | "insufficient_data" | "terminal"; reason: string };
 
-export default function BlotterScreen({ api, capabilities, accessHref, chartHref = defaultChartHref }: BlotterScreenProps) {
+export default function BlotterScreen({ api, capabilities, accessHref, chartHref: chartHrefProp }: BlotterScreenProps) {
   const [params, setParams] = useSearchParams();
+  const chartHref = chartHrefProp ?? ((order: BlotterOrder) => defaultChartHref(order, params));
   const { access } = useSession();
   const colMenuId = useId();
   const noteId = useId();

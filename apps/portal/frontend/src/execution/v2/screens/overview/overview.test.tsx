@@ -505,6 +505,18 @@ describe("links (#7, M11, D9)", () => {
     expect(rows[0]!.querySelector("a")?.getAttribute("href")).toBe("/execution/operations?filter=findings&env=paper");
   });
 
+  it("a server href that is not an app path is dropped: no link, no anchor, the row stays as text", async () => {
+    const hostile = ["https://evil.example/x", "/\t/evil.example", "javascript:alert(1)"];
+    mount({}, withHrefs(hostile), "/execution?env=paper");
+    await loaded();
+    const rows = within(within(panel("Needs attention")).getByRole("list", { name: "Ranked triage list" })).getAllByRole("listitem");
+    for (let i = 0; i < hostile.length; i += 1) {
+      expect(rows[i]!.querySelector("a"), hostile[i]).toBeNull();
+      expect(within(rows[i]!).getByText("No link published")).toBeTruthy();
+    }
+    for (const a of Array.from(document.querySelectorAll("a"))) expect(a.getAttribute("href")).toMatch(/^\/(?![/\\])/);
+  });
+
   it("a denied composition links to My access when the route gives it, with the context, and nothing when it does not", async () => {
     const denied = override({
       getOperationalComposition: async () => ({ ok: false, status: "denied", reason: "OPERATIONAL_READ_DENIED" }),

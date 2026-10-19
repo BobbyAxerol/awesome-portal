@@ -296,6 +296,16 @@ describe("states", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
+  it("denied: My access is a router link that keeps the context (no full page reload)", async () => {
+    variant("denied");
+    mount("/administration/users?env=paper&workspace_id=ws_1", { accessHref: "/profile-access" });
+    const link = await screen.findByRole("link", { name: "My access" });
+    expect(link.getAttribute("href")).toBe("/profile-access?env=paper&workspace_id=ws_1");
+    // A router link is handled in the page: the click is cancelled (a plain anchor would be left to the browser).
+    expect(fireEvent.click(link)).toBe(false);
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/profile-access?env=paper&workspace_id=ws_1"));
+  });
+
   it("unavailable: a 503 names the code, offers Try again, and a retry recovers", async () => {
     variant("broken");
     mount();

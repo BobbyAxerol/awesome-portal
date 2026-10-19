@@ -18,7 +18,8 @@
  * always comes from the table above, never from the value; an unknown `from`
  * is ignored (the screen's own default list is used); `back` keeps only the
  * keys the source lists, each short and free of control characters, and is
- * dropped whole when it is too long to be a list state. A built target must
+ * dropped whole when it is too long to be a list state. A portfolio id is shown in the label only when it
+ * matches `[A-Za-z0-9._:-]{1,64}`; otherwise the label is plain "Portfolio". A built target must
  * start with one of the three execution roots or it is not used.
  *
  * `from` is a context key (`withContext` carries it), so a screen that shows a
@@ -144,6 +145,9 @@ export function sourceOf(from: string | null): BackSource | null {
   return null;
 }
 
+/** What may be shown in a Back label as a portfolio id; anything else is dropped from the label (never echoed). */
+const PORTFOLIO_LABEL_ID = /^[A-Za-z0-9._:-]{1,64}$/;
+
 const inRoots = (path: string): boolean => ROOTS.some((root) => path === root || path.startsWith(`${root}/`));
 
 /**
@@ -173,7 +177,8 @@ export function resolveBack(
   } else {
     const id = (source as { kind: "portfolio"; id: string }).id;
     path = `/deployments/portfolios/${encodeURIComponent(id)}`;
-    label = `Portfolio ${id.length > 40 ? `${id.slice(0, 39)}…` : id}`;
+    // The id comes from the URL: it names the Back label only when it looks like an id, otherwise the label is plain.
+    label = PORTFOLIO_LABEL_ID.test(id) ? `Portfolio ${id}` : "Portfolio";
   }
   if (!inRoots(path)) {
     // Unreachable with the table above; kept so a future edit cannot turn this into an open redirect.

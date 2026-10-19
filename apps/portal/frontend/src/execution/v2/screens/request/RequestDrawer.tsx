@@ -24,7 +24,7 @@ import { useSearchParams } from "react-router-dom";
 import type { ExecutionApi } from "../../../api/ports";
 import { Drawer, useDockMode } from "../../Drawer";
 import { NewRequestForm } from "./NewRequestForm";
-import { WhatNextDisclosure } from "./parts";
+import { WhatNextDisclosure, WorkspaceNote } from "./parts";
 import { readPrefill, type PrefillRead } from "./model";
 import { useNewRequest } from "./useNewRequest";
 
@@ -115,6 +115,7 @@ export function RequestDrawer({ api, open, onClose, writeBlockedReason, accessHr
       }
     >
       <div className="exec-rq-drawer" data-screen="new-request-drawer-v2">
+        <WorkspaceNote />
         <NewRequestForm state={state} variant="drawer" accessHref={accessHref} />
         <WhatNextDisclosure />
       </div>

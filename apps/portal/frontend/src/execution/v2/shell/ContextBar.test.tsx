@@ -44,13 +44,15 @@ describe("ContextBar", () => {
 
   it("disables the window control with its reason attached and leaves the environment live", () => {
     render(
-      <ContextBar
-        env="live"
-        window="90D"
-        onChange={noop}
-        windowLock={{ reason: WINDOW_NOT_SERVED_REASON, effective: "ALL" }}
-        accessHref="/administration/profile-access#do"
-      />,
+      <MemoryRouter>
+        <ContextBar
+          env="live"
+          window="90D"
+          onChange={noop}
+          windowLock={{ reason: WINDOW_NOT_SERVED_REASON, effective: "ALL" }}
+          accessHref="/administration/profile-access#do"
+        />
+      </MemoryRouter>,
     );
     for (const name of ["7D", "30D", "90D", "ALL"]) {
       const button = screen.getByRole("button", { name }) as HTMLButtonElement;
@@ -60,7 +62,10 @@ describe("ContextBar", () => {
     }
     expect((screen.getByRole("button", { name: "Paper" }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByText("Window fixed: ALL")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "My access" }).getAttribute("href")).toBe("/administration/profile-access#do");
+    const access = screen.getByRole("link", { name: "My access" });
+    expect(access.getAttribute("href")).toBe("/administration/profile-access#do");
+    // A router link: the click is handled in the page (cancelled), not left to the browser as a full reload.
+    expect(fireEvent.click(access)).toBe(false);
   });
 
   it("does not click through a locked window", () => {

@@ -217,6 +217,16 @@ describe("withContext", () => {
     for (const href of ["//a", "/\\a", "a", "https://a", "?q", "#h", ""]) expect(isInternalPath(href), href).toBe(false);
   });
 
+  it("isInternalPath: control characters and backslashes are refused anywhere (browsers strip tab, CR and LF)", () => {
+    const refused = [
+      "/\t/evil.com", "/\n/evil.com", "/\r/evil.com", "/\r\n/evil.com", "/\u0000/evil.com", "/a\u0001b", "/a\u001fb", "/a\u007fb",
+      "/a\\b", "/a/b\\c", "/ok\n", "\t/evil.com", "javascript:alert(1)", "mailto:a@b.c", "data:text/html,x", "/\\/evil.com",
+    ];
+    for (const href of refused) expect(isInternalPath(href), JSON.stringify(href)).toBe(false);
+    for (const href of refused) expect(withContext(href, "env=paper"), JSON.stringify(href)).toBe(href);
+    for (const href of ["/a/b?x=1#h", "/a%09b", "/a b"]) expect(isInternalPath(href), href).toBe(true);
+  });
+
   it("`keys` narrows what is carried (the rail leaves `from` out); an own value still wins", () => {
     expect(withContext("/x", current, RAIL_CONTEXT_KEYS)).toBe("/x?env=paper&window=30d&ccy=USDT&workspace_id=ws_1");
     expect(RAIL_CONTEXT_KEYS).not.toContain("from");

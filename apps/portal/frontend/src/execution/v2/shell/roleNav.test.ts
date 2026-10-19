@@ -115,8 +115,18 @@ describe("applyV2Nav presets", () => {
     expect(items.map((item) => item.featureId)).not.toContain("APPROVALS");
     expect(items.filter((item) => item.label === "Approvals").map((item) => item.route)).toEqual(["/governance/approvals"]);
     expect(goToEntries(groups, V2_ROLE_PRESETS.manager).map((entry) => entry.id)).not.toContain("go:APPROVALS");
-    // Even a caller with nothing: the stub never comes back as a substitute for the scoped entry.
-    expect(applyV2Nav(groups, new Set()).flatMap((group) => group.items).map((item) => item.featureId)).not.toContain("APPROVALS");
+  });
+
+  it("the stub stays when its replacement is hidden by capability (a caller with no approval read keeps APPROVALS)", () => {
+    const items = applyV2Nav(groups, new Set()).flatMap((group) => group.items);
+    expect(items.map((item) => item.featureId)).not.toContain("EXECUTION_APPROVALS");
+    expect(items.map((item) => item.featureId)).toContain("APPROVALS");
+    expect(goToEntries(groups, new Set()).map((entry) => entry.id)).toContain("go:APPROVALS");
+  });
+
+  it("the stub stays when the replacement is not listed in the registry groups at all", () => {
+    const patched = groups.map((entry) => ({ ...entry, features: entry.features.filter((feature) => feature.id !== "EXECUTION_APPROVALS") }));
+    expect(applyV2Nav(patched, V2_ROLE_PRESETS.manager).flatMap((group) => group.items).map((item) => item.featureId)).toContain("APPROVALS");
   });
 
   it("a null scoped_v2_replacement does not hide anything", () => {

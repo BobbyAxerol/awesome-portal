@@ -50,7 +50,7 @@ import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
-import { withContext } from "../../urlState";
+import { isInternalPath, withContext } from "../../urlState";
 import {
   FE_CAPITAL, FE_CONTRIBUTORS, FE_DIGEST, FE_MONEY, FE_RESEARCHER, KIND_FLAG, currencyFacts, fleetCells, humanize, modeOf,
   needsAttention, openIncidents, ownRows, stageCounts, streamSentence, todayRows, triageRows, type CurrencyFact, type OwnRow,
@@ -187,6 +187,13 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   const cells = fleetCells(snapshot?.fleet ?? null);
   const today = todayRows(snapshot?.today ?? null);
   const ctx = (href: string) => withContext(canonicalHref(href) ?? href, params);
+  // A href the server published is data, not ours: anything that is not an app path (absolute URL, scheme,
+  // protocol-relative, control characters) is dropped and its row renders as plain text, never as a link.
+  const serverTo = (href: string): string | null => {
+    const target = canonicalHref(href) ?? href;
+    return isInternalPath(target) ? withContext(target, params) : null;
+  };
+  const NOT_AN_APP_LINK = "The link published for this item is not a path inside this app, so it is not offered";
 
   const ownColumns: readonly CardsColumn<OwnRow>[] = [
     { key: "alpha", label: "Alpha", render: (r) => <span className="exec-ov-what"><Link className="exec-ov-what-title exec-ov-link" to={ctx(ID_ROUTES.alpha(r.alphaId))}>{r.label}</Link><span className="exec-ov-sub">{r.version}</span></span> },
@@ -323,7 +330,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
                           {r.kind ? <Flag kind={KIND_FLAG[r.kind].kind} label={KIND_FLAG[r.kind].label} size="sm" /> : <Flag kind="unknown" label="Kind not stated" size="sm" />}
                           <span className="exec-ov-what-title">{r.title}</span>
                         </span>
-                        {r.href ? <Link className="exec-ov-link" to={ctx(r.href)}>{r.actionLabel}</Link> : <span className="exec-ov-na" title="The owning screen for this item was not published">No link published</span>}
+                        {r.href ? (serverTo(r.href) !== null ? <Link className="exec-ov-link" to={serverTo(r.href)!}>{r.actionLabel}</Link> : <span className="exec-ov-na" title={NOT_AN_APP_LINK}>No link published</span>) : <span className="exec-ov-na" title="The owning screen for this item was not published">No link published</span>}
                       </div>
                       {r.summary ? <div className="exec-ov-sub">{r.summary}</div> : null}
                       <div className="exec-ov-sub exec-ov-item-sla" title={r.sla}>{r.slaShort}</div>
@@ -379,7 +386,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
                     {cells.map((c) => (
                       <li key={c.label}>
                         <span className="exec-ov-cell-label">{c.label}</span>
-                        {c.value === null ? <span className="exec-ov-na">Not available</span> : c.href ? <Link className="exec-ov-kpi exec-ov-link" to={ctx(c.href)}>{c.value}</Link> : <span className="exec-ov-kpi">{c.value}</span>}
+                        {c.value === null ? <span className="exec-ov-na">Not available</span> : c.href && serverTo(c.href) !== null ? <Link className="exec-ov-kpi exec-ov-link" to={serverTo(c.href)!}>{c.value}</Link> : <span className="exec-ov-kpi">{c.value}</span>}
                       </li>
                     ))}
                   </ul>
@@ -396,7 +403,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
                 {today.map((item) => (
                   <li key={item.id}>
                     <span className="exec-ov-sub">{item.kind ? humanize(item.kind) : "Kind not published"}</span>{" "}
-                    {item.href ? <Link className="exec-ov-link" to={ctx(item.kind === "CONDITION_EXPIRY" ? "/governance/waivers" : item.href)}>{item.label}</Link> : item.label}
+                    {item.href && (item.kind === "CONDITION_EXPIRY" || serverTo(item.href) !== null) ? <Link className="exec-ov-link" to={item.kind === "CONDITION_EXPIRY" ? ctx("/governance/waivers") : serverTo(item.href)!}>{item.label}</Link> : item.label}
                   </li>
                 ))}
               </ul>

@@ -15,6 +15,7 @@ import type { ApprovalCreateInput, ExecutionApi } from "../../../api/ports";
 import { useExecUrlState } from "../../urlState";
 import NewRequestPage, { REQUEST_SCREEN_KEY } from "./index";
 import { RequestDrawer, type RequestDrawerProps } from "./RequestDrawer";
+import { OWN_WORKSPACE_NOTE } from "./parts";
 
 const u = (n: number): string => String.fromCodePoint(n);
 const RLO = u(0x202e);
@@ -972,5 +973,31 @@ describe("accessibility (structure)", () => {
     expect(screen.getByText("Ready")).toBeTruthy();
     fireEvent.change(summaryBox(), { target: { value: "" } });
     expect(screen.getByText("Incomplete")).toBeTruthy();
+  });
+});
+
+describe("workspace honesty (the port posts with no workspace; the server uses the caller's own)", () => {
+  it("the page says so once when the URL carries a workspace_id, and not otherwise", async () => {
+    mountPage(port(() => CREATED).api, "/governance/approvals/new?workspace_id=ws_other");
+    await loaded();
+    expect(screen.getAllByText(OWN_WORKSPACE_NOTE)).toHaveLength(1);
+    cleanup();
+    mountPage(port(() => CREATED).api, "/governance/approvals/new");
+    await loaded();
+    expect(screen.queryByText(OWN_WORKSPACE_NOTE)).toBeNull();
+    cleanup();
+    mountPage(port(() => CREATED).api, "/governance/approvals/new?workspace_id=");
+    await loaded();
+    expect(screen.queryByText(OWN_WORKSPACE_NOTE)).toBeNull();
+  });
+
+  it("the drawer says so once when the URL carries a workspace_id, and not otherwise", async () => {
+    mountDrawer(port(() => CREATED).api, "/governance/approvals?workspace_id=ws_other&compose=request");
+    await loaded();
+    expect(screen.getAllByText(OWN_WORKSPACE_NOTE)).toHaveLength(1);
+    cleanup();
+    mountDrawer(port(() => CREATED).api, "/governance/approvals?compose=request");
+    await loaded();
+    expect(screen.queryByText(OWN_WORKSPACE_NOTE)).toBeNull();
   });
 });
