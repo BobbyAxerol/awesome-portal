@@ -3,7 +3,7 @@
  *
  * The checker throws on keywords it does not know. `discriminator` and `deprecated` are annotations
  * (dropping them changes nothing); `minProperties` and `unevaluatedProperties` are real constraints
- * it cannot check, so dropping them makes the verdict weaker, and `ignored` says which. Each schema
+ * it cannot check (and `maxProperties`, `propertyNames`, which the paper, Canary and Live schemas carry), so dropping them makes the verdict weaker, and `ignored` says which. Each schema
  * is judged from a copy written to a temp directory (the approach accessEffective.conformance.test.ts
  * takes for `discriminator`). Test support only.
  */
@@ -16,7 +16,7 @@ import { validateAgainst } from "../execution/v2/testkit/schema";
 import type { SchemaRef } from "./routeTable";
 
 const ANNOTATIONS = new Set(["discriminator", "deprecated"]);
-const UNCHECKED = ["minProperties", "unevaluatedProperties"];
+const UNCHECKED = ["minProperties", "maxProperties", "propertyNames", "unevaluatedProperties"];
 
 let dir: string | null = null;
 const copies = new Map<string, { path: string; ignored: string[] }>();

@@ -16,6 +16,7 @@ every other `/api/**` path keeps going to the real services.
 | `location = /api/admin/profile-access/v2/effective` | the Access screen's read (exact match: `/api/admin/profile-access` and `/activity` stay real) |
 | `location = /api/admin/accounts` and `location ^~ /api/admin/accounts/` | the Users roster and detail |
 | `location = /api/admin/step-up` | the Users step-up state |
+| `location = /api/v1/quantbt/runs` | the Run Library list the New request pickers read (exact match: the rest of `/api/v1/quantbt/` stays real) |
 | `location ^~ /__fixture/` | the lane marker and the health check (`/__fixture/healthz`) |
 
 Keep `proxy_http_version 1.1`, `proxy_buffering off` and the `Host` / `X-Forwarded-*` headers the
@@ -30,7 +31,7 @@ These are called by the shell or by other screens. The fixture BFF answers them
 
 - `/api/auth/*` (session and CSRF), `/api/health`, `/api/ready`, `/api/control/healthz`
 - `/api/v1/portal/*` (registry, links, summary, capabilities), `/api/v1/alphas*`
-- `/api/v1/research/*`, `/api/v1/quantbt/*`, `/api/runs*`, `/api/strategies`, `/api/config/*`
+- `/api/v1/research/*`, `/api/v1/quantbt/*` (except the exact `GET /api/v1/quantbt/runs` above), `/api/runs*`, `/api/strategies`, `/api/config/*`
 - `/api/admin/profile-access` (the legacy policy matrix), `/api/admin/profile-access/activity`,
   `/api/admin/profile-access/v2/eligibility`, `/api/admin/profile-access/v2/self-navigation`
 - any other `/api/admin/*`
@@ -47,6 +48,8 @@ user) will refuse the fixture's.
 `/api/v1/execution/**` it asks the doubles in the order `execution-v2-s1.spec.ts` stubs them
 (`operationsV2` and `screensV2` on):
 
+0. `bffDoubleStage` (the S3 stage screens: Paper workbench, Sandbox, Canary, Live, New request; see below), asked first
+   and only for its own deployments and writes;
 1. `bffDoubleAlpha`, `bffDoubleAccount`, `bffDoublePortfolios`, `bffDoubleOverview` (sparse-realistic V2 profile);
 2. `bffDoubleV2` (operations queue and incident root);
 3. `bffDouble` (the canonical-fixture routes the V1 journeys read).
@@ -64,6 +67,31 @@ A request none of them answers is the doubles' own `501 bff_double_gap`; the ser
   `ACCEPTED`, `UNKNOWN`, then `BLOCKED` walk is disabled because it depends on call order.
 
 Every response, including every refusal and the event streams, carries `X-Fixture-Lane: FIXTURE_LAB`.
+
+## The stage screens (`bffDoubleStage`)
+
+Rows tagged `[stage id]` in the table answer for every deployment id except the legacy ones the V1 journeys and the
+recorded golden use (`dep_1`, `dep_94`, `dep_a`, `dep_vnm`), which keep the V1-era bodies byte for byte. Which body a
+stage route answers is chosen by the `workspace_id` of the read, the way the Access double chooses its state:
+
+| `workspace_id` | Sandbox `/certification`, Canary `/canary` | Live `/live` | capture capabilities |
+|---|---|---|---|
+| none, or any other | V1. Sandbox: the published V1 body made rich at the view-model level (4 of 7 steps pass, one fails, 2 findings, 1 plan, a timeline), still schema-valid. Canary: the published dark body | the published dark V1 body | `SANDBOX_NOTE` AVAILABLE |
+| `ws_TEST_SCOPED_V2` | `portal.execution.following-parent.v2` | `portal.execution.live-source-operations.v2`; orders and fills in 3 keyset pages of 20 through `?panel=&cursor=` (a cursor of another panel or past page 3 is `409 LIVE_SOURCE_CURSOR_EXPIRED`) | `SANDBOX_NOTE` AVAILABLE |
+| `ws_TEST_DENIED` | `403 ACCESS_DENIED` | `403 ACCESS_DENIED` | `403 ACCESS_DENIED` |
+| `ws_TEST_NOTE_OFF` | as the default | as the default | `SANDBOX_NOTE` UNAVAILABLE |
+
+Populated or dark: Paper is populated (40 orders including one UNKNOWN, fills, 3 positions, 200 equity snapshots, a
+PARTIAL quality read with latency dark, the observation gate). Sandbox is populated on both bodies. Canary and Live are
+DARK on the V1 bodies on purpose: the V1 schemas pin dark constants (`series.points maxItems 0`,
+`rollback_readiness.ready const false`, `production_command_active const false`), so a lit Canary or Live cannot be
+wire-valid and exists only in the screens' unit suites (S3 plan, section 0, finding 1).
+
+The two writes read the **text of the summary** (and answer without a body exactly as before, which is what the golden
+records), so a reviewer can reach every outcome by typing it: a summary starting `DUPLICATE` answers
+`409 APPROVAL_DUPLICATE_OPEN_REQUEST` naming AP-201, `REFUSE` a typed refusal (`422 CLAIM_NOT_ELIGIBLE` for a request,
+`409 SANDBOX_NOTE_VERSION_CONFLICT` for a note), `DENIED` a `403`, `REPLAY` the success with `replayed: true`; anything else
+is a success that echoes the request key, the alpha and the certification. Still nothing is stored.
 
 ## Scale
 
@@ -171,6 +199,19 @@ rows keep their dates).
 | GET | `/api/v1/execution/deployments/{deployment_id}/certification` | 200 | bffDouble | control-api | `execution-sandbox-certification.v1#/$defs/CertificationResponse` |  |
 | GET | `/api/v1/execution/deployments/{deployment_id}/canary` | 200 | bffDouble | control-api | none |  |
 | GET | `/api/v1/execution/deployments/{deployment_id}/live` | 200 | bffDouble | control-api | none |  |
+| GET | `/api/v1/execution/screens/paper/{deployment_id} [stage id]` | 200 | bffDoubleStage | control-api | DRIFT `execution-paper-read.v1#/` | populated: 40 orders (one UNKNOWN), fills, positions, 200 equity snapshots, observation gate; capabilities say what stays dark |
+| GET | `/api/v1/execution/screens/paper/{deployment_id}/vn-market [stage id]` | 200 | bffDoubleStage | control-api | none | the same rows on the VN market body |
+| GET | `/api/v1/execution/derivations/deployments/{deployment_id}/execution-quality [stage id]` | 200 | bffDoubleStage | control-api | none | PARTIAL: counts agree with the profile rows, latency UNAVAILABLE |
+| GET | `/api/v1/execution/deployments/{deployment_id}/certification [stage id]` | 200 | bffDoubleStage | control-api | `execution-sandbox-certification.v1#/$defs/CertificationResponse` | V1 body made rich at the view-model level (steps PASS/FAIL/UNAVAILABLE, findings, plans, timeline), still schema-valid |
+| GET | `/api/v1/execution/deployments/{deployment_id}/certification [stage id, V2 workspace]` | 200 | bffDoubleStage | control-api | `execution-operations.v1#/$defs/SandboxParentReadV2` | portal.execution.following-parent.v2 (workspace_id=ws_TEST_SCOPED_V2) |
+| GET | `/api/v1/execution/deployments/{deployment_id}/certification [stage id, denied workspace]` | 403 | bffDoubleStage | control-api (typed refusal) | none | ACCESS_DENIED (workspace_id=ws_TEST_DENIED) |
+| GET | `/api/v1/execution/deployments/{deployment_id}/canary [stage id]` | 200 | bffDoubleStage | control-api | `execution-canary-control-room.v1#/$defs/CanaryControlRoom` | the published DARK body (the V1 schema pins dark constants, so a lit Canary cannot be wire-valid) |
+| GET | `/api/v1/execution/deployments/{deployment_id}/canary [stage id, V2 workspace]` | 200 | bffDoubleStage | control-api | `execution-operations.v1#/$defs/CanaryParentReadV2` | portal.execution.following-parent.v2, CANARY family, draft envelope |
+| GET | `/api/v1/execution/deployments/{deployment_id}/live [stage id]` | 200 | bffDoubleStage | control-api | `execution-live-full-operations.v1#/` | the published DARK body (same reason as Canary) |
+| GET | `/api/v1/execution/deployments/{deployment_id}/live [stage id, V2 workspace]` | 200 | bffDoubleStage | control-api | `execution-operations.v1#/$defs/LiveSourceOperationsReadV2` | portal.execution.live-source-operations.v2; orders and fills page 1 of 3 |
+| GET | `/api/v1/execution/deployments/{deployment_id}/live?panel=&cursor= [stage id, V2 workspace]` | 200 | bffDoubleStage | control-api | `execution-operations.v1#/$defs/LiveSourceOperationsReadV2` | keyset: page 2 of 3 of the orders panel; a cursor of another panel or past page 3 answers 409 LIVE_SOURCE_CURSOR_EXPIRED |
+| GET | `/api/v1/execution/governance/review-capture-capabilities [note off]` | 200 | bffDoubleStage | control-api | `execution-governance-review-capture.v1#/$defs/Capabilities` | SANDBOX_NOTE UNAVAILABLE (workspace_id=ws_TEST_NOTE_OFF); the default workspace answers AVAILABLE |
+| GET | `/api/v1/quantbt/runs` | 200 | bffDoubleStage (via bffAnswerer) | quantbt service | none | the Run Library the New request pickers read: 5 COMPLETED runs for 3 alphas, one FAILED and one RUNNING that are never offered |
 | GET | `/api/v1/execution/operations` | 200 | bffDoubleV2 | control-api | `execution-operations.v1#/$defs/OperationalQueueV2` | filters triage_state, environment, source_status, verification_result, severity, target_type, target_id, command_key; sort; keyset |
 | GET | `/api/v1/execution/operations/incidents/{incident_id}` | 200 | bffDoubleV2 | control-api | `execution-operations.v1#/$defs/OperationalIncidentCurrentV2` |  |
 | GET | `/api/v1/execution/operations/{operation_id}` | 200 | bffDouble | control-api | `execution-operations.v1#/$defs/OperationWorkflowResponse` |  |
@@ -178,8 +219,12 @@ rows keep their dates).
 | GET | `/api/v1/execution/commands/catalog` | 200 | bffDoubleOverview | control-api | `execution-operations.v1#/$defs/CommandCatalogue` |  |
 | POST | `/api/v1/execution/commands/plans` | 200 | bffDoubleOverview | control-api | `execution-operations.v1#/$defs/ExecutionCommandPlan` | always the canonical BLOCKED plan (COMMAND_RELAY_DISABLED); the specs' ACCEPTED/UNKNOWN walk is off. Answered 200 where the published route answers 201 |
 | POST | `/api/v1/execution/commands/tasks/{task_id}/run` | 409 | bffDoubleOverview | control-api | none | TASK_NOT_CONNECTED |
-| POST | `/api/v1/execution/governance/approvals` | 201 | bffDouble | control-api | `execution-governance-product.v1#/$defs/ApprovalCreateResponse` | canned created body; nothing is stored |
-| POST | `/api/v1/execution/governance/sandbox/capture-note` | 201 | bffDouble | control-api | `execution-governance-review-capture.v1#/$defs/CaptureResponse` | canned capture body; nothing is stored |
+| POST | `/api/v1/execution/governance/approvals` | 201 | bffDouble | control-api | `execution-governance-product.v1#/$defs/ApprovalCreateResponse` | canned created body when the request carries no summary; nothing is stored |
+| POST | `/api/v1/execution/governance/approvals [with a summary]` | 201 | bffDoubleStage | control-api | `execution-governance-product.v1#/$defs/ApprovalCreateResponse` | created, echoing the alpha; the approval id follows the request key; replayed when the summary starts REPLAY |
+| POST | `/api/v1/execution/governance/approvals [summary DUPLICATE]` | 409 | bffDoubleStage | control-api (typed refusal) | none | APPROVAL_DUPLICATE_OPEN_REQUEST naming AP-201 |
+| POST | `/api/v1/execution/governance/approvals [summary REFUSE]` | 422 | bffDoubleStage | control-api (typed refusal) | none | CLAIM_NOT_ELIGIBLE; DENIED answers 403 APPROVAL_CREATE_DENIED |
+| POST | `/api/v1/execution/governance/sandbox/capture-note` | 201 | bffDoubleStage | control-api | `execution-governance-review-capture.v1#/$defs/CaptureResponse` | echoes the request's workspace, certification and key's deployment; replayed when the summary starts REPLAY; nothing is stored. With no body the doubles' canned body answers |
+| POST | `/api/v1/execution/governance/sandbox/capture-note [summary REFUSE]` | 409 | bffDoubleStage | control-api (typed refusal) | none | SANDBOX_NOTE_VERSION_CONFLICT; DENIED answers 403 GOVERNANCE_ADMIN_REQUIRED; an incomplete body 422 |
 | POST | `/api/v1/execution/approvals/{approval_id}/capital-preview` | 200 | bffDouble | control-api | none | canned preview |
 | POST | `/api/v1/execution/alphas/{alpha_id}/insight-previews` | 200 | bffDouble | control-api | none | canned preview |
 | POST | `/api/v1/execution/operations/{operation_id}/acknowledge` | 200 | bffDouble | control-api | `execution-operations.v1#/$defs/OperationWorkflowResponse` | canned workflow body; nothing changes |

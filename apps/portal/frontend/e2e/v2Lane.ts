@@ -6,7 +6,11 @@
 import type { Page } from "@playwright/test";
 
 import { answerAccessEffective } from "./bffDoubleAccess";
+import { answerQuantbtRuns, STAGE_V2_WORKSPACE } from "./bffDoubleStage";
 import { answerUsers } from "./bffDoubleUsers";
+
+/** The workspace whose reads answer the V2 body of the stage routes (Sandbox, Canary, Live); see bffDoubleStage.ts. */
+export const V2_WORKSPACE = STAGE_V2_WORKSPACE;
 
 /** [name, route, root selector] for every V2 entry route. */
 export const SCREENS = [
@@ -27,6 +31,22 @@ export const SCREENS = [
   ["admin", "/administration/actions", '[data-screen="admin-actions-v2"]'],
   ["users", "/administration/users", '[data-screen="users-v2"]'],
   ["access", "/administration/profile-access?workspace_id=ws_TEST_GRANTS", ".exec-acc-kpi"],
+  // S3 stage screens. The ids are the ones the Alpha 360 double lists, so a click on its Deployments tab lands here.
+  ["workbench", "/deployments/paper/dep_paper_01", '[data-screen="workbench-v2"]'],
+  ["workbench-fills", "/deployments/paper/dep_paper_01?tab=fills", '[data-screen="workbench-v2"]'],
+  ["workbench-vnm", "/deployments/paper/dep_paper_01/vn-market", '[data-screen="workbench-v2"]'],
+  ["sandbox", "/deployments/sandbox/dep_sandbox_01", '[data-screen="sandbox-v2"]'],
+  ["sandbox-steps", "/deployments/sandbox/dep_sandbox_01?tab=steps", '[data-screen="sandbox-v2"]'],
+  ["sandbox-plans", "/deployments/sandbox/dep_sandbox_01?tab=Promotion+plans", '[data-screen="sandbox-v2"]'],
+  ["sandbox-v2body", `/deployments/sandbox/dep_sandbox_01?workspace_id=${V2_WORKSPACE}`, '[data-screen="sandbox-v2"]'],
+  ["canary", "/deployments/live/dep_canary_01/canary", '[data-screen="canary-v2"]'],
+  ["canary-guard", "/deployments/live/dep_canary_01/canary?tab=guard-rule", '[data-screen="canary-v2"]'],
+  ["canary-v2body", `/deployments/live/dep_canary_01/canary?workspace_id=${V2_WORKSPACE}`, '[data-screen="canary-v2"]'],
+  ["live", "/deployments/live/dep_live_01", '[data-screen="live-v2"]'],
+  ["live-continuity", "/deployments/live/dep_live_01?tab=continuity", '[data-screen="live-v2"]'],
+  ["live-v2body", `/deployments/live/dep_live_01?workspace_id=${V2_WORKSPACE}`, '[data-screen="live-v2"]'],
+  ["new-request", "/governance/approvals/new", '[data-screen="new-request-v2"]'],
+  ["new-request-drawer", "/governance/approvals?compose=request", '[data-screen="new-request-drawer-v2"]'],
 ] as const;
 
 /**
@@ -80,6 +100,20 @@ export async function stubAdminRoutes(page: Page): Promise<void> {
     const answer = answerAccessEffective(request.method(), url.pathname, url.searchParams) ?? answerUsers(request.method(), url.pathname, url.searchParams);
     if (answer === null) return route.fallback();
     return route.fulfill({ status: answer.status, contentType: answer.contentType ?? "application/json", body: typeof answer.body === "string" ? answer.body : JSON.stringify(answer.body) });
+  });
+}
+
+/**
+ * `GET /api/v1/quantbt/runs?limit=50`, the Run Library the New request pickers read. It lives outside
+ * `/api/v1/execution`, so `stubExecutionBff` does not answer it; without this the preview server answers the SPA shell
+ * and the screen reports its Run Library as unreadable.
+ */
+export async function stubQuantbtRuns(page: Page): Promise<void> {
+  await page.route(/\/api\/v1\/quantbt\/runs(\?|$)/, (route) => {
+    const request = route.request();
+    const answer = answerQuantbtRuns(request.method(), new URL(request.url()).searchParams);
+    if (answer === null) return route.fallback();
+    return route.fulfill({ status: answer.status, contentType: "application/json", body: JSON.stringify(answer.body) });
   });
 }
 

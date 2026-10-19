@@ -26,7 +26,7 @@ export interface RouteEntry {
   /** The double (file in apps/portal/frontend/e2e) that answers it. */
   source: string;
   /** Who serves it for real. */
-  real: "control-api" | "control-api (typed refusal)" | "none yet" | "fixture lane";
+  real: "control-api" | "control-api (typed refusal)" | "quantbt service" | "none yet" | "fixture lane";
   /** What the route is worth a line on: why it has no schema, what the body is. */
   note?: string;
 }
@@ -43,7 +43,10 @@ const ADM = "/api/admin";
 const OPS = "execution-operations.v1";
 const RES = "execution-resource-scoped.v2";
 
-const SANDBOX_NOTE = { certification_id: "cert_1", expected_workflow_version: 1 };
+const V2_WS = "ws_TEST_SCOPED_V2";
+const SANDBOX_NOTE = { workspace_id: "ws_TEST_ONLY", request_key: "note-key-1", summary: "Reviewed the reconciliation evidence.", certification_id: "scert_dep_sandbox_01", expected_workflow_version: 1 };
+const APPROVAL_REQUEST = { schema_version: "governance.approval-create-request.v1", request_key: "req-key-1", gate: "R1", alpha_id: "alpha_btc_trend", evidence_run_id: "run_btc_trend_a1", methodology_claim_id: "claim_btc_oos", summary: "Momentum with a venue calendar." };
+const livePanelCursor = (panel: string, page: number): string => `lps2.${panel}.${String(page).padStart(8, "0")}.1234567890.${"A".repeat(43)}`;
 
 export const ROUTES: RouteEntry[] = [
   /* fixture lane */
@@ -127,6 +130,21 @@ export const ROUTES: RouteEntry[] = [
   { method: "GET", pattern: `${EX}/deployments/{deployment_id}/canary`, url: `${EX}/deployments/dep_1/canary`, status: 200, source: "bffDouble", real: "control-api" },
   { method: "GET", pattern: `${EX}/deployments/{deployment_id}/live`, url: `${EX}/deployments/dep_1/live`, status: 200, source: "bffDouble", real: "control-api" },
 
+  /* the S3 stage screens (e2e/bffDoubleStage.ts): ids other than dep_1, dep_94, dep_a, dep_vnm; the workspace picks the body */
+  { method: "GET", pattern: `${EX}/screens/paper/{deployment_id} [stage id]`, url: `${EX}/screens/paper/dep_paper_01`, status: 200, source: "bffDoubleStage", real: "control-api", note: "populated: 40 orders (one UNKNOWN), fills, positions, 200 equity snapshots, observation gate; capabilities say what stays dark" },
+  { method: "GET", pattern: `${EX}/screens/paper/{deployment_id}/vn-market [stage id]`, url: `${EX}/screens/paper/dep_paper_01/vn-market`, status: 200, source: "bffDoubleStage", real: "control-api", note: "the same rows on the VN market body" },
+  { method: "GET", pattern: `${EX}/derivations/deployments/{deployment_id}/execution-quality [stage id]`, url: `${EX}/derivations/deployments/dep_paper_01/execution-quality?environment=paper`, status: 200, source: "bffDoubleStage", real: "control-api", note: "PARTIAL: counts agree with the profile rows, latency UNAVAILABLE" },
+  { method: "GET", pattern: `${EX}/deployments/{deployment_id}/certification [stage id]`, url: `${EX}/deployments/dep_sandbox_01/certification`, status: 200, source: "bffDoubleStage", real: "control-api", note: "V1 body made rich at the view-model level (steps PASS/FAIL/UNAVAILABLE, findings, plans, timeline), still schema-valid" },
+  { method: "GET", pattern: `${EX}/deployments/{deployment_id}/certification [stage id, V2 workspace]`, url: `${EX}/deployments/dep_sandbox_01/certification?workspace_id=${V2_WS}`, status: 200, source: "bffDoubleStage", real: "control-api", note: "portal.execution.following-parent.v2 (workspace_id=ws_TEST_SCOPED_V2)" },
+  { method: "GET", pattern: `${EX}/deployments/{deployment_id}/certification [stage id, denied workspace]`, url: `${EX}/deployments/dep_sandbox_01/certification?workspace_id=ws_TEST_DENIED`, status: 403, source: "bffDoubleStage", real: "control-api (typed refusal)", note: "ACCESS_DENIED (workspace_id=ws_TEST_DENIED)" },
+  { method: "GET", pattern: `${EX}/deployments/{deployment_id}/canary [stage id]`, url: `${EX}/deployments/dep_canary_01/canary`, status: 200, source: "bffDoubleStage", real: "control-api", note: "the published DARK body (the V1 schema pins dark constants, so a lit Canary cannot be wire-valid)" },
+  { method: "GET", pattern: `${EX}/deployments/{deployment_id}/canary [stage id, V2 workspace]`, url: `${EX}/deployments/dep_canary_01/canary?workspace_id=${V2_WS}`, status: 200, source: "bffDoubleStage", real: "control-api", note: "portal.execution.following-parent.v2, CANARY family, draft envelope" },
+  { method: "GET", pattern: `${EX}/deployments/{deployment_id}/live [stage id]`, url: `${EX}/deployments/dep_live_01/live`, status: 200, source: "bffDoubleStage", real: "control-api", note: "the published DARK body (same reason as Canary)" },
+  { method: "GET", pattern: `${EX}/deployments/{deployment_id}/live [stage id, V2 workspace]`, url: `${EX}/deployments/dep_live_01/live?workspace_id=${V2_WS}`, status: 200, source: "bffDoubleStage", real: "control-api", note: "portal.execution.live-source-operations.v2; orders and fills page 1 of 3" },
+  { method: "GET", pattern: `${EX}/deployments/{deployment_id}/live?panel=&cursor= [stage id, V2 workspace]`, url: `${EX}/deployments/dep_live_01/live?workspace_id=${V2_WS}&panel=orders&cursor=${livePanelCursor("orders", 2)}`, status: 200, source: "bffDoubleStage", real: "control-api", note: "keyset: page 2 of 3 of the orders panel; a cursor of another panel or past page 3 answers 409 LIVE_SOURCE_CURSOR_EXPIRED" },
+  { method: "GET", pattern: `${EX}/governance/review-capture-capabilities [note off]`, url: `${EX}/governance/review-capture-capabilities?workspace_id=ws_TEST_NOTE_OFF`, status: 200, source: "bffDoubleStage", real: "control-api", note: "SANDBOX_NOTE UNAVAILABLE (workspace_id=ws_TEST_NOTE_OFF); the default workspace answers AVAILABLE" },
+  { method: "GET", pattern: "/api/v1/quantbt/runs", url: "/api/v1/quantbt/runs?limit=50", status: 200, source: "bffDoubleStage (via bffAnswerer)", real: "quantbt service", note: "the Run Library the New request pickers read: 5 COMPLETED runs for 3 alphas, one FAILED and one RUNNING that are never offered" },
+
   /* operations and commands */
   { method: "GET", pattern: `${EX}/operations`, url: `${EX}/operations?limit=50`, status: 200, source: "bffDoubleV2", real: "control-api", note: "filters triage_state, environment, source_status, verification_result, severity, target_type, target_id, command_key; sort; keyset" },
   { method: "GET", pattern: `${EX}/operations/incidents/{incident_id}`, url: `${EX}/operations/incidents/inc_fixture_44`, status: 200, source: "bffDoubleV2", real: "control-api" },
@@ -137,8 +155,12 @@ export const ROUTES: RouteEntry[] = [
   /* writes the doubles model (kept exactly; nothing is stored) */
   { method: "POST", pattern: `${EX}/commands/plans`, url: `${EX}/commands/plans`, body: { command_key: "account/sync" }, status: 200, source: "bffDoubleOverview", real: "control-api", note: "always the canonical BLOCKED plan (COMMAND_RELAY_DISABLED); the specs' ACCEPTED/UNKNOWN walk is off. Answered 200 where the published route answers 201" },
   { method: "POST", pattern: `${EX}/commands/tasks/{task_id}/run`, url: `${EX}/commands/tasks/health/run`, body: {}, status: 409, source: "bffDoubleOverview", real: "control-api", note: "TASK_NOT_CONNECTED" },
-  { method: "POST", pattern: `${EX}/governance/approvals`, url: `${EX}/governance/approvals`, body: {}, status: 201, source: "bffDouble", real: "control-api", note: "canned created body; nothing is stored" },
-  { method: "POST", pattern: `${EX}/governance/sandbox/capture-note`, url: `${EX}/governance/sandbox/capture-note`, body: SANDBOX_NOTE, status: 201, source: "bffDouble", real: "control-api", note: "canned capture body; nothing is stored" },
+  { method: "POST", pattern: `${EX}/governance/approvals`, url: `${EX}/governance/approvals`, body: {}, status: 201, source: "bffDouble", real: "control-api", note: "canned created body when the request carries no summary; nothing is stored" },
+  { method: "POST", pattern: `${EX}/governance/approvals [with a summary]`, url: `${EX}/governance/approvals`, body: APPROVAL_REQUEST, status: 201, source: "bffDoubleStage", real: "control-api", note: "created, echoing the alpha; the approval id follows the request key; replayed when the summary starts REPLAY" },
+  { method: "POST", pattern: `${EX}/governance/approvals [summary DUPLICATE]`, url: `${EX}/governance/approvals`, body: { ...APPROVAL_REQUEST, summary: "DUPLICATE of the open request" }, status: 409, source: "bffDoubleStage", real: "control-api (typed refusal)", note: "APPROVAL_DUPLICATE_OPEN_REQUEST naming AP-201" },
+  { method: "POST", pattern: `${EX}/governance/approvals [summary REFUSE]`, url: `${EX}/governance/approvals`, body: { ...APPROVAL_REQUEST, summary: "REFUSE this request please" }, status: 422, source: "bffDoubleStage", real: "control-api (typed refusal)", note: "CLAIM_NOT_ELIGIBLE; DENIED answers 403 APPROVAL_CREATE_DENIED" },
+  { method: "POST", pattern: `${EX}/governance/sandbox/capture-note`, url: `${EX}/governance/sandbox/capture-note`, body: SANDBOX_NOTE, status: 201, source: "bffDoubleStage", real: "control-api", note: "echoes the request's workspace, certification and key's deployment; replayed when the summary starts REPLAY; nothing is stored. With no body the doubles' canned body answers" },
+  { method: "POST", pattern: `${EX}/governance/sandbox/capture-note [summary REFUSE]`, url: `${EX}/governance/sandbox/capture-note`, body: { ...SANDBOX_NOTE, summary: "REFUSE this note please" }, status: 409, source: "bffDoubleStage", real: "control-api (typed refusal)", note: "SANDBOX_NOTE_VERSION_CONFLICT; DENIED answers 403 GOVERNANCE_ADMIN_REQUIRED; an incomplete body 422" },
   { method: "POST", pattern: `${EX}/approvals/{approval_id}/capital-preview`, url: `${EX}/approvals/AP-352/capital-preview`, body: {}, status: 200, source: "bffDouble", real: "control-api", note: "canned preview" },
   { method: "POST", pattern: `${EX}/alphas/{alpha_id}/insight-previews`, url: `${EX}/alphas/alpha_btc_trend/insight-previews`, body: {}, status: 200, source: "bffDouble", real: "control-api", note: "canned preview" },
   { method: "POST", pattern: `${EX}/operations/{operation_id}/acknowledge`, url: `${EX}/operations/op_1/acknowledge`, body: {}, status: 200, source: "bffDouble", real: "control-api", note: "canned workflow body; nothing changes" },
@@ -166,6 +188,15 @@ export const SCHEMAS: Record<string, SchemaVerdict> = {
   "GET /api/v1/execution/broker-bindings/{binding_id}": { ref: { file: "execution-manager-lists.v1", ptr: "/$defs/BindingDetailResponse" } },
   "GET /api/v1/execution/governance/review-capture-capabilities": { ref: { file: "execution-governance-review-capture.v1", ptr: "/$defs/Capabilities" } },
   "GET /api/v1/execution/deployments/{deployment_id}/certification": { ref: { file: "execution-sandbox-certification.v1", ptr: "/$defs/CertificationResponse" } },
+  "GET /api/v1/execution/deployments/{deployment_id}/canary [stage id]": { ref: { file: "execution-canary-control-room.v1", ptr: "/$defs/CanaryControlRoom" } },
+  "GET /api/v1/execution/deployments/{deployment_id}/live [stage id]": { ref: { file: "execution-live-full-operations.v1", ptr: "" } },
+  "GET /api/v1/execution/deployments/{deployment_id}/certification [stage id]": { ref: { file: "execution-sandbox-certification.v1", ptr: "/$defs/CertificationResponse" } },
+  "GET /api/v1/execution/deployments/{deployment_id}/certification [stage id, V2 workspace]": { ref: { file: OPS, ptr: "/$defs/SandboxParentReadV2" } },
+  "GET /api/v1/execution/deployments/{deployment_id}/canary [stage id, V2 workspace]": { ref: { file: OPS, ptr: "/$defs/CanaryParentReadV2" } },
+  "GET /api/v1/execution/deployments/{deployment_id}/live [stage id, V2 workspace]": { ref: { file: OPS, ptr: "/$defs/LiveSourceOperationsReadV2" } },
+  "GET /api/v1/execution/deployments/{deployment_id}/live?panel=&cursor= [stage id, V2 workspace]": { ref: { file: OPS, ptr: "/$defs/LiveSourceOperationsReadV2" } },
+  "GET /api/v1/execution/governance/review-capture-capabilities [note off]": { ref: { file: "execution-governance-review-capture.v1", ptr: "/$defs/Capabilities" } },
+  "POST /api/v1/execution/governance/approvals [with a summary]": { ref: { file: "execution-governance-product.v1", ptr: "/$defs/ApprovalCreateResponse" } },
   "GET /api/v1/execution/operations": { ref: { file: OPS, ptr: "/$defs/OperationalQueueV2" } },
   "GET /api/v1/execution/operations/incidents/{incident_id}": { ref: { file: OPS, ptr: "/$defs/OperationalIncidentCurrentV2" } },
   "GET /api/v1/execution/operations/{operation_id}": { ref: { file: OPS, ptr: "/$defs/OperationWorkflowResponse" } },
@@ -178,6 +209,7 @@ export const SCHEMAS: Record<string, SchemaVerdict> = {
   "POST /api/v1/execution/operations/{operation_id}/resolve": { ref: { file: OPS, ptr: "/$defs/OperationWorkflowResponse" } },
 
   /* a published schema exists and the double does not conform to it: reported, not hidden */
+  "GET /api/v1/execution/screens/paper/{deployment_id} [stage id]": { ref: { file: "execution-paper-read.v1", ptr: "" }, drift: "data.history_windows is not in the published Data schema; the V1 reader and the V2 workbench read it for the downsample caption (everything else conforms)" },
   "GET /api/v1/execution/screen-contracts": { ref: { file: "execution-screen-bff.v1", ptr: "/$defs/CatalogueResponse" }, drift: "the unit fixture lacks read_at, actor, exact_total and has more than the 23 screens the schema allows" },
   "GET /api/v1/execution/alphas/{alpha_id}/stage-drift": { ref: { file: "execution-alpha-stage-drift.v2", ptr: "" }, drift: "the double serves the pre-v2 stage-drift body (no schema_version, alpha_id, qualification)" },
   "GET /api/v1/execution/resources/alphas/{alpha_id}": { ref: { file: RES, ptr: "/$defs/AlphaScopedResourceWireResponse" }, drift: NOT_V2 },

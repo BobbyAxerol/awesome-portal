@@ -122,8 +122,9 @@ describe("every route in ROUTES.md", () => {
 /* ── the session ───────────────────────────────────────────────────────── */
 
 describe("the session capabilities", () => {
-  it("are the ones the V2 Playwright spec inlines", () => {
-    const spec = readFileSync(resolve(__dirname, "../../e2e/execution-v2-s1.spec.ts"), "utf8");
+  it("are the ones the V2 Playwright lane inlines", () => {
+    // The list moved from the spec into the shared lane module (v2Lane.ts), which the s1 spec and the link crawler both use.
+    const spec = readFileSync(resolve(__dirname, "../../e2e/v2Lane.ts"), "utf8");
     const literal = /const MANAGER_CAPABILITIES = \[([\s\S]*?)\];/.exec(spec)?.[1] ?? "";
     const inSpec = [...literal.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
     expect(inSpec.length).toBeGreaterThan(10);

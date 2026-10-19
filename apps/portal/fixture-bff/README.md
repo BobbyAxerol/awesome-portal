@@ -32,8 +32,8 @@ the same answers (`src/fixtureBff/equivalence.test.ts`).
 
 It answers the same routes with the same body shapes as `apps/control-api` for the reads the V2
 screens make, and nothing else. `ROUTES.md` lists every route, who answers it here, who serves it for
-real, and the published schema its body is judged against. Of the 79 rows, 22 bodies validate against
-a published schema, 10 are known to differ from one (reported as `DRIFT`, never hidden), and 47 have
+real, and the published schema its body is judged against. Of the 96 rows, 31 bodies validate against
+a published schema, 11 are known to differ from one (reported as `DRIFT`, never hidden), and 54 have
 no published schema that fits.
 
 It never reads a request header, so it cannot be told who is calling; the session capabilities and
@@ -44,7 +44,7 @@ the user id are configuration. Anything it does not model is refused, not invent
 - the writes the doubles do model answer exactly as they do for the specs (a command plan is always
   the canonical `BLOCKED` answer, with `source_side_effect_requested: false`).
 
-Be aware of what the modelled writes are: canned bodies that **store nothing**. Creating an approval,
+Be aware of what the modelled writes are: answers that **store nothing**. Creating an approval,
 acknowledging an operation or "applying" one answers success here and changes nothing on the next
 read, while the real relay is off (the published `apply` route answers `409 COMMAND_RELAY_DISABLED`).
 If that would mislead a reviewer, set `FIXTURE_WRITES=refuse`: every non-GET is then `405`.

@@ -21,11 +21,13 @@
  *  - the session capabilities the specs inline for `GET /api/admin/access/self`, so the screens are
  *    not fail-closed;
  *  - the admin reads (`/api/admin/profile-access/v2/effective`, `/api/admin/accounts`,
- *    `/api/admin/step-up`) from their own doubles.
+ *    `/api/admin/step-up`) from their own doubles;
+ *  - the Run Library list (`GET /api/v1/quantbt/runs`) the New request pickers read.
  */
 import { answerAccessEffective, ACCESS_DOUBLE_DEFAULT_USER } from "./bffDoubleAccess";
 import { answerUsers } from "./bffDoubleUsers";
 import { answerExecutionBff, type BffDoubleOptions } from "./bffDouble";
+import { answerQuantbtRuns, QUANTBT_RUNS_PATH } from "./bffDoubleStage";
 
 export interface BffRequest {
   method: string;
@@ -103,6 +105,12 @@ export function answerFixtureRequest(request: BffRequest, options: FixtureAnswer
   if (path === EXECUTION_PREFIX || path.startsWith(`${EXECUTION_PREFIX}/`)) {
     const answer = answerExecutionBff(method, path, params, options, request.body ?? undefined);
     return isGap(answer) ? null : respond(answer);
+  }
+
+  // The Run Library list the New request pickers read. It is outside /api/v1/execution, so the doubles above never see it.
+  if (path === QUANTBT_RUNS_PATH) {
+    const answer = answerQuantbtRuns(method, params);
+    return answer === null ? null : respond(answer);
   }
 
   if (path === ACCESS_SELF_ROUTE) {

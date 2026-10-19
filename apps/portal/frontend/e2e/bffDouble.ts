@@ -22,6 +22,7 @@ import { answerAccount } from "./bffDoubleAccount";
 import { answerAlpha } from "./bffDoubleAlpha";
 import { answerOverview } from "./bffDoubleOverview";
 import { answerPortfolios } from "./bffDoublePortfolios";
+import { answerStage, isStageDeployment, withStageQuality } from "./bffDoubleStage";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 
 const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
@@ -1114,6 +1115,12 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
   const seg = path.split("/").filter(Boolean);
 
   if (options.screensV2) {
+    // The S3 stage screens (Paper workbench, Sandbox, Canary, Live, New request): only their own deployments and writes.
+    const stage = answerStage(method, path, seg, search, requestBody);
+    if (stage !== null) return stage as Answer;
+  }
+
+  if (options.screensV2) {
     const search2 = search;
     const sparse =
       answerAlpha(method, path, search2) ??
@@ -1252,8 +1259,10 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
       const environment = search.get("environment");
       if (!validEnvironment(environment)) return problem(400, "invalid_environment", "A profile environment is required.");
       if (seg[1] === "source-health" && seg.length === 2) return ok(sourceHealthEnvelope(environment));
-      if (seg[1] === "deployments" && seg[3] === "execution-quality" && seg.length === 4)
-        return ok(deploymentQualityEnvelope(seg[2], environment));
+      if (seg[1] === "deployments" && seg[3] === "execution-quality" && seg.length === 4) {
+        const quality = deploymentQualityEnvelope(seg[2], environment);
+        return ok(options.screensV2 && isStageDeployment(seg[2]) ? withStageQuality(quality) : quality);
+      }
       if (seg[1] === "portfolios" && seg[3] === "capital" && seg.length === 4)
         return ok(portfolioCapitalEnvelope(seg[2], environment));
       if (seg[1] === "alphas" && seg[3] === "activity" && seg.length === 4)
@@ -1326,12 +1335,28 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
   return { status: 501, body: { error: { code: "bff_double_gap", message: `the e2e BFF double has no answer for ${method} ${pathname}` } } };
 }
 
+/**
+ * The parsed JSON of the two writes whose answer depends on what was sent (the New request create and the Sandbox note).
+ * Every other request is answered without a body, exactly as the stub always has: `/commands/plans` would otherwise start
+ * echoing its `command_key`, which the V1 journeys do not expect.
+ */
+function bodyOf(request: { method(): string; url(): string; postDataJSON?: () => unknown }): unknown {
+  if (request.method() !== "POST" || typeof request.postDataJSON !== "function") return undefined;
+  const path = new URL(request.url()).pathname.replace(/^\/api\/v1\/execution/, "");
+  if (path !== "/governance/approvals" && path !== "/governance/sandbox/capture-note") return undefined;
+  try {
+    return request.postDataJSON();
+  } catch {
+    return undefined;
+  }
+}
+
 /** Register the double on a page. Same-origin only — nothing else is stubbed here. */
 export async function stubExecutionBff(page: Page, options: BffDoubleOptions = {}): Promise<void> {
   await page.route("**/api/v1/execution/**", (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    const { status, body, contentType = "application/json" } = answerExecutionBff(request.method(), url.pathname, url.searchParams, options);
+    const { status, body, contentType = "application/json" } = answerExecutionBff(request.method(), url.pathname, url.searchParams, options, bodyOf(request));
     return route.fulfill({
       status,
       contentType,
