@@ -1,0 +1,710 @@
+/**
+ * V2 manager reader, part 2: the manager DATASET body
+ * (`portal.execution.manager-dataset.v1`, `components/schemas/ManagerDataset` of
+ * `packages/contracts/openapi/execution-manager-models.openapi.json`; answered by
+ * `executionManagerFundOverviewGetV1`, `...FleetGetV1`, `...Portfolio360GetV1`, `...Alpha360GetV1`,
+ * `...Account360GetV1`, `...Deployment360GetV1`).
+ *
+ * What it reads: the envelope (surface, environment, authorities, clocks, quality), `selected_window`,
+ * `query_options` (closed enums, the sort/metric/group/partition consistency the schema writes as `allOf`),
+ * the `page` and cursor envelope, `items` (rows, children, metrics, per-partition metrics), `groups`,
+ * `capital_statements` and `statement_scope`, the four `scores` slots, `funding_bucket_pnl` and `lineage`.
+ *
+ * What it does NOT read: `score_details`, `composition_details`, `regime_details` (the score, composition and regime
+ * publications, other families). They are optional in the schema; here they are accepted only as bounded arrays of
+ * objects with the right `slot`, COUNTED (`unreadDetails`) and never surfaced (named looser group MD-L1). The
+ * `ManagerScorePublication`, `ManagerCompositionPublication`, `ManagerRegimePublication` and the score-revision
+ * bodies are not covered.
+ *
+ * Boundary rules (consumer-review-2026-10-18, review2/04 and 06):
+ * - the body is `unknown` until every check passes. One bad row, metric, partition or group voids the whole read;
+ *   a silently dropped row would make a count or a fleet table a lie. There is no partial trust;
+ * - a readable body of another `schema_version` is `unsupported_shape`, never fed to this reader's types;
+ * - money and every other figure is an exact decimal STRING (see managerMetric.ts). Times are safe-integer UTC
+ *   epoch milliseconds, never ISO strings;
+ * - `ALL` is never a window: `selected_window.requested === "ALL"` has `resolved: null` and reason
+ *   `ALL_HISTORY_WINDOW_NOT_PUBLISHED`, and reads as `{kind: "gap"}`, a state with no `fromMs`/`toMs` to draw;
+ * - there is no cross-currency total: partitions stay separate and in published order, a figure inside a partition
+ *   cannot name another currency, and a row-level money figure cannot sit above partitions in another currency;
+ * - an absent metric, score or window is a typed absence with its reason, never `0`; an unknown word is a refusal,
+ *   never a success state;
+ * - the contract is closed: a key the schema does not name voids the read; sizes are bounded.
+ *
+ * The result of `readManagerDataset(raw)` is the typed read, `unsupported_shape` for a readable body of another
+ * schema, or `null` for a malformed body. It never throws.
+ */
+import type { UtcEpochMs } from "../../screenDataContract";
+import {
+  boundedCount,
+  clockMs,
+  exactValue,
+  hasAll,
+  hasOnly,
+  managerText,
+  nullableText,
+  oneOf,
+  readMsWindow,
+  readPartitionedMetricsList,
+  readManagerMetric,
+  readManagerQuality,
+  record,
+  type ManagerMetricRead,
+  type ManagerPartitionedMetrics,
+  type ManagerQuality,
+  type MsWindow,
+} from "./managerMetric";
+
+export const MANAGER_DATASET_SCHEMA = "portal.execution.manager-dataset.v1";
+
+export const MANAGER_SURFACES = ["FUND", "FLEET", "PORTFOLIO", "ALPHA", "ACCOUNT", "DEPLOYMENT"] as const;
+export type ManagerSurface = (typeof MANAGER_SURFACES)[number];
+export const MANAGER_ENVIRONMENTS = ["paper", "sandbox", "live"] as const;
+export type ManagerEnvironment = (typeof MANAGER_ENVIRONMENTS)[number];
+export const MANAGER_STAGES = ["PAPER", "SANDBOX", "CANARY", "LIVE"] as const;
+export type ManagerStage = (typeof MANAGER_STAGES)[number];
+
+/** `query_options.metric_keys` / `items[].metrics` property names: the closed enum of the schema. */
+export const MANAGER_METRIC_KEYS = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value", "return_30d_pct", "score"] as const;
+export type ManagerMetricKey = (typeof MANAGER_METRIC_KEYS)[number];
+/** `economic_partition_required_for`: the five money-bearing keys. */
+export const MANAGER_PARTITIONED_METRIC_KEYS = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value"] as const;
+export type ManagerPartitionedMetricKey = (typeof MANAGER_PARTITIONED_METRIC_KEYS)[number];
+/** `window.independent_metrics`. */
+export const MANAGER_INDEPENDENT_WINDOW_KEYS = ["allocation", "balance_total", "unrealized_pnl"] as const;
+export const MANAGER_GROUP_FIELDS = ["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "venue", "health", "source_state", "lifecycle"] as const;
+export type ManagerGroupField = (typeof MANAGER_GROUP_FIELDS)[number];
+export const MANAGER_SORT_FIELDS = [
+  "alpha_id", "alpha_version_id", "name", "owner_user_id", "portfolio_id", "lifecycle", "venue", "health", "source_state", "allocation", "net_pnl",
+  "unrealized_pnl", "balance_total", "equity_30d_end_value", "return_30d_pct", "score", "stage_presence",
+] as const;
+export type ManagerSortField = (typeof MANAGER_SORT_FIELDS)[number];
+export const MANAGER_WINDOW_PRESETS = ["7D", "30D", "90D"] as const;
+
+export const ALL_HISTORY_WINDOW_NOT_PUBLISHED = "ALL_HISTORY_WINDOW_NOT_PUBLISHED";
+export const EXACT_METRIC_WINDOW_NOT_PUBLISHED = "EXACT_METRIC_WINDOW_NOT_PUBLISHED";
+const WINDOW_REASONS = [EXACT_METRIC_WINDOW_NOT_PUBLISHED, ALL_HISTORY_WINDOW_NOT_PUBLISHED] as const;
+export const MANAGER_STATEMENT_SCOPE = "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS";
+
+/** Schema `items` maxItems / `page.limit` maximum / `groups` maxItems. */
+export const MAX_ITEMS = 200;
+export const MAX_GROUPS = 200;
+/** Schema `children` maxItems per row. */
+export const MAX_CHILDREN_PER_ROW = 10_000;
+/**
+ * READER BOUND, not a schema fact: the most children one body may carry in all. The route promises at most
+ * `maximum_response_bytes` = 1 MiB and a child is over 100 bytes, so more than this cannot be one honest body (MD-S8).
+ */
+export const MAX_CHILDREN_TOTAL = 10_000;
+/** Schema `page.authorized_filtered_count` maximum; `groups[].unique_row_count` maximum. */
+export const MAX_FILTERED_COUNT = 10_000;
+/** Schema `page.*_cursor` maxLength. */
+export const MAX_CURSOR = 4096;
+/** Schema `dataset.quality.reasons` maxItems. */
+export const MAX_DATASET_REASONS = 32;
+/** Schema `score_details` / `composition_details` / `regime_details` maxItems. */
+export const MAX_DETAILS = 128;
+/** The route's promise (`query_policy.maximum_response_bytes`), read as a constant. */
+export const MAX_RESPONSE_BYTES = 1_048_576;
+/** `snapshot_id` and `lineage.*`: the schema pins them to `^sha256:[a-f0-9]{64}$`. */
+const SHA256_REF = /^sha256:[a-f0-9]{64}$/;
+const digestRef = (value: unknown): string | null => (typeof value === "string" && SHA256_REF.test(value) ? value : null);
+
+/* ───────────────────────── types ───────────────────────── */
+
+/** `selected_window`. `ALL` is a gap, never a window: it has no bounds to draw. */
+export type ManagerSelectedWindow =
+  | { kind: "window"; requested: "7D" | "30D" | "90D" | MsWindow; resolved: MsWindow }
+  | { kind: "gap"; requested: "ALL"; reasonCode: typeof ALL_HISTORY_WINDOW_NOT_PUBLISHED };
+
+export interface ManagerWindowPreset {
+  value: "7D" | "30D" | "90D" | "ALL";
+  /** `null` when the window is not published for the preset; never an invented range. */
+  resolved: MsWindow | null;
+  dataState: "METRIC_SPECIFIC" | "NOT_PUBLISHED";
+  reasonCode: string | null;
+}
+
+export interface ManagerQueryOptions {
+  temporalMode: "CURRENT_ONLY";
+  search: { fields: readonly "name"[]; modes: readonly ("PREFIX" | "CONTAINS")[] };
+  sortFields: readonly ManagerSortField[];
+  groupFields: readonly ManagerGroupField[];
+  /** The metric keys rows carry: exactly the set `items[].metrics` must hold. */
+  metricKeys: readonly ManagerMetricKey[];
+  economicPartitionRequiredFor: readonly ManagerPartitionedMetricKey[];
+  window: {
+    customSupported: true;
+    independentMetrics: readonly (typeof MANAGER_INDEPENDENT_WINDOW_KEYS)[number][];
+    presets: readonly ManagerWindowPreset[];
+  };
+  /** Fields the contract states it cannot publish, with the published reason. */
+  unavailableFields: readonly { field: "current_stage" | "days_in_stage"; reasonCode: string }[];
+}
+
+export interface ManagerPage {
+  limit: number;
+  returnedCount: number;
+  authorizedFilteredCount: number;
+  /** Opaque, bound to the filter by the server. `null` is "no further page". */
+  nextCursor: string | null;
+  previousCursor: string | null;
+}
+
+export interface ManagerRowChild {
+  alphaId: string;
+  alphaVersionId: string;
+  portfolioId: string;
+  deploymentId: string;
+  accountId: string;
+  stage: ManagerStage;
+  bindingRef: string | null;
+}
+
+export type ManagerRowMetrics = Readonly<Partial<Record<ManagerMetricKey, ManagerMetricRead>>>;
+
+export interface ManagerRow {
+  rowKey: string;
+  alphaId: string;
+  alphaVersionId: string;
+  portfolioId: string;
+  name: string | null;
+  ownerUserId: string | null;
+  lifecycle: string | null;
+  venue: string | null;
+  health: string | null;
+  sourceState: string | null;
+  /** A set, in published (lexical) order: not a risk rank (`query_policy.stage_order`). */
+  stagePresence: readonly ManagerStage[];
+  children: readonly ManagerRowChild[];
+  /** Exactly the keys of `queryOptions.metricKeys`. */
+  metrics: ManagerRowMetrics;
+  /** Per-partition figures; the only place a money figure is complete (see `economicPartitionRequiredFor`). */
+  economicPartitions: readonly ManagerPartitionedMetrics[];
+}
+
+export interface ManagerGroup {
+  key: readonly { field: ManagerGroupField; value: string | null }[];
+  uniqueRowCount: number;
+  totalsScope: "FULL_AUTHORIZED_FILTERED_QUERY";
+  economicPartitions: readonly ManagerPartitionedMetrics[];
+}
+
+export type ManagerScoreSlotStatus =
+  | "policy_pending" | "available" | "provisional" | "unbound" | "invalid_data" | "stale" | "partial_costs" | "partial_components"
+  | "insufficient_data" | "window_not_published" | "partial_coverage" | "incomparable_basis" | "no_allocation";
+
+/** A score slot: a value only for `available` / `provisional`; everything else is a typed absence, never `0`. */
+export type ManagerScoreSlot =
+  | { kind: "value"; status: "available" | "provisional"; exact: string; zero: boolean; provisional: boolean }
+  | { kind: "absent"; status: ManagerScoreSlotStatus; reasonCode: string | null };
+
+export interface ManagerScores {
+  raw: ManagerScoreSlot;
+  composition: ManagerScoreSlot;
+  directNav: ManagerScoreSlot;
+  /** The regime slot never carries a value on a dataset. */
+  regime: { kind: "absent"; status: string; reasonCode: string | null };
+  reasonCode: string;
+  calculationPath: "PRECOMPUTED_ONLY";
+}
+
+export interface ManagerDataset {
+  surface: ManagerSurface;
+  workspaceId: string;
+  environment: ManagerEnvironment;
+  snapshotId: string;
+  asOfMs: UtcEpochMs;
+  recordedThroughMs: UtcEpochMs;
+  /** `null` is "the source states no facts clock", not "now". */
+  factsThroughMs: UtcEpochMs | null;
+  quality: ManagerQuality;
+  /** `null` is "no window was requested"; see `ManagerSelectedWindow` for ALL. */
+  selectedWindow: ManagerSelectedWindow | null;
+  queryOptions: ManagerQueryOptions;
+  page: ManagerPage;
+  items: readonly ManagerRow[];
+  groups: readonly ManagerGroup[];
+  /** Capital figures per partition, before the table filters (`statementScope`). Never totalled across partitions. */
+  capitalStatements: readonly ManagerPartitionedMetrics[];
+  statementScope: typeof MANAGER_STATEMENT_SCOPE;
+  scores: ManagerScores;
+  fundingBucketPnl: { kind: "absent"; reasonCode: "LOT_ATTRIBUTION_METHOD_NOT_APPROVED" };
+  lineage: { reducerRevision: "manager-model.v1"; sourceSetRef: string; revision: string; supersedesRevision: string | null };
+  /** Counts of the details arrays this reader accepted without reading their content. */
+  unreadDetails: { scoreDetails: number; compositionDetails: number; regimeDetails: number };
+  /** True when `next_cursor` names a further page. */
+  hasMore: boolean;
+}
+
+/** What a reader hands back for a readable body that is not this schema. */
+export interface UnsupportedManagerShape {
+  kind: "unsupported_shape";
+  schemaVersion: string | null;
+}
+
+export type ManagerDatasetRead = { kind: "dataset"; dataset: ManagerDataset } | UnsupportedManagerShape;
+
+/* ───────────────────────── readers ───────────────────────── */
+
+const ROOT_REQUIRED = [
+  "schema_version", "selected_window", "query_options", "surface", "workspace_id", "environment", "record_authority", "source_authority",
+  "snapshot_id", "as_of_ms", "recorded_through_ms", "facts_through_ms", "quality", "coverage", "economic_aggregation", "query_policy", "page",
+  "items", "groups", "capital_statements", "statement_scope", "scores", "funding_bucket_pnl", "lineage",
+] as const;
+const ROOT_OPTIONAL = ["score_details", "composition_details", "regime_details"] as const;
+
+const ENVIRONMENT_STAGES: Readonly<Record<ManagerEnvironment, readonly ManagerStage[]>> = {
+  paper: ["PAPER"],
+  sandbox: ["SANDBOX"],
+  live: ["CANARY", "LIVE"],
+};
+
+function uniqueEnumList<T extends string>(raw: unknown, allowed: readonly T[], max: number): readonly T[] | null {
+  if (!Array.isArray(raw) || raw.length > max) return null;
+  const out: T[] = [];
+  for (const entry of raw) {
+    const word = oneOf(entry, allowed);
+    if (word === null || out.includes(word)) return null;
+    out.push(word);
+  }
+  return out;
+}
+
+const sameSet = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((word) => b.includes(word));
+const intersect = <T extends string>(universe: readonly T[], within: readonly string[]): readonly T[] => universe.filter((word) => within.includes(word));
+const isConst = (value: unknown, expected: unknown): boolean => JSON.stringify(value) === JSON.stringify(expected);
+
+/**
+ * `selected_window`. `ALL` has `resolved: null` and reason `ALL_HISTORY_WINDOW_NOT_PUBLISHED`: a GAP, never a window.
+ * Any other request has a resolved window and no reason. `null` (anyOf) is "no window requested".
+ */
+export function readManagerSelectedWindow(raw: unknown): ManagerSelectedWindow | null | undefined {
+  if (raw === null) return null;
+  const window = record(raw);
+  const keys = ["requested", "resolved", "selection_basis", "reason_code"] as const;
+  if (window === null || !hasOnly(window, keys) || !hasAll(window, keys) || window.selection_basis !== "EXACT_PUBLISHED_METRIC_WINDOW_ONLY") return undefined;
+  if (window.requested === "ALL") {
+    return window.resolved === null && window.reason_code === ALL_HISTORY_WINDOW_NOT_PUBLISHED
+      ? { kind: "gap", requested: "ALL", reasonCode: ALL_HISTORY_WINDOW_NOT_PUBLISHED }
+      : undefined;
+  }
+  const preset = oneOf(window.requested, MANAGER_WINDOW_PRESETS);
+  const requested = preset ?? readMsWindow(window.requested);
+  const resolved = readMsWindow(window.resolved);
+  if (requested === null || resolved === null || window.reason_code !== null) return undefined;
+  return { kind: "window", requested, resolved };
+}
+
+function readPreset(raw: unknown, expected: ManagerWindowPreset["value"]): ManagerWindowPreset | null {
+  const preset = record(raw);
+  const keys = ["value", "resolved", "data_state", "reason_code"] as const;
+  if (preset === null || !hasOnly(preset, keys) || !hasAll(preset, keys) || preset.value !== expected) return null;
+  const dataState = oneOf(preset.data_state, ["METRIC_SPECIFIC", "NOT_PUBLISHED"] as const);
+  if (dataState === null) return null;
+  const resolved = preset.resolved === null ? null : readMsWindow(preset.resolved);
+  if (preset.resolved !== null && resolved === null) return null;
+  const reasonCode = preset.reason_code === null ? null : oneOf(preset.reason_code, WINDOW_REASONS);
+  if (preset.reason_code !== null && reasonCode === null) return null;
+  if (dataState === "METRIC_SPECIFIC") {
+    // A published window has bounds and no reason.
+    if (resolved === null || reasonCode !== null) return null;
+  } else if (reasonCode === null || resolved !== null) {
+    // A window the source does not publish names why, and has no bounds (the schema allows bounds here; MD-S9).
+    return null;
+  }
+  if (expected === "ALL" && (resolved !== null || reasonCode !== ALL_HISTORY_WINDOW_NOT_PUBLISHED)) return null;
+  return { value: expected, resolved, dataState, reasonCode };
+}
+
+function readQueryOptions(raw: unknown): ManagerQueryOptions | null {
+  const options = record(raw);
+  const keys = [
+    "temporal_mode", "search", "sort_fields", "group_fields", "metric_keys", "economic_partition_required_for", "window", "stage_environment",
+    "unavailable_fields",
+  ] as const;
+  if (options === null || !hasOnly(options, keys) || !hasAll(options, keys) || options.temporal_mode !== "CURRENT_ONLY") return null;
+
+  // search: closed; the constants are checked, not surfaced.
+  const search = record(options.search);
+  const searchKeys = ["fields", "modes", "maximum_text_length", "normalization"] as const;
+  if (search === null || !hasOnly(search, searchKeys) || !hasAll(search, searchKeys)) return null;
+  if (search.maximum_text_length !== 160 || search.normalization !== "JS_TO_LOWER_CASE_NO_UNICODE_NORMALIZATION") return null;
+  const searchFields = uniqueEnumList(search.fields, ["name"] as const, 1);
+  const searchModes = uniqueEnumList(search.modes, ["PREFIX", "CONTAINS"] as const, 2);
+  if (searchFields === null || searchModes === null) return null;
+  // Schema allOf: no search field means no mode; a search field means both modes.
+  if (searchFields.length === 0 ? searchModes.length !== 0 : searchModes.length !== 2) return null;
+
+  const sortFields = uniqueEnumList(options.sort_fields, MANAGER_SORT_FIELDS, MANAGER_SORT_FIELDS.length);
+  const groupFields = uniqueEnumList(options.group_fields, MANAGER_GROUP_FIELDS, MANAGER_GROUP_FIELDS.length);
+  const metricKeys = uniqueEnumList(options.metric_keys, MANAGER_METRIC_KEYS, MANAGER_METRIC_KEYS.length);
+  const required = uniqueEnumList(options.economic_partition_required_for, MANAGER_PARTITIONED_METRIC_KEYS, MANAGER_PARTITIONED_METRIC_KEYS.length);
+  if (sortFields === null || groupFields === null || metricKeys === null || required === null) return null;
+  // Schema allOf, written once per key: a search field iff `name` is sortable; a metric key iff it is sortable; a group
+  // field iff it is sortable; a partition requirement iff it is a metric key.
+  if ((searchFields.length === 1) !== sortFields.includes("name")) return null;
+  if (!sameSet(metricKeys, intersect(MANAGER_METRIC_KEYS, sortFields))) return null;
+  if (!sameSet(groupFields, intersect(MANAGER_GROUP_FIELDS, sortFields))) return null;
+  if (!sameSet(required, intersect(MANAGER_PARTITIONED_METRIC_KEYS, metricKeys))) return null;
+
+  const window = record(options.window);
+  const windowKeys = ["custom_supported", "interpretation", "independent_metrics", "presets"] as const;
+  if (window === null || !hasOnly(window, windowKeys) || !hasAll(window, windowKeys)) return null;
+  if (window.custom_supported !== true || window.interpretation !== "MATCH_ONLY_NO_READ_TIME_CALCULATION") return null;
+  const independent = uniqueEnumList(window.independent_metrics, MANAGER_INDEPENDENT_WINDOW_KEYS, MANAGER_INDEPENDENT_WINDOW_KEYS.length);
+  if (independent === null || !sameSet(independent, intersect(MANAGER_INDEPENDENT_WINDOW_KEYS, metricKeys))) return null;
+  // Exactly the four presets, in order: 7D, 30D, 90D, ALL.
+  if (!Array.isArray(window.presets) || window.presets.length !== 4) return null;
+  const order = ["7D", "30D", "90D", "ALL"] as const;
+  const presets: ManagerWindowPreset[] = [];
+  for (const [index, entry] of window.presets.entries()) {
+    const preset = readPreset(entry, order[index]!);
+    if (preset === null) return null;
+    presets.push(preset);
+  }
+
+  const stageEnvironment = [
+    { environment: "paper", stages: ["PAPER"] },
+    { environment: "sandbox", stages: ["SANDBOX"] },
+    { environment: "live", stages: ["CANARY", "LIVE"] },
+  ];
+  if (!isConst(options.stage_environment, stageEnvironment)) return null;
+
+  if (!Array.isArray(options.unavailable_fields) || options.unavailable_fields.length !== 2) return null;
+  const unavailableFields: { field: "current_stage" | "days_in_stage"; reasonCode: string }[] = [];
+  const expected = [["current_stage", "CURRENT_STAGE_GRAIN_NOT_PUBLISHED"], ["days_in_stage", "STAGE_ENTRY_TIME_NOT_PUBLISHED"]] as const;
+  for (const [index, entry] of options.unavailable_fields.entries()) {
+    const field = record(entry);
+    if (field === null || !hasOnly(field, ["field", "reason_code"]) || field.field !== expected[index]![0] || field.reason_code !== expected[index]![1]) return null;
+    unavailableFields.push({ field: expected[index]![0], reasonCode: expected[index]![1] });
+  }
+
+  return {
+    temporalMode: "CURRENT_ONLY",
+    search: { fields: searchFields, modes: searchModes },
+    sortFields,
+    groupFields,
+    metricKeys,
+    economicPartitionRequiredFor: required,
+    window: { customSupported: true, independentMetrics: independent, presets },
+    unavailableFields,
+  };
+}
+
+function readCursor(raw: unknown): string | null | undefined {
+  return raw === null ? null : managerText(raw, MAX_CURSOR) ?? undefined;
+}
+
+function readPage(raw: unknown): ManagerPage | null {
+  const page = record(raw);
+  const keys = ["limit", "returned_count", "authorized_filtered_count", "next_cursor", "previous_cursor"] as const;
+  if (page === null || !hasOnly(page, keys) || !hasAll(page, keys)) return null;
+  const limit = boundedCount(page.limit, MAX_ITEMS);
+  const returnedCount = boundedCount(page.returned_count, MAX_ITEMS);
+  const authorizedFilteredCount = boundedCount(page.authorized_filtered_count, MAX_FILTERED_COUNT);
+  const nextCursor = readCursor(page.next_cursor);
+  const previousCursor = readCursor(page.previous_cursor);
+  if (limit === null || limit < 1 || returnedCount === null || authorizedFilteredCount === null || nextCursor === undefined || previousCursor === undefined) return null;
+  // Not in the schema (MD-S7): a page holds at most `limit` rows and no more rows than the filtered query has, and a page
+  // with no cursor either way IS the whole result, so its count is the total. Otherwise "N of M" would be a lie.
+  if (returnedCount > limit || returnedCount > authorizedFilteredCount) return null;
+  if (nextCursor === null && previousCursor === null && returnedCount !== authorizedFilteredCount) return null;
+  return { limit, returnedCount, authorizedFilteredCount, nextCursor, previousCursor };
+}
+
+const CHILD_KEYS = ["alpha_id", "alpha_version_id", "portfolio_id", "deployment_id", "account_id", "stage", "binding_ref"] as const;
+
+function readChild(raw: unknown, allowedStages: readonly ManagerStage[]): ManagerRowChild | null {
+  const child = record(raw);
+  if (child === null || !hasOnly(child, CHILD_KEYS) || !hasAll(child, CHILD_KEYS)) return null;
+  const alphaId = managerText(child.alpha_id);
+  const alphaVersionId = managerText(child.alpha_version_id);
+  const portfolioId = managerText(child.portfolio_id);
+  const deploymentId = managerText(child.deployment_id);
+  const accountId = managerText(child.account_id);
+  const stage = oneOf(child.stage, allowedStages);
+  const bindingRef = nullableText(child.binding_ref);
+  if (alphaId === null || alphaVersionId === null || portfolioId === null || deploymentId === null || accountId === null || stage === null || bindingRef === undefined) return null;
+  return { alphaId, alphaVersionId, portfolioId, deploymentId, accountId, stage, bindingRef };
+}
+
+const ROW_KEYS = [
+  "row_key", "alpha_id", "alpha_version_id", "portfolio_id", "name", "owner_user_id", "lifecycle", "venue", "health", "source_state",
+  "stage_presence", "children", "metrics", "economic_partitions",
+] as const;
+
+function readRowMetrics(raw: unknown, metricKeys: readonly ManagerMetricKey[]): ManagerRowMetrics | null {
+  const bag = record(raw);
+  if (bag === null) return null;
+  const keys = Object.keys(bag);
+  // The schema's `propertyNames` enum and the root `allOf`: exactly the keys `query_options.metric_keys` names.
+  if (keys.length !== metricKeys.length || !keys.every((key) => (metricKeys as readonly string[]).includes(key))) return null;
+  const out: Partial<Record<ManagerMetricKey, ManagerMetricRead>> = {};
+  for (const key of metricKeys) {
+    const metric = readManagerMetric(bag[key]);
+    if (metric === null) return null;
+    out[key] = metric;
+  }
+  return out;
+}
+
+/**
+ * A row-level money figure with a currency sits above its partitions. If a partition that publishes the same key is in
+ * another currency, the row figure would be a cross-currency total: the read is refused (MD-S5).
+ */
+function noCrossCurrencyHeadline(metrics: ManagerRowMetrics, partitions: readonly ManagerPartitionedMetrics[]): boolean {
+  for (const key of MANAGER_METRIC_KEYS) {
+    const headline = metrics[key];
+    if (headline === undefined || headline.kind !== "value" || headline.currency === null) continue;
+    for (const entry of partitions) {
+      if (entry.metrics.has(key) && entry.partition.currency !== headline.currency) return false;
+    }
+  }
+  return true;
+}
+
+function readRow(raw: unknown, environment: ManagerEnvironment, metricKeys: readonly ManagerMetricKey[]): ManagerRow | null {
+  const row = record(raw);
+  if (row === null || !hasOnly(row, ROW_KEYS) || !hasAll(row, ROW_KEYS)) return null;
+  const rowKey = managerText(row.row_key, 2048);
+  const alphaId = managerText(row.alpha_id);
+  const alphaVersionId = managerText(row.alpha_version_id);
+  const portfolioId = managerText(row.portfolio_id);
+  const name = nullableText(row.name);
+  const ownerUserId = nullableText(row.owner_user_id);
+  const lifecycle = nullableText(row.lifecycle);
+  const venue = nullableText(row.venue);
+  const health = nullableText(row.health);
+  const sourceState = nullableText(row.source_state);
+  if (
+    rowKey === null || alphaId === null || alphaVersionId === null || portfolioId === null || name === undefined || ownerUserId === undefined
+    || lifecycle === undefined || venue === undefined || health === undefined || sourceState === undefined
+  ) return null;
+
+  const allowedStages = ENVIRONMENT_STAGES[environment];
+  // A set: no stage repeats (MD-S10). The environment pins which stages a row may be in (schema allOf, one per environment).
+  const stagePresence = uniqueEnumList(row.stage_presence, allowedStages, MANAGER_STAGES.length);
+  if (stagePresence === null) return null;
+  if (!Array.isArray(row.children) || row.children.length > MAX_CHILDREN_PER_ROW) return null;
+  const children: ManagerRowChild[] = [];
+  for (const entry of row.children) {
+    const child = readChild(entry, allowedStages);
+    if (child === null) return null;
+    children.push(child);
+  }
+  const metrics = readRowMetrics(row.metrics, metricKeys);
+  const economicPartitions = readPartitionedMetricsList(row.economic_partitions);
+  if (metrics === null || economicPartitions === null || !noCrossCurrencyHeadline(metrics, economicPartitions)) return null;
+  return { rowKey, alphaId, alphaVersionId, portfolioId, name, ownerUserId, lifecycle, venue, health, sourceState, stagePresence, children, metrics, economicPartitions };
+}
+
+function readGroup(raw: unknown, groupFields: readonly ManagerGroupField[], filteredCount: number): ManagerGroup | null {
+  const group = record(raw);
+  const keys = ["key", "unique_row_count", "totals_scope", "economic_partitions"] as const;
+  if (group === null || !hasOnly(group, keys) || !hasAll(group, keys) || group.totals_scope !== "FULL_AUTHORIZED_FILTERED_QUERY") return null;
+  if (!Array.isArray(group.key) || group.key.length > 2) return null;
+  const key: { field: ManagerGroupField; value: string | null }[] = [];
+  for (const entry of group.key) {
+    const part = record(entry);
+    if (part === null || !hasOnly(part, ["field", "value"]) || !hasAll(part, ["field", "value"])) return null;
+    // The schema says any text; a group over a field the dataset cannot group by contradicts `query_options` (MD-S11).
+    const field = oneOf(part.field, groupFields);
+    const value = nullableText(part.value);
+    if (field === null || value === undefined || key.some((seen) => seen.field === field)) return null;
+    key.push({ field, value });
+  }
+  // The group cannot hold more unique rows than the query it totals over.
+  const uniqueRowCount = boundedCount(group.unique_row_count, MAX_FILTERED_COUNT);
+  const economicPartitions = readPartitionedMetricsList(group.economic_partitions);
+  if (uniqueRowCount === null || uniqueRowCount > filteredCount || economicPartitions === null) return null;
+  return { key, uniqueRowCount, totalsScope: "FULL_AUTHORIZED_FILTERED_QUERY", economicPartitions };
+}
+
+const SLOT_STATUSES: Readonly<Record<"raw" | "composition" | "direct_nav", readonly ManagerScoreSlotStatus[]>> = {
+  raw: ["policy_pending", "available", "provisional", "unbound", "invalid_data", "stale", "partial_costs", "partial_components", "insufficient_data", "window_not_published"],
+  composition: ["policy_pending", "available", "provisional", "partial_coverage", "incomparable_basis", "no_allocation", "invalid_data", "window_not_published"],
+  direct_nav: ["policy_pending", "available", "provisional", "unbound", "invalid_data", "stale", "partial_costs", "partial_components", "insufficient_data", "window_not_published"],
+};
+
+function readScoreSlot(raw: unknown, slot: keyof typeof SLOT_STATUSES): ManagerScoreSlot | null {
+  const body = record(raw);
+  if (body === null || !hasOnly(body, ["value", "status", "reason_code"]) || !hasAll(body, ["value", "status"])) return null;
+  const status = oneOf(body.status, SLOT_STATUSES[slot]);
+  if (status === null) return null;
+  if (status === "available" || status === "provisional") {
+    // A value status has a value (the schema's decimal pattern, up to 128 characters) and no window reason.
+    const value = exactValue(body.value);
+    if (value === null || Object.prototype.hasOwnProperty.call(body, "reason_code")) return null;
+    return { kind: "value", status, exact: value.exact, zero: value.zero, provisional: status === "provisional" };
+  }
+  if (body.value !== null) return null;
+  if (status === "window_not_published") {
+    const reasonCode = oneOf(body.reason_code, WINDOW_REASONS);
+    return reasonCode === null ? null : { kind: "absent", status, reasonCode };
+  }
+  // Any other status carries no `reason_code` key at all (schema `not required`).
+  return Object.prototype.hasOwnProperty.call(body, "reason_code") ? null : { kind: "absent", status, reasonCode: null };
+}
+
+const SCORE_REASONS = [
+  "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED", "QUALIFIED_PRECOMPUTED_SCORE", EXACT_METRIC_WINDOW_NOT_PUBLISHED, ALL_HISTORY_WINDOW_NOT_PUBLISHED,
+] as const;
+const REGIME_STATUSES = ["unavailable", "supported", "weak_support", "out_of_support", "insufficient_data", "stale", "unbound"] as const;
+const REGIME_REASONS = ["REGIME_POLICY_SOURCE_OR_AUTHORIZED_SLICE_NOT_QUALIFIED", "REGIME_IS_PER_ALPHA_OR_DEPLOYMENT_ONLY"] as const;
+
+function readScores(raw: unknown, selected: ManagerSelectedWindow | null): ManagerScores | null {
+  const scores = record(raw);
+  const keys = ["raw", "composition", "direct_nav", "regime", "reason_code", "calculation_path"] as const;
+  if (scores === null || !hasOnly(scores, keys) || !hasAll(scores, keys) || scores.calculation_path !== "PRECOMPUTED_ONLY") return null;
+  const rawSlot = readScoreSlot(scores.raw, "raw");
+  const composition = readScoreSlot(scores.composition, "composition");
+  const directNav = readScoreSlot(scores.direct_nav, "direct_nav");
+  const reasonCode = oneOf(scores.reason_code, SCORE_REASONS);
+  if (rawSlot === null || composition === null || directNav === null || reasonCode === null) return null;
+
+  const regime = record(scores.regime);
+  if (regime === null || !hasOnly(regime, ["value", "status", "reason_code"]) || !hasAll(regime, ["value", "status"]) || regime.value !== null) return null;
+  const regimeStatus = oneOf(regime.status, REGIME_STATUSES);
+  const regimeReason = regime.reason_code === undefined || regime.reason_code === null ? null : oneOf(regime.reason_code, REGIME_REASONS);
+  if (regimeStatus === null || (regime.reason_code !== undefined && regime.reason_code !== null && regimeReason === null)) return null;
+
+  // Schema allOf: window-not-published slots, the selected window and the window reasons agree.
+  const slots = [rawSlot, composition, directNav];
+  const notPublished = slots.filter((slot) => slot.kind === "absent" && slot.status === "window_not_published");
+  // Any slot without its window needs a selected window to say which one (schema allOf, `anyOf` of the three).
+  if (notPublished.length > 0 && selected === null) return null;
+  // `scores.reason_code` is a window reason exactly when ALL THREE slots are window_not_published (schema allOf, `allOf`
+  // of the three); then it is the window's reason. With one or two slots missing the window, it is not a window reason.
+  const allNotPublished = notPublished.length === slots.length;
+  if ((SCORE_REASONS.indexOf(reasonCode) >= 2) !== allNotPublished) return null;
+  const expected = selected !== null && selected.kind === "gap" ? ALL_HISTORY_WINDOW_NOT_PUBLISHED : EXACT_METRIC_WINDOW_NOT_PUBLISHED;
+  for (const slot of notPublished) if (slot.kind === "absent" && slot.reasonCode !== expected) return null;
+  if (allNotPublished && reasonCode !== expected) return null;
+
+  return { raw: rawSlot, composition, directNav, regime: { kind: "absent", status: regimeStatus, reasonCode: regimeReason }, reasonCode, calculationPath: "PRECOMPUTED_ONLY" };
+}
+
+/** An optional details array is counted, not read (MD-L1): bounded, objects only, each naming the slot it belongs to. */
+function countDetails(raw: Record<string, unknown>, key: (typeof ROOT_OPTIONAL)[number], slots: readonly string[]): number | null {
+  if (!Object.prototype.hasOwnProperty.call(raw, key)) return 0;
+  const list = raw[key];
+  if (!Array.isArray(list) || list.length > MAX_DETAILS) return null;
+  for (const entry of list) {
+    const detail = record(entry);
+    if (detail === null || typeof detail.slot !== "string" || !slots.includes(detail.slot)) return null;
+  }
+  return list.length;
+}
+
+function readLineage(raw: unknown): ManagerDataset["lineage"] | null {
+  const lineage = record(raw);
+  const keys = ["reducer_revision", "source_set_ref", "revision", "supersedes_revision"] as const;
+  if (lineage === null || !hasOnly(lineage, keys) || !hasAll(lineage, keys) || lineage.reducer_revision !== "manager-model.v1") return null;
+  const sourceSetRef = digestRef(lineage.source_set_ref);
+  const revision = digestRef(lineage.revision);
+  const supersedesRevision = lineage.supersedes_revision === null ? null : digestRef(lineage.supersedes_revision);
+  return sourceSetRef === null || revision === null || (lineage.supersedes_revision !== null && supersedesRevision === null)
+    ? null
+    : { reducerRevision: "manager-model.v1", sourceSetRef, revision, supersedesRevision };
+}
+
+function readFundingBucket(raw: unknown): ManagerDataset["fundingBucketPnl"] | null {
+  const bucket = record(raw);
+  return bucket !== null && hasOnly(bucket, ["value", "reason_code"]) && bucket.value === null && bucket.reason_code === "LOT_ATTRIBUTION_METHOD_NOT_APPROVED"
+    ? { kind: "absent", reasonCode: "LOT_ATTRIBUTION_METHOD_NOT_APPROVED" }
+    : null;
+}
+
+function readDataset(root: Record<string, unknown>): ManagerDataset | null {
+  if (!hasOnly(root, [...ROOT_REQUIRED, ...ROOT_OPTIONAL]) || !hasAll(root, ROOT_REQUIRED)) return null;
+  if (
+    root.record_authority !== "PORTAL_PROJECTION" || root.source_authority !== "TRADING_SYSTEM" || root.coverage !== "AUTHORIZED_ONLY"
+    || root.economic_aggregation !== "PARTITIONED_ONLY" || root.statement_scope !== MANAGER_STATEMENT_SCOPE
+  ) return null;
+  const queryPolicy = record(root.query_policy);
+  if (
+    queryPolicy === null || !hasOnly(queryPolicy, ["null_order", "stage_order", "maximum_response_bytes"]) || queryPolicy.null_order !== "LAST_BOTH_DIRECTIONS"
+    || queryPolicy.stage_order !== "LEXICAL_SET_NOT_RISK_RANK" || queryPolicy.maximum_response_bytes !== MAX_RESPONSE_BYTES
+  ) return null;
+
+  const surface = oneOf(root.surface, MANAGER_SURFACES);
+  const environment = oneOf(root.environment, MANAGER_ENVIRONMENTS);
+  const workspaceId = managerText(root.workspace_id);
+  const snapshotId = digestRef(root.snapshot_id);
+  const asOfMs = clockMs(root.as_of_ms);
+  const recordedThroughMs = clockMs(root.recorded_through_ms);
+  const factsThroughMs = root.facts_through_ms === null ? null : clockMs(root.facts_through_ms);
+  if (
+    surface === null || environment === null || workspaceId === null || snapshotId === null || asOfMs === null || recordedThroughMs === null
+    || (root.facts_through_ms !== null && factsThroughMs === null)
+  ) return null;
+  const quality = readManagerQuality(root.quality, MAX_DATASET_REASONS);
+  const selectedWindow = readManagerSelectedWindow(root.selected_window);
+  const queryOptions = readQueryOptions(root.query_options);
+  const page = readPage(root.page);
+  if (quality === null || selectedWindow === undefined || queryOptions === null || page === null) return null;
+
+  if (!Array.isArray(root.items) || root.items.length > MAX_ITEMS || root.items.length !== page.returnedCount) return null;
+  const items: ManagerRow[] = [];
+  const rowKeys = new Set<string>();
+  let children = 0;
+  for (const entry of root.items) {
+    const row = readRow(entry, environment, queryOptions.metricKeys);
+    // A row appears once (MD-S10): the schema states no uniqueness, and a repeated row would be counted twice.
+    if (row === null || rowKeys.has(row.rowKey)) return null;
+    rowKeys.add(row.rowKey);
+    children += row.children.length;
+    if (children > MAX_CHILDREN_TOTAL) return null;
+    items.push(row);
+  }
+
+  if (!Array.isArray(root.groups) || root.groups.length > MAX_GROUPS) return null;
+  const groups: ManagerGroup[] = [];
+  const groupKeys = new Set<string>();
+  for (const entry of root.groups) {
+    const group = readGroup(entry, queryOptions.groupFields, page.authorizedFilteredCount);
+    // Two groups with one key would be added together by anyone who totals them (MD-S11).
+    const identity = group === null ? "" : JSON.stringify(group.key);
+    if (group === null || groupKeys.has(identity)) return null;
+    groupKeys.add(identity);
+    groups.push(group);
+  }
+
+  const capitalStatements = readPartitionedMetricsList(root.capital_statements);
+  const scores = readScores(root.scores, selectedWindow);
+  const fundingBucketPnl = readFundingBucket(root.funding_bucket_pnl);
+  const lineage = readLineage(root.lineage);
+  const scoreDetails = countDetails(root, "score_details", ["RAW", "DIRECT_NAV"]);
+  const compositionDetails = countDetails(root, "composition_details", ["COMPOSITION"]);
+  const regimeDetails = countDetails(root, "regime_details", ["REGIME"]);
+  if (
+    capitalStatements === null || scores === null || fundingBucketPnl === null || lineage === null || scoreDetails === null
+    || compositionDetails === null || regimeDetails === null
+  ) return null;
+
+  return {
+    surface, workspaceId, environment, snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, selectedWindow, queryOptions, page, items, groups,
+    capitalStatements, statementScope: MANAGER_STATEMENT_SCOPE, scores, fundingBucketPnl, lineage,
+    unreadDetails: { scoreDetails, compositionDetails, regimeDetails }, hasMore: page.nextCursor !== null,
+  };
+}
+
+/**
+ * Manager dataset body -> typed read.
+ *
+ * `null` is "malformed" and must render as unavailable. A body of another schema is `unsupported_shape`. The result is
+ * the contract's facts and nothing a screen could confuse with a total it made up.
+ */
+export function readManagerDataset(raw: unknown): ManagerDatasetRead | null {
+  try {
+    const root = record(raw);
+    if (root === null) return null;
+    const version = typeof root.schema_version === "string" ? root.schema_version : null;
+    if (version !== MANAGER_DATASET_SCHEMA) return { kind: "unsupported_shape", schemaVersion: version };
+    const dataset = readDataset(root);
+    return dataset === null ? null : { kind: "dataset", dataset };
+  } catch {
+    // A hostile object (a throwing getter) is a malformed body, not a crash.
+    return null;
+  }
+}

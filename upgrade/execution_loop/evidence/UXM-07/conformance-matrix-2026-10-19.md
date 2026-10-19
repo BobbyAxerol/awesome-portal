@@ -14,6 +14,7 @@ L1 = ma trận trạng thái; L2 = quy mô (cap nhãn "N of total", ngân sách 
 | governanceParents | đủ | đủ (256 findings; 257 trở lên bị từ chối) | đủ, kiểm schema | |
 | liveSourceOperations | đủ | đủ | đủ, kiểm schema | |
 | operationalQueue | đủ | đủ | đủ, kiểm schema | |
+| managerDataset (+ `managerMetric`: `ManagerMetric`, window, partition) | đủ: metric, caveats, partition (không tổng chéo tiền tệ), `selected_window` (ALL = gap), `query_options`, page/cursor | đủ (200 hàng, 3 trang keyset, 1 MiB, 10.000 child, 200 group/partition, text 70k) | đủ, **kiểm schema OpenAPI**: reader không nhận cái schema từ chối (0/1.365 ca); 80 ca schema-hợp-lệ bị từ chối có chủ ý, 12 nhóm MD-S1..S12 có tên và đếm | **chưa nối vào màn** (FE-005/025/041). Looser có chủ ý MD-L1: `score_details`/`composition_details`/`regime_details` chỉ đếm, không đọc. Khoảng trống phía Codex ghim bằng `it.fails` MD-1..MD-8 (schema im lặng về: `returned_count` = số hàng, tiền tệ của metric trong partition, partition/row_key/group trùng, preset NOT_PUBLISHED mang window, `-0`, tiền tệ của headline). Chưa đọc: score-revision/history, scoped, realtime. Không đăng ký vào `dispatch.ts` (route mới, một schema, không có V1) |
 | boundary.ts | đủ | đủ | đủ | |
 
 ## Màn hình
@@ -32,7 +33,7 @@ L1 = ma trận trạng thái; L2 = quy mô (cap nhãn "N of total", ngân sách 
 FE-015 (preset, eligibility từng hành động, ai cấp), FE-026 (ma trận trường researcher), FE-037 (tên capability tạm). Cả ba có hàng trong `FRONTEND_BACKEND_SYNC.md`; test của màn Access khẳng định chữ và id. FE-052 và FE-053 trước đó chỉ nằm trong hàng gộp FE-044…055; đã thêm hàng riêng.
 
 ## Contract đã publish nhưng FE chưa đọc
-- Codex-owned, chưa có consumer: manager analytics (23 file), scoped-realtime (UXM-08/09/10 sau), scoped-records, retained-scoped, `execution-resource-scoped` (alpha-resource.v2 mà Alpha 360 sẽ cần; FE đang đọc v1).
+- Codex-owned, chưa có consumer: manager analytics (23 file; riêng dataset đã có reader `managerDataset`, chưa nối màn), scoped-realtime (UXM-08/09/10 sau), scoped-records, retained-scoped, `execution-resource-scoped` (alpha-resource.v2 mà Alpha 360 sẽ cần; FE đang đọc v1).
 - Biên nhận backend/Edge, không dành cho FE: `intercell-gateway.*`, `production-acceptance.*`, `protective-path.*`.
 - Chưa phân loại: `research-*` (ngoài phạm vi Execution V2).
 
