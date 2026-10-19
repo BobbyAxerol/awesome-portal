@@ -261,7 +261,7 @@ function renderCompose(marker) {
       ? ['-w', '600', '/tmp/portal-heavy.lock', 'bash', script, 'compose', 'config', '--format', 'json']
       : [script, 'compose', 'config', '--format', 'json'],
     { encoding: 'utf8', env: { ...process.env, RESEARCH_PREVIEW_HOME: home }, timeout: 900000, maxBuffer: 64 * 1024 * 1024 });
-    if (result.status !== 0) return { skipped: `compose config failed or lock unavailable: ${result.stderr.slice(0, 200)}` };
+    if (result.status !== 0) return { skipped: `compose config failed or lock unavailable (status ${result.status}): ${result.stderr.slice(0, 300)}` };
     return { json: JSON.parse(result.stdout) };
   }, { marker });
 }
@@ -356,6 +356,7 @@ test('nginx -t/-T: without the mount the include is empty and the config has no 
   assert.equal(result.status, 0, result.stderr.slice(-600));
   assert.match(result.stderr, /test is successful/);
   // portal.conf's own comment mentions the overlay; the effective directives must not.
-  assert(!result.stdout.includes('portal-fixture-bff') && !result.stdout.includes('__fixture'));
-  assert(!result.stdout.includes(BANNER) && !result.stdout.includes('sub_filter '));
+  const directives = result.stdout.replace(/^\s*#.*$/gm, '');
+  assert(!directives.includes('portal-fixture-bff') && !directives.includes('__fixture'));
+  assert(!directives.includes(BANNER) && !directives.includes('sub_filter'));
 });
