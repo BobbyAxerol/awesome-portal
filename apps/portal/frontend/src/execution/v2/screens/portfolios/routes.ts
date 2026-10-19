@@ -31,7 +31,9 @@ export const DEFAULT_ROUTES: PortfolioRoutes = {
   deployment: (id, stage) => {
     switch (stage.toUpperCase()) {
       case "SANDBOX": return `/deployments/sandbox/${enc(id)}`;
-      case "LIVE": case "CANARY": return `/deployments/live/${enc(id)}`;
+      // D5 (S3 plan): Canary has its own control room under the Live route.
+      case "CANARY": return `/deployments/live/${enc(id)}/canary`;
+      case "LIVE": return `/deployments/live/${enc(id)}`;
       default: return `/deployments/paper/${enc(id)}`;
     }
   },

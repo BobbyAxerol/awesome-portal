@@ -1,6 +1,12 @@
 /**
  * Legacy `?tab=` labels to V2 tab keys (review2/07 s2).
  *
+ * Stage screens (S3 plan s1, D3): the hi-fi slug is the key (`promotion-plans`,
+ * `positions-orders`, `guard-rule`); the V1 label ("Promotion plans", "Positions
+ * & orders") and the short slug of review2/07 (`plans`, `positions`, `guard`)
+ * are accepted as aliases, so an old link or a hand-typed one still lands. A
+ * tab count in a label ("Steps (7)") is ignored.
+ *
  * V1 URLs carry display labels (`Insight+Charts`, `Structure+%26+Correlation`)
  * and `useParamState` silently falls back for a value it does not know, so a
  * renamed tab would open the wrong tab with no word. This resolves before any
@@ -8,7 +14,7 @@
  * the default tab and a notice.
  */
 
-export type TabSurface = "alpha" | "portfolio" | "paper";
+export type TabSurface = "alpha" | "portfolio" | "paper" | "sandbox" | "canary" | "live";
 
 export interface TabTarget {
   tab: string;
@@ -74,6 +80,37 @@ const SURFACES: Readonly<Record<TabSurface, Surface>> = {
       evidence: { tab: "overview", hash: "evidence" },
     },
   },
+  // Stage screens: key = hi-fi slug (modules/stage.js `G.tab`), aliases = V1 labels + review2/07 short slugs.
+  sandbox: {
+    default: "reconciliation",
+    keys: ["reconciliation", "steps", "promotion-plans", "timeline"],
+    legacy: {
+      "promotion plans": { tab: "promotion-plans" },
+      plans: { tab: "promotion-plans" },
+    },
+  },
+  canary: {
+    default: "envelope",
+    keys: ["envelope", "positions-orders", "reconciliation", "guard-rule"],
+    legacy: {
+      "positions & orders": { tab: "positions-orders" },
+      "guard rule": { tab: "guard-rule" },
+      positions: { tab: "positions-orders" },
+      guard: { tab: "guard-rule" },
+    },
+  },
+  live: {
+    default: "exposure-orders",
+    keys: ["exposure-orders", "continuity", "predecessor-envelope", "guard-rules"],
+    legacy: {
+      "exposure & orders": { tab: "exposure-orders" },
+      "predecessor envelope": { tab: "predecessor-envelope" },
+      "guard rules": { tab: "guard-rules" },
+      exposure: { tab: "exposure-orders" },
+      predecessor: { tab: "predecessor-envelope" },
+      guard: { tab: "guard-rules" },
+    },
+  },
 };
 
 export interface TabResolution {
@@ -103,7 +140,9 @@ export function resolveTab(surface: TabSurface, raw: string | null): TabResoluti
   const fallback: TabTarget = { tab: def.default, hash: null, params: {} };
   if (raw === null || raw.trim() === "") return { target: fallback, legacy: false, notice: null };
 
-  const label = normalise(raw);
+  const exact = normalise(raw);
+  // "Steps (7)": a count in the label is display, not identity. Tried only when the label as typed matched nothing.
+  const label = Object.hasOwn(def.legacy, exact) || def.keys.includes(exact) ? exact : exact.replace(/ ?\(\d+\)$/, "");
   const alias = Object.hasOwn(def.legacy, label) ? def.legacy[label] : undefined;
   if (alias) {
     const rewrite = decode(raw).trim() !== alias.tab || alias.hash !== undefined || alias.params !== undefined;

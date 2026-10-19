@@ -2,7 +2,14 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { EXEC_V2_RESERVED_KEYS, EXEC_V2_SCREEN_KEYS, isV2Screen, parseV2Manifest } from "./flags";
+import {
+  EXEC_V2_PENDING_KEYS,
+  EXEC_V2_PERMANENT_RESERVED_KEYS,
+  EXEC_V2_RESERVED_KEYS,
+  EXEC_V2_SCREEN_KEYS,
+  isV2Screen,
+  parseV2Manifest,
+} from "./flags";
 
 describe("parseV2Manifest", () => {
   it.each([undefined, "", "   ", ",,", " , "])("reads %j as nothing on", (raw) => {
@@ -19,7 +26,7 @@ describe("parseV2Manifest", () => {
 
   it("knows every screen of review2/07 s5 plus the shell", () => {
     expect([...parseV2Manifest(EXEC_V2_SCREEN_KEYS.join(","))].sort()).toEqual(
-      ["account", "admin", "alpha", "archived", "blotter", "cockpit", "compare", "fleet", "ops", "overview", "portfolios", "profile", "replay", "shell", "users", "workbench"],
+      ["account", "admin", "alpha", "archived", "blotter", "canary", "cockpit", "compare", "fleet", "live", "ops", "overview", "portfolios", "profile", "replay", "request", "sandbox", "shell", "users", "workbench"],
     );
   });
 
@@ -45,13 +52,21 @@ describe("reserved keys", () => {
   const reserved: readonly string[] = EXEC_V2_RESERVED_KEYS;
   const mounting = EXEC_V2_SCREEN_KEYS.filter((key) => !reserved.includes(key));
 
-  it("names exactly archived, workbench and replay", () => {
-    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "replay", "workbench"]);
+  it("names the two permanent keys and the five pending S3 keys, and nothing else", () => {
+    expect([...EXEC_V2_PERMANENT_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
+    expect([...EXEC_V2_PENDING_KEYS].sort()).toEqual(["canary", "live", "request", "sandbox", "workbench"]);
+    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "canary", "live", "replay", "request", "sandbox", "workbench"]);
+  });
+
+  it("D2: every S3 stage screen has its own key (no shared `stages` key), and the Paper key stays `workbench`", () => {
+    for (const key of ["workbench", "sandbox", "canary", "live", "request"]) expect(parseV2Manifest(key).has(key as never), key).toBe(true);
+    expect(parseV2Manifest("stages").size).toBe(0);
   });
 
   it("are still read from a manifest (so an env file that lists them is not a typo) but never turn a screen on", () => {
-    const set = parseV2Manifest("fleet,archived,workbench,replay");
+    const set = parseV2Manifest("fleet,archived,workbench,sandbox,canary,live,request,replay");
     expect(set.has("archived")).toBe(true);
+    for (const key of EXEC_V2_PENDING_KEYS) expect(set.has(key), key).toBe(true);
     for (const key of EXEC_V2_RESERVED_KEYS) expect(isV2Screen(key, set, true), key).toBe(false);
     expect(isV2Screen("fleet", set, true)).toBe(true);
   });

@@ -8,6 +8,12 @@
  * from). Tone follows a published sign only, only in the Difference column, and
  * never on a partial value. A side that is absent prints `Not available` in
  * every row, so a missing broker report cannot look like a zero difference.
+ *
+ * `suppressed` (Live mismatch, S3): while Internal and Broker disagree the Broker and
+ * Difference columns are not drawn at all (hi-fi policy: hide, not grey). They print
+ * "Hidden while the figures disagree." in place of the rows, which is a different claim
+ * from `Not available` (nothing was reported): here the figures exist and are withheld.
+ * No broker row, value or as-of reaches the DOM, so a mismatch cannot leak the number.
  */
 import type { ReactNode } from "react";
 
@@ -61,7 +67,17 @@ export interface TriadProps {
   differenceNote?: ReactNode;
   /** Accessible name of the group; default "Reconciliation". */
   label?: string;
+  /**
+   * The figures disagree and policy withholds the Broker and Difference columns. Their rows, values and
+   * as-of are not rendered; the columns say "Hidden while the figures disagree". Internal is unaffected.
+   * The caller maps its fail-closed reading to this flag: Live passes `suppressed` unless the server published
+   * `broker_values_visible` as exactly true.
+   */
+  suppressed?: boolean;
 }
+
+/** The sentence of the hi-fi triad when its columns are withheld (the column adds the full stop). */
+export const TRIAD_SUPPRESSED_COPY = "Hidden while the figures disagree";
 
 type Column = "internal" | "broker" | "difference";
 
@@ -81,35 +97,41 @@ function CellView({ cell, suffix, signed, sideMissing }: { cell: TriadCell; suff
   return <MetricText metric={cell} suffix={suffix} signed={signed} />;
 }
 
-function sub(column: Column, side: TriadSide | null | undefined, differenceNote: ReactNode): ReactNode {
+function sub(column: Column, side: TriadSide | null | undefined, differenceNote: ReactNode, withheld: boolean): ReactNode {
   if (column === "difference") return differenceNote;
   const lead = column === "internal" ? "Virtual ledger" : "Venue report";
+  if (withheld) return lead;
   const when = side === null || side === undefined || side.asOf === null || side.asOf === undefined ? NO_VALUE_COPY : formatAsOf(side.asOf);
   return `${lead} · ${when}`;
 }
 
 /** The three-column reconciliation block. */
-export function Triad({ rows, internal, broker, differenceNote = "Derived · matching scopes only", label = "Reconciliation" }: TriadProps) {
+export function Triad({ rows, internal, broker, differenceNote = "Derived · matching scopes only", label = "Reconciliation", suppressed = false }: TriadProps) {
   const sides: Record<Column, TriadSide | null | undefined> = { internal, broker, difference: undefined };
   return (
     <div className="exec-blk-triad" role="group" aria-label={label}>
       {COLUMNS.map(({ id, title }) => {
         const side = sides[id];
         const sideMissing = id !== "difference" && side === null;
+        const withheld = suppressed && id !== "internal";
         return (
-          <section key={id} className="exec-blk-triad-col" data-col={id} aria-label={title}>
+          <section key={id} className="exec-blk-triad-col" data-col={id} data-state={withheld ? "suppressed" : undefined} aria-label={title}>
             <h3 className="exec-blk-triad-title">{title}</h3>
-            <p className="exec-blk-triad-sub">{sub(id, side, differenceNote)}</p>
-            <dl className="exec-blk-triad-rows">
-              {rows.map((row) => (
-                <div key={row.key} className="exec-blk-triad-row">
-                  <dt>{row.label}</dt>
-                  <dd>
-                    <CellView cell={row[id]} suffix={row.suffix} signed={id === "difference"} sideMissing={sideMissing} />
-                  </dd>
-                </div>
-              ))}
-            </dl>
+            <p className="exec-blk-triad-sub">{sub(id, side, differenceNote, withheld)}</p>
+            {withheld ? (
+              <p className="exec-blk-na" data-state="suppressed">{TRIAD_SUPPRESSED_COPY}.</p>
+            ) : (
+              <dl className="exec-blk-triad-rows">
+                {rows.map((row) => (
+                  <div key={row.key} className="exec-blk-triad-row">
+                    <dt>{row.label}</dt>
+                    <dd>
+                      <CellView cell={row[id]} suffix={row.suffix} signed={id === "difference"} sideMissing={sideMissing} />
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </section>
         );
       })}

@@ -6,7 +6,8 @@
  * - `NotPublished` and the one FE-id table.
  * - `EventFeed`: a subject's events with a keyset `Load more` contract.
  * - `JourneySpine`: R1, R2, Paper, Sandbox, Canary, Live; never infers history.
- * - `Triad`: Internal, Broker, Difference; never computes.
+ * - `Triad`: Internal, Broker, Difference; never computes; `suppressed` withholds Broker and Difference.
+ * - `StageHeader`, `Tabs` / `UrlTabs`, `CapGauge`, `BlockerList`: the S3 stage-screen frame (Sandbox, Canary, Live).
  * - `ReplayPanel`: the V2 frame; the V1 chart loads lazily.
  * - `SectionPanel` / `PanelHead` / `StateBoundary` / `PanelGate`.
  */
@@ -39,8 +40,24 @@ export type {
   SpineVariant,
   JourneySpineProps,
 } from "./JourneySpine";
-export { Triad } from "./Triad";
+export { TRIAD_SUPPRESSED_COPY, Triad } from "./Triad";
 export type { TriadCell, TriadNotComputed, TriadProps, TriadRow, TriadSide } from "./Triad";
+export { REAL_CAPITAL_AT_RISK, STAGE_CHIP_LABELS, STAGE_GUARD, StageChipRow, StageHeader } from "./StageHeader";
+export type {
+  StageChipId,
+  StageChipValue,
+  StageChips,
+  StageCrumb,
+  StageGuardSpec,
+  StageGuardStage,
+  StageHeaderProps,
+} from "./StageHeader";
+export { Tabs, UrlTabs, useUrlTab } from "./Tabs";
+export type { StageTab, TabsProps, UrlTab, UrlTabsProps } from "./Tabs";
+export { CapGauge, fractionToPercent, toneOfUsed } from "./CapGauge";
+export type { CapGaugeProps } from "./CapGauge";
+export { BlockerList } from "./BlockerList";
+export type { BlockerItem, BlockerListProps } from "./BlockerList";
 export { ReplayPanel } from "./ReplayPanel";
 export type { ReplayChip, ReplayLogRow, ReplayPanelProps } from "./ReplayPanel";
 export { LazyReplayCandleChart, LazyTradeReplayEvents } from "./replayLazy";

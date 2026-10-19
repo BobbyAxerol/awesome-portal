@@ -83,6 +83,56 @@ describe("ContextBar", () => {
     expect(onChange).toHaveBeenCalledWith({ window: "30D" });
   });
 
+  it("envLock.effective shows the screen's own environment as pressed, with 'Environment fixed' beside it (S3 plan s1)", () => {
+    render(<ContextBar env="live" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "The deployment fixes the environment.", effective: "paper" }} />);
+    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Real-funded" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByText("Environment fixed: Paper")).toBeTruthy();
+    for (const name of ["Real-funded", "Paper", "Sandbox"]) {
+      const button = screen.getByRole("button", { name }) as HTMLButtonElement;
+      expect(button.disabled, name).toBe(true);
+      expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The deployment fixes the environment.");
+    }
+  });
+
+  it.each([
+    ["sandbox", "Sandbox", "Environment fixed: Sandbox"],
+    ["live", "Real-funded", "Environment fixed: Real-funded"],
+  ] as const)("envLock.effective=%s presses %s", (effective, name, fixed) => {
+    render(<ContextBar env="paper" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "r", effective }} />);
+    expect(screen.getByRole("button", { name }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByText(fixed)).toBeTruthy();
+  });
+
+  it("envLock.effective does not click through, and a window change still reports", () => {
+    const onChange = vi.fn();
+    render(<ContextBar env="live" window="90D" onChange={onChange} windowLock={null} envLock={{ reason: "r", effective: "sandbox" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Paper" }));
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "7D" }));
+    expect(onChange).toHaveBeenCalledWith({ window: "7D" });
+  });
+
+  it("an envLock without effective keeps the URL's environment pressed and prints no 'fixed' chip (the Blotter pattern)", () => {
+    const { container } = render(<ContextBar env="paper" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "Not published (FE-052)." }} />);
+    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
+    expect(container.querySelector(".exec-ctxbar-lock")).toBeNull();
+  });
+
+  it("an effective value the bar cannot name is ignored, not printed", () => {
+    const bad = { reason: "r", effective: "canary" } as unknown as Parameters<typeof ContextBar>[0]["envLock"];
+    const { container } = render(<ContextBar env="paper" window="90D" onChange={noop} windowLock={null} envLock={bad} />);
+    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
+    expect(container.querySelector(".exec-ctxbar-lock")).toBeNull();
+  });
+
+  it("windowLock.effective and envLock.effective can sit together", () => {
+    render(<ContextBar env="live" window="90D" onChange={noop} windowLock={{ reason: "w", effective: "Certification run" }} envLock={{ reason: "e", effective: "sandbox" }} />);
+    expect(screen.getByText("Window fixed: Certification run")).toBeTruthy();
+    expect(screen.getByText("Environment fixed: Sandbox")).toBeTruthy();
+  });
+
   it("draws nothing for what it does not know: no As of, no dash, no placeholder chip", () => {
     const { container } = render(<ContextBar env="live" window="90D" onChange={noop} />);
     const text = container.textContent ?? "";

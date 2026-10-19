@@ -143,6 +143,8 @@ export function deploymentHref(stage: SpineStageId | null, id: string): string {
   const safe = encodeURIComponent(id);
   if (stage === "paper") return `/deployments/paper/${safe}`;
   if (stage === "sandbox") return `/deployments/sandbox/${safe}`;
+  // D5 (S3 plan): the Canary control room is its own route; Live is the full-operations screen.
+  if (stage === "canary") return `/deployments/live/${safe}/canary`;
   return `/deployments/live/${safe}`;
 }
 

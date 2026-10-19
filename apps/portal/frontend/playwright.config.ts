@@ -85,7 +85,7 @@ export default defineConfig({
       env: {
         VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY: "true",
         VITE_EXECUTION_PREVIEW_ENABLED: "true",
-        VITE_EXECUTION_V2_SCREENS: "shell,fleet,cockpit,ops,profile,portfolios,compare,alpha,replay,account,overview,blotter,admin,users",
+        VITE_EXECUTION_V2_SCREENS: "shell,fleet,cockpit,ops,profile,portfolios,compare,alpha,replay,account,overview,blotter,admin,users,workbench,sandbox,canary,live,request",
       },
     },
   ],

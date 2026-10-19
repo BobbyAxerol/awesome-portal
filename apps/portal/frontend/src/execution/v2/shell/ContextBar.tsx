@@ -42,6 +42,14 @@ export interface WindowLock {
 export interface EnvLock {
   /** Why the environment does not apply on this screen (one short sentence, ideally with its FE id). */
   reason: string;
+  /**
+   * The environment the screen itself is in, when it knows (a deployment screen: Paper workbench, Sandbox,
+   * Canary, Live). The pressed button shows this instead of the URL's `env`, and "Environment fixed: <label>"
+   * is printed beside the control, the same pattern as `WindowLock.effective`. Without it the bar keeps showing
+   * the URL's environment, which on `/deployments/paper/x` with no `env=paper` marks Real-funded by default.
+   * A value that is not a known environment is ignored (the bar never prints a label it cannot name).
+   */
+  effective?: ExecEnv;
 }
 
 export type ContextPatch = Partial<Pick<ExecUrlParams, "env" | "window">>;
@@ -71,6 +79,8 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
   const envReasonId = useId();
   const locked = windowLock !== undefined && windowLock !== null;
   const envLocked = envLock !== undefined && envLock !== null;
+  const lockedEnv = envLocked && typeof envLock.effective === "string" && (EXEC_ENVS as readonly string[]).includes(envLock.effective) ? envLock.effective : null;
+  const shownEnv: ExecEnv = lockedEnv ?? env;
 
   return (
     <div className="exec-ctxbar" role="group" aria-label="Context">
@@ -81,7 +91,7 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
             key={value}
             type="button"
             data-v={value}
-            aria-pressed={value === env}
+            aria-pressed={value === shownEnv}
             disabled={envLocked}
             aria-describedby={envLocked ? envReasonId : undefined}
             onClick={() => {
@@ -109,6 +119,7 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
           </button>
         ))}
       </div>
+      {lockedEnv ? <span className="exec-ctxbar-lock">Environment fixed: {ENV_LABEL[lockedEnv]}</span> : null}
       {envLock ? <span id={envReasonId} className="exec-ctxbar-reason">{envLock.reason}</span> : null}
       {windowLock?.effective ? <span className="exec-ctxbar-lock">Window fixed: {windowLock.effective}</span> : null}
       {windowLock ? (

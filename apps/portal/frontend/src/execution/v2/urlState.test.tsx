@@ -33,6 +33,7 @@ describe("parseUrlParams defaults", () => {
       ctx: null,
       from: null,
       workspace_id: null,
+      compose: null,
     });
     expect(invalid).toEqual([]);
   });
@@ -65,6 +66,7 @@ describe("round trip per param", () => {
     ["ctx", { ctx: "portfolio:PF-1" }, "ctx=portfolio%3APF-1"],
     ["from", { from: "alpha_7" }, "from=alpha_7"],
     ["workspace_id", { workspace_id: "ws_1" }, "workspace_id=ws_1"],
+    ["compose (D8c)", { compose: "request" }, "compose=request"],
   ];
 
   it.each(cases)("%s", (_name, patch, query) => {
@@ -111,6 +113,8 @@ describe("invalid values are defaulted and reported", () => {
     ["ctx=nocolon", "ctx"],
     ["sel=a%00b", "sel"],
     [`tab=${"t".repeat(65)}`, "tab"],
+    ["compose=approval", "compose"],
+    ["compose=request,other", "compose"],
   ])("%s", (query, key) => {
     const { value, invalid } = parse(query);
     expect(invalid).toEqual([key]);
@@ -180,6 +184,37 @@ describe("withContext", () => {
   });
 });
 
+describe("compose (D8c: compose=request opens the New request drawer)", () => {
+  it("is not a context key, so a link never carries an open drawer to another screen", () => {
+    expect((CONTEXT_KEYS as readonly string[]).includes("compose")).toBe(false);
+    expect(withContext("/governance/approvals", "env=paper&compose=request")).toBe("/governance/approvals?env=paper");
+  });
+
+  it("reads any case, writes lower-case, and an absent value is null (the drawer is closed)", () => {
+    expect(parse("compose=REQUEST").value.compose).toBe("request");
+    expect(write(parse("compose=Request").value)).toBe("compose=request");
+    expect(parse("").value.compose).toBeNull();
+  });
+
+  it("keeps `sel` and every other key untouched when it is set or cleared", () => {
+    expect(write({ compose: "request" }, "sel=AP-9&tab=overdue&cursor=c")).toBe("sel=AP-9&tab=overdue&cursor=c&compose=request");
+    expect(write({ compose: null }, "sel=AP-9&compose=request&cursor=c")).toBe("sel=AP-9&cursor=c");
+  });
+
+  it("does not disturb the existing keys' round trip when present", () => {
+    const query = "env=paper&window=30d&sel=AP-9&tab=overdue&compose=request&workspace_id=ws_1";
+    expect(write(parse(query).value)).toBe("env=paper&window=30d&sel=AP-9&tab=overdue&workspace_id=ws_1&compose=request");
+    expect(parse(query).invalid).toEqual([]);
+  });
+
+  it("ignores an unknown composer with a report and defaults to closed", () => {
+    const { value, invalid } = parse("compose=transfer&sel=a");
+    expect(invalid).toEqual(["compose"]);
+    expect(value.compose).toBeNull();
+    expect(value.sel).toBe("a");
+  });
+});
+
 describe("useExecUrlState", () => {
   function setup(initial: string, history: string[] = []) {
     const wrapper = ({ children }: { children: ReactNode }) => (
@@ -218,6 +253,22 @@ describe("useExecUrlState", () => {
     expect(result.current.location.search).toBe("");
     act(() => result.current.navigate(-1));
     expect(result.current.location.pathname).toBe("/start");
+  });
+
+  it("opening the drawer pushes a history entry, so Back closes it and leaves the queue as it was", () => {
+    const { result } = setup("/governance/approvals?sel=AP-9&tab=overdue", ["/start"]);
+    act(() => result.current.state.set({ compose: "request" }));
+    expect(result.current.location.search).toBe("?sel=AP-9&tab=overdue&compose=request");
+    expect(result.current.state.value.compose).toBe("request");
+    act(() => result.current.navigate(-1));
+    expect(result.current.location.search).toBe("?sel=AP-9&tab=overdue");
+    expect(result.current.state.value.compose).toBeNull();
+  });
+
+  it("closing the drawer removes only compose", () => {
+    const { result } = setup("/x?sel=AP-9&compose=request");
+    act(() => result.current.state.set({ compose: null }));
+    expect(result.current.location.search).toBe("?sel=AP-9");
   });
 
   it("set writes a patch over the current query and omits defaults", () => {

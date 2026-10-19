@@ -27,6 +27,10 @@ export const DEFAULT_WINDOW: ExecWindow = "90D";
 export const EXEC_STAGES = ["paper", "sandbox", "canary", "live"] as const;
 export type ExecStage = (typeof EXEC_STAGES)[number];
 
+/** Values of `compose`: which composer a screen opens over itself (D8c). Today only the New request drawer. */
+export const EXEC_COMPOSERS = ["request"] as const;
+export type ExecComposer = (typeof EXEC_COMPOSERS)[number];
+
 export interface ExecUrlParams {
   env: ExecEnv;
   window: ExecWindow;
@@ -43,6 +47,12 @@ export interface ExecUrlParams {
   ctx: string | null;
   from: string | null;
   workspace_id: string | null;
+  /**
+   * `compose=request` opens the New request drawer over the current screen (D8c).
+   * It is its own key because `sel` already means "the selected row"; screen-local, so it never travels
+   * with a link (not in `CONTEXT_KEYS`), and Back closes the drawer because opening it pushes a history entry.
+   */
+  compose: ExecComposer | null;
 }
 export type ExecUrlKey = keyof ExecUrlParams;
 
@@ -109,6 +119,14 @@ const CODECS: { [K in ExecUrlKey]: Codec<ExecUrlParams[K]> } = {
   },
   from: token(256),
   workspace_id: token(128),
+  compose: {
+    empty: null,
+    read: (raw) => {
+      const value = raw.toLowerCase();
+      return (EXEC_COMPOSERS as readonly string[]).includes(value) ? (value as ExecComposer) : undefined;
+    },
+    write: (value) => value,
+  },
 };
 
 const KEYS = Object.keys(CODECS) as ExecUrlKey[];

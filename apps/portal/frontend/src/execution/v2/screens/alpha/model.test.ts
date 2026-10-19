@@ -13,7 +13,7 @@ import { cartesian, dimension } from "../../testkit/matrix";
 import { enumCases } from "../../testkit/negative";
 import {
   ALPHA_TABS, ALPHA_MORE_TABS, chooseEnv, currentStageOf, deployedEnvs, deploymentRows, envOfStage, equityInputs, feedKind, focusTarget,
-  isAlphaTab, loadedOrderCounts, numberToDecimal, orderFlag, positionRows, reconciliationRows, replayHref, ribbonEvents, spineStageOf, stageBands,
+  deploymentHref, isAlphaTab, loadedOrderCounts, numberToDecimal, orderFlag, positionRows, reconciliationRows, replayHref, ribbonEvents, spineStageOf, stageBands,
   stagePath, stagePaths,
 } from "./model";
 import { alphaHttpApi, serveAlphaDouble } from "./testApi";
@@ -81,8 +81,23 @@ describe("deployments", () => {
     expect(rows.map((r) => r.stageLabel)).toEqual(["Paper", "Sandbox", "Canary", "Live"]);
     expect(rows.find((r) => r.id === "dep_live_01")).toMatchObject({ allocation: "40000.00", netPnl: "1120.80", href: "/deployments/live/dep_live_01" });
     expect(rows.find((r) => r.id === "dep_paper_01")?.href).toBe("/deployments/paper/dep_paper_01");
+    // D5 (S3 plan): Canary has its own control room; it is not the Live screen.
+    expect(rows.find((r) => r.id === "dep_canary_01")?.href).toBe("/deployments/live/dep_canary_01/canary");
     expect(rows.find((r) => r.id === "dep_canary_01")?.allocation).toBeNull();
     expect(rows.find((r) => r.id === "dep_canary_01")?.runtime).toEqual({ kind: "paused", label: "Ended" });
+  });
+});
+
+describe("deploymentHref (D5)", () => {
+  it.each([
+    ["paper", "/deployments/paper/d%201"],
+    ["sandbox", "/deployments/sandbox/d%201"],
+    ["canary", "/deployments/live/d%201/canary"],
+    ["live", "/deployments/live/d%201"],
+    [null, "/deployments/live/d%201"],
+    ["r1", "/deployments/live/d%201"],
+  ] as const)("%s goes to %s", (stage, href) => {
+    expect(deploymentHref(stage, "d 1")).toBe(href);
   });
 });
 

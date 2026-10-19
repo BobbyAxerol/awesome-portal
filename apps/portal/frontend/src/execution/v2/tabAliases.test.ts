@@ -29,6 +29,36 @@ const ROWS: Row[] = [
   ["paper", "Sessions", "sessions", null, {}],
   ["paper", "Accounting", "overview", "accounting", {}],
   ["paper", "Evidence", "overview", "evidence", {}],
+  // S3 stage screens (D3): hi-fi slug primary, V1 label and review2/07 short slug as aliases.
+  ["sandbox", "reconciliation", "reconciliation", null, {}],
+  ["sandbox", "steps", "steps", null, {}],
+  ["sandbox", "promotion-plans", "promotion-plans", null, {}],
+  ["sandbox", "timeline", "timeline", null, {}],
+  ["sandbox", "Reconciliation", "reconciliation", null, {}],
+  ["sandbox", "Steps", "steps", null, {}],
+  ["sandbox", "Steps (7)", "steps", null, {}],
+  ["sandbox", "Promotion plans", "promotion-plans", null, {}],
+  ["sandbox", "plans", "promotion-plans", null, {}],
+  ["sandbox", "Timeline", "timeline", null, {}],
+  ["canary", "envelope", "envelope", null, {}],
+  ["canary", "positions-orders", "positions-orders", null, {}],
+  ["canary", "reconciliation", "reconciliation", null, {}],
+  ["canary", "guard-rule", "guard-rule", null, {}],
+  ["canary", "Positions & orders", "positions-orders", null, {}],
+  ["canary", "Guard rule", "guard-rule", null, {}],
+  ["canary", "positions", "positions-orders", null, {}],
+  ["canary", "guard", "guard-rule", null, {}],
+  ["live", "exposure-orders", "exposure-orders", null, {}],
+  ["live", "continuity", "continuity", null, {}],
+  ["live", "predecessor-envelope", "predecessor-envelope", null, {}],
+  ["live", "guard-rules", "guard-rules", null, {}],
+  ["live", "Exposure & orders", "exposure-orders", null, {}],
+  ["live", "Predecessor envelope", "predecessor-envelope", null, {}],
+  ["live", "Guard rules", "guard-rules", null, {}],
+  ["live", "Continuity", "continuity", null, {}],
+  ["live", "exposure", "exposure-orders", null, {}],
+  ["live", "predecessor", "predecessor-envelope", null, {}],
+  ["live", "guard", "guard-rules", null, {}],
 ];
 
 describe("resolveTab", () => {
@@ -90,6 +120,72 @@ describe("resolveTab", () => {
 
   it("survives a malformed escape", () => {
     expect(resolveTab("alpha", "%E0%A4%A").notice).not.toBeNull();
+  });
+});
+
+describe("stage surfaces (S3 D3)", () => {
+  it.each([
+    ["sandbox", "reconciliation"],
+    ["canary", "envelope"],
+    ["live", "exposure-orders"],
+  ] as const)("%s opens %s on a bare URL, with no notice", (surface, tab) => {
+    for (const raw of [null, "", "  "]) {
+      const res = resolveTab(surface, raw);
+      expect(res.target.tab).toBe(tab);
+      expect(res.notice).toBeNull();
+    }
+  });
+
+  it("accepts every encoding of the V1 labels with spaces and ampersands", () => {
+    for (const raw of ["Promotion+plans", "promotion%20plans", "PROMOTION   PLANS"]) expect(resolveTab("sandbox", raw).target.tab).toBe("promotion-plans");
+    for (const raw of ["Positions+%26+orders", "positions%20%26%20orders", "Positions&orders"]) expect(resolveTab("canary", raw).target.tab).toBe("positions-orders");
+    for (const raw of ["Exposure+%26+orders", "exposure%20%26%20orders"]) expect(resolveTab("live", raw).target.tab).toBe("exposure-orders");
+  });
+
+  it("marks an alias or a V1 label for rewrite and a hi-fi slug as canonical", () => {
+    expect(resolveTab("sandbox", "Promotion plans").legacy).toBe(true);
+    expect(resolveTab("sandbox", "plans").legacy).toBe(true);
+    expect(resolveTab("sandbox", "Steps (7)").legacy).toBe(true);
+    expect(resolveTab("sandbox", "promotion-plans").legacy).toBe(false);
+    expect(resolveTab("canary", "guard").legacy).toBe(true);
+    expect(resolveTab("live", "guard-rules").legacy).toBe(false);
+  });
+
+  it("canary and live both answer `guard`, each with its own tab", () => {
+    expect(resolveTab("canary", "guard").target.tab).toBe("guard-rule");
+    expect(resolveTab("live", "guard").target.tab).toBe("guard-rules");
+  });
+
+  it("an unknown value gets the default tab and a one-line notice, never silence", () => {
+    for (const surface of ["sandbox", "canary", "live"] as const) {
+      const res = resolveTab(surface, "Heat Map");
+      expect(res.notice).toMatch(/^Tab "Heat Map" is not available\. Showing [a-z-]+\.$/);
+      expect(res.notice).not.toContain("\n");
+      expect(res.target.params).toEqual({});
+    }
+  });
+
+  it("does not take a tab from another surface, a count on its own, or a prototype key", () => {
+    expect(resolveTab("sandbox", "envelope").notice).not.toBeNull();
+    expect(resolveTab("canary", "steps").notice).not.toBeNull();
+    expect(resolveTab("live", "timeline").notice).not.toBeNull();
+    expect(resolveTab("live", "(7)").notice).not.toBeNull();
+    expect(resolveTab("sandbox", "constructor").notice).not.toBeNull();
+    expect(resolveTab("canary", "__proto__").notice).not.toBeNull();
+  });
+
+  it("keeps a count only for a tab it follows: `Heat Map (3)` is still unknown", () => {
+    expect(resolveTab("sandbox", "Heat Map (3)").notice).not.toBeNull();
+    expect(resolveTab("sandbox", "Timeline (12)").target.tab).toBe("timeline");
+  });
+
+  it("applyTab canonicalises: alias to slug, default dropped, other params kept", () => {
+    const alias = applyTab("canary", new URLSearchParams("tab=Positions+%26+orders&workspace_id=w1"), resolveTab("canary", "Positions & orders"));
+    expect(alias.search.toString()).toBe("tab=positions-orders&workspace_id=w1");
+    const def = applyTab("sandbox", new URLSearchParams("tab=Reconciliation&env=sandbox"), resolveTab("sandbox", "Reconciliation"));
+    expect(def.search.toString()).toBe("env=sandbox");
+    const unknown = applyTab("live", new URLSearchParams("tab=Nope&sel=x"), resolveTab("live", "Nope"));
+    expect(unknown.search.toString()).toBe("sel=x");
   });
 });
 

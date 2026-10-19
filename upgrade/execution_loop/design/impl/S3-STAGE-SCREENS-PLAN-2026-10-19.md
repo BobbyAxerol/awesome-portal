@@ -403,3 +403,147 @@ Quy ước kết quả (`Result<VersionRead<A,B>>`):
 - Live: `panel` phải là một trong 10 panel phân trang (`deployments, positions, sessions, orders, fills, accounts, account_balances, margin_balances, account_sync, reconciliation`) và `cursor` đòi `panel`; sai thì `ok: false, status: "unavailable"` và KHÔNG gửi request. `cursor` là chuỗi mờ do server cấp cho đúng panel đó; cursor hết hạn được server từ chối (409, `unavailable`), màn đọc lại panel từ trang đầu. Sandbox và Canary chỉ nhận `workspaceId`.
 - Màn V2 nên dùng `api.withReadSignal?.(signal) ?? api` như các `useRead` hiện có để hủy đọc khi rời màn.
 - Ví dụ dùng: `const r = await api.getLiveFullVersioned(id, { panel: "orders", cursor }); if (r.ok && r.value.kind === "v2") r.value.value.panels.orders`.
+
+## W0a signatures (nền UI dùng chung, 2026-10-19)
+
+Writer W0a công bố để Paper, Sandbox, Canary, Live và New request code song song. Đường dẫn tính từ `apps/portal/frontend/src/execution/v2/`. Mọi khối import từ barrel `blocks/index.ts`; CSS đã được import trong từng khối (`css/stage.css`), màn không import thêm. Mọi chuỗi UI tiếng Anh. Chưa có gì được nối vào `ExecutionPreviewRoute.tsx` (việc của W-INTEG).
+
+### Cờ (`flags.ts`)
+```ts
+EXEC_V2_SCREEN_KEYS  // + "sandbox" | "canary" | "live" | "request" ("workbench" đã có = khóa Paper)
+EXEC_V2_PERMANENT_RESERVED_KEYS = ["archived", "replay"]
+EXEC_V2_PENDING_KEYS            = ["workbench", "sandbox", "canary", "live", "request"]
+EXEC_V2_RESERVED_KEYS           = [...permanent, ...pending]   // isV2Screen(key) trả false cho các khóa này dù manifest liệt kê
+```
+Quyết định `workbench`: giữ trong tập reserved (nhóm "pending"), cùng bốn khóa mới. Lý do: test `flags.test.ts` đòi mọi khóa không reserved phải được đọc bởi `isV2Screen("<khóa>")` trong mã sản phẩm; hiện chưa có route nào đọc năm khóa này. Khi W-INTEG thêm `isV2Screen("<khóa>")` vào `ExecutionPreviewRoute.tsx` cho một màn thì xóa đúng khóa đó khỏi `EXEC_V2_PENDING_KEYS` trong cùng commit (test sẽ đỏ nếu quên một trong hai nửa). `playwright.config.ts` cổng 4176 đã liệt kê năm khóa (vô hại khi còn reserved).
+
+### URL và tab (`urlState.ts`, `tabAliases.ts`)
+```ts
+// urlState.ts
+export const EXEC_COMPOSERS = ["request"] as const;
+export type ExecComposer = "request";
+interface ExecUrlParams { /* ...cũ */ compose: ExecComposer | null }   // ?compose=request mở drawer New request; cục bộ, KHÔNG nằm trong CONTEXT_KEYS
+// useExecUrlState().set({ compose: "request" })  -> push (Back đóng drawer); set({ compose: null }) -> gỡ khóa
+
+// tabAliases.ts
+export type TabSurface = "alpha" | "portfolio" | "paper" | "sandbox" | "canary" | "live";
+// default / keys:
+//  sandbox: reconciliation | steps | promotion-plans | timeline
+//  canary : envelope | positions-orders | reconciliation | guard-rule
+//  live   : exposure-orders | continuity | predecessor-envelope | guard-rules
+// alias: nhãn V1 ("Promotion plans", "Positions & orders", "Guard rule", "Exposure & orders", "Predecessor envelope", "Guard rules"),
+//        slug ngắn review2/07 (plans, positions, guard, exposure, predecessor), "Steps (7)" (đếm trong ngoặc bị bỏ).
+resolveTab(surface, raw): TabResolution      // { target:{tab,hash,params}, legacy, notice }  (không đổi chữ ký)
+applyTab(surface, search, resolution): { search, hash }
+```
+
+### ContextBar (`shell/ContextBar.tsx`)
+```ts
+export interface EnvLock {
+  reason: string;
+  /** môi trường của chính màn (deployment): nút này được nhấn thay cho `env` của URL; in "Environment fixed: <nhãn>". */
+  effective?: ExecEnv;            // "live" | "paper" | "sandbox"
+}
+// Cách dùng (integrator, giống BLOTTER_ENV_LOCK): envLock={{ reason: "The deployment fixes the environment.", effective: "sandbox" }}
+// Canary/Live: effective: "live" (nhãn Real-funded). Giá trị lạ bị bỏ qua. Không đặt effective -> hành vi cũ (Blotter).
+```
+
+### StageHeader (`blocks/StageHeader.tsx`)
+```ts
+export type StageGuardStage = "sandbox" | "canary" | "live";
+export const STAGE_GUARD: Record<StageGuardStage, { word: string; frame: "double" | "left"; risk: boolean }>;
+export const REAL_CAPITAL_AT_RISK = "Real capital at risk";           // chỉ in khi risk=true (canary, live)
+export const STAGE_CHIP_LABELS = { runtime: "Runtime", freshness: "Display freshness", reconciliation: "Reconciliation" } as const;
+
+export type StageChipValue =
+  | { state: "loading" }
+  | { state: "not-published"; id: NotPublishedId; detail?: string }   // "Not published (FE-067) Source flag: active"
+  | { state: "not-available"; reason?: string }                        // "Not available · <reason>"
+  | { state: "flag"; kind: FlagKind; label: string; note?: ReactNode }
+  | { state: "dot"; tone: "ok" | "warn" | "mute"; text: string; note?: ReactNode };   // freshness: "Fresh · 12:04Z"
+export interface StageChips { runtime: StageChipValue; freshness: StageChipValue; reconciliation: StageChipValue }
+export interface StageCrumb { label: string; to?: string | null }       // không có `to` = trang hiện tại (aria-current)
+
+export interface StageHeaderProps {
+  stage: StageGuardStage;
+  crumb: readonly StageCrumb[];
+  title: string;                                   // h1
+  subtitle?: ReactNode;
+  chips: StageChips;
+  spine?: Omit<JourneySpineProps, "variant">;      // current, blocked, stages, selected, onSelect  (luôn variant="compact")
+  extra?: ReactNode;                               // trong khung, dưới spine (Canary: thanh Trial day)
+  renderLink?: (to: string, children: ReactNode) => ReactNode;   // truyền react-router Link; mặc định <a href>
+}
+export function StageHeader(props: StageHeaderProps): JSX.Element;
+export function StageChipRow(props: { chips: StageChips }): JSX.Element;   // ba chip riêng (Paper có thể dùng)
+```
+Khung: `data-frame="double"` (Canary/Live, viền kép `--guard`) hoặc `"left"` (Sandbox, viền trái `--env-sandbox`); `data-stage` trên `<header>`.
+
+### Tabs (`blocks/Tabs.tsx`)
+```ts
+export interface StageTab { id: string; label: string; count?: number | null }   // count in "(7)" chỉ khi là số nguyên >= 0
+export interface TabsProps { tabs: readonly StageTab[]; value: string; onChange(id: string): void; label: string; children?: ReactNode; notice?: string | null }
+export function Tabs(props: TabsProps): JSX.Element;       // thuần: tablist + tabpanel; Left/Right (quay vòng), Home, End; roving tabindex; aria-controls
+
+export interface UrlTab { value: string; notice: string | null; set(id: string): void }
+export function useUrlTab(surface: TabSurface): UrlTab;    // đọc ?tab= qua tabAliases, replace để chuẩn hóa, set() push
+export function UrlTabs(props: { surface: TabSurface; tabs: readonly StageTab[]; label: string; children: (active: string) => ReactNode }): JSX.Element;
+// <UrlTabs surface="sandbox" tabs={[{id:"reconciliation",label:"Reconciliation"},{id:"steps",label:"Steps",count:7},...]} label="Sandbox sections">{(tab) => ...}</UrlTabs>
+```
+`id` của tab phải đúng khóa của bảng slug (`tabAliases.ts`). Account360 và Access giữ tablist riêng (chưa đổi).
+
+### CapGauge (`blocks/CapGauge.tsx`)
+```ts
+export interface CapGaugeProps {
+  ratio?: string | null;     // PHÂN SỐ thập phân server đã publish ("0.76" = 76%). undefined = chưa publish; null/sai = không đọc được
+  label: string;             // "Capital" -> aria-label "Capital: 76.00% used"
+  fe?: NotPublishedId;       // mặc định "FE-071"
+  showText?: boolean;        // mặc định true
+}
+export function CapGauge(props: CapGaugeProps): JSX.Element;
+export function fractionToPercent(fraction: string): string | null;   // "0.7634" -> "76.34"; chỉ dịch dấu thập phân trên chuỗi
+export function toneOfUsed(percent: number): "ok" | "warn" | "bad";   // >=80 warn, >=95 bad (mốc hi-fi, không phải chính sách server)
+```
+D7: không bao giờ tự chia consumed/approved; không có `ratio` thì in `Not published (FE-071) Used`.
+
+### BlockerList (`blocks/BlockerList.tsx`)
+```ts
+export interface BlockerItem { key: string; text: string; code?: string | null }   // text = câu đời thường; code = mã server, chỉ vào Provenance
+export interface BlockerListProps {
+  items: readonly BlockerItem[];
+  title?: string;                  // "What is blocking"
+  emptyText?: ReactNode;           // mặc định "Not available" (danh sách rỗng KHÔNG có nghĩa là không bị chặn; truyền "Nothing is blocking." chỉ khi server nói)
+  provenance?: ReactNode;          // dòng phụ dưới các mã
+  frame?: "panel" | "bare";        // bare = không bọc SectionPanel (đặt trong panel "Exit review")
+  label?: string;                  // tên danh sách khi bare
+}
+export function BlockerList(props: BlockerListProps): JSX.Element;
+```
+
+### Triad.suppressed (`blocks/Triad.tsx`)
+```ts
+interface TriadProps { /* ...cũ */ suppressed?: boolean }   // cột Broker + Difference không vẽ hàng/giá trị/as-of; in "Hidden while the figures disagree."
+export const TRIAD_SUPPRESSED_COPY = "Hidden while the figures disagree";
+// Live: suppressed = !(broker_values_visible exactly true)   (fail-closed ở phía màn).
+```
+
+### FE id mới (`blocks/notPublished.tsx`)
+`FE_REQUEST_LABEL` có thêm `"FE-066" | "FE-067" | "FE-068" | "FE-069" | "FE-070" | "FE-071" | "FE-072"` (nhãn theo mục 8). Dùng được trong `NotPublished id=`, `notPublishedText`, `CapGauge fe=`, `StageChipValue`. Là request OPEN, người tích hợp ghi sổ.
+
+### Lý do disabled (`screens/stage/reasons.ts`)
+```ts
+export const STAGE_WHY = {
+  noGrant: "Needs the approver grant",
+  notEnabled: "Not enabled for this profile",
+  liveClosed: "Live decisions are closed on this build",
+  readOnly: "Read-only on this build",
+  relay: "Relay is not qualified yet",
+} as const;
+export type StageWhyKey = keyof typeof STAGE_WHY;
+export const STAGE_WHY_KEYS: readonly StageWhyKey[];
+export function stageWhy(key: StageWhyKey): string;     // khóa lạ -> câu notEnabled
+// <DockAction label="Hold" reason={stageWhy("liveClosed")} accessHref="/administration/profile-access" />
+```
+
+### Link Canary (D5)
+`alpha/model.ts` `deploymentHref("canary", id)` và `portfolios/routes.ts` `DEFAULT_ROUTES.deployment(id, "CANARY")` giờ trả `/deployments/live/{id}/canary`. `account/model.ts` `deploymentHref` (theo `mode`, không có stage Canary) không đổi.
