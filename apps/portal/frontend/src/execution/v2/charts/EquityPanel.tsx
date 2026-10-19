@@ -319,7 +319,15 @@ export function EquityPanel(props: EquityPanelProps) {
 
       <div className="exec-c2-readout" id={readoutId}>
         <span><span className="exec-c2-ru" data-testid="readout-time">{timeOf(o.t)}</span><b className="exec-c2-rv" data-testid="readout-value">{readoutValue}</b></span>
-        {change !== null ? <span><span className="exec-c2-ru">Change in window</span><span data-testid="readout-change">{change}</span></span> : null}
+        {change !== null ? (
+          // Derived here, not published: the cursor point minus the first plotted point, one series, one unit. It is
+          // a change across the plotted points, never "in window" (the window is the server's, and may be unpublished).
+          <span title={`${timeOf(model.obs[first].t)} to ${timeOf(o.t)}`}>
+            <span className="exec-c2-ru">Change across the plotted points</span>
+            <span data-testid="readout-change">{change}</span>
+            <span className="exec-c2-ru" data-testid="readout-change-span">{timeOf(model.obs[first].t)} to {timeOf(o.t)}</span>
+          </span>
+        ) : null}
         {ddText !== null ? <span><span className="exec-c2-ru">Drawdown</span><span data-testid="readout-drawdown">{ddText}</span></span> : null}
         {ghostText !== null ? <span><span className="exec-c2-ru">{ghost?.name}</span><span data-testid="readout-ghost">{ghostText}</span></span> : null}
       </div>

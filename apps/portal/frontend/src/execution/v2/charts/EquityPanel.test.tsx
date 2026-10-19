@@ -35,6 +35,14 @@ describe("EquityPanel · readout from the published string", () => {
     expect(screen.getByTestId("readout-change").textContent).toBe("+0.20");
   });
 
+  it("labels the change as derived across the plotted points, with both as-of times, never 'in window'", () => {
+    const { container } = render(<EquityPanel label="Net equity" points={BASIC} currency="USDT" />);
+    const text = container.querySelector(".exec-c2-readout")!.textContent!;
+    expect(text).toContain("Change across the plotted points");
+    expect(text).not.toContain("in window");
+    expect(screen.getByTestId("readout-change-span").textContent).toBe("1 Oct 00:00Z to 4 Oct 00:00Z");
+  });
+
   it("flags the high and the low, skipping the one the endpoint already shows", () => {
     const { container } = render(<EquityPanel label="Equity" points={series(["1000.00", "1100.00", "950.00", "1020.75"])} />);
     expect(container.querySelector('[data-testid="high-flag"] text')!.textContent).toBe("High 1,100.00");
