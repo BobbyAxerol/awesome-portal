@@ -259,6 +259,22 @@ describe("tabs on one URL", () => {
     expect(rows[1].querySelector("td[data-l='Mark']")!.textContent).toContain("Not available");
   });
 
+  it("at phone width the strip carries every tab itself (no pinned More) and Trade Replay is the selected tab", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("660px"), media: query, addEventListener: () => {}, removeEventListener: () => {} }));
+    mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?tab=replay`);
+    await ready();
+    expect(tabs().getAllByRole("tab").map((t) => t.textContent)).toEqual([
+      "Performance", "Deployments", "Research Evidence", "Regime Fit", "Orders & Fills", "Activity & Decisions", "Trade Replay", "Positions", "Reconciliation",
+    ]);
+    expect(screen.queryByRole("button", { name: "More" })).toBeNull();
+    expect(tabs().getByRole("tab", { name: "Trade Replay" }).getAttribute("aria-selected")).toBe("true");
+    fireEvent.click(tabs().getByRole("tab", { name: "Positions" }));
+    expect(search().get("tab")).toBe("positions");
+    // The URL slugs are the same ones the wide layout writes.
+    fireEvent.click(tabs().getByRole("tab", { name: "Performance" }));
+    expect(where()).not.toContain("tab=");
+  });
+
   it.each([
     ["Insight+Charts", "performance"], ["Trade+Replay", "replay"], ["Orders+%26+Fills", "orders"], ["Overview", "performance"],
     ["Sessions", "activity"], ["Audit", "activity"], ["Reconciliation", "reconciliation"],

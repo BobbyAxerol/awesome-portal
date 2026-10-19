@@ -491,6 +491,10 @@
     flex-wrap: nowrap;
     overflow-x: auto;
   }
+  /* A label keeps its whole width and the strip scrolls; shrinking is what cut "Research Evidence" to "R". */
+  .exec-alp2-tabs .exec-alp2-tab {
+    flex: none;
+  }
   .exec-alp2-more-wrap {
     flex: none;
   }

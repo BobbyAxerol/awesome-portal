@@ -45,6 +45,7 @@ import { Flag } from "../../Flag";
 import { useContextFacts } from "../../shell/contextFacts";
 import { V2_CAPABILITY, holds } from "../../shell/roleNav";
 import { applyTab, resolveTab } from "../../tabAliases";
+import { useMediaQuery } from "../../useMediaQuery";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
 import { alphaBack, replayBack } from "./backLinks";
 import { Dec, Na } from "./cells";
@@ -174,11 +175,22 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
   };
   const [moreOpen, setMoreOpen] = useState(false);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  /* At phone width the strip is one row that scrolls inside its own box and carries every tab, More's included:
+     a pinned More button squeezes the labels, and would highlight "More" for Trade Replay instead of Trade Replay. */
+  const narrow = useMediaQuery("(max-width: 660px)");
+  const stripTabs: readonly { key: AlphaTabKey; label: string }[] = narrow ? [...ALPHA_TABS, ...ALPHA_MORE_TABS] : ALPHA_TABS;
+  useEffect(() => {
+    const strip = stripRef.current;
+    const active = tabRefs.current[tab];
+    if (!narrow || !strip || !active) return;
+    strip.scrollLeft = Math.max(0, active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2);
+  }, [tab, narrow]);
   const onTabKey = (event: KeyboardEvent, index: number) => {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
     event.preventDefault();
-    const next = (index + (event.key === "ArrowRight" ? 1 : -1) + ALPHA_TABS.length) % ALPHA_TABS.length;
-    const key = ALPHA_TABS[next].key;
+    const next = (index + (event.key === "ArrowRight" ? 1 : -1) + stripTabs.length) % stripTabs.length;
+    const key = stripTabs[next].key;
     tabRefs.current[key]?.focus();
     openTab(key);
   };
@@ -206,7 +218,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
 
   const panelId = `${uid}-panel`;
   const tabId = (key: string) => `${uid}-tab-${key}`;
-  const inMore = ALPHA_MORE_TABS.some((t) => t.key === tab);
+  const inMore = !narrow && ALPHA_MORE_TABS.some((t) => t.key === tab);
 
   return (
     <div className="exec-alp2-v2" data-screen="alpha-360-v2">
@@ -275,8 +287,8 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
             )}
 
             <div className="exec-alp2-tabbar">
-              <div className="exec-alp2-tabs" role="tablist" aria-label="Alpha detail">
-                {ALPHA_TABS.map((t, index) => (
+              <div ref={stripRef} className="exec-alp2-tabs" role="tablist" aria-label="Alpha detail">
+                {stripTabs.map((t, index) => (
                   <button
                     key={t.key}
                     ref={(node) => { tabRefs.current[t.key] = node; }}
@@ -294,6 +306,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                   </button>
                 ))}
               </div>
+              {narrow ? null : (
               <div className="exec-alp2-more-wrap">
                 <button type="button" className="exec-alp2-tab" aria-haspopup="menu" aria-expanded={moreOpen} data-active={inMore ? "true" : undefined} onClick={() => setMoreOpen((open) => !open)}>
                   More
@@ -308,6 +321,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                   </ul>
                 ) : null}
               </div>
+              )}
               {deployed.length > 1 && (tab === "performance" || tab === "orders" || tab === "activity" || tab === "replay") ? (
                 <span className="exec-alp2-seg" role="group" aria-label="Book">
                   <span className="exec-alp2-dim exec-alp2-seg-label">Book</span>
