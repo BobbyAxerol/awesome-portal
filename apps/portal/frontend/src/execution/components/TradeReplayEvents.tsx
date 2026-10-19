@@ -387,10 +387,9 @@ function PlainCells({ row }: { row: LogRow }) {
       <td data-l="Qty" data-numeric="true">{row.qty}</td>
       <td data-l="Price / Trigger" data-numeric="true">{p.price}</td>
       <td data-l="Fee" data-numeric="true" className={row.event === "FILL" && row.fee ? undefined : "exec-rp-mute"}>{p.fee}</td>
-      <td data-l="Result" data-tone={row.noteTone ?? undefined} title={row.note}>
+      <td data-l="Result" data-tone={row.noteTone ?? undefined} title={[p.statusCode ? `Status ${p.statusCode}` : null, row.note].filter((x) => x).join(" · ") || undefined}>
         <span>
           {p.result}
-          {p.statusCode ? <small className="exec-rp-mute"> {p.statusCode}</small> : null}
           {p.detail ? <small> {p.detail}</small> : null}
         </span>
       </td>

@@ -64,7 +64,7 @@ describe("TradeReplayEvents with plain", () => {
   const panel = (plain: boolean) =>
     render(<TradeReplayEvents orders={orders} fills={fills} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} accounts={[ACCT]} plain={plain} />);
 
-  it("prints nine labelled columns in words, the raw status as a chip and the raw type on a title", () => {
+  it("prints nine labelled columns in words, the raw status and the raw type on a title only", () => {
     const { container } = panel(true);
     const table = container.querySelector("table.exec-rp-table")!;
     expect([...table.querySelectorAll("thead th")].map((th) => th.textContent)).toEqual(["Time (UTC)", "Event", "Order", "Leg", "Type · Side", "Qty", "Price / Trigger", "Fee", "Result"]);
@@ -75,7 +75,9 @@ describe("TradeReplayEvents with plain", () => {
     expect(cells[4].getAttribute("title")).toBe("TAKE_PROFIT_MARKET");
     expect(cells[4].textContent).toContain("GTC · reduce only");
     expect(cells[8].textContent).toContain("Waiting for the price");
-    expect(cells[8].textContent).toContain("NEW");
+    // The raw status code is evidence for a hover, not visible text next to the plain words.
+    expect(cells[8].textContent).not.toMatch(/NEW|UNKNOWN|FILLED/);
+    expect(cells[8].getAttribute("title")).toContain("Status NEW");
     expect(cells[7].textContent).toBe("No fill yet");
     expect(cells[0].textContent).toBe("16 Oct 20:01:30Z");
   });
