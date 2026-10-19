@@ -12,7 +12,9 @@
   font: var(--exec-font-label);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  white-space: nowrap;
+  /* A chip with a long reason ("Partial: server reduction does not guarantee extrema") wraps inside its box at 390px. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
   color: var(--ink-soft);
   background: var(--surface-2);
   border: 1px solid var(--ink-soft);

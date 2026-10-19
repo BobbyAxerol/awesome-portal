@@ -16,6 +16,10 @@
   font: var(--exec-font-data);
   color: var(--ink-soft);
 }
+/* A long reason id ("Not available · N28_BROKER_ACK_TIMESTAMP") breaks inside its own box instead of widening the page. */
+.exec-blk-na {
+  overflow-wrap: anywhere;
+}
 .exec-blk-np-word {
   font: var(--exec-font-control);
   color: var(--ink-soft);
@@ -109,6 +113,9 @@
   flex-direction: column;
   gap: 2px;
   margin: var(--space-1) 0 0;
+}
+.exec-blk-kpi-value {
+  min-width: 0;
 }
 .exec-blk-kpi-value .exec-blk-num {
   font: var(--exec-font-kpi);

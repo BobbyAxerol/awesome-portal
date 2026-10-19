@@ -29,7 +29,7 @@
  * and filter are written with replace, so a reload restores them and Back leaves the page (`viewUrl.ts`).
  * A researcher who opens `/governance/approvals/:id/r1` sees that one request read-only, not the list.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import type { ConditionRow, ExecutionApi, InboxResult } from "../../../api/ports";
@@ -38,6 +38,7 @@ import { PanelSkeleton, PanelState } from "../../../components/states";
 import type { PanelStatus } from "../../../contracts";
 import { reviewRouteFor, type DecidedRow } from "../../../screens/ApprovalInbox";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
+import { useDockMode } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { useExecUrlState, withContext } from "../../urlState";
 import { RequestDrawer } from "../request/RequestDrawer";
@@ -376,16 +377,17 @@ function OwnRequests({
             <p className="exec-ck-sub">Read only · decisions are made by reviewers</p>
           </div>
         </div>
-        {!settled ? <PanelSkeleton label="Loading your request" /> : null}
-        {refused ? (
-          <PanelState status="denied" title="Not listed as yours" reason={`${wanted.id} is on the page the server returned, but it is not listed as created by you, so it is not opened here.`} />
-        ) : null}
-        {evidenceTarget !== null ? (
-          <section className="exec-ck-main" aria-label="Evidence">
-            <EvidenceFrame kind={evidenceTarget.kind} header={header} evidence={evidence} />
-          </section>
-        ) : null}
-        {drawer}
+        <DockRow open={composing} drawer={drawer}>
+          {!settled ? <PanelSkeleton label="Loading your request" /> : null}
+          {refused ? (
+            <PanelState status="denied" title="Not listed as yours" reason={`${wanted.id} is on the page the server returned, but it is not listed as created by you, so it is not opened here.`} />
+          ) : null}
+          {evidenceTarget !== null ? (
+            <section className="exec-ck-main" aria-label="Evidence">
+              <EvidenceFrame kind={evidenceTarget.kind} header={header} evidence={evidence} />
+            </section>
+          ) : null}
+        </DockRow>
       </div>
     );
   }
@@ -401,6 +403,7 @@ function OwnRequests({
           <button type="button" className="exec-ck-btn" aria-haspopup="dialog" onClick={() => url.set({ compose: "request" })}>New request</button>
         </div>
       </div>
+      <DockRow open={composing} drawer={drawer}>
       {inbox.status === "loading" ? <PanelSkeleton label="Loading your requests" /> : null}
       {inbox.failure ? <PanelState status={inbox.failure.panel} reason={inbox.failure.reason} /> : null}
       {inbox.status === "ready" ? (
@@ -418,7 +421,7 @@ function OwnRequests({
           ) : null}
         </section>
       ) : null}
-      {drawer}
+      </DockRow>
     </div>
   );
 }
@@ -430,6 +433,22 @@ function itemHeader(item: QueueItem): EvidenceHeader | null {
   const row = item.row;
   const context = item.kind === "gate" ? [item.row.target, item.row.releaseCandidate].filter((part) => part !== null).join(" · ") : "";
   return { id: row.id, title: row.subject, context: context || null, gate: row.gate };
+}
+
+/**
+ * The page body and the New request drawer in one row. Docked (wider than 1500px, `useDockMode`) the open drawer is a
+ * 380px column on the right, the way the shared Drawer sits beside the Fleet and Operations tables; at 1500px and below
+ * it overlays the page and the row is a single column. The drawer stays a child of the row either way, so it keeps its
+ * mount and its draft.
+ */
+function DockRow({ open, drawer, children }: { open: boolean; drawer: ReactNode; children: ReactNode }) {
+  const mode = useDockMode();
+  return (
+    <div className="exec-ck-dockrow" data-docked={open && mode === "dock" ? "true" : "false"}>
+      <div className="exec-ck-dockbody">{children}</div>
+      {drawer}
+    </div>
+  );
 }
 
 function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection, writeBlockedReason, requestApi, principal }: CockpitProps & { principal: Principal }) {
@@ -624,6 +643,13 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
       </div>
       <p className="exec-ck-banner" role="note">Preview build. Decisions are shown here, not recorded.</p>
 
+      <DockRow
+        open={composing}
+        drawer={
+          /* Always mounted and driven by `open`: the draft survives Back, and the Run Library is read on first open only. */
+          <RequestDrawer api={requestApi ?? api} open={composing} onClose={() => url.set({ compose: null }, { replace: true })} writeBlockedReason={writeBlockedReason} />
+        }
+      >
       <div className="exec-ck">
         <Queue
           lane={lane}
@@ -661,11 +687,10 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
           <Rail api={api} target={railTarget} evidence={evidence} principal={principal} workspaceId={workspaceId} />
         </aside>
       </div>
+      </DockRow>
 
       <p className="exec-ck-live" role="status" aria-live="polite">{announcement}</p>
       {helpOpen ? <KeysHelp onClose={() => setHelpOpen(false)} /> : null}
-      {/* Always mounted and driven by `open`: the draft survives Back, and the Run Library is read on first open only. */}
-      <RequestDrawer api={requestApi ?? api} open={composing} onClose={() => url.set({ compose: null }, { replace: true })} writeBlockedReason={writeBlockedReason} />
     </div>
   );
 }

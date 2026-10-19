@@ -42,6 +42,7 @@ import { KpiStrip, NotPublished, SectionPanel, StageHeader, Triad, UrlTabs } fro
 import { formatAsOf } from "../../boundary";
 import { parseUrlParams, withContext } from "../../urlState";
 import { ExitReviewPanel } from "./ExitReviewPanel";
+import { lineageRoute } from "./lineageRoute";
 import { ReviewNoteForm } from "./ReviewNoteForm";
 import { StepsGrid } from "./StepsGrid";
 import { FindingsPanel, PlansPanel, TimelinePanel } from "./Tables";
@@ -151,16 +152,15 @@ function Lineage({ view }: { view: SandboxView }) {
   return (
     <SectionPanel title="Lineage">
       <ul className="exec-sbx-lineage" aria-label="Lineage">
-        {view.lineage.map((item) => (
-          <li key={item.kind}>
-            <span className="exec-sbx-lineage-kind">{LINEAGE_LABEL[item.kind] ?? humanize(item.kind)}</span>{" "}
-            {item.href !== null && item.href.startsWith("/") ? (
-              <Link className="exec-blk-link" to={withContext(item.href, params)}>{item.value}</Link>
-            ) : (
-              <span className="exec-sbx-id">{item.value}</span>
-            )}
-          </li>
-        ))}
+        {view.lineage.map((item) => {
+          const to = lineageRoute(item.href);
+          return (
+            <li key={item.kind}>
+              <span className="exec-sbx-lineage-kind">{LINEAGE_LABEL[item.kind] ?? humanize(item.kind)}</span>{" "}
+              {to !== null ? <Link className="exec-blk-link" to={withContext(to, params)}>{item.value}</Link> : <span className="exec-sbx-id">{item.value}</span>}
+            </li>
+          );
+        })}
       </ul>
     </SectionPanel>
   );

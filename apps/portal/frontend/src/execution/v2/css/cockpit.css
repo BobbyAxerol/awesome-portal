@@ -49,6 +49,36 @@
   border-left: 3px solid var(--warn);
 }
 
+/* The body and the New request drawer. Docked (data-docked, > 1500px) the drawer is a right-hand column; otherwise the
+ * row is one column and the drawer, when open, overlays the page from the shared Drawer's own fixed position. */
+.exec-ck-dockrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+  min-width: 0;
+}
+.exec-ck-dockrow[data-docked="true"] {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.exec-ck-dockbody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  min-width: 0;
+}
+.exec-ck-dockrow > .exec-dock[data-mode="dock"] {
+  position: sticky;
+  top: var(--space-4);
+}
+/* Beside a 380px drawer the three panes do not fit: the decision rail drops under the evidence. */
+.exec-ck-dockrow[data-docked="true"] .exec-ck {
+  grid-template-columns: 268px minmax(0, 1fr);
+}
+.exec-ck-dockrow[data-docked="true"] .exec-ck-rail {
+  grid-column: 2;
+  position: static;
+}
 .exec-ck {
   display: grid;
   grid-template-columns: 268px minmax(0, 1fr) 316px;

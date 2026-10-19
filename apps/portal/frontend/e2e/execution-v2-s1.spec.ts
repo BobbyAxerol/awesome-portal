@@ -21,24 +21,10 @@ const WIDTHS = [
 /**
  * Rows that overflow the page today, each with the component that does it. Not hidden: the row asserts the overflow is
  * STILL there (so the day the component is fixed this row turns red and the entry is deleted), and every other check of
- * the row (root, console, network, foreign requests) stays strict. All but the first two were found by the S3 rows.
- *  - JourneySpine (blocks.css `.exec-blk-spine-list`, 400px wide in a 390px viewport): Alpha 360, the Paper workbench
- *    Overview and the Canary screen carry the compact spine.
- *  - NotPublished text (blocks.css `.exec-blk-na`, one 287px line that does not wrap): the Paper workbench Overview at 1440.
+ * the row (root, console, network, foreign requests) stays strict. Empty since the UI-refine pass fixed the JourneySpine
+ * parents, NotPublished wrapping, the stage tab strip, the long Flag and the Canary series panel (blocks/stage/canary/alpha/flag.css).
  */
-const SPINE = "JourneySpine overflows a 390px viewport (blocks.css .exec-blk-spine-list is 400px wide)";
-const NA_LINE = "NotPublished text does not wrap (blocks.css .exec-blk-na is one 287px line)";
-const KNOWN_OVERFLOW: Readonly<Record<string, string>> = {
-  "alpha-360@narrow": SPINE,
-  "alpha-replay@narrow": SPINE,
-  "workbench@wide": NA_LINE,
-  "workbench@narrow": `${SPINE}; the stage tab strip and a long Flag also run past it`,
-  "workbench-vnm@wide": NA_LINE,
-  "workbench-vnm@narrow": `${SPINE}; the stage tab strip and a long Flag also run past it`,
-  "canary@narrow": `${SPINE}; the series panel (p.exec-cny-series) is 477px wide`,
-  "canary-guard@narrow": `${SPINE}; the series panel (p.exec-cny-series) is 477px wide`,
-  "canary-v2body@narrow": `${SPINE}; the series panel (p.exec-cny-series) is 477px wide`,
-};
+const KNOWN_OVERFLOW: Readonly<Record<string, string>> = {};
 
 for (const [name, route, root] of SCREENS) {
   for (const [label, width, height] of WIDTHS) {

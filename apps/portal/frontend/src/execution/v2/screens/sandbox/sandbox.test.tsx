@@ -232,6 +232,19 @@ describe("the V1 certification body", () => {
     expect(within(lineage).getByText(/sha256:a{64}/)).toBeTruthy();
   });
 
+  it("lineage: the V1 Paper exit href (no route) links the exit review; a shape nobody mounts stays plain text", async () => {
+    const draft = v1Rich();
+    draft.lineage = [
+      { kind: "PAPER_EXIT", value: "PX-29", href: "/deployments/paper/exit/PX-29", source_authority: "PORTAL" },
+      { kind: "PROMOTION_GRANT", value: "grant_77", href: "/deployments/live/grant_77", source_authority: "PORTAL" },
+    ];
+    mount(fakeApi({ read: okRead(draft) }), `${ENTRY}?tab=steps`);
+    await ready();
+    const lineage = screen.getByRole("list", { name: "Lineage" });
+    expect(within(lineage).getByRole("link", { name: "PX-29" }).getAttribute("href")).toBe("/governance/exit-reviews/PX-29");
+    expect(within(lineage).getByText("grant_77").closest("a")).toBeNull();
+  });
+
   it("Reconciliation: the findings table prints the server's sentence, severity, when it was opened and whether it is open", async () => {
     mount(fakeApi({ read: okRead(v1Rich()) }));
     await ready();
