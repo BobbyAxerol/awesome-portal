@@ -377,6 +377,12 @@ const KPI_UNIT: Readonly<Record<KpiKey, "money" | "count">> = {
   broker_equity: "money",
 };
 
+/**
+ * A KPI value is drawn only from a panel that vouches for it. A suppressed, unavailable, denied,
+ * empty, failed or unknown panel may still carry a number on the wire; that number is not shown.
+ */
+export const KPI_VALUE_STATES: readonly PanelFactState[] = ["ok", "partial", "stale"];
+
 function readV1(room: CanaryControlRoom, schemaVersion: string | null): CanaryView | null {
   if (typeof room !== "object" || room === null) return null;
   const deploymentId = ident(room.deploymentId);
@@ -390,7 +396,7 @@ function readV1(room: CanaryControlRoom, schemaVersion: string | null): CanaryVi
     if (key === undefined || kpis[key] !== null || panel === null) continue;
     kpis[key] = {
       key,
-      value: KPI_UNIT[key] === "money" ? moneyFact(k.value) : countFact(k.value),
+      value: !KPI_VALUE_STATES.includes(panel.state) ? null : KPI_UNIT[key] === "money" ? moneyFact(k.value) : countFact(k.value),
       // The wire's `unit` is a currency pattern even for the open-orders count (the published fixture says USDT):
       // a count never carries it.
       currency: KPI_UNIT[key] === "money" ? currencyOf(k.unit) : null,

@@ -104,6 +104,40 @@ describe("KPI cells", () => {
     expect(cell).toMatchObject({ kind: "metric", metric: { kind: "value", partial: true, tone: "neutral" } });
   });
 
+  it.each([
+    ["unavailable", "source unavailable"],
+    ["suppressed", "withheld by the server"],
+    ["empty", "no value published"],
+    ["error", "source unavailable"],
+    ["denied", "source unavailable"],
+    ["something_new", "source unavailable"],
+  ])("a %s panel that still carries a number never draws it", (state, reason) => {
+    const body = populatedV1();
+    for (const kpi of body.kpis) kpi.envelope.panel_state = state;
+    const view = viewOf(body);
+    for (const fact of Object.values(view.kpis)) expect(fact!.value).toBeNull();
+    for (const cell of kpiCells(view)) expect(cell).toMatchObject({ kind: "absent", reason });
+  });
+
+  it.each([["ready"], ["partial"], ["stale"]])("a %s panel keeps its number", (state) => {
+    const body = populatedV1();
+    for (const kpi of body.kpis) kpi.envelope.panel_state = state;
+    for (const cell of kpiCells(viewOf(body))) expect(cell.kind).toBe("metric");
+  });
+
+  it("the model also withholds a number a hand-built view attaches to a panel that does not vouch for it", () => {
+    const view = viewOf(populatedV1());
+    const fact = view.kpis.daily_pnl!;
+    for (const state of ["suppressed", "unavailable", "denied", "empty", "insufficient_data", "terminal", "loading"] as const) {
+      const cell = kpiCells({ ...view, kpis: { ...view.kpis, daily_pnl: { ...fact, panel: { ...fact.panel, state } } } }).find((c) => c.key === "daily_pnl")!;
+      expect(cell.kind).toBe("absent");
+    }
+    for (const state of ["ok", "partial", "stale"] as const) {
+      const cell = kpiCells({ ...view, kpis: { ...view.kpis, daily_pnl: { ...fact, panel: { ...fact.panel, state } } } }).find((c) => c.key === "daily_pnl")!;
+      expect(cell.kind).toBe("metric");
+    }
+  });
+
   it("a stale panel says so in the basis", () => {
     const body = populatedV1();
     body.kpis[0].envelope.panel_state = "stale";

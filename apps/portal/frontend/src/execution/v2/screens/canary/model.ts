@@ -23,6 +23,7 @@ import type { SpineStageId } from "../../blocks";
 import { stageWhy, type StageWhyKey } from "../stage/reasons";
 import {
   KPI_KEYS,
+  KPI_VALUE_STATES,
   type CanaryView,
   type DecimalFact,
   type KpiFact,
@@ -206,7 +207,7 @@ export function kpiCells(view: CanaryView): readonly KpiCell[] {
     if (view.proposalOnly) return { key, label, kind: "not-published", fe: FE_ROWS };
     const fact: KpiFact | null = view.kpis[key];
     if (fact === null) return { key, label, kind: "absent", reason: "not in this response" };
-    if (fact.value === null) return { key, label, kind: "absent", reason: absentWhy(fact.panel), basis: kpiBasis(view, key, fact.panel) };
+    if (fact.value === null || !KPI_VALUE_STATES.includes(fact.panel.state)) return { key, label, kind: "absent", reason: absentWhy(fact.panel), basis: kpiBasis(view, key, fact.panel) };
     return {
       key,
       label,
