@@ -43,6 +43,8 @@ export interface ActionPaneProps {
   activation: StagedActivation | null;
   workspaceId: string | null;
   mode: DockMode;
+  /** False while the screen opened this pane itself (nobody asked): focus is not pulled into it. */
+  focusOnOpen?: boolean;
   onClose: () => void;
   portfoliosHref: string;
   operationsHref: string;
@@ -114,7 +116,7 @@ function PlanResult({ plan, operationsHref }: { plan: CommandPlan; operationsHre
   );
 }
 
-export function ActionPane({ row, api, activation, workspaceId, mode, onClose, portfoliosHref, operationsHref }: ActionPaneProps) {
+export function ActionPane({ row, api, activation, workspaceId, mode, focusOnOpen = true, onClose, portfoliosHref, operationsHref }: ActionPaneProps) {
   const { task, entry } = row;
   const [params] = useSearchParams();
   const ids = { target: useId(), version: useId(), env: useId(), note: useId() };
@@ -170,6 +172,7 @@ export function ActionPane({ row, api, activation, workspaceId, mode, onClose, p
       title={row.title}
       subtitle={task.catalogKey ?? task.taskId}
       mode={mode}
+      focusOnOpen={focusOnOpen}
       onClose={onClose}
       actions={
         row.kind === "read" || row.kind === "capital" ? undefined : (

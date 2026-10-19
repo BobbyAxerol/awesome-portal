@@ -185,13 +185,13 @@ describe("DockAction", () => {
 
   it("links My access with the URL context carried over", () => {
     wrap(<DockAction label="Recall" reason="Your role does not include this." accessHref="/profile/access" />);
-    const link = screen.getByRole("link", { name: "My access" });
+    const link = screen.getByRole("link", { name: "My access: Recall" });
     expect(link.getAttribute("href")).toBe("/profile/access?env=paper");
   });
 
   it("takes a custom link label and has no link without an href", () => {
     wrap(<DockAction label="A" reason="r" accessHref="/p" accessLabel="Why" />);
-    expect(screen.getByRole("link", { name: "Why" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Why: A" })).toBeTruthy();
     cleanup();
     wrap(<DockAction label="A" reason="r" />);
     expect(screen.queryByRole("link")).toBeNull();
@@ -282,5 +282,71 @@ describe("priority slot and footer", () => {
     const p = lines[0].querySelector("p")!;
     expect(p.getAttribute("title")).toBe(p.textContent);
     expect(screen.getAllByText("Acknowledge")).toHaveLength(1);
+  });
+});
+
+describe("focusOnOpen and the close fallback", () => {
+  function Row({ focusOnOpen, withTable = true }: { focusOnOpen?: boolean; withTable?: boolean }) {
+    const { selection, close } = useDockSelection();
+    return (
+      <>
+        <main aria-label="Page">
+          {withTable ? (
+            <table aria-label="Rows">
+              <tbody>
+                <tr tabIndex={0} data-testid="first-row"><td>one</td></tr>
+                <tr tabIndex={0}><td>two</td></tr>
+              </tbody>
+            </table>
+          ) : null}
+        </main>
+        <Drawer open={selection !== null} onClose={close} title="Peek" focusOnOpen={focusOnOpen}>
+          <p>Body</p>
+        </Drawer>
+      </>
+    );
+  }
+  const mountRow = (props: { focusOnOpen?: boolean; withTable?: boolean }) =>
+    render(
+      <MemoryRouter initialEntries={["/fleet?sel=a"]}>
+        <Row {...props} />
+      </MemoryRouter>,
+    );
+
+  it("focuses the panel by default and leaves focus alone with focusOnOpen={false}", () => {
+    mountRow({});
+    expect(document.activeElement).toBe(screen.getByRole("complementary"));
+    cleanup();
+    (document.activeElement as HTMLElement | null)?.blur();
+    mountRow({ focusOnOpen: false });
+    expect(screen.getByRole("complementary")).toBeTruthy();
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("closing a panel nobody opened from a control lands on the first table row, never on nothing", () => {
+    mountRow({ focusOnOpen: false });
+    fireEvent.click(screen.getByText("Close"));
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByTestId("first-row"));
+  });
+
+  it("with no table it lands on the main landmark", () => {
+    mountRow({ focusOnOpen: false, withTable: false });
+    fireEvent.click(screen.getByText("Close"));
+    expect(document.activeElement).toBe(screen.getByRole("main"));
+  });
+
+  it("a real opener still gets focus back, not the fallback", () => {
+    render(
+      <MemoryRouter initialEntries={["/fleet"]}>
+        <Screen />
+        <table><tbody><tr tabIndex={0} data-testid="row"><td>x</td></tr></tbody></table>
+      </MemoryRouter>,
+    );
+    const opener = screen.getByText("Open row");
+    opener.focus();
+    fireEvent.click(opener);
+    fireEvent.click(screen.getByText("Close"));
+    expect(document.activeElement).toBe(opener);
   });
 });

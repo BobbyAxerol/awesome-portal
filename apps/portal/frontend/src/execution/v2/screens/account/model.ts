@@ -232,7 +232,7 @@ export const UPDATED_STALE_MINUTES = 30;
 export function updatedAgo(updatedAt: UtcEpochMs | null, readAt: UtcEpochMs | null): { text: string; stale: boolean } | null {
   if (updatedAt === null || readAt === null || readAt < updatedAt) return null;
   const minutes = Math.floor((readAt - updatedAt) / 60_000);
-  const text = minutes < 1 ? "under 1 min ago" : minutes < 60 ? `${minutes} min ago` : `${Math.round(minutes / 60)} h ago`;
+  const text = minutes < 1 ? "under 1 min ago" : minutes < 60 ? `${minutes} min ago` : `${Math.floor(minutes / 60)} h ago`;
   return { text, stale: minutes >= UPDATED_STALE_MINUTES };
 }
 

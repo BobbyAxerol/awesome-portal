@@ -254,7 +254,10 @@ describe("drawer", () => {
       expect(button.getAttribute("aria-describedby")).toBeTruthy();
     }
     expect(within(dock).getAllByText(/Account changes are made on the current Users screen/).length).toBeGreaterThan(0);
-    expect(within(dock).getByRole("link", { name: "Current Users screen" }).getAttribute("href")).toContain("legacy=1");
+    // Each blocked action carries its own link; the action is part of the name (WCAG 2.4.4).
+    const legacy = within(dock).getAllByRole("link", { name: /^Current Users screen: / });
+    expect(legacy.length).toBeGreaterThan(0);
+    for (const link of legacy) expect(link.getAttribute("href")).toContain("legacy=1");
     expect((screen.getByRole("button", { name: "Invite account" }) as HTMLButtonElement).disabled).toBe(true);
   });
 

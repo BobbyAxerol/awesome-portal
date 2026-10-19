@@ -96,14 +96,28 @@ export default function AdminScreen({
 
   // The hi-fi opens its first ready action on arrival (ADM-B2). Once, in the docked layout only,
   // and never when the URL already names a selection, so Close stays closed and an overlay never
-  // opens over a page nobody has touched.
+  // opens over a page nobody has touched. "Once" is the first time rows are loaded, whatever the
+  // mode or filter then, so widening the window or changing the filter later opens nothing
+  // unprompted. The row must be one the active state filter shows; if none is, nothing opens.
+  // The pane it opens does not take focus (WCAG 2.4.3) until the reader picks a row themselves.
   const autoOpened = useRef(false);
-  const firstReady = rows.find((r) => r.state === "ready") ?? null;
+  const autoId = useRef<string | null>(null);
+  const firstReady = rows.find((r) => r.state === "ready" && (filter === "all" || r.state === filter)) ?? null;
   useEffect(() => {
-    if (autoOpened.current || mode !== "dock" || selection !== null || firstReady === null) return;
+    if (autoOpened.current || rows.length === 0) return;
     autoOpened.current = true;
+    if (mode !== "dock" || selection !== null || firstReady === null) return;
+    autoId.current = firstReady.id;
     url.set({ sel: firstReady.id }, { replace: true });
-  }, [mode, selection, firstReady, url]);
+  }, [rows, mode, selection, firstReady, url]);
+  const pickRow = (id: string) => {
+    autoId.current = null;
+    select(id);
+  };
+  const closePane = () => {
+    autoId.current = null;
+    close();
+  };
 
   const setFilter = (next: RowState | "all") => {
     const copy = new URLSearchParams(params);
@@ -243,7 +257,7 @@ export default function AdminScreen({
           ) : (
             tiers.map((tier) => (
               <SectionPanel key={tier.group} title={tier.label} aside={`${tier.note ? `${tier.note} · ` : ""}${tier.ready} of ${tier.total} ready`} flush>
-                <CardsTable columns={columns} rows={tier.rows} rowKey={(r) => r.id} label={`${tier.label} actions`} selectedKey={selection} onRowOpen={(r) => select(r.id)} />
+                <CardsTable columns={columns} rows={tier.rows} rowKey={(r) => r.id} label={`${tier.label} actions`} selectedKey={selection} onRowOpen={(r) => pickRow(r.id)} />
               </SectionPanel>
             ))
           )}
@@ -257,14 +271,15 @@ export default function AdminScreen({
               activation={activation}
               workspaceId={planWorkspace}
               mode={mode}
-              onClose={close}
+              focusOnOpen={selection !== autoId.current}
+              onClose={closePane}
               portfoliosHref={portfoliosHref}
               operationsHref={operationsHref}
             />
           ) : (
             <aside className="exec-adm-gone" role="status">
               <p>This action is not in the catalogue that was read.</p>
-              <button type="button" className="exec-adm-btn" onClick={close}>Close</button>
+              <button type="button" className="exec-adm-btn" onClick={closePane}>Close</button>
             </aside>
           )
         ) : null}

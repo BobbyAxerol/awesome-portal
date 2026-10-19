@@ -3,7 +3,7 @@
  * tiers, the first reason nothing is live, the plan walk (Accepted, Uncertain,
  * Preview), the local read, and the states.
  */
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -344,5 +344,90 @@ describe("states", () => {
     mount();
     expect(screen.getByRole("status", { name: "Loading Admin Actions" })).toBeTruthy();
     await loaded();
+  });
+});
+
+describe("the auto-open is once, filter-aware and does not take focus", () => {
+  /** A matchMedia whose `(max-width)` query can be flipped by the test. */
+  function stubMedia(initialOverlay: boolean) {
+    let matches = initialOverlay;
+    const listeners = new Set<() => void>();
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      get matches() { return matches; },
+      media: query,
+      addEventListener: (_: string, fn: () => void) => listeners.add(fn),
+      removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),
+    }));
+    return (overlay: boolean) => {
+      matches = overlay;
+      act(() => listeners.forEach((fn) => fn()));
+    };
+  }
+
+  it("widening the window after the first load does not open a pane unprompted", async () => {
+    setOverviewDoubleVariants({ admin: "connected-read" });
+    const setOverlay = stubMedia(true);
+    mount();
+    await loaded();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(search().get("sel")).toBeNull();
+    setOverlay(false);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(search().get("sel")).toBeNull();
+  });
+
+  it("opens only a ready row the active state filter shows; with none visible it opens nothing", async () => {
+    setOverviewDoubleVariants({ admin: "connected-read" });
+    mount("/administration/actions?state=not-enabled");
+    await loaded();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(search().get("sel")).toBeNull();
+    // Showing everything afterwards does not open it either: the one chance was the first load.
+    fireEvent.click(screen.getByRole("button", { name: /^All \d+$/ }));
+    await waitFor(() => expect(search().get("state")).toBeNull());
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(screen.queryByRole("complementary")).toBeNull();
+    cleanup();
+    mount("/administration/actions?state=ready");
+    const pane = await dock();
+    expect(within(pane).getByRole("heading", { name: "System health" })).toBeTruthy();
+  });
+
+  it("the auto-opened pane does not take focus; a row the reader picks does", async () => {
+    setOverviewDoubleVariants({ admin: "connected-read" });
+    mount();
+    const pane = await dock();
+    expect(document.activeElement).not.toBe(pane);
+    expect(pane.contains(document.activeElement)).toBe(false);
+    const other = within(tierTable("Read")).getAllByRole("row").slice(1).find((r) => !r.textContent?.includes("System health"))!;
+    fireEvent.click(other);
+    await waitFor(() => expect(search().get("sel")).not.toBe("health"));
+    const next = await dock();
+    await waitFor(() => expect(document.activeElement).toBe(next));
+  });
+
+  it("Close on the auto-opened pane leaves focus on the first table row, not lost on the body", async () => {
+    setOverviewDoubleVariants({ admin: "connected-read" });
+    mount();
+    const pane = await dock();
+    fireEvent.click(within(pane).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    const first = within(tierTable("Read")).getAllByRole("row")[1]!;
+    expect(document.activeElement).toBe(first);
+  });
+
+  it("a pane the reader opened themselves takes focus and gives it back to that row on Close", async () => {
+    mount();
+    await loaded();
+    const row = within(tierTable("Read")).getAllByRole("row")[2]!;
+    row.focus();
+    fireEvent.click(row);
+    const pane = await dock();
+    await waitFor(() => expect(document.activeElement).toBe(pane));
+    fireEvent.click(within(pane).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    expect(document.activeElement).toBe(row);
   });
 });

@@ -51,7 +51,7 @@ export function When({ at }: { at: UtcEpochMs | null | undefined }) {
 
 /**
  * A row's last update as an age against the read (hi-fi accounts.html `age` + `ageW`): a square dot,
- * warn once it is 30 minutes or more, and the absolute instant on hover. With no usable age it
+ * a hollow warn diamond (a different shape, not only a different colour) once it is 30 minutes or more, and the absolute instant on hover. With no usable age it
  * prints the instant itself.
  */
 export function Updated({ at, readAt }: { at: UtcEpochMs | null | undefined; readAt: UtcEpochMs | null }) {
@@ -60,7 +60,7 @@ export function Updated({ at, readAt }: { at: UtcEpochMs | null | undefined; rea
   if (ago === null) return <When at={at} />;
   return (
     <time className="exec-acct-ago" dateTime={new Date(at).toISOString()} title={`Updated ${formatAsOf(at)}`}>
-      <span className="exec-acct-dot" data-stale={ago.stale ? "true" : undefined} aria-hidden="true" />
+      <span className="exec-acct-dot" data-stale={ago.stale ? "true" : undefined} data-shape={ago.stale ? "diamond" : "square"} aria-hidden="true" />
       {ago.text}
       {ago.stale ? <span className="exec-acct-sr"> (stale)</span> : null}
     </time>

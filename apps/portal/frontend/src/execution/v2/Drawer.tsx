@@ -12,7 +12,10 @@
  * media query would.
  *
  * Focus: moves into the panel on open and goes back to whatever opened it on
- * close. Esc closes in both modes; the overlay also traps Tab.
+ * close. A panel opened by the screen itself, not by the reader (`focusOnOpen={false}`),
+ * leaves focus where it was (WCAG 2.4.3). When there was no opener (focus was on the page
+ * body) Close lands on the first table row control, else the main landmark, so focus is
+ * never lost. Esc closes in both modes; the overlay also traps Tab.
  *
  * Not `.exec-drawer*`: that namespace belongs to CommandPlanDrawer.
  */
@@ -81,24 +84,42 @@ export interface DrawerProps {
    */
   priority?: ReactNode;
   mode?: DockMode;
+  /**
+   * Move focus into the panel when it opens. Default true. A screen that opens the panel on its
+   * own (nobody asked for it) passes false so a reader who has not moved yet is not pulled away.
+   */
+  focusOnOpen?: boolean;
 }
 
-export function Drawer({ open = true, onClose, title, subtitle, children, actions, priority, mode = "dock" }: DrawerProps) {
+/** Where focus goes on close when nothing opened the panel: the first table row control, else main. */
+function fallbackFocusTarget(): HTMLElement | null {
+  const row = document.querySelector<HTMLElement>('table tbody tr[tabindex="0"], table tbody a[href], table tbody button:not([disabled])');
+  if (row) return row;
+  const main = document.querySelector<HTMLElement>("main, [role='main']");
+  if (main && !main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
+  return main;
+}
+
+export function Drawer({ open = true, onClose, title, subtitle, children, actions, priority, mode = "dock", focusOnOpen = true }: DrawerProps) {
   const titleId = useId();
   const panel = useRef<HTMLElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  const focusRef = useRef(focusOnOpen);
+  focusRef.current = focusOnOpen;
 
   // Focus in on open, back out on close. The opener is read before focus moves;
   // it is skipped when the panel was opened from the URL (focus is on body).
   useEffect(() => {
     if (!open) return;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    panel.current?.focus();
+    if (focusRef.current) panel.current?.focus();
     return () => {
       // Only if nobody has moved focus on purpose in the meantime.
       const active = document.activeElement;
-      if (opener?.isConnected && (!active || active === document.body)) opener.focus();
+      if (active && active !== document.body) return;
+      if (opener && opener !== document.body && opener.isConnected) opener.focus();
+      else fallbackFocusTarget()?.focus();
     };
   }, [open]);
 
@@ -199,7 +220,7 @@ export function DockAction({ label, onAction, reason, accessHref, accessLabel = 
       {blocked ? (
         <div className="exec-dock-why" data-l={label}>
           <p id={reasonId} className="exec-dock-reason" title={text}>{text}</p>
-          {accessHref ? <Link className="exec-dock-access" to={withContext(accessHref, params)}>{accessLabel}</Link> : null}
+          {accessHref ? <Link className="exec-dock-access" to={withContext(accessHref, params)} aria-label={`${accessLabel}: ${label}`}>{accessLabel}</Link> : null}
         </div>
       ) : null}
     </div>

@@ -137,6 +137,10 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* .exec-acct-tabs scrolls (overflow-x), which also clips a 2px outline drawn outside the tab: draw it inside. */
+.exec-acct-tab:focus-visible {
+  outline-offset: -2px;
+}
 .exec-acct-tab-count {
   font: var(--exec-font-id);
   color: var(--ink-faint);
@@ -252,7 +256,7 @@
 .exec-acct-link {
   color: var(--accent);
 }
-/* Updated column: age against the read, with a square dot (hi-fi .dot, warn from 30 min). */
+/* Updated column: age against the read, with a filled square dot (hi-fi .dot); from 30 min a hollow warn diamond. */
 .exec-acct-ago {
   display: inline-flex;
   align-items: center;
@@ -267,8 +271,12 @@
   flex: none;
   background: var(--good);
 }
+/* Stale is a different SHAPE, not only a different colour: a hollow diamond against the filled square. */
 .exec-acct-dot[data-stale="true"] {
-  background: var(--warn);
+  box-sizing: border-box;
+  background: transparent;
+  border: 2px solid var(--warn);
+  transform: rotate(45deg);
 }
 a.exec-acct-open {
   display: inline-block;

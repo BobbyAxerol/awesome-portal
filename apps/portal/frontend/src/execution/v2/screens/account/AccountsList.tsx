@@ -13,7 +13,7 @@
  * with the read; the Issues lens and the credential filter narrow only the
  * rows already loaded, and the count line says so.
  */
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
@@ -88,6 +88,17 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     setParams(next, { replace: true });
   };
   const pickEnv = (next: ExecEnv) => url.set({ env: next, sel: null });
+  // Same roving tabindex and arrow keys as Account 360 and My access. "All environments" is
+  // aria-disabled and not offered, so the arrows cycle the three real tabs only.
+  const envKeys = (event: KeyboardEvent<HTMLDivElement>) => {
+    const at = ENV_TABS.findIndex((id) => id === env);
+    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    const next = ENV_TABS[(at + step + ENV_TABS.length) % ENV_TABS.length]!;
+    pickEnv(next);
+    requestAnimationFrame(() => document.getElementById(`${panelId}-tab-${next}`)?.focus());
+  };
   const clearFilters = () => {
     const next = serializeUrlParams({ q: null, sel: null }, params);
     next.delete("issues");
@@ -118,6 +129,9 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
   const capped = pages.items.length >= ROW_CAP;
   // The Issues lens counts what is loaded: the server does not filter on it.
   const issueCount = useMemo(() => all.filter((row) => inScope(row, true)).length, [all]);
+  // Nothing is counted before the rows are read: an unread list is not "0 issues". More pages
+  // behind the cursor mean the count is a floor, so it carries a plus.
+  const issueCountText = pages.state.phase === "ready" ? `${issueCount}${pages.nextCursor !== null ? "+" : ""}` : null;
 
   const columns: CardsColumn<BindingRow>[] = [
     {
@@ -142,7 +156,12 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     { key: "equity", label: "Physical equity", numeric: true, render: () => <Na why="Venue report not published" /> },
     { key: "virtual", label: "Σ Virtual · Headroom", numeric: true, render: () => <Na why="Read per binding" /> },
     { key: "check", label: "Check", render: () => <Na why="Needs the binding's exposure" /> },
-    { key: "updated", label: "Updated", render: (row) => <Updated at={row.updatedAt} readAt={readAtMs} /> },
+    {
+      key: "updated",
+      label: "Updated",
+      sortOffReason: readAtMs !== null ? `Ages are measured against the read at ${formatAsOf(readAtMs)}, not the browser clock.` : "The read time was not published, so ages are shown as times.",
+      render: (row) => <Updated at={row.updatedAt} readAt={readAtMs} />,
+    },
   ];
 
   const countLine = (() => {
@@ -190,6 +209,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
           {envelope ? (
             <span>
               {sourceAsOf !== null ? `As of ${formatAsOf(sourceAsOf)}` : "Source time not published"}
+              {readAtMs !== null ? ` · Read ${formatAsOf(readAtMs)}` : ""}
               {` · ${humanize(envelope.environment)} environment`}
             </span>
           ) : null}
@@ -205,7 +225,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
 
       <div className="exec-acct-main" data-docked={selection !== null && mode === "dock" ? "true" : undefined}>
         <div className="exec-acct-body">
-          <div className="exec-acct-tabs" role="tablist" aria-label="Environment">
+          <div className="exec-acct-tabs" role="tablist" aria-label="Environment" onKeyDown={envKeys}>
             {ENV_TABS.map((id) => (
               <button
                 key={id}
@@ -214,6 +234,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                 id={`${panelId}-tab-${id}`}
                 aria-selected={env === id}
                 aria-controls={`${panelId}-panel`}
+                tabIndex={env === id ? 0 : -1}
                 className="exec-acct-tab"
                 onClick={() => pickEnv(id)}
               >
@@ -226,6 +247,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
               role="tab"
               aria-selected={false}
               aria-disabled="true"
+              tabIndex={-1}
               className="exec-acct-tab"
               title={`${notPublished(ALL_ENVIRONMENTS)}. ${ALL_ENVIRONMENTS.what} is not offered, so each environment is its own read.`}
               onClick={(event) => event.preventDefault()}
@@ -263,11 +285,13 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
               </select>
             </label>
             <button type="button" className="exec-acct-btn" aria-pressed={issuesOnly}
-              aria-label={`Issues only, ${issueCount} in the ${all.length} loaded rows`}
-              title={`${issueCount} of the ${all.length} loaded rows need attention. The server does not filter on this.`}
+              aria-label={issueCountText === null ? "Issues only, count shown once the rows are read" : `Issues only, ${issueCountText} in the ${all.length} loaded rows`}
+              title={issueCountText === null
+                ? "The count appears once the rows are read. The server does not filter on this."
+                : `${issueCountText} of the ${all.length} loaded rows need attention. The server does not filter on this.`}
               onClick={() => setLocal("issues", issuesOnly ? "" : "1")}
             >
-              Issues only<span className="exec-acct-tab-count">{issueCount}</span>
+              Issues only{issueCountText !== null ? <span className="exec-acct-tab-count">{issueCountText}</span> : null}
             </button>
             {filtered ? <button type="button" className="exec-acct-btn" onClick={clearFilters}>Clear all</button> : null}
             <span className="exec-acct-export">

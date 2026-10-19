@@ -4,6 +4,9 @@
  * list, the peek, the sleeve and physical views, and every state the screens
  * must keep apart. Role variants run through `holds()`.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -883,5 +886,121 @@ describe("Account 360: copy and scale", () => {
     const history = await screen.findByRole("table", { name: "Sync history" });
     expect(bodyRows(history)).toHaveLength(10);
     expect(screen.getByText(/Showing the newest 10 of 200 published rows/)).toBeTruthy();
+  });
+});
+
+/* ═══ Accounts list: honesty and accessibility fixes (audit batch) ═════════ */
+
+describe("Accounts list: the Issues only count", () => {
+  const issuesButton = () => screen.getByRole("button", { name: /^Issues only/ });
+
+  it("prints no count while the rows are loading, and never 0", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => undefined)));
+    mount("/deployments/accounts");
+    const button = issuesButton();
+    expect(button.querySelector(".exec-acct-tab-count")).toBeNull();
+    expect(button.textContent).toBe("Issues only");
+    expect(button.getAttribute("aria-label")).not.toMatch(/\d/);
+    expect(button.getAttribute("title")).not.toMatch(/\d/);
+    expect(button.getAttribute("title")).toContain("The server does not filter on this");
+  });
+
+  it("prints no count when the read failed", async () => {
+    stubFetch({ answer: (url) => (url.pathname.endsWith("/broker-bindings") ? { status: 503, body: { error: { code: "BINDINGS_UNAVAILABLE", message: "down" } } } : null) });
+    mount("/deployments/accounts");
+    await screen.findByText(/BINDINGS_UNAVAILABLE/);
+    const button = issuesButton();
+    expect(button.querySelector(".exec-acct-tab-count")).toBeNull();
+    expect(button.getAttribute("aria-label")).not.toMatch(/\d/);
+  });
+
+  it("counts the loaded rows once ready, and carries a plus while more pages exist", async () => {
+    stubFetch({ rewrite: (url) => { if (url.pathname.endsWith("/broker-bindings")) url.searchParams.set("limit", "2"); } });
+    mount("/deployments/accounts");
+    await loadedList();
+    const button = issuesButton();
+    // Page one holds bnc_sub (stale) and bnc_main (ok): one issue so far, more behind the cursor.
+    expect(button.querySelector(".exec-acct-tab-count")?.textContent).toBe("1+");
+    expect(button.getAttribute("aria-label")).toBe("Issues only, 1+ in the 2 loaded rows");
+    expect(button.getAttribute("title")).toContain("The server does not filter on this");
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(3));
+    expect(issuesButton().querySelector(".exec-acct-tab-count")?.textContent).toBe("2");
+    expect(issuesButton().getAttribute("aria-label")).toBe("Issues only, 2 in the 3 loaded rows");
+  });
+});
+
+describe("Accounts list: when it was read, and how old a row is", () => {
+  it("prints the read time beside the source time, and explains it on the Updated header", async () => {
+    stubFetch();
+    mount("/deployments/accounts");
+    await loadedList();
+    expect(screen.getByText(/As of 17 Oct 09:00Z · Read 17 Oct 09:14Z · Live environment/)).toBeTruthy();
+    const head = within(bindingsTable()).getByRole("columnheader", { name: "Updated" });
+    expect(head.getAttribute("title")).toContain("17 Oct 09:14Z");
+    expect(head.getAttribute("title")).toContain("not the browser clock");
+  });
+
+  it("measures ages against the read, with hours floored", async () => {
+    stubFetch();
+    mount("/deployments/accounts");
+    const rows = bodyRows(await loadedList());
+    expect(cell(rows[0]!, "Updated")).toContain("14 min ago");
+    expect(cell(rows[1]!, "Updated")).toContain("3 h ago");
+    // 09:14 - 21:30 the day before is 11 h 44 min: floor, not 12 h.
+    expect(cell(rows[2]!, "Updated")).toContain("11 h ago");
+  });
+
+  it("shows a stale row as a hollow diamond and says (stale) in words; a fresh row is a filled square", async () => {
+    stubFetch();
+    mount("/deployments/accounts");
+    const rows = bodyRows(await loadedList());
+    const dot = (row: HTMLElement) => row.querySelector(".exec-acct-dot");
+    expect(dot(rows[0]!)?.getAttribute("data-shape")).toBe("square");
+    expect(dot(rows[0]!)?.getAttribute("data-stale")).toBeNull();
+    expect(cell(rows[0]!, "Updated")).not.toContain("(stale)");
+    expect(dot(rows[1]!)?.getAttribute("data-shape")).toBe("diamond");
+    expect(dot(rows[1]!)?.getAttribute("data-stale")).toBe("true");
+    expect(cell(rows[1]!, "Updated")).toContain("(stale)");
+  });
+
+  it("the stale dot differs from the fresh one in shape in the stylesheet, with tokens only", () => {
+    const css = readFileSync(resolve(__dirname, "../../css/account.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const stale = css.match(/\.exec-acct-dot\[data-stale="true"\]\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(stale).toMatch(/transform:\s*rotate\(45deg\)/);
+    expect(stale).toMatch(/background:\s*transparent/);
+    expect(stale).toMatch(/border:\s*2px solid var\(--warn\)/);
+    const outline = css.match(/\.exec-acct-tab:focus-visible\s*\{\s*outline-offset:\s*(-?\d+px)/)?.[1];
+    expect(outline).toBe("-2px");
+  });
+});
+
+describe("Accounts list: the environment tablist is keyboard-operable", () => {
+  it("roves tabindex: only the selected tab is in the tab order", async () => {
+    stubFetch();
+    mount("/deployments/accounts");
+    await loadedList();
+    const list = screen.getByRole("tablist", { name: "Environment" });
+    const tabs = within(list).getAllByRole("tab");
+    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual(["0", "-1", "-1", "-1"]);
+    expect(tabs[0]!.getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("ArrowRight selects and focuses the next environment, ArrowLeft wraps; the disabled tab is skipped", async () => {
+    stubFetch();
+    mount("/deployments/accounts");
+    await loadedList();
+    const list = screen.getByRole("tablist", { name: "Environment" });
+    fireEvent.keyDown(list, { key: "ArrowRight" });
+    await waitFor(() => expect(search().get("env")).toBe("paper"));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("tab", { name: /^Paper/ })));
+    expect(screen.getByRole("tab", { name: /^Paper/ }).getAttribute("tabindex")).toBe("0");
+    fireEvent.keyDown(list, { key: "ArrowRight" });
+    await waitFor(() => expect(search().get("env")).toBe("sandbox"));
+    fireEvent.keyDown(list, { key: "ArrowRight" });
+    await waitFor(() => expect(search().get("env")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("tab", { name: /^Real-funded/ })));
+    fireEvent.keyDown(list, { key: "ArrowLeft" });
+    await waitFor(() => expect(search().get("env")).toBe("sandbox"));
   });
 });
