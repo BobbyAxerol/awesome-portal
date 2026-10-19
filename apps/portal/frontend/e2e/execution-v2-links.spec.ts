@@ -98,8 +98,8 @@ const ALLOW_LIST: readonly Allowed[] = [
   },
   {
     id: "double-account-ids-operations-and-live",
-    match: (url) => /^\/deployments\/accounts\/(acc_TEST_ONLY_(operational|binance01|binance02)|acct_live_grid)$/.test(url.pathname),
-    reason: "FIXTURE GAP, not a link defect: the operations double (acc_TEST_ONLY_*) and the published dark Live body (acct_live_grid) name accounts the accounts double does not hold, so the typed 404 for the account read is the double's. The route and the link are right.",
+    match: (url) => /^\/deployments\/accounts\/(acc_TEST_ONLY_(operational|binance01|binance02)|acct_live_grid|acct_canary_grid)$/.test(url.pathname),
+    reason: "FIXTURE GAP, not a link defect: the operations double (acc_TEST_ONLY_*) and the published dark Live body (acct_live_grid) and Canary body (acct_canary_grid) name accounts the accounts double does not hold, so the typed 404 for the account read is the double's. The route and the link are right.",
     follow: true,
     waive: ["console"],
   },
