@@ -53,8 +53,8 @@ export type PortalPresentationMode = "research-light" | "governance-light" | "ex
  * the flag change presentation — exactly the coupling §4.2 forbids.
  */
 // UXM-07 S1: with the V2 cockpit on, the approval and review routes join the one
-// Carbon workspace (decision A2, 2026-10-18). Waivers and the new-request form
-// stay on their V1 light surface until they have V2 screens.
+// Carbon workspace (decision A2, 2026-10-18). Waivers stay on their V1 light surface until they have V2 screens;
+// the new-request form joins Carbon through its own `request` flag (below), not the cockpit's.
 const COCKPIT_ROUTES = [
   /^\/governance\/approvals\/?$/,
   /^\/governance\/approvals\/(?!new\/?$)[^/]+\/(?:r1|r2|live)\/?$/,
@@ -71,6 +71,9 @@ export function presentationModeFor(
   // whole; only the address decides.
   if (isV2Screen("cockpit") && COCKPIT_ROUTES.some((route) => route.test(pathname))) return "execution-carbon";
   // S1e: the Access self-view uses the V2 flag palette, which exists only in Carbon.
+  // The V2 New request page stamps a Carbon surface (ExecutionPreviewRoute `onV2Request`), so the whole workspace must
+  // be Carbon with it: a Carbon page inside a light shell was a mixed theme. Flag off, the page is the V1 light form.
+  if (isV2Screen("request") && /^\/governance\/approvals\/new\/?$/.test(pathname)) return "execution-carbon";
   if (isV2Screen("profile") && /^\/administration\/profile-access\/?$/.test(pathname)) return "execution-carbon";
   if (isV2Screen("users") && /^\/administration\/users\/?$/.test(pathname)) return "execution-carbon";
   if (pathname === "/governance" || pathname.startsWith("/governance/")) return "governance-light";

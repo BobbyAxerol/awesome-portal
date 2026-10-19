@@ -29,6 +29,30 @@ describe("presentationModeFor with the cockpit", () => {
     });
   });
 
+  describe("request flag", () => {
+    it("moves the New request page, and only it, to Carbon when `request` is on: the shell follows the V2 page's own surface", async () => {
+      let mode = await load();
+      expect(mode(null, "/governance/approvals/new")).toBe("governance-light");
+      vi.stubEnv("VITE_EXECUTION_PREVIEW_ENABLED", "true");
+      vi.stubEnv("VITE_EXECUTION_V2_SCREENS", "request");
+      vi.resetModules();
+      mode = await load();
+      for (const path of ["/governance/approvals/new", "/governance/approvals/new/"]) expect(mode(null, path), path).toBe("execution-carbon");
+      // Everything else under Governance stays light with only `request` on.
+      for (const path of ["/governance/approvals", "/governance/approvals/AP-201/r1", "/governance/approvals/newer", "/governance/waivers", "/governance"]) {
+        expect(mode(null, path), path).toBe("governance-light");
+      }
+    });
+
+    it("with the cockpit on and `request` off the page stays light", async () => {
+      vi.stubEnv("VITE_EXECUTION_PREVIEW_ENABLED", "true");
+      vi.stubEnv("VITE_EXECUTION_V2_SCREENS", "cockpit");
+      vi.resetModules();
+      const mode = await load();
+      expect(mode(null, "/governance/approvals/new")).toBe("governance-light");
+    });
+  });
+
   describe("flag on", () => {
     beforeEach(() => {
       vi.stubEnv("VITE_EXECUTION_PREVIEW_ENABLED", "true");
