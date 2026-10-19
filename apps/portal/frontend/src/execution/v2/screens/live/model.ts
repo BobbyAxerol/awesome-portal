@@ -495,7 +495,8 @@ function blockersV1(live: LiveFullOperations, mismatch: boolean, gap: boolean | 
   for (const code of live.projectionContinuity?.blockerCodes ?? []) addCode(code);
   for (const code of live.realtimeBlockers) addCode(code);
   const provenance = [`Deployment ${live.deploymentId ?? "not stated"} · stage ${live.declaredStage ?? "not stated"}`];
-  if (live.suppressedBrokerFields.length > 0) provenance.push(`${live.suppressedBrokerFields.length} broker figure(s) were withheld before reaching this screen`);
+  const withheldCount = live.suppressedBrokerFields.length + live.withheldRows.length;
+  if (withheldCount > 0) provenance.push(`${withheldCount} broker figure(s) were withheld before reaching this screen`);
   return { items, provenance };
 }
 
@@ -508,7 +509,7 @@ export function rowsCaption(shown: number, loaded: number, total: number | null)
 function rowsPanelV1(live: LiveFullOperations, key: "positions" | "orders", collection: RowCollection | null, mismatch: boolean): V1RowsPanel {
   if (collection === null) return { kind: "none" };
   // The reader emptied a BROKER-authored collection while suppression is on; say why, in the same words as a suppressed KPI.
-  if (live.suppressedBrokerFields.includes(`${key}:rows`)) {
+  if (live.withheldRows.includes(key)) {
     return { kind: "withheld", text: mismatch ? "Hidden while the figures disagree." : "Not available · broker state not available" };
   }
   const envelope = collection.envelope;

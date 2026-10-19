@@ -167,10 +167,13 @@ export interface LiveFullOperations {
    * and the rows (free objects, scalar cells only; see `RowCollection`). ADDITIVE: the V1 screen reads
    * only `panels` and ignores these. A collection whose envelope is BROKER-authored while
    * `broker_values_visible` is not `true` arrives here WITHOUT rows and WITHOUT a total, exactly like a
-   * suppressed KPI (the strip below), and is named in `suppressedBrokerFields`.
+   * suppressed KPI (the strip below), and is named in `withheldRows`. (Not in `suppressedBrokerFields`:
+   * that list is the V1 screen's, and V1 never read rows.)
    */
   positionRows: RowCollection | null;
   orderRows: RowCollection | null;
+  /** Which row collections the strip emptied. V2 reads this; V1 does not, so its output is unchanged. */
+  withheldRows: readonly ("positions" | "orders")[];
   /**
    * Broker figures the reader refused to carry.
    *
@@ -180,9 +183,16 @@ export interface LiveFullOperations {
   suppressedBrokerFields: readonly string[];
 }
 
-/** Which authorities are broker-derived, and therefore suppressible. */
-function isBrokerDerived(authority: Authority | null): boolean {
-  return authority === "BROKER";
+/** Authorities the server explicitly names as NOT broker-authored. Only these survive the strip. */
+const KNOWN_NON_BROKER: readonly Authority[] = ["EXECUTION", "PORTAL", "RESEARCH"];
+
+/**
+ * Whether a figure may be broker-derived, and therefore suppressible. Fail-closed: a missing,
+ * unreadable or `DERIVED` authority (derived from what?) is treated as broker-derived; only an
+ * authority explicitly named as not broker survives.
+ */
+function mayBeBrokerDerived(authority: Authority | null): boolean {
+  return authority === null || !KNOWN_NON_BROKER.includes(authority);
 }
 
 function actionPolicy(raw: unknown): LiveActionPolicy | null {
@@ -218,6 +228,7 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
   // The switch, read once. Absent is NOT permission to show broker figures.
   const brokerValuesVisible = consistency?.broker_values_visible === true;
   const suppressed: string[] = [];
+  const withheldRows: ("positions" | "orders")[] = [];
 
   const panelsRaw = obj(root.source_panels) ?? {};
   const panels: Record<string, LivePanel> = {};
@@ -228,8 +239,8 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
   /** THE STRIP, for a row collection: a BROKER-authored one loses its rows and total while suppression is on. */
   const rowCollection = (key: "positions" | "orders"): RowCollection | null => {
     const read = readRowCollection(root[key], key);
-    if (read === null || !isBrokerDerived(read.envelope.authority) || brokerValuesVisible) return read;
-    suppressed.push(`${key}:rows`);
+    if (read === null || !mayBeBrokerDerived(read.envelope.authority) || brokerValuesVisible) return read;
+    withheldRows.push(key);
     return { ...read, rows: [], exactTotal: null, returnedCount: null, rowsDropped: 0 };
   };
 
@@ -279,21 +290,25 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
       const key = str(o?.key);
       if (!key) return [];
       const envelope = readPanelEnvelope(o!.envelope, `kpi-${key}`);
-      const broker = isBrokerDerived(envelope.authority);
+      // `BROKER` is the word the V1 screen has always stripped (flag set even with no value). Any other
+      // authority that is not explicitly non-broker is stripped too, but only counts as suppressed when it
+      // actually carried a value, so a body that has none reads exactly as before.
+      const broker = envelope.authority === "BROKER";
+      const strip = !brokerValuesVisible && mayBeBrokerDerived(envelope.authority);
       const rawValue = str(o!.value);
       // THE STRIP. A broker figure never becomes a prop while suppression is on
       // — it is dropped here, where no later edit can put it back on screen.
-      const withheld = broker && !brokerValuesVisible && rawValue !== null;
+      const withheld = strip && rawValue !== null;
       if (withheld) suppressed.push(`kpi:${key}`);
       return [
         {
           key,
           label: str(o!.label) ?? key,
-          value: broker && !brokerValuesVisible ? null : rawValue,
+          value: strip ? null : rawValue,
           unit: str(o!.unit),
           authority: envelope.authority,
           panelState: envelope.panelState,
-          suppressed: broker && !brokerValuesVisible,
+          suppressed: (broker && !brokerValuesVisible) || withheld,
         },
       ];
     }),
@@ -332,6 +347,7 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
     positionRows: rowCollection("positions"),
     orderRows: rowCollection("orders"),
     suppressedBrokerFields: suppressed,
+    withheldRows,
   };
 }
 

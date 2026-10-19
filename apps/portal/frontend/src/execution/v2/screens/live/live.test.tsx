@@ -209,8 +209,9 @@ describe("V1 body, mismatch (the broker figure never reaches the DOM)", () => {
   it("the broker equity KPI reads Hidden, 'While figures disagree'; the exact figure is nowhere in the page", async () => {
     mount(() => ok(v1Read(mismatch())));
     const strip = await loaded();
-    expect(within(strip).getByText("Hidden")).toBeTruthy();
-    expect(within(strip).getByText("While figures disagree")).toBeTruthy();
+    // Fail-closed: the DERIVED daily PnL is hidden with it (derived from what? the server does not say it is not the broker).
+    expect(within(strip).getAllByText("Hidden")).toHaveLength(2);
+    expect(within(strip).getAllByText("While figures disagree")).toHaveLength(2);
     expect(document.body.innerHTML).not.toContain(BROKER_FIGURE);
     expect(document.body.innerHTML).not.toContain("60,118.40");
     expect(text()).not.toContain("118.40");
