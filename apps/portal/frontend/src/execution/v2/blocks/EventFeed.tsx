@@ -18,6 +18,7 @@ import { CardsTable, type CardsColumn } from "../cardsTable";
 import { Flag } from "../Flag";
 import type { FlagKind } from "../flagKinds";
 import { formatAsOf } from "../boundary";
+import { isInternalPath } from "../urlState";
 import type { UtcEpochMs } from "../../screenDataContract";
 import { NotPublished, type NotPublishedId } from "./notPublished";
 import { SectionPanel } from "./SectionPanel";
@@ -85,10 +86,15 @@ function isoOf(at: UtcEpochMs): string | undefined {
   }
 }
 
-/** An internal path is routed (no page reload); a scheme or protocol-relative href stays a plain anchor. */
+/**
+ * An internal path is routed (no page reload); an absolute http(s) URL stays a plain anchor. Anything else (a
+ * script-capable scheme, a protocol-relative or backslash form, a control character) is a server value we cannot vouch
+ * for, so it is shown as text, not a link.
+ */
 function EventLink({ href, children }: { href: string; children: ReactNode }) {
-  if (/^([a-z][a-z0-9+.-]*:|\/\/)/i.test(href)) return <a className="exec-blk-link" href={href}>{children}</a>;
-  return <Link className="exec-blk-link" to={href}>{children}</Link>;
+  if (isInternalPath(href)) return <Link className="exec-blk-link" to={href}>{children}</Link>;
+  if (/^https?:\/\/[^\s\\\u0000-\u001f\u007f]+$/i.test(href)) return <a className="exec-blk-link" href={href} rel="noopener noreferrer">{children}</a>;
+  return <span title="Link not shown: the address is not a safe app path or web address.">{children}</span>;
 }
 
 function columns(withActor: boolean): CardsColumn<EventFeedRow>[] {

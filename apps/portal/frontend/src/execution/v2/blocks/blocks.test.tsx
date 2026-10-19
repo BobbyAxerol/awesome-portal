@@ -322,6 +322,15 @@ describe("EventFeed", () => {
     expect(link.getAttribute("href")).toBe("https://example.test/x");
   });
 
+  it.each(["javascript:alert(1)", "data:text/html,x", "//evil.example/x", "/\\evil.example", "/\tevil", "https://a b", "ftp://x"])(
+    "an unsafe href %j is text, not a link",
+    (href) => {
+      renderFeed(<EventFeed scope="X" rows={[{ ...ROWS[1], href }]} />);
+      expect(screen.queryByRole("link", { name: "BTC-Trend v3" })).toBeNull();
+      expect(screen.getByText("BTC-Trend v3")).toBeTruthy();
+    },
+  );
+
   it("bare drops the panel chrome", () => {
     renderFeed(<EventFeed scope="X" rows={ROWS} bare />);
     expect(screen.queryByRole("region")).toBeNull();
