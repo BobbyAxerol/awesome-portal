@@ -45,6 +45,10 @@ import "../../css/admin.css";
 
 export const ADMIN_SCREEN_KEY = "admin" as const;
 
+/** The routes Admin links to when the mount passes none; the link-target guard checks both resolve to a mounted screen. */
+export const ADMIN_PORTFOLIOS_HREF = "/deployments/portfolios";
+export const ADMIN_OPERATIONS_HREF = "/execution/operations";
+
 export interface AdminScreenProps {
   api: ExecutionApi;
   /** Used for the catalogue read and the plan request when the catalogue states none. */
@@ -131,7 +135,7 @@ function freshness(state: string | null): { kind: FlagKind; label: string } {
 }
 
 export default function AdminScreen({
-  api, workspaceId, accessHref, portfoliosHref = "/deployments/portfolios", operationsHref = "/execution/operations",
+  api, workspaceId, accessHref, portfoliosHref = ADMIN_PORTFOLIOS_HREF, operationsHref = ADMIN_OPERATIONS_HREF,
 }: AdminScreenProps) {
   const reads = useAdminReads(api, workspaceId);
   const [params, setParams] = useSearchParams();
