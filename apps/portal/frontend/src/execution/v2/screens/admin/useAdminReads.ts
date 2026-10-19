@@ -58,6 +58,9 @@ export function useAdminReads(api: ExecutionApi, workspaceId?: string): AdminRea
   const [tick, setTick] = useState(0);
 
   const scope = useRef({ api, workspaceId });
+  // On the render where the scope changes, the states above still hold the old session's reads (they are
+  // reset in the effect below). Nothing of them may reach the caller: report loading until the reset lands.
+  const switching = scope.current.api !== api || scope.current.workspaceId !== workspaceId;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -87,5 +90,6 @@ export function useAdminReads(api: ExecutionApi, workspaceId?: string): AdminRea
   }, [api, workspaceId, tick]);
 
   const reload = useCallback(() => setTick((n) => n + 1), []);
+  if (switching) return { tasks: loading, catalogue: loading, composition: loading, activation: loading, reload };
   return { tasks, catalogue, composition, activation, reload };
 }

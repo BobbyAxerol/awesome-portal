@@ -383,6 +383,27 @@ describe("queue, lanes and lenses", () => {
       await settle();
       expect(chipNames().slice(0, 2)).toEqual(["All gates", "R1"]);
     });
+
+    it("a changed api for the same workspace drops the old api's counts, even while another lane is open", async () => {
+      const first = standardPort({
+        listApprovals: ((args: { filter: string }) => (args.filter === "R1" ? { ok: true, value: r1Only() } : { ok: true, value: { ...inbox(), ...{ rawRows: RAW } } })) as Handler,
+      });
+      const second = standardPort({ listApprovals: (() => new Promise(() => undefined)) as Handler });
+      const tree = (api: typeof first.api) => (
+        <MemoryRouter initialEntries={["/execution/approvals"]}>
+          <Cockpit api={api} workspaceId="ws_1" />
+        </MemoryRouter>
+      );
+      const view = render(tree(first.api));
+      await settle();
+      expect(chipNames().slice(0, 2)).toEqual(["All gates 4", "R1 1"]);
+      fireEvent.click(laneChip(/^R1/));
+      await settle();
+      expect(chipNames().slice(0, 2)).toEqual(["All gates 4", "R1 1"]);
+      view.rerender(tree(second.api));
+      await settle();
+      expect(chipNames().slice(0, 2)).toEqual(["All gates", "R1"]);
+    });
   });
 
   it("a lane count is an at-least number when the All page had more rows than it loaded", async () => {

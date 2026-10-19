@@ -97,20 +97,28 @@ export default function AdminScreen({
 
   // The hi-fi opens its first ready action on arrival (ADM-B2). Once, in the docked layout only,
   // and never when the URL already names a selection, so Close stays closed and an overlay never
-  // opens over a page nobody has touched. "Once" is the first time rows are loaded, whatever the
-  // mode or filter then, so widening the window or changing the filter later opens nothing
-  // unprompted. The row must be one the active state filter shows; if none is, nothing opens.
-  // The pane it opens does not take focus (WCAG 2.4.3) until the reader picks a row themselves.
+  // opens over a page nobody has touched. "Once" is the first successful load of the task
+  // catalogue, whatever it holds (a first read with no actions spends it, so a later refresh that
+  // returns rows opens nothing unprompted), and whatever the mode or filter then, so widening the
+  // window or changing the filter later opens nothing either. A new workspace is a new arrival and
+  // may open once more. The row is the first ready one in the order the tiers are drawn, among the
+  // rows the active state filter shows; if none is, nothing opens. The pane it opens does not take
+  // focus (WCAG 2.4.3) until the reader picks a row themselves.
   const autoOpened = useRef(false);
   const autoId = useRef<string | null>(null);
-  const firstReady = rows.find((r) => r.state === "ready" && (filter === "all" || r.state === filter)) ?? null;
+  const firstReady = tiers.flatMap((tier) => tier.rows).find((r) => r.state === "ready") ?? null;
   useEffect(() => {
-    if (autoOpened.current || rows.length === 0) return;
+    autoOpened.current = false;
+    autoId.current = null;
+  }, [workspaceId]);
+  const tasksLoaded = reads.tasks.phase === "ready";
+  useEffect(() => {
+    if (autoOpened.current || !tasksLoaded) return;
     autoOpened.current = true;
     if (mode !== "dock" || selection !== null || firstReady === null) return;
     autoId.current = firstReady.id;
     url.set({ sel: firstReady.id }, { replace: true });
-  }, [rows, mode, selection, firstReady, url]);
+  }, [tasksLoaded, mode, selection, firstReady, url]);
   const pickRow = (id: string) => {
     autoId.current = null;
     select(id);
@@ -298,6 +306,7 @@ export default function AdminScreen({
               row={selected}
               api={api}
               activation={activation}
+              stale={staleReads.length > 0}
               workspaceId={planWorkspace}
               mode={mode}
               focusOnOpen={selection !== autoId.current}

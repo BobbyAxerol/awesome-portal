@@ -356,10 +356,10 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   // All lane loaded and kept while another lane is open; it is an at-least number when that page had more.
   const [allPage, setAllPage] = useState<{ rows: readonly InboxRowV2[]; more: boolean } | null>(null);
   const allScope = inboxScope(serverViewFor("all"), workspaceId);
-  // A new workspace owns none of the old page: drop it before anything else can read it.
+  // A new workspace, or a new api for the same one, owns none of the old page: drop it before anything else can read it.
   useEffect(() => {
     setAllPage(null);
-  }, [workspaceId]);
+  }, [api, workspaceId]);
   useEffect(() => {
     // Only the All read counts, and only the state that belongs to it: on the render where the lane flips, `inbox`
     // still holds the previous lane's rows (its scope differs), and they must not become the chips' numbers.

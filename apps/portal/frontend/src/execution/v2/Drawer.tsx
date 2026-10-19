@@ -14,8 +14,10 @@
  * Focus: moves into the panel on open and goes back to whatever opened it on
  * close. A panel opened by the screen itself, not by the reader (`focusOnOpen={false}`),
  * leaves focus where it was (WCAG 2.4.3). When there was no opener (focus was on the page
- * body) Close lands on the first table row control, else the main landmark, so focus is
- * never lost. Esc closes in both modes; the overlay also traps Tab.
+ * body) a Close the reader triggered (Close button, Esc, scrim) lands on the first table row
+ * control, else the main landmark, so focus is never lost. An unmount that is not such a close
+ * (a link inside the panel changing the route, a dev StrictMode cleanup) never moves focus to the
+ * fallback. Esc closes in both modes; the overlay also traps Tab.
  *
  * Not `.exec-drawer*`: that namespace belongs to CommandPlanDrawer.
  */
@@ -92,12 +94,20 @@ export interface DrawerProps {
 }
 
 /** Where focus goes on close when nothing opened the panel: the first table row control, else main. */
-function fallbackFocusTarget(): HTMLElement | null {
+function focusFallback(): void {
   const row = document.querySelector<HTMLElement>('table tbody tr[tabindex="0"], table tbody a[href], table tbody button:not([disabled])');
-  if (row) return row;
+  if (row) {
+    row.focus({ preventScroll: true });
+    return;
+  }
   const main = document.querySelector<HTMLElement>("main, [role='main']");
-  if (main && !main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
-  return main;
+  if (!main) return;
+  // The landmark is only focusable for this one landing: the tabindex it needed is removed on blur.
+  if (!main.hasAttribute("tabindex")) {
+    main.setAttribute("tabindex", "-1");
+    main.addEventListener("blur", () => main.removeAttribute("tabindex"), { once: true });
+  }
+  main.focus({ preventScroll: true });
 }
 
 export function Drawer({ open = true, onClose, title, subtitle, children, actions, priority, mode = "dock", focusOnOpen = true }: DrawerProps) {
@@ -107,11 +117,18 @@ export function Drawer({ open = true, onClose, title, subtitle, children, action
   closeRef.current = onClose;
   const focusRef = useRef(focusOnOpen);
   focusRef.current = focusOnOpen;
+  // Set by the controls that close the panel on the reader's say-so; read by the effect cleanup.
+  const userClosed = useRef(false);
+  const requestClose = useCallback(() => {
+    userClosed.current = true;
+    closeRef.current();
+  }, []);
 
   // Focus in on open, back out on close. The opener is read before focus moves;
   // it is skipped when the panel was opened from the URL (focus is on body).
   useEffect(() => {
     if (!open) return;
+    userClosed.current = false;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (focusRef.current) panel.current?.focus();
     return () => {
@@ -119,18 +136,18 @@ export function Drawer({ open = true, onClose, title, subtitle, children, action
       const active = document.activeElement;
       if (active && active !== document.body) return;
       if (opener && opener !== document.body && opener.isConnected) opener.focus();
-      else fallbackFocusTarget()?.focus();
+      else if (userClosed.current) focusFallback();
     };
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented) closeRef.current();
+      if (event.key === "Escape" && !event.defaultPrevented) requestClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, requestClose]);
 
   if (!open) return null;
 
@@ -155,7 +172,7 @@ export function Drawer({ open = true, onClose, title, subtitle, children, action
 
   return (
     <>
-      {overlay ? <div className="exec-dock-scrim" aria-hidden="true" onClick={onClose} /> : null}
+      {overlay ? <div className="exec-dock-scrim" aria-hidden="true" onClick={requestClose} /> : null}
       <aside
         ref={panel}
         className="exec-dock"
@@ -171,7 +188,7 @@ export function Drawer({ open = true, onClose, title, subtitle, children, action
             <h2 id={titleId} className="exec-dock-title">{title}</h2>
             {subtitle ? <p className="exec-dock-subtitle">{subtitle}</p> : null}
           </div>
-          <button type="button" className="exec-dock-close" onClick={onClose}>Close</button>
+          <button type="button" className="exec-dock-close" onClick={requestClose}>Close</button>
         </header>
         <div className="exec-dock-body">
           {priority ? <div className="exec-dock-priority">{priority}</div> : null}

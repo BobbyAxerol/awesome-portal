@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import { StrictMode, type ReactNode } from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { Link, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DockAction, Drawer, useDockMode, useDockSelection, type DockMode } from "./Drawer";
@@ -348,5 +348,91 @@ describe("focusOnOpen and the close fallback", () => {
     fireEvent.click(opener);
     fireEvent.click(screen.getByText("Close"));
     expect(document.activeElement).toBe(opener);
+  });
+
+  it("StrictMode's simulated cleanup does not defeat focusOnOpen={false}", () => {
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={["/fleet?sel=a"]}>
+          <Row focusOnOpen={false} />
+        </MemoryRouter>
+      </StrictMode>,
+    );
+    expect(screen.getByRole("complementary")).toBeTruthy();
+    expect(document.activeElement).toBe(document.body);
+    expect(screen.getByRole("main").hasAttribute("tabindex")).toBe(false);
+  });
+
+  it("a link inside the panel that changes the route does not move focus to the new page's first row", () => {
+    function Linked() {
+      const { selection, close } = useDockSelection();
+      return (
+        <Drawer open={selection !== null} onClose={close} title="Peek" focusOnOpen={false}>
+          <Link to="/ops">Open in Operations</Link>
+        </Drawer>
+      );
+    }
+    render(
+      <MemoryRouter initialEntries={["/fleet?sel=a"]}>
+        <Routes>
+          <Route path="/fleet" element={<Linked />} />
+          <Route
+            path="/ops"
+            element={<main><table><tbody><tr tabIndex={0} data-testid="ops-row"><td>x</td></tr></tbody></table></main>}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByText("Open in Operations"));
+    expect(screen.getByTestId("ops-row")).toBeTruthy();
+    expect(document.activeElement).toBe(document.body);
+    expect(screen.getByRole("main").hasAttribute("tabindex")).toBe(false);
+  });
+
+  it("the fallback focus does not scroll", () => {
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    try {
+      mountRow({ focusOnOpen: false });
+      fireEvent.click(screen.getByText("Close"));
+      const rowCalls = focus.mock.calls.length;
+      expect(rowCalls).toBeGreaterThan(0);
+      expect(focus.mock.calls.every(([options]) => (options as FocusOptions | undefined)?.preventScroll === true)).toBe(true);
+    } finally {
+      focus.mockRestore();
+    }
+  });
+
+  it("Esc and the scrim also land on the fallback; the main landmark's tabindex is removed once focus leaves it", () => {
+    function Overlay() {
+      const { selection, close } = useDockSelection();
+      return (
+        <>
+          <main aria-label="Page"><p>No table</p></main>
+          <button type="button">Elsewhere</button>
+          <Drawer open={selection !== null} onClose={close} title="Peek" focusOnOpen={false} mode="overlay"><p>Body</p></Drawer>
+        </>
+      );
+    }
+    render(
+      <MemoryRouter initialEntries={["/fleet?sel=a"]}>
+        <Overlay />
+      </MemoryRouter>,
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const main = screen.getByRole("main");
+    expect(document.activeElement).toBe(main);
+    expect(main.getAttribute("tabindex")).toBe("-1");
+    screen.getByText("Elsewhere").focus();
+    expect(main.hasAttribute("tabindex")).toBe(false);
+    cleanup();
+
+    const { container } = render(
+      <MemoryRouter initialEntries={["/fleet?sel=a"]}>
+        <Overlay />
+      </MemoryRouter>,
+    );
+    fireEvent.click(container.querySelector(".exec-dock-scrim")!);
+    expect(document.activeElement).toBe(screen.getByRole("main"));
   });
 });

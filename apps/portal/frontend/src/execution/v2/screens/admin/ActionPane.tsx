@@ -33,6 +33,8 @@ import {
   firstReasonFor, formProblem, humanize, planGate, planRequest, type ActionRow, type PlanForm,
 } from "./adminModel";
 
+const STALE_REASON = "The last refresh failed; refresh before acting.";
+
 function newKey(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `k-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
@@ -41,6 +43,11 @@ export interface ActionPaneProps {
   row: ActionRow;
   api: ExecutionApi;
   activation: StagedActivation | null;
+  /**
+   * A refresh failed and the screen is showing the last good reads. What this pane would offer rests on
+   * those reads, so the two acting controls (Run read, Make plan) stay off until a good refresh.
+   */
+  stale?: boolean;
   workspaceId: string | null;
   mode: DockMode;
   /** False while the screen opened this pane itself (nobody asked): focus is not pulled into it. */
@@ -116,7 +123,7 @@ function PlanResult({ plan, operationsHref }: { plan: CommandPlan; operationsHre
   );
 }
 
-export function ActionPane({ row, api, activation, workspaceId, mode, focusOnOpen = true, onClose, portfoliosHref, operationsHref }: ActionPaneProps) {
+export function ActionPane({ row, api, activation, stale = false, workspaceId, mode, focusOnOpen = true, onClose, portfoliosHref, operationsHref }: ActionPaneProps) {
   const { task, entry } = row;
   const [params] = useSearchParams();
   const ids = { target: useId(), version: useId(), env: useId(), note: useId() };
@@ -208,20 +215,26 @@ export function ActionPane({ row, api, activation, workspaceId, mode, focusOnOpe
         row.state === "ready" ? (
           <div className="exec-adm-block">
             <h4 className="exec-adm-h4">Run local read</h4>
-            {task.params.map((p) => (
-              <label className="exec-adm-field" key={p.key}>
-                <span className="exec-adm-label">{p.key}{p.required ? " (required)" : ""}</span>
-                <input
-                  className="exec-adm-input"
-                  value={readParams[p.key] ?? ""}
-                  onChange={(event) => setReadParams((current) => ({ ...current, [p.key]: event.target.value }))}
-                />
-              </label>
-            ))}
-            <button type="button" className="exec-adm-btn" data-variant="primary" disabled={run.phase === "busy" || missingRead} aria-describedby={missingRead ? ids.note : undefined} onClick={() => void runRead()}>
-              {run.phase === "busy" ? "Running" : "Run read"}
-            </button>
-            {missingRead ? <p id={ids.note} className="exec-adm-note">Complete the required parameters before running.</p> : null}
+            {stale ? (
+              <DockAction label="Run read" reason={STALE_REASON} />
+            ) : (
+              <>
+                {task.params.map((p) => (
+                  <label className="exec-adm-field" key={p.key}>
+                    <span className="exec-adm-label">{p.key}{p.required ? " (required)" : ""}</span>
+                    <input
+                      className="exec-adm-input"
+                      value={readParams[p.key] ?? ""}
+                      onChange={(event) => setReadParams((current) => ({ ...current, [p.key]: event.target.value }))}
+                    />
+                  </label>
+                ))}
+                <button type="button" className="exec-adm-btn" data-variant="primary" disabled={run.phase === "busy" || missingRead} aria-describedby={missingRead ? ids.note : undefined} onClick={() => void runRead()}>
+                  {run.phase === "busy" ? "Running" : "Run read"}
+                </button>
+                {missingRead ? <p id={ids.note} className="exec-adm-note">Complete the required parameters before running.</p> : null}
+              </>
+            )}
             {run.phase === "error" ? <PanelState status="unavailable" reason={run.reason} /> : null}
             {run.phase === "receipt" ? (
               <div className="exec-adm-receipt" role="status">
@@ -241,7 +254,7 @@ export function ActionPane({ row, api, activation, workspaceId, mode, focusOnOpe
         <div className="exec-adm-block">
           <h4 className="exec-adm-h4">1 Plan</h4>
           {showCommandStrip ? <CommandStrip plan={currentPlan} /> : null}
-          {gate.allowed ? (
+          {gate.allowed && !stale ? (
             <>
               <label className="exec-adm-field" htmlFor={ids.env}>
                 <span className="exec-adm-label">Environment</span>
@@ -268,7 +281,7 @@ export function ActionPane({ row, api, activation, workspaceId, mode, focusOnOpe
               <p className="exec-adm-note">A plan is a preview. Applying stays off while the command relay is disabled.</p>
             </>
           ) : (
-            <DockAction label="Make plan" reason={gate.reason} />
+            <DockAction label="Make plan" reason={gate.allowed ? STALE_REASON : gate.reason} />
           )}
           {plan.phase === "error" ? <PanelState status={plan.status} reason={plan.reason} /> : null}
           {currentPlan ? <PlanResult plan={currentPlan} operationsHref={operationsHref} /> : null}

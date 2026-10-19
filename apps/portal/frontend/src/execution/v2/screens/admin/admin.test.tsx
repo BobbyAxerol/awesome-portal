@@ -432,6 +432,142 @@ describe("the auto-open is once, filter-aware and does not take focus", () => {
   });
 });
 
+describe("the auto-open: first successful load, tier order, per workspace", () => {
+  it("a first read with no actions spends the one chance: a later refresh that returns rows opens nothing", async () => {
+    setOverviewDoubleVariants({ admin: "connected-read" });
+    const base = await baseTasks();
+    let n = 0;
+    const api = override({
+      getOperatorTasks: async () => {
+        n += 1;
+        return { ok: true as const, value: n === 1 ? { ...base, tasks: [], totalTasks: 0 } : base, warnings: [] as string[] };
+      },
+    });
+    mount("/administration/actions", {}, api);
+    expect(await screen.findByText(/No actions are published for this profile/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await loaded();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(search().get("sel")).toBeNull();
+  });
+
+  it("opens the first ready action in the order the tiers are drawn, not in raw task order", async () => {
+    setOverviewDoubleVariants({ admin: "connected-read" });
+    const base = await baseTasks();
+    const health = base.tasks.find((t) => t.taskId === "health")!;
+    const other = base.tasks.find((t) => t.taskGroup !== health.taskGroup && t.taskGroup !== "PORTFOLIO_CAPITAL" && t.taskGroup !== "EMERGENCY_DESTRUCTIVE")!;
+    // Raw order lists health first; the server declares the other action's group first, so that tier is drawn first.
+    const value = { ...base, tasks: [health, { ...other, state: "CONNECTED" }], totalTasks: 2, taskGroups: [other.taskGroup, health.taskGroup] };
+    mount("/administration/actions", {}, override({ getOperatorTasks: asTasks(value as TaskCatalogue) }));
+    await dock();
+    await waitFor(() => expect(search().get("sel")).toBe(other.taskId));
+  });
+
+  it("a new workspace is a new arrival and may open once; the same workspace refreshing opens nothing more", async () => {
+    setOverviewDoubleVariants({ admin: "connected-read" });
+    const api = httpApi();
+    const tree = (workspaceId: string) => (
+      <MemoryRouter initialEntries={["/administration/actions"]}>
+        <AdminScreen api={api} workspaceId={workspaceId} />
+        <Where />
+      </MemoryRouter>
+    );
+    const view = render(tree("ws_1"));
+    const pane = await dock();
+    await waitFor(() => expect(search().get("sel")).toBe("health"));
+    fireEvent.click(within(pane).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await loaded();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(screen.queryByRole("complementary")).toBeNull();
+    view.rerender(tree("ws_2"));
+    await dock();
+    await waitFor(() => expect(search().get("sel")).toBe("health"));
+  });
+});
+
+describe("a failed refresh keeps the last good reads, and acting waits for a good one", () => {
+  const STALE = /The last refresh failed; refresh before acting/;
+
+  it("Run read is a disabled action with the reason while the catalogue is stale, and live again after a good refresh", async () => {
+    setOverviewDoubleVariants({ admin: "connected-read" });
+    const real = httpApi();
+    let n = 0;
+    const api = override({
+      getCommandCatalogue: async (...args) => {
+        n += 1;
+        return n === 2 ? { ok: false as const, status: "unavailable" as const, reason: "CATALOGUE_DOWN" } : real.getCommandCatalogue(...args);
+      },
+    });
+    mount("/administration/actions?sel=health", {}, api);
+    const pane = await dock();
+    fireEvent.change(within(pane).getByLabelText(/^mode/), { target: { value: "paper" } });
+    expect((within(pane).getByRole("button", { name: "Run read" }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await screen.findByText(/Showing the last good read\. The refresh failed for the command catalogue \(CATALOGUE_DOWN\)/);
+    const run = within(pane).getByRole("button", { name: "Run read" }) as HTMLButtonElement;
+    expect(run.disabled).toBe(true);
+    expect(pane.textContent).toMatch(STALE);
+    expect(run.getAttribute("aria-describedby")).toBeTruthy();
+    expect(within(pane).queryByLabelText(/^mode/)).toBeNull();
+    fireEvent.click(run);
+    expect(posts()).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(screen.queryByText(/The refresh failed/)).toBeNull());
+    expect(pane.textContent).not.toMatch(STALE);
+    // What the reader typed before the failed refresh is still there.
+    expect((within(pane).getByLabelText(/^mode/) as HTMLInputElement).value).toBe("paper");
+    expect((within(pane).getByRole("button", { name: "Run read" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("Make plan is a disabled action with the reason while any read is stale, keeps the form's text, and posts nothing", async () => {
+    const real = httpApi();
+    let n = 0;
+    const api = override({
+      getActivationCapabilities: async (...args) => {
+        n += 1;
+        return n === 2 ? { ok: false as const, status: "unavailable" as const, reason: "ACTIVATION_DOWN" } : real.getActivationCapabilities(...args);
+      },
+    });
+    mount("/administration/actions?sel=account-sync", {}, api);
+    const pane = await dock();
+    fireEvent.change(within(pane).getByLabelText(/^Target \(/), { target: { value: "acc_1" } });
+    fireEvent.change(within(pane).getByLabelText(/Target version/), { target: { value: "3" } });
+    fireEvent.change(within(pane).getByLabelText(/^Note/), { target: { value: "Pause while the broker is checked" } });
+    expect((within(pane).getByRole("button", { name: "Make plan" }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await screen.findByText(/The refresh failed for the staged activation \(ACTIVATION_DOWN\)/);
+    const make = within(pane).getByRole("button", { name: "Make plan" }) as HTMLButtonElement;
+    expect(make.disabled).toBe(true);
+    expect(pane.textContent).toMatch(STALE);
+    fireEvent.click(make);
+    expect(posts()).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(screen.queryByText(/The refresh failed/)).toBeNull());
+    expect((within(pane).getByLabelText(/^Note/) as HTMLInputElement).value).toBe("Pause while the broker is checked");
+    expect((within(pane).getByRole("button", { name: "Make plan" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("a gate that already refuses keeps its own reason, not the stale one", async () => {
+    const real = httpApi();
+    let n = 0;
+    const api = override({
+      getActivationCapabilities: async (...args) => {
+        n += 1;
+        return n === 2 ? { ok: false as const, status: "unavailable" as const, reason: "ACTIVATION_DOWN" } : real.getActivationCapabilities(...args);
+      },
+    });
+    mount("/administration/actions?sel=emergency-close", {}, api);
+    const pane = await dock();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await screen.findByText(/The refresh failed for the staged activation/);
+    expect(pane.textContent).toContain("Needs a second approver and a security key");
+    expect(pane.textContent).not.toMatch(STALE);
+  });
+});
+
 /* ── F5 L1 state matrix: empty, stale (a refresh that fails, a stale catalogue) ─────────── */
 
 /** The double's task catalogue, as the port returns it, to build variants from. */
