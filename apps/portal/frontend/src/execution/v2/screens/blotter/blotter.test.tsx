@@ -13,6 +13,7 @@ import { readProfileEnvelope } from "../../../api/profileRead";
 import type { ExecutionApi } from "../../../api/ports";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import { cloneRows, pad } from "../../testkit/scale";
+import { useContextFactsValue } from "../../shell/contextFacts";
 import BlotterScreen, { BLOTTER_SCREEN_KEY } from "./index";
 
 let calls: Call[] = [];
@@ -35,8 +36,15 @@ const mount = (entry = "/execution/blotter", props: Partial<React.ComponentProps
     <MemoryRouter initialEntries={[entry]}>
       <BlotterScreen api={api} {...props} />
       <Where />
+      <FactsProbe />
     </MemoryRouter>,
   );
+
+/** What the screen has told the context bar so far (`{}` when it has said nothing). */
+function FactsProbe() {
+  return <output data-testid="facts">{JSON.stringify(useContextFactsValue())}</output>;
+}
+const facts = (): Record<string, unknown> => JSON.parse(screen.getByTestId("facts").textContent ?? "{}");
 
 const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
@@ -488,6 +496,24 @@ describe("scale", () => {
     mount("/execution/blotter", {}, api);
     await loaded();
     expect(bodyRows()).toHaveLength(200);
+  });
+});
+
+describe("the context bar", () => {
+  it("states the slice scope for a session without account visibility, and nothing otherwise", async () => {
+    mount("/execution/blotter", { capabilities: new Set(["governance.r1.read"]) });
+    await loaded();
+    expect(facts()).toEqual({ scope: "Scope: Your orders" });
+    cleanup();
+    mount("/execution/blotter", { capabilities: new Set(["execution.accounts.read"]) });
+    await loaded();
+    expect(facts()).toEqual({});
+  });
+
+  it("states nothing while access is unknown", async () => {
+    mount();
+    await loaded();
+    expect(facts()).toEqual({});
   });
 });
 

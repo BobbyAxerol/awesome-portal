@@ -33,6 +33,10 @@ the real, authenticated reads back.
    FIXTURE_USER_ID=<real principal id>
    ```
 
+   `archived`, `workbench` and `replay` are reserved keys: the build accepts them and they mount nothing
+   (the Archived lens is part of `fleet`, Trade Replay is a tab of `alpha`, the V2 Paper workbench is not built),
+   so listing or omitting them changes no screen.
+
    The umbrella flag `VITE_EXECUTION_PREVIEW_ENABLED` is already true in the preview overlay. Optional:
    `FIXTURE_SCALE=small|medium|large` (default `medium`), `FIXTURE_WRITES=refuse|doubles`,
    `FIXTURE_NOW_ISO`, `FIXTURE_VARIANTS` (see `apps/portal/fixture-bff/README.md`).

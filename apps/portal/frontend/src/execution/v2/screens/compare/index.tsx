@@ -41,6 +41,7 @@ import { SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { CompareOverlay, type NotComparable } from "../../charts";
 import { Flag } from "../../Flag";
+import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { useExecUrlState, withContext } from "../../urlState";
 import { PF_FE, npReason, npText } from "../portfolios/fe";
@@ -106,6 +107,8 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   const all = useMemo(() => (envelope ? toRows(envelope.items) : []), [envelope]);
   const { rows: chosen, unresolved } = useMemo(() => resolveSelection(all, picked.ids), [all, picked.ids.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
   const basis = useMemo(() => basisOf(chosen), [chosen]);
+  // The bar shows the basis currency the screen computes in, and none when there is none (a `ccy` left in the URL is not this screen's).
+  useContextFacts({ ccy: basis.currency });
   const kindWanted = params.get("kind");
 
   // The 360 hands over one id. It becomes the first pick once, as a replace.

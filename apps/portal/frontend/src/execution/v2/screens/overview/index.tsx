@@ -47,6 +47,7 @@ import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { DivBars, EquityPanel } from "../../charts";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
+import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { withContext } from "../../urlState";
 import {
@@ -122,6 +123,8 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   // says "Not published" costs nothing. A READY session without any fund-wide read gets "Your alphas".
   const fundWide = caps === null || holds(caps, { anyOf: [V2_CAPABILITY.portfoliosRead, V2_CAPABILITY.accountsRead, V2_CAPABILITY.operationsRead] });
   const reads = useOverviewReads(api, workspaceId, sseFactory, fundWide);
+  // Same fact as the heading below: only a READY session without any fund-wide read is narrowed; unknown access states nothing.
+  useContextFacts({ scope: fundWide ? undefined : "Scope: Your alphas" });
 
   const { snapshot } = reads;
   const fleet = reads.fleet.phase === "ready" ? reads.fleet.value : null;

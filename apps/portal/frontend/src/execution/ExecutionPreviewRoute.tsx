@@ -51,6 +51,8 @@ const V2ContextBar = import.meta.env.VITE_EXECUTION_V2_SCREENS
 // UXM-07 S1: each V2 screen has its own manifest key and lazy chunk. The raw
 // env string gates the import() so a flag-off build emits none of them.
 const V2Fleet = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/fleet")) : null;
+// S1/S7: the three old stage lists redirect to the Fleet when its flag is on (own tiny chunk, same raw-env gate).
+const V2FleetStageRedirect = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/fleet/stageRedirect")) : null;
 const V2Cockpit = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/cockpit")) : null;
 const V2Operations = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/operations")) : null;
 const V2Overview = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/overview")) : null;
@@ -169,9 +171,18 @@ export function PreviewBanner({ profile, screenId, registryWord }: { profile: st
 }
 // The V2 Blotter's orders read has no environment filter (Not published, FE-052): the bar says so instead of looking live.
 const BLOTTER_ENV_LOCK = { reason: "Not published (FE-052). The orders read has no environment filter." };
+// The V2 Blotter's orders read takes no window either (FE-025); the screen itself says what it covers
+// ("Current retained window"), so the bar prints that as the fixed window.
+const BLOTTER_WINDOW_LOCK = { reason: "Not published (FE-025). The orders read takes no window.", effective: "Current retained window" };
 // Operations carries its own Range control and the server takes no window (FE-025): the bar's window says so.
 // No `effective`: a fixed chip would lie once the local Range changes.
 const OPERATIONS_WINDOW_LOCK = { reason: "Operations has its own Range control below. The server takes no window (FE-025)." };
+/** The window lock a V2 screen's own read implies; `undefined` keeps the bar's generic "server takes no window" lock. */
+function windowLockFor(screenId: string): { reason: string; effective?: string } | undefined {
+  if (screenId === "EXECUTION_OPERATIONS_QUEUE_SCREEN" && isV2Screen("ops")) return OPERATIONS_WINDOW_LOCK;
+  if (screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2Screen("blotter")) return BLOTTER_WINDOW_LOCK;
+  return undefined;
+}
 export function PreviewFrame({ screenId, profile, children }: { screenId: string; profile?: string | null; children: ReactNode }) {
   const sessionKey = retainedSessionKey(useSession().principal);
   // Bind before children's passive effects; never fetch or notify another component during render.
@@ -197,7 +208,7 @@ export function PreviewFrame({ screenId, profile, children }: { screenId: string
           amendment is codex's (consolidated request); shown in the inspector
           as drift, never used to pick a data source. */}
       <PreviewBanner profile="http" screenId={screenId} registryWord={profile} />
-      {V2ContextBar && EXECUTION_V2_SHELL ? <Suspense fallback={null}><V2ContextBar envLock={screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2Screen("blotter") ? BLOTTER_ENV_LOCK : undefined} windowLock={screenId === "EXECUTION_OPERATIONS_QUEUE_SCREEN" && isV2Screen("ops") ? OPERATIONS_WINDOW_LOCK : undefined} /></Suspense> : null}
+      {V2ContextBar && EXECUTION_V2_SHELL ? <Suspense fallback={null}><V2ContextBar envLock={screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2Screen("blotter") ? BLOTTER_ENV_LOCK : undefined} windowLock={windowLockFor(screenId)} /></Suspense> : null}
       <Fragment key={refreshEpoch}>{children}</Fragment>
     </ExecutionSurface>
   );
@@ -334,6 +345,12 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       ? <Suspense fallback={null}><V2Cockpit api={api} workspaceId={routeWorkspaceId} pathSelection={{ id, kind }} onClearPathSelection={() => navigate("/governance/approvals")} /></Suspense>
       : null;
 
+  // The stage list routes (no deployment id) land on the V2 Fleet with the matching stage and environment; flag off keeps the V1 list.
+  const stageListRedirect = (list: "paper" | "sandbox" | "live"): ReactNode | null =>
+    V2FleetStageRedirect && isV2Screen("fleet")
+      ? <Suspense fallback={null}><V2FleetStageRedirect list={list} /></Suspense>
+      : null;
+
   let content: ReactNode;
   switch (screenId) {
     case "EXECUTION_COMMAND_CENTER_SCREEN":
@@ -386,14 +403,14 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       // Feature canonical route (/deployments/paper) = the paper list, entry
       // of WF 1c; /:deploymentId opens that deployment's workbench. The
       // sidebar must never land an operator inside one alpha unasked.
-      content = deploymentId ? <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} /> : <PaperOverviewRichContainer api={api} />;
+      content = deploymentId ? <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} /> : stageListRedirect("paper") ?? <PaperOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
       // Feature canonical route (/deployments/sandbox) = the sandbox overview,
       // entry screen of WF 1d; /:deploymentId opens that certification.
       content = deploymentId
         ? <SandboxCertificationContainer api={api} deploymentId={deploymentId} />
-        : <SandboxOverviewRichContainer api={api} />;
+        : stageListRedirect("sandbox") ?? <SandboxOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN":
       content = deploymentId ? <CanaryControlRoomContainer api={api} deploymentId={deploymentId} /> : <MissingRouteId what="deployment" />;
@@ -401,7 +418,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
     case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN":
       // Feature canonical route (/deployments/live) = the live overview, entry
       // screen of WF 1f/1e; /:deploymentId opens that deployment's workbench.
-      content = deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : <LiveOverviewRichContainer api={api} />;
+      content = deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : stageListRedirect("live") ?? <LiveOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
       content = V2Blotter && isV2Screen("blotter")

@@ -28,6 +28,22 @@ export const EXEC_V2_SCREEN_KEYS = [
 ] as const;
 export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
 
+/**
+ * Keys that are named in the manifest but mount nothing (audit, 2026-10-19).
+ *
+ * - `archived`: the Archived lens is part of the Fleet (`tab=archived`, key `fleet`); there is no separate screen.
+ * - `workbench`: the V2 Paper / Stage workbench (S5) is not built; the V1 workbench still renders.
+ * - `replay`: Trade Replay rides the Alpha 360 Replay tab (key `alpha`); nothing reads `replay` itself.
+ *
+ * They stay in the list because env files and build args already carry them
+ * (a key dropped from the list would read as a typo), but `isV2Screen` answers
+ * false for them even when the manifest names them, so listing one cannot make
+ * a screen look migrated. `flags.test.ts` holds both halves: every other key is
+ * read by `isV2Screen("<key>")` in source, and these three are read nowhere.
+ */
+export const EXEC_V2_RESERVED_KEYS = ["archived", "workbench", "replay"] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
+const RESERVED: ReadonlySet<string> = new Set(EXEC_V2_RESERVED_KEYS);
+
 const KNOWN: ReadonlySet<string> = new Set(EXEC_V2_SCREEN_KEYS);
 
 /** Pure: a typo in the list drops that key only, never turns anything else on. */
@@ -46,7 +62,7 @@ export function isV2Screen(
   set: ReadonlySet<ExecV2ScreenKey> = EXECUTION_V2_SCREENS,
   umbrella: boolean = EXECUTION_PREVIEW_ENABLED,
 ): boolean {
-  return umbrella && set.has(key);
+  return umbrella && !RESERVED.has(key) && set.has(key);
 }
 
 export const EXECUTION_V2_SHELL = isV2Screen("shell");

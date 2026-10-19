@@ -13,6 +13,7 @@ import { resetOverviewDouble, setOverviewDoubleVariants } from "../../../../../e
 import type { ExecutionApi } from "../../../api/ports";
 import type { SseLike } from "../../../sse";
 import { httpApi, serveDoubles, type Call } from "../../../../../e2e/screensV2Harness";
+import { useContextFactsValue } from "../../shell/contextFacts";
 import OverviewScreen, { OVERVIEW_SCREEN_KEY } from "./index";
 
 let calls: Call[] = [];
@@ -32,8 +33,15 @@ const mount = (props: Partial<React.ComponentProps<typeof OverviewScreen>> = {},
   render(
     <MemoryRouter initialEntries={[entry]}>
       <OverviewScreen api={api} sseFactory={null} {...props} />
+      <FactsProbe />
     </MemoryRouter>,
   );
+
+/** What the screen has told the context bar so far (`{}` when it has said nothing). */
+function FactsProbe() {
+  return <output data-testid="facts">{JSON.stringify(useContextFactsValue())}</output>;
+}
+const facts = (): Record<string, unknown> => JSON.parse(screen.getByTestId("facts").textContent ?? "{}");
 
 /** The page is up AND every read has landed, so no state update is left to arrive after the test ends. */
 const loaded = async () => {
@@ -385,6 +393,24 @@ describe("the stream gate", () => {
     await waitFor(() => expect(streamLine().getAttribute("data-stream")).toBe("auth_expired"));
     expect(streamLine().textContent).toMatch(/Session expired/);
     expect(kpi("Needs attention").querySelector(".exec-blk-kpi-value")?.textContent).toBe("3 of 214");
+  });
+});
+
+describe("the context bar's scope", () => {
+  it("says Your alphas for a session without a fund-wide read", async () => {
+    mount({ capabilities: new Set(["governance.r1.read"]) });
+    await screen.findByRole("heading", { level: 1, name: "Your alphas" });
+    expect(facts()).toEqual({ scope: "Scope: Your alphas" });
+  });
+
+  it("says nothing for a fund-wide session, and nothing while access is unknown", async () => {
+    mount({ capabilities: new Set(["execution.operations.read"]) });
+    await loaded();
+    expect(facts()).toEqual({});
+    cleanup();
+    mount();
+    await loaded();
+    expect(facts()).toEqual({});
   });
 });
 

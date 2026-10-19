@@ -11,6 +11,7 @@ import { ALPHA_DOUBLE_ID, ALPHA_DOUBLE_ORDERS_P1, answerAlpha } from "../../../.
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import { cloneRows } from "../../testkit/scale";
 import AlphaScreen, { ALPHA_SCREEN_KEY } from "./index";
+import { useContextFactsValue } from "../../shell/contextFacts";
 import { alphaHttpApi, serveAlphaDouble, sessionOf, type Override } from "./testApi";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
@@ -38,10 +39,17 @@ function mount(entry = `/deployments/alphas/${ALPHA_DOUBLE_ID}`, override?: Over
     <MemoryRouter initialEntries={[entry]}>
       <AlphaScreen api={alphaHttpApi()} alphaId={alphaId} />
       <Where />
+      <FactsProbe />
     </MemoryRouter>,
   );
   return { ...served, view };
 }
+
+/** What the screen has told the context bar so far (`{}` when it has said nothing). */
+function FactsProbe() {
+  return <output data-testid="facts">{JSON.stringify(useContextFactsValue())}</output>;
+}
+const facts = (): Record<string, unknown> => JSON.parse(screen.getByTestId("facts").textContent ?? "{}");
 
 const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
@@ -317,6 +325,12 @@ describe("Deployments", () => {
   it("a manager sees no slice banner", async () => {
     await open();
     expect(screen.queryByText(/Your slice only/)).toBeNull();
+    expect(facts()).toEqual({});
+  });
+
+  it("the context bar states the slice scope for a researcher, not for a manager", async () => {
+    await open(V2_ROLE_PRESETS.researcher);
+    expect(facts()).toEqual({ scope: "Scope: Your slice" });
   });
 });
 

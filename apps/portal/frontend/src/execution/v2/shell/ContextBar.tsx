@@ -10,7 +10,12 @@
  * a window (FE-025) the caller passes `windowLock` and the control is disabled
  * with the reason beside it, not left to look like it works. There is no
  * "As of" and no placeholder for an absent currency or scope; what is not
- * known is not drawn.
+ * known is not drawn. "As of" stays out on purpose: no read can be taken at a
+ * past instant (decision B6; FE-036 was settled 2026-10-18 as current-only), so
+ * the control would promise time travel the data cannot do.
+ *
+ * Scope and currency are published by the mounted screen (`contextFacts.ts`),
+ * only when it knows them; the bar never derives either from a role.
  */
 import { useId } from "react";
 
@@ -23,6 +28,7 @@ import {
   type ExecUrlParams,
   type ExecWindow,
 } from "../urlState";
+import { useContextFactsValue } from "./contextFacts";
 import "../css/shell.css";
 
 export const WINDOW_NOT_SERVED_REASON = "Window applies when the server supports it.";
@@ -122,10 +128,20 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
   );
 }
 
-/** URL-bound: env and window come from the query and are written back with other params kept. */
+/**
+ * URL-bound: env and window come from the query and are written back with other params kept.
+ *
+ * Scope and currency also come from the mounted screen (`useContextFacts`) when
+ * it states them; a `scope` prop wins. A screen that publishes a currency (or
+ * `null` for none) overrides the URL's `ccy`; one that publishes nothing leaves
+ * the URL's `ccy` as it was.
+ */
 export function ConnectedContextBar(props: Omit<ContextBarProps, "env" | "window" | "ccy" | "onChange">) {
   const { value, set } = useExecUrlState();
+  const facts = useContextFactsValue();
   // No read accepts a window yet (FE-025), so the control starts locked; a caller that knows better passes `windowLock={null}`.
   const windowLock = props.windowLock === undefined ? { reason: WINDOW_NOT_SERVED_REASON } : props.windowLock;
-  return <ContextBar {...props} windowLock={windowLock} env={value.env} window={value.window} ccy={value.ccy} onChange={(patch) => set(patch)} />;
+  const ccy = facts.ccy !== undefined ? facts.ccy : value.ccy;
+  const scope = props.scope ?? facts.scope ?? null;
+  return <ContextBar {...props} scope={scope} windowLock={windowLock} env={value.env} window={value.window} ccy={ccy} onChange={(patch) => set(patch)} />;
 }

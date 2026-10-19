@@ -56,6 +56,20 @@ describe("V2 shell flag on", () => {
     expect(why?.textContent).toContain("Not published (FE-052)");
   });
 
+  it("the V2 Blotter reads 'Window fixed: Current retained window' (its read takes no window), and only there", async () => {
+    await frame("shell,blotter", "EXECUTION_FULL_BLOTTER_SCREEN");
+    expect(document.querySelector(".exec-ctxbar-lock")?.textContent).toBe("Window fixed: Current retained window");
+    const button = screen.getByRole("group", { name: "Window" }).querySelector("button") as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toContain("Not published (FE-025)");
+    cleanup();
+    await frame("shell", "EXECUTION_FULL_BLOTTER_SCREEN");
+    expect(document.querySelector(".exec-ctxbar-lock")).toBeNull();
+    cleanup();
+    await frame("shell,blotter", "alpha_fleet");
+    expect(document.querySelector(".exec-ctxbar-lock")).toBeNull();
+  });
+
   it("leaves the environment live on the Blotter while the blotter flag is off, and on other screens", async () => {
     await frame("shell", "EXECUTION_FULL_BLOTTER_SCREEN");
     expect((screen.getByRole("button", { name: "Paper" }) as HTMLButtonElement).disabled).toBe(false);

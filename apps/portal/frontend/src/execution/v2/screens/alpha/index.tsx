@@ -40,6 +40,7 @@ import { PanelState } from "../../../components/states";
 import { utcStamp } from "../../../time";
 import { useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
+import { useContextFacts } from "../../shell/contextFacts";
 import { V2_CAPABILITY, holds } from "../../shell/roleNav";
 import { applyTab, resolveTab } from "../../tabAliases";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
@@ -112,6 +113,8 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
   const capabilities = useMemo(() => new Set(access.kind === "ready" ? access.access.capabilities : []), [access]);
   const canSeeAccounts = holds(capabilities, { allOf: [V2_CAPABILITY.accountsRead] });
   const sliceOnly = !canSeeAccounts && !holds(capabilities, { allOf: [V2_CAPABILITY.portfoliosRead] });
+  // Only a READY session is narrowed; while access loads (empty set) the screen's banner shows, but the bar states nothing.
+  useContextFacts({ scope: sliceOnly && access.kind === "ready" ? "Scope: Your slice" : undefined });
   const linkTo = (href: string) => withContext(href, params);
 
   /* ── tab, from the URL, with the V1 labels mapped ───────────────────── */

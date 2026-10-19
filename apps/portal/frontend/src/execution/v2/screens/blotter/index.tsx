@@ -35,6 +35,7 @@ import { useProfileRealtime } from "../../../profileRealtime";
 import { utcStamp } from "../../../time";
 import { CardsTable } from "../../cardsTable";
 import { Flag } from "../../Flag";
+import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { useMediaQuery } from "../../useMediaQuery";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
@@ -151,6 +152,8 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
   const caps = capabilities ?? (access.kind === "ready" ? new Set(access.access.capabilities) : null);
   const accountsVisible = caps === null || holds(caps, { allOf: [V2_CAPABILITY.accountsRead] });
   const visibleColumns = COLUMNS.filter((c) => columns.has(c.id) && !(c.id === "account" && !accountsVisible));
+  // Same fact as the "Your orders" heading and the scope chip below; unknown access (caps null) states nothing.
+  useContextFacts({ scope: accountsVisible ? undefined : "Scope: Your orders" });
 
   /* ── expansion, funnel, groups ────────────────────────────────────── */
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());

@@ -1,6 +1,8 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { EXEC_V2_SCREEN_KEYS, isV2Screen, parseV2Manifest } from "./flags";
+import { EXEC_V2_RESERVED_KEYS, EXEC_V2_SCREEN_KEYS, isV2Screen, parseV2Manifest } from "./flags";
 
 describe("parseV2Manifest", () => {
   it.each([undefined, "", "   ", ",,", " , "])("reads %j as nothing on", (raw) => {
@@ -36,6 +38,45 @@ describe("isV2Screen", () => {
 
   it("stays off for a listed key without the umbrella", () => {
     expect(isV2Screen("fleet", set, false)).toBe(false);
+  });
+});
+
+describe("reserved keys", () => {
+  const reserved: readonly string[] = EXEC_V2_RESERVED_KEYS;
+  const mounting = EXEC_V2_SCREEN_KEYS.filter((key) => !reserved.includes(key));
+
+  it("names exactly archived, workbench and replay", () => {
+    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "replay", "workbench"]);
+  });
+
+  it("are still read from a manifest (so an env file that lists them is not a typo) but never turn a screen on", () => {
+    const set = parseV2Manifest("fleet,archived,workbench,replay");
+    expect(set.has("archived")).toBe(true);
+    for (const key of EXEC_V2_RESERVED_KEYS) expect(isV2Screen(key, set, true), key).toBe(false);
+    expect(isV2Screen("fleet", set, true)).toBe(true);
+  });
+
+  it("the other keys still turn on from the manifest", () => {
+    const set = parseV2Manifest(mounting.join(","));
+    for (const key of mounting) expect(isV2Screen(key, set, true), key).toBe(true);
+  });
+
+  /** Production sources under src/: test and smoke files aside. */
+  function sources(dir: string, out: string[] = []): string[] {
+    for (const name of readdirSync(dir)) {
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) sources(path, out);
+      else if (/\.(ts|tsx)$/.test(name) && !/\.(test|smoke)\.(ts|tsx)$/.test(name) && !/\.testbase\.ts$/.test(name)) out.push(path);
+    }
+    return out;
+  }
+
+  it("every other key is read by isV2Screen in source, and no reserved key is", () => {
+    const text = sources(join(process.cwd(), "src"))
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
+    for (const key of mounting) expect(text.includes(`isV2Screen("${key}")`), `${key} mounts something`).toBe(true);
+    for (const key of EXEC_V2_RESERVED_KEYS) expect(text.includes(`isV2Screen("${key}"`), `${key} must mount nothing`).toBe(false);
   });
 });
 

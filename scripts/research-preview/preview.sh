@@ -194,6 +194,7 @@ CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON={"governance-k1":"$(head -c 48 /dev/urand
 # Execution V2 screens are a BUILD-time list (compose.yaml maps PORTAL_EXECUTION_V2_SCREENS to the
 # portal-web build arg; empty keeps every screen on V1). The full manifest, for a UI/UX review build:
 # PORTAL_EXECUTION_V2_SCREENS=fleet,archived,portfolios,alpha,workbench,account,ops,profile,overview,cockpit,shell,compare,blotter,admin,users,replay
+# (archived, workbench and replay are reserved keys: they are accepted but mount nothing; see v2/flags.ts)
 # Fixture BFF (see deploy/research-preview/README-fixture.md): read only while \`preview.sh fixture on\`.
 # FIXTURE_SCALE=medium
 # FIXTURE_WRITES=refuse   # default in the overlay; "doubles" answers canned successes that store nothing

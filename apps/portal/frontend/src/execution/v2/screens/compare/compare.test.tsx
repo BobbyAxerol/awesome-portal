@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { PF } from "../../../../../e2e/bffDoublePortfolios";
 import type { ExecutionApi } from "../../../api/ports";
+import { useContextFactsValue } from "../../shell/contextFacts";
 import { V2_CAPABILITY } from "../../shell/roleNav";
 import { makeApi, type Override } from "../portfolios/harness.fixtures";
 import CompareScreen, { COMPARE_SCREEN_KEY } from "./index";
@@ -26,8 +27,15 @@ const mount = (api: ExecutionApi, query = "", props: { portfolioId?: string; cap
     <MemoryRouter initialEntries={[`/deployments/compare${query}`]}>
       <CompareScreen api={api} {...props} />
       <Where />
+      <FactsProbe />
     </MemoryRouter>,
   );
+
+/** What the screen has told the context bar so far (`{}` when it has said nothing). */
+function FactsProbe() {
+  return <output data-testid="facts">{JSON.stringify(useContextFactsValue())}</output>;
+}
+const facts = (): Record<string, unknown> => JSON.parse(screen.getByTestId("facts").textContent ?? "{}");
 
 const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
@@ -171,6 +179,17 @@ describe("basis and partitions", () => {
     expect(apart).toHaveLength(1);
     expect(apart[0].textContent).toContain("Canary");
     expect(apart[0].textContent).toContain("Simulated book; the basis is Real-funded, and the two are never combined");
+  });
+
+  it("tells the context bar the basis currency, and none while nothing comparable is picked", async () => {
+    mount(makeApi().api, pick(PF.satellite, PF.yen));
+    await loaded();
+    expect(facts()).toEqual({ ccy: "USDT" });
+    cleanup();
+    mount(makeApi().api, "?ccy=eur");
+    await loaded();
+    // No basis yet: the bar must not echo the `ccy` another screen left in the URL.
+    expect(facts()).toEqual({ ccy: null });
   });
 
   it("refuses another currency: it is listed apart, with the currency named, never converted", async () => {
