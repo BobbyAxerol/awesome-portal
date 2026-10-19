@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ConnectedContextBar, ContextBar, WINDOW_NOT_SERVED_REASON } from "./ContextBar";
+import { ConnectedContextBar, ContextBar, WINDOW_NOT_SERVED_REASON, invalidNotice } from "./ContextBar";
 
 afterEach(cleanup);
 
@@ -131,6 +131,34 @@ describe("ContextBar", () => {
     render(<ContextBar env="live" window="90D" onChange={noop} windowLock={{ reason: "w", effective: "Certification run" }} envLock={{ reason: "e", effective: "sandbox" }} />);
     expect(screen.getByText("Window fixed: Certification run")).toBeTruthy();
     expect(screen.getByText("Environment fixed: Sandbox")).toBeTruthy();
+  it("D6: an effective environment (the path decides) is the pressed one, whatever the URL value, with the notice attached", () => {
+    const onChange = vi.fn();
+    render(<ContextBar env="live" window="90D" onChange={onChange} windowLock={null} envLock={{ reason: "The path sets the environment.", effective: "paper" }} />);
+    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Real-funded" }).getAttribute("aria-pressed")).toBe("false");
+    for (const name of ["Real-funded", "Paper", "Sandbox"]) {
+      const button = screen.getByRole("button", { name }) as HTMLButtonElement;
+      expect(button.disabled, name).toBe(true);
+      expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The path sets the environment.");
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Real-funded" }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("D7: names the rejected params, never their values, and dismisses on request", () => {
+    const onDismiss = vi.fn();
+    render(<ContextBar env="live" window="90D" onChange={noop} invalid={["stage", "env", "window"]} onDismissInvalid={onDismiss} />);
+    const notice = screen.getByRole("status");
+    expect(notice.textContent).toContain("Ignored invalid URL parameters: stage, env, window.");
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it("D7: one name reads in the singular, a long list is capped, nothing is drawn when empty", () => {
+    expect(invalidNotice(["env"])).toBe("Ignored invalid URL parameter: env. Defaults are shown.");
+    expect(invalidNotice(["a", "b", "c", "d", "e", "f", "g", "h"])).toContain("a, b, c, d, e, f and 2 more");
+    const { container } = render(<ContextBar env="live" window="90D" onChange={noop} invalid={[]} />);
+    expect(container.querySelector('[data-notice="invalid-params"]')).toBeNull();
   });
 
   it("draws nothing for what it does not know: no As of, no dash, no placeholder chip", () => {
@@ -186,6 +214,26 @@ describe("ConnectedContextBar", () => {
     expect(where()).toBe("/execution?q=btc&sel=al_1&workspace_id=ws_9&tab=risk&window=30d");
     fireEvent.click(screen.getByRole("button", { name: "Sandbox" }));
     expect(where()).toBe("/execution?q=btc&sel=al_1&workspace_id=ws_9&tab=risk&window=30d&env=sandbox");
+  });
+
+  it("D7: stage=foo, env=xx and window=24h are named once on the bar, the URL is rewritten, and Dismiss clears the notice", () => {
+    mount("/deployments/alphas?stage=foo&env=xx&window=24h&q=carry", null);
+    const notice = document.querySelector('[data-notice="invalid-params"]')!;
+    expect(notice.textContent).toContain("Ignored invalid URL parameters: env, window, stage.");
+    // Names only: the rejected values are not printed anywhere.
+    expect(document.body.textContent).not.toMatch(/foo|xx|24h/);
+    // The bar shows the defaults it fell back to, and the screen-local param survives the rewrite.
+    expect(screen.getByRole("button", { name: "Real-funded" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "90D" }).getAttribute("aria-pressed")).toBe("true");
+    expect(where()).toBe("/deployments/alphas?q=carry");
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(document.querySelector('[data-notice="invalid-params"]')).toBeNull();
+    expect(where()).toBe("/deployments/alphas?q=carry");
+  });
+
+  it("D7: a clean URL draws no notice", () => {
+    mount("/execution?env=paper&window=30d&q=x");
+    expect(document.querySelector('[data-notice="invalid-params"]')).toBeNull();
   });
 
   it("keeps the URL value live for Real-funded and drops a default from the URL", () => {

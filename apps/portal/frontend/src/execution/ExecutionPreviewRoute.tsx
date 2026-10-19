@@ -7,7 +7,7 @@
  * not published render a typed unavailable state instead.
  */
 import { Fragment, Suspense, lazy, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   CommandCenterSnapshotContainer,
 } from "./screens/profileContainers";
@@ -39,6 +39,9 @@ import { NewApprovalRequestContainer } from "./screens/NewApprovalRequest";
 import { WaiversRegisterContainer } from "./screens/WaiversRegister";
 import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
 import { EXECUTION_V2_SHELL, isV2Screen } from "./v2/flags";
+import { withContext, withoutParams, type ExecEnv } from "./v2/urlState";
+import { RouteFeaturesProvider } from "./v2/shell/routeFeatures";
+import type { EnvLock } from "./v2/shell/ContextBar";
 
 // UXM-07: the V2 context bar loads only when the build flag names it. The
 // condition reads the raw env string so the bundler folds it away when the
@@ -53,6 +56,13 @@ const V2ContextBar = import.meta.env.VITE_EXECUTION_V2_SCREENS
 const V2Fleet = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/fleet")) : null;
 // S1/S7: the three old stage lists redirect to the Fleet when its flag is on (own tiny chunk, same raw-env gate).
 const V2FleetStageRedirect = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/fleet/stageRedirect")) : null;
+// URL contract redirects (`/deployments/alphas/archived`, `/governance/exit-reviews`): own tiny chunk, same raw-env gate.
+const V2ArchivedRedirect = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("./v2/shell/redirects").then((m) => ({ default: m.ArchivedAlphasRedirect })))
+  : null;
+const V2ExitReviewsRedirect = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("./v2/shell/redirects").then((m) => ({ default: m.ExitReviewsRootRedirect })))
+  : null;
 const V2Cockpit = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/cockpit")) : null;
 const V2Operations = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/operations")) : null;
 const V2Overview = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/overview")) : null;
@@ -169,6 +179,13 @@ export function PreviewBanner({ profile, screenId, registryWord }: { profile: st
     </aside>
   );
 }
+const ACCESS_PATH = "/administration/profile-access";
+const APPROVALS_PATH = "/governance/approvals";
+/** The query Esc keeps when it leaves a path selection: all context (`workspace_id`, `from`, ...), no `sel` (a leftover one would reselect). */
+export function cockpitClearSearch(search: URLSearchParams | string): string {
+  const query = withoutParams(search, ["sel"]).toString();
+  return query === "" ? "" : `?${query}`;
+}
 // The V2 Blotter's orders read has no environment filter (Not published, FE-052): the bar says so instead of looking live.
 const BLOTTER_ENV_LOCK = { reason: "Not published (FE-052). The orders read has no environment filter." };
 // The V2 Blotter's orders read takes no window either (FE-025); the screen itself says what it covers
@@ -183,7 +200,56 @@ function windowLockFor(screenId: string): { reason: string; effective?: string }
   if (screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2Screen("blotter")) return BLOTTER_WINDOW_LOCK;
   return undefined;
 }
-export function PreviewFrame({ screenId, profile, children }: { screenId: string; profile?: string | null; children: ReactNode }) {
+/** What the route knows about the URL that decides whether the environment applies. */
+export interface EnvLockContext {
+  /** The screen mounted is the V2 Compare (`?view=compare` on the portfolios route, `compare` flag on). */
+  compare?: boolean;
+  /** The alpha route carries an alpha id (a 360); without one it is the Fleet list. */
+  hasAlphaId?: boolean;
+}
+export const PATH_ENV_REASON = "The path sets the environment.";
+// A deployment path names its own environment; the bar's buttons would change nothing there (audit D6).
+const PATH_ENV: Readonly<Record<string, ExecEnv>> = {
+  EXECUTION_PAPER_WORKBENCH_SCREEN: "paper",
+  EXECUTION_PAPER_WORKBENCH_VNM_SCREEN: "paper",
+  EXECUTION_SANDBOX_CERTIFICATION_SCREEN: "sandbox",
+  // Canary and Live Full are both the real-funded domain, whose URL value is `live`.
+  EXECUTION_CANARY_CONTROL_ROOM_SCREEN: "live",
+  EXECUTION_LIVE_FULL_OPERATIONS_SCREEN: "live",
+};
+// The V2 screens whose reads take no environment (audit D6): the bar says so instead of offering a switch that does nothing.
+const NO_ENV_REASON = "Not applied here. This screen's read has no environment filter.";
+const OPERATIONS_ENV_LOCK: EnvLock = { reason: "Operations has its own Environment filter below." };
+/**
+ * The environment lock for the context bar of one screen, or `undefined` when the bar's choice applies as it is.
+ * Pure: `isV2` is injected so the per-screen flags are testable without reloading the module graph.
+ */
+export function envLockFor(screenId: string, context: EnvLockContext = {}, isV2: (key: Parameters<typeof isV2Screen>[0]) => boolean = isV2Screen): EnvLock | undefined {
+  const pathEnv = PATH_ENV[screenId];
+  if (pathEnv !== undefined) return { reason: PATH_ENV_REASON, effective: pathEnv };
+  switch (screenId) {
+    case "EXECUTION_FULL_BLOTTER_SCREEN":
+      return isV2("blotter") ? BLOTTER_ENV_LOCK : undefined;
+    case "EXECUTION_COMMAND_CENTER_SCREEN":
+      return isV2("overview") ? { reason: NO_ENV_REASON } : undefined;
+    case "EXECUTION_ALPHA_FLEET_LIST_SCREEN":
+      return isV2("fleet") ? { reason: NO_ENV_REASON } : undefined;
+    case "EXECUTION_ALPHA_360_SCREEN":
+      // A 360 reads per environment; only the list route (no alpha id) is the Fleet.
+      return context.hasAlphaId !== true && isV2("fleet") ? { reason: NO_ENV_REASON } : undefined;
+    case "EXECUTION_PORTFOLIO_360_SCREEN":
+      return context.compare === true ? { reason: NO_ENV_REASON } : undefined;
+    case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
+      return isV2("admin") ? { reason: NO_ENV_REASON } : undefined;
+    case "EXECUTION_OPERATIONS_QUEUE_SCREEN":
+    case "EXECUTION_INCIDENT_DETAIL_SCREEN":
+      return isV2("ops") ? OPERATIONS_ENV_LOCK : undefined;
+    default:
+      return COCKPIT_SCREENS.has(screenId) && isV2("cockpit") ? { reason: NO_ENV_REASON } : undefined;
+  }
+}
+
+export function PreviewFrame({ screenId, profile, envLock, children }: { screenId: string; profile?: string | null; /** Overrides the lock `envLockFor` derives from the screen alone. */ envLock?: EnvLock | null; children: ReactNode }) {
   const sessionKey = retainedSessionKey(useSession().principal);
   // Bind before children's passive effects; never fetch or notify another component during render.
   useLayoutEffect(() => { ensureRetainedReview(sessionKey); }, [sessionKey]);
@@ -208,7 +274,7 @@ export function PreviewFrame({ screenId, profile, children }: { screenId: string
           amendment is codex's (consolidated request); shown in the inspector
           as drift, never used to pick a data source. */}
       <PreviewBanner profile="http" screenId={screenId} registryWord={profile} />
-      {V2ContextBar && EXECUTION_V2_SHELL ? <Suspense fallback={null}><V2ContextBar envLock={screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2Screen("blotter") ? BLOTTER_ENV_LOCK : undefined} windowLock={windowLockFor(screenId)} /></Suspense> : null}
+      {V2ContextBar && EXECUTION_V2_SHELL ? <Suspense fallback={null}><V2ContextBar envLock={envLock === undefined ? envLockFor(screenId) : envLock} windowLock={windowLockFor(screenId)} /></Suspense> : null}
       <Fragment key={refreshEpoch}>{children}</Fragment>
     </ExecutionSurface>
   );
@@ -339,11 +405,34 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
     return () => setEntityLabel(null);
   }, [entity, setEntityLabel]);
 
+  // `V2Compare` is only imported when the manifest is set; the flag then decides whether the screen is mounted.
+  const compareOn = V2Compare !== null && isV2Screen("compare");
+  const routeFeatures = useMemo(() => ({ compare: compareOn }), [compareOn]);
+
+  // Where the user's own links to My access go: the shared context travels with them (audit D4/D10).
+  const accessHref = withContext(ACCESS_PATH, search);
+
   // The four review routes keep their paths; with the cockpit on they open it with that request selected.
-  const cockpitAt = (id: string | null | undefined, kind: "r1" | "r2" | "exit" | "live"): ReactNode | null =>
-    V2Cockpit && isV2Screen("cockpit") && id
-      ? <Suspense fallback={null}><V2Cockpit api={api} workspaceId={routeWorkspaceId} pathSelection={{ id, kind }} onClearPathSelection={() => navigate("/governance/approvals")} /></Suspense>
-      : null;
+  const cockpitAt = (id: string | null | undefined, kind: "r1" | "r2" | "exit" | "live"): ReactNode | null => {
+    if (!(V2Cockpit && isV2Screen("cockpit") && id)) return null;
+    // The path and `?sel=` must not name two requests (audit D3): `sel` is the user's later choice, so it wins and
+    // the path is replaced by the list URL that carries it. Everything else in the query stays.
+    const sel = search.get("sel");
+    if (sel !== null && sel !== "" && sel !== id) {
+      return <Navigate replace to={{ pathname: APPROVALS_PATH, search: `?${search.toString()}` }} />;
+    }
+    return (
+      <Suspense fallback={null}>
+        <V2Cockpit
+          api={api}
+          workspaceId={routeWorkspaceId}
+          accessHref={accessHref}
+          pathSelection={{ id, kind }}
+          onClearPathSelection={() => navigate({ pathname: APPROVALS_PATH, search: cockpitClearSearch(search) })}
+        />
+      </Suspense>
+    );
+  };
 
   // The stage list routes (no deployment id) land on the V2 Fleet with the matching stage and environment; flag off keeps the V1 list.
   const stageListRedirect = (list: "paper" | "sandbox" | "live"): ReactNode | null =>
@@ -374,7 +463,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
     case "EXECUTION_APPROVAL_INBOX_SCREEN":
       // EL-V2-05: a row (and the rail's Open) navigates to the review its gate owns.
       content = V2Cockpit && isV2Screen("cockpit")
-        ? <Suspense fallback={null}><V2Cockpit api={api} workspaceId={routeWorkspaceId} /></Suspense>
+        ? <Suspense fallback={null}><V2Cockpit api={api} workspaceId={routeWorkspaceId} accessHref={accessHref} /></Suspense>
         : <ApprovalInboxContainer api={api} workspaceId={routeWorkspaceId} onOpenRequest={(id, gate) => navigate(reviewRouteFor({ id, gate }))} />;
       break;
     case "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN":
@@ -394,7 +483,10 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = cockpitAt(approvalId, "r2") ?? (approvalId ? <GateR2ReviewContainer key={`${approvalId}|${routeWorkspaceId ?? ""}`} api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />);
       break;
     case "EXECUTION_PAPER_EXIT_REVIEW_SCREEN":
-      content = cockpitAt(reviewId, "exit") ?? (<PaperExitReviewContainer key={`${reviewId ?? ""}|${routeWorkspaceId ?? ""}`} api={api} reviewId={reviewId} workspaceId={routeWorkspaceId} />);
+      // The root has no review to open: with the cockpit on it lands on the cockpit's exit-review view (decision A1).
+      content = reviewId === null && V2ExitReviewsRedirect && isV2Screen("cockpit")
+        ? <Suspense fallback={null}><V2ExitReviewsRedirect /></Suspense>
+        : cockpitAt(reviewId, "exit") ?? (<PaperExitReviewContainer key={`${reviewId ?? ""}|${routeWorkspaceId ?? ""}`} api={api} reviewId={reviewId} workspaceId={routeWorkspaceId} />);
       break;
     case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN":
       content = deploymentId ? <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} variant="vnm" /> : <MissingRouteId what="deployment" />;
@@ -422,7 +514,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
       content = V2Blotter && isV2Screen("blotter")
-        ? <Suspense fallback={null}><V2Blotter api={api} /></Suspense>
+        ? <Suspense fallback={null}><V2Blotter api={api} accessHref={accessHref} /></Suspense>
         : <FullBlotterRichContainer api={api} />;
       break;
     case "EXECUTION_ALPHA_FLEET_LIST_SCREEN":
@@ -431,7 +523,10 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
     case "EXECUTION_ALPHA_360_SCREEN":
       // The feature's canonical route (/deployments/alphas, no alphaId) is the
       // fleet list — the entry screen of WF 2a; a row opens the alpha's 360.
-      content = params.alphaId
+      // `archived` is reserved (it is the Fleet's lens, not an alpha): with the Fleet on, the old path lands on `?tab=archived`.
+      content = params.alphaId === "archived" && V2ArchivedRedirect && isV2Screen("fleet")
+        ? <Suspense fallback={null}><V2ArchivedRedirect /></Suspense>
+        : params.alphaId
         ? V2Alpha && isV2Screen("alpha")
           ? <Suspense fallback={null}><V2Alpha api={api} alphaId={params.alphaId} workspaceId={routeWorkspaceId} /></Suspense>
           : <AlphaThreeSixtyRichContainer api={api} alphaId={params.alphaId} />
@@ -442,14 +537,15 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       // register; /:portfolioId opens that portfolio's 360. The default derives
       // from data, never from a canonical-cast constant (P4-A / BR-EX-76).
       // UXM-07: Compare has no registry row yet (rev 7 is Codex's), so it rides the portfolios route as ?view=compare.
-      content = V2Compare && isV2Screen("compare") && search.get("view") === "compare"
+      // The Portfolios mounts sit in RouteFeaturesProvider so they can leave the Compare link out when `compare` is off (audit M2).
+      content = V2Compare && compareOn && search.get("view") === "compare"
         ? <Suspense fallback={null}><V2Compare api={api} portfolioId={params.portfolioId} /></Suspense>
         : params.portfolioId
           ? V2Portfolio && isV2Screen("portfolios")
-            ? <Suspense fallback={null}><V2Portfolio api={api} portfolioId={params.portfolioId} /></Suspense>
+            ? <RouteFeaturesProvider value={routeFeatures}><Suspense fallback={null}><V2Portfolio api={api} portfolioId={params.portfolioId} /></Suspense></RouteFeaturesProvider>
             : <PortfolioThreeSixtyRichContainer api={api} portfolioId={params.portfolioId} />
           : V2PortfolioList && isV2Screen("portfolios")
-            ? <Suspense fallback={null}><V2PortfolioList api={api} /></Suspense>
+            ? <RouteFeaturesProvider value={routeFeatures}><Suspense fallback={null}><V2PortfolioList api={api} /></Suspense></RouteFeaturesProvider>
             : <PortfolioListRichContainer api={api} />;
       break;
     case "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN":
@@ -473,7 +569,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       break;
     case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
       content = V2Admin && isV2Screen("admin")
-        ? <Suspense fallback={null}><V2Admin api={api} workspaceId={routeWorkspaceId} /></Suspense>
+        ? <Suspense fallback={null}><V2Admin api={api} workspaceId={routeWorkspaceId} accessHref={accessHref} portfoliosHref="/deployments/portfolios" operationsHref="/execution/operations" /></Suspense>
         : <AdminCatalogueContainer api={api} />;
       break;
     default:
@@ -481,7 +577,11 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
   }
 
   return (
-    <PreviewFrame screenId={screenId} profile={profile}>
+    <PreviewFrame
+      screenId={screenId}
+      profile={profile}
+      envLock={envLockFor(screenId, { compare: compareOn && search.get("view") === "compare", hasAlphaId: Boolean(params.alphaId) }) ?? null}
+    >
       {/*
         * The server's own word about this screen, above the screen. It is a
         * note, not a replacement: a screen the server declares unserved may

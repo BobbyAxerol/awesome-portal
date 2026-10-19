@@ -107,6 +107,33 @@ describe("applyV2Nav presets", () => {
     expect(ids.indexOf("execution")).toBeLessThan(ids.indexOf("research"));
   });
 
+  it("FE-039: a feature that carries navigation.scoped_v2_replacement is dropped from the rail and the Go to list", () => {
+    const stub = groups.flatMap((entry) => entry.features).find((feature) => feature.id === "APPROVALS");
+    // The fixture is registry rev 7: the old stub names its replacement.
+    expect(stub?.navigation.scoped_v2_replacement).toEqual({ read_mode: "SCOPED_V2", feature_id: "EXECUTION_APPROVALS" });
+    const items = applyV2Nav(groups, V2_ROLE_PRESETS.manager).flatMap((group) => group.items);
+    expect(items.map((item) => item.featureId)).not.toContain("APPROVALS");
+    expect(items.filter((item) => item.label === "Approvals").map((item) => item.route)).toEqual(["/governance/approvals"]);
+    expect(goToEntries(groups, V2_ROLE_PRESETS.manager).map((entry) => entry.id)).not.toContain("go:APPROVALS");
+    // Even a caller with nothing: the stub never comes back as a substitute for the scoped entry.
+    expect(applyV2Nav(groups, new Set()).flatMap((group) => group.items).map((item) => item.featureId)).not.toContain("APPROVALS");
+  });
+
+  it("a null scoped_v2_replacement does not hide anything", () => {
+    const patched = groups.map((entry) => ({
+      ...entry,
+      features: entry.features.map((feature) => feature.id === "APPROVALS" ? { ...feature, navigation: { ...feature.navigation, scoped_v2_replacement: null } } : feature),
+    }));
+    expect(applyV2Nav(patched, new Set()).flatMap((group) => group.items).map((item) => item.featureId)).toContain("APPROVALS");
+  });
+
+  it("carriesContext is true for the Execution entries and Profile & Access, false for Research and Planning", () => {
+    const items = applyV2Nav(groups, V2_ROLE_PRESETS.manager).flatMap((group) => group.items);
+    const flag = (id: string) => items.find((item) => item.featureId === id)?.carriesContext;
+    for (const id of ["EXECUTION_COMMAND_CENTER", "EXECUTION_PORTFOLIOS", "EXECUTION_ALPHA_FLEET", "EXECUTION_APPROVALS", "PROFILE_ACCESS"]) expect(flag(id), id).toBe(true);
+    for (const id of ["QUANTBT_RESEARCH", "PLANNING", "PORTAL_MAP", "ALPHA_POOL"]) expect(flag(id), id).toBe(false);
+  });
+
   it("keeps the registry feature on each item so icon and route stay registry-owned", () => {
     const item = applyV2Nav(groups, V2_ROLE_PRESETS.manager)
       .flatMap((group) => group.items)

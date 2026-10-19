@@ -6,10 +6,13 @@ import { describe, expect, it } from "vitest";
 import {
   CONTEXT_KEYS,
   ENV_LABEL,
+  RAIL_CONTEXT_KEYS,
+  isInternalPath,
   parseUrlParams,
   serializeUrlParams,
   useExecUrlState,
   withContext,
+  withoutParams,
   type ExecUrlParams,
 } from "./urlState";
 
@@ -181,6 +184,52 @@ describe("withContext", () => {
     expect(withContext("/x", new URLSearchParams("env=paper"))).toBe("/x?env=paper");
     expect(withContext("https://example.test/a?b=1", current)).toBe("https://example.test/a?b=1");
     expect(withContext("//example.test/a", current)).toBe("//example.test/a");
+  });
+
+  // L4: only an internal path (one leading slash) is ever decorated.
+  it.each([
+    "https://example.test/a",
+    "http://example.test/a?b=1#h",
+    "//example.test/a",
+    "/\\example.test/a",
+    "javascript:alert(1)",
+    "mailto:ops@example.test",
+    "data:text/html,x",
+    "tel:+84123",
+    "foo/bar",
+    "?tab=risk",
+    "#ledger",
+    "",
+    " /x",
+  ])("returns %j unchanged, with no context", (href) => {
+    expect(withContext(href, current)).toBe(href);
+  });
+
+  it("does not change what a same-origin path gets (query, hash and context exactly as before)", () => {
+    expect(withContext("/x", current)).toBe("/x?env=paper&window=30d&ccy=USDT&from=alpha_7&workspace_id=ws_1");
+    expect(withContext("/x/y?tab=risk#h", "workspace_id=ws_1")).toBe("/x/y?tab=risk&workspace_id=ws_1#h");
+    expect(withContext("/", "workspace_id=ws_1")).toBe("/?workspace_id=ws_1");
+  });
+
+  it("isInternalPath: one leading slash, not protocol-relative", () => {
+    expect(isInternalPath("/a")).toBe(true);
+    expect(isInternalPath("/")).toBe(true);
+    for (const href of ["//a", "/\\a", "a", "https://a", "?q", "#h", ""]) expect(isInternalPath(href), href).toBe(false);
+  });
+
+  it("`keys` narrows what is carried (the rail leaves `from` out); an own value still wins", () => {
+    expect(withContext("/x", current, RAIL_CONTEXT_KEYS)).toBe("/x?env=paper&window=30d&ccy=USDT&workspace_id=ws_1");
+    expect(RAIL_CONTEXT_KEYS).not.toContain("from");
+    expect(withContext("/x?env=sandbox", current, RAIL_CONTEXT_KEYS)).toBe("/x?env=sandbox&window=30d&ccy=USDT&workspace_id=ws_1");
+    expect(withContext("/x", current, [])).toBe("/x");
+  });
+});
+
+describe("withoutParams", () => {
+  it("removes the named keys (all repeats) and keeps the rest in order", () => {
+    expect(withoutParams("workspace_id=ws_1&sel=a&from=x&sel=b", ["sel"]).toString()).toBe("workspace_id=ws_1&from=x");
+    expect(withoutParams(new URLSearchParams("a=1"), ["sel"]).toString()).toBe("a=1");
+    expect(withoutParams("sel=a", ["sel"]).toString()).toBe("");
   });
 });
 

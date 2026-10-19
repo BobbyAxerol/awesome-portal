@@ -26,6 +26,7 @@ import {
 } from "../execution/previewRegistry";
 import { screenDeliveryProfile, screenDeliveryPolicy } from "../execution/profile";
 import { isV2Screen } from "../execution/v2/flags";
+import { withContext } from "../execution/v2/urlState";
 
 /**
  * Heavy modules are loaded when their route is entered, not before.
@@ -73,10 +74,11 @@ const ExecutionPreviewRoute = lazy(() =>
  * on a second tab. Off (or the key absent from the manifest): the V1 screen,
  * unchanged, including its typed denial for a non-owner.
  */
-function UsersEntry() {
+export function UsersEntry() {
   const [search] = useSearchParams();
   if (V2Users === null || !isV2Screen("users") || search.get("view") === "legacy") return <UsersAccess />;
-  return <V2Users legacyHref={`${ADMIN_USERS_ROUTE}?view=legacy`} />;
+  // D9/D10: a denied roster links to My access, keeping the shared context (workspace_id, env, ...).
+  return <V2Users legacyHref={`${ADMIN_USERS_ROUTE}?view=legacy`} accessHref={withContext(ADMIN_PROFILE_ACCESS_ROUTE, search)} />;
 }
 
 function ProfileAccessEntry() {

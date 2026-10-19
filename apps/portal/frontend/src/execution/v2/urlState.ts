@@ -173,12 +173,28 @@ export function serializeUrlParams(patch: Partial<ExecUrlParams>, base: URLSearc
 }
 
 /**
- * Carries the context params of `current` onto an internal link. The link's own
- * values win; each context key ends up at most once; the hash is kept. External
- * hrefs are returned as they are.
+ * Context the left rail carries: the same as the command bar minus `from`. `from` is a breadcrumb origin
+ * for one hop, not context to follow into an unrelated screen (audit L3).
  */
-export function withContext(href: string, current: URLSearchParams | string): string {
-  if (/^([a-z][a-z0-9+.-]*:|\/\/)/i.test(href)) return href;
+export const RAIL_CONTEXT_KEYS = ["env", "window", "ccy", "workspace_id"] as const satisfies readonly (typeof CONTEXT_KEYS)[number][];
+
+/**
+ * True for an app-internal path: starts with one `/` and is not protocol-relative (`//host`, `/\host`).
+ * Anything else (absolute URL, `mailto:`, `javascript:`, bare or query-only text) is not ours to decorate.
+ */
+export function isInternalPath(href: string): boolean {
+  return href.startsWith("/") && !href.startsWith("//") && !href.startsWith("/\\");
+}
+
+/**
+ * Carries the context params of `current` onto an internal link. The link's own
+ * values win; each context key ends up at most once; the hash is kept. Only an
+ * href that is an internal path (`isInternalPath`) is touched: absolute URLs,
+ * other schemes, protocol-relative and relative hrefs come back unchanged, with
+ * no context. `keys` narrows what is carried (the rail leaves `from` out).
+ */
+export function withContext(href: string, current: URLSearchParams | string, keys: readonly (typeof CONTEXT_KEYS)[number][] = CONTEXT_KEYS): string {
+  if (!isInternalPath(href)) return href;
   const hashAt = href.indexOf("#");
   const hash = hashAt < 0 ? "" : href.slice(hashAt);
   const rest = hashAt < 0 ? href : href.slice(0, hashAt);
@@ -187,12 +203,19 @@ export function withContext(href: string, current: URLSearchParams | string): st
   const own = new URLSearchParams(queryAt < 0 ? "" : rest.slice(queryAt + 1));
 
   const { value } = parseUrlParams(current);
-  const carried = serializeUrlParams(Object.fromEntries(CONTEXT_KEYS.map((key) => [key, value[key]])));
+  const carried = serializeUrlParams(Object.fromEntries(keys.map((key) => [key, value[key]])));
   for (const [key, text] of carried) if (!own.has(key)) own.set(key, text);
   for (const key of CONTEXT_KEYS) if (own.getAll(key).length > 1) own.set(key, own.get(key) ?? "");
 
   const query = own.toString();
   return `${path}${query === "" ? "" : `?${query}`}${hash}`;
+}
+
+/** `search` without the named keys; every other param is kept in order. */
+export function withoutParams(search: URLSearchParams | string, drop: readonly string[]): URLSearchParams {
+  const next = new URLSearchParams(asParams(search));
+  for (const key of drop) next.delete(key);
+  return next;
 }
 
 export interface ExecUrlState extends ParsedUrlState {

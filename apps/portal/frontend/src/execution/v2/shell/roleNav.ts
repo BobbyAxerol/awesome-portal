@@ -108,6 +108,11 @@ export interface V2NavItem {
   route: string;
   /** The registry entry, so the renderer can still read icon and description. */
   feature: PortalFeatureDefinition;
+  /**
+   * True for the Execution screens and Profile & Access: the rail carries the shared context onto them.
+   * Research and Planning entries stay plain, so their URLs are exactly what they were.
+   */
+  carriesContext: boolean;
 }
 
 export interface V2NavGroup {
@@ -119,7 +124,7 @@ export interface V2NavGroup {
 export const EXECUTION_NAV_GROUP_ID = "execution";
 
 function toItem(feature: PortalFeatureDefinition, label: string): V2NavItem {
-  return { featureId: feature.id, label, route: feature.canonical_route, feature };
+  return { featureId: feature.id, label, route: feature.canonical_route, feature, carriesContext: RULE_BY_FEATURE.has(feature.id) };
 }
 
 /**
@@ -137,6 +142,9 @@ export function applyV2Nav(groups: readonly NavGroup[], capabilities: ReadonlySe
     const kept: V2NavItem[] = [];
     let contributed = false;
     for (const feature of features) {
+      // FE-039: the registry says this entry has a scoped V2 replacement (the old APPROVALS stub next to
+      // EXECUTION_APPROVALS). With the V2 nav on, the replacement is the one Approvals the rail lists.
+      if (feature.navigation.scoped_v2_replacement != null) continue;
       const rule = RULE_BY_FEATURE.get(feature.id);
       if (rule === undefined) {
         kept.push(toItem(feature, feature.label));

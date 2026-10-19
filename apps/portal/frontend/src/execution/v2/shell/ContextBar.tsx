@@ -72,9 +72,20 @@ export interface ContextBarProps {
   scope?: string | null;
   /** Plain anchor target for the "My access" link beside a locked control (D9). */
   accessHref?: string;
+  /** URL params that were present but rejected (names only; D7). Empty or absent draws nothing. */
+  invalid?: readonly string[];
+  /** Dismisses the invalid-params notice. */
+  onDismissInvalid?(): void;
 }
 
-export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowLock, envLock, scope, accessHref }: ContextBarProps) {
+/** One line naming the rejected params; the values are never printed (they came from a URL anyone can craft). */
+export function invalidNotice(invalid: readonly string[]): string {
+  const names = invalid.slice(0, 6).join(", ");
+  const more = invalid.length > 6 ? ` and ${invalid.length - 6} more` : "";
+  return `Ignored invalid URL ${invalid.length === 1 ? "parameter" : "parameters"}: ${names}${more}. Defaults are shown.`;
+}
+
+export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowLock, envLock, scope, accessHref, invalid, onDismissInvalid }: ContextBarProps) {
   const reasonId = useId();
   const envReasonId = useId();
   const locked = windowLock !== undefined && windowLock !== null;
@@ -135,6 +146,17 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
       ) : null}
       {ccy ? <span className="exec-ctxbar-chip">{ccy} · one basis</span> : null}
       {scope ? <span className="exec-ctxbar-chip">{scope}</span> : null}
+      {invalid && invalid.length > 0 ? (
+        <span role="status" className="exec-ctxbar-reason" data-notice="invalid-params">
+          {invalidNotice(invalid)}
+          {onDismissInvalid ? (
+            <>
+              {" "}
+              <button type="button" className="exec-ctxbar-chip" onClick={onDismissInvalid}>Dismiss</button>
+            </>
+          ) : null}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -148,11 +170,11 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
  * the URL's `ccy` as it was.
  */
 export function ConnectedContextBar(props: Omit<ContextBarProps, "env" | "window" | "ccy" | "onChange">) {
-  const { value, set } = useExecUrlState();
+  const { value, set, invalid, clearInvalid } = useExecUrlState();
   const facts = useContextFactsValue();
   // No read accepts a window yet (FE-025), so the control starts locked; a caller that knows better passes `windowLock={null}`.
   const windowLock = props.windowLock === undefined ? { reason: WINDOW_NOT_SERVED_REASON } : props.windowLock;
   const ccy = facts.ccy !== undefined ? facts.ccy : value.ccy;
   const scope = props.scope ?? facts.scope ?? null;
-  return <ContextBar {...props} scope={scope} windowLock={windowLock} env={value.env} window={value.window} ccy={ccy} onChange={(patch) => set(patch)} />;
+  return <ContextBar {...props} scope={scope} windowLock={windowLock} env={value.env} window={value.window} ccy={ccy} onChange={(patch) => set(patch)} invalid={invalid} onDismissInvalid={clearInvalid} />;
 }

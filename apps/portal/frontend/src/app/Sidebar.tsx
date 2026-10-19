@@ -5,7 +5,7 @@
  * routes, icons and maturity all come from `portal.registry.v1`, so a new
  * commissioned module appears by adding a registry entry (U03 exit gate).
  */
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 import { MaturityBadge } from "../components/semantic";
 import { maturityPresentation, maturityStateName } from "../lib/portalState";
@@ -13,29 +13,77 @@ import {
   EXECUTION_PREVIEW_ENABLED,
   EXECUTION_PREVIEW_FEATURE_DEFAULTS,
 } from "../execution/previewRegistry";
-import type { PortalRegistryDocument } from "../portal/contracts";
+import type { PortalFeatureDefinition, PortalRegistryDocument } from "../portal/contracts";
 import { sidebarGroups, type NavOptions } from "../portal/navigation";
+import { EXECUTION_V2_SHELL } from "../execution/v2/flags";
+import { applyV2Nav } from "../execution/v2/shell/roleNav";
+import { RAIL_CONTEXT_KEYS, withContext } from "../execution/v2/urlState";
 import { iconFor } from "./icons";
 import { usePresentationChrome } from "./presentation";
+
+interface RailItem {
+  feature: PortalFeatureDefinition;
+  label: string;
+  to: string;
+}
+interface RailGroup {
+  id: string;
+  label: string;
+  items: RailItem[];
+}
+
+/**
+ * What the rail lists. Flag off: the registry's groups, untouched. Shell flag on (UXM-07 D1): the same
+ * groups through the V2 overlay (V2 labels and order, capability-filtered, the old APPROVALS stub dropped
+ * for its scoped replacement), and Execution links carry the shared context like the command bar does.
+ */
+export function railGroups(
+  registry: PortalRegistryDocument,
+  options: NavOptions,
+  v2Shell: boolean,
+  search: string,
+): RailGroup[] {
+  const base = sidebarGroups(registry, options);
+  if (!v2Shell) {
+    return base.map(({ group, features }) => ({
+      id: group.id,
+      label: group.label,
+      items: features.map((feature) => ({ feature, label: feature.label, to: feature.canonical_route })),
+    }));
+  }
+  return applyV2Nav(base, new Set(options.capabilities ?? [])).map((group) => ({
+    id: group.id,
+    label: group.label,
+    items: group.items.map((item) => ({
+      feature: item.feature,
+      label: item.label,
+      to: item.carriesContext ? withContext(item.route, search, RAIL_CONTEXT_KEYS) : item.route,
+    })),
+  }));
+}
 
 export function Sidebar({
   registry,
   options,
   collapsed,
   onNavigate,
+  v2Shell = EXECUTION_V2_SHELL,
 }: {
   registry: PortalRegistryDocument;
   options: NavOptions;
   collapsed: boolean;
   /** Called after a nav click so the mobile drawer can close itself. */
   onNavigate?: () => void;
+  /** The V2 shell flag; a prop only so tests can drive both states without reloading the module graph. */
+  v2Shell?: boolean;
 }) {
-  const groups = sidebarGroups(registry, options);
+  const { search } = useLocation();
+  const groups = railGroups(registry, options, v2Shell, search);
   const badge = usePresentationChrome()?.chrome.navBadge ?? null;
 
   return (
     <nav className="portal-sidebar" aria-label="Primary navigation" data-collapsed={collapsed}>
-      {groups.map(({ group, features }) => (
+      {groups.map((group) => (
         <div key={group.id} className="portal-navgroup">
           {collapsed ? (
             <div className="portal-navgroup-rule" aria-hidden="true" />
@@ -43,7 +91,7 @@ export function Sidebar({
             <div className="portal-navgroup-label">{group.label}</div>
           )}
           <ul>
-            {features.map((feature) => {
+            {group.items.map(({ feature, label, to }) => {
               const presentation = maturityPresentation(feature.maturity);
               const Icon = iconFor(feature.navigation.icon_key);
               // A route the user can open RIGHT NOW as a fixture preview must
@@ -61,23 +109,23 @@ export function Sidebar({
               return (
                 <li key={feature.id}>
                   <NavLink
-                    to={feature.canonical_route}
+                    to={to}
                     end={feature.canonical_route === "/"}
                     className={({ isActive }) => `portal-navitem${isActive ? " portal-navitem-active" : ""}`}
                     style={{ opacity: previewMounted ? 1 : presentation.opacity }}
-                    title={collapsed ? `${feature.label} — ${feature.description}` : feature.description}
+                    title={collapsed ? `${label} — ${feature.description}` : feature.description}
                     data-maturity={feature.maturity}
                     aria-label={
-                      collapsed || stateName === null ? undefined : `${feature.label}, ${stateName}`
+                      collapsed || stateName === null ? undefined : `${label}, ${stateName}`
                     }
                     onClick={onNavigate}
                   >
                     <Icon size={15} aria-hidden="true" className="shrink-0" />
                     {collapsed ? (
-                      <span className="sr-only">{feature.label}</span>
+                      <span className="sr-only">{label}</span>
                     ) : (
                       <>
-                        <span className="portal-navitem-label">{feature.label}</span>
+                        <span className="portal-navitem-label">{label}</span>
                         {badge && badge.route === feature.canonical_route && badge.count > 0 ? (
                           <span className="portal-navbadge" data-tone={badge.tone}>{badge.count}</span>
                         ) : null}
