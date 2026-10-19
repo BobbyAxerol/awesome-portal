@@ -34,10 +34,10 @@
     },
     {
       "id": "DEBT-UXM07-008",
-      "title": "HIFI fidelity rows not fixed (class B, MINOR/uncertain)",
-      "where": "hifi-comparison-2026-10-18.md section 'Chua lam'; per-row ids in hifi-review-A/B/C",
-      "consequence": "visual polish only; no data or authority effect",
-      "owner": "Claude (rows without a Codex/owner dependency); owner/Codex for P-B7, Compare Partitions panel, EquityPanel Y labels (exact-decimal display rule)"
+      "title": "HIFI fidelity rows not fixed after pass 2 (class B, MINOR/uncertain)",
+      "where": "hifi-comparison-2026-10-18.md section 'Pass 2 (2026-10-19)': Chua lam",
+      "consequence": "visual polish only; no data or authority effect. Pass 2 (commits 9f6b5dcb, 4c65f2e4, b7bd9d78) fixed about 40 more rows; remaining: T-B5/T-B9 (Y labels keep exact decimals, EquityPanel x-ticks/frame at 390), L-B2 (repeated Not published cards in JourneySpine), L-B7 (FE-029 data), R-B5 autoscale (V1 chart), P-B6, OP-5 (windowLock from ExecutionPreviewRoute), OV-6 (SectionPanel title is string-only), CK-2 (no font role), A360-B8 Open orders (no source), USR-B2 per-user Access link (no view), USR-B5 (kept)",
+      "owner": "Claude for rows with no dependency; owner/Codex for exact-decimal Y labels"
     },
     {
       "id": "DEBT-UXM07-009",
@@ -52,6 +52,20 @@
       "where": "v2/screens/operations/incident.test.tsx 'MITIGATED marks Open done...'",
       "evidence": "fails in the wide run, passes alone (16/16) twice",
       "owner": "Claude: find the timing dependency when the test lane is next touched"
+    },
+    {
+      "id": "DEBT-UXM07-011",
+      "title": "Readers for self-eligibility/self-navigation/currency exist but are not wired",
+      "where": "v2/readers/accessSelf.ts, commandCurrency.ts (commit 83854d9d); roleNav still uses provisional V2_CAPABILITY names",
+      "consequence": "FE-037 stays provisional until Codex answers Q1-Q5 in consumer-review-self-contracts-2026-10-19.md; wiring plan W1-W8 is documented, not built. Navigation projection must stay menu-only (RK-1).",
+      "owner": "Codex (Q1-Q5) then Claude (W1-W8)"
+    },
+    {
+      "id": "DEBT-UXM07-012",
+      "title": "Small shared-layer follow-ups from pass 2",
+      "where": "Compare Series head at 390px squeezes the SERIES title (blocks.css PanelHead); Drawer auto-focus when admin auto-opens the first ready row; Blotter Newer/Older DOM order differs from visual order at <=660px",
+      "consequence": "layout/a11y polish; no data effect",
+      "owner": "Claude"
     }
   ],
   "closed": [

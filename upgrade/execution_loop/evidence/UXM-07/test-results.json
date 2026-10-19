@@ -178,5 +178,36 @@
     "contracts_generators": "operation-reader and operational-current-reader --check exit 0; snapshot regenerated (479 files)",
     "vitest_wide": "23,323 pass / 2 expected-fail / red: r2Ledger (Codex) + one load-flaky incident test (passes alone)",
     "adapted": "governance parent readers + cockpit to the enriched contracts; registry revision 7 pinned"
+  },
+  "hifi_pass2": {
+    "date": "2026-10-19",
+    "commits": [
+      "83854d9d",
+      "9f6b5dcb",
+      "4c65f2e4",
+      "b7bd9d78"
+    ],
+    "gates": {
+      "tsc": {
+        "cmd": "npx tsc --noEmit -p tsconfig.json",
+        "exit": 0
+      },
+      "vitest_wide": {
+        "cmd": "vitest run src/execution src/styles src/app src/portal e2e",
+        "files": "216 pass / 1 fail (217)",
+        "tests": "31297 pass, 1 fail, 4 expected-fail, 1 skipped",
+        "red": "r2Ledger.test.ts:117 governance_approval_decision_inbox = DEBT-UXM07-009 (Codex)",
+        "expected_fail": "SE-1a, SE-1b, CC-1, CC-2 (Codex-side gaps pinned)"
+      },
+      "playwright_v2": {
+        "cmd": "playwright test e2e/execution-v2-s1.spec.ts --project=chromium-v2",
+        "result": "34 passed, 0 failed (17 routes x 1440/390, fresh dist-v2 build)"
+      }
+    },
+    "not_run": [
+      "pinned-image visual suite (re-run at the R2 step)",
+      "full pre-commit hook (re-run at the R2 step)",
+      "Compare/Columns menu at 390px was checked only by Playwright overflow assertions, not by eye"
+    ]
   }
 }

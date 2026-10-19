@@ -33,3 +33,6 @@ Ghi chú không phải yêu cầu: `--f-attention` chọn hue cam (#ffa51f); đ�
 
 ## Nợ liên quan, không thuộc Codex
 DEBT-UXM07-001 (V1 `.exec-gov .exec-btn-apply` tương phản 2.35:1) — xem [debt-register.json](debt-register.json); sửa một dòng nhưng đổi pixel V1 nên cần Bobby/Codex quyết baseline.
+
+## Từ F8c (2026-10-19) — FE-057..065 (FE-064 để trống cho một dòng Board)
+Locator và đề xuất nhỏ nhất trong `consumer-review-self-contracts-2026-10-19.md` §6 và §9 (câu hỏi Q1–Q6). Trạng thái: OPEN, chưa gửi. FE-037 và FE-038 vẫn chờ câu trả lời Q1/Q4; D4 (stage vắng trong `stage_counts` là 0 hay chưa publish) vẫn mở, FE đang giữ cách hiểu thận trọng "Not available".

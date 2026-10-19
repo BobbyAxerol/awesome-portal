@@ -115,3 +115,11 @@ Compare đặt ở `?view=compare` trên route Portfolios; Users chỉ đọc (g
 
 ## So sánh HIFI và sửa độ trung thực (2026-10-18/19)
 Chi tiết: [hifi-comparison-2026-10-18.md](hifi-comparison-2026-10-18.md) và ba bảng review A/B/C. Kết quả: 17 sai khác MAJOR (16 đã sửa, 1 là dữ liệu vắng → FE-056), ~70/104 MINOR đã sửa, 84 dòng dữ liệu vắng đều có mã FE, 54 dòng có chủ ý. Sau sửa: vitest 17.547 pass/0 đỏ, trình duyệt V2 34/34, visual pinned-image 377 pass và 15 lỗi **đúng bằng** tập đã đỏ trên bản sạch của Codex (DEBT-UXM07-007). Commit: `5748ccdb` (lớp dùng chung), `18744bc4` (A), `1b17d791` (B), `1b0417bc` (C).
+
+## Fidelity lượt 2 và F8c (2026-10-19)
+Hai lượt review bị phản hồi là còn yếu (hai `it.fails`, khoảng 34 dòng MINOR, ba contract mới chưa review) nên làm thêm một lượt: ba gói sửa theo cụm màn và một gói review + reader. Mỗi gói tự dựng, chụp trước/sau trên cổng riêng.
+- **F8c** `83854d9d`: reader `accessSelf.ts` (eligibility + navigation) và `commandCurrency.ts` (CommandStatus/PendingControlStatus `currency`), 7.946 test, 4 expected-fail ghim lỗ phía Codex. Đề xuất: eligibility ACCEPTED, navigation CHANGES_REQUESTED (không BLOCKER), currency ACCEPTED. Chưa nối vào màn hình hay roleNav. Chi tiết: `consumer-review-self-contracts-2026-10-19.md`.
+- **C** `9f6b5dcb` Access/Accounts/Blotter/Admin/Users, kèm AE-2 phía FE (id có bidi/zero-width/điều khiển bị từ chối).
+- **A** `4c65f2e4` Fleet/Operations/Incident/Cockpit, kèm D4 phía FE (stage vắng trong `stage_counts` in "Not available", không in 0).
+- **B** `b7bd9d78` Portfolios/Compare/Alpha 360 (đầu bảng sắp xếp được, Partitions thu một dòng, nến xanh).
+- Evidence: tsc 0; vitest rộng 31.297 pass, 1 đỏ là DEBT-UXM07-009 (Codex), 4 expected-fail của Codex; trình duyệt V2 34/34. Visual pinned-image và hook đầy đủ chạy ở bước R2 kế tiếp. Còn lại: DEBT-UXM07-008, -011, -012.

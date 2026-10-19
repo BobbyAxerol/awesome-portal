@@ -29,3 +29,7 @@ Lỗi chung đã sửa: nhãn mono in hoa (SYS-1), nhịp dọc 24px (SYS-2), KP
 
 ## Phát hiện cho Codex
 FE-056: `/operator-tasks` chỉ có `meta` là tham chiếu nguồn ("cli/__main__.py:1570"); HIFI cần mô tả một câu, tên hiển thị và nhãn scope cho từng tác vụ. ContextBar `envLock` đã thêm vì Blotter không có bộ lọc môi trường (FE-052).
+
+## Pass 2 (2026-10-19)
+Sửa thêm khoảng 40 dòng (commit `9f6b5dcb` C, `4c65f2e4` A, `b7bd9d78` B). Đã làm: FL-7/FL-8 (Columns, chip lọc theo URL), OP-6/7/9, INC-3/7/8, CK-3/4/5/7, P-B3/B4, K-B4/B5, T-B5 (Export), T-B6, L-B6/B10, R-B5 (nến xanh), ACC-B1/B3, A360-B8, BLT-B3/B4/B6/B7, ADM-B2..B4, USR-B2, ACS-B2..B4. Quyết định của Bobby áp dụng: giữ "Owner"; Partitions thu một dòng; giữ Context bar và nói rõ trên màn Portfolios.
+Còn lại (DEBT-UXM07-008, -012): nhãn trục Y giữ số thập phân đầy đủ, EquityPanel x-tick/khung ở 390px, JourneySpine lặp "Not published", cột Open orders (không có nguồn), OP-5 windowLock cần ExecutionPreviewRoute, OV-6 SectionPanel nhận title chuỗi, link Access theo người dùng (không có view), tiêu đề SERIES của Compare bị ép ở 390px.
