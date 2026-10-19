@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { alphaFleet } from "../../../../../e2e/bffDouble";
 import type { AlphaFleetQuery, ExecutionApi } from "../../../api/ports";
 import { readAlphaFleet } from "../../../api/profileRead";
+import { PAGE_LIMIT } from "./fleetModel";
 import FleetScreen, { FLEET_SCREEN_KEY } from "./index";
 
 afterEach(cleanup);
@@ -150,18 +151,16 @@ describe("identity table", () => {
     expect(nodes).not.toContain("done");
   });
 
-  it("a deep link to Board or Map explains itself and offers the Table; it asks nothing", async () => {
+  it("a deep link to Map explains itself and offers the Table; it asks nothing", async () => {
     const { api, getAlphaFleet } = makeApi();
-    mount(api, "/execution/fleet?view=board");
-    expect(screen.getAllByText("Board").length).toBeGreaterThan(1);
-    expect(screen.getAllByText("Not published (FE-012, FE-027)").length).toBeGreaterThan(0);
+    mount(api, "/execution/fleet?view=map");
+    expect(screen.getAllByText("Map").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("Not published (FE-035)").length).toBeGreaterThan(0);
     expect(getAlphaFleet).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Map" }).hasAttribute("disabled")).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Back to Table" }));
     await loaded();
     expect(where()).toBe("/execution/fleet");
-    cleanup();
-    mount(api, "/execution/fleet?view=map");
-    expect(screen.getAllByText("Not published (FE-035)").length).toBeGreaterThan(0);
   });
 });
 
@@ -732,5 +731,272 @@ describe("states", () => {
     mount(api);
     expect(await screen.findByText(/UNREADABLE_ALPHA_FLEET/)).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+});
+
+/* ── Board view (view=board): the same loaded rows, one column per stage ── */
+describe("board view", () => {
+  const board = () => screen.findByRole("group", { name: "Alpha fleet board" });
+  const lane = (name: string) => {
+    const section = [...document.querySelectorAll("section.exec-fleet-lane")].find((el) => el.querySelector("h3")?.textContent === name);
+    if (!section) throw new Error(`no lane ${name}`);
+    return section as HTMLElement;
+  };
+  const laneNames = (name: string) => [...lane(name).querySelectorAll(".exec-fleet-card .exec-fleet-name")].map((n) => n.textContent);
+
+  /** `total` generated alphas over keyset pages (limit from the query), stage cycling PAPER, SANDBOX, CANARY, LIVE. */
+  const scaledAnswer = (total: number) => (params: URLSearchParams): Answer => {
+    const base = alphaFleet(new URLSearchParams()).body as Record<string, any>;
+    const template = base.page.rows[0];
+    const cycle = ["PAPER", "SANDBOX", "CANARY", "LIVE"];
+    const all = Array.from({ length: total }, (_, i) => ({
+      ...template, alpha_id: `alpha_${String(i).padStart(4, "0")}`, alpha_label: `Alpha ${i}`, stage: cycle[i % 4], stages: [cycle[i % 4]],
+    }));
+    const limit = Number(params.get("limit") ?? 50);
+    const after = params.get("after");
+    const start = after ? all.findIndex((r) => r.alpha_id === after) + 1 : 0;
+    const rows = all.slice(start, start + limit);
+    const hasMore = start + limit < all.length;
+    const counts = Object.fromEntries(cycle.map((c, k) => [c, all.filter((_, i) => i % 4 === k).length]));
+    return {
+      status: 200,
+      body: {
+        ...base,
+        summary: { ...base.summary, alpha_count: total, stage_counts: counts },
+        page: { ...base.page, rows, total_count: total, filtered_count: total, has_more: hasMore, next_cursor: hasMore ? rows.at(-1)!.alpha_id : null, has_previous: start > 0, prev_cursor: start > 0 ? rows[0]!.alpha_id : null },
+      },
+    };
+  };
+
+  it("the Board button is a real toggle that writes view=board, and Table clears it; Map stays disabled", async () => {
+    const { api } = makeApi();
+    mount(api);
+    await loaded();
+    const boardBtn = screen.getByRole("button", { name: "Board" });
+    expect(boardBtn.getAttribute("aria-pressed")).toBe("false");
+    expect(boardBtn.hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Map" }).hasAttribute("disabled")).toBe(true);
+    fireEvent.click(boardBtn);
+    await board();
+    expect(search().get("view")).toBe("board");
+    expect(screen.getByRole("button", { name: "Board" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Table" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByRole("table", { name: "Alpha fleet" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Table" }));
+    await loaded();
+    expect(where()).toBe("/execution/fleet");
+  });
+
+  it("places the rows by their highest published stage, in spine order, with R1 and R2 empty and stated", async () => {
+    const { api, getAlphaFleet } = makeApi();
+    mount(api, "/execution/fleet?view=board");
+    await board();
+    expect(getAlphaFleet).toHaveBeenCalledTimes(1);
+    const heads = [...document.querySelectorAll("section.exec-fleet-lane h3")].map((h) => h.textContent);
+    expect(heads).toEqual(["Research", "R1 gate", "R2 gate", "Paper", "Sandbox", "Canary", "Live"]);
+    expect(laneNames("Research")).toEqual(["Idea E"]);
+    expect(laneNames("Paper")).toEqual(["Carry A"]);
+    expect(laneNames("Sandbox")).toEqual(["Grid D"]);
+    expect(laneNames("Canary")).toEqual(["Momentum C"]);
+    expect(laneNames("Live")).toEqual(["Basis B"]);
+    // A gate has no rows by construction and says why; it prints no count the server did not state.
+    expect(lane("R1 gate").textContent).toContain("does not publish a gate position (FE-027)");
+    expect(lane("R1 gate").textContent).toContain("In your scope: Not available");
+    expect(lane("R2 gate").textContent).toContain("In your scope: Not available");
+    // Stage counts are the summary's own: Canary and Live both hold Basis B.
+    expect(lane("Live").textContent).toContain("1 loaded");
+    expect(lane("Live").textContent).toContain("In your scope: 1");
+    expect(lane("Canary").textContent).toContain("In your scope: 2");
+    expect(lane("Paper").textContent).toContain("In your scope: 2");
+    expect(screen.getByText(/Loaded rows only: 5 alphas placed by highest published stage/)).toBeTruthy();
+  });
+
+  it("a card is identity, published health, the mini spine and the readiness gap; nothing is derived", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?view=board");
+    await board();
+    const card = (name: string) => [...document.querySelectorAll<HTMLElement>(".exec-fleet-card")].find((c) => c.querySelector(".exec-fleet-name")?.textContent === name)!;
+    const carry = card("Carry A");
+    expect(carry.querySelector(".exec-fleet-version")?.textContent).toBe("3.2");
+    expect(carry.textContent).toContain("Owner Bobby-001");
+    expect(carry.textContent).toContain("Ready");
+    expect(carry.textContent).toContain("Readiness: Not published (FE-027)");
+    const nodes = [...carry.querySelectorAll(".exec-blk-spine-mini i")].map((i) => i.getAttribute("data-s"));
+    expect(nodes).toEqual(["unknown", "unknown", "cur", "ahead", "ahead", "ahead"]);
+    expect(nodes).not.toContain("done");
+    expect(card("Basis B").textContent).toContain("also Canary");
+    expect(card("Momentum C").textContent).toContain("Needs attention");
+    expect(card("Momentum C").textContent).toContain("Deployment attention, Reconciliation open");
+    // A missing owner is a statement, not a blank or a dash.
+    expect(card("Idea E").textContent).toContain("Owner Not available");
+    // No days, no readiness fraction.
+    expect(document.querySelector(".exec-fleet-board")!.textContent).not.toMatch(/\d+\s*\/\s*7|\bdays?\b/i);
+    // Research has no lifecycle node, so no spine is drawn for it.
+    expect(card("Idea E").querySelector(".exec-blk-spine-mini")).toBeNull();
+  });
+
+  it("cards are links to the alpha, in column-by-column Tab order, with the name as their accessible name", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?view=board");
+    const grp = await board();
+    const links = within(grp).getAllByRole("link");
+    expect(links.map((a) => a.textContent)).toEqual(["Idea E 0.1", "Carry A 3.2", "Grid D 0.9", "Momentum C 2.0", "Basis B 1.4"]);
+    expect(links[1]!.getAttribute("href")).toMatch(/^\/deployments\/alphas\/alpha_a/);
+    // DOM order is Tab order: lane by lane in spine order, then card by card.
+    expect([...document.querySelectorAll(".exec-fleet-card a")]).toEqual(links);
+    expect(within(grp).getByRole("link", { name: "Carry A 3.2" })).toBeTruthy();
+    // Each lane is a labelled region; a lane with cards is a labelled list.
+    expect(screen.getByRole("region", { name: "Paper" })).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Paper, 1 loaded" })).toBeTruthy();
+  });
+
+  it("a plain click opens the same peek as a table row (sel), a modified click is left to the browser", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?view=board");
+    const grp = await board();
+    const link = within(grp).getByRole("link", { name: /Carry A/ });
+    // jsdom cannot navigate; record whether the card left the click alone, then swallow it.
+    let left: boolean | null = null;
+    const swallow = (event: Event) => {
+      left = !event.defaultPrevented;
+      event.preventDefault();
+    };
+    document.addEventListener("click", swallow);
+    fireEvent.click(link, { ctrlKey: true });
+    document.removeEventListener("click", swallow);
+    expect(left).toBe(true);
+    expect(search().get("sel")).toBeNull();
+    expect(fireEvent.click(link)).toBe(false);
+    expect(search().get("sel")).toBe("alpha_a");
+    expect(search().get("view")).toBe("board");
+    expect(await screen.findByRole("link", { name: "Open Alpha 360" })).toBeTruthy();
+    expect(document.querySelector(".exec-fleet-card[aria-current='true'] .exec-fleet-name")?.textContent).toBe("Carry A");
+  });
+
+  it("empty fleet: no columns, the table's own statement", async () => {
+    const { api } = makeApi((params) => {
+      const body = structuredClone(alphaFleet(params).body) as Record<string, any>;
+      body.page.rows = [];
+      body.page.total_count = 0;
+      body.page.filtered_count = 0;
+      body.page.has_more = false;
+      body.page.next_cursor = null;
+      body.summary.alpha_count = 0;
+      body.summary.stage_counts = {};
+      return { status: 200, body };
+    });
+    mount(api, "/execution/fleet?view=board");
+    expect(await screen.findByText("The fleet read published no alphas.")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "Alpha fleet board" })).toBeNull();
+  });
+
+  it("a stage with no loaded rows is an empty column with its published count, or Not available when none is stated", async () => {
+    // Only PAPER and SANDBOX rows exist; the summary states Canary as 0 and says nothing about Live.
+    const { api } = makeApi((params) => {
+      const body = structuredClone(alphaFleet(params).body) as Record<string, any>;
+      body.page.rows = body.page.rows.filter((r: any) => r.stage === "PAPER" || r.stage === "SANDBOX");
+      body.page.total_count = body.page.filtered_count = body.page.rows.length;
+      body.page.has_more = false;
+      body.page.next_cursor = null;
+      body.summary.stage_counts = { PAPER: 1, SANDBOX: 1, CANARY: 0 };
+      return { status: 200, body };
+    });
+    mount(api, "/execution/fleet?view=board");
+    await board();
+    expect(lane("Canary").textContent).toContain("0 loaded");
+    expect(lane("Canary").textContent).toContain("In your scope: 0");
+    expect(lane("Canary").textContent).toContain("No loaded alpha is in this stage.");
+    expect(lane("Live").textContent).toContain("In your scope: Not available");
+    expect(lane("Live").textContent).not.toContain("In your scope: 0");
+    expect(laneNames("Paper")).toEqual(["Carry A"]);
+  });
+
+  it("201 alphas: 200 cards at most, the exact label, no Load more, the cap sentence", async () => {
+    const { api, calls } = makeApi(scaledAnswer(201));
+    mount(api, "/execution/fleet?view=board");
+    await board();
+    for (let step = 0; step < 3; step += 1) {
+      fireEvent.click(await screen.findByRole("button", { name: "Load more" }));
+      await waitFor(() => expect(document.querySelectorAll(".exec-fleet-card")).toHaveLength(PAGE_LIMIT * (step + 2)));
+    }
+    expect(document.querySelectorAll(".exec-fleet-card")).toHaveLength(200);
+    expect(screen.getByText("Top 200 of 201 alphas")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+    expect(screen.getByText("Showing the first 200 rows. Narrow the filters to see the rest.")).toBeTruthy();
+    expect(screen.getByText(/Loaded rows only: 200 alphas placed/)).toBeTruthy();
+    expect(calls).toHaveLength(4);
+  }, 30_000);
+
+  it("Load more keeps the board and adds cards; the label counts N of total", async () => {
+    const { api, calls } = makeApi(scaledAnswer(120));
+    mount(api, "/execution/fleet?view=board");
+    await board();
+    expect(document.querySelectorAll(".exec-fleet-card")).toHaveLength(50);
+    expect(screen.getByText("50 of 120 alphas")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    await waitFor(() => expect(document.querySelectorAll(".exec-fleet-card")).toHaveLength(100));
+    expect(screen.getByText("100 of 120 alphas")).toBeTruthy();
+    expect(calls.at(-1)!.after).toBe("alpha_0049");
+    expect(search().get("view")).toBe("board");
+    expect(screen.getByRole("group", { name: "Alpha fleet board" })).toBeTruthy();
+  });
+
+  it("URL round trip: lens, filters and view=board are kept, and the query is the table's", async () => {
+    const first = makeApi();
+    mount(first.api, "/execution/fleet?view=board&stage=paper&owner=Bobby-001&sort=name%3Aasc");
+    await board();
+    expect(laneNames("Paper")).toEqual(["Carry A"]);
+    expect(laneNames("Sandbox")).toEqual(["Grid D"]);
+    expect(screen.getByRole("tab", { name: /^Paper/ }).getAttribute("aria-selected")).toBe("true");
+    expect(where()).toBe("/execution/fleet?view=board&stage=paper&owner=Bobby-001&sort=name%3Aasc");
+    cleanup();
+    const table = makeApi();
+    mount(table.api, "/execution/fleet?stage=paper&owner=Bobby-001&sort=name%3Aasc");
+    await loaded();
+    // One read, same question as the table asks.
+    expect(first.calls).toEqual(table.calls);
+  });
+
+  it("switching Table to Board does not ask again: view is not part of the query", async () => {
+    const { api, getAlphaFleet } = makeApi();
+    mount(api);
+    await loaded();
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    await board();
+    expect(getAlphaFleet).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails closed exactly as the table: denied, unavailable and thrown reads draw no board", async () => {
+    const denied = vi.fn(async () => ({ ok: false as const, status: "denied" as const, reason: "HTTP_403 FORBIDDEN" }));
+    mount({ getAlphaFleet: denied } as unknown as ExecutionApi, "/execution/fleet?view=board");
+    expect(await screen.findByText("Withheld")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "Alpha fleet board" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Board" }).getAttribute("aria-pressed")).toBe("true");
+    cleanup();
+    mount(makeApi(() => ({ status: 503, body: null })).api, "/execution/fleet?view=board");
+    expect(await screen.findByText("Unavailable")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "Alpha fleet board" })).toBeNull();
+    cleanup();
+    const thrown = vi.fn(async () => { throw new Error("boom"); });
+    mount({ getAlphaFleet: thrown } as unknown as ExecutionApi, "/execution/fleet?view=board");
+    expect(await screen.findByText(/PORTAL_READ_FAILED/)).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "Alpha fleet board" })).toBeNull();
+  });
+
+  it("the Archived lens draws no board and makes no request, as the table", async () => {
+    const { api, getAlphaFleet } = makeApi();
+    mount(api, "/execution/fleet?view=board&tab=archived");
+    expect(screen.getAllByText(/Not published \(FE-034\)/).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("group", { name: "Alpha fleet board" })).toBeNull();
+    expect(getAlphaFleet).not.toHaveBeenCalled();
+  });
+
+  it("a filter that matches nothing offers the same Clear filters", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?view=board&q=zzzz-none");
+    expect(await screen.findByText("No alphas match these filters.")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "Alpha fleet board" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    await board();
   });
 });

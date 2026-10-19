@@ -3,7 +3,8 @@
  *
  * One Fleet: lens tabs (All, Real-funded, Sandbox, Paper, Archived), search,
  * Owner / Health / Sort selects, a KPI strip of counts only, and the table
- * with a peek drawer. It reads `GET /alphas` through the ExecutionApi port and
+ * with a peek drawer; `view=board` arranges the same loaded rows by stage
+ * (FleetBoard). It reads `GET /alphas` through the ExecutionApi port and
  * prints identity: no money, no equity line, no PnL column. What the backend
  * has not published is named with its FE id and its control is disabled with
  * the reason; it is never an empty cell or a zero.
@@ -22,12 +23,13 @@ import { useDockMode, useDockSelection } from "../../Drawer";
 import { Kpi, KpiStrip } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
-import { serializeUrlParams, useExecUrlState } from "../../urlState";
+import { serializeUrlParams, useExecUrlState, withContext } from "../../urlState";
 import { ColumnsMenu, FilterChips, type FilterChip } from "./fleetControls";
+import { FleetBoard } from "./FleetBoard";
 import { FleetDrawer } from "./FleetDrawer";
 import { FleetTable } from "./FleetTable";
 import {
-  ARCHIVED_TAB, FE, FLEET_LENSES, HIDDEN_COLUMNS_PARAM, ROW_CAP, SORT_OPTIONS, fleetKpis, humanize, inStages, lensCounts,
+  ARCHIVED_TAB, FE, FLEET_LENSES, alphaHref, HIDDEN_COLUMNS_PARAM, ROW_CAP, SORT_OPTIONS, fleetKpis, humanize, inStages, lensCounts,
   lensForStages, lensLabel, healthView, notPublished, parseHiddenColumns, queryKey, fleetQuery, serializeHiddenColumns,
   sortValueOf, stageLabel, stagesForLens, toFleetRow,
   type FleetColumnKey, type FleetFilters, type FleetLens,
@@ -54,7 +56,7 @@ function freshnessFlag(freshness: string): { kind: FlagKind; label: string } {
   }
 }
 
-const NOT_PUBLISHED_LIST = [FE.group, FE.board, FE.map, FE.window, FE.readiness, FE.compare, FE.archived];
+const NOT_PUBLISHED_LIST = [FE.group, FE.map, FE.window, FE.readiness, FE.compare, FE.archived];
 
 function mergeSeen(current: readonly string[], next: readonly string[]): readonly string[] {
   const merged = [...new Set([...current, ...next])].sort((a, b) => a.localeCompare(b));
@@ -75,6 +77,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
   const archived = tab === ARCHIVED_TAB;
   const lens: FleetLens | null = archived ? "archived" : lensForStages(stage);
   const tableView = view === null || view === "table";
+  const boardView = view === "board";
   const hiddenColumns = useMemo(() => parseHiddenColumns(params.get(HIDDEN_COLUMNS_PARAM)), [params]);
 
   const filters: FleetFilters = useMemo(
@@ -82,7 +85,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
     [q, stage, owner, health, sort],
   );
   const key = queryKey(filters);
-  const read = useFleetRead(api, !archived && tableView, key, (after) => fleetQuery(filters, after));
+  const read = useFleetRead(api, !archived && (tableView || boardView), key, (after) => fleetQuery(filters, after));
 
   /* ── derived rows ─────────────────────────────────────────────────── */
   const loaded = useMemo(() => read.items.map(toFleetRow), [read.items]);
@@ -212,7 +215,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
         <div className="exec-fleet-fresh">
           <span className="exec-fleet-seg" role="group" aria-label="View">
             <button type="button" className="exec-fleet-segbtn" aria-pressed={tableView} onClick={() => url.set({ view: null })}>Table</button>
-            <button type="button" className="exec-fleet-segbtn" aria-pressed={view === "board"} disabled title={notPublished(FE.board)} aria-describedby={reasonId}>Board</button>
+            <button type="button" className="exec-fleet-segbtn" aria-pressed={boardView} onClick={() => url.set({ view: "board" })}>Board</button>
             <button type="button" className="exec-fleet-segbtn" aria-pressed={view === "map"} disabled title={notPublished(FE.map)} aria-describedby={reasonId}>Map</button>
           </span>
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
@@ -338,11 +341,6 @@ export default function FleetScreen({ api }: FleetScreenProps) {
                 <strong>Archived alphas</strong>
                 <p>{notPublished(FE.archived)}. This lens makes no request until the backend publishes the list.</p>
               </div>
-            ) : view === "board" ? (
-              <>
-                {unpublishedView(FE.board)}
-                <button type="button" className="exec-fleet-btn" onClick={() => url.set({ view: null })}>Back to Table</button>
-              </>
             ) : view === "map" ? (
               <>
                 {unpublishedView(FE.map)}
@@ -354,13 +352,31 @@ export default function FleetScreen({ api }: FleetScreenProps) {
               <PanelState status={read.state.status} reason={read.state.reason} />
             ) : (
               <>
-                <FleetTable
-                  rows={visible}
-                  hidden={hiddenColumns}
-                  selectedKey={selection}
-                  onOpen={(row) => select(row.alphaId)}
-                  empty={emptyBlock}
-                />
+                {boardView ? (
+                  <>
+                    <p className="exec-fleet-note exec-fleet-board-note">
+                      Loaded rows only: {visible.length} {visible.length === 1 ? "alpha" : "alphas"} placed by highest published stage.
+                      Stage counts are for your whole scope. Readiness and days in stage are not published ({FE.readiness.fe}).
+                    </p>
+                    {visible.length === 0 ? emptyBlock : (
+                      <FleetBoard
+                        rows={visible}
+                        summary={read.summary}
+                        selectedKey={selection}
+                        hrefFor={(row) => withContext(alphaHref(row.alphaId), params)}
+                        onOpen={(row) => select(row.alphaId)}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <FleetTable
+                    rows={visible}
+                    hidden={hiddenColumns}
+                    selectedKey={selection}
+                    onOpen={(row) => select(row.alphaId)}
+                    empty={emptyBlock}
+                  />
+                )}
                 <div className="exec-fleet-foot">
                   <span className="exec-fleet-count-line" role="status" aria-live="polite">{countLine}</span>
                   {read.nextCursor && !capped ? (

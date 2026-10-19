@@ -487,3 +487,129 @@ a.exec-fleet-open {
     width: 100%;
   }
 }
+
+/* Board (hi-fi modules/board.js): the loaded rows, one lane per stage in spine order. Tokens only. */
+.exec-fleet-board-note {
+  margin: 0;
+}
+.exec-fleet-board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+}
+.exec-fleet-lane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-lane-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--line-strong);
+  border-top: 4px solid var(--line-strong);
+}
+.exec-fleet-lane[data-stage="PAPER"] > .exec-fleet-lane-head {
+  border-top-color: var(--stage-paper);
+}
+.exec-fleet-lane[data-stage="SANDBOX"] > .exec-fleet-lane-head {
+  border-top-color: var(--env-sandbox);
+}
+.exec-fleet-lane[data-stage="CANARY"] > .exec-fleet-lane-head {
+  border-top-color: var(--env-canary);
+}
+.exec-fleet-lane[data-stage="LIVE"] > .exec-fleet-lane-head {
+  border-top-color: var(--env-live);
+}
+.exec-fleet-lane-title {
+  margin: 0;
+  font: var(--exec-font-label);
+  color: var(--ink);
+}
+.exec-fleet-lane-count,
+.exec-fleet-lane-pub {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-fleet-lane-empty {
+  margin: 0;
+  padding: var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-fleet-lane-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2);
+  list-style: none;
+}
+.exec-fleet-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  min-width: 0;
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-card:hover {
+  background: var(--surface-2);
+}
+.exec-fleet-card[data-selected="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+/* The whole card is the link's hit area; the link's own text stays the accessible name. */
+.exec-fleet-card-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--ink);
+  text-decoration: none;
+}
+.exec-fleet-card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.exec-fleet-card-link:focus-visible {
+  outline: none;
+}
+.exec-fleet-card-link:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-fleet-card-owner {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-fleet-card-health {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.exec-fleet-card-ready {
+  white-space: normal;
+}
+
+/* Below 660px (the table's own breakpoint) the lanes stack, one under another. */
+@media (max-width: 660px) {
+  .exec-fleet-board {
+    grid-auto-flow: row;
+    grid-auto-columns: minmax(0, 1fr);
+    overflow-x: visible;
+  }
+}

@@ -277,6 +277,61 @@ export function lensCounts(summary: AlphaFleetSummary | null): Readonly<Record<F
   };
 }
 
+/* ── board (HIFI modules/board.js, partial: loaded rows only) ──────────── */
+
+/** The board's own gap: readiness and days in stage are not in the fleet read. */
+export const BOARD_READINESS: UnpublishedFact = { fe: "FE-027", what: "Readiness" };
+
+/** The spine order. R1 and R2 are review gates: a fleet row publishes a running stage, never a gate position. */
+const BOARD_SPINE = [
+  { code: "R1", label: "R1 gate", gate: true },
+  { code: "R2", label: "R2 gate", gate: true },
+  { code: "PAPER", label: "Paper", gate: false },
+  { code: "SANDBOX", label: "Sandbox", gate: false },
+  { code: "CANARY", label: "Canary", gate: false },
+  { code: "LIVE", label: "Live", gate: false },
+] as const;
+
+export interface BoardColumn {
+  /** The published stage word the column holds. */
+  code: string;
+  label: string;
+  /** R1 and R2: the fleet read has no gate position, so the column can only be empty. */
+  gate: boolean;
+  /** Loaded rows whose highest published stage is this one. */
+  rows: readonly FleetRow[];
+  /** The stage count the summary states (alphas in this stage, whatever the filters), or `COUNT_NOT_AVAILABLE`. */
+  published: string;
+}
+
+/**
+ * Columns in spine order, one per stage, from rows already loaded. A row sits
+ * in the column of its highest published stage (the table's Stage cell says the
+ * rest). The six spine stages always have a column; a stage with no loaded row
+ * is empty and prints the count the summary states, or "Not available" when it
+ * states none (the same D4 rule as `lensCounts`). A Research row, or a stage
+ * word the spine does not know, gets its own column ahead of / after the spine
+ * only when a loaded row needs it, so no loaded row is dropped.
+ */
+export function boardColumns(rows: readonly FleetRow[], summary: AlphaFleetSummary | null): readonly BoardColumn[] {
+  const published = (code: string): string => {
+    const n = summary?.stageCounts[code];
+    return n === undefined ? COUNT_NOT_AVAILABLE : String(n);
+  };
+  const spine = new Set<string>(BOARD_SPINE.map((s) => s.code));
+  const extra = [...new Set(rows.map((r) => r.stageCode).filter((c) => !spine.has(c)))].sort((a, b) => a.localeCompare(b));
+  const research = extra.filter((c) => c === "RESEARCH");
+  const other = extra.filter((c) => c !== "RESEARCH");
+  const column = (code: string, label: string, gate: boolean): BoardColumn => ({
+    code, label, gate, rows: rows.filter((r) => r.stageCode === code), published: published(code),
+  });
+  return [
+    ...research.map((c) => column(c, stageLabel(c), false)),
+    ...BOARD_SPINE.map((s) => column(s.code, s.label, s.gate)),
+    ...other.map((c) => column(c, stageLabel(c), false)),
+  ];
+}
+
 /* ── columns popover (HIFI Columns menu) ───────────────────────────────── */
 
 /** The columns a reader can switch off. Alpha is always shown, as in the HIFI. */

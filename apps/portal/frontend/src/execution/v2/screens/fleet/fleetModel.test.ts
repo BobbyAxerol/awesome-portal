@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { readAlphaFleet, type AlphaFleetItem } from "../../../api/profileRead";
 import {
-  FE, FLEET_LENSES, PAGE_LIMIT, SORT_OPTIONS, alphaHref, fleetKpis, fleetQuery, healthView, humanize, inStages,
+  BOARD_READINESS, COUNT_NOT_AVAILABLE, FE, FLEET_LENSES, PAGE_LIMIT, SORT_OPTIONS, boardColumns, alphaHref, fleetKpis, fleetQuery, healthView, humanize, inStages,
   lensCounts, lensForStages, notPublished, queryKey, serverStageParam, sortValueOf, stageLabel, stagesForLens, toFleetRow,
 } from "./fleetModel";
 
@@ -195,5 +195,44 @@ describe("query", () => {
     expect(queryKey(none)).toBe(queryKey({ ...none }));
     expect(queryKey({ ...none, q: "a" })).not.toBe(queryKey(none));
     expect(queryKey({ ...none, stages: ["paper"] })).not.toBe(queryKey(none));
+  });
+});
+
+describe("boardColumns", () => {
+  const rowOf = (id: string, stages: string[], over: Partial<AlphaFleetItem> = {}) =>
+    toFleetRow(variant({ alphaId: id, alphaLabel: id, stage: stages[0]!, stages, ...over }));
+  const summaryOf = (stageCounts: Record<string, number>) => ({ ...envelope.summary!, stageCounts });
+
+  it("always has the six spine columns in order, and no Research or other column without a row that needs it", () => {
+    const cols = boardColumns([], summaryOf({ PAPER: 2 }));
+    expect(cols.map((c) => c.label)).toEqual(["R1 gate", "R2 gate", "Paper", "Sandbox", "Canary", "Live"]);
+    expect(cols.map((c) => c.gate)).toEqual([true, true, false, false, false, false]);
+    expect(cols.every((c) => c.rows.length === 0)).toBe(true);
+  });
+
+  it("places a row in its highest published stage, once", () => {
+    const rows = [rowOf("a", ["LIVE", "CANARY"]), rowOf("b", ["PAPER"]), rowOf("c", ["SANDBOX", "PAPER"])];
+    const cols = Object.fromEntries(boardColumns(rows, null).map((c) => [c.code, c.rows.map((r) => r.alphaId)]));
+    expect(cols).toMatchObject({ LIVE: ["a"], CANARY: [], PAPER: ["b"], SANDBOX: ["c"] });
+    expect(Object.values(cols).flat().sort()).toEqual(["a", "b", "c"]);
+  });
+
+  it("prints the summary's count for a stage, and Not available (never 0) when it states none or there is no summary", () => {
+    const withSummary = boardColumns([], summaryOf({ PAPER: 2, CANARY: 0 }));
+    expect(withSummary.map((c) => c.published)).toEqual(["Not available", "Not available", "2", "Not available", "0", "Not available"]);
+    expect(boardColumns([], null).every((c) => c.published === COUNT_NOT_AVAILABLE)).toBe(true);
+  });
+
+  it("keeps Research before the spine and an unknown stage word after it, only when a loaded row is there", () => {
+    const rows = [rowOf("r", ["RESEARCH"]), rowOf("x", ["ARCHIVED_PREVIEW"]), rowOf("p", ["PAPER"])];
+    const cols = boardColumns(rows, summaryOf({ RESEARCH: 1 }));
+    expect(cols.map((c) => c.code)).toEqual(["RESEARCH", "R1", "R2", "PAPER", "SANDBOX", "CANARY", "LIVE", "ARCHIVED_PREVIEW"]);
+    expect(cols[0]).toMatchObject({ label: "Research", published: "1" });
+    expect(cols.at(-1)).toMatchObject({ label: "Archived preview", published: COUNT_NOT_AVAILABLE });
+    expect(cols.reduce((n, c) => n + c.rows.length, 0)).toBe(3);
+  });
+
+  it("states the readiness gap as FE-027", () => {
+    expect(notPublished(BOARD_READINESS)).toBe("Not published (FE-027)");
   });
 });
