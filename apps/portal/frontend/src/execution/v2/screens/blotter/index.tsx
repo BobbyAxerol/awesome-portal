@@ -33,13 +33,14 @@ import type { ConditionalGroupRead } from "../../../derivedReads";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { useProfileRealtime } from "../../../profileRealtime";
 import { utcStamp } from "../../../time";
+import { CardsTable } from "../../cardsTable";
 import { SectionPanel } from "../../blocks";
 import { Flag } from "../../Flag";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
-  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NO_SCOPE, applyScope, blotterQuery, chipCounts, filtersKey,
-  fillsFor, groupExact, humanize, isBucket, legsFor, scopeActive, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
+  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NO_SCOPE, applyScope, blotterQuery, chipCounts, filtersKey,
+  fillsFor, groupExact, humanize, isBucket, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
 
@@ -217,7 +218,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
 
   const cell = (order: BlotterOrder, id: ColumnId) => {
     switch (id) {
-      case "time": return order.submittedAt ? <span className="exec-blt2-num">{utcStamp(order.submittedAt)}</span> : <span className="exec-blt2-na">Not available</span>;
+      case "time": return order.submittedAt ? <span className="exec-blt2-num" title={order.submittedAt}>{shortUtc(order.submittedAt)}</span> : <span className="exec-blt2-na">Not available</span>;
       case "alpha": return order.alphaId ?? <span className="exec-blt2-na">Not available</span>;
       case "account": return order.accountId ?? <span className="exec-blt2-na">Not available</span>;
       case "venue": return order.venue ?? <span className="exec-blt2-na">Not available</span>;
@@ -232,7 +233,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
       case "venueOrder": return order.venueOrderId ? <span className="exec-blt2-id">{order.venueOrderId}</span> : <span className="exec-blt2-na">Not sent</span>;
       case "session": return order.sessionId ? <span className="exec-blt2-id">{order.sessionId}</span> : <span className="exec-blt2-na">Not available</span>;
       case "risk": return order.riskGrantId ? <span className="exec-blt2-id">{order.riskGrantId}</span> : <span className="exec-blt2-na">Not available</span>;
-      case "updated": return order.updatedAt ? <span className="exec-blt2-num">{utcStamp(order.updatedAt)}</span> : <span className="exec-blt2-na">Not available</span>;
+      case "updated": return order.updatedAt ? <span className="exec-blt2-num" title={order.updatedAt}>{shortUtc(order.updatedAt)}</span> : <span className="exec-blt2-na">Not available</span>;
       case "status": {
         const view = statusView(order.status);
         return <Flag kind={view.kind} label={view.label} size="sm" />;
@@ -300,7 +301,8 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
 
       <section className="exec-blt2-panel" aria-label="Filters">
         <div className="exec-blt2-scope">
-          <span className="exec-blt2-chip"><span className="exec-blt2-chip-k">environment</span>Paper<span className="exec-blt2-na"> this read</span></span>
+          <span className="exec-blt2-chip" data-lock="read"><span className="exec-blt2-chip-k">environment</span>Paper<span className="exec-blt2-na"> set by this read</span></span>
+          <span className="exec-blt2-chip" data-lock="read"><span className="exec-blt2-chip-k">window</span>Current retained window<span className="exec-blt2-na"> set by this read</span></span>
           {!accountsVisible ? <span className="exec-blt2-chip"><span className="exec-blt2-chip-k">scope</span>Your slice only</span> : null}
           {(["deployment", "account", "alpha"] as const).map((key) =>
             scope[key] !== null && !(key === "account" && !accountsVisible) ? (
@@ -317,6 +319,10 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
             Scope narrows the loaded pages only: {rows.length} of {page.orders.length} loaded {page.orders.length === 1 ? "row" : "rows"} match. The server filters by status, venue, symbol and side, not by this.
           </p>
         ) : null}
+
+        <p className="exec-blt2-note" id={`${noteId}-ctx`}>
+          Environment and window come from this read, not from the context bar: the orders read has no environment or window filter yet (Not published, FE-052, FE-025, FE-041). The environment highlighted in the context bar does not change these rows.
+        </p>
 
         <div className="exec-blt2-tool">
           <label className="exec-blt2-field">
@@ -460,7 +466,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
           </span>
         </div>
         <p className="exec-blt2-note">
-          Numbers are exact and never shortened. A fee is in its venue currency. Not in this read: {NOT_IN_READ.join(", ").toLowerCase()} (Not published; no request id yet).
+          Numbers are exact and never shortened. A fee is in its venue currency. Not in this read: {NOT_IN_READ.join(", ").toLowerCase()} (Not published, {NOT_IN_READ_REQUEST}).
         </p>
       </section>
 
@@ -496,22 +502,21 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
         {page.groups.length === 0 ? (
           <p className="exec-blt2-na">No conditional groups on this page</p>
         ) : (
-          <table className="exec-blt2-inner" aria-label="Conditional groups">
-            <thead><tr><th>Group</th><th>Symbol</th><th>Type</th><th>State</th><th data-numeric="true">Target</th><th data-numeric="true">Filled</th><th>Opened (UTC)</th></tr></thead>
-            <tbody>
-              {page.groups.slice(0, GROUP_CAP).map((group) => (
-                <tr key={group.groupId} data-selected={groupRead.phase !== "idle" && groupRead.groupId === group.groupId ? "true" : undefined}>
-                  <td><button type="button" className="exec-blt2-x" aria-pressed={groupRead.phase !== "idle" && groupRead.groupId === group.groupId} aria-label={`Read structure of group ${group.groupId}`} onClick={() => pickGroup(group.groupId)}>Read</button> <span className="exec-blt2-id">{group.groupId}</span></td>
-                  <td>{group.symbol ?? <span className="exec-blt2-na">Not available</span>}</td>
-                  <td>{group.contingencyType ? humanize(group.contingencyType) : <span className="exec-blt2-na">Not stated</span>}</td>
-                  <td>{group.state ? humanize(group.state) : <span className="exec-blt2-na">Not stated</span>}</td>
-                  <td data-numeric="true"><ExactText value={group.targetQuantity} /></td>
-                  <td data-numeric="true"><ExactText value={group.filledQuantity} /></td>
-                  <td>{group.createdAt ? utcStamp(group.createdAt) : <span className="exec-blt2-na">Not available</span>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <CardsTable
+            label="Conditional groups"
+            rows={page.groups.slice(0, GROUP_CAP)}
+            rowKey={(group) => group.groupId}
+            selectedKey={groupRead.phase !== "idle" ? groupRead.groupId : null}
+            columns={[
+              { key: "group", label: "Group", render: (group) => <span className="exec-blt2-ordercell"><button type="button" className="exec-blt2-x" aria-pressed={groupRead.phase !== "idle" && groupRead.groupId === group.groupId} aria-label={`Read structure of group ${group.groupId}`} onClick={() => pickGroup(group.groupId)}>Read</button> <span className="exec-blt2-id">{group.groupId}</span></span> },
+              { key: "symbol", label: "Symbol", render: (group) => group.symbol ?? <span className="exec-blt2-na">Not available</span> },
+              { key: "type", label: "Type", render: (group) => (group.contingencyType ? humanize(group.contingencyType) : <span className="exec-blt2-na">Not stated</span>) },
+              { key: "state", label: "State", render: (group) => (group.state ? humanize(group.state) : <span className="exec-blt2-na">Not stated</span>) },
+              { key: "target", label: "Target", numeric: true, render: (group) => <ExactText value={group.targetQuantity} /> },
+              { key: "filled", label: "Filled", numeric: true, render: (group) => <ExactText value={group.filledQuantity} /> },
+              { key: "opened", label: "Opened (UTC)", render: (group) => (group.createdAt ? <span title={group.createdAt}>{shortUtc(group.createdAt)}</span> : <span className="exec-blt2-na">Not available</span>) },
+            ]}
+          />
         )}
         {groupRead.phase === "loading" ? <p className="exec-blt2-na" role="status">Reading the group structure</p> : null}
         {groupRead.phase === "error" ? <PanelState status={groupRead.status} reason={groupRead.reason} /> : null}

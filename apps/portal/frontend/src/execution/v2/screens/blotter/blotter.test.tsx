@@ -257,10 +257,17 @@ describe("expanding an order", () => {
   });
 });
 
+/** Alpha, Account and Venue are off by default (BLT-B1); a test that reads them turns them on like a user would. */
+function enableColumn(name: string) {
+  fireEvent.click(screen.getByRole("button", { name: "Columns" }));
+  fireEvent.click(within(screen.getByRole("group", { name: "Choose columns" })).getByRole("checkbox", { name }));
+}
+
 describe("scope from other screens (loaded pages only)", () => {
   it("an account scope narrows the loaded rows and says so; the server query is untouched", async () => {
     mount("/execution/blotter?account=acc_paper_okx_01");
     await loaded();
+    enableColumn("Account");
     expect(bodyRows().length).toBeGreaterThan(0);
     expect(bodyRows().every((r) => cellOf(r, "Account") === "acc_paper_okx_01")).toBe(true);
     expect(screen.getByText(/Scope narrows the loaded pages only: \d+ of 50 loaded rows match/)).toBeTruthy();
@@ -273,6 +280,7 @@ describe("scope from other screens (loaded pages only)", () => {
   it("an alpha scope matches the strategy id", async () => {
     mount("/execution/blotter?alpha=carry_basis_v3");
     await loaded();
+    enableColumn("Alpha");
     expect(bodyRows().every((r) => cellOf(r, "Alpha") === "carry_basis_v3")).toBe(true);
   });
 
@@ -314,8 +322,36 @@ describe("column chooser", () => {
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Client ID" }));
     expect(within(table()).getByRole("columnheader", { name: "Client ID" })).toBeTruthy();
     expect(cellOf(bodyRows()[0]!, "Client ID")).toBe("cl-00137");
+    expect(within(table()).queryByRole("columnheader", { name: "Venue" })).toBeNull();
+    fireEvent.click(within(menu).getByRole("checkbox", { name: "Venue" }));
+    expect(within(table()).getByRole("columnheader", { name: "Venue" })).toBeTruthy();
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Venue" }));
     expect(within(table()).queryByRole("columnheader", { name: "Venue" })).toBeNull();
+  });
+
+  it("opens with ten hi-fi columns, Time as 'DD Mon HH:MM:SSZ', and Status last (BLT-B1)", async () => {
+    mount();
+    await loaded();
+    const heads = within(table()).getAllByRole("columnheader").map((h) => h.textContent);
+    expect(heads).toEqual(["Time (UTC)", "Order", "Symbol", "Side and type", "Price", "Quantity", "Status"]);
+    expect(cellOf(bodyRows()[0]!, "Time (UTC)")).toMatch(/^\d{2} [A-Z][a-z]{2} \d{2}:\d{2}:\d{2}Z$/);
+  });
+
+  it("states that environment and window come from this read, and cites FE-052 for what the read lacks (BLT-A5, BLT-B5)", async () => {
+    mount();
+    await loaded();
+    expect(screen.getByText(/Environment and window come from this read, not from the context bar/)).toBeTruthy();
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("(Not published, FE-052)");
+    expect(body).not.toMatch(/no request id/i);
+  });
+
+  it("Conditional groups is a cards table, so it stacks at 390px (BLT-B2)", async () => {
+    mount();
+    await loaded();
+    const groups = screen.getByRole("table", { name: "Conditional groups" });
+    expect(groups.classList.contains("exec-cards")).toBe(true);
+    expect(groups.querySelector("tbody td")?.getAttribute("data-l")).toBe("Group");
   });
 
   it("every cell is labelled for the cards layout", async () => {

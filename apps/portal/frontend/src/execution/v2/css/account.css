@@ -6,14 +6,14 @@
 .exec-acct-v2 {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-5);
   min-width: 0;
   color: var(--ink);
 }
 .exec-acct-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-3);
 }
@@ -58,6 +58,12 @@
 }
 .exec-acct-banner[data-tone="stale"] {
   border-color: var(--f-stale);
+}
+/* A shared binding is a warning, not a note (hi-fi .banner): warn fill and edge, same pair access.css proved. */
+.exec-acct-banner[data-tone="shared"] {
+  color: var(--ink);
+  background: var(--warn-bg);
+  border-color: var(--warn);
 }
 
 /* layout */
@@ -104,7 +110,9 @@
   align-items: center;
   gap: var(--space-2);
   padding: 6px var(--space-3);
-  font: var(--exec-font-control);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink-soft);
   background: none;
   border: 0;
@@ -186,6 +194,13 @@
   background: var(--accent-soft);
   border-color: var(--accent);
 }
+.exec-acct-export {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
 .exec-acct-chips {
   display: flex;
   flex-wrap: wrap;
@@ -219,14 +234,15 @@
   white-space: normal;
 }
 .exec-acct-name {
-  font: var(--exec-font-control);
+  font: var(--exec-font-data);
+  font-weight: 600;
   color: var(--ink);
 }
 .exec-acct-sub,
 .exec-acct-sub2,
 .exec-acct-why {
   display: block;
-  font: var(--exec-font-caption);
+  font: var(--exec-font-meta);
   color: var(--ink-faint);
   white-space: normal;
 }
@@ -305,9 +321,9 @@ a.exec-acct-open {
   padding: var(--space-3) var(--space-4);
 }
 .exec-acct-fact {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 6px var(--space-3);
   font: var(--exec-font-body);
 }
 .exec-acct-fact dt {
@@ -316,10 +332,14 @@ a.exec-acct-open {
 .exec-acct-fact dd {
   margin: 0;
   color: var(--ink);
-  text-align: right;
+  text-align: left;
   overflow-wrap: anywhere;
 }
+.exec-acct-facts + .exec-acct-btn {
+  margin-top: var(--space-3);
+}
 .exec-acct-sidebar .exec-acct-fact {
+  display: flex;
   flex-direction: column;
   gap: 2px;
 }
@@ -403,11 +423,11 @@ a.exec-acct-open {
   .exec-acct-input {
     width: 100%;
   }
-  .exec-acct-fact {
-    flex-direction: column;
-    gap: 2px;
+  .exec-acct-tool > .exec-acct-field:first-child {
+    flex: 1 1 100%;
   }
-  .exec-acct-fact dd {
-    text-align: left;
+  .exec-acct-fact {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
   }
 }

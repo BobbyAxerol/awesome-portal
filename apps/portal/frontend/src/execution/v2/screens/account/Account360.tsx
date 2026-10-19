@@ -17,7 +17,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import type { ProfileEnvelope } from "../../../api/profileRead";
 import { PanelState } from "../../../components/states";
 import { SectionPanel, StateBoundary } from "../../blocks";
-import { readUtcEpochMs } from "../../../screenDataContract";
+import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import { ENV_LABEL, useExecUrlState, withContext } from "../../urlState";
@@ -25,10 +25,10 @@ import { holds } from "../../shell/roleNav";
 import { PhysicalBinding } from "./PhysicalBinding";
 import { ActivityPanel, EquityBlock } from "./readPanels";
 import { AllocationsPanel, AuthorityKpis, FeesPanel, MarginPanel, PositionsPanel, ReconciliationPanel, SleevesPanel, type PanelContext } from "./panels";
-import { Fact, Na, StateFlag, WITHHELD } from "./parts";
+import { Fact, Na, Np, StateFlag, WITHHELD } from "./parts";
 import { useAccountResource, useBindingDetail, useBindingExposure } from "./reads";
 import {
-  ACCOUNTS_PATH, ACCOUNT_NEEDS, RELATION_LABEL, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
+  ACCOUNTS_PATH, ACCOUNT_NEEDS, FE, RELATION_LABEL, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
   populationOf, portfolioHref, readAccountView, readTab, readViewMode, resourceReason, resourceStatus, timeOf, type TabId,
 } from "./model";
 
@@ -38,6 +38,19 @@ export interface Account360Props {
   api: ExecutionApi;
   accountId: string;
   capabilities: ReadonlySet<string>;
+}
+
+/**
+ * The sentence under a partial or stale state when the source gave no reason of
+ * its own (A360-B5): what the state means for the figures below it, from the
+ * read's own clocks only. A reason the source did publish always wins.
+ */
+function boundaryReason(status: string, asOf: UtcEpochMs | null): string | undefined {
+  if (status === "stale") {
+    return `${asOf !== null ? `The source's last update was ${formatAsOf(asOf)}. ` : "The source did not publish when it last updated. "}The figures below are the last it published, not live.`;
+  }
+  if (status === "partial") return "The source published only part of this account. A figure it did not publish says so where it would be.";
+  return undefined;
 }
 
 export function Account360({ api, accountId, capabilities }: Account360Props) {
@@ -173,6 +186,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, capa
             <dl className="exec-acct-facts">
               <Fact label="Venue">{identity.venue ?? <Na />}</Fact>
               <Fact label="Native account"><span className="exec-acct-withheld">{WITHHELD}</span></Fact>
+              <Fact label="Product"><Np fact={FE.product} /></Fact>
               <Fact label="Margin mode">{identity.marginMode ?? <Na />}</Fact>
               <Fact label="Environment">{environment ? ENV_LABEL[environment] : <Na />}</Fact>
               <Fact label="Credential">
@@ -227,6 +241,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, capa
   );
 
   const reason = resourceReason(profile);
+  const chipStatesStale = status === "stale" && fresh.kind === "stale";
   return (
     <div className="exec-acct-v2" data-screen="account-360-v2" data-view={mode}>
       <header className="exec-acct-head">
@@ -267,7 +282,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, capa
         </div>
       ) : null}
       {population.shared ? (
-        <div className="exec-acct-banner" role="note">
+        <div className="exec-acct-banner" role="note" data-tone="shared">
           Shared by {population.expected ?? population.published} sleeves. Native figures cover the whole account, not one sleeve.
           {population.partial ? ` ${population.published} of ${population.expected} are published here.` : ""}
         </div>
@@ -297,7 +312,8 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, capa
       ) : status === "ok" ? (
         body
       ) : (
-        <StateBoundary status={status} reason={reason}>{body}</StateBoundary>
+        // The header chip already says "Stale" (and the as-of beside it): do not say it twice. Partial has no chip, so it keeps its sentence.
+        <StateBoundary status={status} quiet={chipStatesStale} reason={reason ?? (chipStatesStale ? undefined : boundaryReason(status, asOf))}>{body}</StateBoundary>
       )}
     </div>
   );

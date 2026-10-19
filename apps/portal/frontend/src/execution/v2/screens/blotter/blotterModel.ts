@@ -496,9 +496,9 @@ export interface ColumnSpec {
 export const COLUMNS: readonly ColumnSpec[] = [
   { id: "time", label: "Time (UTC)", dflt: true },
   { id: "order", label: "Order", dflt: true, fixed: true },
-  { id: "alpha", label: "Alpha", dflt: true },
-  { id: "account", label: "Account", dflt: true },
-  { id: "venue", label: "Venue", dflt: true },
+  { id: "alpha", label: "Alpha", dflt: false },
+  { id: "account", label: "Account", dflt: false },
+  { id: "venue", label: "Venue", dflt: false },
   { id: "symbol", label: "Symbol", dflt: true },
   { id: "side", label: "Side and type", dflt: true },
   { id: "tif", label: "TIF", dflt: false },
@@ -518,3 +518,20 @@ export const DEFAULT_COLUMNS: ReadonlySet<ColumnId> = new Set(COLUMNS.filter((c)
 
 /** Facts the orders read does not carry, listed so the table does not look like it forgot them. */
 export const NOT_IN_READ: readonly string[] = ["Average price", "Slippage", "Fee per order", "Totals by currency"];
+
+/** The request that would add them to the read (FE-052); the screen cites it, never "no request id yet". */
+export const NOT_IN_READ_REQUEST = "FE-052" as const;
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
+/**
+ * `17 Oct 09:58:00Z`, the house short UTC form with seconds (hi-fi blotter).
+ * An instant that does not parse, or is not stated as UTC, is returned as the server wrote it, never
+ * blanked; a missing one is the caller's "Not available".
+ */
+export function shortUtc(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:Z|[+-]00:?00)$/.exec(iso.trim());
+  const month = m ? MONTHS[Number(m[2]) - 1] : undefined;
+  if (!m || month === undefined) return iso;
+  return `${m[3]} ${month} ${m[4]}:${m[5]}:${m[6] ?? "00"}Z`;
+}

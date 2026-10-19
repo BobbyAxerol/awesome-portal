@@ -70,7 +70,9 @@
 }
 .exec-acc-tab {
   padding: var(--space-2) var(--space-4);
-  font: var(--exec-font-control);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink-soft);
   background: var(--paper);
   border: 1px solid transparent;
@@ -106,12 +108,21 @@
   margin: 0;
 }
 .exec-acc-kpi-value {
-  font: var(--exec-font-subtitle);
+  font: var(--exec-font-kpi);
+  font-variant-numeric: tabular-nums;
   color: var(--ink);
   overflow-wrap: anywhere;
 }
+/* A long id (a username like principal-visual-baseline) keeps the id role; a stated absence is prose. */
+.exec-acc-kpi-value[data-form="id"] {
+  font: var(--exec-font-id);
+}
+.exec-acc-kpi-value[data-form="absent"] {
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
 .exec-acc-kpi-note {
-  font: var(--exec-font-caption);
+  font: var(--exec-font-meta);
   color: var(--ink-soft);
   overflow-wrap: anywhere;
 }

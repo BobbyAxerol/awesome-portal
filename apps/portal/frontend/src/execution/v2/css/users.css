@@ -109,7 +109,7 @@
   border: 1px solid var(--line-strong);
 }
 .exec-usr-input {
-  width: 240px;
+  width: 280px;
   max-width: 100%;
 }
 .exec-usr-input::placeholder {
@@ -141,6 +141,13 @@
 .exec-usr-link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+.exec-usr-unpub {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  list-style: none;
 }
 .exec-usr-unpub,
 .exec-usr-note {

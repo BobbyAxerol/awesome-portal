@@ -10,7 +10,7 @@
 .exec-adm-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-3);
 }

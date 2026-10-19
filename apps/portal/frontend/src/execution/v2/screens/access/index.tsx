@@ -62,6 +62,19 @@ export interface AccessSelfViewProps {
   fetchImpl?: typeof fetch;
 }
 
+/** Longest value that still reads at the 24/32 mono kpi size; a longer one (a long username) takes the 12/16 mono id role. */
+const KPI_VALUE_MAX_CHARS = 12;
+
+/**
+ * One identity-strip value. A short value is the kpi role (hi-fi `.kpi .v`);
+ * a long id keeps the id role so it cannot wrap at 24px; a stated absence is
+ * body text, never a 24px "Not available".
+ */
+function KpiValue({ text, absent }: { text: string; absent?: boolean }) {
+  const form = absent ? "absent" : text.length > KPI_VALUE_MAX_CHARS ? "id" : "kpi";
+  return <dd className="exec-acc-kpi-value" data-form={form}>{text}</dd>;
+}
+
 function NotPublished({ id, children }: { id: string; children?: ReactNode }) {
   return (
     <span>
@@ -202,29 +215,29 @@ export default function AccessSelfView({ manage, now, fetchImpl }: AccessSelfVie
       <dl className="exec-acc-kpis" aria-label="Who you are signed in as">
         <div className="exec-acc-kpi">
           <dt>Signed in as</dt>
-          <dd className="exec-acc-kpi-value">{principal?.username ?? "Not available"}</dd>
+          <KpiValue text={principal?.username ?? "Not available"} absent={!principal?.username} />
           <dd className="exec-acc-kpi-note exec-acc-code">{session?.userId ? session.userId : "User id not available"}</dd>
         </div>
         <div className="exec-acc-kpi">
           <dt>Owner</dt>
-          <dd className="exec-acc-kpi-value">{ownerWord ?? (access.kind === "loading" ? "Loading" : "Not available")}</dd>
+          <KpiValue text={ownerWord ?? (access.kind === "loading" ? "Loading" : "Not available")} absent={!ownerWord} />
           <dd className="exec-acc-kpi-note">From your session</dd>
         </div>
         <div className="exec-acc-kpi">
           <dt>Capabilities held</dt>
-          <dd className="exec-acc-kpi-value">{session ? String(session.capabilities.length) : access.kind === "loading" ? "Loading" : "Not available"}</dd>
+          <KpiValue text={session ? String(session.capabilities.length) : access.kind === "loading" ? "Loading" : "Not available"} absent={!session} />
           <dd className="exec-acc-kpi-note">From your session</dd>
         </div>
         <div className="exec-acc-kpi">
           <dt>Access policy</dt>
-          <dd className="exec-acc-kpi-value">{effective ? policyWord(effective) : grants.phase === "loading" ? "Loading" : "Not available"}</dd>
+          <KpiValue text={effective ? policyWord(effective) : grants.phase === "loading" ? "Loading" : "Not available"} absent={!effective} />
           <dd className="exec-acc-kpi-note">
             {effective ? (effective.policyRevision ? `Revision ${effective.policyRevision}` : "No revision published") : "From the access read"}
           </dd>
         </div>
         <div className="exec-acc-kpi">
           <dt>Role preset</dt>
-          <dd className="exec-acc-kpi-value"><NotPublished id={ACCESS_FE.reasons} /></dd>
+          <dd className="exec-acc-kpi-value" data-form="absent"><NotPublished id={ACCESS_FE.reasons} /></dd>
           <dd className="exec-acc-kpi-note">Access is shown by capability</dd>
         </div>
       </dl>

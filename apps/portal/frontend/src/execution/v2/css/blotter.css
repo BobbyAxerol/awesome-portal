@@ -11,7 +11,7 @@
 .exec-blt2-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-3);
 }
@@ -235,6 +235,27 @@
 .exec-blt2-table thead th {
   padding: 4px var(--space-2);
 }
+/* Measured on hi-fi blotter.html: td.n and the time column are 12px; text cells are the data role. */
+.exec-blt2-table tbody td {
+  font: var(--exec-font-data);
+}
+.exec-blt2-table tbody td[data-numeric="true"],
+.exec-blt2-table tbody td .exec-blt2-num {
+  font: var(--exec-font-id);
+  font-variant-numeric: tabular-nums;
+}
+/* Status stays in view at any width (hi-fi .stk): the last column sticks to the right edge of the scrolling box. */
+.exec-blt2-table thead th:last-child,
+.exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--paper-raised);
+  box-shadow: -1px 0 0 var(--line);
+}
+.exec-blt2-table tbody tr[data-selected="true"] td:last-child {
+  background: var(--accent-soft);
+}
 .exec-blt2-ordercell {
   display: inline-flex;
   align-items: center;
@@ -310,5 +331,11 @@
   .exec-blt2-inner {
     display: block;
     overflow-x: auto;
+  }
+  /* Cards: nothing sticks; every cell is a row of the card. */
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td:last-child {
+    position: static;
+    box-shadow: none;
+    background: transparent;
   }
 }

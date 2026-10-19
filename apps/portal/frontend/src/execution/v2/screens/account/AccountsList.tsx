@@ -260,9 +260,11 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
               </select>
             </label>
             <button type="button" className="exec-acct-btn" aria-pressed={issuesOnly} onClick={() => setLocal("issues", issuesOnly ? "" : "1")}>Issues only</button>
-            <button type="button" className="exec-acct-btn" disabled title={notPublished(FE.export)} aria-describedby={`${panelId}-export`}>Export</button>
-            <span id={`${panelId}-export`} className="exec-acct-sr">{notPublished(FE.export)}. Exporting this list is not offered yet.</span>
             {filtered ? <button type="button" className="exec-acct-btn" onClick={clearFilters}>Clear all</button> : null}
+            <span className="exec-acct-export">
+              <button type="button" className="exec-acct-btn" disabled title={notPublished(FE.export)} aria-describedby={`${panelId}-export`}>Export</button>
+              <span id={`${panelId}-export`} className="exec-acct-note">{notPublished(FE.export)}. Exporting this list is not offered yet.</span>
+            </span>
           </div>
 
           {chips.length > 0 ? (

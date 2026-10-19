@@ -16,7 +16,7 @@ import { decimalCases, leaked, pollutionCases, prototypeIsClean, requiredCases, 
 import { cloneRows, pad, timed } from "../../testkit/scale";
 import {
   COLUMNS, DEFAULT_COLUMNS, NO_FILTERS, NO_SCOPE, ROW_CAP, applyScope, blotterQuery, chipCounts, fillsFor, filtersKey, groupExact, humanize,
-  isBucket, legsFor, readBlotter, readExact, scopeActive, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder,
+  isBucket, legsFor, readBlotter, readExact, scopeActive, shortUtc, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder,
 } from "./blotterModel";
 
 const NAME = "execution-full-blotter.partial";
@@ -280,5 +280,25 @@ describe("L3 negative", () => {
       const view = statusView(page.orders[0]!.status);
       expect(view.kind, String(status)).not.toBe("ok");
     }
+  });
+});
+
+describe("blotter default columns and time (BLT-B1)", () => {
+  it("opens with the hi-fi's ten columns: Alpha, Account and Venue are off until chosen", () => {
+    expect([...DEFAULT_COLUMNS].sort()).toEqual(["order", "price", "qty", "side", "status", "symbol", "time"].sort());
+    for (const id of ["alpha", "account", "venue"] as const) {
+      expect(COLUMNS.find((c) => c.id === id)?.dflt, id).toBe(false);
+    }
+  });
+
+  it("prints a UTC instant as 'DD Mon HH:MM:SSZ' and returns anything else as written", () => {
+    expect(shortUtc("2026-10-17T09:58:00Z")).toBe("17 Oct 09:58:00Z");
+    expect(shortUtc("2026-10-17T09:58:07.123456Z")).toBe("17 Oct 09:58:07Z");
+    expect(shortUtc("2026-10-17T09:58:00+00:00")).toBe("17 Oct 09:58:00Z");
+    // not stated as UTC, or not an instant: never relabelled
+    expect(shortUtc("2026-10-17T09:58:00")).toBe("2026-10-17T09:58:00");
+    expect(shortUtc("2026-10-17T09:58:00+07:00")).toBe("2026-10-17T09:58:00+07:00");
+    expect(shortUtc("2026-13-17T09:58:00Z")).toBe("2026-13-17T09:58:00Z");
+    expect(shortUtc("yesterday")).toBe("yesterday");
   });
 });

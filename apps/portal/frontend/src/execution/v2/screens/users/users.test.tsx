@@ -87,10 +87,20 @@ describe("roster", () => {
     await loaded();
     const note = document.querySelector(".exec-usr-unpub")!;
     expect(note.textContent).toContain("Not published (FE-015, FE-026, FE-037, FE-038) Role presets");
-    expect(note.textContent).toContain("Last sign-in");
+    expect(note.textContent).toContain("Not published (FE-053) Last sign-in");
+    expect(note.querySelectorAll("li").length).toBe(3);
+    expect(note.textContent).not.toMatch(/no request/i);
     const dock = await screen.findByRole("complementary");
     expect(dock.textContent).toContain("Not published (FE-015, FE-026, FE-037, FE-038)");
-    expect(dock.textContent).toContain("Not published (no request filed yet)");
+    expect(dock.textContent).toContain("Not published (FE-053)");
+  });
+
+  it("renders inside an execution surface, so the type roles apply (USR-B1)", async () => {
+    mount();
+    await loaded();
+    const root = document.querySelector(".exec-usr-v2")!;
+    expect(root.closest(".exec-surface")).not.toBeNull();
+    expect(root.closest("[data-theme='operations-carbon']")).not.toBeNull();
   });
 
   it("renders no dash, no zero for an absence and no abbreviated number", async () => {

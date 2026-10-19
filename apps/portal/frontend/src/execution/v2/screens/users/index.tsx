@@ -27,6 +27,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { accounts, stepUp, type AccountSummary, type HistoryEntry, type StepUpState } from "../../../../features/admin/accountApi";
 import { PanelSkeleton, PanelState } from "../../../components/states";
+import { ExecutionSurface } from "../../../ExecutionSurface";
 import { utcStamp } from "../../../time";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Drawer, DockAction, useDockMode, useDockSelection } from "../../Drawer";
@@ -70,6 +71,8 @@ type DetailState =
   | { phase: "ready"; userId: string; history: readonly HistoryEntry[] };
 
 const SEARCH_DEBOUNCE_MS = 300;
+
+const LAST_SIGN_IN_REQUEST = "FE-053";
 
 const CHANGES_ELSEWHERE = "Account changes are made on the current Users screen. This view reads accounts only.";
 
@@ -235,7 +238,9 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
 
   const reload_ = () => setReload((n) => n + 1);
 
+  // The route mounts this screen bare; the type roles and the Carbon theme exist only under a surface (USR-B1).
   return (
+    <ExecutionSurface kind="deployments">
     <div className="exec-usr-v2" data-screen="users-v2">
       <header className="exec-usr-head">
         <div>
@@ -325,9 +330,11 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                 <button type="button" className="exec-usr-btn" disabled aria-describedby={reasonId}>Invite account</button>
                 {filtered ? <button type="button" className="exec-usr-btn" onClick={clearFilters}>Clear filters</button> : null}
               </div>
-              <p id={reasonId} className="exec-usr-unpub">
-                <Unpublished ids={PRESET_REQUESTS} what="Role presets" />. <Unpublished ids="no request filed yet" what="Last sign-in" />. {CHANGES_ELSEWHERE}
-              </p>
+              <ul id={reasonId} className="exec-usr-unpub">
+                <li><Unpublished ids={PRESET_REQUESTS} what="Role presets" /></li>
+                <li><Unpublished ids={LAST_SIGN_IN_REQUEST} what="Last sign-in" /></li>
+                <li>{CHANGES_ELSEWHERE}</li>
+              </ul>
 
               {counts.awaitingFirstPassword > 0 ? (
                 <p className="exec-usr-note">{counts.awaitingFirstPassword} {counts.awaitingFirstPassword === 1 ? "account is" : "accounts are"} awaiting a first password.</p>
@@ -388,7 +395,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                     <dt>Role preset</dt>
                     <dd><Unpublished ids={PRESET_REQUESTS} /></dd>
                     <dt>Last sign-in</dt>
-                    <dd><Unpublished ids="no request filed yet" /></dd>
+                    <dd><Unpublished ids={LAST_SIGN_IN_REQUEST} /></dd>
                   </dl>
                 ) : (
                   <p className="exec-usr-note">This account is not in the roster that was read. It may have been removed or the link is wrong.</p>
@@ -423,5 +430,6 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
         </>
       )}
     </div>
+    </ExecutionSurface>
   );
 }
