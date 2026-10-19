@@ -593,6 +593,52 @@ describe.skipIf(!URL)("ELP2-04 current operational parents / actual PG+HTTP / TE
     expect(dim(empty, "severity")).toMatchObject({ own_filter_applied: false, total: 0 });
     expect(Object.values(dim(empty, "triage_state").counts).every(value => value === 0)).toBe(true);
   });
+  it("FE-043 a status filter value outside the closed domain (severity=BOGUS) is a typed 400, never a 503, and leaves a valid read unaffected", async () => {
+    const f = await fixture(); await population(f);
+    for (const filters of [{ severity: "BOGUS" }, { source_status: "APPLIED" }, { triage_state: "bogus" }, { verification_result: "" }])
+      await refusal(read(f, filters), 400, "OPERATIONAL_READ_INPUT_INVALID");
+    const page = await read(f, { severity: "ERROR" }); // the same cohort still reads, with the own-bucket count intact
+    expect(page.page.filtered_count).toBe(2); expect(dim(page, "severity").counts.ERROR).toBe(2); expect(dim(page, "severity").counts.BOGUS).toBeUndefined();
+  });
+  const walkPlan = (node: Record<string, unknown>, out: Array<{ type: string; index?: string }> = []) => {
+    out.push({ type: String(node["Node Type"]), index: node["Index Name"] as string | undefined });
+    for (const child of (node.Plans as Array<Record<string, unknown>> | undefined) ?? []) walkPlan(child, out);
+    return out;
+  };
+  it("FE-042 M1: the links table has the (workspace_id, operation_id, created_at DESC, incident_id DESC) lookup index from the migration", async () => {
+    const found = await ctx.pool.query<{ indexname: string; indexdef: string }>(
+      "SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = current_schema() AND tablename = 'execution_incident_operation_links' ORDER BY indexname");
+    const lookup = found.rows.find(row => row.indexname === "execution_incident_operation_links_operation_idx");
+    expect(lookup?.indexdef).toMatch(/\(workspace_id, operation_id, created_at DESC, incident_id DESC\)$/);
+    expect(lookup?.indexdef).not.toMatch(/UNIQUE|WHERE/); // additive, non-unique, non-partial: no new constraint on writers
+    expect(found.rows.length).toBeGreaterThanOrEqual(2); // the primary key is still there
+    expect((await ctx.pool.query("SELECT 1 FROM pgmigrations WHERE name = '1723680000145_execution-incident-links-operation-lookup-index'")).rowCount).toBe(1);
+  });
+  it("FE-042 M1: on 60k link rows the planner seq-scans a PK-only table but uses exactly this index definition for the queue's (workspace_id, operation_id = ANY) lookup", async () => {
+    const real = (await ctx.pool.query<{ indexdef: string }>(
+      "SELECT indexdef FROM pg_indexes WHERE schemaname = current_schema() AND indexname = 'execution_incident_operation_links_operation_idx'")).rows[0].indexdef;
+    const probeDef = real.replace(/ON \S*execution_incident_operation_links /, "ON links_probe ").replace("execution_incident_operation_links_operation_idx", "links_probe_idx");
+    expect(probeDef).toContain("ON links_probe "); expect(probeDef).toContain("links_probe_idx");
+    const db = await ctx.pool.connect();
+    try { // a TEMP table copy of the shape: bulk rows without the FK fixtures, discarded with this connection
+      await db.query(`CREATE TEMP TABLE links_probe (incident_id text NOT NULL, workspace_id text NOT NULL, operation_id text NOT NULL,
+        relationship text NOT NULL, linked_by_user_id text NOT NULL, created_at timestamptz NOT NULL, PRIMARY KEY (incident_id, operation_id))`);
+      await db.query(`INSERT INTO links_probe SELECT 'inc' || (i % 997), 'w' || (i % 25), 'op' || i, 'RELATED', 'u',
+        timestamptz '2026-01-01 UTC' + i * interval '1 second' FROM generate_series(1, 60000) AS i`);
+      await db.query("ANALYZE links_probe");
+      const ids = Array.from({ length: 100 }, (_, n) => `op${3 + 25 * n}`); // all in workspace w3, as one queue page would be
+      const explain = async () => {
+        const plan = await db.query(`EXPLAIN (FORMAT JSON) SELECT operation_id, incident_id, relationship, created_at FROM links_probe l
+          WHERE l.workspace_id = 'w3' AND l.operation_id = ANY($1::text[])`, [ids]);
+        return walkPlan((plan.rows[0]["QUERY PLAN"] as Array<{ Plan: Record<string, unknown> }>)[0].Plan);
+      };
+      expect((await explain()).some(node => node.type === "Seq Scan")).toBe(true); // control: without the index the lookup scans the table
+      await db.query(probeDef); await db.query("ANALYZE links_probe");
+      const nodes = await explain();
+      expect(nodes.some(node => node.type === "Seq Scan")).toBe(false);
+      expect(nodes.some(node => node.index === "links_probe_idx" && /Index|Bitmap/.test(node.type))).toBe(true);
+    } finally { await db.query("DROP TABLE IF EXISTS pg_temp.links_probe").catch(() => undefined); db.release(); }
+  });
   it("FE-042/043 the full 250-row page with maximum-length identifiers and 3 links each stays inside the 1 MiB bound", () => {
     const long = "a".repeat(191), history = { availability: "NOT_PUBLISHED", reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED" } as const;
     const link = { state: "LINKED", incident_id: long, relationship: "RELATED", linked_at: "2026-01-02T03:04:05.123456Z",
