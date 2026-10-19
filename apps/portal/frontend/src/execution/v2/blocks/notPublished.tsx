@@ -42,7 +42,8 @@ export const FE_REQUEST_LABEL = {
   "FE-033": "Compare",
   "FE-034": "Archived list",
   "FE-035": "Map",
-  // S3 stage screens (plan s8, 2026-10-19). OPEN requests recorded in the ledger by the integrator; not yet sent to Codex (D9).
+  // S3 stage screens (plan s8, 2026-10-19). OPEN requests; the ledger rows are in FRONTEND_BACKEND_SYNC.md §6 and the cards in
+  // evidence/UXM-07/backend-requests.md. Not yet sent to Codex (D9).
   "FE-066": "Alpha and portfolio names on a deployment",
   "FE-067": "Runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions",
   "FE-068": "Self-eligibility for stage actions",

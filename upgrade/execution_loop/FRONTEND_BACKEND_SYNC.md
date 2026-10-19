@@ -298,3 +298,40 @@ Tất cả `OPEN`; chưa gửi cho Codex ngoài việc ghi ở đây (Codex đ�
 - Cuối mỗi round: cập nhật §3 (request mới/đã giao) và §4 (review mới) trước khi báo Bobby.
 - Codex đổi trạng thái request trong packet sở hữu và nhắc ID ở commit message; FE đổi `Status` trong cột done-when ở đây
   chỉ sau khi nhận ACCEPTED/CHANGES_REQUESTED có locator.
+
+## 6. Vòng S3 (2026-10-19): FE-066…072 và bốn yêu cầu chưa đánh số
+
+Chủ ghi: Claude. Đây là phần **nối thêm cuối sổ** (không sửa dòng nào ở trên) để việc rebase với bản đang chờ của Codex chỉ là nối hai đoạn. Tất cả dòng dưới đây: **OPEN, chưa gửi cho Codex** (D9 của [S3 plan](design/impl/S3-STAGE-SCREENS-PLAN-2026-10-19.md): Bobby chọn lúc gửi). Thẻ đầy đủ (locator / hiện trạng / mong muốn nhỏ nhất / FE làm khi chờ) ở [evidence/UXM-07/backend-requests.md](evidence/UXM-07/backend-requests.md) mục "S3"; thứ tự ưu tiên ở [codex-priority-requests-2026-10-19.md](evidence/UXM-07/codex-priority-requests-2026-10-19.md) mục 6. Mức ưu tiên là đề xuất của FE.
+
+Màn nào đọc id nào: Paper = `v2/screens/workbench/**`, Sandbox = `…/sandbox/**`, Canary = `…/canary/**`, Live = `…/live/**`, New request = `…/request/**`. Cả năm đã nối sau khóa cờ riêng (`ef9014f3`); trên dữ liệu thật (nguồn tối) các ô dưới đây in `Not published (FE-xxx)` hoặc `Not available`, đó là trung thực, không phải lỗi giao diện. Chỉ FE-066, 067, 070, 071, 072 có ô `Not published (FE-xxx)` trên màn; FE-068 và FE-069 hiện là lý do nút bị tắt / chú thích trong form, và nhãn của chúng nằm trong `FE_REQUEST_LABEL` (`v2/blocks/notPublished.tsx`).
+
+| ID | Pri | Need | UI blocked | Owner | Done-when | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| FE-066 | P2 | `alpha_id`, `alpha_name`, `portfolio_name` (nullable) trên khối `deployment` của profile Paper và của thân stage (`/deployments/{id}/{certification,canary,live}`) | crumb và tiêu đề Paper/Sandbox/Canary/Live hiện id, không hiện tên alpha/portfolio | Portal | Field nullable + lý do khi thiếu, có trong fixture | OPEN, not yet sent to Codex |
+| FE-067 | P2 | Paper: `runtime_state` + `since`; verdict đối soát + số lệnh chưa rõ (unknown orders); hàng phiên `{id, started, ended, state}`. Sandbox/Canary/Live: `runtime_state` thật thay `null` | chip Runtime / Reconciliation, tab Sessions, thanh "On scroll" | Portal (+TS) | Contract + fixture; `active` không thành "Running" | OPEN, not yet sent to Codex |
+| FE-068 | P2 | Self-eligibility cho: `approval.create`, `sandbox.review_note`, `paper.exit_review_request`, `canary.{hold,reduce,rollback,request_scale}`, `live.{halt,reduce,emergency_close}` (mở rộng FE-015/058/059) | nút disabled hiện lý do chung; "Needs the approver grant" chỉ khi server từ chối | Portal | Mỗi action có verdict + `reason_class` đọc được trước khi bấm | OPEN, not yet sent to Codex |
+| FE-069 | P3 | New request: danh sách run lọc theo alpha và có cursor vượt `limit=50`; nhãn phạm vi alpha (ALL AUTHORIZED / YOUR ALPHAS) từ server; tra yêu cầu theo `request_key` | picker alpha suy từ 50 run COMPLETED; "Check original request" chỉ mở Inbox | Portal (+Research cho run list) | Query + cursor + route lookup, fixture rỗng/1/nhiều | OPEN, not yet sent to Codex |
+| FE-070 | P3 | Lịch phiên thị trường VN (timezone, cửa sổ, nghỉ trưa, ATO/ATC, ngày nghỉ) | chip "VN market" ở `/deployments/paper/{id}/vn-market` | Portal | Contract; không suy PAUSED ở client | OPEN, not yet sent to Codex |
+| FE-071 | P2 | Canary: hàng tuân thủ envelope (limit chính sách, approved, consumed, tỷ lệ used, as-of); 4 mục rollback có ngày kiểm tra (flatten plan, paper twin, broker data, rollback drill); lịch trial (`started_at`, `exit_review_opens_at`) | gauge "Used", cờ "Within envelope", "Exit review in N days", panel Rollback readiness | Portal (+TS) | Field + fixture populated | OPEN, not yet sent to Codex |
+| FE-072 | P1 | Hàng và chuỗi có kiểu cho ba màn stage: khóa của `source_panels.*.data` (Internal/Broker/Difference), `positions` / `blotter` / `orders` rows có kiểu kể cả leverage và ack latency, `series.points` cấp deployment, khoảng gap của continuity (từ-đến), cột Opened (findings) và Envelope / Author (plans) | Triad ba màn, bảng Positions/Orders, chart slot, Continuity, Findings, Promotion plans | Portal (+TS) | Schema có kiểu + fixture SOURCE_BACKED hợp schema; bỏ các `const` nguồn tối nếu nguồn đã bật | OPEN, not yet sent to Codex |
+
+### Bốn yêu cầu chưa đánh số mà mã đã phụ thuộc (S3-U1…U4)
+
+| Mã tạm | Need | Hiện trạng (đã kiểm) | Status |
+| --- | --- | --- | --- |
+| S3-U1 | Route keyset `execution.paper-workbench.shadow-panel.v1` (`GET /api/v1/execution/deployments/paper/{deploymentId}/projection/{panel}`, `panel` = orders\|positions, `limit` ≤ 250, `after`/`before`) và kết quả qualification của nó | Có trong `execution-analytics.openapi.json` nhưng không màn FE nào gọi. Profile Paper đọc một lần ~7,4 MB và ~6 s (D12); xin Codex xác nhận route có được serve và có đủ để thay phần orders/positions của profile | OPEN, not yet sent to Codex |
+| S3-U2 | Schema đã phát hành + fixture canonical cho `execution.alpha-resource.v1`, `portal.execution.subject-records.v2`, observed-timeline, market-candles | Alpha 360 / Trade Replay chỉ được kiểm với double viết tay `e2e/bffDoubleAlpha.ts`; `alpha-resource.v2` đã có trong `packages/contracts` (scoped-resource) nhưng FE đọc **v1**. Chỉ chạy được "BFF_DOUBLE", không phải bằng chứng real-API | OPEN, not yet sent to Codex |
+| S3-U3 | Xác nhận server phục vụ `getFinancialChart({subjectKind:"deployment"})` và `getQueryAnalytics("deployments", id)` | **NOT VERIFIED.** Đã grep: màn Paper V2 chỉ gọi `getPaperWorkbenchProfile` và `getDeploymentQuality`; không màn stage nào gọi hai cổng này (chỉ Account 360 và Portfolio 360 gọi `getFinancialChart`, cho `account` / `portfolio`). Vì vậy chart Paper vẽ từ `account_equity` của profile và chart Canary/Live ghi "Not published". Không khẳng định server có phục vụ hay không | OPEN, not yet sent to Codex |
+| S3-U4 | FE-051 mở rộng: long/short/gross theo side cho **vị thế của deployment** (không chỉ account) | Hi-fi Paper Positions có Long/Short/Gross; FE hiện dùng cột đã publish (D13d) | Gộp vào FE-051 (vẫn OPEN) |
+
+### Trạng thái nhất quán của FE-057…065
+
+FE-057, 058, 059, 060, 062, 063, 065: **OPEN, chưa gửi Codex** (FE-064 để trống có chủ ý). FE-061 và FE-056, FE-049: CLAUDE_DELIVERED, chờ Codex review (xem mục 0, `e1178c46`). Không dòng nào trong nhóm này đã được Codex nhận (`ACCEPTED`).
+
+### Khoảng trống phía Codex mà reader Manager dataset đã ghim (MD-1…MD-8)
+
+Mỗi mục có test `it.fails` trong reader `managerDataset` (commit `1686ec86`) và sẽ đỏ khi Codex sửa: MD-1 `returned_count` khớp số hàng và `limit`; MD-2 metric trong partition mang đúng tiền tệ; MD-3 partition không trùng; MD-4 preset không publish thì không có window; MD-5 Decimal nhận `-0`; MD-6 `row_key` duy nhất; MD-7 group key thuộc `group_fields`; MD-8 tiền ở hàng khớp tiền tệ partition. Thuộc FE-005/025/041 và RV-1/RV-2; chưa gửi.
+
+### Lỗi reader V1 đã sửa ở phía FE (không cần Codex; ghi để Codex biết hành vi hiện hành)
+
+`94402566` sửa hai reader dùng chung `certification.ts` và `liveFull.ts`: (1) ánh xạ từ vựng panel đã publish (`ready` → ok, `error` → terminal, `FRESH` → OK; từ lạ giữ `unavailable` / "not stated" thay vì đoán); (2) đọc dòng finding đã publish (`finding_code`, `summary`, `blocking`, `resolved_at`, `created_at`); (3) giữ `rollback_readiness.ready` / `blocker_codes`, `envelope_compliance` (`limits`, `consumed`, `headroom`, `base_risk_profile_verified`), rows của `positions` / `blotter` và `series.points` thành field có kiểu, additive (Live Full positions/orders bị tước khi broker values ẩn). Màn V1 bỏ qua các field mới; markup V1 byte-for-byte giống cũ (đã chứng minh bằng test). Visual V1 verify trong image pinned **chưa chạy** (xem `evidence/UXM-07/debt-register.json`).

@@ -40,3 +40,21 @@ FE-008 (search/`q_mode`), FE-014 (`environment` trên portfolios), FE-040, FE-04
 | F1 index | migration `1723680000145`: index `(workspace_id, operation_id, created_at DESC, incident_id DESC)` cho bảng link incident (review độc lập M1) | M2: đếm `status_counts` luôn bật có làm hỏng cả trang khi chậm; chọn opt-in `include=`, SAVEPOINT + `UNAVAILABLE`, hoặc GROUPING SETS |
 
 Khoảng trống phía Codex mà reader Manager dataset phát hiện (mỗi cái có test `it.fails` sẽ đỏ khi sửa): MD-1 `returned_count` khớp số hàng và `limit`; MD-2 metric trong partition mang đúng tiền tệ; MD-3 partition không trùng; MD-4 preset không publish thì không có window; MD-5 Decimal nhận `-0`; MD-6 `row_key` duy nhất; MD-7 group key thuộc `group_fields`; MD-8 tiền ở hàng khớp tiền tệ partition.
+
+## 6. Thêm từ S3 (năm màn stage dựng xong, 2026-10-19): OPEN, chưa gửi Codex
+
+Thẻ đầy đủ: [backend-requests.md](backend-requests.md) mục "S3"; ledger: [FRONTEND_BACKEND_SYNC.md](../../FRONTEND_BACKEND_SYNC.md) §6. Năm màn Paper, Sandbox, Canary, Live, New request đã dựng sau cờ riêng; trên nguồn tối ba màn stage hiện `Not published (FE-xxx)` ở các ô dưới đây. Thứ tự theo mức chặn màn (đề xuất của FE, Bobby chọn lúc gửi):
+
+| # | Việc | Vì sao | Contract nhỏ nhất |
+| --- | --- | --- | --- |
+| S1 | **FE-072** hàng và chuỗi có kiểu cho Sandbox/Canary/Live | Chặn Triad, bảng Positions/Orders, chart, gap window, cột Opened/Envelope/Author của cả ba màn | Schema có kiểu cho `source_panels.*.data`, `positions`/`orders` rows, `series.points`, `continuity.gap {from,to}` + fixture SOURCE_BACKED |
+| S2 | **FE-067** runtime_state, đối soát, phiên | Chip Runtime/Reconciliation của cả năm màn đang `Not published`; tab Sessions trống | `runtime_state` + `since`, `reconciliation {verdict, unknown_order_count}`, `sessions[]` (hoặc xác nhận nhánh `Records` đã có trong `execution-paper-read.v1`) |
+| S3 | **FE-071** Canary envelope, rollback, trial | Gauge Used, "Within envelope", Rollback readiness, "Exit review in N days" | `envelope_compliance.rows[]` có verdict server, `rollback_readiness.items[]` có `checked_at`, `lifecycle.started_at` / `exit_review_opens_at` |
+| S4 | **S3-U1** route `shadow-panel` + qualification | Profile Paper ~7,4 MB và ~6 s, đọc một lần | Xác nhận route đã serve/qualified; có thay được orders/positions của profile |
+| S5 | **S3-U2** schema + fixture canonical cho alpha-resource, subject-records, observed-timeline, market-candles | Alpha 360 / Replay chỉ được kiểm bằng double viết tay; FE đọc v1 trong khi v2 đã có | Schema + fixture rỗng/1/nhiều/keyset; chốt v1 hay v2 |
+| S6 | **FE-066** tên alpha/portfolio; **FE-068** self-eligibility 11 action | Crumb/tiêu đề chỉ có id; nút bị tắt không nói được lý do thật | Field nullable; mở rộng `self-eligibility.v1` |
+| S7 | **FE-069**, **FE-070**, **S3-U3**, **S3-U4** (FE-051 cho vị thế deployment) | Picker alpha 50 run; chip VN; chưa kiểm hai cổng chart/analytics theo `deployment`; Long/Short/Gross | Theo từng thẻ |
+
+Chưa kiểm (nói thẳng): server có phục vụ `getFinancialChart({subjectKind:"deployment"})` / `getQueryAnalytics("deployments")` hay không (S3-U3); server có điền nhánh `sessions` / `reconciliation` của profile Paper không (FE không đọc chúng).
+
+Hai kết quả review độc lập về S3 (nếu có file) chưa có trong cây này tại thời điểm viết; nếu muộn hơn, chúng được ghi ở `evidence/UXM-07/` và README mục 5.
