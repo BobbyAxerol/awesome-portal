@@ -6,8 +6,8 @@
       "id": "DEBT-UXM07-004",
       "title": "Reader defects documented by the L3 conformance suites",
       "where": "formatExact.ts group() (quadratic), profileRead.ts readFleetDeployment/readCurrency* (money = any non-empty string), inboxRowV2.ts whole()/ids, laneModel.ts isClosedRow, fleetModel.ts healthView, duplicate ids per page",
-      "status": "being fixed by F5b; D4 (stage_counts zero) waits on Codex (FE-048)",
-      "owner": "Claude (FE); D4 Codex"
+      "status": "FE side DONE: F5b readers (bcfde9fe D0-D3/D5-D8, 809d9360, dc0bded5 F5c) and D4 on the FE (4c65f2e4: a stage absent from stage_counts prints 'Not available', never 0). Remaining and not ours: server meaning of an absent stage (FE-048) and the Codex-side gaps pinned as it.fails (MD-1..MD-8, SE-1/CC-1/CC-2 closed by Codex d0789674). Keep open only for FE-048",
+      "owner": "Codex (FE-048); FE side closed"
     },
     {
       "id": "DEBT-UXM07-005",
@@ -59,6 +59,87 @@
       "where": "apps/portal/frontend/src/execution/realtimeProducerConsumer.test.tsx (5 tests: TypeError common_1.Optional is not a function, then service undefined in afterEach)",
       "evidence": "same failure on a detached worktree of d0789674 with this machine's node_modules; not caused by UXM-07",
       "owner": "Codex (the test compiles control-api code in a vm and needs the Nest runtime the Docker cell provides)"
+    },
+    {
+      "id": "DEBT-UXM07-015",
+      "title": "Nine rows of e2e/execution-v2-s1.spec.ts assert a page overflow that is still there (KNOWN_OVERFLOW)",
+      "where": "apps/portal/frontend/e2e/execution-v2-s1.spec.ts KNOWN_OVERFLOW: alpha-360@narrow, alpha-replay@narrow, workbench@wide, workbench@narrow, workbench-vnm@wide, workbench-vnm@narrow, canary@narrow, canary-guard@narrow, canary-v2body@narrow",
+      "consequence": "At 390px the compact JourneySpine (blocks.css .exec-blk-spine-list, 400px) runs past the viewport on Alpha 360, Replay, Paper workbench and the three Canary rows; the stage tab strip and a long Flag also overflow on the Paper workbench at 390px, the Canary series panel (p.exec-cny-series) is 477px wide, and the NotPublished line (.exec-blk-na, 287px, no wrap) overflows the Paper workbench Overview at 1440px. The row asserts the overflow is still there, so the day a component is fixed its row turns red and the entry must be deleted",
+      "proposed": "Let .exec-blk-spine-list wrap or scroll inside its own box, let .exec-blk-na wrap, give the tab strip an inner scroller, cap .exec-cny-series; delete the nine entries",
+      "owner": "Claude (FE)"
+    },
+    {
+      "id": "DEBT-UXM07-016",
+      "title": "No pinned-image visual baselines for the new V2 groups",
+      "where": "e2e visual specs (scripts/portal-web-visual.sh): Paper workbench, Sandbox, Canary, Live, New request (page and drawer), and the changed V2 screens from FF-A/B1/B2",
+      "consequence": "Only Playwright overflow/console/network assertions and eyes-on shots exist for them; a pixel regression would not be caught. Recording needs the pinned image and the contact-sheet review (memory: visual baseline recording)",
+      "proposed": "Record at the R2 milestone with the recorder, review contact sheets, restore zero-diff files",
+      "owner": "Claude (FE) at R2"
+    },
+    {
+      "id": "DEBT-UXM07-017",
+      "title": "No axe run on the V2 routes",
+      "where": "e2e (no axe fixture for chromium-v2); a11y covered by Testing Library roles, aria-describedby on disabled controls and read-only reviews",
+      "consequence": "Colour contrast, landmark and ARIA-validity rules that axe checks are not machine-verified on any V2 route (17 S1/S2 routes + the S3 routes)",
+      "proposed": "Add an axe pass to execution-v2-s1.spec.ts for each SCREENS row at both widths",
+      "owner": "Claude (FE)"
+    },
+    {
+      "id": "DEBT-UXM07-018",
+      "title": "Missing conformance suites for the Paper workbench reader, the New request reader and readLiveFull (V1 body)",
+      "where": "v2/screens/workbench/model.ts (reads ProfileEnvelope; has negative/scale tests but no conformance against execution-paper-read.v1), v2/screens/request/model.ts and useNewRequest.ts (no conformance against governance.approval-create-request.v1 / its outcomes), v2/readers/dispatch.ts readLiveFullByVersion over liveFull.ts (the Live V1 body has no L0-L3 conformance file, unlike readSandbox.conformance.test.ts and readCanary.conformance.test.ts)",
+      "consequence": "These three screens are proven against hand-written doubles and unit cases, not against the published schemas; a schema drift would not fail a test",
+      "proposed": "Add *.conformance.test.ts per reader as for Sandbox and Canary (conformance-matrix-2026-10-19.md gets three rows)",
+      "owner": "Claude (FE)"
+    },
+    {
+      "id": "DEBT-UXM07-019",
+      "title": "V1-shared files changed in the S3 range have not been verified by the V1 visual suite",
+      "where": "src/execution/certification.ts and liveFull.ts (94402566: additive typed fields, V1 markup proved byte-identical in unit tests), src/execution/links.ts (65a5f74e), src/app/Sidebar.tsx and PortalRoutes.tsx (e6127770, behind the shell flag), src/app/PortalShell.tsx and commandRouting.ts and src/portal/navigation.ts (e926b09a, isNavigable exported), execution/ExecutionPreviewRoute.tsx",
+      "consequence": "Flag-off pixel identity is shown by DOM tests and a dist grep, not by the pinned-image visual run on this tip",
+      "proposed": "Run ./scripts/portal-web-visual.sh in verify mode (pinned image) before landing; attribute any red against a pristine Codex-tip worktree",
+      "owner": "Claude (FE) at R2"
+    },
+    {
+      "id": "DEBT-UXM07-020",
+      "title": "Sandbox PAPER_EXIT lineage link has no route",
+      "where": "The published V1 Sandbox body (packages/contracts/fixtures/execution-sandbox-certification.unavailable.valid.json:39, lineage kind PAPER_EXIT) carries href /deployments/paper/exit/{id}; v2/screens/sandbox/index.tsx ~:155 renders item.href as a router Link (any href that starts with /); execution/links.ts:11 documents that exit reviews live under /governance; e2e/execution-v2-links.spec.ts:108 allow-lists the case as a DEFECT",
+      "consequence": "The link lands on a path no route mounts (NotFound). The crawler stays green only through the reasoned allow-list row",
+      "proposed": "Map /deployments/paper/exit/{id} to /governance/exit-reviews/{id} in links.ts canonicalHref (FE side) and ask Codex to publish the mounted href; then delete the allow-list row",
+      "owner": "Claude (FE) for the mapping; Codex for the published href"
+    },
+    {
+      "id": "DEBT-UXM07-021",
+      "title": "Cockpit New request drawer: docked placement at 1500px and wider is not checked",
+      "where": "v2/Drawer.tsx useDockMode (modal below 1500px, docked at 1500px and above); v2/screens/request/RequestDrawer.tsx on the cockpit",
+      "consequence": "The e2e rows run at 1440 and 390, so the docked layout of the drawer next to the queue (hi-fi 380px dock) has not been looked at or measured",
+      "proposed": "Add a 1600px viewport row for ?compose=request and look at it",
+      "owner": "Claude (FE)"
+    },
+    {
+      "id": "DEBT-UXM07-022",
+      "title": "Fleet Board with 8 lanes overflows",
+      "where": "v2/screens/fleet board view (142946e3), css/fleet.css",
+      "consequence": "With 8 stage lanes the board grows past its container; no overflow guard or lane wrap, and the e2e fixture does not exercise 8 lanes",
+      "proposed": "Horizontal scroller inside the board with a visible edge, or wrap to two rows; add a scale case",
+      "owner": "Claude (FE)"
+    },
+    {
+      "id": "DEBT-UXM07-023",
+      "title": "Playwright V2 run on the S3 tip: 2 of 76 failed",
+      "where": "e2e/execution-v2-s1.spec.ts:45 'live-v2body ... at wide width' ([data-screen=\"live-v2\"] not visible in 5s) and :235 'the cockpit's New request opens the drawer ...' (Submit for R1 review stayed disabled: 'This screen has no published delivery policy')",
+      "evidence": "scratchpad g-pw.log ends with 74 passed, 2 failed, exit=1; the crawler spec passed. The build the run used is not recorded in the log",
+      "consequence": "The S3 browser gate is not green. The second failure is the symptom 8b9f361a was written to fix, so either the run used a build older than that commit or the fix is incomplete",
+      "proposed": "Rebuild dist-v2 at 21af6792 and rerun both specs; fix or record the cause before R2",
+      "owner": "Claude (FE)"
+    },
+    {
+      "id": "DEBT-UXM07-024",
+      "title": "Shared navigation/shell files were edited behind the shell flag: Bobby approval to confirm",
+      "where": "src/app/Sidebar.tsx and PortalRoutes.tsx (FF-A e6127770), src/app/PortalShell.tsx, commandRouting.ts and src/portal/navigation.ts (e926b09a; CommandBar mount was decided by Bobby on 2026-10-19), execution/links.ts (65a5f74e)",
+      "consequence": "CLAUDE.md section 0 says a change to shared components that may alter Research or Planning stops and asks Bobby. The edits are guarded by the shell flag (off = identical, tests prove it) but the approval for the Sidebar/PortalRoutes edit is not recorded",
+      "proposed": "Bobby confirms or asks for a revert (rollback.md lists the revert commands)",
+      "owner": "Bobby"
     }
   ],
   "closed": [

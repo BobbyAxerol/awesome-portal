@@ -259,5 +259,106 @@
     "control_api": "scripts/control-api-test.sh test/elp204-operational-current.spec.ts test/query-snapshot-reader.spec.ts: 85 passed, 0 skipped, 0 failed on a real PostgreSQL (migration 1723680000145 applied)",
     "chart_default_path": "the new default-path tests of ReplayCandleChart were run against the OLD chart code in a temp worktree: 4 default tests passed, only the pinned tests failed",
     "visual_v1_targeted": "queued behind Codex's recovery-gate (lock); spec execution-fixtures alpha-360-2a-2b (the only V1 baseline that draws the shared chart)"
+  },
+  "s3": {
+    "date": "2026-10-19",
+    "slice": "S3 (Paper workbench, Sandbox, Canary, Live, New request) plus flow fixes FF-A/B1/B2, link crawler and reader fixes",
+    "lane": "FIXTURE_LAB / BFF_DOUBLE (no real-API read; sources of Sandbox/Canary/Live are dark)",
+    "tier": "R1 slices + merged-tree gates, R2 pending",
+    "base": "35953e07 (S1/S2 landed on docs/research-loop-plan); tip 21af6792 on claude/fe-parity; 71 commits, 2 of them Codex (d0789674, 678cf731)",
+    "gates_given_by_integrator": {
+      "tsc": {
+        "cmd": "npx tsc --noEmit -p tsconfig.json",
+        "exit": 0
+      },
+      "vitest_wide": {
+        "cmd": "npx vitest run --maxWorkers=3 src/execution src/styles src/app src/portal src/fixtureBff e2e",
+        "tests": "38699 passed, 5 failed, 8 expected-fail, 2 skipped",
+        "files": "267 passed, 1 failed",
+        "red": "all 5 are realtimeProducerConsumer.test.tsx (Codex env test, DEBT-UXM07-014), red on the pristine Codex tip in this environment"
+      },
+      "playwright_v2": {
+        "cmd": "execution-v2-s1 + execution-v2-links on chromium-v2 (port-4176 V2 build)",
+        "log": "scratchpad g-pw.log, read to its final exit= line",
+        "exit": 1,
+        "passed": 74,
+        "failed": 2,
+        "failures": [
+          "execution-v2-s1.spec.ts:45 'live-v2body renders in V2 at wide width without console noise': [data-screen=\"live-v2\"] not visible within 5s",
+          "execution-v2-s1.spec.ts:235 'the cockpit's New request opens the drawer; ?compose=request alone sends nothing; Submit shows the receipt': Submit for R1 review stayed disabled (title: This screen has no published delivery policy, so no decision can be recorded)"
+        ],
+        "links_crawler": "execution-v2-links.spec.ts passed (5.1 min)",
+        "status": "RED, 2 of 76; not diagnosed in this docs step. The second is the symptom 8b9f361a (drawer posts through the request screen's delivery policy) was meant to fix; the log does not show which build it ran against (dist-v2 was rebuilt 14:46 UTC, the run ended 14:51 UTC in the main frontend checkout). Needs a rerun on a fresh build before anything is called green"
+      }
+    },
+    "commits_by_writer": {
+      "S3_W0a_shared_frame": ["9735d803"],
+      "S3_W0b_versioned_ports": ["855ad7c0"],
+      "S3_five_screens": {
+        "Paper_workbench": "913ff641",
+        "Sandbox": "93b33116",
+        "Canary": "4eb1fb55",
+        "Live": "2b831cb8",
+        "New_request": "a2af09bc"
+      },
+      "S3_W_INTEG": ["ef9014f3"],
+      "S3_W_E2E": ["fcca44ed"],
+      "S3_drawer_delivery_policy_fix": ["8b9f361a"],
+      "FF_A_route_url_contract": ["e6127770"],
+      "FF_B1_flow_fixes_ops_admin_overview_blotter_access_portfolios": ["65a5f74e"],
+      "FF_B2_flow_fixes_alpha_account_cockpit_fleet_drawer": ["82943cfb"],
+      "link_crawler": ["dd4fab21", "2404c164"],
+      "reader_fixes_sandbox_canary_live": ["94402566"],
+      "ledger_refresh_N29_EDS12": ["21af6792", "4954dc01", "0160bf20", "ccfb100a"],
+      "fe_contract_backend_and_strict_readers": ["e086cb9a", "c460b693", "595cfc2b", "a8d29672", "1686ec86", "e1178c46"],
+      "fixture_bff_and_research_preview": ["9c1af6bf", "2b3ec764", "578c10b3", "c9f8d259", "4d566307", "44ffa34b", "718d4667", "f4098dba", "fbfc804a", "3ca367fe", "a7f7b0fd", "7cecb7b8"],
+      "pre_s3_flow_and_shell": ["8791b1d2", "42a6959d", "649ecef9", "e926b09a", "142946e3", "b46a6fdb"],
+      "audit_round_and_f5_close": ["8e051084", "d519232e", "e5ba9eaf", "a2f45299", "76e19168", "8c4dc9e3", "f8a9f73e", "807e40aa", "a9a09efc"],
+      "fidelity_pass2_and_f8c": ["4b12bb0c", "59f7ac51", "1801ec3c", "03f15c9f", "d2e43db3"],
+      "r2_final_and_fix_wave_2": ["b1fe1aa6", "e4b92aa6", "35268995", "051ce4f7", "31e702c0", "cb8ca689", "4f6473cc"],
+      "docs_plan_audits_landing": ["ec243b92", "e4a7fe33", "7ce1be27", "eb79bc5b"],
+      "codex_not_ours": ["d0789674", "678cf731"]
+    },
+    "diff_35953e07_to_21af6792": "444 files, +64540/-1182; Claude-only part (678cf731..21af6792) 360 files, +55940/-976; Codex part (35953e07..678cf731) 93 files, +8604/-210",
+    "diff_by_category_claude_part": {
+      "V2_product_code": "+15490/-508 in 141 files",
+      "V2_css": "+2867/-41 in 22 files",
+      "V2_tests_and_test_doubles": "+21100/-135 in 88 files",
+      "V1_shared_product_code": "+920/-82 in 15 files",
+      "V1_shared_tests": "+1478/-2 in 13 files",
+      "e2e_specs_and_BFF_doubles": "+2427/-136 in 11 files",
+      "fixture_BFF": "+8438/-0 in 17 files",
+      "contracts_schemas_generated_fixtures": "+414/-22 in 15 files",
+      "control_api_FE_contract_backend": "+506/-24 in 7 files",
+      "deploy_scripts_infra": "+668/-2 in 8 files",
+      "markdown_docs": "+1624/-16 in 18 files",
+      "ledger_json_other": "+8/-8 in 5 files"
+    },
+    "not_run": [
+      {
+        "gate": "pinned-image visual suite (verify mode) for the new V2 groups and for the V1-shared files (certification.ts, liveFull.ts, Sidebar, PortalShell, PortalRoutes, navigation, links)",
+        "reason": "milestone R2; new V2 groups have no baseline at all (DEBT-UXM07-016)"
+      },
+      {
+        "gate": "full pre-commit hook",
+        "reason": "R1 slice commits; runs at R2/push"
+      },
+      {
+        "gate": "axe (a11y engine) on the V2 routes",
+        "reason": "never wired for V2; a11y so far by Testing Library roles and read-only reviews (DEBT-UXM07-017)"
+      },
+      {
+        "gate": "real-API read of any S3 screen",
+        "reason": "UXM-08; Sandbox/Canary/Live sources are dark"
+      }
+    ],
+    "docs_step": {
+      "date": "2026-10-19",
+      "commands": [
+        "scripts/execution-tracking-test.sh (R0 docs gate)",
+        "git diff --cached --check",
+        "node --test scripts/research-preview/fixture-bff-config.test.mjs (15 pass, 0 fail, 3 s; no docker needed for the static checks)"
+      ]
+    }
   }
 }
