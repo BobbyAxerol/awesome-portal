@@ -27,6 +27,11 @@
   background: var(--paper);
   border: 1px solid var(--line-strong);
   cursor: pointer;
+  /* A name is printed whole (never cut); a very long one wraps inside the chip instead of widening the page. */
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 .exec-cmpr-chip small {
   font: var(--exec-font-caption);

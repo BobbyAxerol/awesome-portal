@@ -367,6 +367,87 @@ describe("Paper Exit, V2 body with the sections added by e19ad906", () => {
   });
 });
 
+/**
+ * Pane-level scale (F5 L2): the reader bounds findings at 256 (PaperExitParentReadV2 evaluation.findings maxItems,
+ * fixed by F5c from 4,096) and the pane draws every finding it is given, grouped under its panel. So at the pane
+ * there is no cap to label: what must hold is that the exact count is printed, every row is there, and a body over
+ * the bound is a stated failure, never a trimmed list that reads as whole.
+ */
+describe("Paper Exit, findings at the pane (scale)", () => {
+  const findingsBody = (count: number): Fixture => {
+    const body = structuredClone(parent().paper_exit_extended);
+    const template = structuredClone(body.evaluation.panels[0]);
+    const ids = body.evaluation.panels.map((panel: Fixture) => panel.panel_id as string);
+    // Every panel OK, so each finding row is shown under its panel rather than behind a panel state.
+    body.evaluation.panels = body.evaluation.panels.map((panel: Fixture) => ({ ...template, panel_id: panel.panel_id, ordinal: panel.ordinal, panel_kind: panel.panel_kind, source_authority: panel.source_authority }));
+    const seed = structuredClone(body.evaluation.findings[0]);
+    body.evaluation.findings = Array.from({ length: count }, (_, i) => ({
+      ...seed,
+      finding_id: `finding_scale_${String(i).padStart(4, "0")}`,
+      panel_id: ids[i % ids.length],
+      ordinal: i,
+      outcome: i % 4 === 0 ? "PASS" : "FAIL",
+      blocking: i % 4 !== 0,
+    }));
+    return body;
+  };
+  const rowsIn = (evidence: HTMLElement) => evidence.querySelectorAll("table.exec-ck-table tbody tr");
+  const DOM_BUDGET = 9_000;
+
+  it.each([[199, 50], [200, 50], [201, 51], [256, 64]])("%i findings: the headline prints the exact count and %i pass, every row is drawn", async (count, pass) => {
+    const evidence = await open(portAnswering((kind) => okRead(kind, findingsBody(count))), "apr_exit");
+    expect(within(evidence).getByRole("heading", { name: `Findings ${pass} of ${count} pass` })).toBeTruthy();
+    expect(evidence.textContent).toContain(`${count - pass} blocking`);
+    expect(rowsIn(evidence)).toHaveLength(count);
+    // Nothing is paged or capped, so no phrase may suggest it was.
+    expect(evidence.textContent).not.toMatch(/showing \d+ of|top \d+|more not shown|truncated/i);
+    expect(evidence.textContent).toContain("Gate verdict: Not published (FE-028)");
+  });
+
+  it("256 findings stay under the DOM budget, with one meter segment per finding", async () => {
+    const evidence = await open(portAnswering((kind) => okRead(kind, findingsBody(256))), "apr_exit");
+    const nodes = evidence.querySelectorAll("*").length;
+    expect(nodes).toBeLessThan(DOM_BUDGET);
+    console.info(`cockpit parents: 256 findings -> ${nodes} DOM nodes in the evidence pane (budget ${DOM_BUDGET})`);
+    expect(evidence.querySelectorAll("[data-mark]").length + evidence.querySelectorAll(".exec-ck-meter > *").length).toBeGreaterThan(0);
+  });
+
+  it("every finding id of a 256 body is on screen exactly once, in the panel it names", async () => {
+    const body = findingsBody(256);
+    const evidence = await open(portAnswering((kind) => okRead(kind, body)), "apr_exit");
+    const regions = ["Observation coverage", "Drift", "Limits health", "Portfolio fit"].map((name) => within(evidence).getByRole("region", { name }));
+    expect(regions.reduce((sum, region) => sum + region.querySelectorAll("table.exec-ck-table tbody tr").length, 0)).toBe(256);
+    for (const region of regions) expect(region.querySelectorAll("table.exec-ck-table tbody tr")).toHaveLength(64);
+    const last = body.evaluation.findings[255].finding_id as string;
+    const owner = regions.filter((region) => region.textContent?.includes(last));
+    expect(owner).toHaveLength(1);
+  });
+
+  it.each([[257], [1_000], [4_096]])("%i findings is over the reader's bound: a stated failure with the schema version, and not one finding drawn", async (count) => {
+    const evidence = await open(portAnswering((kind) => okRead(kind, findingsBody(count))), "apr_exit");
+    expect(evidence.textContent).toContain('schema_version "portal.execution.governance-parent.v2"');
+    expect(rowsIn(evidence)).toHaveLength(0);
+    expect(evidence.textContent).not.toContain("finding_scale_0000");
+    expect(within(evidence).queryByRole("heading", { name: /^Findings \d+ of \d+ pass$/ })).toBeNull();
+  });
+
+  it("a body whose findings repeat an id is refused whole, not drawn with one of them dropped", async () => {
+    const body = findingsBody(200);
+    body.evaluation.findings[199].finding_id = body.evaluation.findings[0].finding_id;
+    const evidence = await open(portAnswering((kind) => okRead(kind, body)), "apr_exit");
+    expect(rowsIn(evidence)).toHaveLength(0);
+    expect(evidence.textContent).toContain('schema_version "portal.execution.governance-parent.v2"');
+  });
+
+  it("zero findings is the empty statement per panel and an exact 0 of 0, not a pass", async () => {
+    const evidence = await open(portAnswering((kind) => okRead(kind, findingsBody(0))), "apr_exit");
+    expect(within(evidence).getByRole("heading", { name: "Findings 0 of 0 pass" })).toBeTruthy();
+    expect(evidence.textContent).toContain("0 blocking");
+    expect(evidence.textContent).toContain("No findings published");
+    expect(rowsIn(evidence)).toHaveLength(0);
+  });
+});
+
 describe("Live, V2 body", () => {
   it("shows the approval and Not published (FE-xxx) for the backbone, branches and live facts", async () => {
     const evidence = await open(portAnswering((kind) => okRead(kind, parent().live)), "apr_live");

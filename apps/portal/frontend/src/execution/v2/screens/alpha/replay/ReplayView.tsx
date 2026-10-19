@@ -19,7 +19,7 @@ import { ReplayPanel, type ReplayChip } from "../../../blocks";
 import { ENV_LABEL, type ExecEnv } from "../../../urlState";
 import { focusTarget } from "../model";
 import { useReplayCandles, type SubjectBook } from "../useAlphaReads";
-import { candleVerdict, candleWindow, preferredInterval, replayRange, replayState, symbolsOf, venueOf } from "./model";
+import { auditBook, auditSentences, candleVerdict, candleWindow, preferredInterval, replayRange, replayState, symbolsOf, venueOf } from "./model";
 
 export interface ReplayViewProps {
   api: ExecutionApi;
@@ -58,7 +58,12 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
   const candles = useReplayCandles(api, query);
   const verdict = candleVerdict(symbol, query === null && symbol !== null ? { phase: "error", status: "unavailable", reason: venue === null ? "The Portal reads no public klines for this alpha's venue" : "No timed trade to place candles around" } : candles.venue, candles.context);
 
-  const state = replayState(book);
+  const audit = auditBook(book);
+  // Nothing read is not "nothing there" when records arrived and failed, or the source said it did not answer.
+  const base = replayState(book);
+  const state = base.status === "empty" && (audit.orders.lost > 0 || audit.fills.lost > 0 || audit.orders.badState !== null || audit.fills.badState !== null)
+    ? { status: "unavailable" as const, reason: auditSentences(audit).join(" ") }
+    : base;
   // Symbol and Interval are the chart bar's own selects; naming them again here said everything twice.
   const chips: ReplayChip[] = [
     { label: "Book", value: ENV_LABEL[env] },
@@ -86,6 +91,10 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
     plain: true,
   };
 
+  // The log and chart hold what was loaded and read. Say how far that is from what the Portal holds, in exact counts.
+  const shortfalls = state.status === "ok" || state.status === "partial" ? auditSentences(audit) : [];
+  const pagers = ([["orders", audit.orders, book.ordersMore], ["fills", audit.fills, book.fillsMore]] as const).filter(([, rel]) => rel.hasMore || rel.moreError !== null);
+
   const missing =
     target !== null && state.status === "ok" && !(target.kind === "order" ? book.orders.some((o) => o.orderId === target.id) : book.fills.some((f) => f.fillId === target.id));
 
@@ -103,6 +112,16 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
             </>
           )}{" "}
           <a className="exec-blk-link" href={ordersHref}>Back to Orders &amp; Fills</a>
+        </div>
+      ) : null}
+      {shortfalls.length > 0 ? (
+        <div className="exec-blk-banner" role="status" aria-label="What this replay holds" data-testid="replay-shortfall">
+          {shortfalls.map((line) => <p key={line}>{line}</p>)}
+          {pagers.map(([relation, rel, more]) => (
+            <button key={relation} type="button" className="exec-blk-btn" aria-busy={rel.loadingMore ? "true" : undefined} onClick={() => { if (!rel.loadingMore) more.loadMore(); }}>
+              {rel.loadingMore ? `Loading more ${relation}` : rel.moreError ? `Try again: ${relation}` : `Load more ${relation}`}
+            </button>
+          ))}
         </div>
       ) : null}
       <ReplayPanel

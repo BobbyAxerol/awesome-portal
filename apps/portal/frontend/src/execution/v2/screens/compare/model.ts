@@ -70,7 +70,9 @@ export function basisOf(rows: readonly PortfolioRow[]): Basis {
     if (group) partitions[partitions.indexOf(group)] = { ...group, ids: [...group.ids, row.portfolioId] };
     else partitions.push({ key: partKey(row), currency: row.baseCurrency, domain: row.domain, domainLabel: row.domainLabel, ids: [row.portfolioId] });
   }
-  const first = eligible.find((row) => !row.mixedBooks) ?? eligible[0];
+  // An environment word the Portal does not know never sets the basis: it would print a domain nobody published.
+  const known = eligible.filter((row) => row.domain !== "unknown");
+  const first = known.find((row) => !row.mixedBooks) ?? known[0];
   const currency = first?.baseCurrency ?? null;
   const domain = first?.domain ?? null;
   const comparable: PortfolioRow[] = [];
@@ -78,6 +80,7 @@ export function basisOf(rows: readonly PortfolioRow[]): Basis {
   for (const row of rows) {
     if (!row.comparable) apart.push({ row, reason: row.notComparableReason ?? "Not comparable" });
     else if (row.mixedBooks) apart.push({ row, reason: "Real-funded and Simulated books share one allocation figure, so it cannot be read on one basis" });
+    else if (row.domain === "unknown") apart.push({ row, reason: "Domain not published; it cannot be placed on a Real-funded or Simulated basis" });
     else if (row.baseCurrency !== currency) apart.push({ row, reason: `Other currency (${row.baseCurrency}); cannot be compared on a ${currency ?? "common"} basis` });
     else if (row.domain !== domain) apart.push({ row, reason: `${row.domainLabel} book; the basis is ${first?.domainLabel ?? "another domain"}, and the two are never combined` });
     else comparable.push(row);

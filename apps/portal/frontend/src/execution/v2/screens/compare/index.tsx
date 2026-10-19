@@ -70,6 +70,10 @@ const TONES = ["series", "series-2", "series-3", "series-4"] as const;
 const GLYPHS = ["circle", "square", "diamond", "triangle"] as const;
 const SEARCH_DEBOUNCE_MS = 300;
 
+/** The basis' domain in words. Only a published domain is named; the basis never takes an unknown one. */
+const domainWord = (domain: PortfolioRow["domain"] | null): string =>
+  domain === "simulated" ? "Simulated" : domain === "mixed" ? "Real-funded and Simulated" : "Real-funded";
+
 interface MetricRow { id: string; label: string; cell(row: PortfolioRow): ReactNode }
 
 /** The hi-fi order: the measures first (each says which request publishes it), then what the list read does publish. */
@@ -144,6 +148,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   const needle = q?.trim().toLowerCase() ?? "";
   const candidates = all.filter((row) => needle === "" || [row.label, row.portfolioId, row.owner ?? ""].some((part) => part.toLowerCase().includes(needle)));
   const chips = candidates.slice(0, CHIP_CAP);
+  const repeats = new Set(all.filter((row) => row.key !== row.portfolioId).map((row) => row.key));
   const back = backTarget(from);
   const backHref = back.kind === "portfolio" ? routes.portfolio(back.portfolioId) : back.kind === "fleet" ? routes.fleet : routes.list;
   const backLabel = back.kind === "portfolio" ? "Back to Portfolio" : back.kind === "fleet" ? "Back to Alpha Fleet" : "Back to Portfolios";
@@ -155,13 +160,13 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
     ...unresolved.map((id) => ({ id, label: id, reason: "Not in the loaded portfolios" })),
   ];
   const partsSummary = [
-    basis.currency === null ? (chosen.length === 0 && unresolved.length === 0 ? "Nothing picked" : "No comparable basis") : `${basis.currency} · ${basis.domain === "simulated" ? "Simulated" : "Real-funded"} basis`,
+    basis.currency === null ? (chosen.length === 0 && unresolved.length === 0 ? "Nothing picked" : "No comparable basis") : `${basis.currency} · ${domainWord(basis.domain)} basis`,
     apart.length > 0 ? `${apart.length} listed apart` : null,
     "Money is never converted or combined",
   ].filter((part): part is string => part !== null).join(" · ");
   const basisText = basis.currency === null
     ? "No comparable portfolio picked yet"
-    : `Return since window start (${windowLabel}), one currency (${basis.currency}), ${basis.domain === "simulated" ? "Simulated" : "Real-funded"} books; methodology as published per source (FE-006)`;
+    : `Return since window start (${windowLabel}), one currency (${basis.currency}), ${domainWord(basis.domain)} books; methodology as published per source (FE-006)`;
 
   const tableColumns: CardsColumn<MetricRow>[] = [
     { key: "metric", label: "Metric", render: (m) => m.label },
@@ -209,10 +214,12 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
             ) : null}
             <div className="exec-cmpr-pick" role="group" aria-label="Portfolios to compare">
               {chips.map((row) => {
-                const tone = toneOf(row.portfolioId);
+                // A list that repeats an id has two rows for it, but a pick is an id: the first row stands for it, the repeat is refused, so no chip looks picked that the table does not show.
+                const repeat = repeats.has(row.key);
+                const tone = repeat ? -1 : toneOf(row.portfolioId);
                 const on = tone >= 0;
-                const blocked = !row.comparable || (!on && state.kind === "full");
-                const why = !row.comparable ? row.notComparableReason : !on && state.kind === "full" ? `At most ${COMPARE_MAX}` : null;
+                const blocked = repeat || !row.comparable || (!on && state.kind === "full");
+                const why = repeat ? "Same id as an earlier portfolio in the read; the first one is used" : !row.comparable ? row.notComparableReason : !on && state.kind === "full" ? `At most ${COMPARE_MAX}` : null;
                 return (
                   <button
                     key={row.key}
@@ -273,7 +280,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
               ) : (
                 <>
                   <p className="exec-pf-note" data-testid="basis-line">
-                    {basis.currency === null ? "No comparable portfolio picked yet." : `Basis: ${basis.currency}, ${basis.domain === "simulated" ? "Simulated" : "Real-funded"}, set by the first portfolio picked.`}
+                    {basis.currency === null ? "No comparable portfolio picked yet." : `Basis: ${basis.currency}, ${domainWord(basis.domain)}, set by the first portfolio picked.`}
                   </p>
                   <ul className="exec-pf-list" aria-label="Partitions">
                     {basis.partitions.map((part) => (

@@ -189,6 +189,8 @@ describe("states", () => {
       if (!path.endsWith("/orders") && !path.endsWith("/fills")) return undefined;
       const body = structuredClone(answerAlpha("GET", path, query)!.body) as { records: unknown[]; page: { has_more: boolean; next_cursor: null } };
       body.records = [];
+      // The page states its own count; an honest empty page says 0, and a count that disagrees with the records is a different test.
+      (body.page as Record<string, unknown>).returned_count = 0;
       body.page.has_more = false;
       return { status: 200, body };
     });

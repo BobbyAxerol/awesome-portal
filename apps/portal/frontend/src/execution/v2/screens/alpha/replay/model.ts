@@ -20,7 +20,7 @@ import type { MarketContextCandles } from "../../../../api/marketContext";
 import type { AlphaFleetItem } from "../../../../api/profileRead";
 import type { PanelStatus } from "../../../../contracts";
 import type { ReplayFill, ReplayOrder } from "../../../../components/tradeReplayModel";
-import { ms } from "../../../../components/tradeReplayModel";
+import { buildLog, ms } from "../../../../components/tradeReplayModel";
 import type { ExecEnv } from "../../../urlState";
 import { envOfStage, humanize, spineStageOf } from "../model";
 import type { Read, SubjectBook } from "../useAlphaReads";
@@ -130,4 +130,74 @@ export function candleVerdict(
   if (payload.symbol !== null && payload.symbol !== symbol) return { qualified: false, reason: `The candles read are for ${payload.symbol}, not ${symbol}.`, context: contextState };
   if (payload.candles.length === 0) return { qualified: false, reason: `${symbol}: the venue returned no candle for this window.`, context: contextState };
   return { qualified: true, reason: trading, context: contextState };
+}
+
+/* ── what the loaded book is, and is not ───────────────────────────────────── */
+
+export interface RelationAudit {
+  /** Records the Portal said it returned (summed over the loaded pages; the received count when a page does not say). */
+  declared: number;
+  /** Records that arrived as readable objects with an id. */
+  received: number;
+  /** Records that became orders or fills of the replay. */
+  read: number;
+  /** Declared or received records that did not: no id, no price, no time, a repeat, or not an object at all. */
+  lost: number;
+  /** A page state that says the source did not answer (UNAVAILABLE, or a word this reader does not know); null when every page is AVAILABLE, PARTIAL or empty. */
+  badState: string | null;
+  hasMore: boolean;
+  loadingMore: boolean;
+  moreError: string | null;
+}
+
+export interface BookAudit {
+  orders: RelationAudit;
+  fills: RelationAudit;
+  /** Orders and fills that were read but carry no time that parses, so they are on neither the log nor the chart. */
+  untimed: number;
+  /** True when anything about the loaded book is short of the whole of it. */
+  incomplete: boolean;
+}
+
+type PagedBook = Pick<SubjectBook, "orders" | "fills" | "ordersState" | "fillsState" | "ordersMore" | "fillsMore">;
+
+/** The page states the Portal publishes for subject records: a window with rows, a partial window, and a proven empty one. */
+const SERVED_STATES: readonly string[] = ["AVAILABLE", "PARTIAL", "AUTHORITATIVE_EMPTY", "EMPTY"];
+
+function auditRelation(state: Read<readonly { state: string; records: readonly unknown[]; page: { returnedCount: number | null } }[]>, read: number, more: SubjectBook["ordersMore"]): RelationAudit {
+  const pages = state.phase === "ready" ? state.value : [];
+  const received = pages.reduce((sum, page) => sum + page.records.length, 0);
+  const declared = pages.reduce((sum, page) => sum + (page.page.returnedCount ?? page.records.length), 0);
+  const badState = pages.find((page) => !SERVED_STATES.includes(page.state.toUpperCase()))?.state ?? null;
+  return { declared, received, read, lost: Math.max(0, Math.max(declared, received) - read), badState, hasMore: more.hasMore, loadingMore: more.loadingMore, moreError: more.moreError };
+}
+
+/**
+ * What the orders and fills in hand are, against what the Portal said it sent.
+ * The replay draws what it could read; this says how much that is short of the
+ * whole, so a partly read book never looks like a whole one.
+ */
+export function auditBook(book: PagedBook): BookAudit {
+  const orders = auditRelation(book.ordersState, book.orders.length, book.ordersMore);
+  const fills = auditRelation(book.fillsState, book.fills.length, book.fillsMore);
+  const untimed = Math.max(0, book.orders.length + book.fills.length - buildLog(book.orders, book.fills, []).length);
+  return { orders, fills, untimed, incomplete: orders.lost > 0 || fills.lost > 0 || orders.badState !== null || fills.badState !== null || untimed > 0 || orders.hasMore || fills.hasMore || orders.moreError !== null || fills.moreError !== null };
+}
+
+const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+
+/** One sentence per shortfall, with exact counts. Empty when the book is whole. */
+export function auditSentences(audit: BookAudit): string[] {
+  const out: string[] = [];
+  for (const [word, rel] of [["order", audit.orders], ["fill", audit.fills]] as const) {
+    if (rel.lost > 0) {
+      const total = Math.max(rel.declared, rel.received);
+      out.push(`${rel.lost} of ${total} ${word} ${plural(total, "record", "records")} could not be read (no id, price or time, a repeat, or not a record) and ${plural(rel.lost, "is", "are")} left out of the log and chart.`);
+    }
+    if (rel.badState !== null) out.push(`The Portal reported the ${word} read as ${rel.badState.replace(/_/g, " ").toLowerCase()}, so what is shown is not known to be the whole of it.`);
+    if (rel.hasMore) out.push(`${rel.read} ${plural(rel.read, word, `${word}s`)} loaded; the Portal holds more. The log and chart show only what is loaded.`);
+    if (rel.moreError !== null) out.push(`The next page of ${word}s could not be read (${rel.moreError}).`);
+  }
+  if (audit.untimed > 0) out.push(`${audit.untimed} ${plural(audit.untimed, "record has", "records have")} no time that can be read, so ${plural(audit.untimed, "it is", "they are")} on neither the log nor the chart.`);
+  return out;
 }

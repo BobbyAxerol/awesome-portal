@@ -54,6 +54,16 @@ describe("basisOf", () => {
     expect(basisOf(rows(noFigure)).apart).toEqual([]);
   });
 
+  it("never lets an environment word the Portal does not know set the basis: it is apart, named, and never called a domain", () => {
+    const moon = item("x", { environments: ["MOON"] });
+    const alone = basisOf(rows(moon));
+    expect(alone).toMatchObject({ currency: null, domain: null, comparable: [] });
+    expect(alone.apart[0].reason).toBe("Domain not published; it cannot be placed on a Real-funded or Simulated basis");
+    const beside = basisOf(rows(moon, item("a")));
+    expect(beside).toMatchObject({ currency: "USDT", domain: "real" });
+    expect(beside.apart.map((a) => a.row.portfolioId)).toEqual(["x"]);
+  });
+
   it("refuses the Unallocated bucket on any basis", () => {
     const basis = basisOf(rows(item("pf_unallocated", { baseCurrency: "UNKNOWN", allocatedByCurrency: [] }), item("a")));
     expect(basis.apart.map((a) => a.row.portfolioId)).toEqual(["pf_unallocated"]);
