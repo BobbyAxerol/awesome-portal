@@ -243,5 +243,21 @@
     "playwright_v2": "34 passed before the Codex rebase (the rebase brought no frontend file)",
     "ledgers": "scripts/refresh-release-integrity-ledgers.sh --write run after the rebase; --check clean",
     "landing": "NOT done in this step: Codex checkout had 6 uncommitted files and a new tip; see receipt"
+  },
+  "fix_wave_2": {
+    "date": "2026-10-19",
+    "commits": [
+      "0b113488",
+      "326325bd",
+      "633b7f11",
+      "4fb72473"
+    ],
+    "source": "two independent read-only reviews (FE logic; F1 backend) found 0 BLOCKER, 4 MAJOR (Users display_name voided the roster; Replay focus banner wrong while pages remain; F1 links index missing; F1 always-on counts), 12 MINOR; all FE items and the index fixed, always-on counts left as a Codex/Bobby decision",
+    "vitest_wide": "31869 passed, 5 failed (realtimeProducerConsumer.test.tsx, Codex env test, DEBT-UXM07-014), 1 skipped; ~2 min wall",
+    "tsc": "exit 0",
+    "playwright_v2": "34 passed on a fresh build",
+    "control_api": "scripts/control-api-test.sh test/elp204-operational-current.spec.ts test/query-snapshot-reader.spec.ts: 85 passed, 0 skipped, 0 failed on a real PostgreSQL (migration 1723680000145 applied)",
+    "chart_default_path": "the new default-path tests of ReplayCandleChart were run against the OLD chart code in a temp worktree: 4 default tests passed, only the pinned tests failed",
+    "visual_v1_targeted": "queued behind Codex's recovery-gate (lock); spec execution-fixtures alpha-360-2a-2b (the only V1 baseline that draws the shared chart)"
   }
 }

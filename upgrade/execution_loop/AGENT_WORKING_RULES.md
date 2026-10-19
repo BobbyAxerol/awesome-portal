@@ -617,6 +617,15 @@ Vấn đề: hook pre-commit chạy toàn bộ `verify-workspace.sh` (~20–25 p
 
 Duyệt: **APPROVED (Bobby, 2026-10-18)**, phương án A của câu hỏi "Hook theo tầng".
 
+### 10.10a Quy trình chạy test cho nhanh mà không thiếu (Bobby, 2026-10-19)
+Đo thực tế ngày 2026-10-19: vitest rộng chỉ mất khoảng 2 phút chạy thật; phần chờ lâu (40–50 phút) là **xếp hàng sau khóa `/tmp/portal-heavy.lock`** khi hook của Codex (`gate.py land`) đang giữ. Visual pinned-image mất 18–21 phút, hook đầy đủ còn lâu hơn. Vì vậy:
+1. **Writer (subagent) chỉ chạy test tập trung** (`vitest run <đường dẫn của mình>` + `tsc`). Không writer nào chạy vitest rộng, visual hay hook. Một người tích hợp chạy gộp **một lần** khi mọi writer đã dừng.
+2. **Khóa `/tmp/portal-heavy.lock` chỉ dành cho việc dùng Docker/PostgreSQL hoặc rất nặng** (hook R2/R3, visual pinned-image, `control-api-test.sh`). Khóa này là **quy ước của hai agent** (§10.11.5), không cơ chế nào ép; nó có để hai gate không tranh CPU/RAM và làm trượt test có hạn chót. **vitest, tsc, Playwright V2 không cần khóa**: chạy thẳng, giới hạn worker (`--maxWorkers=3`) để không làm chậm gate của bên kia. Chuỗi việc nặng gói trong một script nền để không ai phải canh; không bao giờ để server dài hạn giữ lock.
+3. **Việc không cần khóa chạy song song**: Playwright V2 (`chromium-v2`, cổng 4176) chạy cùng lúc với vitest rộng.
+4. **Visual V1 theo phạm vi thay đổi**: đổi chỉ trong `v2/**` thì chỉ cần Playwright V2 + vitest (V1 build không nạp CSS/JS của V2, đã kiểm). Đổi file **dùng chung với V1** (ví dụ `ReplayCandleChart.tsx`, CSS `execution.css`) thì chạy visual V1 **có -g** cho spec chạm file đó. Visual **toàn bộ** chỉ ở mốc R2 trước hạ cánh.
+5. **Hook đầy đủ chỉ ở mốc** (R2/R3 và trước hạ cánh); commit trong lát dùng `--no-verify` sau gate tập trung (§10.10). Khi sửa mã dùng chung, chứng minh đường mặc định không đổi bằng cách chạy test mới trên **mã cũ** trong worktree tạm (test "default" phải xanh, test mới phải đỏ).
+6. **Review độc lập chỉ-đọc chạy song song với việc đang đóng băng** (hook đang chạy): đọc `git diff`, không chạy test nặng.
+
 ### 10.11 Chia việc Codex / Claude sau khi backend đã đi trước (Bobby, 2026-10-18)
 
 Bối cảnh: Codex đã làm phần lớn nền backend (ELP2-02…10); Bobby giao Claude **làm chính FE và làm cả backend ở phần contract mà FE cần** để rút ngắn workflow, thay vì chờ từng request. Đây là một **giao việc có phạm vi** theo CLAUDE.md (Research override: "either may work both sides within an explicit assignment"); nó không bỏ quy tắc "backend authority thuộc Codex" cho phần còn lại.
