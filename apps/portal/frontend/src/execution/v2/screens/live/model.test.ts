@@ -125,6 +125,33 @@ describe("L1 · the V1 state matrix", () => {
     expect(m.gapNote).toBe("A gap blocks risk-increasing actions. Protective actions stay open.");
   });
 
+  it("the gap note follows the policy flags: a protective rule that blocks on a gap is never worded as open", () => {
+    const raw = populatedV1({ gap: true });
+    setPath(raw, ["command_policy", "protective", "source_gap_blocks"], true);
+    const m = model(raw);
+    expect(m.guardRules.find((r) => r.key === "gap-r3")).toMatchObject({ effect: { t: "text", text: "Protective actions are blocked" } });
+    expect(m.gapNote).toBe("A gap blocks risk-increasing actions. Protective actions are blocked too.");
+    expect(m.gapNote).not.toContain("stay open");
+  });
+
+  it("the gap note says 'not published' for a rule the body does not carry, not that it stays open", () => {
+    const raw = populatedV1({ gap: true });
+    setPath(raw, ["command_policy", "protective"], null);
+    setPath(raw, ["command_policy", "risk_increasing"], null);
+    const m = model(raw);
+    expect(m.gapNote).toBe("A gap is open; whether it blocks risk-increasing actions is not published. Whether it blocks protective actions is not published.");
+    expect(m.gapNote).not.toContain("stay open");
+  });
+
+  it("a V2 read carries no guard policy, so no guard rule states an effect: each is Not published, none says blocked or open", () => {
+    const m = liveModelV2(v2Of(v2Populated()));
+    expect(m.guardProvenance).toEqual(["This read carries no guard policy"]);
+    for (const key of ["mismatch", "gap-r4", "gap-r3"]) {
+      expect(m.guardRules.find((r) => r.key === key)!.effect).toMatchObject({ t: "np", fe: "FE-072" });
+    }
+    expect(JSON.stringify(m.guardRules)).not.toMatch(/stay open|are blocked|are hidden/);
+  });
+
   it("names the stage the body states: LIVE_FULL is Live, LIVE_CANARY is Canary with a link and no redirect, anything else is unknown", () => {
     expect(model(populatedV1({ stage: "LIVE_FULL" }))).toMatchObject({ stage: "live", inCanary: false });
     expect(model(populatedV1({ stage: "LIVE_CANARY" }))).toMatchObject({ stage: "canary", inCanary: true });

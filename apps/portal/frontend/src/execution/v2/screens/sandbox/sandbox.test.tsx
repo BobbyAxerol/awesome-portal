@@ -223,6 +223,31 @@ describe("the V1 certification body", () => {
     expect(prov.textContent).toContain("Workflow version");
   });
 
+  it("Refresh re-reads without blanking the screen, is disabled while it reads, and is one read for two presses", async () => {
+    let release: (() => void) | undefined;
+    let calls = 0;
+    const api = fakeApi({ read: okRead(v1Rich()) });
+    const original = api.getSandboxCertificationVersioned;
+    (api as unknown as { getSandboxCertificationVersioned: unknown }).getSandboxCertificationVersioned = async (...args: unknown[]) => {
+      calls += 1;
+      if (calls === 1) return (original as (...a: unknown[]) => unknown)(...args);
+      return new Promise((resolveRead) => { release = () => resolveRead((original as (...a: unknown[]) => unknown)(...args)); });
+    };
+    mount(api, `${ENTRY}?tab=steps`);
+    await ready();
+    const button = screen.getByRole("button", { name: "Refresh" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    fireEvent.click(button);
+    fireEvent.click(button);
+    await waitFor(() => expect((screen.getByRole("button", { name: "Refresh" }) as HTMLButtonElement).disabled).toBe(true));
+    // The previous answer stays on screen while it reads.
+    expect(screen.getByRole("heading", { level: 1, name: "Sandbox certification" })).toBeTruthy();
+    expect(calls).toBe(2);
+    release?.();
+    await waitFor(() => expect((screen.getByRole("button", { name: "Refresh" }) as HTMLButtonElement).disabled).toBe(false));
+    expect(calls).toBe(2);
+  });
+
   it("subtitle, crumb and lineage use only what the body published", async () => {
     mount(fakeApi({ read: okRead(v1Rich()) }), `${ENTRY}?tab=steps`);
     await ready();

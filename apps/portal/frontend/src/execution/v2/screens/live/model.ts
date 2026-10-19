@@ -478,6 +478,19 @@ function guardRulesV1(live: LiveFullOperations): { rows: GuardRuleRow[]; provena
   return { rows, provenance };
 }
 
+/** What a gap does, from the policy flags the body carries; a rule the body does not carry is not described. */
+export function gapNoteV1(live: LiveFullOperations): string {
+  const r4 = live.commandPolicy?.riskIncreasing ?? null;
+  const r3 = live.commandPolicy?.protective ?? null;
+  const first = r4 === null
+    ? "A gap is open; whether it blocks risk-increasing actions is not published."
+    : r4.sourceGapBlocks ? "A gap blocks risk-increasing actions." : "A gap does not block risk-increasing actions.";
+  const second = r3 === null
+    ? "Whether it blocks protective actions is not published."
+    : r3.sourceGapBlocks ? "Protective actions are blocked too." : "Protective actions stay open.";
+  return `${first} ${second}`;
+}
+
 function blockersV1(live: LiveFullOperations, mismatch: boolean, gap: boolean | null): { items: BlockerItem[]; provenance: string[] } {
   const items: BlockerItem[] = [];
   const seen = new Set<string>();
@@ -596,7 +609,7 @@ export function liveModelV1(live: LiveFullOperations): LiveModel {
     guardRules: guard.rows,
     guardProvenance: guard.provenance,
     ladder: LADDER,
-    gapNote: gap === true ? "A gap blocks risk-increasing actions. Protective actions stay open." : null,
+    gapNote: gap === true ? gapNoteV1(live) : null,
     blockers: blockers.items,
     blockerProvenance: blockers.provenance,
   };
@@ -754,9 +767,10 @@ export function liveModelV2(v2: LiveSourceOperationsV2): LiveModel {
     coverage,
     predecessor: { present: false, reason: "This read does not carry the predecessor Canary envelope.", canaryHref: canaryHref(v2.deploymentId) },
     guardRules: [
-      { key: "mismatch", when: "Internal and broker figures disagree", effect: text("Broker values are hidden"), now: na("No broker verdict in this read") },
-      { key: "gap-r4", when: "Updates have a gap", effect: text("Risk-increasing actions are blocked"), now: na("No continuity verdict in this read") },
-      { key: "gap-r3", when: "Updates have a gap", effect: text("Protective actions stay open"), now: na("No continuity verdict in this read") },
+      // This read carries no guard policy, so no rule's effect is stated here: the server has not published one.
+      { key: "mismatch", when: "Internal and broker figures disagree", effect: np("FE-072", "Broker mismatch rule"), now: na("No broker verdict in this read") },
+      { key: "gap-r4", when: "Updates have a gap", effect: np("FE-072", "Risk-increasing rule"), now: na("No continuity verdict in this read") },
+      { key: "gap-r3", when: "Updates have a gap", effect: np("FE-072", "Protective rule"), now: na("No continuity verdict in this read") },
     ],
     guardProvenance: ["This read carries no guard policy"],
     ladder: LADDER,

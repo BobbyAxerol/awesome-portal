@@ -291,6 +291,11 @@ export default function SandboxScreen({ api, deploymentId, workspaceId }: Sandbo
         spine={{ current: "sandbox", blocked: gate === "blocked", stages: spineFacts(view), label: "Lifecycle" }}
         renderLink={renderLink}
       />
+      <div className="exec-sbx-actions">
+        <button type="button" className="exec-dock-btn" disabled={read.refreshing} aria-busy={read.refreshing ? "true" : undefined} onClick={reload}>
+          Refresh
+        </button>
+      </div>
       <Banners view={view} />
       <UrlTabs surface="sandbox" tabs={tabsOf(view)} label="Sandbox certification sections">
         {(tab) => (

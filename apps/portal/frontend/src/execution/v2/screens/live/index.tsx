@@ -97,7 +97,7 @@ function kpiView(cell: KpiCell) {
   }
 }
 
-function LiveBody({ model, api, deploymentId, workspaceId, v2 }: { model: LiveModel; api: ExecutionApi; deploymentId: string; workspaceId: string | undefined; v2: Parameters<typeof usePanelPaging>[3] }) {
+function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model: LiveModel; api: ExecutionApi; deploymentId: string; workspaceId: string | undefined; v2: Parameters<typeof usePanelPaging>[3]; reload(): void }) {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const paging = usePanelPaging(api, deploymentId, workspaceId, v2);
@@ -151,6 +151,10 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2 }: { model: LiveMo
           {model.notice.text}
         </p>
       ) : null}
+      <div className="exec-liv-actions">
+        {/* One read per press: the body is replaced by the loading frame until it answers, so there is no second in flight. */}
+        <button type="button" className="exec-blk-btn" onClick={reload}>Refresh</button>
+      </div>
       <KpiStrip label="Live figures" columns={5}>
         {model.kpis.map(kpiView)}
       </KpiStrip>
@@ -232,5 +236,5 @@ function Ready({ read, api, deploymentId, workspaceId, reload }: { read: LiveFul
       </Frame>
     );
   }
-  return <LiveBody model={built.model} v2={built.v2} api={api} deploymentId={deploymentId} workspaceId={workspaceId} />;
+  return <LiveBody model={built.model} v2={built.v2} api={api} deploymentId={deploymentId} workspaceId={workspaceId} reload={reload} />;
 }

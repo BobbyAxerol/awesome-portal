@@ -68,6 +68,21 @@ describe("page", () => {
     expect(screen.queryByRole("status", { name: "Loading Live operations" })).toBeNull();
   });
 
+  it("has a Refresh like Canary's: one press reads again once, and two presses in one tick are one read", async () => {
+    const m = mount(() => ok(v1Read(populatedV1())));
+    await loaded();
+    expect(m.calls).toHaveLength(1);
+    const button = screen.getByRole("button", { name: "Refresh" });
+    fireEvent.click(button);
+    await loaded();
+    await waitFor(() => expect(m.calls).toHaveLength(2));
+    const again = screen.getByRole("button", { name: "Refresh" });
+    fireEvent.click(again);
+    fireEvent.click(again);
+    await loaded();
+    await waitFor(() => expect(m.calls).toHaveLength(3));
+  });
+
   it("reads the deployment once, with the workspace from the URL", async () => {
     const m = mount(() => ok(v1Read(populatedV1())), "?workspace_id=ws_TEST_ONLY_a");
     await loaded();
