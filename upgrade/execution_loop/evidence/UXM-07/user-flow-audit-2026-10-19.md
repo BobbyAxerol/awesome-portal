@@ -26,3 +26,27 @@ Quyết định cockpit → receipt → next (FE-030/020/015/028/029); Request a
 
 ## Lệch concept chưa có quyết định ghi lại (cần Bobby chốt hoặc ghi nhận)
 Back theo nguồn; rail nav 7–9 mục (`applyV2Nav` chỉ dùng cho ⌘K); redirect `/governance/exit-reviews` và hợp nhất Waivers/Exit/New request vào Approvals (A1–A3); landing theo capability; D9 toàn app; env không ảnh hưởng dữ liệu trên ≥5 màn; link vào Blotter và Researcher Overview→Fleet/Alpha; route `/deployments/alphas/archived`; `?binding=B`; "Open in Alpha Fleet" không lọc theo portfolio; `#cap=` ở My access; `urlState` bỏ giá trị sai không báo.
+
+---
+# Phần 2 — Audit route/URL độc lập (cùng ngày, HEAD `855ad7c0`)
+
+Manifest đầy đủ: `fleet,archived,portfolios,alpha,workbench,account,ops,profile,overview,cockpit,shell,compare,blotter,admin,users,replay`; `archived`, `workbench`, `replay` là reserved (không mount). Registry rev 7: chỉ thêm `navigation.scoped_v2_replacement` cho `APPROVALS` (FE-039); các mục C-2…C-7 của review2/07 (tắt `show_in_sidebar` Paper/Sandbox/Live/Exit Reviews, hai screen mới Archived và Compare, đổi nhãn) **chưa có trong registry**.
+
+## Lỗi route xếp theo ảnh hưởng
+**Cao**
+- **D1** Rail không dùng overlay V2: `app/Sidebar.tsx:33` chỉ gọi `sidebarGroups`; `applyV2Nav` chỉ cho ⌘K. Rail còn Paper/Sandbox/Live/Waivers/Exit Reviews/Blotter, hai mục Approvals, không lọc quyền. Sửa: khi `EXECUTION_V2_SHELL` dùng `applyV2Nav` và ẩn `APPROVALS` khi có `scoped_v2_replacement`.
+- **D2** Profile & Access chỉ đọc "Granted to you" khi URL có `workspace_id` (`access/index.tsx:100`); vào từ rail thì trống. Sửa: dùng workspace của session nếu có; nếu không, sửa câu copy.
+- **D3** Esc ở cockpit bỏ toàn bộ query gồm `workspace_id` (`ExecutionPreviewRoute.tsx:345`); path (`…/AP-1/r1`) và `?sel=AP-2` có thể mâu thuẫn.
+- **D4** Admin: mặc định `/execution/portfolios` không có route; `?source=admin` không ai đọc; không truyền `accessHref`.
+- **D5** Link incident từ Portfolio 360 dùng `?sel=<incidentId>` trên Operations (là operation id): `portfolios/portfolio/People.tsx:95` (và `:76`).
+- **D6** Context bar: env nhấn sai trên `/deployments/paper/:id`; nút env bật nhưng bị bỏ qua ở Fleet, Ops, Overview, Cockpit, Admin, Compare; chỉ Blotter được khóa.
+- **D7** Giá trị URL sai bị nuốt im lặng (`urlState.ts:191-213` tính `invalid`, 0 consumer); `?view=foo` ở Fleet làm hook đọc tắt → skeleton vĩnh viễn.
+
+**Trung bình** — M1 notice tab lạ của Account 360 biến mất sau một frame; M2 nút Compare hiện dù cờ `compare` tắt; M3 Operations giữ filter/range trong `useState` và `?operation=` push thêm history; M4 Canary dẫn vào `/live/:id` (3 nơi); M5 alias tab Alpha làm rơi hash; M6 "← Alpha Fleet results" mất bộ lọc; M7 `<a href>` gây tải lại trang (Alpha TableTabs/OrdersTab/replay/Lifecycle, Blotter, EventFeed); M8 Drawer đóng để lại history trùng; M9 `/governance/exit-reviews` root và lane cockpit không nằm trong URL; M10 Blotter V2 đọc `status` còn V1 dùng `filter`; M11 href server phát (`?filter=findings|broker_sync`) Operations bỏ qua; M12 Admin V2 bỏ `operation/action/binding/cmd`; M13 `workspace_id` không nhất quán (rail bỏ, ⌘K giữ).
+**Thấp** — L1 `/governance/approvals/new`, `/administration/actions`, `vn-market` chỉ vào bằng URL/link V1; L2 `binding` còn trong URL sau khi đóng; L3 `from` rò sang link không liên quan; L4 `withContext` nhận href tuyệt đối/scheme lạ; L5 Cmd-K trên hai route sáng mở palette V1; L6 `reviewRouteFor` không encode id; L7 tắt "show commissioned" làm mục chạy thật biến khỏi rail.
+
+## Authority qua URL
+Không route V2 nào render dữ liệu ngoài BFF; không tham số nào đổi nguồn sang fixture. `compose=request` chưa có trong mã (khi làm phải không tự POST từ URL). Cockpit chỉ preview.
+
+## Quyết định URL còn mở
+Bobby: nối `applyV2Nav` vào Sidebar ngay hay chờ Codex tắt `show_in_sidebar`; path hay bar thắng về env; rail mang `workspace_id`/env/window như ⌘K; redirect `/governance/exit-reviews` và lane vào URL; Archived là route hay `?tab=archived`; Compare là `/deployments/compare` hay `?view=compare`; redirect `/backtests/approvals`; ý nghĩa window `all`/`24h`/`from..to`; `ctx` thay `from`. Codex: khóa hai screen mới và cờ nav (registry), Q4/FE-038, C-9 stage xuyên env, binding→account lookup, FE-037, nguồn href command-center.
