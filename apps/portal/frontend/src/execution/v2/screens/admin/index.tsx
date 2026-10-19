@@ -22,7 +22,7 @@
  *
  * URL: `sel` (the task id) and the screen-local `state` filter. Defaults omitted.
  */
-import { useId, useMemo } from "react";
+import { useEffect, useId, useMemo, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
@@ -34,7 +34,7 @@ import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
-import { withContext } from "../../urlState";
+import { useExecUrlState, withContext } from "../../urlState";
 import { ActionPane } from "./ActionPane";
 import {
   ROW_CAP, ROW_STATES, ROW_STATE_VIEW, firstNotLive, firstReasonFor, humanize, stateCounts, tiersOf, toRows, type ActionRow, type RowState,
@@ -78,6 +78,7 @@ export default function AdminScreen({
   const { selection, select, close } = useDockSelection();
   const mode = useDockMode();
   const summaryId = useId();
+  const url = useExecUrlState();
 
   const stateParam = params.get("state");
   const filter: RowState | "all" = isRowState(stateParam) ? stateParam : "all";
@@ -92,6 +93,17 @@ export default function AdminScreen({
   const tiers = useMemo(() => tiersOf(rows, taskCatalogue?.taskGroups ?? [], filter), [rows, taskCatalogue, filter]);
   const selected = selection === null ? null : rows.find((r) => r.id === selection) ?? null;
   const planWorkspace = catalogue?.scope?.workspaceId ?? workspaceId ?? null;
+
+  // The hi-fi opens its first ready action on arrival (ADM-B2). Once, in the docked layout only,
+  // and never when the URL already names a selection, so Close stays closed and an overlay never
+  // opens over a page nobody has touched.
+  const autoOpened = useRef(false);
+  const firstReady = rows.find((r) => r.state === "ready") ?? null;
+  useEffect(() => {
+    if (autoOpened.current || mode !== "dock" || selection !== null || firstReady === null) return;
+    autoOpened.current = true;
+    url.set({ sel: firstReady.id }, { replace: true });
+  }, [mode, selection, firstReady, url]);
 
   const setFilter = (next: RowState | "all") => {
     const copy = new URLSearchParams(params);
@@ -178,13 +190,13 @@ export default function AdminScreen({
             <Flag kind={fresh.kind} label={fresh.label} size="sm" />
             {composition?.readAt ? <span className="exec-adm-meta">Read {utcStamp(composition.readAt)}</span> : null}
           </span>
-          <Link className="exec-adm-link" to={withContext(operationsHref, params)}>Open in Operations (source: admin)</Link>
+          <Link className="exec-adm-link" data-variant="outline" to={withContext(operationsHref, params)}>Open in Operations (source: admin)</Link>
           <button type="button" className="exec-adm-btn" onClick={reads.reload}>Refresh</button>
         </div>
       </header>
 
       {authority || notLive ? (
-        <div className="exec-adm-banner" role="status">
+        <div className="exec-adm-banner" data-tone="warn" role="status">
           <Flag kind="paused" label="Relay off" size="sm" />
           <span>
             {authority ? `Command authority: ${humanize(authority.state)}. ` : ""}
@@ -258,9 +270,12 @@ export default function AdminScreen({
         ) : null}
       </div>
 
-      <p className="exec-adm-note">
-        Capital actions are not started here. They begin in <Link className="exec-adm-link" to={withContext(portfoliosHref, params)}>Portfolios</Link> with a preview.
-      </p>
+      <div className="exec-adm-foot">
+        <p className="exec-adm-note">
+          Capital actions are not started here. They begin in <Link className="exec-adm-link" to={withContext(portfoliosHref, params)}>Portfolios</Link> with a preview.
+        </p>
+        <Link className="exec-adm-link" to={withContext(operationsHref, params)}>Open in Operations (source: admin)</Link>
+      </div>
 
       <details className="exec-adm-prov">
         <summary>Provenance</summary>

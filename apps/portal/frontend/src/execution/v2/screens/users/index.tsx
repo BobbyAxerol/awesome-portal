@@ -26,10 +26,12 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { useSearchParams } from "react-router-dom";
 
 import { accounts, stepUp, type AccountSummary, type HistoryEntry, type StepUpState } from "../../../../features/admin/accountApi";
+import { useSession } from "../../../../auth/session";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { ExecutionSurface } from "../../../ExecutionSurface";
 import { utcStamp } from "../../../time";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
+import { SectionPanel } from "../../blocks";
 import { Drawer, DockAction, useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { useExecUrlState } from "../../urlState";
@@ -95,25 +97,34 @@ function flagsOf(account: AccountSummary) {
   );
 }
 
-const COLUMNS: readonly CardsColumn<AccountSummary>[] = [
-  {
-    key: "account",
-    label: "Account",
-    render: (a) => (
-      <span className="exec-usr-name">
-        <span className="exec-usr-display">{a.displayName || a.username}</span>
-        <span className="exec-usr-username">{a.username}</span>
-      </span>
-    ),
-  },
-  { key: "state", label: "State", render: flagsOf },
-  { key: "role", label: "Role", render: (a) => ROLE_LABEL[a.role] },
-  { key: "revision", label: "Revision", numeric: true, render: (a) => String(a.accountRevision) },
-];
+/** `me` is the signed-in user's id when the session published it; that row reads "(you)". */
+function columnsFor(me: string | null): readonly CardsColumn<AccountSummary>[] {
+  return [
+    {
+      key: "account",
+      label: "Account",
+      render: (a) => (
+        <span className="exec-usr-name">
+          <span className="exec-usr-display">
+            {a.displayName || a.username}
+            {me !== null && a.userId === me ? <span className="exec-usr-you"> (you)</span> : null}
+          </span>
+          <span className="exec-usr-username">{a.username}</span>
+        </span>
+      ),
+    },
+    { key: "state", label: "State", render: flagsOf },
+    { key: "role", label: "Role", render: (a) => ROLE_LABEL[a.role] },
+    { key: "revision", label: "Revision", numeric: true, render: (a) => String(a.accountRevision) },
+  ];
+}
 
 export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, accessHref }: UsersScreenProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
+  const { access } = useSession();
+  const me = access.kind === "ready" && access.access.userId !== "" ? access.access.userId : null;
+  const columns = useMemo(() => columnsFor(me), [me]);
   const { selection, select, close } = useDockSelection();
   const mode = useDockMode();
   const reasonId = useId();
@@ -340,24 +351,26 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                 <p className="exec-usr-note">{counts.awaitingFirstPassword} {counts.awaitingFirstPassword === 1 ? "account is" : "accounts are"} awaiting a first password.</p>
               ) : null}
 
-              <CardsTable
-                columns={COLUMNS}
-                rows={visible}
-                rowKey={(a) => a.userId}
-                label="Accounts"
-                selectedKey={selection}
-                onRowOpen={(a) => select(a.userId)}
-                empty={
-                  all.length === 0 ? (
-                    <PanelState status="empty" reason="The roster is empty. No account has been created." />
-                  ) : (
-                    <div className="exec-usr-empty">
-                      <p>No accounts match these filters.</p>
-                      <button type="button" className="exec-usr-btn" onClick={clearFilters}>Clear filters</button>
-                    </div>
-                  )
-                }
-              />
+              <SectionPanel title="Accounts" aside={matching.length === counts.total ? `${matching.length} of ${counts.total}` : `${matching.length} matching of ${counts.total}`} flush>
+                <CardsTable
+                  columns={columns}
+                  rows={visible}
+                  rowKey={(a) => a.userId}
+                  label="Accounts"
+                  selectedKey={selection}
+                  onRowOpen={(a) => select(a.userId)}
+                  empty={
+                    all.length === 0 ? (
+                      <PanelState status="empty" reason="The roster is empty. No account has been created." />
+                    ) : (
+                      <div className="exec-usr-empty">
+                        <p>No accounts match these filters.</p>
+                        <button type="button" className="exec-usr-btn" onClick={clearFilters}>Clear filters</button>
+                      </div>
+                    )
+                  }
+                />
+              </SectionPanel>
               <div className="exec-usr-foot">
                 <span className="exec-usr-count" role="status" aria-live="polite">
                   {matching.length === 0

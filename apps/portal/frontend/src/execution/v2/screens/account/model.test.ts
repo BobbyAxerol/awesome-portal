@@ -18,7 +18,7 @@ import { ABSENT, cartesian, dimension, dimensionOf, pairwise } from "../../testk
 import { decimalCases, leaked, pollutionCases, requiredCases } from "../../testkit/negative";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import {
-  ACCOUNT_NEEDS, FE, PAGE_LIMIT, ROW_CAP, absentCodeFor, accountHref, activityRows, ageAtRead, balanceFacts, bindingQuery, branchOf, brokerFacts,
+  ACCOUNT_NEEDS, FE, PAGE_LIMIT, ROW_CAP, absentCodeFor, accountHref, activityRows, ageAtRead, updatedAgo, balanceFacts, bindingQuery, branchOf, brokerFacts,
   capitalRows, chooseCurrency, countMetric, coverageFlag, credentialView, deploymentHref, diffFacts, equityModel, freshnessFlag, headroomFacts,
   isNegative, ledgerPnl, marginFacts, matchesCredential, mergeBindings, metricOf, notPublished, notPublishedReason, populationOf, readAccountView,
   readCredentialFilter, readTab, readViewMode, resourceReason, resourceStatus, sleeveRows, stateView, syncView, timeOf, toBindingRow, triadModel,
@@ -404,6 +404,18 @@ describe("tabs, views, links, copy", () => {
     expect(ageAtRead(at("2026-10-17T05:00:00Z"), at("2026-10-17T09:00:00Z"))).toBe("4 h");
     expect(ageAtRead(null, at("2026-10-17T09:00:00Z"))).toBeNull();
     expect(ageAtRead(at("2026-10-17T10:00:00Z"), at("2026-10-17T09:00:00Z"))).toBeNull();
+  });
+
+  it("a row's update reads as an age against the read, stale from 30 minutes (ACC-B1)", () => {
+    const at = (iso: string) => readUtcEpochMs(Date.parse(iso));
+    const read = at("2026-10-17T09:00:00Z");
+    expect(updatedAgo(at("2026-10-17T08:46:00Z"), read)).toEqual({ text: "14 min ago", stale: false });
+    expect(updatedAgo(at("2026-10-17T08:30:00Z"), read)).toEqual({ text: "30 min ago", stale: true });
+    expect(updatedAgo(at("2026-10-17T06:10:00Z"), read)).toEqual({ text: "3 h ago", stale: true });
+    expect(updatedAgo(at("2026-10-17T08:59:40Z"), read)).toEqual({ text: "under 1 min ago", stale: false });
+    // No age is invented: a missing instant or a row newer than the read prints the instant instead.
+    expect(updatedAgo(null, read)).toBeNull();
+    expect(updatedAgo(at("2026-10-17T09:05:00Z"), read)).toBeNull();
   });
 
   it("states of the resource map one to one", () => {

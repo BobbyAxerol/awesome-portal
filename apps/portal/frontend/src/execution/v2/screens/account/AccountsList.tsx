@@ -24,7 +24,7 @@ import { useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
 import { BindingDrawer } from "./BindingDrawer";
-import { Na, StateFlag, CredentialFlag, When } from "./parts";
+import { Na, StateFlag, CredentialFlag, Updated } from "./parts";
 import { useBindingPages } from "./reads";
 import {
   ALL_ENVIRONMENTS, CREDENTIAL_FILTERS, ENV_TABS, FE, ROW_CAP, accountHref, freshnessFlag, humanize, inScope, matchesCredential, notPublished,
@@ -112,9 +112,12 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
   const drawerEnv: BindingEnv = envelopeEnvironment(envelope?.environment) ?? env;
   const fresh = envelope ? freshnessFlag(envelope.freshness) : null;
   const sourceAsOf = envelope ? timeOf({ source_as_of: envelope.sourceAsOf }, "source_as_of") : null;
+  const readAtMs = envelope ? timeOf({ read_at: envelope.readAt }, "read_at") : null;
   const incomplete = envelope !== null && envelope.completeness.toUpperCase() !== "COMPLETE";
   const narrowedHere = issuesOnly || credentialFilter !== null;
   const capped = pages.items.length >= ROW_CAP;
+  // The Issues lens counts what is loaded: the server does not filter on it.
+  const issueCount = useMemo(() => all.filter((row) => inScope(row, true)).length, [all]);
 
   const columns: CardsColumn<BindingRow>[] = [
     {
@@ -139,7 +142,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     { key: "equity", label: "Physical equity", numeric: true, render: () => <Na why="Venue report not published" /> },
     { key: "virtual", label: "Σ Virtual · Headroom", numeric: true, render: () => <Na why="Read per binding" /> },
     { key: "check", label: "Check", render: () => <Na why="Needs the binding's exposure" /> },
-    { key: "updated", label: "Updated", render: (row) => <When at={row.updatedAt} /> },
+    { key: "updated", label: "Updated", render: (row) => <Updated at={row.updatedAt} readAt={readAtMs} /> },
   ];
 
   const countLine = (() => {
@@ -259,7 +262,13 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                 {CREDENTIAL_FILTERS.map((id) => <option key={id} value={id}>{id === "ok" ? "Synced" : "Needs attention"}</option>)}
               </select>
             </label>
-            <button type="button" className="exec-acct-btn" aria-pressed={issuesOnly} onClick={() => setLocal("issues", issuesOnly ? "" : "1")}>Issues only</button>
+            <button type="button" className="exec-acct-btn" aria-pressed={issuesOnly}
+              aria-label={`Issues only, ${issueCount} in the ${all.length} loaded rows`}
+              title={`${issueCount} of the ${all.length} loaded rows need attention. The server does not filter on this.`}
+              onClick={() => setLocal("issues", issuesOnly ? "" : "1")}
+            >
+              Issues only<span className="exec-acct-tab-count">{issueCount}</span>
+            </button>
             {filtered ? <button type="button" className="exec-acct-btn" onClick={clearFilters}>Clear all</button> : null}
             <span className="exec-acct-export">
               <button type="button" className="exec-acct-btn" disabled title={notPublished(FE.export)} aria-describedby={`${panelId}-export`}>Export</button>

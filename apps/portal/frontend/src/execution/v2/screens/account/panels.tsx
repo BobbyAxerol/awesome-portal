@@ -215,7 +215,7 @@ export function AllocationsPanel({ ctx }: { ctx: PanelContext }) {
 export function FeesPanel({ ctx }: { ctx: PanelContext }) {
   const pnl = ledgerPnl(ctx.profile, ctx.accountId, ctx.currency);
   return (
-    <SectionPanel title="Fees and funding" aside="This sleeve">
+    <SectionPanel title="Fees & funding" aside="This sleeve">
       <dl className="exec-acct-facts">
         <Fact label="Fees, over a window"><Np fact={FE.window} /></Fact>
         <Fact label="Funding, over a window"><Np fact={FE.window} /></Fact>

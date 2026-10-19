@@ -109,9 +109,27 @@ function token(value: unknown): string | null {
   return typeof value === "string" && TOKEN.test(value) ? value : null;
 }
 
-/** Ids are opaque server strings: bounded and printable, not held to the token grammar. */
+/**
+ * Characters an identifier must not contain in this reader: C0/C1 controls and DEL,
+ * zero-width and bidi-control format characters (U+200B..U+200F, U+202A..U+202E,
+ * U+2060..U+2064, U+2066..U+2069, U+061C, U+180E, U+FEFF).
+ */
+const UNSAFE_ID_CHARS = /[\u0000-\u001f\u007f-\u009f\u061c\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/;
+
+/**
+ * Ids are opaque server strings: bounded and printable, not held to the token grammar.
+ *
+ * DISPLAY SAFETY, STRICTER THAN THE PUBLISHED SCHEMA: the schema allows
+ * `^[^\u0000-\u001f\u007f]+$`, which admits whitespace-only text and bidi or
+ * zero-width characters (a U+202E override can reorder the id shown in "Granted
+ * to you"). This reader refuses both, so the whole read is unavailable rather
+ * than showing an id that can misread. That is a FE defence, not a schema claim:
+ * a server id that is legitimately whitespace-only or carries such a character
+ * would be refused here, and the answer to that is a schema change, not a looser reader.
+ */
 function opaque(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 && value.length <= 256 && !/[\u0000-\u001f]/.test(value) ? value : null;
+  return typeof value === "string" && value.length > 0 && value.length <= 256
+    && value.trim().length > 0 && !UNSAFE_ID_CHARS.test(value) ? value : null;
 }
 
 function idList(value: unknown): readonly string[] | null {

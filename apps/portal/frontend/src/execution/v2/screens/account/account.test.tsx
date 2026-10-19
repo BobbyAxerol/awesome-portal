@@ -189,7 +189,7 @@ describe("Accounts list", () => {
     stubFetch();
     mount("/deployments/accounts");
     await loadedList();
-    fireEvent.click(screen.getByRole("button", { name: "Issues only" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Issues only/ }));
     await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(2));
     expect(search().get("issues")).toBe("1");
     expect(screen.getByText(/2 with issues in the 3 loaded rows, 3 on the server/)).toBeTruthy();
@@ -686,7 +686,7 @@ describe("Account 360: tabs", () => {
     account("acc_bnc_core");
     await loaded360();
     const tabs = within(screen.getByRole("tablist", { name: "Account sections" })).getAllByRole("tab");
-    expect(tabs.map((t) => t.textContent)).toEqual(["Overview", "Positions", "Allocations", "Fees and funding", "Reconciliation", "Activity"]);
+    expect(tabs.map((t) => t.textContent)).toEqual(["Overview", "Positions", "Allocations", "Fees & funding", "Reconciliation", "Activity"]);
     expect(tabs[0]!.getAttribute("aria-selected")).toBe("true");
     expect(search().get("tab")).toBeNull();
     await openTab("Reconciliation");
@@ -743,11 +743,11 @@ describe("Account 360: tabs", () => {
     expect(panel.textContent).toContain("no claim on the native balance");
   });
 
-  it("Fees and funding: windowed figures are Not published (FE-025); current ones are labelled current", async () => {
+  it("Fees & funding: windowed figures are Not published (FE-025); current ones are labelled current", async () => {
     stubFetch();
     account("acc_bnc_core");
     await loaded360();
-    const panel = await openTab("Fees and funding");
+    const panel = await openTab("Fees & funding");
     expect(within(panel).getAllByText("Not published (FE-025)")).toHaveLength(3);
     expect(panel.textContent).toContain("Fees, current");
     expect(panel.textContent).toContain("388.20");
@@ -848,7 +848,7 @@ describe("Account 360: copy and scale", () => {
     stubFetch();
     const { container } = account("acc_bnc_sub");
     await loaded360("Binance sub account");
-    for (const name of ["Overview", "Positions", "Allocations", "Fees and funding", "Reconciliation", "Activity"]) {
+    for (const name of ["Overview", "Positions", "Allocations", "Fees & funding", "Reconciliation", "Activity"]) {
       fireEvent.click(screen.getByRole("tab", { name }));
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
       expect(container.textContent, name).not.toMatch(/—|N\/A/);

@@ -44,7 +44,7 @@ const table = () => screen.getByRole("table", { name: "Orders" });
 const bodyRows = () => within(table()).getAllByRole("row").slice(1).filter((r) => !r.classList.contains("exec-blt2-kid"));
 const loaded = () => screen.findByRole("table", { name: "Orders" });
 const cellOf = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
-const idOf = (row: HTMLElement) => row.querySelector(".exec-blt2-ordercell .exec-blt2-id")?.textContent ?? "";
+const idOf = (row: HTMLElement) => row.querySelector(".exec-blt2-ordercell :is(.exec-blt2-id, .exec-blt2-idlink)")?.textContent ?? "";
 const countLine = () => document.querySelector(".exec-blt2-count-line")?.textContent ?? "";
 const blotterCalls = () => calls.filter((c) => c.path === "/screens/blotter");
 const lastQuery = () => new URLSearchParams(blotterCalls().at(-1)!.query);

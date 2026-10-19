@@ -27,7 +27,7 @@
  *     `unsupported_shape`, never throws, never leaks its probe. The schema for
  *     this body is not published in packages/contracts/schemas, so acceptance
  *     of a mutated body is judged against the oracle, and what the reader
- *     accepts beyond the header contract is fixed by F5c, except AE-2 which stays `it.fails`, blocked on a Codex answer.
+ *     accepts beyond the header contract is fixed by F5c, including AE-2 (FE display-safety defence, stricter than the schema).
  */
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -440,12 +440,10 @@ const LEGIT: ((c: Case) => boolean)[] = [
 ];
 /**
  * Accepted although the header contract refuses it; each has a DEFECT below.
- * AE-1 (negative clocks) was fixed by F5c; only AE-2 remains, blocked on Codex.
+ * AE-1 (negative clocks) was fixed by F5c, AE-2 (whitespace/bidi ids) by the FE display-safety
+ * defence in `opaque()`; nothing is accepted beyond the contract any more.
  */
-const KNOWN_GAPS: ((c: Case) => boolean)[] = [
-  // DEFECT AE-2: opaque ids accept whitespace-only text and bidi/format characters (U+202E)
-  (c) => /(workspace_id|user_id|policy_revision|grant_id|revision|selector\.ids\.0) <- ("   "|"‮evil")/.test(c.name),
-];
+const KNOWN_GAPS: ((c: Case) => boolean)[] = [];
 
 describe("L3 · negative", () => {
   it("reports the case counts", () => {
@@ -507,11 +505,22 @@ describe("defects", () => {
    * already allows "   " and U+202E, so the reader is exactly as strict as the schema
    * and tightening it would be a policy decision, not a schema guarantee.
    */
-  it.fails("DEFECT AE-2: a whitespace-only or bidi-override id is refused", () => {
-    for (const id of ["   ", "\u202eevil", "a\u200bb"]) {
+  it("FIXED AE-2 (FE defence, stricter than the schema): a whitespace-only, bidi-override or zero-width id is refused", () => {
+    for (const id of ["   ", "\t\u00a0", "\u202eevil", "a\u200bb", "\ufeffgrant", "g\u2066x\u2069", "a\u0085b"]) {
+      for (const path of [["grants", 0, "grant_id"], ["grants", 0, "revision"], ["grants", 0, "selector", "ids", 0], ["workspace_id"], ["user_id"], ["policy_revision"]]) {
+        const body = clone(GRANTED);
+        setPath(body, path, id);
+        expect(effectiveOf(body), `${path.join(".")} <- ${JSON.stringify(id)}`).toBeNull();
+      }
+    }
+  });
+
+  it("AE-2 keeps ordinary ids: a normal id, one with inner spaces and non-ASCII letters still passes", () => {
+    expect(effectiveOf(clone(GRANTED))).not.toBeNull();
+    for (const id of ["grant-1", "grant with spaces", "Công ty 01"]) {
       const body = clone(GRANTED);
       body.grants[0].grant_id = id;
-      expect(effectiveOf(body), JSON.stringify(id)).toBeNull();
+      expect(effectiveOf(body), JSON.stringify(id)).not.toBeNull();
     }
   });
 

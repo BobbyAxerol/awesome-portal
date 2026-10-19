@@ -65,24 +65,28 @@
 
 .exec-acc-tabs {
   display: flex;
-  gap: var(--space-1);
+  overflow-x: auto;
   border-bottom: 1px solid var(--line-strong);
 }
+/* Underline tabs (hi-fi .tabs button): no box, a 2px accent line under the selected one. */
 .exec-acc-tab {
   padding: var(--space-2) var(--space-4);
   font: var(--exec-font-label);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-soft);
-  background: var(--paper);
-  border: 1px solid transparent;
-  border-bottom: 0;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
   cursor: pointer;
+  white-space: nowrap;
+}
+.exec-acc-tab:hover {
+  color: var(--ink);
 }
 .exec-acc-tab[aria-selected="true"] {
   color: var(--ink);
-  background: var(--paper-raised);
-  border-color: var(--line-strong);
+  border-bottom-color: var(--accent);
 }
 
 /* ---- identity strip ------------------------------------------------------ */
@@ -178,24 +182,6 @@
   background: var(--paper-raised);
   border: 1px solid var(--line);
 }
-.exec-acc-panel-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--line);
-}
-.exec-acc-panel-title {
-  margin: 0;
-  font: var(--exec-font-section);
-  color: var(--ink);
-}
-.exec-acc-panel-note {
-  font: var(--exec-font-caption);
-  color: var(--ink-soft);
-}
 .exec-acc-foot {
   margin: 0;
   padding: var(--space-2) var(--space-4);
@@ -226,6 +212,12 @@
   font: var(--exec-font-id);
   color: var(--ink);
   overflow-wrap: anywhere;
+}
+/* A capability key is one token: it never breaks mid-word (alpha.metadata.e / dit); the column grows instead. */
+.exec-acc-cell > .exec-acc-id {
+  min-width: 14ch;
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 .exec-acc-meta {
   font: var(--exec-font-meta);

@@ -165,11 +165,22 @@
 }
 .exec-usr-display {
   font: var(--exec-font-control);
+  font-weight: 600;
   color: var(--ink);
 }
-.exec-usr-username {
-  font: var(--exec-font-id);
+.exec-usr-you {
+  font: var(--exec-font-meta);
+  font-weight: 400;
   color: var(--ink-faint);
+}
+/* The username is a mono chip under the name (hi-fi .chipx.mono); it is not a link because no per-user Access view exists. */
+.exec-usr-username {
+  align-self: flex-start;
+  padding: 0 var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line);
 }
 .exec-usr-flags {
   display: inline-flex;

@@ -24,7 +24,7 @@
  * URL: `status` (bucket), `symbol`, `venue`, `side`, and the scopes `deployment`,
  * `account`, `alpha`, `order`, `fill`. Defaults omitted.
  */
-import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { useSession } from "../../../../auth/session";
@@ -34,7 +34,6 @@ import { PanelSkeleton, PanelState } from "../../../components/states";
 import { useProfileRealtime } from "../../../profileRealtime";
 import { utcStamp } from "../../../time";
 import { CardsTable } from "../../cardsTable";
-import { SectionPanel } from "../../blocks";
 import { Flag } from "../../Flag";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
@@ -44,6 +43,7 @@ import {
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
 
+import "../../css/blocks.css";
 import "../../css/blotter.css";
 import "../../css/cards.css";
 
@@ -57,6 +57,24 @@ export interface BlotterScreenProps {
   accessHref?: string;
   /** The chart deep link for an order. Defaults to the V1 Trade Replay link; return null for none. */
   chartHref?: (order: BlotterOrder) => string | null;
+}
+
+/**
+ * A panel that folds (hi-fi `details.panel`): the head is the summary, with a
+ * triangle that turns when open. The funnel is open by default; groups open
+ * when the page carries some, so a reader who comes for the table does not
+ * scroll past them.
+ */
+function FoldPanel({ title, aside, defaultOpen = false, children }: { title: string; aside?: ReactNode; defaultOpen?: boolean; children: ReactNode }) {
+  return (
+    <details className="exec-blk-panel exec-blt2-fold" open={defaultOpen}>
+      <summary className="exec-blk-ph">
+        <h3 className="exec-blk-ph-title">{title}</h3>
+        {aside ? <span className="exec-blk-ph-aside">{aside}</span> : null}
+      </summary>
+      <div className="exec-blk-panel-body">{children}</div>
+    </details>
+  );
 }
 
 function defaultChartHref(order: BlotterOrder): string | null {
@@ -424,6 +442,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
                   const legs = legsFor(order, page.legs);
                   const fills = fillsFor(order, page.fills);
                   const focused = scoped?.focusOrderId === order.orderId;
+                  const orderChart = chartHref(order);
                   return (
                     <Fragment key={order.orderId}>
                       <tr data-selected={focused ? "true" : undefined} aria-current={focused ? "true" : undefined}>
@@ -431,8 +450,13 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
                           <td key={c.id} data-l={c.label} data-numeric={c.numeric ? "true" : undefined}>
                             {c.id === "order" ? (
                               <span className="exec-blt2-ordercell">
-                                <button type="button" className="exec-blt2-x" aria-expanded={isOpen} aria-label={`${isOpen ? "Hide" : "Show"} legs and fills for order ${order.orderId}`} onClick={() => toggle(order.orderId)}>{isOpen ? "Hide" : "Show"}</button>
-                                <span className="exec-blt2-id">{order.orderId}</span>
+                                <button type="button" className="exec-blt2-x" aria-expanded={isOpen} aria-label={`${isOpen ? "Hide" : "Show"} legs and fills for order ${order.orderId}`} onClick={() => toggle(order.orderId)}>{isOpen ? "\u2212" : "+"}</button>
+                                {orderChart !== null ? (
+                                  <a className="exec-blt2-idlink" href={orderChart} title="Open on chart">{order.orderId}</a>
+                                ) : (
+                                  <span className="exec-blt2-id">{order.orderId}</span>
+                                )}
+                                {legs.some((leg) => (leg.state ?? "").toUpperCase() === "ARMED") ? <span className="exec-blt2-na" title="Bracket legs armed">{"\u25c7"}</span> : null}
                                 {legs.length > 0 ? <span className="exec-blt2-na" title="Part of a bracket or conditional group"> bracket</span> : null}
                               </span>
                             ) : (
@@ -444,7 +468,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
                       {isOpen ? (
                         <tr className="exec-blt2-kid">
                           <td colSpan={visibleColumns.length}>
-                            <OrderDetail order={order} legs={legs} fills={fills} loadedFills={page.fills.length} funnel={funnels[order.orderId] ?? { phase: "loading" }} chartHref={chartHref(order)} />
+                            <OrderDetail order={order} legs={legs} fills={fills} loadedFills={page.fills.length} funnel={funnels[order.orderId] ?? { phase: "loading" }} chartHref={orderChart} />
                           </td>
                         </tr>
                       ) : null}
@@ -465,14 +489,18 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
             {page.prevCursor === null ? "At the newest rows" : "Newer rows exist"}{page.nextCursor === null ? ", at the oldest rows" : ", older rows exist"}
           </span>
         </div>
-        <p className="exec-blt2-note">
-          Numbers are exact and never shortened. A fee is in its venue currency. Not in this read: {NOT_IN_READ.join(", ").toLowerCase()} (Not published, {NOT_IN_READ_REQUEST}).
-        </p>
+        <details className="exec-blt2-how">
+          <summary>How to read</summary>
+          <p className="exec-blt2-note">
+            Rows are newest first. Numbers are exact and never shortened. A fee is in its venue currency. Orders with bracket legs, fills and an order path expand in place. Not in this read: {NOT_IN_READ.join(", ").toLowerCase()} (Not published, {NOT_IN_READ_REQUEST}).
+          </p>
+        </details>
       </section>
 
-      <SectionPanel
+      <FoldPanel
         title="Order funnel"
         aside={lastOpened ? `Order ${lastOpened}` : "Open an order to see its path"}
+        defaultOpen
       >
         {lastOpened === null ? (
           <p className="exec-blt2-na">Expand an order to read its path: submitted, risk grant, venue acknowledged, fill.</p>
@@ -496,9 +524,9 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
           </table>
         )}
         <p className="exec-blt2-note">Intent and signal steps happen before the order and are not carried here.</p>
-      </SectionPanel>
+      </FoldPanel>
 
-      <SectionPanel title="Conditional groups" aside={page.groups.length === 0 ? "None on this page" : `${Math.min(GROUP_CAP, page.groups.length)} of ${page.groups.length} on this page`}>
+      <FoldPanel title="Conditional groups" defaultOpen={page.groups.length > 0 && page.groups.length <= GROUP_CAP} aside={page.groups.length === 0 ? "None on this page" : `${Math.min(GROUP_CAP, page.groups.length)} of ${page.groups.length} on this page`}>
         {page.groups.length === 0 ? (
           <p className="exec-blt2-na">No conditional groups on this page</p>
         ) : (
@@ -536,7 +564,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
           </div>
         ) : null}
         {page.groups.length > GROUP_CAP ? <p className="exec-blt2-note">Showing {GROUP_CAP} of {page.groups.length}</p> : null}
-      </SectionPanel>
+      </FoldPanel>
 
       <details className="exec-blt2-prov">
         <summary>Provenance</summary>

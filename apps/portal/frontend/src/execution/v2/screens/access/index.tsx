@@ -19,6 +19,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useSession } from "../../../../auth/session";
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
+import { PanelHead } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { ExecutionSurface } from "../../../ExecutionSurface";
 import { Flag } from "../../Flag";
@@ -258,19 +259,13 @@ export default function AccessSelfView({ manage, now, fetchImpl }: AccessSelfVie
 
       <div className="exec-acc-two">
         <section className="exec-acc-panel" aria-labelledby={`${headingId}-see`}>
-          <div className="exec-acc-panel-head">
-            <h2 className="exec-acc-panel-title" id={`${headingId}-see`}>What you can see</h2>
-            <span className="exec-acc-panel-note">Visibility only</span>
-          </div>
+          <PanelHead level={2} id={`${headingId}-see`} title="What you can see" aside="Visibility only" />
           {sessionState ?? (
             <CardsTable columns={seeColumns} rows={seeRows(capabilities)} rowKey={(r) => r.id} label="What you can see" />
           )}
         </section>
         <section className="exec-acc-panel" aria-labelledby={`${headingId}-do`}>
-          <div className="exec-acc-panel-head">
-            <h2 className="exec-acc-panel-title" id={`${headingId}-do`}>What you can do</h2>
-            <span className="exec-acc-panel-note">Seeing never grants this</span>
-          </div>
+          <PanelHead level={2} id={`${headingId}-do`} title="What you can do" aside="Seeing never grants this" />
           {sessionState ?? (
             <>
               <CardsTable columns={doColumns} rows={doRows(capabilities)} rowKey={(r) => r.id} label="What you can do" />
@@ -288,10 +283,7 @@ export default function AccessSelfView({ manage, now, fetchImpl }: AccessSelfVie
       </p>
 
       <section className="exec-acc-panel" aria-labelledby={`${headingId}-granted`} id="exec-acc-granted">
-        <div className="exec-acc-panel-head">
-          <h2 className="exec-acc-panel-title" id={`${headingId}-granted`}>Granted to you</h2>
-          <span className="exec-acc-panel-note">What, where and until when</span>
-        </div>
+        <PanelHead level={2} id={`${headingId}-granted`} title="Granted to you" aside="What, where and until when" />
         {grants.phase === "idle" ? (
           <p className="exec-acc-state" role="status">
             <strong>Not available.</strong> No workspace is named in the address (<span className="exec-acc-code">workspace_id</span>) and the session does not publish one, so the grants were not requested.
@@ -332,10 +324,7 @@ export default function AccessSelfView({ manage, now, fetchImpl }: AccessSelfVie
 
       {effective ? (
         <section className="exec-acc-panel" aria-labelledby={`${headingId}-policy`}>
-          <div className="exec-acc-panel-head">
-            <h2 className="exec-acc-panel-title" id={`${headingId}-policy`}>Policy</h2>
-            <span className="exec-acc-panel-note">As published</span>
-          </div>
+          <PanelHead level={2} id={`${headingId}-policy`} title="Policy" aside="As published" />
           <dl className="exec-acc-facts">
             <dt>Researcher field policy</dt>
             <dd>
@@ -381,7 +370,7 @@ export default function AccessSelfView({ manage, now, fetchImpl }: AccessSelfVie
           <div className="exec-acc-head">
             <div>
               <h1 className="exec-acc-title">Profile &amp; Access</h1>
-              <p className="exec-acc-subtitle">Your own access, as the Portal publishes it</p>
+              <p className="exec-acc-subtitle">{principal?.username && ownerWord ? `${principal.username} · ${ownerWord}` : "Your own access, as the Portal publishes it"}</p>
             </div>
             <div className="exec-acc-chips">
               {grants.phase === "ready" && grants.readAt !== null ? (

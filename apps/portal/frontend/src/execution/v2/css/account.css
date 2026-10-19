@@ -101,7 +101,7 @@
 .exec-acct-tabs {
   display: flex;
   flex-wrap: nowrap;
-  gap: 2px;
+  gap: 0;
   overflow-x: auto;
   border-bottom: 1px solid var(--line-strong);
 }
@@ -109,7 +109,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 6px var(--space-3);
+  padding: var(--space-2) var(--space-4);
   font: var(--exec-font-label);
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -123,9 +123,9 @@
 .exec-acct-tab:hover {
   color: var(--ink);
 }
+/* Underline tabs (hi-fi .tabs button): the selected tab is marked by the 2px accent line, not a fill. */
 .exec-acct-tab[aria-selected="true"] {
   color: var(--ink);
-  background: var(--accent-soft);
   border-bottom-color: var(--accent);
 }
 .exec-acct-tab:focus-visible,
@@ -172,6 +172,9 @@
 }
 .exec-acct-btn,
 .exec-acct-segbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: 5px var(--space-3);
   font: var(--exec-font-control);
   color: var(--ink);
@@ -248,6 +251,24 @@
 }
 .exec-acct-link {
   color: var(--accent);
+}
+/* Updated column: age against the read, with a square dot (hi-fi .dot, warn from 30 min). */
+.exec-acct-ago {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.exec-acct-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  background: var(--good);
+}
+.exec-acct-dot[data-stale="true"] {
+  background: var(--warn);
 }
 a.exec-acct-open {
   display: inline-block;

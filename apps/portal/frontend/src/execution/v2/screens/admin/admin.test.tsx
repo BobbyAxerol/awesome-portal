@@ -248,6 +248,31 @@ describe("planning", () => {
   });
 });
 
+describe("the first ready action opens on arrival (ADM-B2)", () => {
+  it("opens it in the docked layout once, replacing the history entry, and Close keeps it closed", async () => {
+    setOverviewDoubleVariants({ admin: "connected-read" });
+    mount();
+    const pane = await dock();
+    expect(within(pane).getByRole("heading", { name: "System health" })).toBeTruthy();
+    await waitFor(() => expect(search().get("sel")).toBe("health"));
+    fireEvent.click(within(pane).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    expect(search().get("sel")).toBeNull();
+  });
+
+  it("opens nothing when no action is ready, and never overrides a selection already in the URL", async () => {
+    mount();
+    await loaded();
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(search().get("sel")).toBeNull();
+    cleanup();
+    setOverviewDoubleVariants({ admin: "connected-read" });
+    mount("/administration/actions?sel=capital_history");
+    await loaded();
+    expect(search().get("sel")).toBe("capital_history");
+  });
+});
+
 describe("a local read", () => {
   it("runs a CONNECTED read and says no source command was sent", async () => {
     setOverviewDoubleVariants({ admin: "connected-read" });

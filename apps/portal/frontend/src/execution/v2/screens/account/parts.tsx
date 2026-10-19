@@ -9,7 +9,7 @@ import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf, type Metric } from "../../boundary";
 import { MetricText } from "../../blocks";
 import { Flag } from "../../Flag";
-import { credentialView, notPublished, stateView, type UnpublishedFact } from "./model";
+import { credentialView, notPublished, stateView, updatedAgo, type UnpublishedFact } from "./model";
 
 import "../../css/account.css";
 
@@ -47,6 +47,24 @@ export function NotComputed({ why }: { why: string }) {
 export function When({ at }: { at: UtcEpochMs | null | undefined }) {
   if (at === null || at === undefined) return <Na />;
   return <time dateTime={new Date(at).toISOString()}>{formatAsOf(at)}</time>;
+}
+
+/**
+ * A row's last update as an age against the read (hi-fi accounts.html `age` + `ageW`): a square dot,
+ * warn once it is 30 minutes or more, and the absolute instant on hover. With no usable age it
+ * prints the instant itself.
+ */
+export function Updated({ at, readAt }: { at: UtcEpochMs | null | undefined; readAt: UtcEpochMs | null }) {
+  if (at === null || at === undefined) return <Na />;
+  const ago = updatedAgo(at, readAt);
+  if (ago === null) return <When at={at} />;
+  return (
+    <time className="exec-acct-ago" dateTime={new Date(at).toISOString()} title={`Updated ${formatAsOf(at)}`}>
+      <span className="exec-acct-dot" data-stale={ago.stale ? "true" : undefined} aria-hidden="true" />
+      {ago.text}
+      {ago.stale ? <span className="exec-acct-sr"> (stale)</span> : null}
+    </time>
+  );
 }
 
 export function Value({ metric, suffix, signed }: { metric: Metric | null | undefined; suffix?: string; signed?: boolean }) {

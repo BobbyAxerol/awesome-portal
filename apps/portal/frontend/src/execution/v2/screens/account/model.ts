@@ -220,6 +220,22 @@ export function ageAtRead(asOf: UtcEpochMs | null, readAt: UtcEpochMs | null): s
   return `${Math.floor(minutes / 60)} h`;
 }
 
+/** HIFI accounts.html `ageW`: a row last updated this many minutes before the read is marked stale. */
+export const UPDATED_STALE_MINUTES = 30;
+
+/**
+ * "14 min ago" / "3 h ago" for a row's `updated_at`, measured against the instant the list was
+ * READ (both published, no browser clock), as hi-fi accounts.html prints it. `null` when either
+ * instant is missing or the row claims to be newer than the read: the caller then prints the
+ * absolute time instead of inventing an age.
+ */
+export function updatedAgo(updatedAt: UtcEpochMs | null, readAt: UtcEpochMs | null): { text: string; stale: boolean } | null {
+  if (updatedAt === null || readAt === null || readAt < updatedAt) return null;
+  const minutes = Math.floor((readAt - updatedAt) / 60_000);
+  const text = minutes < 1 ? "under 1 min ago" : minutes < 60 ? `${minutes} min ago` : `${Math.round(minutes / 60)} h ago`;
+  return { text, stale: minutes >= UPDATED_STALE_MINUTES };
+}
+
 /* ── the Accounts list: one environment per read ───────────────────────── */
 
 export type BindingEnv = "paper" | "sandbox" | "live";
@@ -880,7 +896,7 @@ export const TABS = [
   { id: "ov", label: "Overview" },
   { id: "pos", label: "Positions" },
   { id: "all", label: "Allocations" },
-  { id: "fee", label: "Fees and funding" },
+  { id: "fee", label: "Fees & funding" },
   { id: "rec", label: "Reconciliation" },
   { id: "act", label: "Activity" },
 ] as const;

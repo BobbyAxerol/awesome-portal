@@ -166,13 +166,20 @@
   gap: var(--space-2);
   font: var(--exec-font-body);
 }
+/* Expand toggle: 20x20 square with a + or minus (hi-fi .x). "Read" on the groups table is a word, so it keeps its width. */
 .exec-blt2-x {
-  padding: 0 var(--space-2);
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-1);
   font: var(--exec-font-label);
+  line-height: 18px;
   color: var(--ink);
   background: var(--surface-2);
   border: 1px solid var(--line-strong);
   cursor: pointer;
+}
+.exec-blt2-x[aria-pressed] {
+  padding: 0 var(--space-2);
 }
 .exec-blt2-x[aria-pressed="true"] {
   background: var(--accent-soft);
@@ -209,6 +216,22 @@
 }
 .exec-blt2-id {
   font: var(--exec-font-id);
+}
+/* The order id is a link to the chart (hi-fi a.chipx.mono). */
+.exec-blt2-idlink {
+  padding: 0 var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--accent);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+  text-decoration: none;
+}
+.exec-blt2-idlink:hover {
+  border-color: var(--accent);
+}
+.exec-blt2-idlink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .exec-blt2-unit {
   font: var(--exec-font-caption);
@@ -314,6 +337,41 @@
 .exec-blt2-group p {
   margin: 0 0 var(--space-2);
 }
+/* Folding panels and "How to read" (hi-fi details.panel, details). */
+.exec-blt2-fold > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.exec-blt2-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.exec-blt2-fold > summary::before {
+  content: "\25B8";
+  margin-right: var(--space-2);
+  color: var(--ink-faint);
+}
+.exec-blt2-fold[open] > summary::before {
+  content: "\25BE";
+}
+.exec-blt2-fold > summary > .exec-blk-ph-title {
+  margin-right: auto;
+}
+.exec-blt2-fold:not([open]) > summary {
+  border-bottom: 0;
+}
+.exec-blt2-fold > summary:focus-visible,
+.exec-blt2-how > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.exec-blt2-how > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font: var(--exec-font-meta);
+}
+.exec-blt2-how > .exec-blt2-note {
+  padding: var(--space-2) 0;
+}
 .exec-blt2-prov {
   font: var(--exec-font-body);
   color: var(--ink-soft);
@@ -328,6 +386,12 @@
   .exec-blt2-panel {
     padding: var(--space-3);
   }
+  /* Older / Newer sit above the 50 cards (BLT-B7): at 390px the table is ~20,000px tall. The order only moves the pager; DOM order and tab order are unchanged below the filters. */
+  .exec-blt2-panel > .exec-blt2-count-line { order: 1; }
+  .exec-blt2-panel > .exec-blt2-pager { order: 2; }
+  .exec-blt2-panel > .exec-cards-wrap,
+  .exec-blt2-panel > .exec-blt2-empty { order: 3; }
+  .exec-blt2-panel > .exec-blt2-how { order: 4; }
   .exec-blt2-inner {
     display: block;
     overflow-x: auto;
