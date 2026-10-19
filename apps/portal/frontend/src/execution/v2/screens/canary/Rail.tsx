@@ -15,6 +15,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { BlockerList, NotPublished, SectionPanel } from "../../blocks";
 import { DockAction } from "../../Drawer";
 import { Flag } from "../../Flag";
+import { safeInternalHref } from "../../safeHref";
 import { withContext } from "../../urlState";
 import type { CanaryView } from "./readCanary";
 import { ACCESS_PATH, DECISIONS, FE, blockerItems, decisionReason, rollbackHead, rollbackItems } from "./model";
@@ -60,7 +61,7 @@ export function BeforeScaleUp({ view }: { view: CanaryView }) {
               {lineage.map((item) => (
                 <li key={`${item.kind}-${item.value}`}>
                   {item.kind.replace(/_/g, " ").toLowerCase()}{" "}
-                  {item.href === null ? <span>{item.value}</span> : <Link to={withContext(item.href, params)}>{item.value}</Link>}
+                  {safeInternalHref(item.href) === null ? <span>{item.value}</span> : <Link to={withContext(safeInternalHref(item.href) as string, params)}>{item.value}</Link>}
                 </li>
               ))}
             </ul>

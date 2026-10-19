@@ -38,6 +38,7 @@
 import type { Authority, FreshnessState, PanelStatus } from "../../../contracts";
 import type { CanaryActionPolicy, CanaryControlRoom, PanelEnvelope } from "../../../certification";
 import { readDecimal, type BoundaryDecimal } from "../../boundary";
+import { safeInternalHref } from "../../safeHref";
 import { publishedRowsOf, type PublishedRows } from "../../readers/publishedRows";
 import { unsupportedText, type CanaryVersionRead } from "../../readers/dispatch";
 import type { CanaryParentV2 } from "../../readers/governanceParents";
@@ -293,8 +294,8 @@ function panelFact(panel: PanelEnvelope | null | undefined): PanelFact | null {
 }
 
 function href(value: unknown): string | null {
-  // An in-app path only: a link out of the app, or a protocol-relative one, is not a lineage link.
-  return typeof value === "string" && /^\/(?!\/)[^\s]{0,500}$/.test(value) ? value : null;
+  // An in-app path only: a link out of the app, a protocol-relative one or a backslash one is not a lineage link.
+  return typeof value === "string" && !/\s/.test(value) ? safeInternalHref(value) : null;
 }
 
 /** Closed list of codes the V1 and V2 bodies may carry; any other code is kept and shown in Provenance only. */

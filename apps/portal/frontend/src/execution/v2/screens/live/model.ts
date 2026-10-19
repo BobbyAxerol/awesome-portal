@@ -18,6 +18,7 @@
  * MISMATCH. An UNAVAILABLE broker state still withholds every broker figure (the reader strips them),
  * but says "Not available", which is a different fact.
  */
+import { safeInternalHref } from "../../safeHref";
 import { formatAsOf, readMetric, type Metric } from "../../boundary";
 import type { BlockerItem, NotPublishedId, SpineStageId, StageChips, StageChipValue, TriadCell, TriadRow, TriadSide } from "../../blocks";
 import type { FlagKind } from "../../flagKinds";
@@ -67,12 +68,8 @@ export function humanize(code: string): string {
   return words === "" ? code : words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** A server link that is safe to render: an in-app path (one leading slash, no scheme). Anything else is not linked. */
-export function safeInternalHref(href: string | null | undefined): string | null {
-  if (typeof href !== "string" || href.length === 0 || href.length > 512) return null;
-  if (!href.startsWith("/") || href.startsWith("//") || /[\u0000-\u001f\u007f\\]/.test(href)) return null;
-  return href;
-}
+/** A server link that is safe to render: an in-app path (one leading slash, no scheme). Shared with Sandbox and Canary. */
+export { safeInternalHref } from "../../safeHref";
 
 export function canaryHref(deploymentId: string): string {
   return `/deployments/live/${encodeURIComponent(deploymentId)}/canary`;

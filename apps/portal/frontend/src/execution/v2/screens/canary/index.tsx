@@ -35,6 +35,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
 import { KpiStrip, Kpi, NotPublished, SectionPanel, StageHeader, UrlTabs, type StageChips, type StageCrumb } from "../../blocks";
 import { useContextFacts } from "../../shell/contextFacts";
+import { safeInternalHref } from "../../safeHref";
 import { useExecUrlState, withContext } from "../../urlState";
 import type { SpineStageId } from "../../blocks";
 import { EnvelopeTab } from "./EnvelopeTab";
@@ -139,7 +140,7 @@ export default function CanaryScreen({ api, deploymentId, workspaceId }: CanaryS
     }
     // R1 and R2: the lineage link when the body gave one, else the Approval Inbox (a real route).
     const kind = stage === "r1" ? "R1_APPROVAL" : "R2_APPROVAL";
-    const href = view?.lineage.find((l) => l.kind === kind)?.href ?? null;
+    const href = safeInternalHref(view?.lineage.find((l) => l.kind === kind)?.href);
     navigate(linkTo(href ?? "/governance/approvals"));
   };
 

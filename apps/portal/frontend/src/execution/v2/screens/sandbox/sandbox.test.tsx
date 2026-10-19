@@ -245,6 +245,17 @@ describe("the V1 certification body", () => {
     expect(within(lineage).getByText("grant_77").closest("a")).toBeNull();
   });
 
+  it.each(["//evil.example", "/\\evil.example", "/\tevil", "javascript:x", "https://x"])("a hostile lineage href %j is shown as text, never as a link", async (hostile) => {
+    const body = v1Rich();
+    body.lineage.find((item: { kind: string }) => item.kind === "R1_APPROVAL").href = hostile;
+    mount(fakeApi({ read: okRead(body) }), `${ENTRY}?tab=steps`);
+    await ready();
+    const lineage = screen.getByRole("list", { name: "Lineage" });
+    expect(within(lineage).queryByRole("link", { name: "AP-101" })).toBeNull();
+    expect(within(lineage).getByText("AP-101")).toBeTruthy();
+    for (const a of Array.from(lineage.querySelectorAll("a"))) expect(a.getAttribute("href")).toMatch(/^\/(?![\\/])/);
+  });
+
   it("Reconciliation: the findings table prints the server's sentence, severity, when it was opened and whether it is open", async () => {
     mount(fakeApi({ read: okRead(v1Rich()) }));
     await ready();

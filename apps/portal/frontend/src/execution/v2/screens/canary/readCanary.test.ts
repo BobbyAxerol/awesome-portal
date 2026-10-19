@@ -90,6 +90,12 @@ describe("V1 control room body", () => {
     expect(view.lineage[2]).toMatchObject({ kind: "R2_APPROVAL", value: "AP-152", href: "/governance/approvals/AP-152/r2" });
   });
 
+  it.each(["//evil.example", "/\\evil.example", "/\tevil", "javascript:x", "https://x"])("lineage drops the hostile href %j", (hostile) => {
+    const body = v1Body();
+    body.lineage[0].href = hostile;
+    expect(fromBody(body).lineage[0].href).toBeNull();
+  });
+
   it("a trial day is stated only when it is 1..duration; day 0 and a day past the end are not stated", () => {
     for (const [day, expected] of [[1, 1], [6, 6], [14, 14], [0, null], [15, null], [null, null]] as const) {
       const body = populatedV1();

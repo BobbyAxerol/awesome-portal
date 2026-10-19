@@ -40,6 +40,7 @@ import { useExecutionRuntime } from "../../../useExecutionRuntime";
 import { Flag } from "../../Flag";
 import { KpiStrip, NotPublished, SectionPanel, StageHeader, Triad, UrlTabs } from "../../blocks";
 import { formatAsOf } from "../../boundary";
+import { safeInternalHref } from "../../safeHref";
 import { parseUrlParams, withContext } from "../../urlState";
 import { ExitReviewPanel } from "./ExitReviewPanel";
 import { lineageRoute } from "./lineageRoute";

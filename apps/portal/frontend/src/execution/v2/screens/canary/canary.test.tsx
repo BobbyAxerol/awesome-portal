@@ -15,6 +15,7 @@ import { useContextFactsValue } from "../../shell/contextFacts";
 import { STAGE_WHY } from "../stage/reasons";
 import CanaryScreen, { CANARY_SCREEN_KEY } from "./index";
 import { EnvelopeTab } from "./EnvelopeTab";
+import { BeforeScaleUp } from "./Rail";
 import { PositionsOrdersTab } from "./PositionsOrdersTab";
 import { ReconciliationTab } from "./ReconGuardTabs";
 import { readCanaryView, type CanaryView, type OrderRow, type PositionRow } from "./readCanary";
@@ -239,6 +240,14 @@ describe("what is blocking and rollback readiness", () => {
     expect(provenance.textContent).toContain("risk profile risk-profile-rev-12");
     // the lineage link is the body's own in-app path
     expect(within(provenance as HTMLElement).getByRole("link", { name: "AP-152" }).getAttribute("href")).toBe("/governance/approvals/AP-152/r2");
+  });
+
+  it.each(["//evil.example", "/\\evil.example", "/\tevil", "javascript:x", "https://x"])("the rail never links a hostile lineage href %j, even one handed to the view directly", (hostile) => {
+    const view = viewOf(v1Body());
+    withRouter(<BeforeScaleUp view={{ ...view, lineage: view.lineage.map((l) => ({ ...l, href: hostile })) }} />);
+    const rail = screen.getByRole("heading", { name: "Before scale-up" }).closest("section")!;
+    expect(rail.querySelectorAll("a")).toHaveLength(0);
+    expect(rail.textContent).toContain("AP-152");
   });
 
   it("Rollback readiness: four checks, dates Not published (FE-071), and no Ready anywhere", async () => {
