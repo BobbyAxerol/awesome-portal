@@ -28,6 +28,27 @@ export const ACCESS_FE = {
   capabilityNames: "FE-037",
 } as const;
 
+/**
+ * Most grants drawn into the DOM, the same 200-row convention as Accounts, Blotter and Portfolios.
+ * The reader's bound (MAX_GRANTS = 500) is a different limit: it decides whether the read is accepted
+ * at all; this one only decides how many of an accepted read are drawn.
+ */
+export const ROW_CAP = 200;
+
+export interface GrantWindow {
+  rows: readonly AccessGrant[];
+  total: number;
+  /** Words under the table when rows were left out; `null` when every grant is drawn. */
+  label: string | null;
+}
+
+/** The first `ROW_CAP` grants in the order the server sent them, and a label with exact numbers when some are not drawn. */
+export function grantWindow(grants: readonly AccessGrant[]): GrantWindow {
+  const total = grants.length;
+  const rows = total > ROW_CAP ? grants.slice(0, ROW_CAP) : grants;
+  return { rows, total, label: total > ROW_CAP ? `Showing ${rows.length} of ${total} grants` : null };
+}
+
 /** The two administration capabilities the server's finite namespace names (`PORTAL_CAPABILITIES`). */
 export const ADMIN_CAPABILITY = {
   usersManage: "administration.users.manage",

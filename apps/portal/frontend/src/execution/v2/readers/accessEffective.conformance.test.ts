@@ -19,25 +19,42 @@
  *     Each maps to the documented UI state: a pending policy is never "no
  *     access granted", `current` is the server's word and is not recomputed
  *     from dates, an UNKNOWN authority never reads as ACCEPTED.
- * L2  200 grants, the 500 grant bound and ~1 MiB of selector ids. The read is
+ * L2  200 grants, the 500 grant bound and ~1 MiB of selector ids (20 grants x 200 ids x 256 characters; 200 ids is the schema's maxItems). The read is
  *     not paged (the route answers the whole effective set); the bound
  *     MAX_GRANTS = 500 is what keeps it finite, and one grant over it voids
  *     the read.
  * L3  generated negatives; every case is refused or the typed
- *     `unsupported_shape`, never throws, never leaks its probe. The schema for
- *     this body is not published in packages/contracts/schemas, so acceptance
- *     of a mutated body is judged against the oracle, and what the reader
- *     accepts beyond the header contract is fixed by F5c, including AE-2 (FE display-safety defence, stricter than the schema).
+ *     `unsupported_shape`, never throws, never leaks its probe. The body is also
+ *     judged against the published schema (execution-access.openapi.json,
+ *     components/schemas/AccessEffective, through testkit validateAgainst):
+ *       - every published canonical body, and every body the e2e double serves,
+ *         validates AND is read;
+ *       - the reader never accepts what the schema refuses, over the matrices
+ *         and over the whole generated negative corpus (counted, see
+ *         "L3 · schema agreement");
+ *       - where the reader is stricter than the schema it is on purpose and the
+ *         group is named: bidi/zero-width/whitespace-only ids (AE-2), the
+ *         500-grant bound, the end-after-start interval, pending/reason pairing,
+ *         QUALIFIED needs a ref, and the field-policy/reason grammar.
+ *       - fixed here after this suite found them looser than the schema: AE-4 (more than 200
+ *         selector ids) and AE-5 (an unnamed key anywhere: the schema is closed).
+ *       - one named group is LOOSER on purpose: the open dotted `action` token
+ *         (AE-3), see its test.
  */
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { afterAll, describe, expect, it } from "vitest";
 
 import { ACCESS_DOUBLE_WORKSPACES, answerAccessEffective } from "../../../../e2e/bffDoubleAccess";
-import { canonicalDigest, loadCanonical } from "../testkit/loadCanonical";
+import { canonicalDigest, listCanonical, loadCanonical, SCHEMA_DIR } from "../testkit/loadCanonical";
 import { cartesian, coverage, describeCoverage, dimension, dimensionOf, getPath, pairwise, setPath, type Draft } from "../testkit/matrix";
 import {
   arrayCases, enumCases, integerCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases, stringCases,
 } from "../testkit/negative";
 import { cloneRows, MIB, pad, serializedBytes, timed } from "../testkit/scale";
+import { validateAgainst } from "../testkit/schema";
 import {
   ACCESS_AVAILABILITIES,
   ACCESS_EFFECTIVE_SCHEMA,
@@ -50,12 +67,35 @@ import {
   type AccessEffective,
 } from "./accessEffective";
 
+/** AccessSelector.ids / portfolio_ids: maxItems 200 in the published schema. */
+const MAX_IDS = 200;
+
 /* ── budgets (stated, generous: the suite shares a machine with other lanes) ── */
 const BUDGET_200_GRANTS_MS = 300;
 const BUDGET_500_GRANTS_MS = 500;
 const BUDGET_1_MIB_MS = 800;
 
 const FILE = "execution-access.synthetic";
+const OPENAPI = "../openapi/execution-access.openapi.json";
+const EFFECTIVE_SCHEMA_PTR = "/components/schemas/AccessEffective";
+/**
+ * The testkit checker (testkit/schema.ts) throws on the OpenAPI keyword `discriminator`, which
+ * `AccessSelector` carries. It is an annotation (the four `oneOf` branches already pin `kind` with a
+ * const), so the checker is given a byte-for-byte copy of the published document with only that key
+ * removed, written to a temp dir. The published file is read, never written. FINDING for the testkit
+ * owner: adding "discriminator" to IGNORED in testkit/schema.ts makes this copy unnecessary.
+ */
+const checkerDir = mkdtempSync(join(tmpdir(), "access-effective-schema-"));
+const withoutDiscriminator = (node: unknown): unknown => {
+  if (Array.isArray(node)) return node.map(withoutDiscriminator);
+  if (typeof node !== "object" || node === null) return node;
+  return Object.fromEntries(Object.entries(node).filter(([key]) => key !== "discriminator").map(([key, child]) => [key, withoutDiscriminator(child)]));
+};
+const OPENAPI_COPY = join(checkerDir, "execution-access.openapi.json");
+writeFileSync(OPENAPI_COPY, JSON.stringify(withoutDiscriminator(JSON.parse(readFileSync(join(SCHEMA_DIR, OPENAPI), "utf8")))));
+afterAll(() => rmSync(checkerDir, { recursive: true, force: true }));
+/** Violations of the published `AccessEffective` schema; empty when the body conforms. */
+const schemaViolations = (value: unknown): string[] => validateAgainst(OPENAPI_COPY, EFFECTIVE_SCHEMA_PTR, value);
 const digestBefore = canonicalDigest(FILE);
 afterAll(() => {
   expect(canonicalDigest(FILE)).toBe(digestBefore);
@@ -161,6 +201,8 @@ describe("L1 · matrix A · availability x reason x revision x researcher field 
     const body = effectiveOf(state.value);
     expect(body !== null).toBe(accept(state.picks));
     if (body === null) return;
+    // The reader never reads what the schema refuses.
+    expect(schemaViolations(state.value)).toEqual([]);
     expect(body.availability).toBe(state.picks.availability);
     // A pending policy always says why, and an available one never carries a reason.
     expect(body.reasonCode === null).toBe(body.availability === "AVAILABLE");
@@ -204,6 +246,7 @@ describe("L1 · matrix B · one grant", () => {
     const body = effectiveOf(state.value);
     expect(body !== null).toBe(accept(state.picks));
     if (body === null) return;
+    expect(schemaViolations(state.value)).toEqual([]);
     const grant = body.grants[0]!;
     const want = state.value.grants[0];
     // Words pass through unchanged: an UNKNOWN authority stays UNKNOWN, a DENY stays a DENY.
@@ -261,7 +304,10 @@ describe("L1 · matrix C · the grants list (size x repeated id x one bad grant)
     const body = effectiveOf(state.value);
     expect(body !== null).toBe(accept(state.picks));
     // One bad grant voids the whole read: no partial list is ever handed to "Granted to you".
-    if (body !== null) expect(body.grants).toHaveLength(Number(state.picks.size));
+    if (body !== null) {
+      expect(body.grants).toHaveLength(Number(state.picks.size));
+      expect(schemaViolations(state.value)).toEqual([]);
+    }
   });
 });
 
@@ -273,7 +319,7 @@ describe("L1 · matrix D · selector id lists", () => {
   const ids = (n: number): string[] => Array.from({ length: n }, (_, i) => `id_${pad(i)}`);
   const DIMS = [
     dimensionOf("kind", Object.keys(kinds).map((k) => ({ label: k, apply: () => undefined }))),
-    dimensionOf("count", [0, 1, 2, 1000, 1001].map((n) => ({ label: String(n), apply: () => undefined }))),
+    dimensionOf("count", [0, 1, 2, MAX_IDS, MAX_IDS + 1].map((n) => ({ label: String(n), apply: () => undefined }))),
     dimensionOf("repeat", ["none", "twice"].map((label) => ({ label, apply: () => undefined }))),
     dimensionOf("text", ["plain", "control", "empty", "256", "257"].map((label) => ({ label, apply: () => undefined }))),
   ];
@@ -292,7 +338,7 @@ describe("L1 · matrix D · selector id lists", () => {
   });
   const accept = (p: Record<string, string>) => {
     const n = Number(p.count);
-    if (n < 1 || n > 1000) return false;
+    if (n < 1 || n > MAX_IDS) return false;
     if (p.repeat === "twice" && n > 1) return false;
     return p.text === "plain" || p.text === "256";
   };
@@ -306,6 +352,7 @@ describe("L1 · matrix D · selector id lists", () => {
     const body = effectiveOf(state.value);
     expect(body !== null).toBe(accept(state.picks));
     if (body === null) return;
+    expect(schemaViolations(state.value)).toEqual([]);
     const sel = body.grants[0]!.selector;
     const got = sel.kind === "EXPLICIT_RESOURCE_SET" ? sel.ids : sel.kind === "PORTFOLIO_MEMBERSHIP" ? sel.portfolioIds : [];
     expect([...got]).toEqual(state.list);
@@ -329,6 +376,7 @@ describe("L1 · matrix E · owner recovery is the contract constant or nothing",
     if (c.reason === "ABSENT") delete body.owner_recovery.reason_code;
     else body.owner_recovery.reason_code = c.reason;
     const read = effectiveOf(body);
+    if (read !== null) expect(schemaViolations(body)).toEqual([]);
     const exact = c.enabled === false && c.reason === "OWNER_RECOVERY_NOT_APPROVED";
     expect(read !== null).toBe(exact);
     if (read !== null) expect(read.ownerRecovery).toEqual({ enabled: false, reasonCode: "OWNER_RECOVERY_NOT_APPROVED" });
@@ -345,6 +393,7 @@ describe("L2 · scale", () => {
 
   it("reads 200 grants inside the budget and keeps every one, in order", () => {
     const body = withGrants(grants(200));
+    expect(schemaViolations(body)).toEqual([]);
     const { value, ms } = timed(() => effectiveOf(body));
     console.info(`accessEffective 200 grants (${(serializedBytes(body) / 1024).toFixed(0)} KiB): ${ms.toFixed(0)} ms (budget ${BUDGET_200_GRANTS_MS} ms)`);
     expect(value!.grants.map((g) => g.grantId)).toEqual(body.grants.map((g: Draft) => g.grant_id));
@@ -353,20 +402,23 @@ describe("L2 · scale", () => {
 
   it("reads the bound itself (500) and refuses one over it; the read is not paged", () => {
     const at = withGrants(grants(MAX_GRANTS));
+    expect(schemaViolations(at)).toEqual([]);
     const { value, ms } = timed(() => effectiveOf(at));
     console.info(`accessEffective ${MAX_GRANTS} grants: ${ms.toFixed(0)} ms (budget ${BUDGET_500_GRANTS_MS} ms)`);
     expect(value!.grants).toHaveLength(MAX_GRANTS);
     expect(ms).toBeLessThan(BUDGET_500_GRANTS_MS);
+    // One over the reader bound is still inside the schema (maxItems 10000): the bound is the reader's own, counted as stricter.
+    expect(schemaViolations(withGrants(grants(MAX_GRANTS + 1)))).toEqual([]);
     expect(effectiveOf(withGrants(grants(MAX_GRANTS + 1)))).toBeNull();
-    // No cursor field is read: a body that carries one is not a paged read.
-    expect(readAccessEffective({ ...at, next_cursor: "x" })?.kind).toBe("effective");
+    // No cursor field is read: a body that carries one is not this contract (additionalProperties: false), so it is refused, not read unpaged.
+    expect(readAccessEffective({ ...at, next_cursor: "x" })).toBeNull();
   });
 
-  it("reads ~1 MiB of selector ids (the widest legal ids, the id bound) inside the budget", () => {
-    const body = withGrants(grants(4, 1000, 256));
+  it("reads ~1 MiB of selector ids (the widest legal ids, the 200-id schema bound) inside the budget", () => {
+    const body = withGrants(grants(20, MAX_IDS, 256));
     const bytes = serializedBytes(body);
     const { value, ms } = timed(() => effectiveOf(body));
-    console.info(`accessEffective ${(bytes / MIB).toFixed(2)} MiB, 4 grants x 1000 ids: ${ms.toFixed(0)} ms (budget ${BUDGET_1_MIB_MS} ms)`);
+    console.info(`accessEffective ${(bytes / MIB).toFixed(2)} MiB, 20 grants x 200 ids: ${ms.toFixed(0)} ms (budget ${BUDGET_1_MIB_MS} ms)`);
     expect(bytes).toBeGreaterThan(0.9 * MIB);
     expect(value).not.toBeNull();
     expect(ms).toBeLessThan(BUDGET_1_MIB_MS);
@@ -487,6 +539,204 @@ describe("L3 · negative", () => {
     other.user_id = "usr_someone_else";
     expect(effectiveOf(other)!.userId).toBe("usr_someone_else");
     expect(effectiveOf(other)!.userId).not.toBe(GRANTED.user_id);
+  });
+});
+
+/* ═════════════════════════ L3 · schema agreement ═════════════════════════ */
+describe("L3 · schema agreement (the published AccessEffective schema, via testkit validateAgainst)", () => {
+  /** Every body any published canonical fixture carries under this schema_version, found by walking the whole file. */
+  const publishedBodies = (): { file: string; path: string; body: Draft }[] => {
+    const found: { file: string; path: string; body: Draft }[] = [];
+    const walk = (node: unknown, file: string, path: string): void => {
+      if (Array.isArray(node)) node.forEach((item, index) => walk(item, file, `${path}[${index}]`));
+      else if (typeof node === "object" && node !== null) {
+        const record = node as Draft;
+        if (record.schema_version === ACCESS_EFFECTIVE_SCHEMA) found.push({ file, path, body: record });
+        else for (const [key, child] of Object.entries(record)) walk(child, file, `${path}.${key}`);
+      }
+    };
+    for (const file of listCanonical()) walk(loadCanonical(file), file, "$");
+    return found;
+  };
+  const double = (workspace: string): Draft => answerAccessEffective(
+    "GET", "/api/admin/profile-access/v2/effective", new URLSearchParams({ workspace_id: workspace }),
+  )!.body;
+
+  it("every published canonical body validates against the schema and is read", () => {
+    const bodies = publishedBodies();
+    console.info(`accessEffective schema: ${bodies.length} published canonical body(ies): ${bodies.map((b) => `${b.file}${b.path}`).join(", ")}`);
+    expect(bodies.length).toBeGreaterThanOrEqual(1);
+    for (const { file, path, body } of bodies) {
+      expect(schemaViolations(body), `${file}${path}`).toEqual([]);
+      expect(effectiveOf(body), `${file}${path}`).not.toBeNull();
+    }
+  });
+
+  it("the AVAILABLE-with-grants body of the e2e double validates against the schema and is read, grant for grant", () => {
+    expect(schemaViolations(GRANTED)).toEqual([]);
+    const body = effectiveOf(GRANTED)!;
+    expect(body).not.toBeNull();
+    expect(body.availability).toBe("AVAILABLE");
+    expect(body.grants).toHaveLength(GRANTED.grants.length);
+    expect(GRANTED.grants.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it.each(["pending", "available", "empty", "otherUser"] as const)("every 200 answer of the double (%s) validates and is read", (state) => {
+    const body = double(ACCESS_DOUBLE_WORKSPACES[state]);
+    expect(schemaViolations(body), state).toEqual([]);
+    expect(effectiveOf(body), state).not.toBeNull();
+  });
+
+  it("the double's 'malformed' body is refused by the schema (action outside the enum) and by the reader", () => {
+    const body = double(ACCESS_DOUBLE_WORKSPACES.malformed);
+    expect(schemaViolations(body).join()).toMatch(/action/);
+    expect(readAccessEffective(body)).toBeNull();
+  });
+
+  /** Reader and schema judge one payload; the pair is what the counts below group. */
+  const judge = (value: unknown) => {
+    const read = readAccessEffective(value);
+    return { invalid: schemaViolations(value).length > 0, accepted: read !== null && read.kind !== "unsupported_shape" };
+  };
+
+  /**
+   * Looser on purpose, AE-3: `action` is an open dotted token in the reader (header comment), the
+   * schema pins the 59-name enum. A well-formed name outside the enum is schema-invalid and read.
+   * The generated corpus has none of these (every malformed action it builds is refused by both);
+   * the test below pins the group by hand so a change of that choice is deliberate.
+   */
+  const LOOSER_ON_PURPOSE: ((value: Draft) => boolean)[] = [];
+
+  /**
+   * Schema-valid, reader refuses, found in the generated corpus. Each group is a documented FE rule, never an
+   * accident, and the counts are pinned so a new accidental refusal (or a lost one) is a red test.
+   * Rules that the corpus does not generate (interval order, QUALIFIED needs a ref, reason token grammar, the
+   * 500 bound) are pinned by hand in "stricter than the schema, on purpose" below.
+   */
+  const STRICTER_GROUPS: { name: string; count: number; test: (c: Case) => boolean }[] = [
+    { name: "duplicate grant_id (the schema states no uniqueness on grants)", count: 1, test: (c) => c.category === "duplicate-id" },
+    { name: "reason_code present while AVAILABLE (pairing: POLICY_PENDING iff reason_code)", count: 2, test: (c) => /^huge-string: reason_code <-/.test(c.name) },
+    { name: "AE-2 display safety on patterned ids: whitespace-only or bidi override", count: 8, test: (c) => /^huge-string: (workspace_id|user_id|grants\.0\.grant_id|grants\.0\.selector\.ids\.0) <-/.test(c.name) },
+    { name: "AE-2 on strings the schema leaves unpatterned (policy_revision, revision): whitespace-only, bidi, NUL", count: 6, test: (c) => /^huge-string: (policy_revision|grants\.0\.revision) <-/.test(c.name) },
+  ];
+
+  const corpus = ALL_NEG.filter((c) => c.category !== "prototype-pollution" && c.category !== "schema-swapped");
+
+  it("reader never accepts what the schema refuses, over the whole generated negative corpus (counted)", () => {
+    let invalid = 0;
+    let looser = 0;
+    let stricter = 0;
+    const looserNames: string[] = [];
+    const stricterBy = new Map<string, number>();
+    for (const c of corpus) {
+      const { invalid: bad, accepted } = judge(c.value);
+      if (bad) invalid += 1;
+      if (bad && accepted) {
+        looser += 1;
+        looserNames.push(c.name);
+      }
+      if (!bad && !accepted) {
+        stricter += 1;
+        const group = STRICTER_GROUPS.find((g) => g.test(c))?.name ?? "UNEXPLAINED";
+        stricterBy.set(group, (stricterBy.get(group) ?? 0) + 1);
+      }
+    }
+    console.info(
+      `accessEffective L3 schema gap: ${corpus.length} cases, schema refuses ${invalid}; reader accepts ${looser} of those (looser); `
+      + `reader refuses ${stricter} schema-valid ones (stricter): ${[...stricterBy.entries()].map(([k, v]) => `${k} ${v}`).join("; ")}`,
+    );
+    expect(invalid).toBeGreaterThan(200);
+    expect(looserNames).toEqual([]);
+    expect(stricterBy.get("UNEXPLAINED") ?? 0).toBe(0);
+    for (const group of STRICTER_GROUPS) expect(stricterBy.get(group.name) ?? 0, group.name).toBe(group.count);
+    expect(stricter).toBe(STRICTER_GROUPS.reduce((sum, group) => sum + group.count, 0));
+  });
+
+  it("and the schema-swapped cases are refused by the schema and are never an effective body", () => {
+    const swapped = ALL_NEG.filter((c) => c.category === "schema-swapped");
+    expect(swapped.length).toBeGreaterThan(0);
+    for (const c of swapped) {
+      const { invalid, accepted } = judge(c.value);
+      // The unchanged-version control, if the generator emits one, is the base body: valid and read.
+      if (!invalid) expect(accepted, c.name).toBe(true);
+      else expect(accepted, c.name).toBe(false);
+    }
+  });
+
+  it("AE-3 (looser on purpose, pinned): a well-formed dotted action outside the schema enum is schema-invalid and still read", () => {
+    const body = clone(GRANTED);
+    body.grants[0].action = "future.capability_added_by_server";
+    expect(schemaViolations(body).join()).toMatch(/grants\[0\]\.action/);
+    expect(effectiveOf(body)!.grants[0]!.action).toBe("future.capability_added_by_server");
+    expect(LOOSER_ON_PURPOSE).toHaveLength(0);
+  });
+
+  /* Divergences found by this suite and fixed in the reader (regression): the reader had accepted what the schema refuses. */
+  it("REGRESSION AE-4: more than 200 selector ids is schema-invalid (maxItems 200) and refused by the reader", () => {
+    for (const make of [
+      (ids: string[]) => ({ kind: "EXPLICIT_RESOURCE_SET", resource_kind: "PORTFOLIO", ids }),
+      (ids: string[]) => ({ kind: "PORTFOLIO_MEMBERSHIP", portfolio_ids: ids }),
+    ]) {
+      const ids = (n: number) => Array.from({ length: n }, (_, i) => `id_${pad(i)}`);
+      const at = clone(GRANTED);
+      at.grants[0].selector = make(ids(MAX_IDS));
+      expect(schemaViolations(at)).toEqual([]);
+      expect(effectiveOf(at)).not.toBeNull();
+      const over = clone(GRANTED);
+      over.grants[0].selector = make(ids(MAX_IDS + 1));
+      expect(schemaViolations(over).join()).toMatch(/selector: matched 0 oneOf/);
+      expect(readAccessEffective(over)).toBeNull();
+    }
+  });
+
+  it.each([
+    ["the body", [] as (string | number)[]],
+    ["a grant", ["grants", 0]],
+    ["a selector", ["grants", 0, "selector"]],
+    ["the researcher field policy", ["researcher_field_policy"]],
+    ["owner recovery", ["owner_recovery"]],
+  ])("REGRESSION AE-5: an unnamed key on %s is schema-invalid (additionalProperties false) and refuses the whole read", (_name, path) => {
+    const body = clone(GRANTED);
+    setPath(body, [...path, "surprise_field"], "x");
+    // A selector is a oneOf: a stray key makes it match no branch, any other level names the key.
+    expect(schemaViolations(body).join()).toMatch(path.includes("selector") ? /selector: matched 0 oneOf/ : /surprise_field: not allowed/);
+    expect(readAccessEffective(body)).toBeNull();
+  });
+
+  it("AE-5 keeps the schema_version rule: a body of another version with unknown keys is still unsupported_shape, not malformed", () => {
+    const other = { ...clone(GRANTED), schema_version: "portal.access-effective.v2", brand_new_field: 1 };
+    expect(readAccessEffective(other)).toEqual({ kind: "unsupported_shape", schemaVersion: "portal.access-effective.v2" });
+  });
+
+  it("stricter than the schema, on purpose: each pinned case is schema-valid and refused by the reader", () => {
+    const rlo = String.fromCharCode(0x202e);
+    const zwsp = String.fromCharCode(0x200b);
+    const cases: [string, (b: Draft) => void][] = [
+      ["whitespace-only workspace_id (AE-2)", (b) => { b.workspace_id = "   "; }],
+      ["bidi override in grant_id (AE-2)", (b) => { b.grants[0].grant_id = `acg${rlo}x`; }],
+      ["zero-width in selector id (AE-2)", (b) => { b.grants[0].selector.ids[0] = `pf${zwsp}x`; }],
+      ["C1 control in revision (schema leaves revision unpatterned)", (b) => { b.grants[0].revision = "r\u0085x"; }],
+      ["control character in policy_revision (schema leaves it unpatterned)", (b) => { b.policy_revision = "p\u0007x"; }],
+      ["valid_until_ms equal to valid_from_ms (empty interval)", (b) => { b.grants[0].valid_until_ms = b.grants[0].valid_from_ms; }],
+      ["valid_until_ms before valid_from_ms", (b) => { b.grants[0].valid_until_ms = b.grants[0].valid_from_ms - 1; }],
+      ["POLICY_PENDING without a reason_code", (b) => { b.availability = "POLICY_PENDING"; b.reason_code = null; }],
+      ["AVAILABLE with a reason_code", (b) => { b.reason_code = "POLICY_PENDING"; }],
+      ["QUALIFIED researcher_field_policy without a ref", (b) => { b.researcher_field_policy = { state: "QUALIFIED", policy_ref: null }; }],
+      ["reason_code with a space (reader token grammar)", (b) => { b.availability = "POLICY_PENDING"; b.reason_code = "POLICY PENDING"; }],
+      ["duplicate grant_id across grants", (b) => { b.grants.push(clone(b.grants[0])); }],
+      [`${MAX_GRANTS + 1} grants (reader bound; schema allows 10000)`, (b) => { b.grants = cloneRows(b.grants[0], MAX_GRANTS + 1, (g, i) => { g.grant_id = `acg_${pad(i)}`; }); }],
+    ];
+    const outcome: string[] = [];
+    for (const [name, change] of cases) {
+      const body = clone(GRANTED);
+      change(body);
+      const { invalid, accepted } = judge(body);
+      // The pinned set is "stricter" only if the schema is silent. A case the schema also refuses is not in this group.
+      outcome.push(`${name}: schema ${invalid ? "refuses" : "allows"}, reader ${accepted ? "reads" : "refuses"}`);
+      expect(invalid, `schema should allow: ${name}`).toBe(false);
+      expect(accepted, `reader should refuse: ${name}`).toBe(false);
+    }
+    console.info(`accessEffective stricter-than-schema (on purpose), ${outcome.length} pinned groups:\n  ${outcome.join("\n  ")}`);
   });
 });
 

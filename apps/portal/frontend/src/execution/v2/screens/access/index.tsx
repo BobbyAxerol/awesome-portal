@@ -31,6 +31,7 @@ import {
   TS_AUTHORITY_FLAG,
   doRows,
   environmentsText,
+  grantWindow,
   otherCapabilities,
   policyWord,
   reasonText,
@@ -210,6 +211,8 @@ export default function AccessSelfView({ manage, now, fetchImpl }: AccessSelfVie
 
   const effective = grants.phase === "ready" ? grants.effective : null;
   const others = otherCapabilities(capabilities);
+  // At most ROW_CAP grants are drawn; the label states the exact count (the read itself is bounded at 500 by the reader).
+  const grantView = useMemo(() => grantWindow(effective?.grants ?? []), [effective]);
 
   const body = (
     <>
@@ -270,6 +273,13 @@ export default function AccessSelfView({ manage, now, fetchImpl }: AccessSelfVie
             <>
               <CardsTable columns={doColumns} rows={doRows(capabilities)} rowKey={(r) => r.id} label="What you can do" />
               <p className="exec-acc-foot">
+                {/*
+                  FE-015 WORDING: "Not published" is no longer exact for per-action eligibility. A published body
+                  (portal.self-eligibility.v1) and a strict reader (readers/accessSelf.ts) exist but are NOT wired here
+                  (DEBT-UXM07-011), and serving of the route is not verified. Recommended honest words until it is wired and
+                  served: "Not read yet by this screen"; "Not published" stays only for what no body states (who granted
+                  an item, a role preset). Left unchanged on purpose: nothing is wired in this slice.
+                */}
                 <NotPublished id={ACCESS_FE.reasons}>Per-action eligibility and the reason a control is off are not published for commands, archive and export.</NotPublished>
               </p>
             </>
@@ -308,13 +318,18 @@ export default function AccessSelfView({ manage, now, fetchImpl }: AccessSelfVie
           <>
             <CardsTable
               columns={grantColumns}
-              rows={effective.grants}
+              rows={grantView.rows}
               rowKey={(g) => g.grantId}
               label="Granted to you"
               empty={effective.availability === "POLICY_PENDING"
                 ? "No grants are listed while the access policy is pending."
                 : "No grants are published for you in this workspace."}
             />
+            {grantView.label !== null ? (
+              <p className="exec-acc-foot" role="status" data-testid="exec-acc-grants-cap">
+                <span data-testid="exec-acc-grants-cap-label">{grantView.label}</span>. These are the first {grantView.rows.length} in the order the Portal sent them; the other {grantView.total - grantView.rows.length} are not drawn here.
+              </p>
+            ) : null}
             <p className="exec-acc-foot">
               Who granted each item is not published ({ACCESS_FE.reasons}). State and trading-system columns are the Portal&apos;s own evaluation, not recomputed here.
             </p>

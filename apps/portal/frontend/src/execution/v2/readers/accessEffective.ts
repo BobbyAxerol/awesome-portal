@@ -14,6 +14,8 @@
  *   the enum belongs to the generated contract, and a name added there must
  *   not turn the whole screen unavailable. Everything that has a closed set
  *   (effect, availability, authority, environment, selector kind) is closed;
+ * - the contract is closed: a key the schema does not name voids the read (AE-5), and a selector
+ *   id list longer than the schema's 200 is refused (AE-4);
  * - `owner_recovery` is the contract's constant (`enabled: false`,
  *   `OWNER_RECOVERY_NOT_APPROVED`); anything else is refused;
  * - nothing is invented: no "granted by", no preset name. The body carries
@@ -82,7 +84,15 @@ export type AccessEffectiveRead = { kind: "effective"; effective: AccessEffectiv
 
 /** The most grants one read may carry; more is a contract the screen was not built for. */
 export const MAX_GRANTS = 500;
-const MAX_IDS = 1000;
+/** Schema `AccessSelector`: `ids` / `portfolio_ids` have maxItems 200. A longer list is not this contract and voids the read. */
+const MAX_IDS = 200;
+
+const GRANT_KEYS = [
+  "grant_id", "action", "effect", "selector", "environments", "valid_from_ms", "valid_until_ms", "revision", "current", "ts_authority",
+] as const;
+const ROOT_KEYS = [
+  "schema_version", "workspace_id", "user_id", "policy_revision", "availability", "reason_code", "grants", "researcher_field_policy", "owner_recovery",
+] as const;
 
 const TOKEN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
 const ACTION = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
@@ -94,6 +104,15 @@ function record(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null;
+}
+
+/**
+ * The contract is closed (`additionalProperties: false` on the body, a grant, a selector, the field policy and owner
+ * recovery): a key the schema does not name is not this contract and voids the read, as accessSelf does. The answer to a
+ * server that adds a field is a schema change, not a reader that quietly drops it.
+ */
+function hasOnly(value: Record<string, unknown>, allowed: readonly string[]): boolean {
+  return Object.keys(value).every((key) => allowed.includes(key));
 }
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | null {
@@ -146,6 +165,14 @@ function idList(value: unknown): readonly string[] | null {
 function readSelector(raw: unknown): AccessSelector | null {
   const selector = record(raw);
   if (selector === null) return null;
+  const keys: Record<string, readonly string[]> = {
+    EXPLICIT_RESOURCE_SET: ["kind", "resource_kind", "ids"],
+    OWN_ALPHA: ["kind"],
+    PORTFOLIO_MEMBERSHIP: ["kind", "portfolio_ids"],
+    ROOT_SCOPE: ["kind", "root_id"],
+  };
+  const allowed = typeof selector.kind === "string" && Object.prototype.hasOwnProperty.call(keys, selector.kind) ? keys[selector.kind] : null;
+  if (allowed === null || !hasOnly(selector, allowed)) return null;
   switch (selector.kind) {
     case "EXPLICIT_RESOURCE_SET": {
       const resourceKind = oneOf(selector.resource_kind, ACCESS_RESOURCE_KINDS);
@@ -180,7 +207,7 @@ function readEnvironments(raw: unknown): readonly AccessEnvironment[] | null {
 
 function readGrant(raw: unknown): AccessGrant | null {
   const grant = record(raw);
-  if (grant === null) return null;
+  if (grant === null || !hasOnly(grant, GRANT_KEYS)) return null;
   const grantId = opaque(grant.grant_id);
   const action = typeof grant.action === "string" && ACTION.test(grant.action) && grant.action.length <= 128 ? grant.action : null;
   const effect = oneOf(grant.effect, ACCESS_EFFECTS);
@@ -202,7 +229,7 @@ function readGrant(raw: unknown): AccessGrant | null {
 
 function readFieldPolicy(raw: unknown): AccessEffective["researcherFieldPolicy"] | null {
   const policy = record(raw);
-  if (policy === null) return null;
+  if (policy === null || !hasOnly(policy, ["state", "policy_ref"])) return null;
   const state = oneOf(policy.state, ["PENDING", "QUALIFIED"] as const);
   const policyRef = policy.policy_ref === null ? null : opaque(policy.policy_ref);
   if (state === null || (policy.policy_ref !== null && policyRef === null)) return null;
@@ -213,7 +240,7 @@ function readFieldPolicy(raw: unknown): AccessEffective["researcherFieldPolicy"]
 
 function readOwnerRecovery(raw: unknown): AccessEffective["ownerRecovery"] | null {
   const recovery = record(raw);
-  if (recovery === null || !isFalse(recovery.enabled) || recovery.reason_code !== "OWNER_RECOVERY_NOT_APPROVED") return null;
+  if (recovery === null || !hasOnly(recovery, ["enabled", "reason_code"]) || !isFalse(recovery.enabled) || recovery.reason_code !== "OWNER_RECOVERY_NOT_APPROVED") return null;
   return { enabled: false, reasonCode: "OWNER_RECOVERY_NOT_APPROVED" };
 }
 
@@ -229,6 +256,9 @@ export function readAccessEffective(raw: unknown): AccessEffectiveRead | null {
   if (root === null) return null;
   const version = typeof root.schema_version === "string" ? root.schema_version : null;
   if (version !== ACCESS_EFFECTIVE_SCHEMA) return { kind: "unsupported_shape", schemaVersion: version };
+
+  // The version is read first so another schema stays `unsupported_shape`; only this schema's body is held to its keys.
+  if (!hasOnly(root, ROOT_KEYS)) return null;
 
   const workspaceId = opaque(root.workspace_id);
   const userId = opaque(root.user_id);

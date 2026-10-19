@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACCESS_DOUBLE_WORKSPACES, answerAccessEffective } from "../../../../../e2e/bffDoubleAccess";
 import { V2_CAPABILITY, V2_ROLE_PRESETS } from "../../shell/roleNav";
 import AccessSelfView, { ACCESS_PATH, type AccessSelfViewProps } from "./index";
-import { ADMIN_CAPABILITY } from "./model";
+import { ADMIN_CAPABILITY, ROW_CAP } from "./model";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
@@ -467,4 +467,65 @@ describe("structure and absences", () => {
       }
     },
   );
+});
+
+describe("L2 · grants over the DOM cap", () => {
+  /** The double's AVAILABLE answer with `n` grants (unique ids), through the real strict reader. */
+  function fetchWithGrants(n: number) {
+    return vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "http://portal.test");
+      const base = answerAccessEffective("GET", url.pathname, url.searchParams, { userId: ME })!.body as { grants: Record<string, unknown>[] };
+      const template = base.grants[0];
+      const grants = Array.from({ length: n }, (_, i) => ({ ...template, grant_id: `acg_scale_${String(i).padStart(4, "0")}` }));
+      return json({ ...base, grants });
+    }) as unknown as typeof fetch;
+  }
+  const mountWith = (n: number) => mount({ fetchImpl: fetchWithGrants(n) }, workspace("available"));
+  const capLabel = () => screen.queryByTestId("exec-acc-grants-cap");
+
+  it("200 grants: every row is drawn and there is no label", async () => {
+    mountWith(ROW_CAP);
+    const rows = rowsOf(await granted());
+    expect(rows).toHaveLength(200);
+    expect(capLabel()).toBeNull();
+    expect(screen.queryByText(/Showing \d+ of \d+ grants/)).toBeNull();
+  });
+
+  it("201 grants: 200 rows in the DOM and the exact words 'Showing 200 of 201 grants'", async () => {
+    mountWith(ROW_CAP + 1);
+    const rows = rowsOf(await granted());
+    expect(rows).toHaveLength(200);
+    expect(screen.getByTestId("exec-acc-grants-cap-label").textContent).toBe("Showing 200 of 201 grants");
+    expect(capLabel()!.textContent).toContain("the other 1 are not drawn here");
+    // The first 200 in the order the server sent them; the 201st is not drawn.
+    expect(cell(rows[0], "Revision").textContent).toBe("r3_TEST_ONLY");
+    expect(screen.queryByText("acg_scale_0200")).toBeNull();
+  });
+
+  it("500 grants (the reader bound): 200 rows in the DOM and 'Showing 200 of 500 grants', no ellipsis in the numbers", async () => {
+    mountWith(500);
+    const rows = rowsOf(await granted());
+    expect(rows).toHaveLength(200);
+    const text = screen.getByTestId("exec-acc-grants-cap-label").textContent!;
+    expect(text).toBe("Showing 200 of 500 grants");
+    expect(capLabel()!.textContent).not.toMatch(/\u2026|\.\.\./);
+    expect(capLabel()!.textContent).toContain("the other 300 are not drawn here");
+  });
+
+  it("501 grants stays refused by the reader: unavailable, no table, no label", async () => {
+    mountWith(501);
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("did not match the published access contract");
+    expect(screen.queryByRole("table", { name: "Granted to you" })).toBeNull();
+    expect(capLabel()).toBeNull();
+  });
+
+  it("the DOM stays under budget at the bound: the whole screen holds fewer than 7,000 elements for 500 grants", async () => {
+    const { container } = mountWith(500);
+    await granted();
+    const nodes = container.querySelectorAll("*").length;
+    // Measured 6,323 with 200 drawn rows (8 cells, flags, mobile labels); 500 uncapped rows would be about 15,000.
+    expect(nodes).toBeLessThan(7000);
+    expect(container.querySelectorAll('table[aria-label="Granted to you"] tbody tr, table[aria-label="Granted to you"] tr').length).toBeLessThanOrEqual(ROW_CAP + 1);
+  });
 });

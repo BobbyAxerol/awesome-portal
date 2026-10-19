@@ -9,6 +9,8 @@ import { V2_CAPABILITY, V2_ROLE_PRESETS } from "../../shell/roleNav";
 import type { AccessGrant } from "../../readers/accessEffective";
 import {
   ADMIN_CAPABILITY,
+  ROW_CAP,
+  grantWindow,
   doRows,
   needsText,
   otherCapabilities,
@@ -147,5 +149,28 @@ describe("grant text", () => {
     expect(selectorText({ kind: "PORTFOLIO_MEMBERSHIP", portfolioIds: ["pf1"] })).toBe("Portfolio membership: pf1");
     expect(selectorText({ kind: "ROOT_SCOPE", rootId: "root1" })).toBe("Root scope: root1");
     expect(selectorText({ kind: "OWN_ALPHA" })).toBe("Alphas you own");
+  });
+});
+
+describe("grantWindow (200-row DOM cap)", () => {
+  const grants = (n: number): AccessGrant[] => Array.from({ length: n }, (_, i) => ({
+    grantId: `g${i}`, action: "portfolio.read", effect: "ALLOW", selector: { kind: "OWN_ALPHA" }, environments: ["paper"],
+    validFrom: 1 as AccessGrant["validFrom"], validUntil: null, revision: "r", current: true, tsAuthority: "NOT_REQUIRED",
+  }));
+
+  it.each([[0, 0, null], [1, 1, null], [200, 200, null], [201, 200, "Showing 200 of 201 grants"], [500, 200, "Showing 200 of 500 grants"]])(
+    "%i grants draws %i with label %s", (n, drawn, label) => {
+      const view = grantWindow(grants(n));
+      expect(ROW_CAP).toBe(200);
+      expect(view.rows).toHaveLength(drawn);
+      expect(view.total).toBe(n);
+      expect(view.label).toBe(label);
+    },
+  );
+
+  it("keeps the server order and never reorders or drops silently", () => {
+    const all = grants(350);
+    const view = grantWindow(all);
+    expect(view.rows.map((g) => g.grantId)).toEqual(all.slice(0, 200).map((g) => g.grantId));
   });
 });
