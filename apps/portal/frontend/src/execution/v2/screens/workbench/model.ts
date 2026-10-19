@@ -600,6 +600,16 @@ export interface PositionsModel {
   unreadableSide: number;
 }
 
+/**
+ * A flat position has no entry price. A server that prints its zero placeholder ("0", "0.00") for one is not
+ * publishing a price, so that is absent (the table says why); a null/absent entry is absent too. A zero entry
+ * on a LONG/SHORT/unknown row stays a printed value: it is the server's, and only a flat row is known to have none.
+ */
+function entryFigure(side: unknown, raw: unknown): Figure {
+  const entry = figure(raw, "money");
+  return side === "FLAT" && entry.kind === "value" && entry.decimal.zero ? { kind: "absent" } : entry;
+}
+
 export function readPositions(envelope: ProfileEnvelope): PositionsModel {
   const seen = new Map<string, number>();
   const all = rowsOf(envelope, "positions").map((row, at): PositionRow => ({
@@ -607,7 +617,7 @@ export function readPositions(envelope: ProfileEnvelope): PositionsModel {
     symbol: text(row.instrument_id) ?? text(row.symbol),
     side: row.side === "LONG" ? "long" : row.side === "SHORT" ? "short" : row.side === "FLAT" ? "flat" : "unknown",
     quantity: figure(row.quantity, "qty"),
-    entry: figure(row.avg_px_open, "money"),
+    entry: entryFigure(row.side, row.avg_px_open),
     mark: figure(row.mark_price, "money"),
     unrealized: figure(row.unrealized_pnl, "money"),
     atMs: timeOf(row, "updated_at_ms", "updated_at", "opened_at"),

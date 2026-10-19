@@ -504,6 +504,21 @@ describe("Orders, Fills, Positions, Sessions", () => {
     expect(text()).toContain("Long, Short and Gross columns: Not published (FE-051)");
   });
 
+  it("Positions: a flat row prints its zero quantity but no entry price, and says why", async () => {
+    const wire = paperWire({ positions: 2 });
+    Object.assign(wire.data.positions[1], { instrument_id: "SOLUSDT", side: "FLAT", quantity: "0", avg_px_open: "0", mark_price: "152.30", unrealized_pnl: "0" });
+    mount({ profile: { ok: true, value: envelopeOf(wire) } });
+    await ready();
+    await openTab("Positions");
+    const flatRow = within(screen.getByRole("table", { name: "Positions" })).getAllByRole("row").find((r) => r.textContent?.includes("SOLUSDT"))!;
+    const cells = within(flatRow).getAllByRole("cell").map((c) => c.textContent);
+    expect(cells[2]).toBe("0");
+    expect(cells[3]).toContain("Not available");
+    expect(cells[3]).toContain("Flat: no entry price");
+    expect(cells[3]).not.toContain("0.00");
+    expect(cells[4]).toContain("152.30");
+  });
+
   it("Sessions: Not published (FE-067), the count the quality read gives, and no empty table", async () => {
     mount();
     await ready();

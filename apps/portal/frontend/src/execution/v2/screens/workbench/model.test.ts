@@ -420,6 +420,29 @@ describe("orders, fills, positions", () => {
   });
 });
 
+describe("a flat position has no entry price", () => {
+  const flat = (avg: unknown, side = "FLAT") => {
+    const wire = paperWire({ positions: 1 });
+    Object.assign(wire.data.positions[0], { side, quantity: "0", avg_px_open: avg, unrealized_pnl: "0" });
+    return readPositions(envelopeOf(wire)).table.rows[0];
+  };
+  it("a null or missing entry is absent, never 0.00; the quantity keeps its exact published zero", () => {
+    expect(flat(null).entry).toEqual({ kind: "absent" });
+    const wire = paperWire({ positions: 1 });
+    Object.assign(wire.data.positions[0], { side: "FLAT", quantity: "0" });
+    delete (wire.data.positions[0] as Record<string, unknown>).avg_px_open;
+    const row = readPositions(envelopeOf(wire)).table.rows[0];
+    expect(row.entry).toEqual({ kind: "absent" });
+    expect(row.quantity).toMatchObject({ kind: "value", decimal: { full: "0" } });
+  });
+  it("the server's zero placeholder on a FLAT row is absent too, while a zero on an open row is still printed", () => {
+    expect(flat("0").entry).toEqual({ kind: "absent" });
+    expect(flat("0.00").entry).toEqual({ kind: "absent" });
+    expect(flat("0", "LONG").entry).toMatchObject({ kind: "value", decimal: { zero: true } });
+    expect(flat("152.30").entry).toMatchObject({ kind: "value", decimal: { full: "152.30" } });
+  });
+});
+
 describe("the 200-row cap says what it did", () => {
   it.each([
     [200, 200, 1247, "orders", "Showing 200 of 1,247 orders"],
