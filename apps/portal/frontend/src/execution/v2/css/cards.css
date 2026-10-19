@@ -43,14 +43,17 @@
 }
 .exec-cards-sort::after {
   content: "\2195";
+  content: "\2195" / "";
   color: var(--ink-faint);
 }
 .exec-cards-sort[data-dir="asc"]::after {
   content: "\25B2";
+  content: "\25B2" / "";
   color: var(--accent);
 }
 .exec-cards-sort[data-dir="desc"]::after {
   content: "\25BC";
+  content: "\25BC" / "";
   color: var(--accent);
 }
 .exec-cards-sort[data-dir] {

@@ -168,6 +168,7 @@
 }
 /* Expand toggle: 20x20 square with a + or minus (hi-fi .x). "Read" on the groups table is a word, so it keeps its width. */
 .exec-blt2-x {
+  position: relative;
   min-width: 20px;
   height: 20px;
   padding: 0 var(--space-1);
@@ -337,6 +338,12 @@
 .exec-blt2-group p {
   margin: 0 0 var(--space-2);
 }
+/* The square stays 20px; the hit area reaches 28px so the target is at least 24 CSS px (WCAG 2.5.8). */
+.exec-blt2-x::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
 /* Folding panels and "How to read" (hi-fi details.panel, details). */
 .exec-blt2-fold > summary {
   list-style: none;
@@ -347,11 +354,13 @@
 }
 .exec-blt2-fold > summary::before {
   content: "\25B8";
+  content: "\25B8" / "";
   margin-right: var(--space-2);
   color: var(--ink-faint);
 }
 .exec-blt2-fold[open] > summary::before {
   content: "\25BE";
+  content: "\25BE" / "";
 }
 .exec-blt2-fold > summary > .exec-blk-ph-title {
   margin-right: auto;
@@ -386,12 +395,6 @@
   .exec-blt2-panel {
     padding: var(--space-3);
   }
-  /* Older / Newer sit above the 50 cards (BLT-B7): at 390px the table is ~20,000px tall. The order only moves the pager; DOM order and tab order are unchanged below the filters. */
-  .exec-blt2-panel > .exec-blt2-count-line { order: 1; }
-  .exec-blt2-panel > .exec-blt2-pager { order: 2; }
-  .exec-blt2-panel > .exec-cards-wrap,
-  .exec-blt2-panel > .exec-blt2-empty { order: 3; }
-  .exec-blt2-panel > .exec-blt2-how { order: 4; }
   .exec-blt2-inner {
     display: block;
     overflow-x: auto;

@@ -81,7 +81,7 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
                   key={c.key}
                   scope="col"
                   data-numeric={c.numeric ? "true" : undefined}
-                  aria-sort={sortable ? (active === "asc" ? "ascending" : active === "desc" ? "descending" : "none") : undefined}
+                  aria-sort={active === "asc" ? "ascending" : active === "desc" ? "descending" : undefined}
                   data-sortable={sortable ? "true" : undefined}
                   title={!sortable ? c.sortOffReason : undefined}
                 >

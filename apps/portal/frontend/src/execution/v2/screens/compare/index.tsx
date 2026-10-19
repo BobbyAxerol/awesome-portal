@@ -253,7 +253,8 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
                   onClick={() => setPartsOpen((open) => !open)}
                 >
                   {partsSummary}
-                  <span className="exec-cmpr-sum-more">{partsOpen ? "Hide partitions" : "Partitions"}</span>
+                  {/* Constant name; aria-expanded carries the state and the glyph is CSS alt-text-empty, so it never enters the name. */}
+                  <span className="exec-cmpr-sum-more">Partitions</span>
                 </button>
                 <span className="exec-pf-seg" role="group" aria-label="Series measure">
                   {([["Return", PF_FE.ret], ["Net PnL", PF_FE.netPnl]] as const).map(([label, fact]) => (
@@ -266,7 +267,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
               </>
             }
           >
-            <div id={partsId} className="exec-cmpr-parts" hidden={!partsOpen} aria-label="Partitions">
+            <div id={partsId} className="exec-cmpr-parts" role="group" hidden={!partsOpen} aria-label="Partitions">
               {chosen.length === 0 && unresolved.length === 0 ? (
                 <p className="exec-pf-note">Nothing is picked, so there is nothing to partition.</p>
               ) : (

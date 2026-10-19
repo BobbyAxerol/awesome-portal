@@ -268,7 +268,7 @@ describe("search, domain, currency and sort", () => {
     mount(makeApi().api);
     await loaded();
     const head = (name: string) => within(table()).getByRole("columnheader", { name });
-    expect(head("Owner").getAttribute("aria-sort")).toBe("none");
+    expect(head("Owner").getAttribute("aria-sort")).toBeNull();
     fireEvent.click(within(head("Owner")).getByRole("button"));
     expect(search().get("sort")).toBe("owner:asc");
     expect(head("Owner").getAttribute("aria-sort")).toBe("ascending");
@@ -286,6 +286,50 @@ describe("search, domain, currency and sort", () => {
     mount(makeApi().api);
     await loaded();
     expect(screen.getByText(/Context: Real-funded · showing all domains/)).toBeTruthy();
+  });
+
+  const whole: Override = (_m, path) => {
+    if (path !== "/portfolios") return undefined;
+    const base = answerPortfolios("GET", path)!;
+    return { status: 200, body: { ...(base.body as object), truncated: false, total_portfolios: 6 } };
+  };
+  const sub = () => document.querySelector(".exec-pf-sub")!.textContent ?? "";
+
+  it("names the domain filter and what is shown out of what was loaded, instead of 'showing all domains' (honesty)", async () => {
+    mount(makeApi(whole).api, "/deployments/portfolios?domain=simulated");
+    await loaded();
+    expect(sub()).not.toContain("showing all domains");
+    expect(sub()).toContain("domain: Simulated");
+    expect(sub()).toContain(`${names().length} of 6 loaded portfolios`);
+    expect(names().length).toBeLessThan(6);
+  });
+
+  it("counts what the search leaves, and still says all domains when no domain filter is set", async () => {
+    mount(makeApi(whole).api, "/deployments/portfolios?q=core");
+    await loaded();
+    expect(sub()).toContain("1 of 6 loaded portfolios");
+    expect(sub()).toContain("showing all domains");
+  });
+
+  it("on a truncated read a narrowing filter says N of the top M / total, and the unfiltered line is unchanged", async () => {
+    mount(makeApi().api, "/deployments/portfolios?domain=simulated");
+    await loaded();
+    expect(sub()).toContain(`${names().length} of the top 6 / 9 portfolios`);
+    cleanup();
+    mount(makeApi().api);
+    await loaded();
+    expect(sub()).toContain("Top 6 / 9 portfolios · Context: Real-funded · showing all domains");
+  });
+
+  it("says the order is by name when sort=allocated has no currency, and drops the note once a currency is chosen", async () => {
+    mount(makeApi().api, "/deployments/portfolios?sort=allocated:desc");
+    await loaded();
+    expect(screen.getByTestId("sort-fallback").textContent).toContain("Sorted by name");
+    expect(names()).toEqual(["Canary", "Core", "Pilot", "Satellite", "Yen-Carry", "Unallocated"]);
+    cleanup();
+    mount(makeApi().api, "/deployments/portfolios?sort=allocated:desc&ccy=usdt");
+    await loaded();
+    expect(screen.queryByTestId("sort-fallback")).toBeNull();
   });
 
   it("will not sort by allocated capital until a currency is chosen", async () => {

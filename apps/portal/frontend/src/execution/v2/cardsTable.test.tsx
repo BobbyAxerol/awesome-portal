@@ -113,11 +113,11 @@ describe("CardsTable sortable headers (P-B4)", () => {
     expect(container.querySelectorAll("th[aria-sort]")).toHaveLength(0);
   });
 
-  it("prints a button and aria-sort on sortKey columns only, reports the key, and keeps the label as the name", () => {
+  it("prints a button on sortKey columns and aria-sort on the sorted head only, reports the key, and keeps the label as the name", () => {
     const onSort = vi.fn();
     const { container } = render(<CardsTable columns={sortable} rows={ROWS} rowKey={(r) => r.id} label="Deployments" sort={{ key: "nav", dir: "desc" }} onSort={onSort} />);
     const heads = [...container.querySelectorAll("th")];
-    expect(heads.map((h) => h.getAttribute("aria-sort"))).toEqual(["none", "descending", null]);
+    expect(heads.map((h) => h.getAttribute("aria-sort"))).toEqual([null, "descending", null]);
     expect(heads[2]!.getAttribute("title")).toBe("Not sortable yet");
     fireEvent.click(within(heads[0]!).getByRole("button", { name: "Deployment" }));
     expect(onSort).toHaveBeenCalledWith("name");

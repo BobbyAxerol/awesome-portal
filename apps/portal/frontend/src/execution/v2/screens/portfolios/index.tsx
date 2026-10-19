@@ -36,7 +36,7 @@ import { Flag } from "../../Flag";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { ENV_LABEL, useExecUrlState, withContext } from "../../urlState";
 import { EXPORT_REASON, PF_FE, npText } from "./fe";
-import { freshnessFlag, humanize } from "./format";
+import { DOMAIN_LABEL, freshnessFlag, humanize } from "./format";
 import {
   ROW_CAP, SORT_KEYS, countLine, currenciesOf, degradedBranches, filterRows, parseSort, readDomainFilter, sortRows, toRows, writeSort,
   type DomainFilter, type SortKey,
@@ -178,6 +178,15 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   const degraded = envelope ? degradedBranches(envelope) : [];
   const line = envelope && read.phase !== "loading" ? countLine(envelope, loaded.length, visible.length, filtered) : null;
   const capped = loaded.length > ROW_CAP;
+  // What is on screen out of what was loaded: a filter that narrows says "N of M loaded", never the loaded count alone.
+  const narrowed = filtered && visible.length < loaded.length;
+  const subCount = envelope
+    ? envelope.truncated
+      ? narrowed ? `${visible.length} of the top ${loaded.length} / ${envelope.totalPortfolios} portfolios` : `Top ${loaded.length} / ${envelope.totalPortfolios} portfolios`
+      : narrowed ? `${visible.length} of ${loaded.length} loaded portfolios` : `${loaded.length} ${loaded.length === 1 ? "portfolio" : "portfolios"}`
+    : "";
+  // `sort=allocated:*` in the address with no currency: sortRows has nothing to compare, so the order is the name order. Say so.
+  const sortFallsBack = sort.key === "allocated" && ccy === null;
   const comparable = chosen.length >= COMPARE_MIN && chosen.length <= COMPARE_MAX && unknownChosen.length === 0;
   const compareHref = withContext(`${routes.compare}?${IN_PARAM}=${picked.ids.join(",")}&from=${FROM_LIST}`, params);
 
@@ -209,7 +218,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
         <div>
           <h1 className="exec-pf-h1">Portfolios</h1>
           <p className="exec-pf-sub" id={`${searchId}-sub`}>
-            {envelope ? `${envelope.truncated ? `Top ${loaded.length} / ${envelope.totalPortfolios}` : loaded.length} portfolios · Context: ${ENV_LABEL[url.value.env]} · showing all domains` : "Reading the portfolio register"}
+            {envelope ? `${subCount} · Context: ${ENV_LABEL[url.value.env]} · ${domain === null ? "showing all domains" : `domain: ${DOMAIN_LABEL[domain]}`}` : "Reading the portfolio register"}
           </p>
         </div>
         <div className="exec-pf-fresh">
@@ -301,6 +310,10 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             </span>
             {filtered ? <button type="button" className="exec-pf-btn" onClick={clearFilters}>Clear filters</button> : null}
           </div>
+
+          {sortFallsBack ? (
+            <p className="exec-pf-note" role="status" data-testid="sort-fallback">Sorted by name: allocated capital sorts only inside one currency. Pick a currency to sort by it.</p>
+          ) : null}
 
           <div className="exec-pf-selbar" role="status" aria-live="polite">
             <span>{selectionMessage}</span>

@@ -136,6 +136,31 @@ describe("keyset paging", () => {
     expect(Object.fromEntries(lastQuery()).before).toBeTruthy();
   });
 
+  it("at 660px and narrower the single pager sits before the table in DOM order, and still pages", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(max-width: 660px)", media: query, addEventListener: () => {}, removeEventListener: () => {},
+    }));
+    mount();
+    await loaded();
+    expect(screen.getAllByRole("button", { name: "Newer" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Older" })).toHaveLength(1);
+    const pager = document.querySelector(".exec-blt2-pager")!;
+    expect(document.querySelectorAll(".exec-blt2-pager")).toHaveLength(1);
+    expect(pager.compareDocumentPosition(table()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(document.querySelector(".exec-blt2-count-line")!.compareDocumentPosition(pager) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Older" }));
+    await waitFor(() => expect(idOf(bodyRows()[0]!)).toBe("ord_00087"));
+    fireEvent.click(screen.getByRole("button", { name: "Newer" }));
+    await waitFor(() => expect(idOf(bodyRows()[0]!)).toBe("ord_00137"));
+  });
+
+  it("wide, the pager stays after the table", async () => {
+    mount();
+    await loaded();
+    const pager = document.querySelector(".exec-blt2-pager")!;
+    expect(table().compareDocumentPosition(pager) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("a filter change drops the cursor instead of sending it to the new query", async () => {
     mount();
     await loaded();

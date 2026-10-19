@@ -228,6 +228,21 @@ describe("basis and partitions", () => {
     expect(region.hidden).toBe(false);
   });
 
+  it("keeps the Partitions button's name constant while aria-expanded carries the state; the region is a named group", async () => {
+    mount(makeApi().api, pick(PF.satellite, PF.yen));
+    await loaded();
+    const summary = screen.getByRole("button", { name: /listed apart/ });
+    const before = summary.textContent;
+    expect(before).toMatch(/Partitions$/);
+    expect(before).not.toMatch(/Hide partitions/);
+    fireEvent.click(summary);
+    expect(summary.getAttribute("aria-expanded")).toBe("true");
+    expect(summary.textContent).toBe(before);
+    const region = document.getElementById(summary.getAttribute("aria-controls")!)!;
+    expect(region.getAttribute("role")).toBe("group");
+    expect(screen.getByRole("group", { name: "Partitions" })).toBe(region);
+  });
+
   it("puts each pick's series swatch in its metric column head, and the figures right-aligned (K-B5)", async () => {
     mount(makeApi().api, pick(PF.satellite, PF.canary));
     await loaded();

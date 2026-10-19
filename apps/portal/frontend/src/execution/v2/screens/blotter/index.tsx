@@ -36,6 +36,7 @@ import { utcStamp } from "../../../time";
 import { CardsTable } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
+import { useMediaQuery } from "../../useMediaQuery";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
   CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NO_SCOPE, applyScope, blotterQuery, chipCounts, filtersKey,
@@ -96,6 +97,8 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
   const { access } = useSession();
   const colMenuId = useId();
   const noteId = useId();
+  // At phone width the cards make the page ~20,000px tall (BLT-B7): the pager then sits above them, once, in DOM order.
+  const narrow = useMediaQuery("(max-width: 660px)");
 
   /* ── url -> filters and scope ─────────────────────────────────────── */
   const statusParam = params.get("status");
@@ -289,6 +292,17 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
   const page = state.read;
   const fresh = (page.freshness ?? "").toUpperCase();
   const emptyPage = page.orders.length === 0;
+  const pager = (
+    <div className="exec-blt2-pager">
+      <span className="exec-blt2-pagerbtns">
+        <button type="button" className="exec-blt2-btn" disabled={page.prevCursor === null} aria-describedby={page.prevCursor === null ? `${noteId}-pg` : undefined} onClick={() => page.prevCursor && setCursor({ fk, dir: "before", value: page.prevCursor })}>Newer</button>
+        <button type="button" className="exec-blt2-btn" disabled={page.nextCursor === null} aria-describedby={page.nextCursor === null ? `${noteId}-pg` : undefined} onClick={() => page.nextCursor && setCursor({ fk, dir: "after", value: page.nextCursor })}>Older</button>
+      </span>
+      <span id={`${noteId}-pg`} className="exec-blt2-meta">
+        {page.prevCursor === null ? "At the newest rows" : "Newer rows exist"}{page.nextCursor === null ? ", at the oldest rows" : ", older rows exist"}
+      </span>
+    </div>
+  );
 
   return (
     <div className="exec-blt2-v2" data-screen="blotter-v2">
@@ -421,6 +435,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
             : <>Showing <b className="exec-blt2-num">{page.orders.length}</b> {page.filteredTotal !== null ? <>of <b className="exec-blt2-num">{page.filteredTotal}</b> {filtered ? "matching" : "authorized"}{filtered && page.exactTotal !== null ? <> · <span className="exec-blt2-num">{page.exactTotal}</span> authorized</> : null}</> : <>orders (the server did not state a total)</>} · newest first</>}
         </p>
 
+        {narrow ? pager : null}
         {emptyPage ? (
           <div className="exec-blt2-empty">
             {filtered || live ? <><p>No orders match these filters.</p><button type="button" className="exec-blt2-btn" onClick={() => { setCursor(null); clearAll(); }}>Clear all</button></> : <PanelState status="empty" reason="No orders in this scope and window." />}
@@ -480,15 +495,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
           </div>
         )}
 
-        <div className="exec-blt2-pager">
-          <span className="exec-blt2-pagerbtns">
-            <button type="button" className="exec-blt2-btn" disabled={page.prevCursor === null} aria-describedby={page.prevCursor === null ? `${noteId}-pg` : undefined} onClick={() => page.prevCursor && setCursor({ fk, dir: "before", value: page.prevCursor })}>Newer</button>
-            <button type="button" className="exec-blt2-btn" disabled={page.nextCursor === null} aria-describedby={page.nextCursor === null ? `${noteId}-pg` : undefined} onClick={() => page.nextCursor && setCursor({ fk, dir: "after", value: page.nextCursor })}>Older</button>
-          </span>
-          <span id={`${noteId}-pg`} className="exec-blt2-meta">
-            {page.prevCursor === null ? "At the newest rows" : "Newer rows exist"}{page.nextCursor === null ? ", at the oldest rows" : ", older rows exist"}
-          </span>
-        </div>
+        {narrow ? null : pager}
         <details className="exec-blt2-how">
           <summary>How to read</summary>
           <p className="exec-blt2-note">
