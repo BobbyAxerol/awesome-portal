@@ -40,13 +40,6 @@
       "owner": "Claude for rows with no dependency; owner/Codex for exact-decimal Y labels"
     },
     {
-      "id": "DEBT-UXM07-009",
-      "title": "r2Ledger red on the Codex tip e19ad906",
-      "where": "apps/portal/frontend/src/execution/r2Ledger.test.ts:117 (governance_approval_decision_inbox is named in control-api SQL and has no row in r2_ledger/persistence-ownership.v1.json)",
-      "evidence": "fails after the rebase with no FE change; same class as DEBT-UXM07-002 (closed by Codex 5291a80f)",
-      "owner": "Codex"
-    },
-    {
       "id": "DEBT-UXM07-011",
       "title": "Readers for self-eligibility/self-navigation/currency exist but are not wired",
       "where": "v2/readers/accessSelf.ts, commandCurrency.ts (commit 83854d9d); roleNav still uses provisional V2_CAPABILITY names",
@@ -59,6 +52,13 @@
       "where": "components/tradeReplayModel.ts str() turns a JSON number price into a string instead of refusing it (pinned KNOWN GAP in replay.l2l3.test.tsx); api/subjectActivity.ts treats a non-array `records` as []; screens/portfolios/format.tsx MoneyList keys lines by currency (React duplicate-key warning when a currency repeats); testkit/schema.ts needs `discriminator` in IGNORED (AccessEffective test writes a temp schema copy without it); V1 features/admin/accountApi.ts roster reader shows malformed bodies as an empty roster (Users V2 now uses rosterReader.ts)",
       "consequence": "Replay/Users/Portfolios edge cases only; no secret or authority effect",
       "owner": "Claude (FE files); testkit owner for IGNORED"
+    },
+    {
+      "id": "DEBT-UXM07-014",
+      "title": "realtimeProducerConsumer.test.tsx red on the pristine Codex tip d0789674 in this environment",
+      "where": "apps/portal/frontend/src/execution/realtimeProducerConsumer.test.tsx (5 tests: TypeError common_1.Optional is not a function, then service undefined in afterEach)",
+      "evidence": "same failure on a detached worktree of d0789674 with this machine's node_modules; not caused by UXM-07",
+      "owner": "Codex (the test compiles control-api code in a vm and needs the Nest runtime the Docker cell provides)"
     }
   ],
   "closed": [
@@ -111,6 +111,14 @@
       "consequence": "layout/a11y polish; no data effect",
       "owner": "Claude",
       "closed": "2b9c6fcf (Blotter pager now one copy placed by media query), 654a39b3 (panel heads wrap at 660px), 185076d8 (Drawer focusOnOpen + close fallback)"
+    },
+    {
+      "id": "DEBT-UXM07-009",
+      "title": "r2Ledger red on the Codex tip e19ad906",
+      "where": "apps/portal/frontend/src/execution/r2Ledger.test.ts:117 (governance_approval_decision_inbox is named in control-api SQL and has no row in r2_ledger/persistence-ownership.v1.json)",
+      "evidence": "fails after the rebase with no FE change; same class as DEBT-UXM07-002 (closed by Codex 5291a80f)",
+      "owner": "Codex",
+      "closed": "Codex d0789674 added the governance_approval_decision_inbox row; r2Ledger green after the rebase"
     }
   ]
 }
