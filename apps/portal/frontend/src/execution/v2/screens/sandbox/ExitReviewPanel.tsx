@@ -68,7 +68,7 @@ export function ExitReviewPanel({ view }: { view: SandboxView }) {
       "Nothing is blocking."
     ) : undefined;
   return (
-    <SectionPanel title="Exit review" aside={aside}>
+    <SectionPanel level={2} title="Exit review" aside={aside}>
       <div className="exec-sbx-exit">
         <BlockerList
           frame="bare"

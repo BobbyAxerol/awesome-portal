@@ -66,14 +66,14 @@ export function FindingsPanel({ view }: { view: SandboxView }) {
   const f = view.findings;
   if (f === null) {
     return (
-      <SectionPanel title="Findings" aside="Not available">
+      <SectionPanel level={2} title="Findings" aside="Not available">
         <p className="exec-sbx-note"><NotPublished id="FE-072">Reconciliation findings</NotPublished></p>
       </SectionPanel>
     );
   }
   const sourcesReported = view.panels.some((p) => p.state === "ok");
   return (
-    <SectionPanel title="Findings" aside={shown(f)} flush>
+    <SectionPanel level={2} title="Findings" aside={shown(f)} flush>
       {f.rows.length === 0 ? (
         <PanelState
           status="empty"
@@ -115,13 +115,13 @@ const PLAN_COLUMNS: readonly CardsColumn<PlanView & { k: string }>[] = [
 export function PlansPanel({ view }: { view: SandboxView }) {
   if (view.plans === null) {
     return (
-      <SectionPanel title="Promotion plans" aside="Not available">
+      <SectionPanel level={2} title="Promotion plans" aside="Not available">
         <p className="exec-sbx-note"><NotPublished id="FE-072">Promotion plans</NotPublished></p>
       </SectionPanel>
     );
   }
   return (
-    <SectionPanel title="Promotion plans" aside={`${view.plans.length} recorded`} flush>
+    <SectionPanel level={2} title="Promotion plans" aside={`${view.plans.length} recorded`} flush>
       {view.plans.length === 0 ? (
         <PanelState status="empty" reason="No promotion plan has been recorded for this certification." />
       ) : (
@@ -149,13 +149,13 @@ export function TimelinePanel({ view }: { view: SandboxView }) {
   const t = view.timeline;
   if (t === null) {
     return (
-      <SectionPanel title="Timeline" aside="UTC">
+      <SectionPanel level={2} title="Timeline" aside="UTC">
         <p className="exec-sbx-note"><NotPublished id="FE-072">Certification timeline</NotPublished></p>
       </SectionPanel>
     );
   }
   return (
-    <SectionPanel title="Timeline" aside={`UTC · ${shown(t)}`} flush>
+    <SectionPanel level={2} title="Timeline" aside={`UTC · ${shown(t)}`} flush>
       {t.rows.length === 0 ? (
         <PanelState status="empty" reason="No event has been recorded for this certification." />
       ) : (

@@ -42,6 +42,27 @@ const col = (name: string) => document.querySelector(`[data-col="${name}"]`) as 
 
 /* ═════════════════════════ page ═════════════════════════ */
 
+/** Heading levels in document order; a skip (h1 straight to h3) is a screen-reader jump the page did not mean. */
+const headingJumps = (): string[] => {
+  const heads = Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6")).map((h) => ({ level: Number(h.tagName.slice(1)), text: h.textContent ?? "" }));
+  return heads.flatMap((h, i) => (i === 0 ? (h.level === 1 ? [] : [h.text]) : h.level > heads[i - 1]!.level + 1 ? [`${heads[i - 1]!.text} -> ${h.text}`] : []));
+};
+
+describe("heading order", () => {
+  it.each([["V1", () => ok(v1Read(populatedV1()))], ["V2", () => ok(v2Read(v2Populated()))]] as const)("%s: h1 is followed by h2 panels on every tab, with no skipped level", async (_v, handler) => {
+    mount(handler);
+    await loaded();
+    const list = () => within(screen.getByRole("tablist", { name: "Live sections" }));
+    const names = list().getAllByRole("tab").map((t) => t.textContent ?? "");
+    expect(names.length).toBeGreaterThan(1);
+    for (const name of names) {
+      fireEvent.click(list().getByRole("tab", { name }));
+      await waitFor(() => expect(list().getByRole("tab", { name }).getAttribute("aria-selected")).toBe("true"));
+      expect(headingJumps(), name).toEqual([]);
+    }
+  });
+});
+
 describe("page", () => {
   it("is the live flag's screen, with one h1, the double guard frame and the words 'Real capital at risk'", async () => {
     expect(LIVE_SCREEN_KEY).toBe("live");

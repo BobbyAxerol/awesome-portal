@@ -178,7 +178,7 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
         </div>
         <aside className="exec-liv-rail" aria-label="Protective actions and blockers">
           <ProtectiveLadder model={model} />
-          <BlockerList items={model.blockers} provenance={blockerNotes} />
+          <BlockerList level={2} items={model.blockers} provenance={blockerNotes} />
         </aside>
       </div>
     </Frame>

@@ -95,6 +95,7 @@ function RowsPanel<R>({
   const published = rows === null ? fact.published : null;
   return (
     <SectionPanel
+      level={2}
       title={title}
       aside={rows !== null ? countLine(rows.length, fact.total, ROW_CAP) : published !== null ? countLine(published.rows.length, published.total, ROW_CAP) : undefined}
     >

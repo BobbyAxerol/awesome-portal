@@ -45,6 +45,27 @@ const tabs = () => within(screen.getByRole("tablist", { name: "Sandbox certifica
 const kpi = (label: string) => screen.getByText(label, { selector: "dt" }).closest(".exec-blk-kpi") as HTMLElement;
 const chip = (id: string) => document.querySelector(`[data-chip="${id}"]`) as HTMLElement;
 
+
+/** Heading levels in document order; a skip (h1 straight to h3) is a screen-reader jump the page did not mean. */
+const headingJumps = (): string[] => {
+  const heads = Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6")).map((h) => ({ level: Number(h.tagName.slice(1)), text: h.textContent ?? "" }));
+  return heads.flatMap((h, i) => (i === 0 ? (h.level === 1 ? [] : [h.text]) : h.level > heads[i - 1]!.level + 1 ? [`${heads[i - 1]!.text} -> ${h.text}`] : []));
+};
+
+describe("heading order", () => {
+  it("h1 is followed by h2 panels on every tab, with no skipped level", async () => {
+    mount(fakeApi({ read: okRead(v1Rich()) }));
+    await ready();
+    const names = within(screen.getByRole("tablist", { name: "Sandbox certification sections" })).getAllByRole("tab").map((t) => t.textContent ?? "");
+    expect(names.length).toBeGreaterThan(1);
+    for (const name of names) {
+      fireEvent.click(within(screen.getByRole("tablist", { name: "Sandbox certification sections" })).getByRole("tab", { name }));
+      await waitFor(() => expect(within(screen.getByRole("tablist", { name: "Sandbox certification sections" })).getByRole("tab", { name }).getAttribute("aria-selected")).toBe("true"));
+      expect(headingJumps(), name).toEqual([]);
+    }
+  });
+});
+
 describe("screen contract", () => {
   it("is the sandbox flag's screen", () => {
     expect(SANDBOX_SCREEN_KEY).toBe("sandbox");

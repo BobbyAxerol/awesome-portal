@@ -15,7 +15,7 @@
  * from `Not available` (nothing was reported): here the figures exist and are withheld.
  * No broker row, value or as-of reaches the DOM, so a mismatch cannot leak the number.
  */
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 
 import type { Metric } from "../boundary";
 import { formatAsOf } from "../boundary";
@@ -74,6 +74,8 @@ export interface TriadProps {
    * `broker_values_visible` as exactly true.
    */
   suppressed?: boolean;
+  /** Heading level of the three column titles (default 3, under a panel's h2); a triad that follows the h1 directly passes 2. */
+  titleLevel?: 2 | 3;
 }
 
 /** The sentence of the hi-fi triad when its columns are withheld (the column adds the full stop). */
@@ -106,7 +108,7 @@ function sub(column: Column, side: TriadSide | null | undefined, differenceNote:
 }
 
 /** The three-column reconciliation block. */
-export function Triad({ rows, internal, broker, differenceNote = "Derived · matching scopes only", label = "Reconciliation", suppressed = false }: TriadProps) {
+export function Triad({ rows, internal, broker, differenceNote = "Derived · matching scopes only", label = "Reconciliation", suppressed = false, titleLevel = 3 }: TriadProps) {
   const sides: Record<Column, TriadSide | null | undefined> = { internal, broker, difference: undefined };
   return (
     <div className="exec-blk-triad" role="group" aria-label={label}>
@@ -116,7 +118,7 @@ export function Triad({ rows, internal, broker, differenceNote = "Derived · mat
         const withheld = suppressed && id !== "internal";
         return (
           <section key={id} className="exec-blk-triad-col" data-col={id} data-state={withheld ? "suppressed" : undefined} aria-label={title}>
-            <h3 className="exec-blk-triad-title">{title}</h3>
+            {createElement(`h${titleLevel}`, { className: "exec-blk-triad-title" }, title)}
             <p className="exec-blk-triad-sub">{sub(id, side, differenceNote, withheld)}</p>
             {withheld ? (
               <p className="exec-blk-na" data-state="suppressed">{TRIAD_SUPPRESSED_COPY}.</p>

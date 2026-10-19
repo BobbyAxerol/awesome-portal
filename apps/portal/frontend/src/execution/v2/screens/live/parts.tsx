@@ -94,7 +94,7 @@ export function ChartSlot({ slot }: { slot: ChartSlotModel }) {
       );
     case "unavailable":
       return (
-        <SectionPanel title="Live net PnL" aside="Since activation">
+        <SectionPanel level={2} title="Live net PnL" aside="Since activation">
           <p className="exec-liv-line">
             <NotPublished id="FE-013">Live net PnL series</NotPublished>
           </p>
@@ -146,7 +146,7 @@ function CellOf({ column, record }: { column: PanelColumn; record: LiveSourceRec
 export function V1RowsSection({ title, aside, rows, what }: { title: string; aside?: string; rows: V1RowsPanel; what: string }) {
   if (rows.kind !== "table") {
     return (
-      <SectionPanel title={title} aside={aside}>
+      <SectionPanel level={2} title={title} aside={aside}>
         {rows.kind === "withheld" ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.text}</span></p> : null}
         <p className="exec-liv-line">
           <NotPublished id="FE-072">{what}</NotPublished>
@@ -167,7 +167,7 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
     },
   }));
   return (
-    <SectionPanel title={title} aside={aside}>
+    <SectionPanel level={2} title={title} aside={aside}>
       {rows.line ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.line}</span></p> : null}
       <CardsTable columns={cols} rows={shown} rowKey={(row) => row.key} label={title} empty="The source reported none." />
       <div className="exec-liv-more">
@@ -232,7 +232,7 @@ export function PanelSection({ panel, page, onMore }: PanelSectionProps) {
   }
 
   return (
-    <SectionPanel title={title} aside={aside}>
+    <SectionPanel level={2} title={title} aside={aside}>
       {page.notice ? <p className="exec-liv-notice" role="status">{page.notice}</p> : null}
       {body}
       {page.error ? <p className="exec-liv-fail" role="alert">Could not load more {noun}. {page.error}</p> : null}

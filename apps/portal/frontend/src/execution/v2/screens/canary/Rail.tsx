@@ -22,7 +22,7 @@ import { ACCESS_PATH, DECISIONS, FE, blockerItems, decisionReason, rollbackHead,
 
 export function DecisionPanel() {
   return (
-    <SectionPanel title="Promotion decision" aside="Via exit review">
+    <SectionPanel level={2} title="Promotion decision" aside="Via exit review">
       {DECISIONS.map((decision) => (
         <div key={decision.label} className="exec-cny-dec">
           <p className="exec-cny-dec-hint">{decision.hint}</p>
@@ -46,6 +46,7 @@ export function BeforeScaleUp({ view }: { view: CanaryView }) {
   const lineage = view.lineage;
   return (
     <BlockerList
+      level={2}
       title="Before scale-up"
       items={items}
       emptyText="Not available · no reasons were published"
@@ -76,6 +77,7 @@ export function RollbackPanel({ view }: { view: CanaryView }) {
   const head = rollbackHead(view);
   return (
     <SectionPanel
+      level={2}
       title="Rollback readiness"
       aside={head.kind === "flag" ? <Flag kind={head.flag} label={head.label} size="sm" /> : <NotPublished id={FE.envelope}>Readiness</NotPublished>}
     >

@@ -62,6 +62,26 @@ function viewOf(raw: unknown): CanaryView {
 }
 const withRouter = (node: ReactNode) => render(<MemoryRouter>{node}</MemoryRouter>);
 
+
+/** Heading levels in document order; a skip (h1 straight to h3) is a screen-reader jump the page did not mean. */
+const headingJumps = (): string[] => {
+  const heads = Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6")).map((h) => ({ level: Number(h.tagName.slice(1)), text: h.textContent ?? "" }));
+  return heads.flatMap((h, i) => (i === 0 ? (h.level === 1 ? [] : [h.text]) : h.level > heads[i - 1]!.level + 1 ? [`${heads[i - 1]!.text} -> ${h.text}`] : []));
+};
+
+describe("heading order", () => {
+  it("h1 is followed by h2 panels on every tab, with no skipped level", async () => {
+    mount(canaryPort(answering(populatedWithFacts())));
+    await ready();
+    const names = tabs().getAllByRole("tab").map((t) => t.textContent ?? "");
+    expect(names.length).toBeGreaterThan(1);
+    for (const name of names) {
+      await openTab(name);
+      expect(headingJumps(), name).toEqual([]);
+    }
+  });
+});
+
 describe("screen contract", () => {
   it("is the canary flag's screen", () => {
     expect(CANARY_SCREEN_KEY).toBe("canary");

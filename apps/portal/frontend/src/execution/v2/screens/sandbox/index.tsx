@@ -115,6 +115,7 @@ function Reconciliation({ view }: { view: SandboxView }) {
   return (
     <div className="exec-sbx-recon">
       <Triad
+        titleLevel={2}
         rows={RECON_ROWS}
         internal={internal === null ? null : { asOf: internal.asOf }}
         broker={broker === null ? null : { asOf: broker.asOf }}
@@ -145,13 +146,13 @@ function Lineage({ view }: { view: SandboxView }) {
   const [params] = useSearchParams();
   if (view.lineage.length === 0) {
     return (
-      <SectionPanel title="Lineage">
+      <SectionPanel level={2} title="Lineage">
         <p className="exec-blk-na">Not available</p>
       </SectionPanel>
     );
   }
   return (
-    <SectionPanel title="Lineage">
+    <SectionPanel level={2} title="Lineage">
       <ul className="exec-sbx-lineage" aria-label="Lineage">
         {view.lineage.map((item) => {
           const to = lineageRoute(item.href);

@@ -28,7 +28,7 @@ function Meta({ step }: { step: StepView }) {
 export function StepsGrid({ steps, hasSentences }: { steps: StepsView; hasSentences: boolean }) {
   if (steps.availability === "absent") {
     return (
-      <SectionPanel title="Steps">
+      <SectionPanel level={2} title="Steps">
         <p className="exec-blk-na">{steps.text}</p>
         {steps.code === null ? null : <p className="exec-sbx-code">{steps.code}</p>}
         <p className="exec-sbx-note">

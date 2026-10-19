@@ -79,7 +79,7 @@ const UNAVAILABLE_CHIPS: StageChips = {
 
 function SeriesPanel({ view }: { view: CanaryView }) {
   return (
-    <SectionPanel title="Live vs Paper vs Backtest" aside="Return since canary start">
+    <SectionPanel level={2} title="Live vs Paper vs Backtest" aside="Return since canary start">
       <p className="exec-cny-series">
         <NotPublished id={FE.series}>Live, Paper and Backtest series</NotPublished> <span className="exec-blk-na">{panelLine(view.series)}.</span>
       </p>

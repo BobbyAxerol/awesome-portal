@@ -32,7 +32,7 @@ export function EnvelopeTab({ view }: { view: CanaryView }) {
   ];
 
   return (
-    <SectionPanel title="Envelope" aside="Used is the server's ratio">
+    <SectionPanel level={2} title="Envelope" aside="Used is the server's ratio">
       {view.envelope === null ? (
         <p className="exec-blk-na">
           {view.proposalOnly

@@ -35,7 +35,7 @@ export function ReconciliationTab({ view }: { view: CanaryView }) {
     ["Difference", view.difference],
   ];
   return (
-    <SectionPanel title="Reconciliation" aside="Internal, Broker, Difference">
+    <SectionPanel level={2} title="Reconciliation" aside="Internal, Broker, Difference">
       <Triad rows={ROWS} internal={sideOf(view.internal)} broker={sideOf(view.broker)} suppressed={suppressed} />
       <p className="exec-cny-foot">
         <RowsNotPublished what="Reconciliation rows (equity, gross notional, position, open orders)" />
@@ -64,7 +64,7 @@ const GUARD_COLUMNS: readonly CardsColumn<GuardRow>[] = [
 
 export function GuardRuleTab({ view }: { view: CanaryView }) {
   return (
-    <SectionPanel title="Guard rule" aside="Scale-up only">
+    <SectionPanel level={2} title="Guard rule" aside="Scale-up only">
       <CardsTable columns={GUARD_COLUMNS} rows={guardRows(view)} rowKey={(r) => r.condition} label="Canary guard rule" />
       <p className="exec-cny-foot">{guardSentence(view)}</p>
     </SectionPanel>

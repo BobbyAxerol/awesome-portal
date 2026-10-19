@@ -27,7 +27,7 @@ import type { PanelPaging } from "./useLiveReads";
 export function ProtectiveLadder({ model }: { model: LiveModel }) {
   const reason = stageWhy("liveClosed");
   return (
-    <SectionPanel title="Protective ladder" aside="Halt → Reduce → Close">
+    <SectionPanel level={2} title="Protective ladder" aside="Halt → Reduce → Close">
       <div className="exec-liv-ladder">
         {model.ladder.map((rung, index) => (
           <div key={rung.key} className="exec-liv-rung" data-rung={index + 1}>
@@ -68,7 +68,7 @@ export function ExposureTab({ model, v2, paging }: TabProps) {
           )}
         </>
       ) : (
-        <SectionPanel title="Reconciliation">
+        <SectionPanel level={2} title="Reconciliation">
           <p className="exec-liv-line">
             <NotPublished id="FE-072">Internal, Broker and Difference figures</NotPublished>
           </p>
@@ -99,7 +99,7 @@ export function ContinuityTab({ model, v2, paging }: TabProps) {
   const c = model.continuity;
   return (
     <div className="exec-liv-stack">
-      <SectionPanel title="Display continuity" aside={<Flag kind={c.flag.kind} label={c.flag.label} size="sm" />}>
+      <SectionPanel level={2} title="Display continuity" aside={<Flag kind={c.flag.kind} label={c.flag.label} size="sm" />}>
         <KeyedTable
           label="Display continuity"
           columns={[{ key: "check", label: "Check" }, { key: "result", label: "Result" }]}
@@ -118,7 +118,7 @@ export function ContinuityTab({ model, v2, paging }: TabProps) {
       </SectionPanel>
       {v2 !== null ? (
         <>
-          <SectionPanel title="What this read covers" aside="Retained observations">
+          <SectionPanel level={2} title="What this read covers" aside="Retained observations">
             <KeyedTable
               label="Panel coverage"
               columns={[{ key: "panel", label: "Panel" }, { key: "state", label: "State" }, { key: "rows", label: "On this page", numeric: true }, { key: "why", label: "Why" }]}
@@ -147,7 +147,7 @@ export function ContinuityTab({ model, v2, paging }: TabProps) {
 export function PredecessorTab({ model }: { model: LiveModel }) {
   const p = model.predecessor;
   return (
-    <SectionPanel title="Canary envelope" aside="Predecessor">
+    <SectionPanel level={2} title="Canary envelope" aside="Predecessor">
       {p.present ? (
         <>
           <p className="exec-liv-line">
@@ -178,7 +178,7 @@ export function GuardRulesTab({ model }: { model: LiveModel }) {
   const reason = stageWhy("liveClosed");
   return (
     <div className="exec-liv-stack">
-      <SectionPanel title="Guard rules">
+      <SectionPanel level={2} title="Guard rules">
         <KeyedTable
           label="Guard rules"
           columns={[{ key: "when", label: "When" }, { key: "effect", label: "Effect" }, { key: "now", label: "Now" }]}
@@ -195,7 +195,7 @@ export function GuardRulesTab({ model }: { model: LiveModel }) {
           </details>
         ) : null}
       </SectionPanel>
-      <SectionPanel title="Risk-increasing actions">
+      <SectionPanel level={2} title="Risk-increasing actions">
         <p className="exec-liv-line">A gap blocks these first; the ladder's protective actions are separate.</p>
         <DockAction label="Risk-increasing action" reason={reason} accessHref={ACCESS_PATH} />
       </SectionPanel>

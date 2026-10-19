@@ -14,7 +14,7 @@
 import type { ReactNode } from "react";
 
 import { NO_VALUE_COPY } from "./metric";
-import { SectionPanel } from "./SectionPanel";
+import { SectionPanel, type PanelHeadLevel } from "./SectionPanel";
 import "../css/blocks.css";
 import "../css/stage.css";
 
@@ -42,6 +42,8 @@ export interface BlockerListProps {
   frame?: "panel" | "bare";
   /** Accessible name of the list when `frame="bare"`. */
   label?: string;
+  /** Heading level of the panel title (default 3); a screen whose panels follow its h1 directly passes 2. */
+  level?: PanelHeadLevel;
 }
 
 function Body({ items, emptyText, provenance, label }: Pick<BlockerListProps, "items" | "emptyText" | "provenance" | "label">) {
@@ -78,10 +80,10 @@ function Body({ items, emptyText, provenance, label }: Pick<BlockerListProps, "i
 }
 
 /** "What is blocking". */
-export function BlockerList({ items, title = "What is blocking", emptyText, provenance, frame = "panel", label }: BlockerListProps) {
+export function BlockerList({ items, title = "What is blocking", emptyText, provenance, frame = "panel", label, level }: BlockerListProps) {
   if (frame === "bare") return <Body items={items} emptyText={emptyText} provenance={provenance} label={label ?? title} />;
   return (
-    <SectionPanel title={title}>
+    <SectionPanel title={title} level={level}>
       <Body items={items} emptyText={emptyText} provenance={provenance} label={title} />
     </SectionPanel>
   );

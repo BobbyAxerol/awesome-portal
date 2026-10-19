@@ -245,7 +245,7 @@ export function ReviewNoteForm({ api, capability, identity, onRecorded }: Review
   }
 
   return (
-    <SectionPanel title="Record review note" aside="Portal evidence">
+    <SectionPanel level={2} title="Record review note" aside="Portal evidence">
       <p className="exec-sbx-note">{LEAD}</p>
       {body}
     </SectionPanel>
