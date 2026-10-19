@@ -8,7 +8,7 @@
  *
  * What it refuses, and says so:
  * - the overlay: aligned and rebased series are not published, so
- *   `CompareOverlay` prints `Not available` with `FE-033`, and still lists who
+ *   `CompareOverlay` prints `Not published (FE-033)`, and still lists who
  *   would have been left out of one basis;
  * - mixing: the basis is the currency and domain of the first portfolio
  *   picked. Another currency, a Simulated book beside a Real-funded one, or a
@@ -306,7 +306,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
               series={[]}
               notComparable={apart}
               basis={basisText}
-              state={{ kind: "unavailable", copy: "Not available", reason: `Aligned series are ${npText(PF_FE.compareSeries)}. Nothing is rebased or worked out here.` }}
+              state={{ kind: "unavailable", copy: npText(PF_FE.compareSeries), reason: "Aligned series are not published. Nothing is rebased or worked out here." }}
             />
             <p className="exec-pf-note" data-testid="basis-caption">Basis: {basisText}</p>
           </SectionPanel>

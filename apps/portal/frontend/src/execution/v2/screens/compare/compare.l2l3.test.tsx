@@ -100,7 +100,7 @@ describe("L2 · scale", () => {
     await loaded();
     expect(calls).toEqual(["GET /portfolios"]);
     expect(container.querySelectorAll(".exec-compare svg")).toHaveLength(0);
-    expect(container.textContent).toContain("Aligned series are Not published (FE-033)");
+    expect(container.textContent).toContain("Not published (FE-033)");
   });
 });
 

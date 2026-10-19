@@ -281,12 +281,13 @@ describe("basis and partitions", () => {
 });
 
 describe("series", () => {
-  it("prints Not available for the aligned series with FE-033 and the basis caption, and draws nothing", async () => {
+  it("prints Not published (FE-033) for the aligned series and the basis caption, and draws nothing", async () => {
     const { container } = mount(makeApi().api, pick(PF.satellite, PF.canary));
     await loaded();
     const overlay = container.querySelector(".exec-compare")!;
-    expect(overlay.textContent).toContain("Not available");
-    expect(overlay.textContent).toContain("Aligned series are Not published (FE-033). Nothing is rebased or worked out here.");
+    expect(overlay.textContent).toContain("Not published (FE-033)");
+    expect(overlay.textContent).not.toContain("Not available");
+    expect(overlay.textContent).toContain("Aligned series are not published. Nothing is rebased or worked out here.");
     expect(overlay.querySelectorAll("svg")).toHaveLength(0);
     expect(screen.getByTestId("basis-caption").textContent).toBe("Basis: Return since window start (90D), one currency (USDT), Real-funded books; methodology as published per source (FE-006)");
     expect(within(overlay as HTMLElement).getByRole("list", { name: "Not in the comparison" })).toBeTruthy();
