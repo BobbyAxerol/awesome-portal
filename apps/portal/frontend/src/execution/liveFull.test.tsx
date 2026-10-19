@@ -269,6 +269,20 @@ describe("positions and orders rows (additive; the V1 screen ignores them)", () 
     expect(rich).toBe(plain);
   });
 
+  it("V1 is unchanged by cells the reader drops (a number, an array, an unsafe key): the markup and the V1 list are the same as with no rows", () => {
+    const markup = (html: string) => html.replace(/:r[0-9a-z]+:/g, ":r:");
+    const base = readLiveFullOperations(LIVE_FULL_FIXTURE)!;
+    const plain = markup(render(<LiveFullOperationsScreen live={base} />).container.innerHTML);
+    cleanup();
+    const raw = JSON.parse(JSON.stringify(LIVE_FULL_FIXTURE));
+    raw.positions = collection("positions", "EXECUTION", [{ instrument: "BTCUSDT", qty: 0.012, legs: ["a"], "bad name": "x" }, { qty: 5 }]);
+    const withDrops = readLiveFullOperations(raw)!;
+    expect(withDrops.positionRows?.rows).toEqual([{ instrument: "BTCUSDT" }]);
+    expect(withDrops.positionRows?.rowLosses?.[0]).toEqual({ cells: { qty: "number", legs: "unreadable" }, notShown: 1 });
+    expect(withDrops.suppressedBrokerFields).toEqual(base.suppressedBrokerFields);
+    expect(markup(render(<LiveFullOperationsScreen live={withDrops} />).container.innerHTML)).toBe(plain);
+  });
+
   it("V1 is unchanged by rows that the strip empties: a BROKER collection (hidden) prints and lists exactly what a body without rows does", () => {
     const markup = (html: string) => html.replace(/:r[0-9a-z]+:/g, ":r:");
     const base = readLiveFullOperations(LIVE_FULL_FIXTURE)!;

@@ -21,6 +21,7 @@
  */
 import type { Authority, FreshnessState, PanelStatus } from "./contracts";
 import { v1Refusal } from "./api/schemaGuard";
+import { unsafeText } from "./unsafeText";
 
 function obj(raw: unknown): Record<string, unknown> | null {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw)
@@ -539,24 +540,58 @@ export const MAX_ROW_RECORDS = 200;
 const MAX_ROW_CELLS = 80;
 const MAX_CELL_CHARS = 256;
 const CELL_KEY = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
-/** Control characters, C1 controls, zero-width and bidirectional controls: text a row must not smuggle onto a screen. */
-const UNSAFE_TEXT = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]/;
+/**
+ * Why a cell the response carried is not in the row. `number`: a JS number is never kept (it has lost its trailing
+ * zeros; a figure that arrives as one is not a decimal this build may print). `unreadable`: a string that is too long
+ * or carries unsafe characters, or an array or object.
+ */
+export type CellLoss = "number" | "unreadable";
 
-/** A bounded free row: the readable scalar cells, or `null` when the row is not an object or nothing in it is readable. */
-export function readRowRecord(raw: unknown): RowRecord | null {
+/**
+ * What a kept row lost, so a V2 screen can say "Unreadable" for a cell that was PRESENT, instead of "Not available".
+ * `cells` are the dropped cells whose key is safe to name; `notShown` counts the rest (a key that is not a plain
+ * identifier, or a cell past the per-row bounds). V1 never reads this.
+ */
+export interface RowLoss {
+  cells: Readonly<Record<string, CellLoss>>;
+  notShown: number;
+}
+
+/** A bounded free row and what it dropped, or `null` when the row is not an object or nothing in it is readable. */
+export function readRowRecordWithLoss(raw: unknown): { row: RowRecord; loss: RowLoss } | null {
   const o = obj(raw);
   if (!o) return null;
   const cells: Record<string, RowCell> = {};
+  const lost: Record<string, CellLoss> = {};
   let kept = 0;
+  let lostCount = 0;
+  let notShown = 0;
   for (const [key, value] of Object.entries(o)) {
-    if (kept >= MAX_ROW_CELLS) break;
-    if (!CELL_KEY.test(key)) continue;
-    if (value === null || typeof value === "boolean" || (typeof value === "string" && value.length <= MAX_CELL_CHARS && !UNSAFE_TEXT.test(value))) {
+    if (kept >= MAX_ROW_CELLS) {
+      notShown += 1;
+      continue;
+    }
+    if (!CELL_KEY.test(key)) {
+      notShown += 1;
+      continue;
+    }
+    if (value === null || typeof value === "boolean" || (typeof value === "string" && value.length <= MAX_CELL_CHARS && !unsafeText(value))) {
       cells[key] = value;
       kept += 1;
+    } else if (lostCount < MAX_ROW_CELLS) {
+      lost[key] = typeof value === "number" ? "number" : "unreadable";
+      lostCount += 1;
+    } else {
+      notShown += 1;
     }
   }
-  return kept === 0 ? null : cells;
+  return { row: cells, loss: { cells: lost, notShown } };
+}
+
+/** A bounded free row: the readable scalar cells, or `null` when the row is not an object or nothing in it is readable. */
+export function readRowRecord(raw: unknown): RowRecord | null {
+  const read = readRowRecordWithLoss(raw);
+  return read === null || Object.keys(read.row).length === 0 ? null : read.row;
 }
 
 /**
@@ -574,6 +609,10 @@ export interface RowCollection {
   rows: readonly RowRecord[];
   /** Rows the response carried that this reader did not keep (past 200, or with no readable cell). */
   rowsDropped: number;
+  /** ADDITIVE, V2 only: what each kept row lost, aligned with `rows`. A collection built by hand may omit it. */
+  rowLosses?: readonly RowLoss[];
+  /** ADDITIVE, V2 only: of `rowsDropped`, the rows that had cells but none readable (a present row is not "none"). */
+  rowsUnreadable?: number;
 }
 
 export function readRowCollection(raw: unknown, fallbackId = ""): RowCollection | null {
@@ -581,11 +620,18 @@ export function readRowCollection(raw: unknown, fallbackId = ""): RowCollection 
   if (!o) return null;
   const source = Array.isArray(o.rows) ? o.rows : [];
   const rows: RowRecord[] = [];
+  const rowLosses: RowLoss[] = [];
   let dropped = 0;
+  let unreadable = 0;
   for (const entry of source) {
-    const row = rows.length < MAX_ROW_RECORDS ? readRowRecord(entry) : null;
-    if (row === null) dropped += 1;
-    else rows.push(row);
+    const read = rows.length < MAX_ROW_RECORDS ? readRowRecordWithLoss(entry) : null;
+    if (read === null || Object.keys(read.row).length === 0) {
+      dropped += 1;
+      if (read !== null && (Object.keys(read.loss.cells).length > 0 || read.loss.notShown > 0)) unreadable += 1;
+    } else {
+      rows.push(read.row);
+      rowLosses.push(read.loss);
+    }
   }
   return {
     envelope: readPanelEnvelope(o.envelope, fallbackId),
@@ -593,6 +639,8 @@ export function readRowCollection(raw: unknown, fallbackId = ""): RowCollection 
     returnedCount: count(o.returned_count),
     rows,
     rowsDropped: dropped,
+    rowLosses,
+    rowsUnreadable: unreadable,
   };
 }
 

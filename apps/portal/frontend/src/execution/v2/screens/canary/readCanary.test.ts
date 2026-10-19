@@ -222,7 +222,11 @@ describe("V1 body: what the shared reader used to drop (FIXTURE_LAB; the V1 sche
     const body = populatedWithFacts();
     body.positions.rows = [{ symbol: "BTCUSDT", qty: 0.012, deep: { a: 1 }, list: [1] }];
     const only = fromBody(body).positions.published!;
-    expect(only.columns.map((c) => c.key)).toEqual(["symbol"]);
+    // The number, the object and the array were PRESENT: their columns stay, marked lost, never converted and never "Not available".
+    expect(only.columns.map((c) => c.key)).toEqual(["symbol", "qty", "deep", "list"]);
+    expect(only.rows[0]!.cells).toEqual(["BTCUSDT", null, null, null]);
+    expect(only.rows[0]!.lost).toEqual([null, "number", "unreadable", "unreadable"]);
+    expect(JSON.stringify(only)).not.toContain("0.012");
   });
 
   it("rows are bounded: 200 rows, 12 columns, and a count of what was not kept", () => {
@@ -255,7 +259,12 @@ describe("V1 body: what the shared reader used to drop (FIXTURE_LAB; the V1 sche
     const zero = String.fromCharCode(0x200b);
     body.positions.rows = [{ symbol: `BTC${bidi}USDT`, note: `a${zero}b`, ok: "fine", tab: "a\tb" }];
     const table = fromBody(body).positions.published!;
-    expect(table.columns.map((c) => c.key)).toEqual(["ok"]);
+    // Nothing hostile is kept as a cell; each member the row carried is marked unreadable instead of silently absent.
+    expect(table.columns.map((c) => c.key)).toEqual(["ok", "symbol", "note", "tab"]);
+    expect(table.rows[0]!.cells).toEqual(["fine", null, null, null]);
+    expect(table.rows[0]!.lost).toEqual([null, "unreadable", "unreadable", "unreadable"]);
+    expect(JSON.stringify(table)).not.toContain(bidi);
+    expect(JSON.stringify(table)).not.toContain(zero);
   });
 });
 

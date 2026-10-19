@@ -12,7 +12,7 @@ import { Flag } from "../../Flag";
 import { SectionPanel } from "../../blocks";
 import { formatAsOf, readAsOf } from "../../boundary";
 import type { PublishedRow, PublishedRows } from "../../readers/publishedRows";
-import { cellText } from "../../readers/publishedRows";
+import { cellText, lossNote, lossText } from "../../readers/publishedRows";
 import type { CanaryView, OrderRow, PositionRow, RowsFact } from "./readCanary";
 import { ROW_CAP, panelLine } from "./model";
 import { ExactCell, RowsNotPublished, countLine } from "./parts";
@@ -54,6 +54,8 @@ function publishedColumns(table: PublishedRows): readonly CardsColumn<PublishedR
     key: column.key,
     label: column.label,
     render: (row: PublishedRow) => {
+      const lost = row.lost[index];
+      if (lost !== null && lost !== undefined) return <span className="exec-blk-na" data-lost={lost}>{lossText(lost)}</span>;
       const text = cellText(row.cells[index]);
       return text === null ? null : <span className="exec-blk-num" title={text}>{text}</span>;
     },
@@ -65,7 +67,7 @@ function PublishedRowsTable({ table, label, rowsLabel }: { table: PublishedRows;
     <>
       <CardsTable columns={publishedColumns(table)} rows={table.rows} rowKey={(row) => row.key} label={label} empty="The source reported none." />
       <p className="exec-cny-rowsnote">
-        Columns are the source's own field names.{table.hiddenColumns > 0 ? ` ${table.hiddenColumns} more field${table.hiddenColumns === 1 ? " is" : "s are"} not drawn.` : ""}{" "}
+        Columns are the source's own field names.{table.hiddenColumns > 0 ? ` ${table.hiddenColumns} more field${table.hiddenColumns === 1 ? " is" : "s are"} not drawn.` : ""}{lossNote(table) === null ? "" : ` ${lossNote(table)}`}{" "}
         <RowsNotPublished what={`Typed ${rowsLabel.toLowerCase()}`} />
       </p>
     </>

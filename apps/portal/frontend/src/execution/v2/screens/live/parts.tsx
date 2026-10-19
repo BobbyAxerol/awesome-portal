@@ -10,7 +10,7 @@ import { MetricText, NO_VALUE_COPY, NotPublished, SectionPanel } from "../../blo
 import { withContext } from "../../urlState";
 import type { LiveSourcePanelV2, LiveSourceRecordV2 } from "../../readers/liveSourceOperations";
 import { PanelState } from "../../../components/states";
-import { cellText, type PublishedRow } from "../../readers/publishedRows";
+import { cellText, lossNote, lossText, type PublishedRow } from "../../readers/publishedRows";
 import {
   OPERATIONS_PATH,
   ROW_CAP,
@@ -160,6 +160,8 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
     key: column.key,
     label: column.label,
     render: (row) => {
+      const lost = row.lost[index];
+      if (lost !== null && lost !== undefined) return <span className="exec-blk-na" data-lost={lost}>{lossText(lost)}</span>;
       const text = cellText(row.cells[index]);
       return text === null ? null : <span className="exec-blk-num" title={text}>{text}</span>;
     },
@@ -172,7 +174,7 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
         <span className="exec-liv-cap">{rows.caption}</span>
       </div>
       <p className="exec-liv-line">
-        Columns are the source's own field names.{table.hiddenColumns > 0 ? ` ${table.hiddenColumns} more field${table.hiddenColumns === 1 ? " is" : "s are"} not drawn.` : ""}{" "}
+        Columns are the source's own field names.{table.hiddenColumns > 0 ? ` ${table.hiddenColumns} more field${table.hiddenColumns === 1 ? " is" : "s are"} not drawn.` : ""}{lossNote(table) === null ? "" : ` ${lossNote(table)}`}{" "}
         <NotPublished id="FE-072">{`Typed ${what.toLowerCase()}`}</NotPublished>
       </p>
     </SectionPanel>

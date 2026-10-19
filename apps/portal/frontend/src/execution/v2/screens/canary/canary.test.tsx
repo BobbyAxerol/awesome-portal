@@ -11,6 +11,8 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { readCanaryByVersion } from "../../readers/dispatch";
+import { publishedRowsOf } from "../../readers/publishedRows";
+import { readRowCollection } from "../../../certification";
 import { useContextFactsValue } from "../../shell/contextFacts";
 import { STAGE_WHY } from "../stage/reasons";
 import CanaryScreen, { CANARY_SCREEN_KEY } from "./index";
@@ -504,6 +506,30 @@ describe("components against typed rows and published ratios (FIXTURE_LAB, view-
     withRouter(<PositionsOrdersTab view={{ ...view, positions: { panel: view.positions.panel, rows: positions(3), total: null, published: null }, orders: { panel: view.orders.panel, rows: [], total: 0, published: null } }} />);
     expect(screen.getByText("3 shown · total not published")).toBeTruthy();
     expect(screen.getByText("The source reported none.")).toBeTruthy();
+  });
+
+  it("a source row's number cell prints Unreadable (number not accepted), not Not available, and the cells that have no column are counted", () => {
+    const view = viewOf(v1Body());
+    const envelope = {
+      panel_id: "positions", source_authority: "EXECUTION", panel_state: "ready", freshness_state: "FRESH", delivery_profile: "fixture",
+      source_verification_state: "VERIFIED", as_of: "2026-10-17T12:04:00.000Z", read_at: "2026-10-17T12:04:00.000Z", data: {}, warnings: [],
+    };
+    const collection = readRowCollection({
+      envelope, exact_total: 2, returned_count: 2,
+      rows: [{ symbol: "BTCUSDT", qty: 0.012, entry: "64000.10", note: null, "bad name": "x" }, { symbol: "ETHUSDT", qty: "1.5000", entry: "3412.50", note: "n" }],
+    }, "positions");
+    const published = publishedRowsOf(collection)!;
+    withRouter(<PositionsOrdersTab view={{ ...view, positions: { panel: view.positions.panel, rows: null, total: 2, published }, orders: view.orders }} />);
+    const table = screen.getByRole("table", { name: "Canary positions" });
+    const rows = within(table).getAllByRole("row").slice(1);
+    const qty = within(table).getAllByRole("columnheader").findIndex((h) => h.textContent === "Qty");
+    expect(within(rows[0]!).getAllByRole("cell")[qty]!.textContent).toBe("Unreadable (number not accepted)");
+    expect(within(rows[1]!).getAllByRole("cell")[qty]!.textContent).toBe("1.5000");
+    // a source null is absent, not unreadable
+    const note = within(table).getAllByRole("columnheader").findIndex((h) => h.textContent === "Note");
+    expect(within(rows[0]!).getAllByRole("cell")[note]!.textContent).toBe("Not available");
+    expect(screen.getByText(/1 cell not shown\./)).toBeTruthy();
+    expect(table.textContent).not.toContain("0.012");
   });
 
   it("an unreadable decimal in a typed row prints as unreadable, never as 0", () => {

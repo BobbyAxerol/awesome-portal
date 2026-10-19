@@ -241,7 +241,7 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
     const read = readRowCollection(root[key], key);
     if (read === null || !mayBeBrokerDerived(read.envelope.authority) || brokerValuesVisible) return read;
     withheldRows.push(key);
-    return { ...read, rows: [], exactTotal: null, returnedCount: null, rowsDropped: 0 };
+    return { ...read, rows: [], exactTotal: null, returnedCount: null, rowsDropped: 0, rowLosses: [], rowsUnreadable: 0 };
   };
 
   return {
