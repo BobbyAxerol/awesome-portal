@@ -25,10 +25,21 @@ export const FE = {
   eligibility: "FE-015",
 } as const;
 
+/**
+ * Delivered by B1 (UXM-07), so these are "Not published" only for an older server or body that omits the field. Kept
+ * out of `FE` because blocks.test.tsx pins `FE` to the shared table in blocks/notPublished.tsx; hoist both there in one step.
+ */
+export const FE_B1 = {
+  /** Incident links on a queue row. */
+  links: "FE-042",
+  /** Server-side status counts over the whole filtered query. */
+  counts: "FE-043",
+} as const;
+
 /** The Access screen's route (D9: where a blocked action shows which grant is missing). Kept here so the queue does not import that screen. */
 export const ACCESS_PATH = "/administration/profile-access";
 
-export type FeId = (typeof FE)[keyof typeof FE];
+export type FeId = (typeof FE)[keyof typeof FE] | (typeof FE_B1)[keyof typeof FE_B1];
 
 /** The sentence a disabled control carries. */
 export function notPublishedReason(id: FeId, because: string): string {

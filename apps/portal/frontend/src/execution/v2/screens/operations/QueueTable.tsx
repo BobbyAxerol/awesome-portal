@@ -4,23 +4,26 @@
  *
  * Time is `created_at`; Target + operation is the target and `command_key`;
  * Receipt is `source_status` with `verification_result`; Next is
- * `triage_state`. Intent (FE-020) and Display (FE-032) have no source yet, so
+ * `triage_state`. The incidents an operation is linked to (FE-042) sit under the
+ * target, so the six kit columns stay six. Intent (FE-020) and Display (FE-032) have no source yet, so
  * they stay columns, as in the kit, and each cell says "Not published" with its
  * request id instead of the table silently losing two of its six columns.
  */
 import { useMemo, type MouseEvent, type ReactNode } from "react";
+import type { To } from "react-router-dom";
 
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { formatAsOf } from "../../boundary";
 import type { OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
+import { IncidentLinks } from "./IncidentLinks";
 import { FE, NotPublished } from "./notPublished";
 import { axesText, commandLabel, receiptOutcome, severityWord, TARGET_LABEL, triageOutcome } from "./outcome";
 
 import "../../css/operations.css";
 
-function columnsFor(onOpen: (row: OperationV2) => void): readonly CardsColumn<OperationV2>[] {
+function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId: string) => To): readonly CardsColumn<OperationV2>[] {
   return [
     {
       key: "time",
@@ -36,6 +39,7 @@ function columnsFor(onOpen: (row: OperationV2) => void): readonly CardsColumn<Op
           <span className="exec-ops-meta" title={row.commandKey}>
             {commandLabel(row.commandKey)} · {ENV_LABEL[row.environment]} · {severityWord(row.severity)}
           </span>
+          <IncidentLinks operationId={row.operationId} links={row.incidentLinks} to={incidentTo} />
         </span>
       ),
     },
@@ -97,11 +101,13 @@ export interface QueueTableProps {
   rows: readonly OperationV2[];
   selectedKey: string | null;
   onOpen(row: OperationV2): void;
+  /** The incident drawer route for an incident id (FE-042 links). */
+  incidentTo(incidentId: string): To;
   empty: ReactNode;
 }
 
-export function QueueTable({ rows, selectedKey, onOpen, empty }: QueueTableProps) {
-  const columns = useMemo(() => columnsFor(onOpen), [onOpen]);
+export function QueueTable({ rows, selectedKey, onOpen, incidentTo, empty }: QueueTableProps) {
+  const columns = useMemo(() => columnsFor(onOpen, incidentTo), [onOpen, incidentTo]);
   return (
     <CardsTable
       columns={columns}

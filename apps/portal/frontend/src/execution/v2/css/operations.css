@@ -288,6 +288,121 @@
   white-space: normal;
 }
 
+/* ---- incident links in a queue row (FE-042) ---------------------------- */
+
+.exec-ops-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin-top: var(--space-1);
+}
+.exec-ops-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-ops-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  min-width: 0;
+}
+.exec-ops-link-id {
+  font: var(--exec-font-id);
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+span.exec-ops-link-id {
+  color: var(--ink);
+}
+
+/* ---- counts by status (FE-043) ----------------------------------------- */
+
+.exec-ops-counts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.exec-ops-counts-title {
+  margin: 0;
+  font: var(--exec-font-section);
+  color: var(--ink);
+}
+.exec-ops-counts-scope {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-ops-counts-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line-strong);
+  border: 1px solid var(--line-strong);
+}
+.exec-ops-dim {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+}
+.exec-ops-dim-label {
+  margin: 0;
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-ops-dim-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-1) 0;
+}
+.exec-ops-dim-num {
+  font: var(--exec-font-id);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.exec-ops-dim-total .exec-ops-dim-num {
+  font: var(--exec-font-kpi);
+}
+.exec-ops-dim-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-body);
+}
+.exec-ops-dim-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.exec-ops-dim-row[data-selected="true"] {
+  font-weight: 600;
+}
+.exec-ops-dim-tag {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+@media (max-width: 1100px) {
+  .exec-ops-counts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 660px) {
+  .exec-ops-counts-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ---- dock and drawer bodies -------------------------------------------- */
 
 .exec-ops-facts {

@@ -13,7 +13,7 @@
  * it hides loaded rows older than the window and says how many it hid.
  */
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, type To } from "react-router-dom";
 
 import { PanelState } from "../../../components/states";
 import type { ExecutionApi } from "../../../api/ports";
@@ -33,6 +33,7 @@ import { FE, NotPublished, notPublishedReason } from "./notPublished";
 import { OperationDock } from "./OperationDock";
 import { humanize, TARGET_LABEL } from "./outcome";
 import { QueueTable } from "./QueueTable";
+import { StatusCounts } from "./StatusCounts";
 import { sourceHealthSummary, useSourceHealth } from "./useSourceHealth";
 
 import "../../css/operations.css";
@@ -264,6 +265,11 @@ export default function OperationsV2({
   const operationOpen = !incidentOpen && view === "commands" && selection !== null;
   const dockOpen = (incidentOpen || operationOpen) && mode === "dock";
 
+  /** The incident drawer route, over this queue, keeping the context in the query string (FE-042 links). */
+  const incidentTo = useCallback(
+    (id: string): To => ({ pathname: `${queuePath}/incidents/${encodeURIComponent(id)}`, search: location.search }),
+    [queuePath, location.search],
+  );
   const closeIncident = () => navigate({ pathname: queuePath, search: location.search });
   const selectedRow = load.phase === "ready" && selection ? load.rows.find((row) => row.operationId === selection) ?? null : null;
 
@@ -307,6 +313,14 @@ export default function OperationsV2({
             </dd>
           </div>
         </KpiStrip>
+      ) : null}
+
+      {ready ? (
+        <StatusCounts
+          counts={ready.queue.page.statusCounts}
+          appliedFilters={ready.queue.page.appliedFilters}
+          observed={formatAsOf(ready.queue.observedAtMs)}
+        />
       ) : null}
 
       <details className="exec-ops-panel">
@@ -508,6 +522,7 @@ export default function OperationsV2({
                         rows={visible}
                         selectedKey={operationOpen ? selection : null}
                         onOpen={(row) => select(row.operationId)}
+                        incidentTo={incidentTo}
                         empty={emptyNode}
                       />
                       <div className="exec-ops-foot">
