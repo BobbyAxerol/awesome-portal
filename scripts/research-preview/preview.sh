@@ -8,13 +8,15 @@
 #   scripts/research-preview/preview.sh status     # containers, images, git SHA, health
 #   scripts/research-preview/preview.sh down       # stop, keep volumes
 #   scripts/research-preview/preview.sh teardown   # stop and delete this project's volumes
+#   scripts/research-preview/preview.sh fixture on|off|status   # fixture BFF marker only; never runs docker
 #
 # Safety rails, all enforced here rather than remembered:
 #   - the compose project is always `portal-research-preview`;
 #   - the port may not be dev (8080), showcase (8081), Execution probe (8090)
 #     or stable (18081), and must be loopback-bound (compose.yaml does that);
 #   - the env file lives outside the checkout, mode 0600, and is never printed;
-#   - teardown removes only volumes labelled with this project.
+#   - teardown removes only volumes labelled with this project;
+#   - `fixture` only creates/removes/reads $ENV_DIR/fixture-bff.enabled and prints the next command.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -23,6 +25,46 @@ ENV_DIR="${RESEARCH_PREVIEW_HOME:-$HOME/.config/portal-research-preview}"
 ENV_FILE="$ENV_DIR/preview.env"
 IDENTITY_FILE="$ENV_DIR/identity.json"
 FORBIDDEN_PORTS=" 8080 8081 8090 18081 "
+
+FIXTURE_MARKER="$ENV_DIR/fixture-bff.enabled"
+# Fixture BFF switch (FIXTURE_LAB lane, not acceptance evidence): only a marker file. It never runs
+# docker; the operator applies it with `build` + `up`. See deploy/research-preview/README-fixture.md.
+cmd_fixture() {
+  local action="${1:-status}"
+  [[ -f "$ENV_FILE" ]] || { echo "preview: run '$0 init' first" >&2; return 1; }
+  # Count of screen keys in the build-time manifest; the value itself is not echoed.
+  local screens screen_count=0
+  screens="$(sed -n 's/^PORTAL_EXECUTION_V2_SCREENS=//p' "$ENV_FILE" | tail -n1 | tr -d ' "')"
+  [[ -z "$screens" ]] || screen_count="$(tr ',' '\n' <<<"$screens" | grep -c .)"
+  case "$action" in
+    on)
+      mkdir -p "$ENV_DIR"
+      : >"$FIXTURE_MARKER"
+      echo "preview: fixture BFF marker set ($FIXTURE_MARKER)"
+      if [[ "$screen_count" -eq 0 ]]; then
+        echo "preview: PORTAL_EXECUTION_V2_SCREENS is empty in the env file; set it before 'build' or every screen stays on V1" >&2
+      else
+        echo "preview: PORTAL_EXECUTION_V2_SCREENS lists $screen_count screen(s)"
+      fi
+      echo "next: $0 build portal-web portal-fixture-bff && $0 up"
+      ;;
+    off)
+      rm -f "$FIXTURE_MARKER"
+      echo "preview: fixture BFF marker removed"
+      echo "next: $0 up   # recreates portal-web without the fixture locations and banner"
+      echo "then: remove the now-orphaned fixture container once (project $PROJECT only):"
+      echo "      docker rm -f ${PROJECT}-portal-fixture-bff-1"
+      ;;
+    status)
+      if [[ -f "$FIXTURE_MARKER" ]]; then echo "fixture-bff: on (marker present)"; else echo "fixture-bff: off"; fi
+      echo "PORTAL_EXECUTION_V2_SCREENS: $screen_count screen(s) in the env file"
+      echo "note: the marker only takes effect on the next '$0 up'"
+      ;;
+    *) echo "usage: $0 fixture on|off|status" >&2; return 2 ;;
+  esac
+}
+# Handled before the Docker probe below: this command must work without Docker.
+if [[ "${1:-}" == fixture ]]; then shift; cmd_fixture "$@"; exit $?; fi
 
 DOCKER=(docker)
 if ! docker info >/dev/null 2>&1; then
@@ -65,6 +107,11 @@ compose() {
     # Last overlay overrides retained flags deliberately. The retained marker
     # stays available for rollback; it is not an auto-restoration of grants.
     domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.native-review.yaml")
+  fi
+  if [[ -f "$FIXTURE_MARKER" ]]; then
+    # Fixture BFF (FIXTURE_LAB lane): one private service plus an nginx variant and a banner on
+    # portal-web. The project name and port rails above/below are unchanged.
+    domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.fixture-bff.yaml")
   fi
   if [[ "${DOCKER[0]}" == sudo ]]; then
     compose_docker=(sudo -n env "PORTAL_BUILD_COMMIT=${PORTAL_BUILD_COMMIT:-unknown}" \
@@ -144,6 +191,13 @@ CONTROL_API_FEATURE_RESEARCH_PREVIEW_LONG_WFO=true
 PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO=true
 CONTROL_API_QUERY_CURSOR_KEYS_JSON={"query-k1":"$(head -c 48 /dev/urandom | base64 | tr -d '/+=\n' | head -c 48)"}
 CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON={"governance-k1":"$(head -c 48 /dev/urandom | base64 | tr -d '/+=\n' | head -c 48)"}
+# Execution V2 screens are a BUILD-time list (compose.yaml maps PORTAL_EXECUTION_V2_SCREENS to the
+# portal-web build arg; empty keeps every screen on V1). The full manifest, for a UI/UX review build:
+# PORTAL_EXECUTION_V2_SCREENS=fleet,archived,portfolios,alpha,workbench,account,ops,profile,overview,cockpit,shell,compare,blotter,admin,users,replay
+# Fixture BFF (see deploy/research-preview/README-fixture.md): read only while \`preview.sh fixture on\`.
+# FIXTURE_SCALE=medium
+# FIXTURE_WRITES=refuse   # default in the overlay; "doubles" answers canned successes that store nothing
+# FIXTURE_USER_ID=
 ENV
   chmod 600 "$ENV_FILE"
   echo "preview: wrote $ENV_FILE (port $port)"
@@ -152,8 +206,11 @@ ENV
 cmd_build() {
   local services=("$@")
   [[ ${#services[@]} -gt 0 ]] || services=(portal-api control-api portal-web roadmap-task-board-api)
+  if [[ $# -eq 0 && -f "$FIXTURE_MARKER" ]]; then services+=(portal-fixture-bff); fi
   local service
   for service in "${services[@]}"; do
+    # The fixture BFF image exists only while the fixture marker is set (compose.fixture-bff.yaml).
+    [[ "$service" == portal-fixture-bff && -f "$FIXTURE_MARKER" ]] && continue
     case "$service" in portal-api|control-api|portal-web|roadmap-task-board-api) ;;
       *) echo "preview: unsupported build service $service" >&2; return 1;;
     esac
@@ -191,7 +248,7 @@ record_identity() {
     printf '{\n  "project": "%s",\n  "git_commit": "%s",\n  "recorded_at_utc": "%s",\n  "images": {\n' \
       "$PROJECT" "$sha" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     local first=1
-    for service in portal-api control-api portal-web roadmap-task-board-api quant-worker-py; do
+    for service in portal-api control-api portal-web roadmap-task-board-api quant-worker-py portal-fixture-bff; do
       local id
       id="$(compose ps -q "$service" | head -n1)"
       [[ -n "$id" ]] || continue
@@ -223,6 +280,7 @@ cmd_up() {
   if [[ $# -gt 0 ]]; then
     local service
     for service in "$@"; do
+      [[ "$service" == portal-fixture-bff && -f "$FIXTURE_MARKER" ]] && continue
       case "$service" in control-api|portal-web|portal-api|quant-worker-py|roadmap-task-board-api) ;;
         *) echo "preview: scoped application rollout excludes DB/NATS/migrations/bootstrap" >&2; return 1;;
       esac
