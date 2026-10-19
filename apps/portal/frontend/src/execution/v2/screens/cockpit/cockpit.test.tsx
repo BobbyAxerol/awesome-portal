@@ -1228,6 +1228,18 @@ describe("the New request drawer", () => {
     expect(fetchCalls.length).toBeGreaterThan(0);
   });
 
+  it("the drawer posts through requestApi (the New-request screen's policy), never the inbox's: both mounts, source-checked", async () => {
+    // The approval inbox's delivery policy says governance_write_enabled=false, so a port built from it refuses
+    // createApprovalRequest on the client. The route hands the cockpit a second port bound to the request screen's policy.
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync(`${process.cwd()}/src/execution/v2/screens/cockpit/index.tsx`, "utf8");
+    expect(source.match(/<RequestDrawer api=\{requestApi \?\? api\}/g)?.length).toBe(2);
+    expect(source).not.toMatch(/<RequestDrawer api=\{api\}/);
+    const route = readFileSync(`${process.cwd()}/src/execution/ExecutionPreviewRoute.tsx`, "utf8");
+    expect(route.match(/requestApi=\{requestApi\}/g)?.length).toBe(2);
+    expect(route).toMatch(/governanceWriteBlocked\(requestPolicy\)/);
+  });
+
   it("the delivery policy's reason reaches the drawer as writeBlockedReason", async () => {
     await mountNav(standardPort(), "/governance/approvals?compose=request", { writeBlockedReason: "The delivery policy blocks governance writes." });
     expect(screen.queryAllByText(/delivery policy blocks governance writes/).length).toBeGreaterThan(0);

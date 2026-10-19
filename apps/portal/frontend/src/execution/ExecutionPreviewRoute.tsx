@@ -326,7 +326,7 @@ export function PreviewFrame({ screenId, profile, envLock, windowLock, children 
 
 
 
-export function ExecutionPreviewRoute({ screenId, profile = null, policy = null }: { screenId: string; profile?: string | null; policy?: DeliveryPolicy | null }) {
+export function ExecutionPreviewRoute({ screenId, profile = null, policy = null, requestPolicy = null }: { screenId: string; profile?: string | null; policy?: DeliveryPolicy | null; requestPolicy?: DeliveryPolicy | null }) {
   const params = useParams();
   const [search] = useSearchParams();
   const navigate = useNavigate();
@@ -338,6 +338,8 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
   // data for a fixture on a product route; the fixture port lives on only in
   // unit tests and the fixture lab.
   const api = useMemo(() => createHttpApi({ policy }), [policy]);
+  // The cockpit's New request drawer writes through the New-request screen's own policy, not the inbox's.
+  const requestApi = useMemo(() => createHttpApi({ policy: requestPolicy }), [requestPolicy]);
   /*
    * PHASE 6 (round 2) · the workspace the URL names, sent to the reads that
    * accept one.
@@ -471,7 +473,8 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
           api={api}
           workspaceId={routeWorkspaceId}
           accessHref={accessHref}
-          writeBlockedReason={governanceWriteBlocked(policy)}
+          requestApi={requestApi}
+          writeBlockedReason={governanceWriteBlocked(requestPolicy)}
           pathSelection={{ id, kind }}
           onClearPathSelection={() => navigate({ pathname: APPROVALS_PATH, search: cockpitClearSearch(search) })}
         />
@@ -508,7 +511,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
     case "EXECUTION_APPROVAL_INBOX_SCREEN":
       // EL-V2-05: a row (and the rail's Open) navigates to the review its gate owns.
       content = V2Cockpit && isV2Screen("cockpit")
-        ? <Suspense fallback={null}><V2Cockpit api={api} workspaceId={routeWorkspaceId} accessHref={accessHref} writeBlockedReason={governanceWriteBlocked(policy)} /></Suspense>
+        ? <Suspense fallback={null}><V2Cockpit api={api} workspaceId={routeWorkspaceId} accessHref={accessHref} requestApi={requestApi} writeBlockedReason={governanceWriteBlocked(requestPolicy)} /></Suspense>
         : <ApprovalInboxContainer api={api} workspaceId={routeWorkspaceId} onOpenRequest={(id, gate) => navigate(reviewRouteFor({ id, gate }))} />;
       break;
     case "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN":

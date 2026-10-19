@@ -199,6 +199,10 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
     ? registry.screens.filter((screen) => hasExecutionPreview(screen.screen_id))
     : [];
   const previewByExactRoute = new Map(previewScreens.map((screen) => [screen.route, screen]));
+  // The cockpit's New request drawer posts to the New-request screen's route, so it is bound to THAT screen's delivery policy:
+  // the approval inbox's own policy says governance_write_enabled=false and would refuse the write client-side.
+  const requestScreen = registry.screens.find((screen) => screen.screen_id === "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN");
+  const requestScreenPolicy = requestScreen ? screenDeliveryPolicy(requestScreen) : null;
 
   return (
     // The fallback reserves a screen-shaped footprint, so entering a split route
@@ -214,7 +218,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
             <Route
               key={`execution-preview:${screen.screen_id}`}
               path={screen.route}
-              element={<ExecutionPreviewRoute screenId={screen.screen_id} profile={screenDeliveryProfile(screen)} policy={screenDeliveryPolicy(screen)} />}
+              element={<ExecutionPreviewRoute screenId={screen.screen_id} profile={screenDeliveryProfile(screen)} policy={screenDeliveryPolicy(screen)} requestPolicy={requestScreenPolicy} />}
             />
           ))}
         {EXECUTION_PREVIEW_ENABLED

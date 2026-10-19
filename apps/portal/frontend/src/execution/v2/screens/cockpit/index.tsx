@@ -84,6 +84,8 @@ export interface CockpitProps {
   accessHref?: string;
   /** Why the delivery policy does not allow a governance write (`governanceWriteBlocked(policy)`), or null; forwarded to the New request drawer. */
   writeBlockedReason?: string | null;
+  /** The port the New request drawer posts through: bound to the New-request screen's delivery policy (the inbox's own policy refuses writes). Falls back to `api`. */
+  requestApi?: ExecutionApi;
 }
 
 export const PAGE_SIZE = 50;
@@ -287,6 +289,7 @@ function OwnRequests({
   pathSelection,
   onClearPathSelection,
   writeBlockedReason,
+  requestApi,
 }: {
   api: ExecutionApi;
   workspaceId?: string;
@@ -294,6 +297,7 @@ function OwnRequests({
   pathSelection?: CockpitProps["pathSelection"];
   onClearPathSelection?: () => void;
   writeBlockedReason?: string | null;
+  requestApi?: ExecutionApi;
 }) {
   const [params] = useSearchParams();
   const url = useExecUrlState();
@@ -358,7 +362,7 @@ function OwnRequests({
     { key: "clock", label: "Clock", render: (row) => slaView(row.sla)?.phrase ?? <span className="exec-ck-np">{NOT_PUBLISHED.clock}</span> },
   ];
 
-  const drawer = <RequestDrawer api={api} open={composing} onClose={() => url.set({ compose: null }, { replace: true })} writeBlockedReason={writeBlockedReason} />;
+  const drawer = <RequestDrawer api={requestApi ?? api} open={composing} onClose={() => url.set({ compose: null }, { replace: true })} writeBlockedReason={writeBlockedReason} />;
 
   if (wanted !== null) {
     return (
@@ -428,7 +432,7 @@ function itemHeader(item: QueueItem): EvidenceHeader | null {
   return { id: row.id, title: row.subject, context: context || null, gate: row.gate };
 }
 
-function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection, writeBlockedReason, principal }: CockpitProps & { principal: Principal }) {
+function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection, writeBlockedReason, requestApi, principal }: CockpitProps & { principal: Principal }) {
   const url = useExecUrlState();
   // The New request drawer (`?compose=request`) owns the keyboard while it is open: j/k/n/Esc inside it do not drive the queue.
   const composing = url.value.compose === "request";
@@ -661,7 +665,7 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
       <p className="exec-ck-live" role="status" aria-live="polite">{announcement}</p>
       {helpOpen ? <KeysHelp onClose={() => setHelpOpen(false)} /> : null}
       {/* Always mounted and driven by `open`: the draft survives Back, and the Run Library is read on first open only. */}
-      <RequestDrawer api={api} open={composing} onClose={() => url.set({ compose: null }, { replace: true })} writeBlockedReason={writeBlockedReason} />
+      <RequestDrawer api={requestApi ?? api} open={composing} onClose={() => url.set({ compose: null }, { replace: true })} writeBlockedReason={writeBlockedReason} />
     </div>
   );
 }
@@ -695,6 +699,7 @@ export default function ApprovalsCockpit(props: CockpitProps) {
         pathSelection={props.pathSelection}
         onClearPathSelection={props.onClearPathSelection}
         writeBlockedReason={props.writeBlockedReason}
+        requestApi={props.requestApi}
       />
     );
   }
