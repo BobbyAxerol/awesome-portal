@@ -16,7 +16,7 @@ Digest Codex `design/sync/2026-10-18-codex-digest.md` (Portal `ac056d46`, tip hi
 | U6 Reader | `readDecimal`, `readMetric`, `readAsOf`, `formatAsOf` | `v2/boundary.ts` |
 | U7 Tích hợp | export `PreviewFrame` + một dòng có điều kiện; `productBoundary` duyệt `v2/`; `v2Hygiene`; test cờ tắt/bật | `ExecutionPreviewRoute.tsx`, `productBoundary.test.ts`, `v2/v2Hygiene.test.ts`, `flagOff/flagOn.test.tsx` |
 
-Chưa gắn vào `Sidebar` (đợi registry rev 7 và capability, FE-037/039). `ContextBar` gắn trong `PreviewFrame`; `CommandBar` không ở đó mà ở `PortalShell` (từ 2026-10-19, `ExecCommandBar` lazy, chỉ khi cờ `shell` bật và route là Execution; ngoài ra palette V1 giữ nguyên).
+Chưa gắn vào `Sidebar` ở S0 (đợi registry rev 7 và capability, FE-037/039). **Đã đổi sau đó:** FF-A `e6127770` cho `Sidebar` gọi `applyV2Nav` khi cờ `shell` bật (cần Bobby xác nhận chạm file dùng chung, DEBT-UXM07-024). `ContextBar` gắn trong `PreviewFrame`; `CommandBar` không ở đó mà ở `PortalShell` (từ 2026-10-19, `ExecCommandBar` lazy, chỉ khi cờ `shell` bật và route là Execution; ngoài ra palette V1 giữ nguyên).
 
 ## Chứng cứ cờ tắt không đổi
 - DOM của `PreviewFrame` khi cờ tắt = snapshot chụp từ markup V1 trước khi thêm nhánh V2 (`flagOff.test.tsx`).
@@ -137,3 +137,126 @@ Rebase 20 commit lên tip mới của Codex `d0789674` (không xung đột; làm
 
 ## Đợt sửa thứ hai sau review độc lập (2026-10-19)
 Hai review chỉ-đọc chạy trong lúc hook R2 đóng băng cây: logic FE (reader Users, Replay, Admin, Drawer, Cockpit, chart dùng chung, reader eligibility) và backend F1. Kết quả 0 BLOCKER; MAJOR: `display_name` hợp lệ theo server làm hỏng cả roster Users; banner focus của Replay nói sai khi còn trang chưa tải; bảng link incident thiếu index; đếm status luôn bật (quyết định mở). Đã sửa toàn bộ phần FE và thêm migration `1723680000145` (index). Commit: `0b113488` Users, `326325bd` Drawer/Admin/Cockpit, `633b7f11` Replay, `4fb72473` index và test snapshot-reader. Còn mở cho Codex/Bobby: M2 (đếm luôn bật: opt-in, SAVEPOINT hoặc GROUPING SETS), m1 (UI phải ghi "No readable incident links"), m2 (schema_version không đổi khi thêm trường), m3, m4. Quy trình test nhanh hơn được ghi ở AGENT_WORKING_RULES §10.10a (khóa heavy chỉ cho Docker/visual/hook).
+
+---
+
+# S3 · Paper workbench, Sandbox, Canary, Live, New request, luồng người dùng (FF-A/B1/B2), crawler (2026-10-19)
+
+Lane: **FIXTURE_LAB / BFF_DOUBLE** (không đọc thật; nguồn Sandbox/Canary/Live đang tối). Tip `21af6792` trên `claude/fe-parity` (chưa push). Tier: **R1 từng lát + cổng trên cây đã merge; R2 chưa chạy** (visual pinned-image, hook đầy đủ). Kế hoạch: [S3-STAGE-SCREENS-PLAN](../../design/impl/S3-STAGE-SCREENS-PLAN-2026-10-19.md) (quyết định D1–D13 áp dụng theo khuyến nghị, chờ Bobby phủ quyết). Số liệu cổng: [test-results.json](test-results.json) khối `s3`. **Cổng trình duyệt V2 đang ĐỎ (74 pass / 2 fail), xem "Evidence".** SHA ở đây là SHA hiện tại sau rebase; SHA cũ ở các mục S0–S2 phía trên là trước rebase.
+
+## Đã đọc (file@commit)
+| Nguồn | Pin | Dùng cho |
+| --- | --- | --- |
+| Codex `d0789674` (native read runtime, CC-1/CC-2/SE-1) | ancestor của tip | Reader eligibility theo luật 28 kind (đã làm ở `b1fe1aa6`); S3 không đọc thêm contract từ gói này |
+| Codex `678cf731` (isolate Research native review, exact stage reads) | ancestor của tip | Stage-drift v2 (`execution-alpha-stage-drift.v2.schema.json`, FE-054) và operator tasks; **các màn S3 không tiêu thụ stage-drift** |
+| Codex `f4643915` ("recover exact source rollback before human ENTER", 2026-10-19 11:19) | **không** là ancestor của tip; chỉ xác nhận commit tồn tại | Không đọc nội dung; không có gì trong S3 phụ thuộc vào nó (chưa kiểm sâu) |
+| `packages/contracts/schemas/execution-paper-read.v1.schema.json` | `f22f64be` (lần sửa cuối; không đổi bởi 678cf731) | Paper workbench. `Data` có nhánh `sessions`/`reconciliation` kiểu `Records` không đặt tên field mà màn không đọc (FE-067) |
+| `…/execution-sandbox-certification.v1.schema.json` + fixture `…unavailable.valid.json` | `7424d1a8`, `421e21c7` | Sandbox V1 body; nguồn tối nên mọi bước UNAVAILABLE |
+| `…/execution-canary-control-room.v1.schema.json` + fixture | `3960c184`, `02503386` | Canary V1; `series.points maxItems 0`, `rollback_readiness.ready const false` |
+| `…/execution-live-full-operations.v1.schema.json` + fixture | `3960c184`, `421e21c7` | Live V1 |
+| `…/execution-live-source.synthetic.valid.json` (V2 live-source) | `25218372` | Live V2, 11 panel quan sát lưu giữ |
+| `…/execution-governance-product.v1.schema.json` (approval-create, summary 8..2000) | `5b682dbd` | New request; server tối thiểu 8 ký tự (hi-fi 24) |
+| `…/execution-analytics.openapi.json` (shadow-panel) | `7424d1a8` | Đọc để hỏi Codex; **không dùng** (S3-U1) |
+| Hi-fi `upgrade/execution_loop/design/hifi/v2/{deployment,sandbox,canary,live,new-approval}.html` + `modules/stage.js`; ảnh trích từ artifact "Execution V2 Screens" (`deployment-{mgr,res,wire}`, `hl-deployment-orders`, `sandbox-{mgr,res,v1}`, `canary-{mgr,res}`, `live-{mgr,res}`, `hl-live-mismatch`, `new-approval-{mgr,res}`, `hl-new-approval-drawer`) | kit `design/hifi/v2` (pin S0); ảnh chỉ nằm trong scratchpad phiên | Trạng thái không có ảnh (loading/partial/stale/guarded/mismatch/gap/nq) đọc từ mã HTML/JS: bằng chứng bằng mã, không bằng ảnh |
+
+## Giao gì (commit, theo thứ tự)
+| Việc | Commit | Ghi chú |
+| --- | --- | --- |
+| S3 plan + quyết định D1–D13 | `7ce1be27` | Phân tích chỉ-đọc của một agent; quyết định áp dụng chờ Bobby phủ quyết |
+| W0a khung dùng chung | `9735d803` | 5 khoá cờ, slug tab + alias, `compose=request`, `EnvLock.effective`, `StageHeader`, `Tabs/UrlTabs`, `CapGauge`, `BlockerList`, `Triad.suppressed`, `reasons.ts`, `css/stage.css`, sửa link Canary (D5) |
+| W0b cổng có phiên bản | `855ad7c0` | `getSandboxCertificationVersioned`, `getCanaryVersioned`, `getLiveFullVersioned(panel, cursor)` ở `ports/httpApi/fixtureApi` |
+| W-PAPER | `913ff641` | `screens/workbench/**` |
+| W-REQUEST | `a2af09bc` | `screens/request/**` (trang + `RequestDrawer`) |
+| W-SANDBOX | `93b33116` | `screens/sandbox/**` (cả hai thân, ghi chú review) |
+| W-CANARY | `4eb1fb55` | `screens/canary/**` |
+| W-LIVE | `2b831cb8` | `screens/live/**` |
+| W-INTEG | `ef9014f3` | Một chunk `lazy()` đọc chuỗi env thô cho mỗi màn; ContextBar khoá cửa sổ + env theo màn; New request sang Carbon; nút New request + `RequestDrawer` trên cockpit; `EXEC_V2_PENDING_KEYS` rỗng; sửa 3 test đỏ có sẵn |
+| W-E2E | `fcca44ed` | `e2e/bffDoubleStage.ts`, 15 hàng SCREENS × 2 khổ, luồng click, crawler, route fixture BFF |
+| Sửa ngăn kéo | `8b9f361a` | Ngăn kéo cockpit POST qua delivery policy của màn New request (policy của inbox có `governance_write_enabled=false`) |
+| FF-A / FF-B1 / FF-B2 | `e6127770` / `65a5f74e` / `82943cfb` | Sửa 10 lỗi luồng + lỗi route (xem [user-flow-audit](user-flow-audit-2026-10-19.md) "Trạng thái sau sửa") |
+| Crawler link | `dd4fab21`, `2404c164` | `e2e/execution-v2-links.spec.ts`, `v2Lane.ts`, `linkTargets.test.tsx` |
+| Sửa reader | `94402566` | `certification.ts`, `liveFull.ts` (additive, V1 byte-identical), testkit `maxProperties`/`propertyNames`; gỡ workaround conformance của Canary/Access/Manager |
+| Làm mới ledger N29/EDS-12 | `21af6792` | |
+
+## Bản đồ hi-fi → component → field → trạng thái → test
+Test là tệp trong `src/execution/v2/`; số `it()` là số khối trong tệp (case sinh bằng generator nhiều hơn: commit message ghi Paper model 369, màn L1 139, scale 9, negative 944 case thực chạy).
+
+**Paper workbench** (`deployment-{mgr,res,wire}`, `hl-deployment-orders`; flag `workbench`; `screens/workbench/`)
+| Hi-fi | Component | Field đã publish | Trạng thái | Test |
+| --- | --- | --- | --- | --- |
+| Masthead, crumb, thẻ PAPER, link Alpha/Account | `Header.tsx` | `deployment.{strategy_id,portfolio_id,account_id,venue}` | `Not published (FE-066)` cho tên; Account ẩn khi thiếu `execution.accounts.read` | `workbench.test.tsx` (71), `model.test.ts` (55) |
+| 3 chip Runtime / Display freshness / Reconciliation | `Header.tsx` `chipsOf`, `StickySummary.tsx` | `deployment.active` (cờ nguồn), `envelope.freshness`, `asOf` | Runtime/Reconciliation `Not published (FE-067)`; freshness thật; không tuổi "14m" | cùng tệp |
+| Lifecycle (spine, "3 of 7 criteria", Request exit review) | `LifecyclePanel`, `ExitGatePanel.tsx` | `observation_gate` (ngày, giao dịch, `state`) | spine không vẽ R1/R2 xong (FE-027/028); nút tắt kèm lý do + My access | cùng tệp |
+| Tabs Overview/Orders/Fills/Positions/Sessions | `UrlTabs`, `OverviewTab`, `OrdersTab`, `FillsTab`, `PositionsTab`, `SessionsTab`, `TablePanel` | `orders`, `fills`, `positions`, `account_equity` | 200 hàng + "Showing N of total"; Sessions `Not published (FE-067)` kèm số đếm; Long/Short/Gross → cột đã publish | `workbench.scale.test.tsx` (9: thân 1 MiB và 7 MiB), `workbench.negative.test.tsx` (generator ~944 case) |
+| Equity vs approved band | `OverviewTab` + `EquityPanel` | `account_equity` rows | band `Not published (FE-029)`; drawdown `(FE-013)` | `workbench.test.tsx` |
+| Execution quality | `OverviewTab` | `getDeploymentQuality` | Latency "Not available", cờ Partial theo `latencyState` | cùng tệp |
+
+**Sandbox** (`sandbox-{mgr,res,v1}`; flag `sandbox`; `screens/sandbox/`)
+| Hi-fi | Component | Field | Trạng thái | Test |
+| --- | --- | --- | --- | --- |
+| Head, 3 chip, spine | `StageHeader` + `index.tsx` | `lifecycle`, `runtime_state` null | Runtime `Not published (FE-067)`; spine không "done" | `sandbox.test.tsx` (41) |
+| 5 KPI (Steps passed, Open findings, Critical open, Plans, Gate) | `index.tsx` facts | `progress.passedCount/totalCount` (server), `findings` | Findings/Critical chỉ từ danh sách đầy đủ, ngược lại `(FE-072)` | `model.test.ts` (33) |
+| Tab Reconciliation: Triad + Findings | `Triad` (suppressed), `FindingsPanel` | `source_panels` (envelope), `findings.rows` (`finding_code`, `summary`, `blocking`, `resolved_at`, `created_at`) | 3 cột "Not available" + lý do (khoá hàng FE-072); Difference không tự trừ | cùng tệp |
+| Tab Steps (7 ô) | `StepsGrid.tsx` | `steps[]` V1 / `steps.items[]` V2 | PASS/FAIL/STALE/UNAVAILABLE từ server; "why" chỉ từ `summary` công bố | `readSandbox.conformance.test.ts` (21) |
+| Promotion plans, Timeline | `PlansPanel`, `TimelinePanel` | `promotion_plans[]`, `timeline.rows` | Envelope/Author `(FE-072)` | `sandbox.test.tsx` |
+| Rail: Exit review (Submit, Request exit disabled) + Record review note | `ExitReviewPanel`, `ReviewNoteForm` | `getReviewCaptureCapabilities`, `captureSandboxNote` | Ghi thật theo capability server, 8–1000 ký tự, không optimistic, idempotent theo ý định, từ chối có kiểu | `reviewNote.test.tsx` (25) |
+
+**Canary** (`canary-{mgr,res}`; flag `canary`; `screens/canary/`)
+| Hi-fi | Component | Field | Trạng thái | Test |
+| --- | --- | --- | --- | --- |
+| Khung kép guard, 3 chip, spine, Trial strip | `StageHeader`, `TrialStrip.tsx` | `lifecycle.day_index/duration_days` | "Trial day not stated" khi null; ngày mở exit `(FE-071)` | `canary.test.tsx` (48), `model.test.ts` (29) |
+| 5 KPI | `Kpi` (index) | `kpis[]` | `value` null → Not available; không chia | cùng tệp |
+| Chart Live vs Paper vs Backtest | `SeriesPanel` (`index.tsx`): một dòng `NotPublished`, không vẽ đường | `series` (`points maxItems 0`) | `Not published (FE-029/013/072)` | cùng tệp |
+| Tab Envelope + gauge | `EnvelopeTab.tsx`, `CapGauge` | `envelope.limits`, `envelope_compliance` | gauge chỉ khi server cho tỷ lệ (D7); `(FE-071)` | `readCanary.conformance.test.ts` (22), `readCanary.test.ts` (28) |
+| Tab Positions & orders | `PositionsOrdersTab.tsx` | `positions`, `blotter` rows (tên field của nguồn) | cột hi-fi `(FE-072)` | `canary.test.tsx` |
+| Tab Reconciliation, Guard rule | `ReconGuardTabs.tsx` | `source_panels`, `command_policy.guard_semantics` | Triad "Not available"; guard rule suy từ cờ cấu trúc | cùng tệp |
+| Rail: Hold/Reduce/Rollback/Request scale, Before scale-up, Rollback readiness | `DecisionPanel`, `BeforeScaleUp`, `RollbackPanel` (`Rail.tsx`) | `command_policy`, `lifecycle.blocker_codes`, `rollback_readiness` | luôn disabled + lý do (D6); "Ready" chỉ khi server true và không mâu thuẫn; 4 mục kiểm tra `(FE-071)` | cùng tệp |
+
+**Live** (`live-{mgr,res}`, `hl-live-mismatch`; flag `live`; `screens/live/`)
+| Hi-fi | Component | Field | Trạng thái | Test |
+| --- | --- | --- | --- | --- |
+| Khung kép, 3 chip, spine, thông báo Canary | `StageHeader` + notice | `broker_consistency.state`, `lifecycle.declared_stage` | Runtime `(FE-067)`; Canary chỉ có dòng link, không redirect (D5) | `live.test.tsx` (59), `model.test.ts` (37) |
+| 5 KPI; chart slot (chart / mismatch / gap / unavailable) | `Kpi`, `ChartSlot` (`parts.tsx`) | `kpis`, `projection_continuity.gap_detected`, `broker_values_visible` | KPI `(FE-072)`; mismatch → khung đỏ + "Hidden", không rò giá trị broker (test DOM); gap null ≠ không gap | cùng tệp |
+| Tab Exposure & orders (Triad + Positions) | `ExposureTab`, `KeyedTable` | `positions`, `orders` (V1 rows tự do; V2 `signed_qty`, `avg_px_open`, `mark_price`, …) | Leverage, Ack latency `(FE-072)`; keyset "Load more" 200 hàng, cursor hết hạn → khởi động lại | cùng tệp |
+| Tab Continuity / Predecessor envelope / Guard rules | `ContinuityTab`, `PredecessorTab`, `GuardRulesTab` | `projection_continuity`, `predecessor_canary_envelope`, `command_policy` | gap window `(FE-072)`; 3 hàng guard từ cờ cấu trúc | cùng tệp |
+| Rail: Protective ladder (Halt/Reduce/Close), What is blocking | `ProtectiveLadder`, `BlockerList` | `command_policy`, các `blocker_codes` | 3 bậc disabled "Live decisions are closed on this build" + My access; mã thô vào Provenance | cùng tệp |
+
+**New request** (`new-approval-{mgr,res}`, `hl-new-approval-drawer`; flag `request`; `screens/request/`)
+| Hi-fi | Component | Field | Trạng thái | Test |
+| --- | --- | --- | --- | --- |
+| Tiêu đề, StepBar 3 bước | `index.tsx`, `StepBar` | – | – | `request.test.tsx` (65) |
+| Form: Alpha, Evidence run, Methodology claim, Summary | `NewRequestForm.tsx`, `useNewRequest.ts` | `GET /api/v1/quantbt/runs?limit=50` (COMPLETED), `eligible_methodology_claim_ids` | Alpha = alpha của run COMPLETED, "Showing 50" khi cắt `(FE-069)`; summary 8..2000 ký tự (D8) | `model.test.ts` (47), `request.test.tsx` |
+| "Still needed" + Submit | thanh trong `NewRequestForm.tsx` | – | Submit tắt "Fill the missing fields first"; chặn bấm đúp; một khoá theo ý định | cùng tệp |
+| Kết quả Created / Duplicate / Refused / Offline | `OutcomePanel.tsx` | `ApprovalCreateOutcome` (created, replayed, duplicate, refused, failed, offline) | mã từ chối vào Provenance; offline thử lại cùng khoá + payload | cùng tệp |
+| Biến thể drawer 380px | `RequestDrawer.tsx` trên cockpit | `?compose=request` | URL chỉ điền form, không bao giờ POST; Esc trả focus; hàng đợi giữ nguyên | `request.test.tsx`, `cockpit.test.tsx`, e2e `execution-v2-s1.spec.ts:235` (đang đỏ) |
+
+## Độ lệch so với hi-fi (D13 a–g và theo màn)
+D13 (đã áp dụng, chờ Bobby phủ quyết): **(a)** chip Runtime/Reconciliation ghi "Not published" thay cho "Running/Reconciling" xanh tới FE-067; **(b)** spine không đánh "done" R1/R2 tới FE-027; **(c)** không in tuổi "14m" tự tính; **(d)** Positions Paper dùng cột đã publish thay Long/Short/Gross (FE-051); **(e)** tab Sessions và chip VN hiện "Not published" kèm id (FE-067, FE-070); **(f)** bỏ "Preview the result states" và công tắc "Route page | Drawer" khỏi sản phẩm; **(g)** thanh bối cảnh khoá môi trường theo deployment ("The deployment fixes the environment.").
+Theo màn (từ commit message, tiêu đề tệp `index.tsx` và plan):
+- Paper: mặc định mở Overview (V1 mở Orders); một đọc profile + nút Refresh, không realtime (D11); chấp nhận đọc profile ~7,4 MB ~6 s (D12, hỏi Codex S3-U1); bảng cắt 200 hàng; Account ẩn theo `execution.accounts.read` (tên tạm FE-037).
+- Sandbox: ghi chú review tối thiểu 8 (server/V1), không phải 24 của hi-fi; Submit for review và Request Sandbox exit review luôn tắt (không có route lệnh, BR-EX-61); Difference không tự trừ; bước "why" chỉ từ câu server công bố.
+- Canary: nhóm quyết định hiện dạng disabled kể cả khi V1 ẩn (`visible:false`, D6); không có "Used %" tự tính (D7); chart ba đường chưa vẽ: `SeriesPanel` chỉ in `Not published` (và `EquityPanel` chỉ có một `ghost`); "Ready" chỉ từ server true.
+- Live: Halt/Reduce/Emergency close luôn disabled, không là no-op bật như V1; Canary notice thay vì redirect (D5); `panel`/`cursor` không vào URL trang.
+- New request: không chip "Fresh · 12:04Z" (không có nguồn); danh sách Alpha suy từ run COMPLETED, không có nhãn ALL AUTHORIZED / YOUR ALPHAS (FE-069); khoá URL của ngăn kéo là `compose=request`; "Check original request" mở Inbox vì chưa có tra theo khoá (FE-069).
+
+## Số liệu thay đổi
+`git diff --stat 35953e07..21af6792`: **444 file, +64.540/−1.182**. Phần Codex (`d0789674`, `678cf731`): 93 file, +8.604/−210. Phần của Claude (`678cf731..21af6792`, 69 commit): **360 file, +55.940/−976**, theo loại: code sản phẩm V2 +15.490/−508 (141 file); css V2 +2.867/−41 (22); test và double V2 +21.100/−135 (88); code V1/dùng chung +920/−82 (15) và test của chúng +1.478/−2 (13); e2e spec và BFF double +2.427/−136 (11); fixture BFF +8.438/−0 (17); contracts (schema, generated, fixture) +414/−22 (15); control-api (FE-056/049/061, migration) +506/−24 (7); deploy/scripts +668/−2 (8); markdown +1.624/−16 (18); ledger JSON khác +8/−8 (5).
+
+## Evidence (thật)
+- `tsc --noEmit -p tsconfig.json`: exit 0.
+- Vitest rộng `npx vitest run --maxWorkers=3 src/execution src/styles src/app src/portal src/fixtureBff e2e`: **38.699 pass, 5 fail, 8 expected-fail, 2 skipped; 267 tệp pass, 1 tệp fail**. 5 lỗi đều ở `realtimeProducerConsumer.test.tsx` (test môi trường của Codex, đỏ cả trên tip sạch của Codex, DEBT-UXM07-014).
+- Playwright V2 (`execution-v2-s1` + `execution-v2-links`, `chromium-v2`): **exit 1: 74 pass, 2 fail**. Đỏ: (1) `execution-v2-s1.spec.ts:45` hàng `live-v2body` ở 1440: `[data-screen="live-v2"]` không hiện trong 5 s; (2) `:235` ngăn kéo New request: nút "Submit for R1 review" vẫn disabled ("This screen has no published delivery policy…"), đúng triệu chứng `8b9f361a` đã định sửa. Crawler link: pass (5,1 phút). **Chưa chẩn đoán trong bước docs; log không ghi bản build đã dùng** (DEBT-UXM07-023). Không gọi là xanh.
+- Bước docs này: `scripts/execution-tracking-test.sh` (R0), `git diff --cached --check`, `node --test scripts/research-preview/fixture-bff-config.test.mjs` (15 pass).
+- Trình duyệt bắt được cái test đơn vị không bắt (đã ghi trong commit): ngăn kéo cockpit bị policy inbox chặn POST (`8b9f361a`); ba test có sẵn đỏ trên tip (hàng canary, literal lane-root, literal testbase) được sửa cùng `ef9014f3`.
+
+## Chưa làm / NOT_RUN
+Visual pinned-image (verify) cho nhóm V2 mới và các tệp V1 dùng chung (`certification.ts`, `liveFull.ts`, `Sidebar`, `PortalShell`, `PortalRoutes`, `navigation`, `links`); hook đầy đủ; axe trên route V2; đọc API thật; bundle-size test (cần `dist/`); không có baseline ảnh nào cho nhóm mới (DEBT-UXM07-016/017/019). Ảnh hi-fi chỉ xem trong phiên (scratchpad), không commit.
+
+## Agent log 2026-10-19 (vai trò đã dùng; không ghi số token vì không có số đo)
+- Phân tích chỉ-đọc cho kế hoạch S3 (một agent, xem hi-fi và mã V1/V2): `7ce1be27`.
+- Writer W0a (khung), W0b (cổng/reader có phiên bản): hai writer song song, file rời nhau.
+- Writer theo màn: W-PAPER, W-SANDBOX, W-CANARY, W-LIVE, W-REQUEST (mỗi writer một thư mục, một commit).
+- Writer sửa luồng: FF-A (route/URL), FF-B1 (Operations, Admin, Overview, Blotter, Access, Portfolios), FF-B2 (Alpha, Account, Cockpit, Fleet, Drawer).
+- W-INTEG (nối route, người duy nhất chạm `ExecutionPreviewRoute.tsx`), W-E2E (double, spec, fixture BFF), writer crawler link, writer sửa reader (`94402566`).
+- Reviewer độc lập chỉ-đọc: luồng hành trình (journeys), route/URL, trung thực (honesty), a11y, backend F1 (B1/FE-042), logic FE, kiểm tra đầy đủ (completeness audit); kết quả: [user-flow-audit](user-flow-audit-2026-10-19.md), mục "Đợt sửa thứ hai" phía trên, và danh sách trong phiên này. Hai review độc lập về S3 chưa có tệp trong `evidence/UXM-07/` tại thời điểm viết.
+- Docs writer (bước này): chỉ sửa tài liệu và hai tệp fixture-preview; không sửa mã sản phẩm (ngoại trừ một câu comment trong `v2/blocks/notPublished.tsx`).
