@@ -34,9 +34,9 @@ async function loaded() {
 }
 
 describe("tabs", () => {
-  it("every tab key is one the alias table knows, and More holds the three that fold away", () => {
+  it("every tab key is one the alias table knows, and More holds Trade Replay and the two that fold away", () => {
     const keys = [...ALPHA_TABS, ...ALPHA_MORE_TABS].map((t) => t.key);
-    expect(keys).toEqual(["performance", "deployments", "evidence", "orders", "activity", "replay", "regime", "positions", "reconciliation"]);
+    expect(keys).toEqual(["performance", "deployments", "evidence", "regime", "orders", "activity", "replay", "positions", "reconciliation"]);
     expect(keys.every(isAlphaTab)).toBe(true);
     expect(isAlphaTab("overview")).toBe(false);
   });

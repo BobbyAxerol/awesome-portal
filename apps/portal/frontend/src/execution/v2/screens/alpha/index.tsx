@@ -40,7 +40,6 @@ import { PanelState } from "../../../components/states";
 import { utcStamp } from "../../../time";
 import { useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
-import type { FlagKind } from "../../flagKinds";
 import { V2_CAPABILITY, holds } from "../../shell/roleNav";
 import { applyTab, resolveTab } from "../../tabAliases";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
@@ -60,6 +59,7 @@ import {
   deploymentRows,
   equityInputs,
   focusTarget,
+  freshnessFlag,
   isAlphaTab,
   humanize,
   positionRows,
@@ -88,15 +88,6 @@ export interface AlphaScreenProps {
   alphaId: string;
   /** Carried to the reads that take it (`workspace_id`); the URL's value wins. */
   workspaceId?: string;
-}
-
-function freshnessFlag(freshness: string | null): { kind: FlagKind; label: string } {
-  switch ((freshness ?? "").toUpperCase()) {
-    case "FRESH": return { kind: "ok", label: "Fresh" };
-    case "STALE": return { kind: "stale", label: "Stale" };
-    case "": return { kind: "unknown", label: "Freshness not published" };
-    default: return { kind: "unknown", label: humanize(freshness ?? "") };
-  }
 }
 
 function Fig({ label, children, basis }: { label: string; children: ReactNode; basis?: string }) {
@@ -206,7 +197,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
     <div className="exec-alp2-v2" data-screen="alpha-360-v2">
       <header className="exec-alp2-head">
         <div>
-          <Link className="exec-alp2-back" to={linkTo("/deployments/alphas")}>Back to Alpha Fleet</Link>
+          <Link className="exec-alp2-back" to={linkTo("/deployments/alphas")}>← Alpha Fleet results</Link>
           <h1 className="exec-alp2-title">
             {item ? item.alphaLabel : alphaId}
             {item ? <span className="exec-alp2-version">v{item.version}</span> : null}
@@ -241,8 +232,9 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
       ) : (
         <div className="exec-alp2-main" data-docked={selection === "score" && mode === "dock" ? "true" : undefined}>
           <div className="exec-alp2-body">
-            <LifecyclePanel item={item} current={current} selected={stagePick} onSelect={setStagePick} linkTo={linkTo} />
+            {tab === "replay" ? null : <LifecyclePanel item={item} current={current} selected={stagePick} onSelect={setStagePick} linkTo={linkTo} />}
 
+            {tab === "replay" ? null : (
             <dl className="exec-blk-kpis exec-alp2-kpis" aria-label="Current facts">
               <Fig label="Net PnL, current" basis="All stages, current facts">
                 {item && item.positionPnl.length > 0
@@ -254,7 +246,12 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
               </Fig>
               <Fig label="Return"><Np id="FE-006" /></Fig>
               <Fig label="Max drawdown"><Np id="FE-025" /></Fig>
+              <Fig label="Regime fit" basis="Separate from score">
+                <Np id="FE-011" />{" "}
+                <Link className="exec-blk-link" to={linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=regime`)}>Open</Link>
+              </Fig>
             </dl>
+            )}
 
             <div className="exec-alp2-tabbar">
               <div className="exec-alp2-tabs" role="tablist" aria-label="Alpha detail">
@@ -292,6 +289,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
               </div>
               {deployed.length > 1 && (tab === "performance" || tab === "orders" || tab === "activity" || tab === "replay") ? (
                 <span className="exec-alp2-seg" role="group" aria-label="Book">
+                  <span className="exec-alp2-dim exec-alp2-seg-label">Book</span>
                   {deployed.map((e) => (
                     <button key={e} type="button" className="exec-alp2-segbtn" aria-pressed={env === e} onClick={() => url.set({ env: e })}>{ENV_LABEL[e]}</button>
                   ))}

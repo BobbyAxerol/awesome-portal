@@ -261,10 +261,12 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
           {identity ? <Flag kind={identity.stateKind} label={identity.stateLabel} size="sm" /> : null}
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {resource ? <span className="exec-pf-dim">{resource.asOf ? `As of ${utcStamp(resource.asOf)}` : "Source time not published"}</span> : null}
-          <button type="button" className="exec-pf-btn" disabled title={EXPORT_REASON} aria-describedby={`${tabsId}-export`}>Report pack</button>
-          <span id={`${tabsId}-export`} className="exec-pf-sr">Report pack: {EXPORT_REASON}</span>
+          <span className="exec-pf-btnwhy">
+            <button type="button" className="exec-pf-btn" disabled title={EXPORT_REASON} aria-describedby={`${tabsId}-export`}>Report pack</button>
+            <span id={`${tabsId}-export`} className="exec-pf-why">{EXPORT_REASON}</span>
+          </span>
           <Link className="exec-pf-link-btn" to={compareHref}>Compare with</Link>
-          <button type="button" className="exec-pf-btn" data-variant="primary" disabled={identity === null} title={identity === null ? "The portfolio has not resolved" : undefined} onClick={() => select(RAIL_SELECTION)}>Actions</button>
+          <button type="button" className="exec-pf-btn" disabled={identity === null} title={identity === null ? "The portfolio has not resolved" : undefined} onClick={() => select(RAIL_SELECTION)}>Actions</button>
         </div>
       </header>
       <div className="exec-pf-main" data-docked={selection === RAIL_SELECTION && mode === "dock" ? "true" : undefined}>

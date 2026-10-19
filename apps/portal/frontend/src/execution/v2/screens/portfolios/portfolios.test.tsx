@@ -44,7 +44,7 @@ describe("register", () => {
   });
 
   it("lists the six rows, real portfolios by name and Unallocated last", async () => {
-    mount(makeApi().api);
+    mount(makeApi().api, "/deployments/portfolios?hide=none");
     await loaded();
     expect(names()).toEqual(["Canary", "Core", "Pilot", "Satellite", "Yen-Carry", "Unallocated"]);
     const core = bodyRows().find((r) => r.textContent?.includes("Core"))!;
@@ -102,7 +102,7 @@ describe("register", () => {
   });
 
   it("treats Unallocated as a bucket: not linked, not selectable, every figure Not published", async () => {
-    mount(makeApi().api);
+    mount(makeApi().api, "/deployments/portfolios?hide=none");
     await loaded();
     const una = bodyRows().find((r) => r.textContent?.includes("Unallocated"))!;
     expect(una.querySelector("a")).toBeNull();
@@ -124,8 +124,26 @@ describe("register", () => {
     expect(href).toContain("window=30d");
   });
 
-  it("marks every cell with its column label, so the same markup stacks as cards at 660px and below", async () => {
+  it("opens with Domain hidden (the hi-fi default), so the eleven columns fit; the chooser brings it back and the address remembers it", async () => {
     mount(makeApi().api);
+    await loaded();
+    for (const row of bodyRows()) {
+      expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
+        "Compare", "Portfolio", "Owner", "State", "Allocations", "Deployments", "Allocated capital", "NAV", "Net PnL", "Return", "Drawdown", "Concentration",
+      ]);
+    }
+    expect(search().has("hide")).toBe(false);
+    const menu = screen.getByRole("group", { name: "Columns" });
+    expect((within(menu).getByRole("checkbox", { name: "Domain" }) as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(within(menu).getByRole("checkbox", { name: "Domain" }));
+    expect(search().get("hide")).toBe("none");
+    expect(cell(bodyRows()[0], "Domain")).not.toBe("");
+    fireEvent.click(within(menu).getByRole("checkbox", { name: "Domain" }));
+    expect(search().has("hide")).toBe(false);
+  });
+
+  it("marks every cell with its column label, so the same markup stacks as cards at 660px and below", async () => {
+    mount(makeApi().api, "/deployments/portfolios?hide=none");
     await loaded();
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
@@ -270,13 +288,13 @@ describe("columns", () => {
     expect((within(menu).getByRole("checkbox", { name: "Portfolio" }) as HTMLInputElement).disabled).toBe(true);
     fireEvent.click(within(menu).getByRole("checkbox", { name: "NAV" }));
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Concentration" }));
-    expect(search().get("hide")).toBe("nav,hhi");
+    expect(search().get("hide")).toBe("domain,nav,hhi");
     const headers = [...table().querySelectorAll("th")].map((th) => th.textContent);
     expect(headers).not.toContain("NAV");
     expect(headers).not.toContain("Concentration");
     expect(headers).toContain("Net PnL");
     fireEvent.click(within(menu).getByRole("checkbox", { name: "NAV" }));
-    expect(search().get("hide")).toBe("hhi");
+    expect(search().get("hide")).toBe("domain,hhi");
   });
 
   it("honours a hide list in the address and ignores a name it does not know", async () => {

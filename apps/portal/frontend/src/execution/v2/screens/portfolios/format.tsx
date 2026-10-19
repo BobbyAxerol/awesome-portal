@@ -13,16 +13,31 @@ import { Fragment, type ReactNode } from "react";
 import type { CurrencyValue } from "../../../api/profileRead";
 import { readDecimal } from "../../boundary";
 import type { FlagKind } from "../../flagKinds";
-import { npText, type Unpublished } from "./fe";
+import { NOT_PUBLISHED_WORD, type Unpublished } from "./fe";
 
 import "../../css/portfolios.css";
 
 export function Np({ fact, children }: { fact: Unpublished; children?: ReactNode }) {
   return (
     <span className="exec-pf-np" title={fact.what}>
-      {npText(fact)}
+      {NOT_PUBLISHED_WORD} <FeIds fe={fact.fe} />
       {children ? <> {children}</> : null}
     </span>
+  );
+}
+
+/** `(FE-005, FE-025)`, each id kept whole: a narrow cell breaks between ids, never inside one. Reads as the same text. */
+function FeIds({ fe }: { fe: string }) {
+  const ids = fe.split(", ");
+  return (
+    <>
+      {ids.map((id, i) => (
+        <Fragment key={id}>
+          {i > 0 ? " " : null}
+          <span className="exec-pf-fe">{i === 0 ? "(" : ""}{id}{i === ids.length - 1 ? ")" : ","}</span>
+        </Fragment>
+      ))}
+    </>
   );
 }
 

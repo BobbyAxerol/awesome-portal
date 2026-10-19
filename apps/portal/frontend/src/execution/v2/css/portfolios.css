@@ -4,7 +4,7 @@
 .exec-pf-v2 {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-5);
   min-width: 0;
   color: var(--ink);
 }
@@ -57,6 +57,29 @@
   background: var(--surface-2);
   border: 1px solid var(--line-strong);
 }
+div.exec-pf-banner {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.exec-pf-banner-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+/* The reason a disabled control is off, printed under it (hi-fi .why) so touch and sighted readers get it too. */
+.exec-pf-btnwhy {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.exec-pf-why {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
 .exec-pf-banner[data-tone="info"] {
   color: var(--ink);
   background: var(--paper-raised);
@@ -67,8 +90,11 @@
 .exec-pf-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-width: 0;
+  padding: var(--space-4);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
 }
 .exec-pf-tool {
   display: flex;
@@ -201,6 +227,45 @@
   padding-bottom: 2px;
 }
 
+/* The register fits the page (hi-fi: cell padding 5px, th may wrap, "Not
+ * available" and "Not published" take two lines, Owner is narrow). Scoped to
+ * the panel so no other CardsTable changes. Above 660px only: the cards below
+ * it have their own rules in cards.css. */
+@media (min-width: 661px) {
+  .exec-pf-panel .exec-cards thead th {
+    padding: 6px 5px;
+    white-space: normal;
+    vertical-align: bottom;
+  }
+  .exec-pf-panel .exec-cards tbody td {
+    padding: 6px 5px;
+  }
+  .exec-pf-panel .exec-cards td[data-l="Owner"] {
+    max-width: 104px;
+    white-space: normal;
+  }
+  .exec-pf-panel .exec-cards .exec-pf-name {
+    max-width: 150px;
+  }
+  .exec-pf-panel .exec-cards .exec-pf-id {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .exec-pf-panel .exec-cards .exec-pf-np,
+  .exec-pf-panel .exec-cards .exec-pf-na {
+    display: inline-block;
+    max-width: 104px;
+    white-space: normal;
+    text-align: right;
+  }
+  .exec-pf-panel .exec-cards td[data-l="Owner"] .exec-pf-na,
+  .exec-pf-panel .exec-cards td[data-l="Domain"] .exec-pf-na {
+    text-align: left;
+  }
+  .exec-pf-panel .exec-cards .exec-pf-alloc .exec-flag {
+    white-space: normal;
+  }
+}
 /* table cells */
 .exec-pf-check {
   width: 14px;
@@ -236,6 +301,9 @@
   font: var(--exec-font-meta);
   color: var(--ink-faint);
 }
+.exec-pf-fe {
+  white-space: nowrap;
+}
 .exec-pf-note {
   margin: 0;
   color: var(--ink-soft);
@@ -255,7 +323,7 @@
   color: var(--ink);
 }
 .exec-pf-num[data-tone="negative"] {
-  color: var(--series-dd);
+  color: var(--bad);
 }
 .exec-pf-unit {
   font: var(--exec-font-caption);
@@ -334,8 +402,10 @@
   border-bottom: 1px solid var(--line-strong);
 }
 .exec-pf-tab {
-  padding: 6px var(--space-3);
-  font: var(--exec-font-control);
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink-soft);
   background: none;
   border: 0;
@@ -347,7 +417,6 @@
 }
 .exec-pf-tab[aria-selected="true"] {
   color: var(--ink);
-  background: var(--accent-soft);
   border-bottom-color: var(--accent);
 }
 .exec-pf-tabpanel {
@@ -362,8 +431,8 @@
 }
 .exec-pf-grid2 {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
   align-items: start;
 }
 .exec-pf-grid2 > * {
@@ -372,18 +441,19 @@
 .exec-pf-kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: var(--space-2);
+  gap: 1px;
   margin: 0;
+  background: var(--line-strong);
+  border: 1px solid var(--line-strong);
 }
 .exec-pf-kpi {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   color: var(--ink);
   background: var(--paper-raised);
-  border: 1px solid var(--line);
 }
 .exec-pf-kpi-label {
   font: var(--exec-font-meta);
@@ -396,8 +466,11 @@
   margin: 0;
 }
 .exec-pf-kpi-value {
-  font: var(--exec-font-num);
+  font: var(--exec-font-kpi);
   color: var(--ink);
+}
+.exec-pf-kpi-value .exec-pf-num {
+  font: var(--exec-font-kpi);
 }
 .exec-pf-kpi-note {
   font: var(--exec-font-caption);
@@ -432,6 +505,21 @@
 .exec-pf-statements td {
   text-align: right;
 }
+.exec-pf-statements th {
+  text-transform: none;
+  letter-spacing: normal;
+}
+.exec-pf-statements tr.exec-pf-grp th {
+  padding: 5px var(--space-2);
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+}
+.exec-pf-statements tr[data-total="true"] th,
+.exec-pf-statements tr[data-total="true"] td {
+  font-weight: 500;
+  color: var(--ink);
+}
 .exec-pf-cap {
   text-align: left;
   font: var(--exec-font-th);
@@ -452,6 +540,33 @@
   gap: var(--space-3);
   font: var(--exec-font-caption);
   color: var(--ink-faint);
+}
+.exec-pf-attn {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-pf-attn > li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-pf-attn > li:last-child {
+  border-bottom: 0;
+}
+.exec-pf-attn-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-control);
+  color: var(--ink);
 }
 .exec-pf-list {
   margin: 0;

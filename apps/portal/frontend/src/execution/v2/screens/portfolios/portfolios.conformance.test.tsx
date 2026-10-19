@@ -437,7 +437,7 @@ describe("L3 · negative payloads", () => {
     expect(wrong).toEqual([]);
     // The one case that is not a success: an unknown word, on screen, is named, not coloured.
     const body = (cases.find((c) => (c.value as Draft).items[0].environments[0] === "UNKNOWN_WORD_FROM_TESTKIT")!.value);
-    mount(makeApi((_m, path) => (path === "/portfolios" ? { status: 200, body } : undefined)).api);
+    mount(makeApi((_m, path) => (path === "/portfolios" ? { status: 200, body } : undefined)).api, "/deployments/portfolios?hide=none");
     await loaded();
     const row = bodyRows().find((r) => r.querySelector(".exec-pf-title")?.textContent === "Carry Core")!;
     expect(cellOf(row, "Domain")).toContain("Domain not published");

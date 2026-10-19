@@ -54,9 +54,32 @@ const UNPUBLISHED: Readonly<Partial<Record<ColumnId, Unpublished>>> = {
   hhi: PF_FE.concentration,
 };
 
+/**
+ * Columns hidden until the reader asks (hi-fi `hide={dom:true}`): Domain, which
+ * the Domain filter above the table already says. 11 columns fit at 1440; with
+ * Domain the register is wider than the page and the five measures scroll away.
+ */
+export const DEFAULT_HIDDEN: readonly ColumnId[] = ["domain"];
+
+/** The `hide` value that means "hide nothing", so a reader can switch the default off. */
+export const HIDE_NONE = "none";
+
+/**
+ * The hidden set the address names. An absent `hide` is the default set; a
+ * name it does not know is ignored; `none` (or any list with no known name) is
+ * every column shown.
+ */
 export function readHidden(raw: string | null): ReadonlySet<ColumnId> {
+  if (raw === null) return new Set(DEFAULT_HIDDEN);
   const known = new Set<string>(OPTIONAL_COLUMNS.map((c) => c.id));
-  return new Set((raw ?? "").split(",").map((p) => p.trim()).filter((p): p is ColumnId => known.has(p)));
+  return new Set(raw.split(",").map((p) => p.trim()).filter((p): p is ColumnId => known.has(p)));
+}
+
+/** The `hide` value for a hidden set: omitted when it is the default, `none` when empty. */
+export function writeHidden(hidden: ReadonlySet<ColumnId>): string | null {
+  const ids = OPTIONAL_COLUMNS.filter((c) => hidden.has(c.id)).map((c) => c.id);
+  if (ids.join(",") === DEFAULT_HIDDEN.join(",")) return null;
+  return ids.length === 0 ? HIDE_NONE : ids.join(",");
 }
 
 export interface PortfolioTableProps {

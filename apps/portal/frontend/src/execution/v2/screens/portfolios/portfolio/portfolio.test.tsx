@@ -148,9 +148,22 @@ describe("Overview", () => {
     expect(all.queriesOf("/views/equity-chart")[0].has("from_ms")).toBe(false);
   });
 
-  it("shows capital per environment as current facts, partial where the source is, and never one total", async () => {
+  it("shows capital statements in two groups on the Overview, and the per-currency capital only on Allocations, never twice", async () => {
     mount(makeApi().api);
     await ready();
+    expect(screen.queryByRole("region", { name: "Capital in Live" })).toBeNull();
+    const statements = screen.getByRole("table", { name: "Capital statements" });
+    expect(within(statements).getByText("Cash flows")).toBeTruthy();
+    expect(within(statements).getByText("Budget · not cash")).toBeTruthy();
+    const order = [...statements.querySelectorAll("tbody tr")].map((tr) => tr.querySelector("th")?.textContent);
+    expect(order).toEqual(["Cash flows", "Initial funds", "Added funds", "Returned", "Net external flows", "Net PnL, since start", "NAV", "Budget · not cash", "Approved budget", "Recalling", "Headroom"]);
+    for (const row of ["Initial funds", "Added funds", "Returned", "Net external flows", "Approved budget", "Recalling", "Headroom"]) {
+      expect(within(statements).getByText(row).closest("tr")!.textContent).toContain("Not published (FE-017)");
+    }
+    expect(within(statements).getByText("NAV").closest("tr")!.textContent).toContain("Not published (FE-013)");
+    expect(within(statements).getByText("Net PnL, since start").closest("tr")!.textContent).toContain("Not published (FE-005, FE-025)");
+    expect(within(statements).getByText("Net external flows").closest("tr")!.getAttribute("data-total")).toBe("true");
+    await goto("Allocations");
     const live = screen.getByRole("region", { name: "Capital in Live" });
     expect(within(live).getByText("460,000.00")).toBeTruthy();
     expect(within(live).getByText("700,000.00")).toBeTruthy();
@@ -161,12 +174,12 @@ describe("Overview", () => {
     expect(within(paper).getByText(/MARGIN_BALANCES_NOT_PUBLISHED/)).toBeTruthy();
     expect(within(paper).getByText(/Inputs the source did not publish: margin_balances/)).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Capital in Sandbox" })).toBeNull();
-    const statements = screen.getByRole("table", { name: "Capital statements" });
-    for (const row of ["Initial funds", "Added funds", "Returned", "Net external flows", "Approved budget", "Recalling", "Headroom"]) {
-      expect(within(statements).getByText(row).closest("tr")!.textContent).toContain("Not published (FE-017)");
-    }
-    expect(within(statements).getByText("NAV").closest("tr")!.textContent).toContain("Not published (FE-013)");
-    expect(within(statements).getByText("Net PnL, since start").closest("tr")!.textContent).toContain("Not published (FE-005, FE-025)");
+  });
+
+  it("says on the Overview that Simulated capital is never added to Real-funded figures", async () => {
+    mount(makeApi().api);
+    await ready();
+    expect(screen.getByText("Simulated capital. It is never added to Real-funded figures.")).toBeTruthy();
   });
 
   it("lists what the projection reports as not ready: deployments and accounts", async () => {
@@ -580,6 +593,7 @@ describe("states", () => {
     const refuse: Override = (_m, path, query) => (path.endsWith("/capital") && query.get("environment") === "paper" ? { status: 503, body: {} } : undefined);
     mount(makeApi(refuse).api);
     await ready();
+    await goto("Allocations");
     const paper = screen.getByRole("region", { name: "Capital in Paper" });
     await waitFor(() => expect(paper.textContent).toContain("Unavailable"));
     expect(within(screen.getByRole("region", { name: "Capital in Live" })).getByText("460,000.00")).toBeTruthy();

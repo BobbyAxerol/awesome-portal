@@ -75,12 +75,18 @@ describe("screen contract", () => {
   it("prints no dash and no N/A anywhere on any tab", async () => {
     mount();
     await ready();
-    for (const label of ["Performance", "Deployments", "Research Evidence", "Orders & Fills", "Activity & Decisions", "Trade Replay"]) {
+    for (const label of ["Performance", "Deployments", "Research Evidence", "Regime Fit", "Orders & Fills", "Activity & Decisions"]) {
       fireEvent.click(tabs().getByRole("tab", { name: label }));
       await waitFor(() => expect(tabs().getByRole("tab", { name: label }).getAttribute("aria-selected")).toBe("true"));
       await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
       expect(document.body.textContent ?? "", label).not.toMatch(NO_DASH);
     }
+    // Trade Replay sits under More, as in the hi-fi.
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    fireEvent.click(within(screen.getByRole("menu", { name: "More tabs" })).getByRole("menuitem", { name: "Trade Replay" }));
+    await waitFor(() => expect(search().get("tab")).toBe("replay"));
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    expect(document.body.textContent ?? "", "Trade Replay").not.toMatch(NO_DASH);
   });
 });
 
@@ -231,12 +237,12 @@ describe("tabs on one URL", () => {
     expect(where()).not.toContain("tab=");
   });
 
-  it("More holds Regime Fit, Positions and Reconciliation", async () => {
+  it("More holds Trade Replay, Positions and Reconciliation", async () => {
     mount();
     await ready();
     fireEvent.click(screen.getByRole("button", { name: "More" }));
     const menu = screen.getByRole("menu", { name: "More tabs" });
-    expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Regime Fit", "Positions", "Reconciliation"]);
+    expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Trade Replay", "Positions", "Reconciliation"]);
     fireEvent.click(within(menu).getByRole("menuitem", { name: "Positions" }));
     expect(search().get("tab")).toBe("positions");
     const table = await screen.findByRole("table", { name: "Current positions of this alpha" });

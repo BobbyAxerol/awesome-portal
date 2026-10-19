@@ -72,7 +72,13 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 interface MetricRow { id: string; label: string; cell(row: PortfolioRow): ReactNode }
 
+/** The hi-fi order: the measures first (each says which request publishes it), then what the list read does publish. */
 const METRICS: readonly MetricRow[] = [
+  { id: "nav", label: "NAV", cell: () => <Np fact={PF_FE.nav} /> },
+  { id: "pnl", label: "Net PnL", cell: () => <Np fact={PF_FE.netPnl} /> },
+  { id: "ret", label: "Return", cell: () => <Np fact={PF_FE.ret} /> },
+  { id: "dd", label: "Max drawdown", cell: () => <Np fact={PF_FE.drawdown} /> },
+  { id: "score", label: "Score", cell: () => <Np fact={PF_FE.score} /> },
   { id: "currency", label: "Base currency", cell: (r) => r.baseCurrency },
   { id: "owner", label: "Owner", cell: (r) => r.owner ?? <Absent reason="owner not published" /> },
   { id: "state", label: "State", cell: (r) => <Flag kind={r.stateKind} label={r.stateLabel} size="sm" /> },
@@ -80,11 +86,6 @@ const METRICS: readonly MetricRow[] = [
   { id: "allocations", label: "Allocations", cell: (r) => String(r.allocationCount) },
   { id: "deployments", label: "Deployments", cell: (r) => String(r.deploymentCount) },
   { id: "allocated", label: "Allocated capital", cell: (r) => <MoneyList entries={r.allocated} empty={<Absent reason="no allocation published" />} /> },
-  { id: "nav", label: "NAV", cell: () => <Np fact={PF_FE.nav} /> },
-  { id: "pnl", label: "Net PnL", cell: () => <Np fact={PF_FE.netPnl} /> },
-  { id: "ret", label: "Return", cell: () => <Np fact={PF_FE.ret} /> },
-  { id: "dd", label: "Max drawdown", cell: () => <Np fact={PF_FE.drawdown} /> },
-  { id: "score", label: "Score", cell: () => <Np fact={PF_FE.score} /> },
 ];
 
 export default function CompareScreen({ api, portfolioId, capabilities, routes = DEFAULT_ROUTES }: CompareScreenProps) {
@@ -214,7 +215,10 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
                   >
                     <i className="exec-cmpr-sw" data-glyph={on ? GLYPHS[tone] : undefined} aria-hidden="true" />
                     {row.label}
-                    <small>{row.baseCurrency}{row.unallocated ? " · not comparable" : ""}</small>
+                    <small>
+                      {row.baseCurrency}
+                      {!row.comparable ? " · not comparable" : basis.currency !== null && !on && row.baseCurrency !== basis.currency ? " · other currency" : ""}
+                    </small>
                   </button>
                 );
               })}
@@ -250,7 +254,21 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
             )}
           </SectionPanel>
 
-          <SectionPanel title="Series" aside={<Flag kind="neutral" label="Retained snapshots" size="sm" />}>
+          <SectionPanel
+            title="Series"
+            aside={
+              <>
+                <span className="exec-pf-seg" role="group" aria-label="Series measure">
+                  {([["Return", PF_FE.ret], ["Net PnL", PF_FE.netPnl]] as const).map(([label, fact]) => (
+                    <button key={label} type="button" className="exec-pf-segbtn" aria-pressed="false" disabled title={npReason(fact, "No aligned series is published to draw it from.")}>
+                      {label}
+                    </button>
+                  ))}
+                </span>
+                <Flag kind="neutral" label="Retained snapshots" size="sm" />
+              </>
+            }
+          >
             <CompareOverlay
               label="Comparison"
               series={[]}

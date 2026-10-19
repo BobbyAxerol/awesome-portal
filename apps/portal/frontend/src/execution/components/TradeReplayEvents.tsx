@@ -14,6 +14,7 @@ import { ReplayCandleChart, type ReplayChartHandle } from "./ReplayCandleChart";
 import { buildLog, legLevels, legRole, money, ms, num, pairRoundTrips } from "./tradeReplayModel";
 import { EMPTY_GROUPS, type ReplayGroups } from "./tradeReplayGroups";
 import { soonReason } from "../soon";
+import { plainRow, plainTime } from "./tradeReplayWords";
 import type { LogRow, ReplayFill, ReplayOrder } from "./tradeReplayModel";
 
 export {
@@ -56,6 +57,13 @@ export interface TradeReplayEventsProps {
   subjectLabel?: string | null;
   /** order groups / packages / ledgers as the source publishes them (read ahead of publication) */
   groups?: ReplayGroups;
+  /**
+   * The V2 reading of the panel (hi-fi trade-replay): the trade log in plain
+   * words with the raw codes kept beside them, one column per fact, cards at or
+   * below 660px, and the provenance behind a disclosure. Off, the panel is the
+   * V1 panel unchanged.
+   */
+  plain?: boolean;
 }
 
 const HEIGHT = { compact: 420, tall: 620 } as const;
@@ -112,7 +120,7 @@ export function sentence(text: string): string {
   return /[.!?]$/.test(text.trimEnd()) ? text.trimEnd() : `${text.trimEnd()}.`;
 }
 
-export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null, groups = EMPTY_GROUPS, source = null }: TradeReplayEventsProps) {
+export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null, groups = EMPTY_GROUPS, source = null, plain = false }: TradeReplayEventsProps) {
   const symbols = useMemo(() => Array.from(new Set([...fills.map((f) => f.symbol), ...orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [fills, orders]);
   const [ownSymbol, setOwnSymbol] = useState<string | null>(null);
   const symbol = controlledSymbol !== undefined ? controlledSymbol : ownSymbol;
@@ -205,6 +213,27 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
   const height = tall ? HEIGHT.tall : HEIGHT.compact;
   const brackets = scopedFills.filter((f) => !trips.some((tr) => tr.exit.fillId === f.fillId)).length;
 
+  const provenance = (
+    <>
+          <span className="exec-rp-mute" data-source={source?.page ? "relations" : "n25"}>source: {source?.label ?? "retained projection page (N25)"}{source?.detail ? ` · ${source.detail}` : ""}</span>
+          <span className="exec-rp-mute" data-groups={groups.published.brackets ? "published" : "not-published"}>
+            groups: {groups.published.brackets ? `brackets published (${groups.brackets.length}) — boxes from the source's groups` : "order_brackets not published — boxes paired by time (DERIVED)"}
+            {" · "}{groups.published.conditional ? `OCO/OTO/OUO groups (${groups.conditional.length}) ⌐ brace` : "conditional_order_groups not published"}
+            {" · "}{groups.published.packages ? `atomic packages (${groups.packages.length}) ▒ band` : "arb_order_packages not published"}
+            {" · "}{groups.published.ledger ? `ledger (${groups.ledger.length}) ◆ on the time axis` : "capital ledger / settlements not published"}
+          </span>
+    </>
+  );
+  const footerNode = (
+    <footer className="exec-rp-foot">
+      source: orders ⋈ fills (client_order_id) · legs = orders of type TAKE_PROFIT_* / STOP_* with trigger_price · marker time = fill trade_time (UTC) ·{" "}
+      {market && market.state === "READY"
+        ? `candles = ${market.source.venue ?? "venue"} ${market.source.market ?? ""} ${market.source.kind === "data_layer" ? "data_layer" : "public"} klines ${market.interval ?? interval}${market.source.instrument && market.source.instrument !== market.symbol ? ` (${market.source.instrument})` : ""} via Portal (${market.source.endpoint ?? "venue endpoint"}, fetched ${market.fetchedAtMs ? `${new Date(market.fetchedAtMs).toISOString().slice(11, 19)}Z` : "at a time not published"}, ${market.coverage.returnedCount ?? bars.length} bars${market.coverage.truncated ? ", truncated at the venue page limit" : ""}) — VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard`
+        : `venue klines ${market ? market.state.toLowerCase() : marketTransport}${market?.reasonCode ? ` · ${market.reasonCode}` : marketReason ? ` · ${marketReason}` : ""}`}
+      {" "}· Trading System candles: {soonReason(candles.reason) ?? "Soon · BR-EX-50"} · as_of {asOf ?? "not stated"}
+      <span className="exec-rp-attrib"> · charting: <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer noopener">TradingView Lightweight Charts™</a> © TradingView, Inc.</span>
+    </footer>
+  );
   return (
     <>
       <section className="exec-rp-panel" aria-label="Trade replay">
@@ -269,28 +298,25 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
           <span>─ ─ <span data-tone="good">TP</span> / <span data-tone="bad">SL</span> leg at trigger_price · ◇ triggered · ⊣ cancelled · ┈ resting limit level</span>
           <span data-tone="bad">× rejected ({rejects})</span>
           <span className="exec-rp-mute">╌ round trip · {bars.length > 0 ? "▮ venue candle up / down" : "no candles"} · hover a marker for its card · click ↔ log row · ← → step fills</span>
-          <span className="exec-rp-mute" data-source={source?.page ? "relations" : "n25"}>source: {source?.label ?? "retained projection page (N25)"}{source?.detail ? ` · ${source.detail}` : ""}</span>
-          <span className="exec-rp-mute" data-groups={groups.published.brackets ? "published" : "not-published"}>
-            groups: {groups.published.brackets ? `brackets published (${groups.brackets.length}) — boxes from the source's groups` : "order_brackets not published — boxes paired by time (DERIVED)"}
-            {" · "}{groups.published.conditional ? `OCO/OTO/OUO groups (${groups.conditional.length}) ⌐ brace` : "conditional_order_groups not published"}
-            {" · "}{groups.published.packages ? `atomic packages (${groups.packages.length}) ▒ band` : "arb_order_packages not published"}
-            {" · "}{groups.published.ledger ? `ledger (${groups.ledger.length}) ◆ on the time axis` : "capital ledger / settlements not published"}
-          </span>
+          {plain ? null : provenance}
         </div>
-        <footer className="exec-rp-foot">
-          source: orders ⋈ fills (client_order_id) · legs = orders of type TAKE_PROFIT_* / STOP_* with trigger_price · marker time = fill trade_time (UTC) ·{" "}
-          {market && market.state === "READY"
-            ? `candles = ${market.source.venue ?? "venue"} ${market.source.market ?? ""} ${market.source.kind === "data_layer" ? "data_layer" : "public"} klines ${market.interval ?? interval}${market.source.instrument && market.source.instrument !== market.symbol ? ` (${market.source.instrument})` : ""} via Portal (${market.source.endpoint ?? "venue endpoint"}, fetched ${market.fetchedAtMs ? `${new Date(market.fetchedAtMs).toISOString().slice(11, 19)}Z` : "at a time not published"}, ${market.coverage.returnedCount ?? bars.length} bars${market.coverage.truncated ? ", truncated at the venue page limit" : ""}) — VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard`
-            : `venue klines ${market ? market.state.toLowerCase() : marketTransport}${market?.reasonCode ? ` · ${market.reasonCode}` : marketReason ? ` · ${marketReason}` : ""}`}
-          {" "}· Trading System candles: {soonReason(candles.reason) ?? "Soon · BR-EX-50"} · as_of {asOf ?? "not stated"}
-          <span className="exec-rp-attrib"> · charting: <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer noopener">TradingView Lightweight Charts™</a> © TradingView, Inc.</span>
-        </footer>
+        {plain ? (
+          <details data-how="true">
+            <summary>How this is built</summary>
+            {provenance}
+            {footerNode}
+          </details>
+        ) : footerNode}
       </section>
       <section className="exec-rp-panel" aria-label="Trade log">
         <header className="exec-rp-head"><span className="exec-rp-title">Trade log — events behind the markers</span><span className="exec-rp-spacer" /><span className="exec-rp-win" data-log-shown={Math.min(logShown, log.length)} data-log-total={log.length}>{log.length > logShown ? `${logShown} of ${log.length} events shown · newest first` : `${log.length} events`}{activeSymbol ? ` · ${activeSymbol}` : ""} · row ↔ marker share order_id / fill id</span></header>
         <div className="exec-scroll-x">
-          <table className="exec-rp-table">
+          <table className="exec-rp-table" data-plain={plain ? "true" : undefined}>
+            {plain ? (
+              <thead><tr><th>Time (UTC)</th><th>Event</th><th>Order</th><th>Leg</th><th>Type · Side</th><th data-numeric="true">Qty</th><th data-numeric="true">Price / Trigger</th><th data-numeric="true">Fee</th><th>Result</th></tr></thead>
+            ) : (
             <thead><tr><th>time (UTC)</th><th>event</th><th>order · leg</th><th>type · side</th><th data-numeric="true">qty</th><th data-numeric="true">price / trigger</th><th data-numeric="true">fee</th><th>note</th></tr></thead>
+            )}
             <tbody>
               {log.slice(0, logShown).map((r, index) => {
                 const sceneId = logScene[index];
@@ -306,6 +332,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
                   tabIndex={sceneId ? 0 : undefined}
                   onKeyDown={sceneId ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(sceneId, false); } } : undefined}
                 >
+                  {plain ? <PlainCells row={r} /> : (
+                  <>
                   <td className="exec-rp-dim">{r.time}</td>
                   <td><span className="exec-rp-ev" data-tone={r.eventTone}>{r.event}</span></td>
                   <td><span className="exec-rp-mute">{r.event === "FILL" ? "fill " : "ord "}</span><span className="exec-num">{r.ref}</span>{r.tail}</td>
@@ -314,6 +342,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
                   <td data-numeric="true">{r.price}</td>
                   <td data-numeric="true" className={r.fee ? undefined : "exec-rp-mute"}>{r.fee ?? "fee not published"}</td>
                   <td data-tone={r.noteTone ?? undefined}>{r.note}</td>
+                  </>
+                  )}
                 </tr>
                 );
               })}
@@ -327,6 +357,41 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
           </div>
         ) : null}
       </section>
+    </>
+  );
+}
+
+/** The nine cells of one log row in the V2 reading. The raw codes ride on `title` or in a muted chip; none is dropped. */
+function PlainCells({ row }: { row: LogRow }) {
+  const p = plainRow(row);
+  const parent = row.event === "FILL" ? row.orderId : row.ref;
+  return (
+    <>
+      <td data-l="Time (UTC)" className="exec-rp-dim" title={new Date(row.t).toISOString()}>{plainTime(row.t)}</td>
+      <td data-l="Event"><span className="exec-rp-ev" data-tone={row.eventTone} title={p.eventCode}>{p.event}</span></td>
+      <td data-l="Order">
+        <span>
+          <span className="exec-num" title={row.event === "FILL" ? `Fill ${row.ref}` : undefined}>{parent}</span>
+          {row.event === "FILL" ? <small className="exec-rp-mute"> fill {row.ref}</small> : null}
+        </span>
+      </td>
+      <td data-l="Leg">{p.leg}</td>
+      <td data-l="Type · Side" title={row.typeCode ?? undefined}>
+        <span>
+          {p.type} · <span data-tone={row.side === "BUY" ? "good" : row.side === "SELL" ? "bad" : undefined}>{p.side ?? "Side not published"}</span>
+          {p.flags ? <small className="exec-rp-mute"> {p.flags}</small> : null}
+        </span>
+      </td>
+      <td data-l="Qty" data-numeric="true">{row.qty}</td>
+      <td data-l="Price / Trigger" data-numeric="true">{p.price}</td>
+      <td data-l="Fee" data-numeric="true" className={row.event === "FILL" && row.fee ? undefined : "exec-rp-mute"}>{p.fee}</td>
+      <td data-l="Result" data-tone={row.noteTone ?? undefined} title={row.note}>
+        <span>
+          {p.result}
+          {p.statusCode ? <small className="exec-rp-mute"> {p.statusCode}</small> : null}
+          {p.detail ? <small> {p.detail}</small> : null}
+        </span>
+      </td>
     </>
   );
 }

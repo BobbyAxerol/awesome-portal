@@ -27,13 +27,13 @@ export const ALPHA_TABS = [
   { key: "performance", label: "Performance" },
   { key: "deployments", label: "Deployments" },
   { key: "evidence", label: "Research Evidence" },
+  { key: "regime", label: "Regime Fit" },
   { key: "orders", label: "Orders & Fills" },
   { key: "activity", label: "Activity & Decisions" },
-  { key: "replay", label: "Trade Replay" },
 ] as const;
-/** Behind the "More" menu, as in the hi-fi. */
+/** Behind the "More" menu, as in the hi-fi (Trade Replay is there too; `?tab=replay` opens it). */
 export const ALPHA_MORE_TABS = [
-  { key: "regime", label: "Regime Fit" },
+  { key: "replay", label: "Trade Replay" },
   { key: "positions", label: "Positions" },
   { key: "reconciliation", label: "Reconciliation" },
 ] as const;
@@ -42,6 +42,16 @@ export const ALPHA_TAB_KEYS: readonly AlphaTabKey[] = [...ALPHA_TABS, ...ALPHA_M
 export const isAlphaTab = (value: string): value is AlphaTabKey => (ALPHA_TAB_KEYS as readonly string[]).includes(value);
 
 /* ── text ─────────────────────────────────────────────────────────────────── */
+
+/** The freshness tier of the alpha read, as a flag. Unknown words stay unknown; nothing becomes green by default. */
+export function freshnessFlag(freshness: string | null): { kind: "ok" | "stale" | "unknown"; label: string } {
+  switch ((freshness ?? "").toUpperCase()) {
+    case "FRESH": return { kind: "ok", label: "Fresh" };
+    case "STALE": return { kind: "stale", label: "Stale" };
+    case "": return { kind: "unknown", label: "Freshness not published" };
+    default: return { kind: "unknown", label: humanize(freshness ?? "") };
+  }
+}
 
 export function humanize(code: string): string {
   const words = code.replace(/[_-]+/g, " ").trim().toLowerCase();

@@ -8,7 +8,7 @@
 .exec-alp2-v2 {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
   min-width: 0;
   color: var(--ink);
 }
@@ -114,7 +114,7 @@
 
 /* current facts */
 .exec-alp2-kpis {
-  --exec-kpi-n: 4;
+  --exec-kpi-n: 5;
 }
 .exec-alp2-fig {
   display: block;
@@ -135,7 +135,9 @@
 }
 .exec-alp2-tab {
   padding: var(--space-2) var(--space-4);
-  font: var(--exec-font-control);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink-faint);
   white-space: nowrap;
   background: none;
@@ -183,10 +185,17 @@
 }
 .exec-alp2-seg {
   display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
   margin-left: auto;
   margin-bottom: var(--space-1);
 }
+.exec-alp2-seg-label {
+  margin-right: var(--space-2);
+}
+/* A segment never breaks inside its word: the row wraps between buttons. */
 .exec-alp2-segbtn {
+  white-space: nowrap;
   padding: var(--space-2) var(--space-3);
   font: var(--exec-font-control);
   color: var(--ink);
@@ -202,6 +211,7 @@
 .exec-alp2-filter {
   display: inline-flex;
   flex-wrap: wrap;
+  max-width: 100%;
 }
 .exec-alp2-panel {
   min-width: 0;
@@ -216,11 +226,34 @@
 }
 .exec-alp2-grid2 {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
+  align-items: start;
+}
+.exec-alp2-pair {
+  display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-5);
 }
+.exec-alp2-duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-bottom: var(--space-3);
+}
+.exec-alp2-duo-l {
+  display: block;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-alp2-duo-v {
+  display: block;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
 @media (max-width: 900px) {
   .exec-alp2-grid2,
+  .exec-alp2-pair,
   .exec-alp2-main[data-docked="true"] {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -382,13 +415,78 @@
   gap: var(--space-3);
   min-width: 0;
 }
+/* The V1 replay panel in its plain-words reading (`plain`): selectors by
+ * element and attribute, because the V1 class names belong to execution.css. */
+.exec-alp2-replay table[data-plain] td:first-child {
+  white-space: nowrap;
+}
+.exec-alp2-replay table[data-plain] small {
+  font: var(--exec-font-caption);
+}
+.exec-alp2-replay table[data-plain] td[data-l="Order"] small {
+  display: block;
+}
+.exec-alp2-replay table[data-plain] td[data-l="Leg"],
+.exec-alp2-replay table[data-plain] td[data-numeric="true"] {
+  white-space: nowrap;
+}
+.exec-alp2-replay table[data-plain] td[data-numeric="true"] {
+  font: var(--exec-font-id);
+}
+.exec-alp2-replay details[data-how] {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}
+.exec-alp2-replay details[data-how] > summary {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
 
 @media (max-width: 660px) {
+  /* The trade log becomes cards, the same rule as cards.css: the header row goes, each cell prints its label. */
+  .exec-alp2-replay table[data-plain] {
+    display: block;
+    min-width: 0;
+  }
+  .exec-alp2-replay table[data-plain] thead {
+    display: none;
+  }
+  .exec-alp2-replay table[data-plain] tbody {
+    display: block;
+  }
+  .exec-alp2-replay table[data-plain] tbody tr {
+    display: block;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .exec-alp2-replay table[data-plain] tbody td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: 3px var(--space-3);
+    border: 0;
+    white-space: normal;
+  }
+  .exec-alp2-replay table[data-plain] tbody td > span {
+    text-align: right;
+  }
+  .exec-alp2-replay table[data-plain] td[data-l]::before {
+    content: attr(data-l);
+    flex: none;
+    font: var(--exec-font-caption);
+    color: var(--ink-faint);
+  }
   .exec-alp2-tabs {
+    flex: 1 1 0;
     flex-wrap: nowrap;
     overflow-x: auto;
   }
+  .exec-alp2-more-wrap {
+    flex: none;
+  }
   .exec-alp2-seg {
+    flex-basis: 100%;
     margin-left: 0;
   }
 }

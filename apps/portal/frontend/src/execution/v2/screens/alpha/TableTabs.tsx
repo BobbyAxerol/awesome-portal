@@ -106,7 +106,7 @@ export function RegimeTab() {
   return (
     <SectionPanel title="Regime fit" aside="Historical support, not a forecast">
       <p className="exec-alp2-line"><Flag kind="pending" label="Not evaluated" size="sm" /> <Np id="FE-011">Regime profile and support</Np></p>
-      <div className="exec-alp2-grid2">
+      <div className="exec-alp2-pair">
         <table className="exec-alp2-kv" aria-label="Regime axes">
           <tbody>
             {REGIME_AXES.map((axis) => <tr key={axis}><th scope="row">{axis}</th><td><Np id="FE-011" /></td></tr>)}

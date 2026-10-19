@@ -59,9 +59,8 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
   const verdict = candleVerdict(symbol, query === null && symbol !== null ? { phase: "error", status: "unavailable", reason: venue === null ? "The Portal reads no public klines for this alpha's venue" : "No timed trade to place candles around" } : candles.venue, candles.context);
 
   const state = replayState(book);
+  // Symbol and Interval are the chart bar's own selects; naming them again here said everything twice.
   const chips: ReplayChip[] = [
-    ...(symbol === null ? [] : [{ label: "Symbol", value: symbol }]),
-    { label: "Interval", value: window?.interval ?? wanted },
     { label: "Book", value: ENV_LABEL[env] },
     { label: "Account", value: canSeeAccounts ? (book.orders[0]?.accountId ?? book.fills[0]?.accountId ?? "Not available") : "Not available" },
   ];
@@ -84,6 +83,7 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
     focusId: focus,
     source: { label: "Subject BFF retained window", detail: "orders and fills of this alpha in this book, not an event replay", page: null },
     subjectLabel: alphaLabel,
+    plain: true,
   };
 
   const missing =

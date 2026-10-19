@@ -23,11 +23,14 @@ import { useSession } from "../../../../../auth/session";
 import { Flag } from "../../../Flag";
 import { V2_CAPABILITY, holds } from "../../../shell/roleNav";
 import { ENV_LABEL, useExecUrlState, withContext } from "../../../urlState";
-import { chooseEnv, deployedEnvs } from "../model";
+import { chooseEnv, deploymentRows, deployedEnvs, freshnessFlag } from "../model";
 import { useAlphaResource, useSubjectBook } from "../useAlphaReads";
 import { ReplayView } from "./ReplayView";
 
 import "../../../css/alpha.css";
+
+/** The stages a book holds (Real-funded is Canary and Live; Simulated is Paper and Sandbox). */
+const ENV_STAGES: Readonly<Record<string, readonly string[]>> = { live: ["canary", "live"], paper: ["paper"], sandbox: ["sandbox"] };
 
 export const REPLAY_SCREEN_KEY = "replay" as const;
 
@@ -52,6 +55,9 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
   const settled = resource.phase === "ready" || resource.phase === "error";
   const book = useSubjectBook(api, alphaId, env, settled);
   const label = item ? `${item.alphaLabel} v${item.version}` : alphaId;
+  const deployment = deploymentRows(item).find((row) => row.stage !== null && ENV_STAGES[env].includes(row.stage)) ?? deploymentRows(item)[0] ?? null;
+  const accountId = canSeeAccounts ? (book.orders[0]?.accountId ?? book.fills[0]?.accountId ?? deployment?.accountId ?? null) : null;
+  const fresh = resource.phase === "ready" ? freshnessFlag(resource.value.envelope.freshness) : null;
 
   return (
     <div className="exec-alp2-v2" data-screen="trade-replay-v2">
@@ -62,7 +68,10 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
         </div>
         <div className="exec-alp2-chips">
           <a className="exec-alp2-chip" href={linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}`)}>{label}</a>
+          {deployment ? <a className="exec-alp2-chip" href={linkTo(deployment.href)}>Deployment {deployment.id}</a> : null}
+          {accountId ? <a className="exec-alp2-chip" href={linkTo(`/deployments/accounts/${encodeURIComponent(accountId)}`)}>{accountId}</a> : null}
           <Flag kind="display" label={ENV_LABEL[env]} size="sm" />
+          {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
         </div>
       </header>
       {resource.phase === "error" && resource.status === "denied" ? (

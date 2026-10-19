@@ -41,7 +41,7 @@ import {
   ROW_CAP, SORT_KEYS, countLine, currenciesOf, degradedBranches, filterRows, parseSort, readDomainFilter, sortRows, toRows, writeSort,
   type DomainFilter, type SortKey,
 } from "./listModel";
-import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, type ColumnId } from "./PortfolioTable";
+import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId } from "./PortfolioTable";
 import { DEFAULT_ROUTES, FROM_LIST, type PortfolioRoutes } from "./routes";
 import { COMPARE_MAX, COMPARE_MIN, IN_PARAM, partitionByCurrency, selectionFrom, withSelection } from "./selection";
 import { useRead } from "./useRead";
@@ -147,7 +147,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
     const next = new Set(hidden);
     if (show) next.delete(id);
     else next.add(id);
-    setLocal("hide", OPTIONAL_COLUMNS.filter((c) => next.has(c.id)).map((c) => c.id).join(",") || null);
+    setLocal("hide", writeHidden(next));
   };
   const clearFilters = () => {
     const next = new URLSearchParams(params);
@@ -220,15 +220,19 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
       <p className="exec-pf-banner" data-tone="info">
         Names and allocation only. NAV, Net PnL, Return, Drawdown, Concentration and Score are not published yet; each column says which request will publish it.
       </p>
-      {incomplete && envelope ? (
-        <p className="exec-pf-banner" role="status">
-          <Flag kind="partial" label="Partial" size="sm" /> The read is {humanize(envelope.completeness).toLowerCase()}: some portfolios or figures may be missing.
-        </p>
-      ) : null}
-      {degraded.length > 0 ? (
-        <p className="exec-pf-banner" role="status">
-          <Flag kind="partial" label="Branch not whole" size="sm" /> {degraded.map((d) => `${humanize(d.environment)}: ${humanize(d.state)}${d.reasonCode ? ` (${d.reasonCode})` : ""}`).join(" · ")}
-        </p>
+      {(incomplete && envelope) || degraded.length > 0 ? (
+        <div className="exec-pf-banner" role="status">
+          {incomplete && envelope ? (
+            <p className="exec-pf-banner-line">
+              <Flag kind="partial" label="Partial" size="sm" /> The read is {humanize(envelope.completeness).toLowerCase()}: some portfolios or figures may be missing.
+            </p>
+          ) : null}
+          {degraded.length > 0 ? (
+            <p className="exec-pf-banner-line">
+              <Flag kind="partial" label="Branch not whole" size="sm" /> {degraded.map((d) => `${humanize(d.environment)}: ${humanize(d.state)}${d.reasonCode ? ` (${d.reasonCode})` : ""}`).join(" · ")}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {read.phase === "loading" && envelope === null ? <PanelState status="loading" /> : null}
@@ -286,7 +290,10 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
               </div>
             </details>
             <button type="button" className="exec-pf-btn" aria-pressed={compact} onClick={() => setLocal("density", compact ? null : "compact")}>Compact</button>
-            <button type="button" className="exec-pf-btn" disabled title={EXPORT_REASON} aria-describedby={reasonId}>Export</button>
+            <span className="exec-pf-btnwhy">
+              <button type="button" className="exec-pf-btn" disabled title={EXPORT_REASON} aria-describedby={reasonId}>Export</button>
+              <span className="exec-pf-why" aria-hidden="true">{EXPORT_REASON}</span>
+            </span>
             {filtered ? <button type="button" className="exec-pf-btn" onClick={clearFilters}>Clear filters</button> : null}
           </div>
 

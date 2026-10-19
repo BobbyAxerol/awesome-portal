@@ -15,9 +15,8 @@ import { SectionPanel } from "../../../blocks";
 import { Flag } from "../../../Flag";
 import { formatAsOf } from "../../../boundary";
 import { readUtcEpochMs } from "../../../../screenDataContract";
-import { PF_FE, npReason, npText } from "../fe";
+import { PF_FE, npReason, npText, type Unpublished } from "../fe";
 import { Absent, MoneyList, Np, envWord } from "../format";
-import { CapitalEnv } from "./CapitalEnv";
 import type { TabCtx } from "./ctx";
 import { chartState, equitySeries, serverEnvelope } from "./model";
 import { InternalLink, PfKpi, PfKpiStrip, ReadGate } from "./parts";
@@ -112,22 +111,40 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
   );
 }
 
-function CapitalCard({ ctx }: { ctx: TabCtx }) {
-  const envs = ctx.environments.length > 0 ? ctx.environments : ([ctx.reads.selected] as const);
+/** The statements the hi-fi lists, in its two groups. Every figure is `Not published` with the request that will publish it. */
+const CASH_ROWS: readonly { label: string; fact: Unpublished; total?: boolean }[] = [
+  { label: "Initial funds", fact: PF_FE.statements },
+  { label: "Added funds", fact: PF_FE.statements },
+  { label: "Returned", fact: PF_FE.statements },
+  { label: "Net external flows", fact: PF_FE.statements, total: true },
+  { label: "Net PnL, since start", fact: PF_FE.netPnl },
+  { label: "NAV", fact: PF_FE.nav, total: true },
+];
+const BUDGET_ROWS: readonly { label: string; fact: Unpublished }[] = [
+  { label: "Approved budget", fact: PF_FE.statements },
+  { label: "Recalling", fact: PF_FE.statements },
+  { label: "Headroom", fact: PF_FE.statements },
+];
+
+/**
+ * Statements only. The per-currency capital table (allocation and balances) is
+ * the Allocations tab's, once: it does not fit a 360px panel and printing it
+ * twice made the Overview and Allocations disagree about which one was whole.
+ */
+function CapitalCard() {
   return (
-    <SectionPanel title="Capital" aside="Current facts, by environment">
+    <SectionPanel title="Capital">
       <div className="exec-pf-stack">
-        {envs.map((env) => <CapitalEnv key={env} environment={env} read={ctx.reads.capital[env]} />)}
         <table className="exec-pf-statements" aria-label="Capital statements">
           <caption className="exec-pf-cap">Statements</caption>
           <tbody>
-            {["Initial funds", "Added funds", "Returned", "Net external flows"].map((row) => (
-              <tr key={row}><th scope="row">{row}</th><td><Np fact={PF_FE.statements} /></td></tr>
+            <tr className="exec-pf-grp"><th colSpan={2} scope="colgroup">Cash flows</th></tr>
+            {CASH_ROWS.map((row) => (
+              <tr key={row.label} data-total={row.total ? "true" : undefined}><th scope="row">{row.label}</th><td><Np fact={row.fact} /></td></tr>
             ))}
-            <tr><th scope="row">Net PnL, since start</th><td><Np fact={PF_FE.netPnl} /></td></tr>
-            <tr><th scope="row">NAV</th><td><Np fact={PF_FE.nav} /></td></tr>
-            {["Approved budget", "Recalling", "Headroom"].map((row) => (
-              <tr key={row}><th scope="row">{row}</th><td><Np fact={PF_FE.statements} /></td></tr>
+            <tr className="exec-pf-grp"><th colSpan={2} scope="colgroup">Budget · not cash</th></tr>
+            {BUDGET_ROWS.map((row) => (
+              <tr key={row.label}><th scope="row">{row.label}</th><td><Np fact={row.fact} /></td></tr>
             ))}
           </tbody>
         </table>
@@ -148,19 +165,23 @@ function Attention({ ctx }: { ctx: TabCtx }) {
       {deployments.length === 0 && accounts.length === 0 ? (
         <p className="exec-pf-note">Every deployment reports Ready and every account Synced in the projection. This is the published state, not a guarantee.</p>
       ) : (
-        <ul className="exec-pf-list">
+        <ul className="exec-pf-attn">
           {deployments.map((d) => (
             <li key={d.deploymentId}>
-              <Flag kind={d.healthKind} label={d.healthLabel} size="sm" />{" "}
-              <InternalLink to={ctx.routes.deployment(d.deploymentId, d.stage)} search={ctx.search}>{d.deploymentId}</InternalLink>
-              <span className="exec-pf-dim"> · {d.alphaLabel} · {d.stageLabel}</span>
+              <span className="exec-pf-attn-head">
+                <Flag kind={d.healthKind} label={d.healthLabel} size="sm" />
+                <InternalLink to={ctx.routes.deployment(d.deploymentId, d.stage)} search={ctx.search}>{d.deploymentId}</InternalLink>
+              </span>
+              <span className="exec-pf-dim">{d.alphaLabel} · {d.stageLabel}</span>
             </li>
           ))}
           {accounts.map((a) => (
             <li key={a.accountId}>
-              <Flag kind={a.syncKind === "ok" ? "attention" : a.syncKind} label={a.syncKind === "ok" ? "Open findings" : a.syncLabel} size="sm" />{" "}
-              {ctx.mayOpenAccounts ? <InternalLink to={ctx.routes.account(a.accountId)} search={ctx.search}>{a.accountId}</InternalLink> : a.accountId}
-              {a.openFindings !== null && a.openFindings > 0 ? <span className="exec-pf-dim"> · {a.openFindings} open {a.openFindings === 1 ? "finding" : "findings"}</span> : null}
+              <span className="exec-pf-attn-head">
+                <Flag kind={a.syncKind === "ok" ? "attention" : a.syncKind} label={a.syncKind === "ok" ? "Open findings" : a.syncLabel} size="sm" />
+                {ctx.mayOpenAccounts ? <InternalLink to={ctx.routes.account(a.accountId)} search={ctx.search}>{a.accountId}</InternalLink> : a.accountId}
+              </span>
+              {a.openFindings !== null && a.openFindings > 0 ? <span className="exec-pf-dim">{a.openFindings} open {a.openFindings === 1 ? "finding" : "findings"}</span> : null}
             </li>
           ))}
         </ul>
@@ -172,8 +193,10 @@ function Attention({ ctx }: { ctx: TabCtx }) {
 export function Overview({ ctx }: { ctx: TabCtx }) {
   const { identity, deployments, accounts, environments } = ctx;
   const alphaCount = new Set(deployments.map((d) => d.strategyId ?? d.alphaLabel)).size;
+  const simulated = environments.some((env) => env !== "live");
   return (
     <div className="exec-pf-stack">
+      {simulated ? <p className="exec-pf-banner" data-tone="info">Simulated capital. It is never added to Real-funded figures.</p> : null}
       <PfKpiStrip label="Portfolio identity">
         <PfKpi label="Alphas" note="From the deployments in this portfolio">{alphaCount}</PfKpi>
         <PfKpi label="Deployments" note={identity.holdingsCount !== null ? `${identity.holdingsCount} holdings counted by the server` : undefined}>{deployments.length}</PfKpi>
@@ -190,7 +213,7 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
       </PfKpiStrip>
       <div className="exec-pf-grid2">
         <EquityCard ctx={ctx} />
-        <CapitalCard ctx={ctx} />
+        <CapitalCard />
       </div>
       <div className="exec-pf-grid2">
         <SectionPanel title="Concentration" aside={<Np fact={PF_FE.concentration} />}>

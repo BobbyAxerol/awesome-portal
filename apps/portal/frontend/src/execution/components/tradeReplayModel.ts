@@ -224,6 +224,23 @@ export interface LogRow {
   fee: string | null;
   note: string;
   noteTone: "good" | "bad" | "warn" | "mute" | null;
+  /**
+   * The raw facts behind the words, kept so a plain-language view (see
+   * `tradeReplayWords`) can map them without parsing `note`: the order the row
+   * belongs to, its status and type codes, the leg it plays, and the figures
+   * the note prints.
+   */
+  orderId: string;
+  status: string | null;
+  typeCode: string | null;
+  flags: string[];
+  role: LegRole;
+  /** Round-trip kind of an exit fill. */
+  exitKind: RoundTrip["kind"] | null;
+  /** The exit fill's realized_pnl, formatted. */
+  realized: string | null;
+  /** `error_code · error_message` as the source sent them. */
+  errorText: string | null;
 }
 
 export const money = (v: string | null | undefined) => (v ? formatExact(v, "money").display : "not published");
@@ -251,6 +268,8 @@ export function buildLog(orders: readonly ReplayOrder[], fills: readonly ReplayF
     rows.push({
       t, time: "", event: "FILL", eventTone: tone,
       ref: f.fillId, tail: o ? ` · ord ${o.orderId}${role !== "OTHER" ? `.${role}` : ""}` : null,
+      orderId: o?.orderId ?? f.clientOrderId ?? f.fillId, status: null, typeCode: o?.type ?? null, flags: [], role, exitKind: trip ? trip.kind : null,
+      realized: trip ? money(trip.pnl) : null, errorText: null,
       type: o?.type ?? "FILL", side: f.side, qty: qtyFmt(f.qty), price: money(f.price),
       fee: f.commission ? `${formatExact(f.commission, "money").display} · ${(f.liquidity ?? "").toLowerCase() || "fee"}` : null,
       note: trip ? `${trip.kind} exit · realized ${money(trip.pnl)}${f.tradeId ? ` · trade ${f.tradeId.slice(0, 18)}` : ""}` : `${role === "ENTRY" ? "entry" : "fill"}${f.tradeId ? ` · trade ${f.tradeId.slice(0, 18)}` : ""}`,
@@ -276,6 +295,8 @@ export function buildLog(orders: readonly ReplayOrder[], fills: readonly ReplayF
     const flags = [o.timeInForce, o.postOnly ? "POST-ONLY" : null, o.reduceOnly ? "reduce_only" : null].filter(Boolean).join(" ");
     rows.push({
       t, time: "", event, eventTone,
+      orderId: o.orderId, status: status || null, typeCode: o.type, flags: [o.timeInForce, o.postOnly ? "POST-ONLY" : null, o.reduceOnly ? "reduce_only" : null].filter((x): x is string => Boolean(x)),
+      role, exitKind: null, realized: null, errorText: [o.errorCode, o.errorMessage].filter(Boolean).join(" · ") || null,
       ref: o.orderId, tail: role !== "OTHER" ? ` · ${role}` : null,
       type: `${o.type ?? "ORDER"}${flags ? ` ${flags}` : ""}`, side: o.side, qty: qtyFmt(o.qty),
       price: o.trigger ? `${money(o.trigger)} (trigger)` : o.price ? money(o.price) : "market",

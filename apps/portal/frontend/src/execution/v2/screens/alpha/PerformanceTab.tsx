@@ -183,9 +183,12 @@ export function PerformanceTab(props: PerformanceTabProps) {
       </div>
 
       <SectionPanel title="Forward observation" aside={<Flag kind="partial" label="Not an actual track record" size="sm" />}>
+        <div className="exec-alp2-duo" role="group" aria-label="Forward and actual days">
+          <span><span className="exec-alp2-duo-l">Forward</span><span className="exec-alp2-duo-v"><Np id="FE-029">Days observed forward</Np></span></span>
+          <span><span className="exec-alp2-duo-l">Actual</span><span className="exec-alp2-duo-v"><Np id="FE-029">Days actually traded</Np></span></span>
+        </div>
         <table className="exec-alp2-kv">
           <tbody>
-            <tr><th scope="row">Forward and actual days</th><td><Np id="FE-029" /></td></tr>
             <tr><th scope="row">Mixed return</th><td><Np id="FE-029">Continuity manifest</Np></td></tr>
             <tr><th scope="row">Mixed score</th><td><Np id="FE-011" /></td></tr>
           </tbody>

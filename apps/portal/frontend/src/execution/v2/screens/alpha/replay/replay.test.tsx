@@ -73,9 +73,12 @@ describe("the page", () => {
     expect(props().orders.map((o) => o.orderId)).toEqual(["ord_001", "ord_002", "ord_003", "ord_004", "ord_005", "ord_007"]);
     expect(props().fills.map((f) => f.price)).toEqual(["67200.50", "67410.55", "67411.00"]);
     expect(props().symbol).toBe("BTCUSDT");
-    expect(chip("Symbol")).toBe("Symbol BTCUSDT");
+    // Symbol and Interval are the chart bar's selects; the scope chips do not name them again.
+    expect(screen.queryByText("Symbol", { selector: ".exec-blk-chip-label" })).toBeNull();
+    expect(screen.queryByText("Interval", { selector: ".exec-blk-chip-label" })).toBeNull();
+    expect(props().interval).toBe("1h");
+    expect(props().plain).toBe(true);
     expect(chip("Book")).toBe("Book Real-funded");
-    expect(chip("Interval")).toBe("Interval 1h");
     expect(chip("Account")).toBe("Account acct_binance_02");
     expect(props().intervalNote).toBe("Interval derived from the strategy id");
   });
@@ -173,7 +176,10 @@ describe("deep link", () => {
     await screen.findByTestId("v1-replay");
     expect(await screen.findByText(/Opened at/)).toBeTruthy();
     expect(props().focusId).toBe("order:ord_004");
-    expect(screen.getByRole("tab", { name: "Trade Replay" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("button", { name: "More" }).getAttribute("data-active")).toBe("true");
+    // The replay is the page: no lifecycle and no current-facts strip above the chart.
+    expect(screen.queryByRole("list", { name: "Alpha lifecycle" })).toBeNull();
+    expect(screen.queryByLabelText("Current facts")).toBeNull();
   });
 });
 
