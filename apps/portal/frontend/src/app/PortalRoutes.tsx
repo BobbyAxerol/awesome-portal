@@ -201,6 +201,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
   const previewByExactRoute = new Map(previewScreens.map((screen) => [screen.route, screen]));
   // The cockpit's New request drawer posts to the New-request screen's route, so it is bound to THAT screen's delivery policy:
   // the approval inbox's own policy says governance_write_enabled=false and would refuse the write client-side.
+  // Mounted on both the screen routes and the feature canonical routes (the cockpit lives on /governance/approvals).
   const requestScreen = registry.screens.find((screen) => screen.screen_id === "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN");
   const requestScreenPolicy = requestScreen ? screenDeliveryPolicy(requestScreen) : null;
 
@@ -239,7 +240,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
             feature.canonical_route === "/"
               ? <RootRoute />
               : EXECUTION_PREVIEW_ENABLED && previewScreenId
-                ? <ExecutionPreviewRoute screenId={previewScreenId} profile={screenDeliveryProfile(registry.screens.find((s) => s.screen_id === previewScreenId) ?? null)} />
+                ? <ExecutionPreviewRoute screenId={previewScreenId} profile={screenDeliveryProfile(registry.screens.find((s) => s.screen_id === previewScreenId) ?? null)} requestPolicy={requestScreenPolicy} />
                 : module
                   ? <module.component />
                   : <FeaturePreview feature={feature} />;

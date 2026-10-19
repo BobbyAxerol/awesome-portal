@@ -131,7 +131,9 @@
       "evidence": "scratchpad g-pw.log ends with 74 passed, 2 failed, exit=1; the crawler spec passed. The build the run used is not recorded in the log",
       "consequence": "The S3 browser gate is not green. The second failure is the symptom 8b9f361a was written to fix, so either the run used a build older than that commit or the fix is incomplete",
       "proposed": "Rebuild dist-v2 at 21af6792 and rerun both specs; fix or record the cause before R2",
-      "owner": "Claude (FE)"
+      "owner": "Claude (FE)",
+      "status": "CLOSED",
+      "resolution": "Cause found 2026-10-19: PortalRoutes mounted ExecutionPreviewRoute on feature canonical routes (/governance/approvals) without requestPolicy, so the cockpit drawer's port refused the write. 8b9f361a only wired the screen routes. Fixed by passing requestPolicy on the canonical mount; spec :235 passes. Spec :45 (live-v2body wide) passed on rerun in isolation (3 of 3 selected); one-off in the full run, not reproduced - watch it in the next full run."
     },
     {
       "id": "DEBT-UXM07-024",
