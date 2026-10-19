@@ -1,0 +1,69 @@
+# FIXTURE_LAB lane. NOT acceptance evidence.
+#
+# Fixture BFF overlay for the isolated Research preview (Bobby 2026-10-19). Appended by
+# scripts/research-preview/preview.sh only while $ENV_DIR/fixture-bff.enabled exists
+# (`preview.sh fixture on|off|status`); it is never applied to dev, stable or the Execution probe.
+#
+# It adds one private service, portal-fixture-bff (apps/portal/fixture-bff: the Playwright BFF
+# doubles behind node:http), and changes portal-web in two ways:
+#   - nginx sends the Execution V2 reads to that service instead of the Control API
+#     (deploy/research-preview/nginx/fixture-bff/fixture-bff.conf);
+#   - every HTML document carries a fixed, non-dismissible "FIXTURE DATA" banner.
+# Nothing else moves: /api/auth, /api/v1/portal, the legacy profile-access reads and the shell
+# registry stay on the real services. No database, no migration, no secret.
+#
+# Turn it off with `preview.sh fixture off` and `preview.sh up`: the same paths then reach the real
+# Control API again, and the frontend is unchanged because it has no fixture mode.
+services:
+  portal-fixture-bff:
+    build:
+      context: .
+      dockerfile: deploy/images/fixture-bff.Dockerfile
+    image: ${PORTAL_IMAGE_PREFIX:-local/portal-research-preview}-fixture-bff:${PORTAL_IMAGE_TAG:-rf02}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+    pids_limit: 64
+    # Private: reachable as portal-fixture-bff:4100 on the compose network only. Never `ports:`.
+    expose:
+      - "4100"
+    environment:
+      # Optional knobs from the host-bound env file; an empty value means "server default".
+      # FIXTURE_LANE_LABEL is deliberately not overridable here: the image fixes it to FIXTURE_LAB.
+      FIXTURE_SCALE: ${FIXTURE_SCALE:-medium}
+      # Default `refuse`: every non-GET is 405, so the preview never shows a fake successful command.
+      # `doubles` answers the canned successes the Playwright specs use (they store nothing).
+      FIXTURE_WRITES: ${FIXTURE_WRITES:-refuse}
+      FIXTURE_USER_ID: ${FIXTURE_USER_ID:-}
+      FIXTURE_NOW_ISO: ${FIXTURE_NOW_ISO:-}
+      FIXTURE_VARIANTS: ${FIXTURE_VARIANTS:-}
+    networks:
+      - portal
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4100/__fixture/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+
+  portal-web:
+    volumes:
+      # Server-context nginx fragment + shared proxy settings; read by the nginx master at start.
+      - ./deploy/research-preview/nginx/fixture-bff:/etc/nginx/fixture:ro
+    depends_on:
+      # nginx resolves portal-fixture-bff when it starts, so it must be up first.
+      portal-fixture-bff:
+        condition: service_healthy
