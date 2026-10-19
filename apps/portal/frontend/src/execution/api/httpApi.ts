@@ -40,7 +40,17 @@ import {
 import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProblem";
 import { readCommandCatalogue } from "../adminCatalog";
 import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../operations";
-import { readGovernanceParentByKind, unsupportedText, type GovernanceParentKind, type GovernanceParentRead } from "../v2/readers/dispatch";
+import {
+  readCanaryByVersion,
+  readGovernanceParentByKind,
+  readLiveFullByVersion,
+  readSandboxByVersion,
+  stageVersionedSearch,
+  unsupportedText,
+  type GovernanceParentKind,
+  type GovernanceParentRead,
+  type VersionRead,
+} from "../v2/readers/dispatch";
 import { refusalReason } from "./schemaGuard";
 import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } from "../v2/readers/operationalQueue";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
@@ -423,6 +433,40 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     if (value.read.kind === "unsupported") return unavailable(`${what}: ${unsupportedText(value.read)} (${value.read.reason})`);
     const warnings = value.kind !== "live" && value.read.kind === "v1" ? value.read.value.gaps : undefined;
     return { ok: true as const, value, ...(warnings ? { warnings } : {}) };
+  };
+  /**
+   * A stage route read by the body's `schema_version` (dispatch.ts). Fetch
+   * failure, `!ok` (typed by `problem`) and an aborted read are `ok: false`;
+   * a body that is not JSON is dispatched as `null` and comes back
+   * `unsupported` (NOT_AN_OBJECT). `unsupported` is an `ok` answer that never
+   * carries the body, only the version it named (capped by `unsupportedText`).
+   */
+  const readVersioned = async <A, B>(
+    path: string,
+    dispatch: (raw: unknown) => VersionRead<A, B>,
+    what: string,
+  ): Promise<Result<VersionRead<A, B>>> => {
+    let response: Response;
+    try {
+      response = await get(path, signal);
+    } catch {
+      return unavailable(`${what} never reached the Portal — network failure.`);
+    }
+    if (!response.ok) return problem(response);
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* dispatched as null: unsupported, not a throw */ }
+    return { ok: true as const, value: dispatch(body) };
+  };
+  const stageVersioned = <A, B>(
+    route: string,
+    deploymentId: string,
+    options: Parameters<typeof stageVersionedSearch>[0],
+    dispatch: (raw: unknown) => VersionRead<A, B>,
+    what: string,
+  ): Promise<Result<VersionRead<A, B>>> => {
+    const query = stageVersionedSearch(options);
+    if (!query.ok) return Promise.resolve(unavailable(query.reason));
+    return readVersioned(`/deployments/${encodeURIComponent(deploymentId)}/${route}${query.search}`, dispatch, what);
   };
   const getLiveReview = (approvalId: string, workspaceId?: string): Promise<Result<LiveReviewPayload>> =>
     readGet(
@@ -828,6 +872,13 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         ? { ok: true as const, value: live }
         : unavailable(refusalReason(body, "The live full operations response could not be read."));
     },
+
+    getSandboxCertificationVersioned: (deploymentId, options = {}) =>
+      stageVersioned("certification", deploymentId, { workspaceId: options.workspaceId }, readSandboxByVersion, "The sandbox certification"),
+    getCanaryVersioned: (deploymentId, options = {}) =>
+      stageVersioned("canary", deploymentId, { workspaceId: options.workspaceId }, readCanaryByVersion, "The canary control room"),
+    getLiveFullVersioned: (deploymentId, options = {}) =>
+      stageVersioned("live", deploymentId, options, readLiveFullByVersion, "The live operations"),
 
     async listOperations(query) {
       const blocked = readBlocked();

@@ -370,3 +370,36 @@ Dùng lại id sẵn có: FE-004 (AGING/PAUSED), FE-006/013/025 (cửa sổ, ret
 | D11 | Đọc một lần + nút Refresh như các màn V2 khác | Nhất quán |
 | D12 | Chấp nhận đọc profile Paper lớn ở lần đầu; ghi request hỏi Codex route phân trang `shadow-panel` | Không chặn cờ `workbench` |
 | D13 | Chấp nhận các lệch hi-fi (a)–(g): chip chưa publish ghi "Not published", spine không đánh done khi chưa có lịch sử, không tự tính tuổi, cột Positions đã publish, Sessions/VN "Not published", bỏ công tắc Route|Drawer, thanh bối cảnh khóa env theo deployment | Giữ nguyên luật trung thực |
+
+## W0b signatures (cổng nhận biết phiên bản, 2026-10-19)
+
+Writer W0b công bố để ba màn Sandbox, Canary, Live code theo. Đường dẫn tính từ `apps/portal/frontend/src/execution/`. Ba phương thức nằm trong `ExecutionApi` (`api/ports.ts`), cài ở `api/httpApi.ts` (HTTP thật) và `api/fixtureApi.ts` (lab: bọc fixture V1 thành `v1`). Phương thức V1 (`getSandboxCertification`, `getCanaryControlRoom`, `getLiveFullOperations`) và mọi chỗ gọi chúng không đổi.
+
+```ts
+// api/ports.ts
+getSandboxCertificationVersioned(deploymentId: string, options?: StageVersionedOptions): Promise<Result<SandboxVersionRead>>;
+getCanaryVersioned(deploymentId: string, options?: StageVersionedOptions): Promise<Result<CanaryVersionRead>>;
+getLiveFullVersioned(deploymentId: string, options?: LiveFullVersionedOptions): Promise<Result<LiveFullVersionRead>>;
+
+// v2/readers/dispatch.ts (kiểu và helper mới; hành vi của dispatch không đổi)
+export type SandboxVersionRead  = VersionRead<SandboxCertification, SandboxParentV2>;   // GET /deployments/{id}/certification
+export type CanaryVersionRead   = VersionRead<CanaryControlRoom, CanaryParentV2>;       // GET /deployments/{id}/canary
+export type LiveFullVersionRead = VersionRead<LiveFullOperations, LiveSourceOperationsV2>; // GET /deployments/{id}/live
+export interface StageVersionedOptions { workspaceId?: string }                         // ?workspace_id=
+export interface LiveFullVersionedOptions extends StageVersionedOptions { panel?: string; cursor?: string }
+export const LIVE_FULL_PAGEABLE_PANELS: readonly LiveSourcePanelName[];                  // 10 panel, không có broker_sync
+export function stageVersionedSearch(o?: LiveFullVersionedOptions): { ok: true; search: string } | { ok: false; reason: string };
+export function v1Versioned<A, B>(r: Result<A>): Result<VersionRead<A, B>>;             // bọc kết quả V1 (cổng fixture)
+// VersionRead<A,B> (đã có) =
+//   | { kind: "v1"; schemaVersion: string | null; value: A }
+//   | { kind: "v2"; schemaVersion: string; value: B }
+//   | { kind: "unsupported"; schemaVersion: string | null; reason: UnsupportedReason }
+```
+
+Quy ước kết quả (`Result<VersionRead<A,B>>`):
+- `ok: true, value.kind === "v1"`: thân V1, giá trị đúng như reader V1 trả. `"v2"`: thân V2 đã qua reader V2 chặt (`readSandboxParentV2`, `readCanaryParentV2`, `readLiveSourceOperationsV2`). Không bao giờ có đối tượng hình V1 cho thân V2.
+- `ok: true, value.kind === "unsupported"` là một câu trả lời đọc được, không phải lỗi mạng: `schema_version` lạ hoặc của route khác, thân V2 sai hình (`V2_MALFORMED`), thân không phải JSON hoặc không phải object (`NOT_AN_OBJECT`, `schemaVersion: null`). Màn dùng `unsupportedText(value)` để hiện câu; kết quả không chứa thân, chỉ chứa `schema_version` (cắt 80 ký tự, đã bỏ ký tự điều khiển). Khác `getGovernanceParent` (cùng kiểu nhưng cổng HTTP của nó trả `unavailable` cho `unsupported`): ở đây `unsupported` ở trong `ok`, đúng như tài liệu cổng đó mô tả.
+- `ok: false`: 401/403 là `denied`; 404/409/5xx, lỗi mạng, đọc bị hủy (signal đã abort hoặc abort giữa chừng) là `unavailable`; 429 là `stale`. `reason` giữ `code: message` của server như mọi cổng khác. Không bao giờ throw.
+- Live: `panel` phải là một trong 10 panel phân trang (`deployments, positions, sessions, orders, fills, accounts, account_balances, margin_balances, account_sync, reconciliation`) và `cursor` đòi `panel`; sai thì `ok: false, status: "unavailable"` và KHÔNG gửi request. `cursor` là chuỗi mờ do server cấp cho đúng panel đó; cursor hết hạn được server từ chối (409, `unavailable`), màn đọc lại panel từ trang đầu. Sandbox và Canary chỉ nhận `workspaceId`.
+- Màn V2 nên dùng `api.withReadSignal?.(signal) ?? api` như các `useRead` hiện có để hủy đọc khi rời màn.
+- Ví dụ dùng: `const r = await api.getLiveFullVersioned(id, { panel: "orders", cursor }); if (r.ok && r.value.kind === "v2") r.value.value.panels.orders`.

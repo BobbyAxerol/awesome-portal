@@ -28,7 +28,10 @@ import {
   readPaperExitByVersion,
   readR2ByVersion,
   readSandboxByVersion,
+  LIVE_FULL_PAGEABLE_PANELS,
+  stageVersionedSearch,
   unsupportedText,
+  v1Versioned,
 } from "./dispatch";
 
 type Fixture = Record<string, any>;
@@ -233,5 +236,35 @@ describe("unsupportedText", () => {
     if (read.kind !== "unsupported") throw new Error("unreachable");
     expect(unsupportedText(read)).toContain("portal.execution.something.v9");
     expect(unsupportedText({ kind: "unsupported", schemaVersion: null, reason: "V1_MALFORMED" })).toContain("no schema_version");
+  });
+});
+
+describe("the stage port helpers", () => {
+  it("the pageable Live panels are the published query enum: ten, without broker_sync", () => {
+    expect([...LIVE_FULL_PAGEABLE_PANELS]).toEqual([
+      "deployments", "positions", "sessions", "orders", "fills", "accounts", "account_balances", "margin_balances", "account_sync", "reconciliation",
+    ]);
+  });
+
+  it("stageVersionedSearch: no options is no query; workspace, panel and cursor are encoded in that order", () => {
+    expect(stageVersionedSearch()).toEqual({ ok: true, search: "" });
+    expect(stageVersionedSearch({})).toEqual({ ok: true, search: "" });
+    expect(stageVersionedSearch({ workspaceId: "a b" })).toEqual({ ok: true, search: "?workspace_id=a+b" });
+    expect(stageVersionedSearch({ cursor: "" })).toEqual({ ok: true, search: "" });
+    expect(stageVersionedSearch({ workspaceId: "w", panel: "orders", cursor: "c&x=1" })).toEqual({ ok: true, search: "?workspace_id=w&panel=orders&cursor=c%26x%3D1" });
+  });
+
+  it("stageVersionedSearch: a panel outside the enum, or a cursor with no panel, is refused with a reason", () => {
+    for (const panel of ["broker_sync", "", "nope", "ORDERS"]) expect(stageVersionedSearch({ panel }).ok).toBe(false);
+    const refused = stageVersionedSearch({ cursor: "lps2.x" });
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) expect(refused.reason).toContain("panel");
+  });
+
+  it("v1Versioned wraps a V1 value as a v1 read and passes warnings and failures through untouched", () => {
+    expect(v1Versioned({ ok: true, value: 7 })).toEqual({ ok: true, value: { kind: "v1", schemaVersion: null, value: 7 } });
+    expect(v1Versioned({ ok: true, value: 7, warnings: ["w"] })).toEqual({ ok: true, value: { kind: "v1", schemaVersion: null, value: 7 }, warnings: ["w"] });
+    const failure = { ok: false as const, status: "denied" as const, reason: "no" };
+    expect(v1Versioned(failure)).toBe(failure);
   });
 });

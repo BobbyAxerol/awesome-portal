@@ -25,8 +25,8 @@ import type { ExecutionApi, Result } from "../../api/ports";
 import { readLiveReview, type LiveReviewPayload } from "../../api/profileRead";
 import { readGateR2Detail, readPaperExitDetail, type GateR2Detail, type PaperExitDetail } from "../../api/rows";
 import { v1Refusal } from "../../api/schemaGuard";
-import { readCanaryControlRoom, readSandboxCertification } from "../../certification";
-import { readLiveFullOperations } from "../../liveFull";
+import { readCanaryControlRoom, readSandboxCertification, type CanaryControlRoom, type SandboxCertification } from "../../certification";
+import { readLiveFullOperations, type LiveFullOperations } from "../../liveFull";
 import { readStagedActivation } from "../../stagedActivation";
 import {
   FOLLOWING_PARENT_V2_SCHEMA,
@@ -39,11 +39,19 @@ import {
   readPaperExitParentV2,
   readR2ParentV2,
   readSandboxParentV2,
+  type CanaryParentV2,
   type LiveParentV2,
   type PaperExitParentV2,
   type R2ParentV2,
+  type SandboxParentV2,
 } from "./governanceParents";
-import { LIVE_SOURCE_V2_SCHEMA, readLiveSourceOperationsV2 } from "./liveSourceOperations";
+import {
+  LIVE_SOURCE_PANELS,
+  LIVE_SOURCE_V2_SCHEMA,
+  readLiveSourceOperationsV2,
+  type LiveSourceOperationsV2,
+  type LiveSourcePanelName,
+} from "./liveSourceOperations";
 
 export type UnsupportedReason =
   /** The body is not a JSON object. */
@@ -254,4 +262,61 @@ export async function v1GovernanceParent(
         : result;
     }
   }
+}
+
+/* ── the stage screens' port (Sandbox, Canary, Live) ──────────────────────── */
+
+/** What `ExecutionApi.getSandboxCertificationVersioned` answers: V1 certification, V2 following parent, or `unsupported`. */
+export type SandboxVersionRead = VersionRead<SandboxCertification, SandboxParentV2>;
+/** What `ExecutionApi.getCanaryVersioned` answers: V1 control room, V2 following parent, or `unsupported`. */
+export type CanaryVersionRead = VersionRead<CanaryControlRoom, CanaryParentV2>;
+/** What `ExecutionApi.getLiveFullVersioned` answers: V1 live full operations, V2 live-source operations, or `unsupported`. */
+export type LiveFullVersionRead = VersionRead<LiveFullOperations, LiveSourceOperationsV2>;
+
+/** The panels `GET /deployments/{id}/live?panel=` can advance (published query enum): the eleven minus `broker_sync`, which is not commissioned and has nothing to page. */
+export const LIVE_FULL_PAGEABLE_PANELS: readonly LiveSourcePanelName[] = LIVE_SOURCE_PANELS.filter((p) => p !== "broker_sync");
+
+export interface StageVersionedOptions {
+  /** `?workspace_id=`; omitted means the caller's own workspace. */
+  workspaceId?: string;
+}
+
+export interface LiveFullVersionedOptions extends StageVersionedOptions {
+  /** One fixed Live panel to advance; every other panel answers its first page. */
+  panel?: string;
+  /** The opaque continuation the server issued for that panel; requires `panel`. */
+  cursor?: string;
+}
+
+/**
+ * The query string of a version-aware stage read, or the reason the request is
+ * not sent. A panel outside the published enum, or a cursor with no panel, is
+ * a caller bug the server would answer with a 400; it is refused here without
+ * a request, so a screen cannot ask the server to guess.
+ */
+export function stageVersionedSearch(options: LiveFullVersionedOptions = {}): { ok: true; search: string } | { ok: false; reason: string } {
+  const { workspaceId, panel, cursor } = options;
+  if (panel !== undefined && !(LIVE_FULL_PAGEABLE_PANELS as readonly string[]).includes(panel)) {
+    return { ok: false, reason: "That Live panel cannot be requested: it is not one of the published pageable panels." };
+  }
+  if (cursor !== undefined && cursor !== "" && panel === undefined) {
+    return { ok: false, reason: "A continuation cursor belongs to one panel: name the panel it continues." };
+  }
+  const params = new URLSearchParams();
+  if (workspaceId) params.set("workspace_id", workspaceId);
+  if (panel !== undefined) params.set("panel", panel);
+  if (cursor) params.set("cursor", cursor);
+  const search = params.toString();
+  return { ok: true, search: search === "" ? "" : `?${search}` };
+}
+
+/**
+ * A port with only V1 methods (the fixture port): the V1 result wrapped as a
+ * `v1` answer, failures passed through untouched. Same shape as
+ * `v1GovernanceParent`, for the three stage routes.
+ */
+export function v1Versioned<A, B>(result: Result<A>): Result<VersionRead<A, B>> {
+  return result.ok
+    ? { ok: true, value: { kind: "v1", schemaVersion: null, value: result.value }, ...(result.warnings ? { warnings: result.warnings } : {}) }
+    : result;
 }

@@ -11,7 +11,7 @@
  * the ones in the mapping, not the ones in `fetch`. A fixture that returned
  * finished `ApprovalRow` objects would test nothing.
  */
-import { v1GovernanceParent } from "../v2/readers/dispatch";
+import { stageVersionedSearch, v1GovernanceParent, v1Versioned } from "../v2/readers/dispatch";
 import CC_SNAPSHOT_BUSY from "../../../../../../packages/contracts/fixtures/execution-command-center.busy.valid.json";
 import PAPER_OVERVIEW_READY from "../../../../../../packages/contracts/fixtures/execution-paper-overview.ready.valid.json";
 import SANDBOX_OVERVIEW_READY from "../../../../../../packages/contracts/fixtures/execution-sandbox-overview.ready.valid.json";
@@ -756,6 +756,29 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return live
         ? { ok: true as const, value: live }
         : unavailable("The live full operations response could not be read.");
+    },
+
+    /*
+     * The version-aware stage reads: the fixture lab only has the V1 bodies, so
+     * each answers its V1 fixture as a `v1` read (same rule as getGovernanceParent).
+     * A request the http port would refuse without sending (bad panel, cursor
+     * with no panel) is refused here too, so a screen under the lab sees the
+     * same behaviour.
+     */
+    async getSandboxCertificationVersioned(deploymentId) {
+      return gate<never>("getSandboxCertificationVersioned") ?? v1Versioned(await self.getSandboxCertification(deploymentId));
+    },
+
+    async getCanaryVersioned(deploymentId) {
+      return gate<never>("getCanaryVersioned") ?? v1Versioned(await self.getCanaryControlRoom(deploymentId));
+    },
+
+    async getLiveFullVersioned(deploymentId, versionedOptions) {
+      const blocked = gate<never>("getLiveFullVersioned");
+      if (blocked) return blocked;
+      const query = stageVersionedSearch(versionedOptions);
+      if (!query.ok) return unavailable(query.reason);
+      return v1Versioned(await self.getLiveFullOperations(deploymentId));
     },
 
     async listOperations(query) {

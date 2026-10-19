@@ -39,7 +39,15 @@ import type { ScreenContract } from "../screenContracts";
 import type { CommandCatalogue } from "../adminCatalog";
 import type { CommandPlan, CommandPlanRequestInput } from "../commandPlan";
 import type { IncidentDetail, OperationsQueue, WorkflowResult } from "../operations";
-import type { GovernanceParentKind, GovernanceParentRead } from "../v2/readers/dispatch";
+import type {
+  CanaryVersionRead,
+  GovernanceParentKind,
+  GovernanceParentRead,
+  LiveFullVersionedOptions,
+  LiveFullVersionRead,
+  SandboxVersionRead,
+  StageVersionedOptions,
+} from "../v2/readers/dispatch";
 import type { IncidentRootReadV2, OperationalQueueQueryV2, OperationalQueueReadV2 } from "../v2/readers/operationalQueue";
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
@@ -425,6 +433,29 @@ export interface ExecutionApi {
   getCanaryControlRoom(deploymentId: string): Promise<Result<CanaryControlRoom>>;
   /** `GET /api/v1/execution/deployments/{id}/live` */
   getLiveFullOperations(deploymentId: string): Promise<Result<LiveFullOperations>>;
+  /**
+   * The three stage routes above, read by the body's `schema_version`
+   * (v2/readers/dispatch.ts). In a SCOPED_V2 workspace the SAME route answers
+   * `portal.execution.following-parent.v2` (certification, canary) or
+   * `portal.execution.live-source-operations.v2` (live), which the V1 methods
+   * above refuse. These answer whichever the server sent, tagged: `v1` (the
+   * existing V1 value), `v2` (the strict V2 value) or `unsupported` (a later or
+   * foreign version, a malformed body, an unreadable response: named by
+   * `unsupportedText`, never a partial V1-shaped object and never the body).
+   * `unsupported` is an `ok` answer, not a failure: a refusal (403/404/409/503),
+   * a network failure and an aborted read are `ok: false` with the typed status.
+   * The V1 methods are unchanged and V1 screens keep calling them.
+   * `workspaceId` is `?workspace_id=`; omitted means the caller's own.
+   */
+  getSandboxCertificationVersioned(deploymentId: string, options?: StageVersionedOptions): Promise<Result<SandboxVersionRead>>;
+  getCanaryVersioned(deploymentId: string, options?: StageVersionedOptions): Promise<Result<CanaryVersionRead>>;
+  /**
+   * `panel` (one of the ten pageable Live panels) advances that panel and every
+   * other panel answers its first page; `cursor` is the opaque continuation the
+   * server issued for that panel and requires `panel`. A panel outside the
+   * published enum, or a cursor without a panel, is `unavailable` with no request.
+   */
+  getLiveFullVersioned(deploymentId: string, options?: LiveFullVersionedOptions): Promise<Result<LiveFullVersionRead>>;
   /**
    * `GET /api/v1/execution/operations` — the triage queue.
    *
