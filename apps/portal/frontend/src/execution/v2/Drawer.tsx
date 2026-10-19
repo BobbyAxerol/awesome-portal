@@ -67,12 +67,22 @@ export interface DrawerProps {
   title: string;
   subtitle?: string;
   children: ReactNode;
-  /** Footer row, usually `DockAction`s. */
+  /**
+   * Footer, usually `DockAction`s: one row of buttons, then one line per blocked
+   * action. The footer is capped at a quarter of the viewport and scrolls.
+   */
   actions?: ReactNode;
+  /**
+   * Content placed at the top of the body, above `children`, set off by a rule.
+   * For what the reader must not have to scroll to: a screen whose facts table
+   * is long passes its "Not published" block (or any state that explains what
+   * is missing) here instead of putting it last. Absent = nothing is drawn.
+   */
+  priority?: ReactNode;
   mode?: DockMode;
 }
 
-export function Drawer({ open = true, onClose, title, subtitle, children, actions, mode = "dock" }: DrawerProps) {
+export function Drawer({ open = true, onClose, title, subtitle, children, actions, priority, mode = "dock" }: DrawerProps) {
   const titleId = useId();
   const panel = useRef<HTMLElement>(null);
   const closeRef = useRef(onClose);
@@ -141,7 +151,10 @@ export function Drawer({ open = true, onClose, title, subtitle, children, action
           </div>
           <button type="button" className="exec-dock-close" onClick={onClose}>Close</button>
         </header>
-        <div className="exec-dock-body">{children}</div>
+        <div className="exec-dock-body">
+          {priority ? <div className="exec-dock-priority">{priority}</div> : null}
+          {children}
+        </div>
         {actions ? <footer className="exec-dock-actions">{actions}</footer> : null}
       </aside>
     </>
@@ -183,10 +196,10 @@ export function DockAction({ label, onAction, reason, accessHref, accessLabel = 
         {label}
       </button>
       {blocked ? (
-        <>
-          <p id={reasonId} className="exec-dock-reason">{text}</p>
+        <div className="exec-dock-why" data-l={label}>
+          <p id={reasonId} className="exec-dock-reason" title={text}>{text}</p>
           {accessHref ? <Link className="exec-dock-access" to={withContext(accessHref, params)}>{accessLabel}</Link> : null}
-        </>
+        </div>
       ) : null}
     </div>
   );

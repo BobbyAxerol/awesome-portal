@@ -121,7 +121,7 @@ export interface NotPublishedProps {
 export function NotPublished({ id, reasonCode, children }: NotPublishedProps) {
   return (
     <span className="exec-blk-np" title={feLabel(id)}>
-      <span className="exec-blk-np-word">{NOT_PUBLISHED}</span> ({id})
+      <span className="exec-blk-np-word">{NOT_PUBLISHED}</span> (<span className="exec-blk-np-id">{id}</span>)
       {children ? <> {children}</> : null}
       {reasonCode ? <span className="exec-blk-np-reason">{reasonCode}</span> : null}
     </span>

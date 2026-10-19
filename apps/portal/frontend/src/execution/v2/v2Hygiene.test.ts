@@ -39,8 +39,30 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/** Selectors whose uppercase is a reviewed design choice (flag chips, group labels). */
-const UPPERCASE_ALLOWED = [/^\.exec-flag\b/, /^\.exec-ctxbar-label\b/, /^\.exec-cmdbar-group\b/, /^\.exec-nav-group-label\b/];
+/**
+ * Selectors whose uppercase is a reviewed design choice. Two groups:
+ *  - chrome labels and flag chips (SYS-5 of the shell);
+ *  - the hi-fi kit's mono caps voice (SYS-1, UXM-07 fidelity review): KPI labels,
+ *    panel heads, tabs, column heads and tile names. Each entry is a class prefix
+ *    owned by one stylesheet, so a new uppercase rule outside them still fails.
+ *    Size always comes from a type role (`--exec-font-label`), never `font-size`.
+ */
+const UPPERCASE_ALLOWED = [
+  /^\.exec-flag\b/,
+  /^\.exec-ctxbar-label\b/,
+  /^\.exec-cmdbar-group\b/,
+  /^\.exec-nav-group-label\b/,
+  // blocks.css: KPI label (.kpi .l), panel head (.ph), spine stage name/short, triad title and row heads.
+  /^\.exec-blk-kpi-label\b/,
+  /^\.exec-blk-ph-title\b/,
+  /^\.exec-blk-spine-(name|short)\b/,
+  /^\.exec-blk-triad-(title|row dt)\b/,
+  // cards.css: the shared table head (th) and the 660px card label (td::before).
+  /^\.exec-cards thead th\b/,
+  /^\.exec-cards td\[data-l\]::before\b/,
+  // Tabs (kit .tabs button): one tab class per screen stylesheet, always `.exec-<screen>-tab`.
+  /^\.exec-[a-z0-9]+-tab\b(?!-count)/,
+];
 
 function rules(source: string): { selector: string; body: string }[] {
   return [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ selector: m[1].trim(), body: m[2] }));

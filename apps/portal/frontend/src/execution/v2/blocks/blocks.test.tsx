@@ -96,6 +96,23 @@ describe("Kpi", () => {
     expect(within(group).getByText("Net PnL").tagName).toBe("DT");
   });
 
+  it("prints a pre-formatted value, and Not available (never 0) when the screen has none", () => {
+    render(
+      <KpiStrip label="Counts">
+        <Kpi label="Alphas" value="5" basis="In your scope" />
+        <Kpi label="Portfolios" />
+      </KpiStrip>,
+    );
+    expect(screen.getByText("Alphas").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("5");
+    expect(screen.getByText("Portfolios").nextElementSibling?.textContent).toBe("Not available");
+  });
+
+  it("keeps a Not published id in one unbreakable span", () => {
+    render(<NotPublished id="FE-027/028" />);
+    expect(document.querySelector(".exec-blk-np-id")?.textContent).toBe("FE-027/028");
+    expect(document.body.textContent).toContain("Not published (FE-027/028)");
+  });
+
   it("prints Not published (FE-xxx) and it wins over a metric", () => {
     render(<Kpi label="Window return" notPublished="FE-025" metric={metric("1.00")} />);
     expect(document.body.textContent).toContain("Not published");
@@ -181,6 +198,19 @@ describe("SectionPanel, PanelHead and StateBoundary", () => {
     const { container } = render(<StateBoundary status={status} reason="Two sources behind">the body</StateBoundary>);
     expect(container.querySelector(".exec-state")?.getAttribute("data-status")).toBe(status);
     expect(container.querySelector(".exec-blk-demoted")?.textContent).toBe("the body");
+  });
+
+  it.each(["partial", "stale"] as const)("%s with quiet and no reason drops the generic state line but keeps the demoted body", (status) => {
+    const { container } = render(<StateBoundary status={status} quiet>the body</StateBoundary>);
+    expect(container.querySelector(".exec-state")).toBeNull();
+    expect(container.textContent).not.toContain("The source gave no reason.");
+    expect(container.querySelector(".exec-blk-demoted")?.textContent).toBe("the body");
+  });
+
+  it("quiet never hides a reason that was given", () => {
+    const { container } = render(<StateBoundary status="stale" quiet reason="Two sources behind">the body</StateBoundary>);
+    expect(container.querySelector(".exec-state")?.getAttribute("data-status")).toBe("stale");
+    expect(container.textContent).toContain("Two sources behind");
   });
 });
 

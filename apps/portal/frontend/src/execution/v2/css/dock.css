@@ -2,8 +2,8 @@
  * Overlay: fixed to the right edge below 1500px, over a scrim. `data-mode` is
  * set by the component from the same breakpoint, so role and look agree.
  *
- * No uppercase here: the kit's header caps are dropped so this file needs no
- * entry in the v2 hygiene allowlist. Text and fill pairs sit in one rule. */
+ * No uppercase here, so this file needs no entry in the v2 hygiene allowlist.
+ * Text and fill pairs sit in one rule. */
 .exec-dock {
   box-sizing: border-box;
   display: flex;
@@ -22,8 +22,12 @@
 .exec-dock[data-mode="overlay"] {
   position: fixed;
   right: 0;
-  /* The shell sets this to its own chrome height; 81px is the kit's. */
-  top: var(--exec-dock-top, 81px);
+  /* Starts under the real top bar: 52px, the Carbon operational --topbar-h. The
+   * kit's 81px is that bar plus the 29px "design preview" strip, which is not
+   * product chrome and left a dead band here. (The token is not read: the bar
+   * sits outside this surface, whose own density may differ.) A shell may still
+   * set --exec-dock-top. */
+  top: var(--exec-dock-top, 52px);
   bottom: 0;
   z-index: 30;
   width: min(420px, 100vw);
@@ -89,21 +93,46 @@
   font: var(--exec-font-body);
   overflow: auto;
 }
+/* The `priority` slot: what the reader must see before the facts below it. */
+.exec-dock-priority {
+  margin: 0 0 var(--space-4);
+  padding: 0 0 var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
 
+/* Footer: one row of buttons, then one line per blocked action (kit `.acts` +
+ * `.why`). The reasons are never dropped (each stays the button's
+ * aria-describedby); they are one line each, ellipsised, full text on hover or
+ * focus and in `title`. The footer is capped and scrolls, so four blocked
+ * actions cannot take over the drawer (INC-1: 37-39% of its height before). */
 .exec-dock-actions {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   align-items: flex-start;
   gap: var(--space-2);
+  max-height: 25vh;
   padding: 12px 16px;
+  overflow-y: auto;
   border-top: 1px solid var(--line-strong);
 }
 .exec-dock-action {
+  display: contents;
+}
+.exec-dock-why {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  max-width: 100%;
+  flex: 0 0 100%;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  order: 1;
+}
+/* The action's name, drawn from data-l so it is not a second text node for the button's name. */
+.exec-dock-why[data-l]::before {
+  content: attr(data-l);
+  flex: none;
+  font: var(--exec-font-caption);
+  color: var(--ink-soft);
 }
 .exec-dock-btn {
   padding: 6px 16px;
@@ -125,11 +154,22 @@
   cursor: not-allowed;
 }
 .exec-dock-reason {
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
   font: var(--exec-font-caption);
   color: var(--ink-faint);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.exec-dock-why:hover .exec-dock-reason,
+.exec-dock-why:focus-within .exec-dock-reason {
+  overflow: visible;
+  white-space: normal;
 }
 .exec-dock-access {
+  flex: none;
   font: var(--exec-font-caption);
   color: var(--accent);
 }

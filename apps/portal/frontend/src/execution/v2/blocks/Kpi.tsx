@@ -17,8 +17,14 @@ export interface KpiProps {
   label: string;
   /** Boundary result from `readMetric`. `null` = malformed payload, `undefined` = not provided. */
   metric?: Metric | null;
-  /** The request that will publish this value; wins over `metric`. */
+  /** The request that will publish this value; wins over `metric` and `value`. */
   notPublished?: NotPublishedId;
+  /**
+   * A figure the screen already formatted (a count, a state word). Wins over
+   * `metric`. Absent = the cell falls through to `metric`, which prints
+   * `Not available` when it was not provided; a count is never padded with 0.
+   */
+  value?: string;
   /** Unit word after the number ("USDT"). */
   suffix?: string;
   /** Methodology or basis caption ("Modified Dietz, 30D"). */
@@ -32,7 +38,7 @@ export interface KpiProps {
 }
 
 /** One cell of the strip. Render inside `KpiStrip`. */
-export function Kpi({ label, metric, notPublished, suffix, basis, signed = false, absentReason, children }: KpiProps) {
+export function Kpi({ label, metric, notPublished, value, suffix, basis, signed = false, absentReason, children }: KpiProps) {
   return (
     <div className="exec-blk-kpi">
       <dt className="exec-blk-kpi-label">{label}</dt>
@@ -40,6 +46,8 @@ export function Kpi({ label, metric, notPublished, suffix, basis, signed = false
         <span className="exec-blk-kpi-value">
           {notPublished ? (
             <NotPublished id={notPublished} />
+          ) : value !== undefined ? (
+            <span className="exec-blk-num">{value}</span>
           ) : (
             <MetricText metric={metric} suffix={suffix} signed={signed} absentReason={absentReason} />
           )}

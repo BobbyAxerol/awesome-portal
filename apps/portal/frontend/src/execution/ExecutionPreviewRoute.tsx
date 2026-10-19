@@ -167,6 +167,8 @@ export function PreviewBanner({ profile, screenId, registryWord }: { profile: st
     </aside>
   );
 }
+// The V2 Blotter's orders read has no environment filter (Not published, FE-052): the bar says so instead of looking live.
+const BLOTTER_ENV_LOCK = { reason: "Not published (FE-052). The orders read has no environment filter." };
 export function PreviewFrame({ screenId, profile, children }: { screenId: string; profile?: string | null; children: ReactNode }) {
   const sessionKey = retainedSessionKey(useSession().principal);
   // Bind before children's passive effects; never fetch or notify another component during render.
@@ -192,7 +194,7 @@ export function PreviewFrame({ screenId, profile, children }: { screenId: string
           amendment is codex's (consolidated request); shown in the inspector
           as drift, never used to pick a data source. */}
       <PreviewBanner profile="http" screenId={screenId} registryWord={profile} />
-      {V2ContextBar && EXECUTION_V2_SHELL ? <Suspense fallback={null}><V2ContextBar /></Suspense> : null}
+      {V2ContextBar && EXECUTION_V2_SHELL ? <Suspense fallback={null}><V2ContextBar envLock={screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2Screen("blotter") ? BLOTTER_ENV_LOCK : undefined} /></Suspense> : null}
       <Fragment key={refreshEpoch}>{children}</Fragment>
     </ExecutionSurface>
   );

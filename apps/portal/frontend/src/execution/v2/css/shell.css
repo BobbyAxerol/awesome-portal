@@ -3,7 +3,7 @@
  * Type only through the `--exec-font-*` roles, colour only through carbon
  * tokens, one fg/bg pair per rule so the pair gate can read it. Radius stays 0
  * (terminal principle). Uppercase mono labels are limited to .exec-ctxbar-label,
- * .exec-cmdbar-group and .exec-nav-group-label. */
+ * .exec-cmdbar-group and .exec-nav-group-label (v2Hygiene allowlist). */
 
 /* ---- context bar ------------------------------------------------------- */
 
@@ -11,8 +11,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
-  padding: var(--space-2) var(--space-4);
+  gap: var(--space-2) 14px;
+  /* The kit's `main{padding:24px}` puts 24px between the bar and the page head.
+   * The bar is a sibling of the screen root inside .exec-preview-shell, so the
+   * space lives here: every screen gets it and none has to know (SYS-2). */
+  margin-bottom: var(--space-5);
+  padding: 7px var(--space-4);
   background: var(--paper-sunken);
   color: var(--ink-soft);
   border-bottom: 1px solid var(--line-strong);
@@ -33,7 +37,7 @@
 .exec-ctxbar-seg button {
   font: var(--exec-font-label);
   letter-spacing: 0.04em;
-  padding: var(--space-1) var(--space-3);
+  padding: 7px var(--space-3);
   background: var(--paper);
   color: var(--ink-soft);
   border: 0;

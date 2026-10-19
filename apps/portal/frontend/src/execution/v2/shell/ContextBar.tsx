@@ -33,6 +33,11 @@ export interface WindowLock {
   effective?: string;
 }
 
+export interface EnvLock {
+  /** Why the environment does not apply on this screen (one short sentence, ideally with its FE id). */
+  reason: string;
+}
+
 export type ContextPatch = Partial<Pick<ExecUrlParams, "env" | "window">>;
 
 export interface ContextBarProps {
@@ -42,15 +47,24 @@ export interface ContextBarProps {
   ccy?: string | null;
   onChange(patch: ContextPatch): void;
   windowLock?: WindowLock | null;
+  /**
+   * For a screen whose read takes no environment (the Blotter's orders read):
+   * the environment buttons are disabled and the reason is printed beside them,
+   * the same pattern as `windowLock`. The pressed button keeps showing the URL's
+   * environment; it is not a claim about the rows.
+   */
+  envLock?: EnvLock | null;
   /** Server-derived scope text, e.g. "Scope: Your alphas"; the bar never decides it from a role. */
   scope?: string | null;
   /** Plain anchor target for the "My access" link beside a locked control (D9). */
   accessHref?: string;
 }
 
-export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowLock, scope, accessHref }: ContextBarProps) {
+export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowLock, envLock, scope, accessHref }: ContextBarProps) {
   const reasonId = useId();
+  const envReasonId = useId();
   const locked = windowLock !== undefined && windowLock !== null;
+  const envLocked = envLock !== undefined && envLock !== null;
 
   return (
     <div className="exec-ctxbar" role="group" aria-label="Context">
@@ -62,6 +76,8 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
             type="button"
             data-v={value}
             aria-pressed={value === env}
+            disabled={envLocked}
+            aria-describedby={envLocked ? envReasonId : undefined}
             onClick={() => {
               if (value !== env) onChange({ env: value });
             }}
@@ -87,6 +103,7 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
           </button>
         ))}
       </div>
+      {envLock ? <span id={envReasonId} className="exec-ctxbar-reason">{envLock.reason}</span> : null}
       {windowLock?.effective ? <span className="exec-ctxbar-lock">Window fixed: {windowLock.effective}</span> : null}
       {windowLock ? (
         <span id={reasonId} className="exec-ctxbar-reason">

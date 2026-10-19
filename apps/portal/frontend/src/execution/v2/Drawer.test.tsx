@@ -234,3 +234,53 @@ describe("DockAction", () => {
     }
   });
 });
+
+describe("priority slot and footer", () => {
+  it("draws the priority block before the children, and nothing when it is absent", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <Drawer onClose={() => {}} title="Incident" priority={<p>Not published (FE-031)</p>}>
+          <p>Facts table</p>
+        </Drawer>
+      </MemoryRouter>,
+    );
+    const body = container.querySelector(".exec-dock-body")!;
+    expect(body.firstElementChild?.className).toBe("exec-dock-priority");
+    expect(body.firstElementChild?.textContent).toBe("Not published (FE-031)");
+    expect(body.children[1]?.textContent).toBe("Facts table");
+    cleanup();
+    const bare = render(
+      <MemoryRouter>
+        <Drawer onClose={() => {}} title="Incident">
+          <p>Facts table</p>
+        </Drawer>
+      </MemoryRouter>,
+    );
+    expect(bare.container.querySelector(".exec-dock-priority")).toBeNull();
+  });
+
+  it("a blocked action keeps its full reason in the DOM (title and description) with one line per action", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <Drawer
+          onClose={() => {}}
+          title="Incident"
+          actions={
+            <>
+              <DockAction label="Acknowledge" reason="Not published (FE-015). Acknowledging is an ADMIN-only write." />
+              <DockAction label="Assign to me" reason="Not published (FE-020). Nobody to assign." />
+            </>
+          }
+        >
+          <p>Body</p>
+        </Drawer>
+      </MemoryRouter>,
+    );
+    const lines = container.querySelectorAll(".exec-dock-why");
+    expect(lines).toHaveLength(2);
+    expect(lines[0].getAttribute("data-l")).toBe("Acknowledge");
+    const p = lines[0].querySelector("p")!;
+    expect(p.getAttribute("title")).toBe(p.textContent);
+    expect(screen.getAllByText("Acknowledge")).toHaveLength(1);
+  });
+});

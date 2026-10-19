@@ -70,6 +70,19 @@ describe("ContextBar", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("envLock disables the environment buttons and ties the reason to them, leaving the window alone", () => {
+    const onChange = vi.fn();
+    render(<ContextBar env="paper" window="90D" onChange={onChange} windowLock={null} envLock={{ reason: "Not published (FE-052). No environment filter." }} />);
+    const sandbox = screen.getByRole("button", { name: "Sandbox" }) as HTMLButtonElement;
+    expect(sandbox.disabled).toBe(true);
+    expect(document.getElementById(sandbox.getAttribute("aria-describedby") ?? "")?.textContent).toBe("Not published (FE-052). No environment filter.");
+    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(sandbox);
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "30D" }));
+    expect(onChange).toHaveBeenCalledWith({ window: "30D" });
+  });
+
   it("draws nothing for what it does not know: no As of, no dash, no placeholder chip", () => {
     const { container } = render(<ContextBar env="live" window="90D" onChange={noop} />);
     const text = container.textContent ?? "";

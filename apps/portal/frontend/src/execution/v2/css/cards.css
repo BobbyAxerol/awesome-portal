@@ -3,7 +3,9 @@
  *
  * Numeric cells follow the V1 M6 rule: mono, tabular, right-aligned, and no
  * text-overflow, so an amount is never ellipsised.
- * No uppercase: the card label keeps the caption role instead of the kit's caps. */
+ * Uppercase (hi-fi kit `th` and `td::before`): the column head and the card label
+ * are mono caps, tracked .10em / .08em, sized by --exec-font-label (never a
+ * font-size). Both selectors are on the v2Hygiene uppercase allowlist. */
 .exec-cards-wrap {
   min-width: 0;
   overflow-x: auto;
@@ -14,22 +16,24 @@
   font: var(--exec-font-data);
 }
 .exec-cards thead th {
-  padding: var(--space-2) var(--space-3);
-  font: var(--exec-font-th);
+  padding: 6px var(--space-3);
+  font: var(--exec-font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--ink-faint);
-  background: var(--paper-raised);
-  border-bottom: 1px solid var(--line);
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--line-strong);
   text-align: left;
   white-space: nowrap;
 }
 .exec-cards tbody tr {
-  color: var(--ink-soft);
+  color: var(--ink);
 }
 .exec-cards tbody td {
   box-sizing: border-box;
   height: 32px;
-  padding: 7px var(--space-3);
-  border-bottom: 1px solid var(--line-soft);
+  padding: 6px var(--space-3);
+  border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
 .exec-cards th[data-numeric="true"],
@@ -86,10 +90,20 @@
     border: 0;
     white-space: normal;
   }
+  /* The label sits left and every value packs to the right, so a cell with two
+   * spans ("Buy" "Stop limit") reads as one value, not as two ends (BLT-B7). */
+  .exec-cards tbody td[data-l] {
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
   .exec-cards td[data-l]::before {
     content: attr(data-l);
     flex: none;
-    font: var(--exec-font-caption);
+    margin-right: auto;
+    padding-right: var(--space-3);
+    font: var(--exec-font-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--ink-faint);
   }
   .exec-cards td[data-numeric="true"] .exec-cards-v {

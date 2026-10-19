@@ -255,6 +255,7 @@ export function JourneySpine({
             <li
               key={id}
               className="exec-blk-spine-node"
+              data-stage={id}
               data-s={state}
               data-sel={isSel ? "true" : undefined}
               aria-current={state === "cur" || state === "blk" ? "step" : undefined}

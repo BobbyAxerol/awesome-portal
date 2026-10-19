@@ -1,7 +1,13 @@
 /* Shared V2 blocks: Kpi strip, SectionPanel, Not published, EventFeed,
  * JourneySpine, Triad, ReplayPanel frame. Layout and type only: colour through
- * carbon tokens, type through the --exec-font-* roles, no uppercase, every
- * text/background pair inside one rule so the contrast gate can read it. */
+ * carbon tokens, type through the --exec-font-* roles, every text/background
+ * pair inside one rule so the contrast gate can read it.
+ *
+ * Uppercase (hi-fi kit): the mono label voice of the kit is restored on exactly
+ * the selectors v2Hygiene.test.ts allows by prefix: .exec-blk-kpi-label (kit
+ * `.kpi .l`, .10em), .exec-blk-ph-title (kit `.ph`, .12em), .exec-blk-spine-name
+ * and .exec-blk-triad-title / -row dt (kit tile names, .12em / .06em). The size
+ * stays in the role (--exec-font-label, mono 500 11/16), never a font-size. */
 
 /* ---- Not published / absent values -------------------------------------- */
 
@@ -14,10 +20,16 @@
   font: var(--exec-font-control);
   color: var(--ink-soft);
 }
+/* An id never breaks mid-token: "(FE-027/028)" wraps before the "(" at 390px. */
+.exec-blk-np-id {
+  white-space: nowrap;
+}
 .exec-blk-np-reason {
   margin-left: var(--space-2);
   font: var(--exec-font-id);
   color: var(--ink-faint);
+  /* "(FE-005/006/013/025)" breaks before the id, never inside it (OV-2). */
+  white-space: nowrap;
 }
 
 /* ---- metric ------------------------------------------------------------- */
@@ -68,19 +80,21 @@
 }
 .exec-blk-kpi-label {
   font: var(--exec-font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--ink-faint);
 }
 .exec-blk-kpi-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 2px;
   margin: var(--space-1) 0 0;
 }
 .exec-blk-kpi-value .exec-blk-num {
   font: var(--exec-font-kpi);
 }
 .exec-blk-kpi-note {
-  font: var(--exec-font-caption);
+  font: var(--exec-font-meta);
   color: var(--ink-faint);
 }
 @media (max-width: 1100px) {
@@ -107,7 +121,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-4);
+  padding: 9px var(--space-4);
   color: var(--ink-soft);
   background: var(--paper-sunken);
   border-bottom: 1px solid var(--line-strong);
@@ -115,6 +129,8 @@
 .exec-blk-ph-title {
   margin: 0;
   font: var(--exec-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 .exec-blk-ph-aside {
   font: var(--exec-font-meta);
@@ -137,7 +153,12 @@
   gap: var(--space-3);
   min-width: 0;
 }
+/* The body of a partial or stale panel keeps the kit's page rhythm (.stack,
+ * 24px): without it a tab bar sits on the panel above it at 0px (S3). */
 .exec-blk-demoted {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
   min-width: 0;
   opacity: 0.85;
 }
@@ -156,6 +177,10 @@
   background: var(--surface-2);
 }
 .exec-blk-btn:focus-visible,
+.exec-blk-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 .exec-blk-spine-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -223,8 +248,28 @@
   list-style: none;
 }
 .exec-blk-spine-node {
+  position: relative;
   min-width: 0;
   margin-right: -1px;
+}
+/* Connector chevron (kit .sp-nd::after): a rotated square on the seam between full nodes. */
+.exec-blk-spine[data-variant="full"] .exec-blk-spine-node:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -7px;
+  z-index: 3;
+  width: 12px;
+  height: 12px;
+  background: var(--paper);
+  border-top: 1px solid var(--line-strong);
+  border-right: 1px solid var(--line-strong);
+  transform: translateY(-50%) rotate(45deg);
+  pointer-events: none;
+}
+.exec-blk-spine[data-variant="full"] .exec-blk-spine-node[data-s="cur"]:not(:last-child)::after {
+  border-color: var(--accent);
+  border-width: 2px;
 }
 .exec-blk-spine-btn {
   display: flex;
@@ -270,7 +315,38 @@ button.exec-blk-spine-btn:hover {
   gap: var(--space-2);
 }
 .exec-blk-spine-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font: var(--exec-font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+/* 8x8 stage hue (kit stg()): gates grey, Paper and Sandbox filled, Canary hollow, Live solid. */
+.exec-blk-spine[data-variant="full"] .exec-blk-spine-name::before {
+  content: "";
+  flex: none;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  background: var(--ink-faint);
+  border: 1px solid var(--ink-faint);
+}
+.exec-blk-spine-node[data-stage="paper"] .exec-blk-spine-name::before {
+  background: var(--stage-paper);
+  border-color: var(--stage-paper);
+}
+.exec-blk-spine-node[data-stage="sandbox"] .exec-blk-spine-name::before {
+  background: var(--env-sandbox);
+  border-color: var(--env-sandbox);
+}
+.exec-blk-spine-node[data-stage="canary"] .exec-blk-spine-name::before {
+  background: transparent;
+  border: 2px solid var(--env-canary);
+}
+.exec-blk-spine-node[data-stage="live"] .exec-blk-spine-name::before {
+  background: var(--env-live);
+  border-color: var(--env-live);
 }
 .exec-blk-spine-domain {
   font: var(--exec-font-caption);
@@ -353,8 +429,17 @@ button.exec-blk-spine-btn:hover {
   border-style: dashed;
 }
 .exec-blk-spine-short {
-  font: var(--exec-font-caption);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.exec-blk-spine-node[data-s="done"] .exec-blk-spine-short {
   color: var(--ink-soft);
+}
+.exec-blk-spine-node[data-s="cur"] .exec-blk-spine-short,
+.exec-blk-spine-node[data-s="blk"] .exec-blk-spine-short {
+  color: var(--ink);
 }
 
 /* mini: a glyph for a table cell */
@@ -391,6 +476,9 @@ button.exec-blk-spine-btn:hover {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     row-gap: var(--space-2);
   }
+  .exec-blk-spine[data-variant="full"] .exec-blk-spine-node::after {
+    display: none;
+  }
 }
 @media (max-width: 660px) {
   .exec-blk-spine[data-variant="full"] .exec-blk-spine-list {
@@ -416,6 +504,8 @@ button.exec-blk-spine-btn:hover {
 .exec-blk-triad-title {
   margin: 0;
   font: var(--exec-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--ink-soft);
 }
 .exec-blk-triad-sub {
@@ -436,6 +526,8 @@ button.exec-blk-spine-btn:hover {
 }
 .exec-blk-triad-row dt {
   font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink-faint);
 }
 .exec-blk-triad-row dd {

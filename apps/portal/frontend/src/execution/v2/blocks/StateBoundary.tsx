@@ -24,6 +24,14 @@ interface StateBoundaryBase {
   actions?: ReactNode;
   /** The screen's own name for the state, when it has a better one. */
   title?: string;
+  /**
+   * `partial`/`stale` with no reason: skip the generic "The source gave no
+   * reason." state line and render the demoted body alone. For a screen that
+   * already states the freshness itself (a chip in its header) and would
+   * otherwise say it twice. The body is still marked demoted; a state that does
+   * carry a reason, and every other status, is unaffected.
+   */
+  quiet?: boolean;
 }
 
 export type StateBoundaryProps = StateBoundaryBase &
@@ -36,15 +44,16 @@ export type StateBoundaryProps = StateBoundaryBase &
 /** The panel body or the state that replaced it. */
 export function StateBoundary(props: StateBoundaryProps) {
   if (props.status === "ok") return <>{props.children}</>;
-  const { status, actions, title, children } = props;
+  const { status, actions, title, children, quiet = false } = props;
   const lastGood = "lastGood" in props ? props.lastGood : undefined;
   const keepsBody = status === "partial" || status === "stale";
   // A state that keeps the body still owes the reader a sentence: a bare "Stale" says nothing.
   const given = "reason" in props ? props.reason : undefined;
+  const silent = quiet && keepsBody && given === undefined && actions === undefined && lastGood === undefined;
   const reason = given === undefined && keepsBody ? "The source gave no reason." : given;
   return (
     <div className="exec-blk-boundary" data-status={status}>
-      <PanelState status={status} reason={reason} lastGood={lastGood} actions={actions} title={title} />
+      {silent ? null : <PanelState status={status} reason={reason} lastGood={lastGood} actions={actions} title={title} />}
       {keepsBody && children ? (
         <div className="exec-blk-demoted" data-status={status}>
           {children}
