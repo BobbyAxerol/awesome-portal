@@ -1,0 +1,435 @@
+/* New request, page and drawer (UXM-07 S3 W-REQUEST).
+ *
+ * Measured from hi-fi v2 new-approval.html (kit has no form fields, so the page defines them):
+ *   .cols 1fr | 340px, gap 24 (stacks at 1100) .. .fld gap 6, margin-bottom 16 .. label mono 11/16, .1em
+ *   select/input/textarea padding 8px 10px, 13/18, 1px line-strong .. textarea min-height 84
+ *   .step item padding 6px 14px, overlapping 1px borders, `.on` accent .. .bar2 padding 12px 16px, gap 12
+ *   .res border-left 4px, padding 12px 16px, gap 8 .. drawer 380px (the shared Drawer).
+ *
+ * Deviations: the kit's uppercase labels are not used (v2Hygiene allows uppercase on reviewed selectors
+ * only), so labels are mono 11/16 with .04em tracking in the case typed; sizes come from the --exec-font-*
+ * roles, so 13/18 is the body role's 13/20 and 12/18 mono is the term role.
+ *
+ * Names are `.exec-rq-*`; V1 uses `.exec-nr-*`, so no V1 rule can reach these and none of these reach V1.
+ * Every text/background pair is declared in one rule so the contrast gate can read it. */
+
+.exec-rq-page {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-rq-mast {
+  min-width: 0;
+}
+.exec-rq-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-rq-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-rq-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--space-5);
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .exec-rq-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- step bar ------------------------------------------------------------ */
+
+.exec-rq-steps {
+  padding: 10px var(--space-4);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-rq-steps ol {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-rq-steps li {
+  margin-right: -1px;
+  padding: 6px 14px;
+  font: var(--exec-font-term);
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  border: 1px solid var(--line-strong);
+}
+.exec-rq-steps li[data-state="current"] {
+  position: relative;
+  z-index: 1;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* ---- panel and fields ----------------------------------------------------- */
+
+.exec-rq-panel {
+  min-width: 0;
+  padding: var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-rq-panel[data-flush] {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+.exec-rq-next {
+  padding: 0;
+}
+.exec-rq-form {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.exec-rq-fields {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.exec-rq-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.exec-rq-fld {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.exec-rq-label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font: var(--exec-font-label);
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.exec-rq-label-meta {
+  color: var(--ink-faint);
+}
+.exec-rq-label-meta[data-state="long"],
+.exec-rq-label-meta[data-state="hostile"] {
+  color: var(--bad);
+}
+.exec-rq-link {
+  color: var(--accent);
+  font: var(--exec-font-label);
+}
+.exec-rq-control {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+textarea.exec-rq-control {
+  min-height: 84px;
+  resize: vertical;
+}
+.exec-rq-control:focus-visible,
+.exec-rq-submit:focus-visible,
+.exec-rq-btn:focus-visible,
+.exec-rq-link:focus-visible,
+.exec-rq-res:focus-visible,
+.exec-rq-hand summary:focus-visible,
+.exec-rq-disclosure summary:focus-visible,
+.exec-rq-prov summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-rq-control:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  cursor: not-allowed;
+}
+.exec-rq-control[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+.exec-rq-mono {
+  font: var(--exec-font-id);
+}
+.exec-rq-control.exec-rq-mono {
+  font: var(--exec-font-term);
+}
+.exec-rq-note,
+.exec-rq-meta {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+.exec-rq-error {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--bad);
+  overflow-wrap: anywhere;
+}
+.exec-rq-claim {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.exec-rq-notices {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  list-style: none;
+  font: var(--exec-font-meta);
+  color: var(--ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--warn);
+}
+
+.exec-rq-hand,
+.exec-rq-disclosure,
+.exec-rq-prov {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-rq-hand summary,
+.exec-rq-disclosure summary,
+.exec-rq-prov summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.exec-rq-hand-body {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* ---- "Still needed" bar and the one submit button -------------------------- */
+
+.exec-rq-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-rq-bar-text {
+  display: grid;
+  flex: 1 1 220px;
+  gap: 6px;
+  min-width: 0;
+}
+.exec-rq-need {
+  margin: 0;
+  font: var(--exec-font-body);
+  overflow-wrap: anywhere;
+}
+.exec-rq-bar-act {
+  display: grid;
+  flex: 0 1 auto;
+  gap: var(--space-1);
+  justify-items: start;
+  min-width: 0;
+}
+.exec-rq-submit {
+  padding: 8px 16px;
+  font: var(--exec-font-control);
+  color: var(--on-accent);
+  background: var(--accent-strong);
+  border: 1px solid var(--accent-strong);
+  cursor: pointer;
+}
+.exec-rq-submit:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.exec-rq-why {
+  max-width: 24ch;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-rq-form[data-variant="drawer"] .exec-rq-bar-act {
+  justify-items: start;
+}
+.exec-rq-form[data-variant="drawer"] .exec-rq-why {
+  max-width: none;
+}
+
+/* ---- outcome -------------------------------------------------------------- */
+
+.exec-rq-res {
+  --exec-rq-tone: var(--accent);
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+  border-left: 4px solid var(--exec-rq-tone);
+}
+.exec-rq-res[data-tone="created"],
+.exec-rq-res[data-tone="replayed"] {
+  --exec-rq-tone: var(--f-applied);
+}
+.exec-rq-res[data-tone="duplicate"] {
+  --exec-rq-tone: var(--f-operation);
+}
+.exec-rq-res[data-tone="refused"],
+.exec-rq-res[data-tone="denied"] {
+  --exec-rq-tone: var(--f-rejected);
+}
+.exec-rq-res[data-tone="uncertain"] {
+  --exec-rq-tone: var(--f-unknown);
+}
+.exec-rq-res[data-tone="unavailable"] {
+  --exec-rq-tone: var(--f-attention);
+}
+.exec-rq-res-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  font: var(--exec-font-body);
+  overflow-wrap: anywhere;
+}
+.exec-rq-id {
+  padding: 0 5px;
+  font: var(--exec-font-id);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  overflow-wrap: anywhere;
+}
+.exec-rq-facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+.exec-rq-facts div {
+  display: grid;
+  grid-template-columns: minmax(96px, 140px) minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.exec-rq-facts dt {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-rq-facts dd {
+  margin: 0;
+  font: var(--exec-font-data);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-rq-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.exec-rq-btn {
+  display: inline-block;
+  padding: 6px 16px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+  text-decoration: none;
+}
+.exec-rq-btn[data-variant="primary"] {
+  color: var(--on-accent);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+/* ---- what happens next ---------------------------------------------------- */
+
+.exec-rq-next-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0 var(--space-4);
+  list-style: none;
+}
+.exec-rq-next-list li {
+  display: grid;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-rq-next-list li:last-child {
+  border-bottom: 0;
+}
+.exec-rq-next-list b {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+
+/* ---- drawer --------------------------------------------------------------- */
+
+.exec-rq-drawer {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.exec-rq-confirm {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  color: var(--ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--warn);
+}
+.exec-rq-confirm-title {
+  margin: 0;
+  font: var(--exec-font-section);
+  color: var(--ink);
+}
+
+@media (max-width: 660px) {
+  .exec-rq-bar-text {
+    flex-basis: 100%;
+  }
+  .exec-rq-facts div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .exec-rq-steps li {
+    flex: 1 1 100%;
+    margin-right: 0;
+    margin-bottom: -1px;
+  }
+}
