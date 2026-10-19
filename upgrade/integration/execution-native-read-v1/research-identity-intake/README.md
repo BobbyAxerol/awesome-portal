@@ -8,7 +8,30 @@ owns acceptance. [Bounded qualification](qualification.json) separates isolated
 tests, actual read-only observation and operational preparation. Full connected08
 is **NOT_MET**;09connected has not started.
 
-**Published source,19Oct:** use`44ee6c186de9e0822f587c37069738a8f410ae58`
+**Current pre-ENTER repair,19Oct — IMPLEMENTED / ISOLATED_QUALIFIED:** the old
+235-line helper must NOT be activated with a Core that rejects rollback from
+ISSUED. See [same-phase repair journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-pre-enter-identity-window-recovery--2026-10-19-asiasaigon).
+The new helper recovers a failed pre-ENTER RUN using its original SDK attempt,
+physical fenced receipt and Core rollback-only ACK, never fake `finished` or
+ENTER. `test_pre_enter_recovery.py` models that Core seam explicitly; it is not
+connected Core acceptance. Core owns the authenticated matching protocol and
+its release/schema134/trust. Bobby approved a temporary Research PREVIEW session
+through AuthService, then exact revocation (not password/Cloudflare evidence);
+Core owns creation and custody. Do not ask again for the old cookie-file choice.
+Persistent goal is not resumed by this HK-only source/test/publication slice.
+Helper SHA256`5f1a0f293311f752d934de72666f8b2e9d671c899eec115d08d7ccd30265dec2`,
+test SHA256`49eb121c0cb71bee51ebb689b3468c149dbda696755863f2bfaae6c4c1f0800a`.
+Use both from the same Git revision as this packet (not the old44ee helper).
+Final17new +40role +14wrapper +18distinct receipt cases =89PASS,0FAIL/SKIP;
+the two PG suites reuse the same18baseline cases, counted once. Real-PG15 and
+actual-task cancellation evidence is isolated; modeled Core ACKs do not qualify
+Core's real abort protocol. Earlier two failed specimens (one also tainted) are
+retained, not counted as PASS. All own cells/network/lease removed,0newimages/
+cache,41runtime tuples unchanged. Exact result/source/cleanup hashes are in
+[qualification](qualification.json); normal unmodified publication hook remains
+mandatory. No operational credential/window/session was created by this slice.
+
+**Previous published source,19Oct:** `44ee6c186de9e0822f587c37069738a8f410ae58`
 on`BobbyAxerol/awesome-portal:feat/execution-edge-upgrade-v1_2`. The bounded
 qualification pins all four changed source/test files,130contract/717API normal
 publication gate and exact hook cleanup. This is not the current Core release
@@ -150,13 +173,20 @@ Required composition, in order:
 5. `run()` uses the actual SDK context and final COMMIT/ACK checks. A failed
    or uncertain result releases no usable mapping. `recover()` invokes the same
    official fenced readback and real Core terminal ACK, not a new identity run.
-6. `retire()` requires SDK-finished + known COMMITTED/ROLLED_BACK + positive ACK,
+6. `retire()` normally requires SDK-finished + known COMMITTED/ROLLED_BACK + positive ACK,
    the matching immutable physical receipt, no borrowed pool connections, then
    a closed pool and zero role sessions. It restores only this role's exact ACLs,
    NOLOGIN/password NULL/defaults; leaves mapping/receipts/schema/history intact.
    UNKNOWN/unacknowledged/borrowed cases retain recovery. No clock-based expiry,
    force-close, force-revoke or old-role mutation. Ambiguous ACL DDL COMMIT or
    peer catalogue drift is operator readback/review, never an automatic retry.
+   The only unfinished-SDK exception is a RUN that failed while entered/admitted/
+   borrowed/outer_started are all exactly false: `recover()` must obtain the
+   original attempt's physical ROLLED_BACK + Core ACK. The helper remembers that
+   exact resolution, invalidates it before each repeated recovery, and still
+   rereads/matches the immutable physical receipt before pool close. UNKNOWN,
+   missing ACK, interrupted recovery, mismatched receipt or pre-ENTER COMMITTED
+   cannot retire. The SDK's `finished` remains false throughout this exception.
 
 `test_identity_role_window.py` reuses the18-case PG baseline and exercises real
 SCRAM/defaults, exact privilege denials, actual SDK identity/immutable receipts,
@@ -164,6 +194,16 @@ lost terminal ACK, UNKNOWN under a real held source fence, safe recovery,
 inactive mapping preservation and repeated windows. Its Core endpoint uses
 explicit **TEST_ONLY** keys/ACK fixtures: this is NOT genuine Core/current-human
 or connected08 acceptance. See [bounded measured results](qualification.json).
+
+`test_pre_enter_recovery.py` adds17distinct regression cases using the same
+disposable setup. With only the exact disposable DSN/HBA and pinned source mounts,
+run `PYTHONPATH=/source:/packet:/credentials python3 -B /packet/test_pre_enter_recovery.py`.
+It is not an operational runner: source/system guards reject the three known
+production systems; use internal-network PG15/tmpfs, no host ports or private
+mounts, host-window scheduling and guaranteed exact teardown. Cancellation
+messages are not portable across Python3.10 wait_for; cancellation TYPE and
+invalidation/receipt/recovery assertions remain mandatory. No test grants real
+Core authority, and no fixture ACK can substitute for connected qualification.
 
 Core owns its new registered schema/release overlay/current session and reverse
 listener. Bind only that reviewed actual composition. This packet supplies no

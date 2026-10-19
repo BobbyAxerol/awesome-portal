@@ -84,6 +84,8 @@ class IdentityRoleWindow:
         self.preparation, self.prepared, self.pool = preparation, prepared, pool
         self.selection, self.raw = selection, raw_request
         self.task, self.state = asyncio.current_task(), 'DORMANT'
+        self._pre_enter_failure = False
+        self._pre_enter_resolution = None
 
     def guard(self):
         require(asyncio.current_task() is self.task, 'IDENTITY_WINDOW_TASK_CHANGED')
@@ -173,23 +175,46 @@ class IdentityRoleWindow:
         require(self.state == 'OPEN' and not self.prepared.entered,
                 'IDENTITY_WINDOW_REUSE_DENIED')
         self.state = 'RECOVERY_REQUIRED'
-        result = await resolve_prepared_identity(self.prepared,self.selection,self.raw)
-        return result
+        try:
+            return await resolve_prepared_identity(self.prepared,self.selection,self.raw)
+        except BaseException:
+            # Validation/cancellation may precede SDK ENTER. This records only
+            # where RUN failed, NEVER a source outcome or permission to retire.
+            if self.prepared.finished is False and self._never_entered():
+                self._pre_enter_failure = True
+            raise
+
+    def _never_entered(self):
+        return all(getattr(self.prepared, name) is False
+                   for name in ('entered', 'admitted', 'borrowed', 'outer_started'))
 
     async def recover(self):
         """Official fenced readback and real Core ACK, never a new identity attempt."""
         self.guard()
-        require(self.state == 'RECOVERY_REQUIRED' and self.prepared.finished,
+        r = self.prepared
+        pre_enter = (self._pre_enter_failure and r.finished is False and self._never_entered())
+        require(self.state == 'RECOVERY_REQUIRED' and (r.finished or pre_enter),
                 'IDENTITY_WINDOW_RECOVERY_NOT_READY')
-        self.prepared.resolution = await self.prepared.owner.recover(self.prepared.attempt)
-        return self.prepared.resolution
+        if pre_enter:
+            # A cancelled/repeated recovery must not reuse an older local ACK.
+            self._pre_enter_resolution = None
+        r.resolution = await r.owner.recover(r.attempt)
+        if (pre_enter and type(r.resolution) is SourceResolution
+                and r.resolution.phase == 'ROLLED_BACK'
+                and r.resolution.portal_acknowledged is True):
+            self._pre_enter_resolution = r.resolution
+        return r.resolution
 
     async def retire(self, conn):
         """No wall-clock gate on recovery: revoke only after terminal ACK+drain."""
         self.guard()
         r = self.prepared
         terminal = r.resolution
-        require(self.state == 'RECOVERY_REQUIRED' and r.finished
+        pre_enter_settled = (self._pre_enter_failure and r.finished is False
+            and self._never_entered() and self._pre_enter_resolution is terminal
+            and type(terminal) is SourceResolution and terminal.phase == 'ROLLED_BACK'
+            and terminal.portal_acknowledged is True)
+        require(self.state == 'RECOVERY_REQUIRED' and (r.finished or pre_enter_settled)
             and type(terminal) is SourceResolution and terminal.phase in ('COMMITTED','ROLLED_BACK')
             and terminal.portal_acknowledged is True, 'IDENTITY_WINDOW_TERMINAL_UNCONFIRMED')
         await self.target(conn)

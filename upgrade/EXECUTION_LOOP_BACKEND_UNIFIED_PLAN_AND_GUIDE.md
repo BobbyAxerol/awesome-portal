@@ -23161,6 +23161,140 @@ publication hook remains mandatory for this coherent documentation transaction;
 it is not another qualification of changed Core WIP. No connected progress is
 claimed from entrypoint repair; genuine composition input remains pending.
 
+### Original08 pre-ENTER identity-window recovery — 2026-10-19 Asia/Saigon
+
+**Status BEFORE code: IN_PROGRESS, bounded owner-approved HK helper/test/source
+publication only.** Persistent goal stays blocked; no resume, new phase, Core/PM
+source edit, production role opening, DB mutation, provider28445 change or SGP
+deployment/test. Governing scope is [guide08](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls)
+and the [official-SDK operator packet](integration/execution-native-read-v1/research-identity-intake/README.md).
+Core owns its recovery protocol, release/schema134, reverse trust and session.
+
+**Goal/defect:** OPEN may succeed but official JWT revalidation fail before
+ENTER. The SDK then honestly remains finished=False; the old helper refuses
+both recovery and retirement. Recover only the original attempt under the
+official physical source fence; require its immutable ROLLED_BACK receipt and
+positive Core ACK before exact role retirement. Never fake ENTER/finished,
+interpret expiry/cancellation as rollback, or retry identity creation. Interrupted
+recovery invalidates the helper's prior pre-ENTER acknowledgement; UNKNOWN,
+unacknowledged, COMMITTED-before-ENTER or mismatched physical receipts retain
+recovery custody. Existing entered/COMMIT recovery and original-role ACLs must
+remain unchanged. No source SQL/schema/SDK upgrade is included.
+
+**Current peer input:** Core678cf7313a1767197ad57a59b22b3b173efde537 plus its
+uncommitted rollback-only unentered-abort WIP. Read-only draft packet:
+SGP /home/bobby/.local/state/portal-execution-elp210/20261019/research-commission/identity-role-window-repair/.
+Its helper/test are review inputs, NOT landed/tested/connected proof. Current
+Core owner return is upgrade/execution_loop/evidence/ELP2-10/research-temporary-session-recovery-2026-10-19.md
+on Core's checkout. Bobby approved exactly one temporary Research PREVIEW
+AuthService session followed by exact revocation; do not repeat the old cookie
+request. This is not Cloudflare/password/human-presence evidence. Core owns it;
+this HK slice creates no session or credential for an operational target.
+
+**Tests/exit:** disposable real PG15 + official SDK/verifier/SCRAM, explicit
+TEST_ONLY Core model (never genuine connected acceptance). Cover JWT expiry,
+pre-ENTER cancellation, held fence UNKNOWN, lost ACK, repeated/interrupted
+recovery, physical receipt correlation, exact terminal retirement and affected
+72-case baseline without double-counting the18 reused receipt cases. Check
+measurement locks/foreign work before tests; use the existing pinned images,
+internal network/no host ports, read-only code mounts and finite <=300s test
+window. Normal publication hooks, exact staged scope and Bobby identity remain
+mandatory. Record actual results and source pins, then publish the ordinary
+feature commit for Core adoption; no main/dev merge.
+
+**Rollback/cleanup:** source rollback only before activation. Tests own only
+their labelled disposable containers/internal network/tmpfs/lease. Remove those
+after actual terminal, inventory images/cache and disk before/after, reconcile
+protected runtime tuples, retain all active/explicit rollback/private/receipt
+resources and unrelated WIP. No broad prune. Full08 connected NOT_MET,
+09connected NOT_STARTED; genuine Core rollback-only ACK interoperability and
+connected revoke/cache/cursor/SSE remain same-phase round2, not owned work
+deferred behind an unrelated return.
+
+**Implementation before tests:** helper now records only an actual failed RUN
+with all four SDK progress bits exactly false; it does not write SDK finished.
+Official same-attempt recovery may establish only ROLLED_BACK + positive ACK
+for this exception. Each recovery clears prior local acknowledgement before
+awaiting; retire still independently rereads/correlates the physical immutable
+receipt before pool close and exact ACL restoration. The reviewed Core draft
+helper SHA78b71144 and draft test SHA243258a2 are provenance inputs; owned
+source adds comments and cancellation/interrupted-recovery/terminal negatives,
+so its output pins intentionally differ. Core protocol WIP remains untouched.
+PM advanced tob203b77a; eight selected SDK/transport/identity/installer/catalogue/
+fence/SQL files have zero diff from Core's392140cb cut. No TS/DL edit.
+
+**Scheduling:** first two isolated launches were preflight DEFERRED_NO_TEST,
+not failed/passed tests: foreign Rust/build/test processes and anonymous test
+containers were present. No own container/lease was created by those attempts.
+New existing operational monitor is independently classified, not deleted:
+8a80045cfb85ba56c19b91dd795d9c6aacfccf993ac0a8780d3eec89b96c795d,
+trading_system/monitor, image5cd22b4e, configb2f1c609,
+Started2026-10-19T08:31:13.200898405Z/restart0. A task-local copy of the guard
+retains only that exact ID/name/compose pair in addition to its two known Redis
+pairs (SHA52c28c78d0f0ea815cbdc15c656a0698f983dc72ef4876612ce5dbc3ecdd3a01).
+Unknown anonymous/test/browser/heavy work still blocks. No shared guard edit.
+
+**Actual isolated result,08:44:27UTC/15:44Asia/Saigon:**17new pre-ENTER cases,
+40existing role-window cases,14wrapper cases and18distinct reused PG receipt
+cases PASS =89distinct,0FAIL/SKIP in the final serial batch. Both PG suites
+invoke the same18baseline cases; do not count that baseline twice. Commands:
+task-local run.py --pre-enter-pg, run.py --acl-pg, run.py (guarded batch.py).
+New cases cover actual verifier expiry, pre-ENTER cancellation and actual task
+cancellation at a labelled pre-SDK seam, old Core ISSUED refusal/no ACK,
+real held source fence UNKNOWN, physical same-attempt rollback, lost modeled
+ACK/replay, repeated/interrupted recovery invalidating a stale local ACK,
+unexpected pre-ENTER COMMITTED and mismatched physical receipt refusal.
+Official source PG15/verifier/SDK/SCRAM are real disposable inputs; Core is an
+explicit authenticated TEST_ONLY model, NOT genuine current-human acceptance.
+No identity/business rows changed in the new17cases. SDK finished remains false
+for pre-ENTER recovery, original40entered/COMMIT cases remain PASS.
+
+**Reproducible pins/evidence:** source helper
+5f1a0f293311f752d934de72666f8b2e9d671c899eec115d08d7ccd30265dec2;
+new test49eb121c0cb71bee51ebb689b3468c149dbda696755863f2bfaae6c4c1f0800a.
+Existing receipt SQL305ba236, effective ACLdfe69940 and SCRAM89ed42ed unchanged.
+Final bounded logs:17case40ab89e1cfedc3b7bb3c9c31f10e4a2a919b0a40e604a1e8408671e480863e13,
+40case364dc22d8f1f4533ff8fc54a015227c94570d920ef8659f4bf51519f7096a36b,
+14casef889134b61e526015a38d77e39df691ec71d919d2e995db2e79973e88b098eef.
+Receipts/runner are bounded local evidence at /tmp/epg10-08-pre-enter-EGKQFQGk/;
+qualification.json contains exact source and result hashes. Two earlier executed
+specimens FAIL at a Python3.10 test assertion: wait_for preserves cancellation
+type but may discard its message. Fixed only the assertion to require real
+CancelledError propagation + stale-ACK invalidation, not platform-dependent text.
+First specimen also observed foreign work at terminal and is TAINTED_NOT_PASS.
+Both specimens/receipts retained; neither contributes PASS. Final clean rerun
+is untainted by observed foreign work. No production behavior weakened.
+
+**Actual isolated cleanup:** each labelled PG/client container, internal
+network and tmpfs removed after actual terminal; batch lease removed. Zero new
+images/cache, no pull/build, no source drift, all41protected tuples unchanged.
+Configured test caps2CPU/1024MiB combined, no host ports, private DB mounts0.
+Shared free256491765760→256407875584B across the final batch, not exclusive
+reclaimed bytes. Keep pinned active images28ea3958/6343bdc8 and all preexisting
+active/explicit rollback/data/volume/private/source/worktrees; no broad cleanup.
+SGP received READ ONLY source/owner-return inspection only, so no owned SGP
+test/transfer/build/session/credential resources exist in this slice.
+**Owned slice IMPLEMENTED / ISOLATED_QUALIFIED.** Publication uses the ordinary
+unmodified hook with exact expected-path/hash/identity checks. Its actual
+terminal and final image/cache/disk/runtime cleanup receipts are recorded by
+/tmp/epg10-08-pre-enter-EGKQFQGk/publication-folder.txt -> receipt.json/cleanup.json;
+do not infer hook PASS from a running process or isolated cases. Core's next
+permitted action is adopting this same pinned helper alongside its independently
+qualified rollback-only protocol, not reapplying an obsolete patch.
+No role activation/goal resume/08connected closure/09connected start is implied.
+
+**Fresh peer check before publication:** Core remains678cf731 at read-only
+cut; its current owner return now reports167/167affected real-Core-PG PASS
+(64candidate+68installation+17transport+18schema), terminal15:29:33Asia/Saigon,
+log e8a5ce9e33e66b41b59f97cc5698ceb69b3625ea0a1ec1d24c90e49c8e431474,
+candidate SHA74aa99af7e02056dd5552185069b4ed5195a3f2f40ea8398d709f8d8102bedd3.
+It also reports8source cases +18reused baseline PASS with its draft, separately
+from this Edge17case qualification. These are attributed owner-return results,
+not rerun by HK or added to Edge's89count. Core normal R3 landing remains
+pending at that cut; no Bobby session, source activation or connected operation
+is inferred. Compatible semantics now have focused peer evidence; actual joint
+runtime proof still requires reviewed matching releases/private references.
+
 
 
 

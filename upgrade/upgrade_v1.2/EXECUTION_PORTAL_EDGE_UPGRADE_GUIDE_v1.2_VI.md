@@ -1033,6 +1033,17 @@ or business authority is inferred; full connected08NOT_MET,09not started.
 Core's genuine reverse/session composition still precedes finite identity ACL
 activation and connected revoke/cache/cursor/SSE. Stable/provider28445 unchanged.
 
+**Original08 pre-ENTER repair (19Oct):** [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-pre-enter-identity-window-recovery--2026-10-19-asiasaigon)
+and [current helper/test packet](../integration/execution-native-read-v1/research-identity-intake/README.md)
+supersede activation of the old235-line helper. Failed pre-ENTER RUN recovers
+only its original attempt using official fenced physical ROLLED_BACK + Core
+ACK, never fake finished/ENTER. Final89distinct isolated cases PASS,0FAIL/SKIP;
+Core ACK model is explicitly not genuine connected acceptance. Core owns its
+authenticated rollback-only seam and Research release134/trust/temporary PREVIEW
+session (then exact revoke), which is not Cloudflare/password proof. HK slice
+does not resume goal, activate role or change provider28445; full08NOT_MET and
+09connectedNOT_STARTED. Original acceptance/security requirements below remain.
+
 **Mục tiêu:** quyền thu hồi có hiệu lực xuyên cache/queue/socket và TS commit; transport fail closed. **Dependencies:** read-scope tests từ 02/05 và trust decisions, không cần 07 command hoàn tất. Command-scope revoke/commit tests cần 07 + TS authority. Security changes cần riêng approval theo loại.
 
 **Deliverables:** revocation propagation contract, security test report, certificate/auth rotation plan, least-privilege access map và safe logging policy.

@@ -2,6 +2,15 @@
 
 ## Current owner return — 19Oct Asia/Saigon
 
+**Current repair:** [pre-ENTER helper/test slice](../../../integration/execution-native-read-v1/research-identity-intake/README.md)
+fixes the old OPEN → expired JWT → finished=False dead end, without faking
+SDK completion. Requires original-attempt physical rollback receipt and Core's
+compatible authenticated rollback-only ACK. Core678cf731 plus its owned WIP
+is the current protocol owner. Its temporary Research PREVIEW AuthService
+session is now owner-approved (then exact revoke); do not repeat the old cookie
+request or call PREVIEW Cloudflare/password proof. HK repair is source/test/
+publication only, goal not resumed, connected08 remains NOT_MET.
+
 **Full connected08 NOT_MET;09connected NOT_STARTED.** Use the
 [current packet entrypoint](../../../integration/execution-native-read-v1/README.md#current-entrypoint--19oct-asiasaigon)
 and [bounded identity/ACL return](../../../integration/execution-native-read-v1/research-identity-intake/qualification.json).

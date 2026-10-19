@@ -8,6 +8,14 @@ is separate and full connected08 remains **NOT_MET**;09connected NOT_STARTED.
 
 Read in this order:
 
+**Pre-ENTER recovery repair:** [current helper/test packet](research-identity-intake/README.md)
+supersedes activation of the old44ee helper. OPEN + JWT expiry/cancellation
+must recover through the original fenced receipt and compatible Core
+rollback-only ACK; never force `finished` or retirement. Core's current source
+is678cf731 plus its owned recovery WIP. The newly approved temporary Research
+PREVIEW AuthService session is Core-owned, then exactly revoked; it is not
+Cloudflare/password proof. Goal remains blocked, this HK slice is source-only.
+
 1. [Current target/adoption map](current-core-reconciliation/README.md#current-owner-direction--integration-first):
    actual Execution v2 consumer is Research, `/home/bobby/portal-research`,
    `docs/research-loop-plan`; stable/main is the separate genuine security

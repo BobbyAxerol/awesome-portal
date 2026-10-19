@@ -7,6 +7,16 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 pre-ENTER recovery,19Oct — IMPLEMENTED / ISOLATED_QUALIFIED:**
+  [same-phase helper/test journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-pre-enter-identity-window-recovery--2026-10-19-asiasaigon)
+  and [packet](../integration/execution-native-read-v1/research-identity-intake/README.md).
+  Original attempt + physical rollback receipt + compatible Core ACK, no fake
+  SDK finished/ENTER. HK-only source/test/publication; Core owns its matching
+  recovery protocol and Research session/release. Goal remains blocked;
+  full08NOT_MET/09connectedNOT_STARTED. Do not activate the old235-line helper.
+  Final89distinct PASS (17new+72regression/baseline),0FAIL/SKIP; modeled Core
+  ACKs only. Own cells/network/lease gone,0newimages/cache,41runtime unchanged.
+
 - **Original08 current handoff entrypoint,19Oct — CURRENT:**
   [start here](../integration/execution-native-read-v1/README.md#current-entrypoint--19oct-asiasaigon).
   Core adopted atd0789674; old e19/5291 patch instructions are historical, not

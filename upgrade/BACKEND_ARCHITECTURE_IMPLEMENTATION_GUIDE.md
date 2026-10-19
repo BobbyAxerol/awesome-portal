@@ -650,6 +650,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 pre-ENTER recovery,19Oct — IMPLEMENTED / ISOLATED_QUALIFIED:**
+[approved helper/test slice](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-pre-enter-identity-window-recovery--2026-10-19-asiasaigon)
+repairs OPEN followed by expiry/cancellation before SDK ENTER. Same original
+attempt, physical ROLLED_BACK and Core ACK; never fake finished/ENTER. New tests
+use explicit Core models, not connected qualification. Core owns matching
+protocol/schema134/reverse/session; HK owns helper/test/publication only.
+Persistent goal not resumed; full08NOT_MET/09connectedNOT_STARTED.
+Final17new +72distinct regression/baseline =89PASS,0FAIL/SKIP; the shared18case
+baseline is counted once. No new image/cache, own test cells/network/lease gone,
+41runtime tuples unchanged. Core ACKs are modeled, not connected evidence.
+
 **Original08 authoritative handoff entrypoint,19Oct — CURRENT:**
 [start here](integration/execution-native-read-v1/README.md#current-entrypoint--19oct-asiasaigon),
 not the historical e19 patch instructions. Core source adoption DONEd0789674;
