@@ -4,6 +4,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import ts from 'typescript';
+import { pendingControlProblemCodes, PROBLEM_CODE_DESCRIPTION } from './execution-problem-vocabulary.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url), cache = new Map();
@@ -162,7 +163,8 @@ status.description += ' Required currency is the exact immutable original intent
 schemas.PendingControlProblem = { type: 'object', additionalProperties: false,
   required: ['error', 'request_id'], properties: {
     error: { type: 'object', additionalProperties: false, required: ['code', 'message'],
-      properties: { code: { type: 'string' }, message: { type: 'string' } } },
+      properties: { code: { type: 'string', enum: [...pendingControlProblemCodes(contract.pendingControlReason.options)],
+        description: PROBLEM_CODE_DESCRIPTION }, message: { type: 'string' } } },
     request_id: { type: 'string' }, public_copy_key: { type: 'string' },
     safe_next_action: { type: 'string', enum: ['QUERY_SAME_INTENT', 'REVIEW_BLOCKER'] },
   } };

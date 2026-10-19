@@ -1,6 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs';
 import {dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {ACCESS_PROBLEM_CODES,PROBLEM_CODE_DESCRIPTION} from './execution-problem-vocabulary.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const obj=p=>({type:'object',additionalProperties:false,required:Object.keys(p),properties:p});
 const text={type:'string',minLength:1,maxLength:256,pattern:'^[^\\u0000-\\u001f\\u007f]+$'};
@@ -142,6 +143,7 @@ const selfNavigationItem={...obj({feature:{enum:featureIds},state:{enum:['ENTERA
   ]};
 const eligibilityQuery=obj({workspace_id:scopedText,environment,resource_kind:resourceKind,resource_id:scopedText,actions:eligibilityCsv});
 const selfNavigationQuery=obj({workspace_id:scopedText,environment});
+const accessProblemCode={type:'string',enum:[...ACCESS_PROBLEM_CODES],description:PROBLEM_CODE_DESCRIPTION};
 const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector,AccessChange:change,
   AccessEligibilityAction:{type:'string',enum:eligibilityActions},
   AccessEligibilityQuery:eligibilityQuery,AccessSelfNavigationQuery:selfNavigationQuery,
@@ -180,7 +182,7 @@ const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector
   AccessAudit:obj({schema_version:{const:'portal.access-audit.v1'},workspace_id:text,subject_user_id:text,
     items:{type:'array',maxItems:100,items:obj({operation:text,receipt:ref('AccessReceipt'),occurred_at_ms:ms})},
     next_cursor:nullable({type:'string',maxLength:2048}),max_items:{const:100}}),
-  AccessProblem:obj({error:obj({code:text,message:{type:'string'}}),request_id:{type:'string'}})};
+  AccessProblem:obj({error:obj({code:accessProblemCode,message:{type:'string'}}),request_id:{type:'string'}})};
 const response=(s,description)=>({description,content:{'application/json':{schema:ref(s)}}});
 const errors=Object.fromEntries([400,401,403,404,409,503].map(s=>[s,response('AccessProblem','Typed public refusal; current authority is required even for replay.')]));
 const workspace={name:'workspace_id',in:'query',required:true,schema:text};

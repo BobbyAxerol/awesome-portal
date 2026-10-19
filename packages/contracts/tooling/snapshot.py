@@ -95,6 +95,7 @@ TRACKED = (
     "generated/execution-resource-scoped.d.ts",
     "generated/execution-scoped-records.d.ts",
     "tooling/generate-execution-access.mjs",
+    "tooling/execution-problem-vocabulary.mjs",
     "openapi/execution-access.openapi.json",
     "fixtures/execution-access.synthetic.valid.json",
     "generated/execution-access.d.ts",
