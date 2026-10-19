@@ -107,7 +107,7 @@ import { readScreenContracts, type ScreenContract } from "../screenContracts";
 import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
 import type { components as GovernanceComponents } from "@portal/contracts-governance";
-import { readReviewCapture, readReviewCaptureCapabilities, type R2CaptureInput, type PaperExitCreateInput, type SandboxNoteInput } from "./reviewCapture";
+import { readReviewCapture, readReviewCaptureCapabilities, REVIEW_CAPTURE_OUTCOME_UNKNOWN, type R2CaptureInput, type PaperExitCreateInput, type SandboxNoteInput } from "./reviewCapture";
 
 type PaperExitPlanRequest = GovernanceComponents["schemas"]["PaperExitDecisionPlanRequest"];
 type InsightBatchRequest = components["schemas"]["InsightBatchRequest"];
@@ -685,11 +685,30 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
     },
     async captureSandboxNote(input: SandboxNoteInput) {
-      const response = await post("/governance/sandbox/capture-note",input,signal);
-      if (!response.ok) return problem(response);
-      const value = readReviewCapture(await response.json());
+      // Once the request is sent, a thrown fetch, a 5xx/408, or a 2xx the client cannot read does not
+      // say the note was NOT recorded. Those carry REVIEW_CAPTURE_OUTCOME_UNKNOWN; a definite 4xx does not.
+      const unknownOutcome = (why: string) => unavailable(`${REVIEW_CAPTURE_OUTCOME_UNKNOWN}: ${why}`);
+      let response: Response;
+      try {
+        response = await post("/governance/sandbox/capture-note",input,signal);
+      } catch {
+        return unknownOutcome("The request ended before the Portal's answer was read.");
+      }
+      if (!response.ok) {
+        const refused = await problem(response);
+        return response.status >= 500 || response.status === 408
+          ? unknownOutcome(refused.ok ? `HTTP ${response.status}` : refused.reason)
+          : refused;
+      }
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        return unknownOutcome("The Portal answered but the answer could not be read.");
+      }
+      const value = readReviewCapture(body);
       return value?.action === "SANDBOX_NOTE" && value.workspace_id === input.workspace_id && value.certification_id === input.certification_id
-        ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
+        ? {ok:true as const,value} : unknownOutcome("REVIEW_CAPTURE_CONTRACT_INVALID");
     },
     getWaivers,
     getCommandCenterSnapshot,

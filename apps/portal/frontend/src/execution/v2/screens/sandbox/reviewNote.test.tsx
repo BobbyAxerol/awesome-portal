@@ -250,11 +250,15 @@ describe("the server's refusal is shown as given and nothing is kept", () => {
     expect(api.read).toHaveBeenCalledTimes(1);
   });
 
-  it("a request that throws says nothing was recorded", async () => {
+  it("a request that throws does NOT say nothing was recorded: the outcome is unknown", async () => {
     await mount({ capture: async () => { throw new Error("network"); } });
     type(NOTE);
     fireEvent.click(record());
-    expect((await screen.findByRole("alert")).textContent).toContain("Nothing was recorded.");
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Unknown: it may have been recorded.");
+    expect(alert.textContent).toContain("Retrying sends the same reference");
+    expect(alert.textContent).not.toContain("Nothing was recorded");
+    expect(alert.textContent).not.toContain("did not record");
     expect(record().disabled).toBe(false);
   });
 
@@ -265,6 +269,74 @@ describe("the server's refusal is shown as given and nothing is kept", () => {
     await screen.findByRole("alert");
     type(`${NOTE} More.`);
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+const UNKNOWN = "REVIEW_CAPTURE_OUTCOME_UNKNOWN: The Portal answered but the answer could not be read.";
+
+describe("an outcome the client could not learn is unknown, not refused", () => {
+  it("the port's unknown marker (5xx / 408 / unreadable 2xx) is worded as unknown and the same text retries under the same reference", async () => {
+    const answers: Result<ReviewCapture>[] = [
+      { ok: false, status: "unavailable", reason: UNKNOWN },
+      { ok: true, value: captureBody({ replayed: true }) },
+    ];
+    const api = await mount({ capture: async () => answers.shift()! });
+    type(NOTE);
+    fireEvent.click(record());
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Unknown: it may have been recorded.");
+    expect(alert.textContent).not.toContain("did not record");
+    // The edit-free retry is the same reference; the receipt settles it.
+    fireEvent.click(record());
+    await screen.findByText("Matched an earlier note");
+    const keys = api.capture.mock.calls.map((c) => (c[0] as SandboxNoteInput).request_key);
+    expect(keys[1]).toBe(keys[0]);
+    expect(screen.queryByText(/Unknown: it may have been recorded/)).toBeNull();
+  });
+
+  it("an edited text while unknown stays visibly warned and goes out under a NEW reference", async () => {
+    const api = await mount({ capture: async () => ({ ok: false, status: "unavailable", reason: UNKNOWN }) });
+    type(NOTE);
+    fireEvent.click(record());
+    await screen.findByRole("alert");
+    type(`${NOTE} Edited.`);
+    // The old text's uncertainty is not cleared by editing; the warning says an earlier attempt may exist.
+    const warn = screen.getByRole("alert");
+    expect(warn.textContent).toContain("An earlier attempt may have been recorded");
+    expect(warn.textContent).toContain("new reference");
+    fireEvent.click(record());
+    await waitFor(() => expect(api.capture).toHaveBeenCalledTimes(2));
+    const keys = api.capture.mock.calls.map((c) => (c[0] as SandboxNoteInput).request_key);
+    expect(keys[1]).not.toBe(keys[0]);
+  });
+
+  it("a note recorded under a different text still tells the operator the earlier attempt may exist", async () => {
+    const answers: Result<ReviewCapture>[] = [
+      { ok: false, status: "unavailable", reason: UNKNOWN },
+      { ok: true, value: captureBody() },
+    ];
+    await mount({ capture: async () => answers.shift()! });
+    type(NOTE);
+    fireEvent.click(record());
+    await screen.findByRole("alert");
+    type(`${NOTE} Edited.`);
+    fireEvent.click(record());
+    await screen.findByText("Recorded");
+    expect(screen.getByRole("alert").textContent).toContain("An earlier attempt may have been recorded too");
+  });
+
+  it("a definite refusal under the same reference settles it as not recorded", async () => {
+    const answers: Result<ReviewCapture>[] = [
+      { ok: false, status: "unavailable", reason: UNKNOWN },
+      { ok: false, status: "denied", reason: "403: ADMIN role required" },
+    ];
+    await mount({ capture: async () => answers.shift()! });
+    type(NOTE);
+    fireEvent.click(record());
+    await screen.findByText(/Unknown: it may have been recorded/);
+    fireEvent.click(record());
+    await screen.findByText(/The server did not record this note \(denied\)/);
+    expect(screen.queryByText(/Unknown: it may have been recorded/)).toBeNull();
   });
 });
 

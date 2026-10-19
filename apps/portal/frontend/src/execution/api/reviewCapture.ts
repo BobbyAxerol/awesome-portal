@@ -6,6 +6,13 @@ export type R2CaptureInput = components["schemas"]["R2CaptureRequest"];
 export type PaperExitCreateInput = components["schemas"]["PaperExitCreateRequest"];
 export type SandboxNoteInput = components["schemas"]["SandboxNoteRequest"];
 
+/**
+ * The reason prefix of a write whose outcome is not known: the request may have reached the
+ * server and been recorded. A definite 4xx refusal never carries it.
+ */
+export const REVIEW_CAPTURE_OUTCOME_UNKNOWN = "REVIEW_CAPTURE_OUTCOME_UNKNOWN";
+export const isOutcomeUnknownReason = (reason: string): boolean => reason.startsWith(REVIEW_CAPTURE_OUTCOME_UNKNOWN);
+
 const ACTIONS = ["R2_CREATE","PAPER_EXIT_CREATE","SANDBOX_NOTE","R2_EXECUTION_GRANT","PAPER_EXIT_PROMOTE","SANDBOX_CERTIFY_SOURCE"];
 const object = (v: unknown): Record<string,unknown>|null => v && typeof v === "object" && !Array.isArray(v) ? v as Record<string,unknown> : null;
 const id = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9._:-]{1,192}$/.test(v);

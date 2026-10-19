@@ -11,8 +11,12 @@
  *   the server accepts 8 and the form does not invent a stricter rule the server will not enforce.
  * - A note records a review. It is not a pass, a certification or a promotion: the response
  *   contract pins `source_verdict: NOT_ASSERTED` and no Trading System change, and the panel says so.
- * - It is never optimistic. Nothing is shown as recorded until the server answered `ok`; a refusal
- *   (typed: denied, conflict, unavailable) is shown as the server worded it and nothing is kept.
+ * - It is never optimistic. Nothing is shown as recorded until the server answered `ok`; a definite
+ *   refusal (typed: denied, conflict, a 4xx) is shown as the server worded it and nothing is kept.
+ * - It never says "not recorded" when it does not know. A request that threw, a 5xx or 408, or a 2xx
+ *   the client could not read leaves the outcome UNKNOWN: the note may have been recorded. The key
+ *   stays tied to the text, so retrying sends the same reference; an edited text gets a new reference
+ *   and the form says, in plain words, that an earlier attempt may have been recorded.
  * - It is idempotent. The request key follows the INTENT (workspace, certification, version, text):
  *   pressing Record again with the same text replays under the same key (the server answers
  *   `replayed`, nothing is duplicated); an edited text is a new intent with a new key. A second
@@ -24,7 +28,7 @@
 import { useId, useRef, useState } from "react";
 
 import type { ExecutionApi } from "../../../api/ports";
-import type { ReviewCapture } from "../../../api/reviewCapture";
+import { isOutcomeUnknownReason, type ReviewCapture } from "../../../api/reviewCapture";
 import { DockAction } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { SectionPanel } from "../../blocks";
@@ -38,6 +42,13 @@ const LEAD = "A note records a review. It does not pass a step.";
 type Outcome =
   | { kind: "recorded"; capture: ReviewCapture; key: string }
   | { kind: "refused"; reason: string; status: string };
+
+/** An attempt whose outcome the client could not learn: it may be recorded under `key`. */
+interface UnknownAttempt {
+  fingerprint: string;
+  key: string;
+  reason: string;
+}
 
 export interface ReviewNoteFormProps {
   api: ExecutionApi;
@@ -63,6 +74,7 @@ export function ReviewNoteForm({ api, capability, identity, onRecorded }: Review
   const [summary, setSummary] = useState("");
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [unknown, setUnknown] = useState<UnknownAttempt | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const inFlight = useRef(false);
   const intent = useRef<{ fingerprint: string; key: string } | null>(null);
@@ -72,6 +84,7 @@ export function ReviewNoteForm({ api, capability, identity, onRecorded }: Review
   const input: NoteInputs = { ...identity, summary };
   const block = noteBlock(input);
   const count = noteLength(summary);
+  const currentFingerprint = noteFingerprint(input);
 
   const submit = async () => {
     // A ref, not `busy`: two clicks inside one tick both see the same stale state.
@@ -91,14 +104,23 @@ export function ReviewNoteForm({ api, capability, identity, onRecorded }: Review
       });
       if (result.ok) {
         setOutcome({ kind: "recorded", capture: result.value, key });
+        // The same reference answered: whatever was uncertain about it is settled. Another text's
+        // uncertainty is not.
+        setUnknown((u) => (u?.key === key ? null : u));
         // The next note is a new intent: it must not reuse this key.
         intent.current = null;
         onRecorded();
+      } else if (isOutcomeUnknownReason(result.reason)) {
+        setOutcome(null);
+        setUnknown({ fingerprint, key, reason: result.reason });
       } else {
         setOutcome({ kind: "refused", reason: result.reason, status: result.status });
+        // A definite answer for this reference settles it as not recorded.
+        setUnknown((u) => (u?.key === key ? null : u));
       }
     } catch {
-      setOutcome({ kind: "refused", reason: "The request failed before the Portal answered. Nothing was recorded.", status: "unavailable" });
+      setOutcome(null);
+      setUnknown({ fingerprint, key, reason: "The request ended before the Portal's answer was read." });
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -159,6 +181,11 @@ export function ReviewNoteForm({ api, capability, identity, onRecorded }: Review
           </button>
         </p>
         {copied === null ? null : <p className="exec-sbx-note" role="status">{copied}</p>}
+        {unknown === null ? null : (
+          <p className="exec-sbx-refusal" role="alert">
+            An earlier attempt may have been recorded too (reference {unknown.key}). Check the certification history before sending that text again.
+          </p>
+        )}
       </div>
     );
   } else {
@@ -200,6 +227,19 @@ export function ReviewNoteForm({ api, capability, identity, onRecorded }: Review
             The server did not record this note ({outcome.status}). {outcome.reason}
           </p>
         ) : null}
+        {unknown === null ? null : (
+          <div className="exec-sbx-refusal" role="alert" data-outcome="unknown">
+            <p>Unknown: it may have been recorded. {unknown.reason}</p>
+            {unknown.fingerprint === currentFingerprint ? (
+              <p>Retrying sends the same reference ({unknown.key}), so nothing is duplicated.</p>
+            ) : (
+              <p>
+                An earlier attempt may have been recorded (reference {unknown.key}). This text is different, so it will be sent
+                under a new reference and both could exist.
+              </p>
+            )}
+          </div>
+        )}
       </>
     );
   }
