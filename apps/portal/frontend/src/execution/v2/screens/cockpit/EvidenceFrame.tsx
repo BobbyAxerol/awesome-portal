@@ -216,9 +216,9 @@ function ChartPanel() {
   );
 }
 
-function countMarks(rows: readonly { mark: Mark }[]): { total: number; pass: number; watch: number; fail: number } {
+function countMarks(rows: readonly { mark: Mark }[]): { total: number; pass: number; watch: number; fail: number; insufficient: number } {
   const count = (mark: Mark) => rows.filter((row) => row.mark === mark).length;
-  return { total: rows.length, pass: count("pass"), watch: count("watch"), fail: count("fail") };
+  return { total: rows.length, pass: count("pass"), watch: count("watch"), fail: count("fail"), insufficient: count("insufficient") };
 }
 
 /* ── per-kind bodies ──────────────────────────────────────────────────────── */
@@ -809,10 +809,11 @@ function verdictOf(data: EvidenceData): Verdict {
   switch (data.kind) {
     case "r1": {
       const marks = countMarks(data.detail.checklist.map((item) => ({ mark: item.outcome })));
-      const facts = [`${marks.pass} within`, `${marks.watch} watch`, `${marks.fail} blocking`];
+      const facts = [`${marks.pass} within`, `${marks.watch} watch`, `${marks.fail} blocking`, `${marks.insufficient} insufficient`];
       const meter = data.detail.checklist.map((item) => item.outcome);
       if (data.detail.decided) return { tone: "mute", headline: `Decided · ${data.detail.decided.outcome}`, facts, meter };
-      return { tone: marks.fail > 0 ? "bad" : marks.watch > 0 ? "warn" : "ok", headline: `Checklist ${marks.pass} of ${marks.total}`, facts, meter };
+      // A criterion with too little evidence is unknown, and unknown is never green: only a fully read checklist is "ok".
+      return { tone: marks.fail > 0 ? "bad" : marks.watch > 0 || marks.insufficient > 0 ? "warn" : "ok", headline: `Checklist ${marks.pass} of ${marks.total}`, facts, meter };
     }
     case "exit": {
       const d = data.detail;

@@ -102,6 +102,17 @@ function drawerOnly(port: ExecutionApi, id = "inc_TEST_ONLY_operational") {
   );
 }
 
+/**
+ * Waits for the READY drawer, not just any aside: the shared Drawer renders an aside in the loading phase too, so
+ * `findByRole("complementary")` can resolve on the skeleton and a synchronous query after it then races the read.
+ * The workflow rail exists only once the incident has been read.
+ */
+async function readyDrawer(port: ExecutionApi, id = "inc_TEST_ONLY_operational"): Promise<HTMLElement> {
+  drawerOnly(port, id);
+  const rail = await screen.findByRole("list", { name: "Workflow state" });
+  return rail.closest("aside") as HTMLElement;
+}
+
 describe("root content", () => {
   it("shows the state rail, severity, target, timestamps and version for OPEN", async () => {
     drawerOnly(api().port);
@@ -125,16 +136,14 @@ describe("root content", () => {
   });
 
   it("MITIGATED marks Open done and Mitigated current", async () => {
-    drawerOnly(api().port, "inc_TEST_ONLY_mitigated");
-    const drawer = await screen.findByRole("complementary");
+    const drawer = await readyDrawer(api().port, "inc_TEST_ONLY_mitigated");
     const steps = within(within(drawer).getByRole("list", { name: "Workflow state" })).getAllByRole("listitem");
     expect(steps.map((s) => s.getAttribute("data-step"))).toEqual(["done", "current", "todo"]);
     expect(within(drawer).getAllByText("22 Aug 12:30Z").length).toBeGreaterThan(0);
   });
 
   it("RESOLVED is a Portal record, never a green flag", async () => {
-    drawerOnly(api().port, "inc_TEST_ONLY_resolved");
-    const drawer = await screen.findByRole("complementary");
+    const drawer = await readyDrawer(api().port, "inc_TEST_ONLY_resolved");
     const flag = drawer.querySelector(".exec-flag") as HTMLElement;
     expect(flag.getAttribute("data-k")).toBe("neutral");
     expect(flag.textContent).toContain("Resolved in the Portal");
@@ -149,16 +158,21 @@ describe("root content", () => {
   });
 
   it("evidence, operations, gates and timeline each keep a named panel that is Not published (FE-031); assignee is FE-030 (INC-3)", async () => {
-    drawerOnly(api().port);
-    const drawer = await screen.findByRole("complementary");
+    const drawer = await readyDrawer(api().port);
     const priority = drawer.querySelector(".exec-dock-priority") as HTMLElement;
     for (const name of ["Evidence", "Operations taken", "Resolution gates", "Timeline"]) {
-      const panel = within(priority).getByRole("region", { name });
+      const panel = within(priority).getByRole("group", { name });
       expect(within(panel).getByRole("heading", { name }), name).toBeTruthy();
       expect(panel.textContent, name).toContain("Not published (FE-031)");
       // The server's reason code is the same for all four, so it is not repeated inside each.
       expect(panel.textContent, name).not.toContain("ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED");
     }
+    // Four panels named by their own heading: no landmark regions in the drawer body, and no name that repeats its heading.
+    expect(within(priority).queryAllByRole("region")).toHaveLength(0);
+    expect(priority.querySelectorAll("[aria-label]")).toHaveLength(0);
+    const ids = [...priority.querySelectorAll("h4")].map((h) => h.id);
+    expect(new Set(ids).size).toBe(4);
+    expect(ids.every((id) => id !== "")).toBe(true);
     expect(priority.textContent).toContain("Assignee");
     expect(priority.textContent).toContain("Not published (FE-030)");
     expect(priority.textContent?.match(/ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED/g)).toHaveLength(1);
@@ -172,16 +186,17 @@ describe("root content", () => {
   });
 
   it("every blocked action links to My access, the Access screen's real route (INC-8)", async () => {
-    drawerOnly(api().port);
-    const drawer = await screen.findByRole("complementary");
-    const links = within(drawer).getAllByRole("link", { name: "My access" });
+    const drawer = await readyDrawer(api().port);
+    const links = within(drawer).getAllByRole("link", { name: /^My access/ });
     expect(links).toHaveLength(4);
     for (const link of links) expect(link.getAttribute("href")).toBe("/administration/profile-access");
+    // Four links with the same words need their action in the name (WCAG 2.4.4).
+    expect(new Set(links.map((l) => l.getAttribute("aria-label"))).size).toBe(4);
+    for (const link of links) expect(link.getAttribute("aria-label")).toMatch(/^My access: \S/);
   });
 
   it("every action is disabled and points at its reason", async () => {
-    drawerOnly(api().port);
-    const drawer = await screen.findByRole("complementary");
+    const drawer = await readyDrawer(api().port);
     const wanted: Record<string, string> = {
       Acknowledge: INCIDENT_ACTION_REASONS.acknowledge,
       "Assign to me": INCIDENT_ACTION_REASONS.assign,

@@ -94,10 +94,15 @@ interface InboxLoad {
   nextCursor: string | null;
   moreBusy: boolean;
   moreError: string | null;
+  /** The read this state belongs to (`inboxScope`); null before any read. A render right after the view or workspace changes still holds the previous one's state. */
+  scope: string | null;
 }
 
+/** What one inbox read is for: the server view and the workspace. */
+const inboxScope = (view: string | null, workspaceId: string | undefined): string | null => (view === null ? null : `${view}\u0000${workspaceId ?? ""}`);
+
 const IDLE_INBOX: InboxLoad = {
-  status: "idle", failure: null, rows: [], warnings: [], counts: null, totalCount: null, filteredCount: null, hasMore: false, nextCursor: null, moreBusy: false, moreError: null,
+  status: "idle", failure: null, rows: [], warnings: [], counts: null, totalCount: null, filteredCount: null, hasMore: false, nextCursor: null, moreBusy: false, moreError: null, scope: null,
 };
 
 function useInbox(api: ExecutionApi, view: string | null, workspaceId: string | undefined): InboxLoad & { loadMore(): void } {
@@ -108,23 +113,25 @@ function useInbox(api: ExecutionApi, view: string | null, workspaceId: string | 
 
   useEffect(() => {
     const mine = ++generation.current;
+    const scope = inboxScope(view, workspaceId);
     if (view === null) {
       setState(IDLE_INBOX);
       return;
     }
-    setState({ ...IDLE_INBOX, status: "loading" });
+    setState({ ...IDLE_INBOX, status: "loading", scope });
     void api
       .listApprovals({ filter: view, limit: PAGE_SIZE, ...(workspaceId ? { workspaceId } : {}) })
       .then((result) => {
         if (generation.current !== mine) return;
         if (!result.ok) {
-          setState({ ...IDLE_INBOX, status: "failed", failure: { panel: settledPanel(result.status), reason: result.reason } });
+          setState({ ...IDLE_INBOX, status: "failed", scope, failure: { panel: settledPanel(result.status), reason: result.reason } });
           return;
         }
         const page = result.value.page;
         setState({
           ...IDLE_INBOX,
           status: "ready",
+          scope,
           rows: mergeInboxRows(page.rows, readRawRows(result.value)),
           warnings: [...(result.warnings ?? [])],
           counts: result.value.counts,
@@ -135,7 +142,7 @@ function useInbox(api: ExecutionApi, view: string | null, workspaceId: string | 
         });
       })
       .catch(() => {
-        if (generation.current === mine) setState({ ...IDLE_INBOX, status: "failed", failure: { panel: "unavailable", reason: "The queue read did not complete." } });
+        if (generation.current === mine) setState({ ...IDLE_INBOX, status: "failed", scope, failure: { panel: "unavailable", reason: "The queue read did not complete." } });
       });
   }, [api, view, workspaceId]);
 
@@ -348,9 +355,18 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   // Lane chips carry a count (HIFI). The server publishes no per-lane count, so it is taken from the last page the
   // All lane loaded and kept while another lane is open; it is an at-least number when that page had more.
   const [allPage, setAllPage] = useState<{ rows: readonly InboxRowV2[]; more: boolean } | null>(null);
+  const allScope = inboxScope(serverViewFor("all"), workspaceId);
+  // A new workspace owns none of the old page: drop it before anything else can read it.
   useEffect(() => {
-    if (lane === "all" && inbox.status === "ready") setAllPage({ rows: inbox.rows, more: inbox.hasMore });
-  }, [lane, inbox.status, inbox.rows, inbox.hasMore]);
+    setAllPage(null);
+  }, [workspaceId]);
+  useEffect(() => {
+    // Only the All read counts, and only the state that belongs to it: on the render where the lane flips, `inbox`
+    // still holds the previous lane's rows (its scope differs), and they must not become the chips' numbers.
+    if (lane !== "all" || inbox.scope !== allScope) return;
+    if (inbox.status === "ready") setAllPage({ rows: inbox.rows, more: inbox.hasMore });
+    else if (inbox.status === "loading" || inbox.status === "failed") setAllPage(null);
+  }, [lane, allScope, inbox.scope, inbox.status, inbox.rows, inbox.hasMore]);
   const laneCounts = useMemo(() => {
     if (allPage === null) return null;
     const open = (id: Exclude<Lane, "waiver">) => gateItems({ rows: allPage.rows, decided: [], lane: id, lens: "open", principal }).length;

@@ -12,7 +12,7 @@
  * mode the shared Drawer is the modal dialog and in dock mode it sits beside
  * the table.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { PanelState } from "../../../components/states";
 import type { ExecutionApi } from "../../../api/ports";
@@ -78,6 +78,7 @@ export interface IncidentRootDrawerProps {
 
 export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose }: IncidentRootDrawerProps) {
   const [load, setLoad] = useState<Load>({ phase: "loading" });
+  const gapId = useId();
 
   useEffect(() => {
     let live = true;
@@ -136,11 +137,12 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
     <>
       <h3 className="exec-ops-section">Not published</h3>
       <div className="exec-ops-gaps">
-        {GAP_PANELS.map((panel) => (
-          <section key={panel} className="exec-ops-gap" aria-label={panel}>
-            <h4 className="exec-ops-gap-title">{panel}</h4>
+        {/* Named by their own heading (one name, not a label plus the same text again) and grouped, not four region landmarks. */}
+        {GAP_PANELS.map((panel, index) => (
+          <div key={panel} className="exec-ops-gap" role="group" aria-labelledby={`${gapId}-${index}`}>
+            <h4 id={`${gapId}-${index}`} className="exec-ops-gap-title">{panel}</h4>
             <p className="exec-ops-np"><NotPublished id={FE.events} /></p>
-          </section>
+          </div>
         ))}
       </div>
       <p className="exec-ops-np exec-ops-gap-assignee">

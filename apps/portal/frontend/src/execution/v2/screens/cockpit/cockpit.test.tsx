@@ -325,6 +325,66 @@ describe("queue, lanes and lenses", () => {
     expect(names().slice(0, 6)).toEqual(["All gates 4", "R1 1", "R2 1", "Exit 1", "Live 1", "Waiver"]);
   });
 
+  describe("lane chip counts never take another view's rows (finding: stale allPage)", () => {
+    const chipNames = () => [...(queue().querySelector('[aria-label="Lane"]') as HTMLElement).querySelectorAll(".exec-ck-chip")].map((el) => el.textContent?.trim());
+    const laneChip = (name: RegExp) => within(queue().querySelector('[aria-label="Lane"]') as HTMLElement).getByRole("button", { name });
+    const r1Only = (): InboxResult => ({ ...inbox([ROWS[0]!], { rawRows: [RAW[0]!] }) });
+
+    /** First All read answers; R1 answers one row; every later All read is `later`. */
+    function lanePort(later: () => unknown) {
+      let allReads = 0;
+      return standardPort({
+        listApprovals: ((args: { filter: string }) => {
+          if (args.filter === "R1") return { ok: true, value: r1Only() };
+          allReads += 1;
+          return allReads === 1 ? { ok: true, value: { ...inbox(), ...{ rawRows: RAW } } } : later();
+        }) as Handler,
+      });
+    }
+
+    it("going back to All while its read is pending does not show the R1 lane's rows as the All counts", async () => {
+      const p = lanePort(() => new Promise(() => undefined));
+      await mount(p);
+      expect(chipNames().slice(0, 5)).toEqual(["All gates 4", "R1 1", "R2 1", "Exit 1", "Live 1"]);
+      fireEvent.click(laneChip(/^R1/));
+      await settle();
+      fireEvent.click(laneChip(/^All gates/));
+      await settle();
+      // The R1 page held one row: "All 1 · R1 1 · R2 0 ..." would be that page passed off as the All lane.
+      expect(chipNames().slice(0, 5)).toEqual(["All gates", "R1", "R2", "Exit", "Live"]);
+    });
+
+    it("an All read that fails leaves the chips without counts, not with the previous lane's", async () => {
+      const p = lanePort(() => ({ ok: false, status: "unavailable", reason: "Queue is down." }));
+      await mount(p);
+      fireEvent.click(laneChip(/^R1/));
+      await settle();
+      fireEvent.click(laneChip(/^All gates/));
+      await settle();
+      expect(chipNames().slice(0, 5)).toEqual(["All gates", "R1", "R2", "Exit", "Live"]);
+      expect(within(queue()).getByText(/Queue is down/)).toBeTruthy();
+    });
+
+    it("a workspace change drops the old workspace's counts until its own All read answers", async () => {
+      let pending = false;
+      const p = standardPort({
+        listApprovals: (() => (pending ? new Promise(() => undefined) : { ok: true, value: { ...inbox(), ...{ rawRows: RAW } } })) as Handler,
+      });
+      const tree = (workspaceId: string) => (
+        <MemoryRouter initialEntries={["/execution/approvals"]}>
+          <Cockpit api={p.api} workspaceId={workspaceId} />
+        </MemoryRouter>
+      );
+      const view = render(tree("ws_1"));
+      await settle();
+      expect(chipNames().slice(0, 2)).toEqual(["All gates 4", "R1 1"]);
+      pending = true;
+      view.rerender(tree("ws_2"));
+      await settle();
+      expect(chipNames().slice(0, 2)).toEqual(["All gates", "R1"]);
+    });
+  });
+
   it("a lane count is an at-least number when the All page had more rows than it loaded", async () => {
     const p = standardPort({}, inbox(ROWS, { rawRows: RAW }, { hasMore: true, nextCursor: "c1", totalCount: 48, filteredCount: 48 }));
     await mount(p);
@@ -501,6 +561,21 @@ describe("evidence frame", () => {
     expect(segments.map((i) => i.getAttribute("data-m"))).toContain("watch");
     expect(segments.map((i) => i.getAttribute("data-m"))).toEqual(["pass", "watch", "insufficient"]);
     expect(meter.getAttribute("aria-label")).toBe("3 criteria: 1 within, 1 watch, 0 blocking, 1 insufficient");
+  });
+
+  it("an R1 checklist with an insufficient criterion and nothing failing is never a green verdict, and says insufficient", async () => {
+    const checklist = (outcomes: ("pass" | "insufficient")[]) => ({ ...r1Detail(), checklist: outcomes.map((outcome, i) => ({ label: `Criterion ${i + 1}`, outcome })) });
+    const verdict = () => within(screen.getByRole("region", { name: "Evidence" })).getByText(/^Checklist \d+ of \d+$/).closest(".exec-ck-verdict") as HTMLElement;
+
+    const gaps = await mount(standardPort({ getGateR1: () => ({ ok: true, value: checklist(["pass", "pass", "insufficient"]) }) }), "/execution/approvals?sel=apr_a");
+    expect(verdict().getAttribute("data-tone")).toBe("warn");
+    expect(verdict().textContent).toContain("1 insufficient");
+    expect(within(verdict()).getByRole("img").getAttribute("aria-label")).toBe("3 criteria: 2 within, 0 watch, 0 blocking, 1 insufficient");
+    gaps.unmount();
+
+    await mount(standardPort({ getGateR1: () => ({ ok: true, value: checklist(["pass", "pass"]) }) }), "/execution/approvals?sel=apr_a");
+    expect(verdict().getAttribute("data-tone")).toBe("ok");
+    expect(verdict().textContent).toContain("0 insufficient");
   });
 
   it("the evidence frame keeps the V1 review URLs, with the context params carried", async () => {
@@ -852,6 +927,20 @@ describe("keyboard", () => {
     expect(where()).toContain("sel=apr_a");
     fireEvent.click(within(screen.getByRole("dialog", { name: "Keys" })).getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog", { name: "Keys" })).toBeNull();
+  });
+
+  it("the shortcut list container is focusable, so a click inside keeps Tab in the trap, and it says where single keys work", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    fireEvent.click(screen.getByRole("button", { name: /Keys/ }));
+    const dialog = screen.getByRole("dialog", { name: "Keys" });
+    expect(dialog.getAttribute("tabindex")).toBe("-1");
+    expect(dialog.textContent).toMatch(/only while the Cockpit is focused/);
+    expect(dialog.textContent).toMatch(/never fire while you are typing/);
+    // A mouse click inside lands focus on the container; Tab from there goes back to Close, not out of the dialog.
+    dialog.focus();
+    expect(document.activeElement).toBe(dialog);
+    fireEvent.keyDown(dialog, { key: "Tab" });
+    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Close" }));
   });
 });
 

@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { answerOperationsV2 } from "../../../../../e2e/bffDoubleV2";
 import type { ExecutionApi, Result } from "../../../api/ports";
 import { operationalQueueSearch, readOperationalQueueV2, type OperationalQueueQueryV2, type OperationalQueueReadV2 } from "../../readers/operationalQueue";
+import { sourceHealthSummary } from "./useSourceHealth";
 import OperationsV2, { MINE_REASON, PAGE_LIMIT, queryFor, ROW_CAP, type OperationsV2Props } from "./index";
 import { receiptOutcome, triageOutcome } from "./outcome";
 
@@ -166,6 +167,34 @@ describe("Source health summary (OP-7)", () => {
     ]);
     // The journal sentence stays: it is about the journal, not the profiles.
     expect(document.querySelector("details")?.textContent).toContain("Not published (FE-021)");
+  });
+
+  it("counts only PARTIAL profiles as partial and names every other non-available state in its own words", async () => {
+    const mixed = [
+      { profile: "paper_binance_usdm", state: "AVAILABLE", reasonCode: null },
+      { profile: "sandbox_binance_usdm", state: "PARTIAL", reasonCode: null },
+      { profile: "real_funded_binance_usdm", state: "UNAVAILABLE", reasonCode: "SOURCE_DOWN" },
+      { profile: "canary_binance_usdm", state: "UNAVAILABLE", reasonCode: null },
+      { profile: "live_binance_usdm", state: null, reasonCode: null },
+    ] as const;
+    const { api } = fakeApi({ profiles: mixed });
+    mount(api);
+    await table();
+    await waitFor(() => expect(document.querySelector("summary")?.textContent).toContain("1 of 5 partial · 2 unavailable · 1 state not stated"));
+    // Not "4 of 5 partial": unavailable and unstated are not relabelled.
+    expect(document.querySelector("summary")?.textContent).not.toContain("4 of 5 partial");
+    const profiles = screen.getByRole("table", { name: "Source health by profile" });
+    const rows = within(profiles).getAllByRole("row").slice(1).map((r) => r.textContent ?? "");
+    expect(rows[2]).toContain("Unavailable");
+    expect(rows[2]).not.toContain("Partial");
+    expect(rows[4]).toContain("State not stated");
+  });
+
+  it("sourceHealthSummary prints no extra clause when every non-available profile is partial", () => {
+    expect(sourceHealthSummary([
+      { profile: "a", state: "PARTIAL", reasonCode: null },
+      { profile: "b", state: "AVAILABLE", reasonCode: null },
+    ])).toBe("1 of 2 partial");
   });
 
   it("a failed or absent composition read says Not available in the summary, never a healthy profile", async () => {

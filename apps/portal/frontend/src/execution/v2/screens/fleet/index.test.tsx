@@ -3,6 +3,8 @@
  * reader: lenses, filters, sort, paging, the peek drawer, and every state the
  * screen must keep apart.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -382,6 +384,67 @@ describe("Columns menu (FL-7)", () => {
     fireEvent.keyDown(document.body, { key: "Escape" });
     expect(screen.queryByRole("group", { name: "Columns" })).toBeNull();
     expect(document.activeElement).toBe(button);
+  });
+});
+
+describe("Columns popup and chip focus (a11y)", () => {
+  it("the Columns button does not claim a menu: the popup is a checkbox group", async () => {
+    const { api } = makeApi();
+    mount(api);
+    await loaded();
+    const button = screen.getByRole("button", { name: /Columns/ });
+    expect(button.hasAttribute("aria-haspopup")).toBe(false);
+    fireEvent.click(button);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("tabbing out of the popup closes it; moving between its own checkboxes does not", async () => {
+    const { api } = makeApi();
+    mount(api);
+    await loaded();
+    fireEvent.click(screen.getByRole("button", { name: /Columns/ }));
+    const boxes = within(screen.getByRole("group", { name: "Columns" })).getAllByRole("checkbox");
+    fireEvent.focusOut(boxes[0]!, { relatedTarget: boxes[1] });
+    expect(screen.getByRole("group", { name: "Columns" })).toBeTruthy();
+    fireEvent.focusOut(boxes[1]!, { relatedTarget: screen.getByRole("searchbox", { name: "Search alpha" }) });
+    expect(screen.queryByRole("group", { name: "Columns" })).toBeNull();
+  });
+
+  it("clearing a chip moves focus to the next remaining chip, else the previous, else the search box", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?stage=paper&owner=Bobby-001&health=READY");
+    await loaded();
+    const cross = (name: string) => screen.getByRole("button", { name: `Clear ${name}` });
+    // middle chip: the next one takes focus
+    fireEvent.click(cross("owner"));
+    await waitFor(() => expect(search().get("owner")).toBeNull());
+    expect(document.activeElement).toBe(cross("health"));
+    // last chip: the previous one
+    fireEvent.click(cross("health"));
+    await waitFor(() => expect(search().get("health")).toBeNull());
+    expect(document.activeElement).toBe(cross("lens"));
+    // no chip left: the search box, never body
+    fireEvent.click(cross("lens"));
+    await waitFor(() => expect(search().get("stage")).toBeNull());
+    expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: "Search alpha" }));
+  });
+
+  it("Clear all puts focus on the search box", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?stage=paper&owner=Bobby-001");
+    await loaded();
+    fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+    await waitFor(() => expect(search().get("owner")).toBeNull());
+    expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: "Search alpha" }));
+  });
+
+  it("the chip list keeps its list box (not display: contents) and the cross has a 24px hit area", () => {
+    const css = readFileSync(resolve(__dirname, "../../css/fleet.css"), "utf8");
+    const rule = (selector: string) => css.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+    expect(rule(".exec-fleet-chips")).not.toMatch(/display:\s*contents/);
+    expect(rule(".exec-fleet-chips")).toMatch(/display:\s*flex/);
+    // inset -6px around a cross that is at least 12px square reaches 24px on both axes.
+    expect(rule(".exec-fleet-chipx::after")).toMatch(/inset:\s*-(6|7|8|9|1\d)px/);
   });
 });
 

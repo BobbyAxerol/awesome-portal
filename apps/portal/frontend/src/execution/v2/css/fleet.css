@@ -213,8 +213,12 @@
   align-items: center;
   gap: var(--space-2);
 }
+/* A real flex box, not `display: contents`: contents drops the list's semantics in several browsers. Same gap, same look. */
 .exec-fleet-chips {
-  display: contents;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -240,6 +244,15 @@
 }
 .exec-fleet-link {
   color: var(--accent);
+}
+/* The cross stays small; its hit area reaches at least 24 x 24 CSS px (WCAG 2.5.8) without growing the chip. */
+.exec-fleet-chipx {
+  position: relative;
+}
+.exec-fleet-chipx::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
 }
 .exec-fleet-chipx:focus-visible,
 .exec-fleet-link:focus-visible,

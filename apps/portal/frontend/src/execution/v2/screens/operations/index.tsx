@@ -33,7 +33,7 @@ import { FE, NotPublished, notPublishedReason } from "./notPublished";
 import { OperationDock } from "./OperationDock";
 import { humanize, TARGET_LABEL } from "./outcome";
 import { QueueTable } from "./QueueTable";
-import { partialProfiles, useSourceHealth } from "./useSourceHealth";
+import { sourceHealthSummary, useSourceHealth } from "./useSourceHealth";
 
 import "../../css/operations.css";
 
@@ -313,7 +313,7 @@ export default function OperationsV2({
         <summary>
           Source health
           {sourceHealth.phase === "ready" && sourceHealth.profiles.length > 0 ? (
-            <span className="exec-ops-sum"> · {partialProfiles(sourceHealth.profiles)} of {sourceHealth.profiles.length} partial</span>
+            <span className="exec-ops-sum"> · {sourceHealthSummary(sourceHealth.profiles)}</span>
           ) : sourceHealth.phase === "loading" ? null : (
             <span className="exec-ops-sum"> · Not available</span>
           )}

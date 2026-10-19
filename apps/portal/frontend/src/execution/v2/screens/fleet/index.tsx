@@ -142,6 +142,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
     const timer = setTimeout(() => setUrl.current({ q: next, sel: null }, { replace: true }), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [text, q]);
+  const searchInput = useRef<HTMLInputElement>(null);
   const commitNow = () => url.set({ q: text.trim() === "" ? null : text.trim(), sel: null }, { replace: true });
 
   const filtered = q !== null || owner !== null || health !== null || stage.length > 0;
@@ -274,6 +275,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
             <label className="exec-fleet-field">
               <span className="exec-fleet-sr">Search alpha</span>
               <input
+                ref={searchInput}
                 className="exec-fleet-input"
                 type="search"
                 placeholder="Search alpha"
@@ -325,7 +327,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
             <span className="exec-fleet-grow" />
             <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />
           </div>
-          <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} />
+          <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} onFocusFallback={() => searchInput.current?.focus()} />
           <p id={reasonId} className="exec-fleet-unpub">
             Not published yet: {NOT_PUBLISHED_LIST.map((fact) => `${fact.what} (${fact.fe})`).join(", ")}.
           </p>

@@ -58,7 +58,7 @@ export function KeysHelp({ onClose }: KeysHelpProps) {
 
   return (
     <div className="exec-ck-help-scrim" onClick={onClose}>
-      <div className="exec-ck-help" role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(event) => event.stopPropagation()} onKeyDown={trap}>
+      <div className="exec-ck-help" role="dialog" tabIndex={-1} aria-modal="true" aria-labelledby={titleId} onClick={(event) => event.stopPropagation()} onKeyDown={trap}>
         <div className="exec-ck-ph">
           <h2 id={titleId} className="exec-ck-pt">Keys</h2>
           <span className="exec-ck-pr">Esc closes</span>
@@ -73,6 +73,7 @@ export function KeysHelp({ onClose }: KeysHelpProps) {
             ))}
           </tbody>
         </table>
+        <p className="exec-ck-note exec-ck-pad">Single-key shortcuts (J, K, A, R, N, ?) work only while the Cockpit is focused, and never fire while you are typing in a field.</p>
         <div className="exec-ck-helpfoot">
           <button ref={close} type="button" className="exec-ck-more" onClick={onClose}>Close</button>
         </div>

@@ -8,7 +8,7 @@
  * what is in the URL (lens, stage, owner, health, search) and clear one at a
  * time; they add no filter of their own.
  */
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type FocusEvent } from "react";
 
 import {
   FLEET_COLUMNS, UNPUBLISHED_COLUMNS, notPublished,
@@ -49,13 +49,19 @@ export function ColumnsMenu({ hidden, onToggle }: ColumnsMenuProps) {
     };
   }, [open]);
 
+  // Tabbing out of the popup closes it. A null relatedTarget (a click on a non-focusable spot, the window losing
+  // focus) is left to the pointer handler above: it must not close the popup under a click on a label.
+  const leave = (event: FocusEvent) => {
+    const to = event.relatedTarget;
+    if (to instanceof Node && wrap.current && !wrap.current.contains(to)) setOpen(false);
+  };
+
   return (
-    <span className="exec-fleet-pop" ref={wrap}>
+    <span className="exec-fleet-pop" ref={wrap} onBlur={leave}>
       <button
         ref={button}
         type="button"
         className="exec-fleet-btn"
-        aria-haspopup="true"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((v) => !v)}
@@ -99,22 +105,62 @@ export interface FilterChipsProps {
   onClearAll(): void;
   /** The query string the page is at, shown in the URL disclosure. */
   urlText: string;
+  /** Where focus goes when no chip is left to take it (the search box); without it focus is not moved. */
+  onFocusFallback?(): void;
 }
 
-export function FilterChips({ chips, onClearAll, urlText }: FilterChipsProps) {
+export function FilterChips({ chips, onClearAll, urlText, onFocusFallback }: FilterChipsProps) {
+  const buttons = useRef(new Map<string, HTMLButtonElement>());
+  // Set when a clear is clicked: the chip order as it was and which chip went. The next render has the new chips.
+  const pending = useRef<{ order: readonly string[]; cleared: string | null } | null>(null);
+  const fallback = useRef(onFocusFallback);
+  fallback.current = onFocusFallback;
+
+  useEffect(() => {
+    const move = pending.current;
+    if (move === null) return;
+    pending.current = null;
+    const alive = new Set(chips.map((chip) => chip.id));
+    const at = move.cleared === null ? -1 : move.order.indexOf(move.cleared);
+    // The next remaining chip, else the previous one, else the search box: focus is never left on a button that is gone.
+    const after = at < 0 ? [] : move.order.slice(at + 1);
+    const before = at < 0 ? [] : move.order.slice(0, at).reverse();
+    const target = [...after, ...before].find((id) => alive.has(id));
+    if (target !== undefined) buttons.current.get(target)?.focus();
+    else fallback.current?.();
+  });
+
+  const clearOne = (chip: FilterChip) => {
+    pending.current = { order: chips.map((c) => c.id), cleared: chip.id };
+    chip.clear();
+  };
+  const clearAll = () => {
+    pending.current = { order: chips.map((c) => c.id), cleared: null };
+    onClearAll();
+  };
+
   return (
     <div className="exec-fleet-chiprow">
       {chips.length > 0 ? (
-        <ul className="exec-fleet-chips" aria-label="Active filters">
+        <ul className="exec-fleet-chips" role="list" aria-label="Active filters">
           {chips.map((chip) => (
             <li key={chip.id} className="exec-fleet-chip">
               <span>{chip.name}: {chip.value}</span>
-              <button type="button" className="exec-fleet-chipx" aria-label={`Clear ${chip.name}`} onClick={chip.clear}>✕</button>
+              <button
+                ref={(node) => {
+                  if (node) buttons.current.set(chip.id, node);
+                  else buttons.current.delete(chip.id);
+                }}
+                type="button"
+                className="exec-fleet-chipx"
+                aria-label={`Clear ${chip.name}`}
+                onClick={() => clearOne(chip)}
+              >✕</button>
             </li>
           ))}
         </ul>
       ) : null}
-      {chips.length > 0 ? <button type="button" className="exec-fleet-link" onClick={onClearAll}>Clear all</button> : null}
+      {chips.length > 0 ? <button type="button" className="exec-fleet-link" onClick={clearAll}>Clear all</button> : null}
       <details className="exec-fleet-url">
         <summary>URL</summary>
         <code className="exec-fleet-urltext">{urlText}</code>

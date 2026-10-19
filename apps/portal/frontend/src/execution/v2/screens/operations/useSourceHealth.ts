@@ -48,6 +48,28 @@ export function useSourceHealth(api: ExecutionApi, workspaceId?: string): Source
   return state;
 }
 
-/** Profiles whose state is not AVAILABLE: what the summary line counts. */
-export const partialProfiles = (profiles: readonly SourceProfile[]): number =>
-  profiles.filter((p) => (p.state ?? "").toUpperCase() !== "AVAILABLE").length;
+const stateOf = (p: SourceProfile): string => (p.state ?? "").trim().toUpperCase();
+
+/** Profiles whose state is PARTIAL, and only those: another non-available state is not a partial one. */
+export const partialProfiles = (profiles: readonly SourceProfile[]): number => profiles.filter((p) => stateOf(p) === "PARTIAL").length;
+
+/**
+ * The states that are neither AVAILABLE nor PARTIAL, each in its own words and counted ("2 unavailable"), in the
+ * order first seen. A profile that states nothing is "state not stated": it is never relabelled partial or ok.
+ */
+export function otherStateCounts(profiles: readonly SourceProfile[]): { word: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const p of profiles) {
+    const state = stateOf(p);
+    if (state === "AVAILABLE" || state === "PARTIAL") continue;
+    const word = state === "" ? "state not stated" : state.toLowerCase().replace(/_/g, " ");
+    counts.set(word, (counts.get(word) ?? 0) + 1);
+  }
+  return [...counts].map(([word, count]) => ({ word, count }));
+}
+
+/** The summary line after "Source health": "2 of 5 partial", then " · 2 unavailable" for any other non-available state. */
+export function sourceHealthSummary(profiles: readonly SourceProfile[]): string {
+  const others = otherStateCounts(profiles).map(({ word, count }) => ` · ${count} ${word}`).join("");
+  return `${partialProfiles(profiles)} of ${profiles.length} partial${others}`;
+}
