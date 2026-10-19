@@ -13,7 +13,7 @@ import { NotPublished, SectionPanel, Triad } from "../../blocks";
 import type { LiveSourceOperationsV2 } from "../../readers/liveSourceOperations";
 import { withContext } from "../../urlState";
 import { stageWhy } from "../stage/reasons";
-import { ContextLink, KeyedTable, PanelSection } from "./parts";
+import { ContextLink, KeyedTable, PanelSection, V1RowsSection } from "./parts";
 import { ACCESS_PATH, CONTINUITY_PANELS, EXPOSURE_PANELS, type LiveModel } from "./model";
 import type { PanelPaging } from "./useLiveReads";
 
@@ -80,16 +80,8 @@ export function ExposureTab({ model, v2, paging }: TabProps) {
         ))
       ) : (
         <>
-          <SectionPanel title="Positions" aside="Internal figures">
-            <p className="exec-liv-line">
-              <NotPublished id="FE-072">Position rows</NotPublished>
-            </p>
-          </SectionPanel>
-          <SectionPanel title="Orders">
-            <p className="exec-liv-line">
-              <NotPublished id="FE-072">Open order rows</NotPublished>
-            </p>
-          </SectionPanel>
+          <V1RowsSection title="Positions" aside="Internal figures" rows={model.v1Rows?.positions ?? { kind: "none" }} what="Position rows" />
+          <V1RowsSection title="Orders" rows={model.v1Rows?.orders ?? { kind: "none" }} what="Open order rows" />
         </>
       )}
       {blotter === null ? null : (

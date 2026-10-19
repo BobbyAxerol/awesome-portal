@@ -29,12 +29,13 @@ import {
   liveModelV1,
   liveModelV2,
   panelCell,
+  rowsCaption,
   panelColumns,
   safeInternalHref,
   type LiveModel,
   type TriadFigure,
 } from "./model";
-import { BROKER_FIGURE, POPULATED_DEFAULTS, cursorFor, populatedV1, v1Of, v1Raw, v2Of, v2Populated, v2Unpublished, withRecords, type PopulatedV1 } from "./live.testbase";
+import { BROKER_FIGURE, POPULATED_DEFAULTS, cursorFor, populatedV1, v1Of, v1Raw, v2Of, v2Populated, v2Unpublished, withRecords, withV1Rows, type PopulatedV1 } from "./live.testbase";
 
 const model = (raw: unknown): LiveModel => liveModelV1(v1Of(raw));
 
@@ -153,6 +154,60 @@ describe("L1 · the V1 state matrix", () => {
     expect(m.chart.kind).toBe("unavailable");
     expect(m.triad).toMatchObject({ suppressed: false, internal: null, broker: null, rowsPublished: false });
     expect(m.predecessor).toMatchObject({ present: true, activeFlag: { label: "Not active for Live" } });
+  });
+
+  it("V1 rows: the dark body holds none (the panels are unavailable); a V2 body has no V1 rows at all", () => {
+    expect(model(v1Raw()).v1Rows).toEqual({ positions: { kind: "withheld", text: "Not available · source unavailable" }, orders: { kind: "withheld", text: "Not available · source unavailable" } });
+    expect(liveModelV2(v2Of(v2Populated())).v1Rows).toBeNull();
+    const noCollection = v1Raw();
+    delete noCollection.positions;
+    expect(model(noCollection).v1Rows?.positions).toEqual({ kind: "none" });
+  });
+
+  it("V1 rows: a ready, execution-authored collection is the source's own members, exact text, with the server's total", () => {
+    const m = model(withV1Rows(populatedV1()));
+    const positions = m.v1Rows!.positions;
+    if (positions.kind !== "table") throw new Error(positions.kind);
+    expect(positions.table.columns.map((c) => c.label)).toEqual(["Instrument", "Side", "Qty", "Entry px", "Reduce only"]);
+    expect(positions.table.rows.map((r) => r.cells)).toEqual([["BTCUSDT", "LONG", "0.0120", "64000.10", false], ["ETHUSDT", "SHORT", "1.5000", "3412.50", true]]);
+    expect(positions.caption).toBe("2 of 2");
+    expect(positions.line).toBeNull();
+    const orders = m.v1Rows!.orders;
+    if (orders.kind !== "table") throw new Error(orders.kind);
+    expect(orders.caption).toBe("1 of 1");
+  });
+
+  it("V1 rows: partial and stale say so; unavailable, a failed read and a suppressed envelope hold no rows", () => {
+    const line = (state: string) => {
+      const p = model(withV1Rows(populatedV1(), "EXECUTION", state)).v1Rows!.positions;
+      return p.kind === "table" ? p.line : p.kind === "withheld" ? p.text : p.kind;
+    };
+    expect(line("partial")).toBe("Partial: the source reported only part of it.");
+    expect(line("stale")).toBe("Stale: the source has not updated within its freshness budget.");
+    expect(line("ready")).toBeNull();
+    expect(line("empty")).toBeNull();
+    expect(line("unavailable")).toBe("Not available · source unavailable");
+    expect(line("error")).toBe("Not available · the source read failed");
+    expect(line("suppressed")).toBe("Withheld by the server.");
+    expect(line("fine")).toBe("Not available · source unavailable");
+  });
+
+  it("V1 rows: a BROKER collection is stripped while broker figures are hidden, and named; visible, it is drawn", () => {
+    const hidden = liveModelV1(v1Of(withV1Rows(populatedV1({ state: "MISMATCH", visible: false }), "BROKER")));
+    expect(hidden.v1Rows!.positions).toEqual({ kind: "withheld", text: "Hidden while the figures disagree." });
+    expect(hidden.v1Rows!.orders).toEqual({ kind: "withheld", text: "Hidden while the figures disagree." });
+    const unverified = liveModelV1(v1Of(withV1Rows(populatedV1({ state: "UNAVAILABLE", visible: false }), "BROKER")));
+    expect(unverified.v1Rows!.positions).toEqual({ kind: "withheld", text: "Not available · broker state not available" });
+    expect(liveModelV1(v1Of(withV1Rows(populatedV1(), "BROKER"))).v1Rows!.positions.kind).toBe("table");
+    // An EXECUTION collection is the Portal's own and is never withheld by broker suppression.
+    expect(liveModelV1(v1Of(withV1Rows(populatedV1({ state: "MISMATCH", visible: false }), "EXECUTION"))).v1Rows!.positions.kind).toBe("table");
+  });
+
+  it("rows caption: the server's total, or what is loaded and that the total is not published", () => {
+    expect(rowsCaption(2, 2, 2)).toBe("2 of 2");
+    expect(rowsCaption(200, 200, 5000)).toBe("200 of 5,000");
+    expect(rowsCaption(3, 3, null)).toBe("3 shown · total not published");
+    expect(rowsCaption(200, 250, null)).toBe("Top 200 of 250 loaded · total not published");
   });
 
   it("blockers: a published code is a sentence, the code goes to Provenance, a stranger code is generic and keeps its code", () => {

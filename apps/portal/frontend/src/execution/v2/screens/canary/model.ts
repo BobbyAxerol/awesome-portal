@@ -5,8 +5,9 @@
  *
  * The rules (S3 plan s4, D4, D6, D7, D13; CLAUDE.md s3.3):
  * - nothing is computed: no consumed / approved, no days remaining, no "Within
- *   envelope" verdict, no Ready. A fact the body does not carry is `Not
- *   published (FE-xxx)`, and a fact the source did not report is `Not available`;
+ *   envelope" verdict. `Ready` is the server's boolean and nothing else (see
+ *   `rollbackHead`). A fact the body does not carry is `Not published (FE-xxx)`,
+ *   and a fact the source did not report is `Not available`;
  * - a chip whose source does not publish is a request id, never a green word;
  * - the four decisions are always drawn and never enabled: there is no command
  *   route, and the reason is the stage dictionary's (D6, D9);
@@ -89,8 +90,6 @@ export function freshnessChip(view: CanaryView): StageChipValue {
       return { state: "dot", tone: "warn", text: at ? `Aging · ${at}` : "Aging" };
     case "STALE":
       return { state: "dot", tone: "warn", text: at ? `Stale · ${at}` : "Stale" };
-    case "PAUSED":
-      return { state: "dot", tone: "mute", text: "Paused" };
     default:
       return { state: "not-available", reason: "Freshness is not stated" };
   }
@@ -244,18 +243,49 @@ export interface LimitRow {
   key: LimitKey;
   label: string;
   value: DecimalFact | null;
+  /** The cap `envelope_compliance.limits` states, when it states one; `null` = not in this response (FE-071). */
+  limit: DecimalFact | null;
+  /** The consumed figure keyed by this cap's published name, when the compliance panel states one; `null` = not published (FE-071). */
+  consumed: DecimalFact | null;
   /** The server's used ratio, when one is published; `undefined` otherwise (the gauge then says so). */
   usedRatio: string | undefined;
 }
 
 export function limitRows(view: CanaryView): readonly LimitRow[] {
   const currency = view.envelope?.currency ?? null;
+  const compliance = view.complianceFacts;
   return (view.envelope?.limits ?? []).map((l: LimitFact) => ({
     key: l.key,
     label: LIMIT_MONEY[l.key] && currency !== null ? `${LIMIT_LABEL[l.key]} (${currency})` : LIMIT_LABEL[l.key],
     value: l.value,
+    limit: compliance?.limits[l.key] ?? null,
+    consumed: compliance?.consumed?.byLimit[l.key] ?? null,
     usedRatio: l.usedRatio,
   }));
+}
+
+export interface ComplianceNotes {
+  /** Headroom the server states for a cap, printed under the cap's label. */
+  headroom: readonly { key: LimitKey; label: string; value: DecimalFact }[];
+  /** Consumed or headroom figures under a name that is not a cap's published name, listed with that name. */
+  other: readonly { group: "Consumed" | "Headroom"; name: string; exact: string }[];
+  /** `false` is "not verified"; `true` is "verified"; `null` = not stated. */
+  baseRiskProfile: "verified" | "not-verified" | null;
+}
+
+/** The compliance figures that have no column: the published headroom, unmatched keys, and the base risk profile flag. */
+export function complianceNotes(view: CanaryView): ComplianceNotes {
+  const c = view.complianceFacts;
+  const headroom = (Object.keys(LIMIT_LABEL) as LimitKey[]).flatMap((key) => {
+    const value = c?.headroom?.byLimit[key];
+    return value === undefined ? [] : [{ key, label: LIMIT_LABEL[key], value }];
+  });
+  const other = [
+    ...(c?.consumed?.other ?? []).map((f) => ({ group: "Consumed" as const, name: f.key, exact: f.exact })),
+    ...(c?.headroom?.other ?? []).map((f) => ({ group: "Headroom" as const, name: f.key, exact: f.exact })),
+  ];
+  const verified = c?.baseRiskProfileVerified ?? null;
+  return { headroom, other, baseRiskProfile: verified === null ? null : verified ? "verified" : "not-verified" };
 }
 
 /* ── blockers ─────────────────────────────────────────────────────────────── */
@@ -331,7 +361,25 @@ export function rollbackItems(view: CanaryView): readonly RollbackItem[] {
   ];
 }
 
-/** The head flag of the Rollback panel: only a state the response states. Readiness itself is not printed (the V1 reader drops `ready`). */
+/**
+ * Is a published `ready: true` contradicted by the same response? Any one of these is enough:
+ * the readiness panel is not `ok`; its own freshness is STALE; it lists blocker codes; the broker snapshot,
+ * which a rollback leans on, is stale. A contradicted `true` is never printed as Ready.
+ */
+export function rollbackContradicted(view: CanaryView): boolean {
+  const panel = view.rollback;
+  if (panel === null || panel.state !== "ok" || panel.freshness === "STALE") return true;
+  if (view.rollbackBlockerCodes.length > 0) return true;
+  const broker = view.broker;
+  return broker !== null && (broker.state === "stale" || broker.freshness === "STALE");
+}
+
+/**
+ * The head flag of the Rollback panel. `Ready` is `rollback_readiness.ready` being the boolean `true` AND the
+ * response not contradicting it (`rollbackContradicted`); a `false` is "Not ready"; a missing or non-boolean
+ * `ready` prints nothing about readiness. The panel's own state still speaks first when the source did not
+ * report: an unavailable, withheld, partial or stale panel is that, whatever `ready` says.
+ */
 export function rollbackHead(view: CanaryView): { kind: "not-published" } | { kind: "flag"; flag: FlagKind; label: string } {
   const panel = view.rollback;
   if (panel === null) return { kind: "not-published" };
@@ -347,6 +395,10 @@ export function rollbackHead(view: CanaryView): { kind: "not-published" } | { ki
     case "terminal":
       return { kind: "flag", flag: "na", label: "Not available" };
     default:
+      if (view.rollbackReady === true) {
+        return rollbackContradicted(view) ? { kind: "flag", flag: "partial", label: "Not confirmed" } : { kind: "flag", flag: "ok", label: "Ready" };
+      }
+      if (view.rollbackReady === false) return { kind: "flag", flag: "attention", label: "Not ready" };
       return { kind: "not-published" };
   }
 }

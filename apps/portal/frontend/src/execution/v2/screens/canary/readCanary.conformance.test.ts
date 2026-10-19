@@ -16,7 +16,7 @@
  *
  * Lane: BFF-shaped bodies through the real dispatcher and readers. The populated body is FIXTURE_LAB.
  */
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import { readDecimal } from "../../boundary";
 import { readCanaryByVersion } from "../../readers/dispatch";
@@ -30,35 +30,7 @@ import { cloneRows, fillToBytes, MIB, serializedBytes, timed } from "../../testk
 import { validateAgainst } from "../../testkit/schema";
 import { bannersOf, chipsOf, guardRows, trialOf } from "./model";
 import { readCanaryView, type CanaryReadResult, type CanaryView, type DecimalFact } from "./readCanary";
-import { PARENT_FILE, SCHEMA_V1, SCHEMA_V2, V1_FILE, parentBody, populatedV1, v1Body } from "./canary.testbase";
-
-/*
- * The testkit's JSON Schema checker (`testkit/schema.ts`) throws on a keyword it does not know, and the published
- * control-room schema uses `maxProperties` (the free `data` / `rows` objects). That file is shared and not edited here,
- * so this suite reads schemas through a `readFileSync` that drops `maxProperties` and nothing else; every other
- * keyword is still checked, and fixtures (not `.schema.json`) are read untouched. A request to teach the checker the
- * keyword is in the report.
- */
-vi.mock("node:fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs")>();
-  const strip = (node: unknown): void => {
-    if (Array.isArray(node)) node.forEach(strip);
-    else if (typeof node === "object" && node !== null) {
-      delete (node as Record<string, unknown>).maxProperties;
-      Object.values(node).forEach(strip);
-    }
-  };
-  const readFileSync = ((path: unknown, ...rest: unknown[]) => {
-    const text = (actual.readFileSync as (...args: unknown[]) => unknown)(path, ...rest);
-    if (typeof path === "string" && path.endsWith(".schema.json") && typeof text === "string") {
-      const doc: unknown = JSON.parse(text);
-      strip(doc);
-      return JSON.stringify(doc);
-    }
-    return text;
-  }) as typeof actual.readFileSync;
-  return { ...actual, readFileSync, default: { ...actual, readFileSync } };
-});
+import { PARENT_FILE, SCHEMA_V1, SCHEMA_V2, V1_FILE, lit, parentBody, populatedV1, v1Body } from "./canary.testbase";
 
 const digests = Object.fromEntries([V1_FILE, PARENT_FILE].map((f) => [f, canonicalDigest(f)]));
 afterAll(() => {
@@ -124,8 +96,8 @@ describe("L0 · canonical, verbatim", () => {
 describe("L1 · matrix · broker panel x freshness x guard flags x trial day", () => {
   const BROKER = ["source_panels", 1] as const;
   const DIMS = [
-    dimension("broker", [...BROKER, "panel_state"], ["unavailable", "stale", "partial", "empty", "suppressed", "ok"]),
-    dimension("fresh", [...BROKER, "freshness_state"], ["OK", "AGING", "STALE", "UNKNOWN", "PAUSED"]),
+    dimension("broker", [...BROKER, "panel_state"], ["unavailable", "stale", "partial", "empty", "suppressed", "ready"]),
+    dimension("fresh", [...BROKER, "freshness_state"], ["FRESH", "AGING", "STALE", "UNKNOWN"]),
     dimension("scale", ["command_policy", "scale_up", "broker_sync_blocks"], [true, false]),
     dimension("protective", ["command_policy", "protective", "broker_sync_blocks"], [true, false]),
     dimension("day", ["lifecycle", "day_index"], [null, 0, 1, 14, 15]),
@@ -137,7 +109,7 @@ describe("L1 · matrix · broker panel x freshness x guard flags x trial day", (
     const state = picks.broker!;
     const fresh = picks.fresh!;
     const day = picks.day!;
-    const chip = state === "suppressed" || state === "unavailable" ? "na" : fresh === "OK" ? "ok" : fresh === "AGING" || fresh === "STALE" ? "warn" : fresh === "PAUSED" ? "mute" : "na";
+    const chip = state === "suppressed" || state === "unavailable" ? "na" : fresh === "FRESH" ? "ok" : fresh === "AGING" || fresh === "STALE" ? "warn" : "na";
     const brokerStale = state === "stale" || fresh === "STALE";
     const banners = [...(brokerStale ? ["guarded"] : []), ...(state === "partial" ? ["partial"] : [])];
     return { chip, banners, day: ["1", "14"].includes(day) ? Number(day) : null, scale: picks.scale === "true" ? "attention" : "ok", protective: picks.protective === "true" ? "attention" : "ok" };
@@ -146,7 +118,7 @@ describe("L1 · matrix · broker panel x freshness x guard flags x trial day", (
   it("prints the matrix size", () => {
     const c = coverage(DIMS, states);
     console.info(describeCoverage("canary L1 (broker x freshness x flags x day)", c));
-    expect(states).toHaveLength(6 * 5 * 2 * 2 * 5);
+    expect(states).toHaveLength(6 * 4 * 2 * 2 * 5);
   });
 
   it("every state reads to the oracle's chip, banners, trial day and guard cells, inside the budget", () => {
@@ -195,7 +167,7 @@ describe("L2 · scale", () => {
     expect(new Set(view.blockers.map((b) => b.code)).size).toBe(48);
   });
 
-  it("200 position rows and 200 order rows (the schema page) are not drawn: rows stay unpublished (FE-072)", () => {
+  it("200 position rows and 200 order rows (the schema page) of a dark body are not drawn (the published panels are unavailable); typed rows stay unpublished (FE-072)", () => {
     const body = v1Body();
     const row = { symbol: "TESTUSDT", side: "LONG", quantity: "1.0000" };
     body.positions.rows = cloneRows(row, 200, (r, i) => { r.symbol = `SYM${i}`; });
@@ -206,6 +178,25 @@ describe("L2 · scale", () => {
     const view = viewOf(body);
     expect(view.positions.rows).toBeNull();
     expect(view.orders.rows).toBeNull();
+    expect(view.positions.published).toBeNull();
+    expect(view.orders.published).toBeNull();
+  });
+
+  it("the same 200 + 200 rows on a ready panel (the schema's free rows, `maxProperties` 80 now checked) are all kept, each under its own field names", () => {
+    const body = populatedV1();
+    const row = { symbol: "TESTUSDT", side: "LONG", quantity: "1.0000" };
+    body.positions.envelope = { ...v1Body().positions.envelope };
+    lit(body.positions.envelope, "ready", "FRESH");
+    body.positions.envelope.data = { page: "first" };
+    body.positions.rows = cloneRows(row, 200, (r, i) => { r.symbol = `SYM${i}`; });
+    body.positions.returned_count = 200;
+    body.positions.exact_total = 5000;
+    expect(validateAgainst(SCHEMA_V1, "/$defs/UnavailableCollection", body.positions)).toEqual([]);
+    const view = viewOf(body);
+    expect(view.positions.published!.rows).toHaveLength(200);
+    expect(view.positions.published!.total).toBe(5000);
+    expect(view.positions.published!.rows[199]!.cells[0]).toBe("SYM199");
+    expect(view.positions.rows).toBeNull();
   });
 
   it("a ~1 MiB body reads inside the budget and the view stays small", () => {

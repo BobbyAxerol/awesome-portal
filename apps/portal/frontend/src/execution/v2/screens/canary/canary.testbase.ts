@@ -4,9 +4,9 @@
  * (`testkit/loadCanonical`); nothing here is imported by product code.
  *
  * `populatedV1` is a FIXTURE_LAB body: the published V1 fixture is source-dark, so the
- * lit-up states (figures, a fresh broker, a trial day) are built in memory at the
- * reader's own vocabulary (`panel_state: "ok"`, `freshness_state: "OK"`), which is not the
- * schema's (`ready` / `FRESH`) and is why it is not asserted against the schema.
+ * lit-up states (figures, a fresh broker, a trial day) are built in memory with the
+ * schema's own words (`panel_state: "ready"`, `freshness_state: "FRESH"`) but with values the V1 schema pins
+ * dark (a trial day, KPI figures), which is why the whole body is not asserted against the schema.
  * Suites say which lane they run in.
  */
 import type { ExecutionApi, Result } from "../../../api/ports";
@@ -26,7 +26,8 @@ export const parentBody = (key: "canary" | "canary_absent" | "canary_revision" =
 
 const AS_OF = "2026-10-17T12:04:00.000Z";
 
-function lit(envelope: Draft, state: string, freshness: string, verification = "VERIFIED"): void {
+/** Lights a source envelope in memory with the schema's own words (`ready` / `FRESH`), a clock and no warning. */
+export function lit(envelope: Draft, state: string, freshness: string, verification = "VERIFIED"): void {
   envelope.panel_state = state;
   envelope.freshness_state = freshness;
   envelope.source_verification_state = verification;
@@ -47,14 +48,40 @@ export function populatedV1(overrides: { brokerFreshness?: string; brokerState?:
   };
   for (const kpi of body.kpis) {
     kpi.value = values[kpi.key];
-    lit(kpi.envelope, "ok", "OK");
+    lit(kpi.envelope, "ready", "FRESH");
   }
   for (const panel of body.source_panels) {
-    if (panel.panel_id === "broker") lit(panel, overrides.brokerState ?? "ok", overrides.brokerFreshness ?? "OK");
-    else lit(panel, "ok", "OK");
+    if (panel.panel_id === "broker") lit(panel, overrides.brokerState ?? "ready", overrides.brokerFreshness ?? "FRESH");
+    else lit(panel, "ready", "FRESH");
   }
   body.lifecycle.day_index = 6;
   body.lifecycle.duration_days = 14;
+  return body;
+}
+
+/**
+ * A populated body that also carries rows, compliance figures and a ready rollback (FIXTURE_LAB: the V1 schema pins
+ * all of these dark, and the row members are the test's own, since the contract does not name them).
+ */
+export function populatedWithFacts(): Draft {
+  const body = populatedV1();
+  lit(body.positions.envelope, "ready", "FRESH");
+  body.positions.exact_total = 2;
+  body.positions.returned_count = 2;
+  body.positions.rows = [
+    { symbol: "BTCUSDT", side: "LONG", qty: "0.0120", entry_price: "64000.10", hedged: false, note: null },
+    { symbol: "ETHUSDT", side: "SHORT", qty: "1.5000", entry_price: "3412.50", hedged: true },
+  ];
+  lit(body.blotter.envelope, "ready", "FRESH");
+  body.blotter.exact_total = 1;
+  body.blotter.returned_count = 1;
+  body.blotter.rows = [{ order_id: "o-1", price: "63990.00", type: "LIMIT" }];
+  lit(body.envelope_compliance.envelope, "ready", "FRESH");
+  body.envelope_compliance.consumed = { capital_cap: "3820.00", max_open_orders: "1", fees_paid: "4.25" };
+  body.envelope_compliance.headroom = { capital_cap: "1180.00" };
+  lit(body.rollback_readiness.envelope, "ready", "FRESH");
+  body.rollback_readiness.ready = true;
+  body.rollback_readiness.blocker_codes = [];
   return body;
 }
 

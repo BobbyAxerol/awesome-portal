@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { unsupportedText } from "../../readers/dispatch";
 import LiveScreen, { LIVE_SCREEN_KEY } from "./index";
 import {
-  BROKER_FIGURE, DEPLOYMENT_ID, cursorFor, fakeApi, ok, populatedV1, refused, v1Raw, v1Read, v2Populated, v2Read, v2Unpublished, withRecords, type Handler,
+  BROKER_FIGURE, DEPLOYMENT_ID, cursorFor, fakeApi, ok, populatedV1, refused, v1Raw, v1Read, v2Populated, v2Read, v2Unpublished, withRecords, withV1Rows, type Handler,
 } from "./live.testbase";
 
 afterEach(cleanup);
@@ -109,6 +109,32 @@ describe("V1 body, matched", () => {
     expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("Not published (FE-072)");
     expect(screen.getByRole("region", { name: "Orders" }).textContent).toContain("Not published (FE-072)");
     expect(screen.getByRole("link", { name: "Open the full blotter for this deployment" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEPLOYMENT_ID}`);
+  });
+
+  it("a V1 body that carries rows draws positions and orders under the source's own names; the typed columns stay Not published (FE-072)", async () => {
+    mount(() => ok(v1Read(withV1Rows(populatedV1()))));
+    await loaded();
+    const table = screen.getByRole("table", { name: "Positions" });
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Instrument", "Side", "Qty", "Entry px", "Reduce only"]);
+    const first = Array.from(table.querySelectorAll("tbody tr"))[0]!;
+    expect(Array.from(first.querySelectorAll("td")).map((td) => td.textContent)).toEqual(["BTCUSDT", "LONG", "0.0120", "64000.10", "No"]);
+    expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("2 of 2");
+    expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("Columns are the source's own field names.");
+    expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("Not published (FE-072)");
+    const orders = screen.getByRole("table", { name: "Orders" });
+    expect(orders.textContent).toContain("63990.00");
+    expect(orders.textContent).not.toMatch(/(^|\s)[-–—](\s|$)|N\/A/);
+    expect(Array.from(table.querySelectorAll("tbody td")).every((td) => td.getAttribute("data-l"))).toBe(true);
+  });
+
+  it("broker rows never reach the DOM while broker figures are hidden: the strip is in the reader, the screen says why", async () => {
+    mount(() => ok(v1Read(withV1Rows(populatedV1({ state: "MISMATCH", visible: false }), "BROKER"))));
+    await loaded();
+    expect(screen.queryByRole("table", { name: "Positions" })).toBeNull();
+    expect(screen.queryByRole("table", { name: "Orders" })).toBeNull();
+    expect(text()).not.toContain("BTCUSDT");
+    expect(text()).not.toContain("64000.10");
+    expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("Hidden while the figures disagree.");
   });
 
   it("the protective ladder is three disabled controls, each with the reason and a My access link; nothing enables one", async () => {

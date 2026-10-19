@@ -2,7 +2,8 @@
  * The testkit checks itself: a generator that silently produced nothing, or
  * edited L0, would make every conformance suite built on it vacuous.
  */
-import { readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -83,6 +84,82 @@ describe("schema checker", () => {
   it("is not fooled by planted prototype keys", () => {
     const [planted] = pollutionCases(loadCanonical(SCHEMA), [[]]);
     expect(validateAgainst(SCHEMA, "", planted!.value).join()).toMatch(/not allowed/);
+  });
+
+  describe("maxProperties", () => {
+    // The canary control room's free row: `{type: object, maxProperties: 80}` inside `UnavailableCollection.rows`.
+    const CANARY = "execution-canary-control-room.v1";
+    const COLLECTION = "/$defs/UnavailableCollection";
+    const wide = (members: number): Record<string, string> => Object.fromEntries(Array.from({ length: members }, (_, i) => [`k${i}`, "v"]));
+    const collection = (row: unknown) => {
+      const body = loadCanonical<Record<string, any>>("execution-canary-control-room.unavailable");
+      return { ...body.positions, returned_count: 1, rows: [row] };
+    };
+
+    it("accepts exactly the bound and names the object that is one over", () => {
+      expect(validateAgainst(CANARY, COLLECTION, collection(wide(80)))).toEqual([]);
+      expect(validateAgainst(CANARY, COLLECTION, collection(wide(81))).join()).toMatch(/\$\.rows\[0\]: more than 80 properties/);
+    });
+
+    it("counts members whatever their values are (an empty object is within any bound, null members still count)", () => {
+      expect(validateAgainst(CANARY, COLLECTION, collection({}))).toEqual([]);
+      expect(validateAgainst(CANARY, COLLECTION, collection(Object.fromEntries(Array.from({ length: 81 }, (_, i) => [`k${i}`, null])))).join()).toMatch(/more than 80 properties/);
+    });
+
+    it("applies to a nullable object only when it is an object (null is the other branch of `type`)", () => {
+      const envelope = loadCanonical<Record<string, any>>("execution-canary-control-room.unavailable").source_panels[0];
+      expect(validateAgainst(CANARY, "/$defs/SourceEnvelope", envelope)).toEqual([]);
+      // `data` is `{type: [object, null], maxProperties: 16}`: the panel is `unavailable`, so the if/then pins data to null;
+      // a 17-member object is refused by the bound and by the pin, a null is refused by neither.
+      const lit = { ...envelope, data: wide(17) };
+      expect(validateAgainst(CANARY, "/$defs/SourceEnvelope", lit).join()).toMatch(/\$\.data: more than 16 properties/);
+    });
+  });
+
+  describe("propertyNames", () => {
+    // The manager dataset's row metrics: member NAMES are a closed enum, member VALUES are metric objects.
+    const OPENAPI = "../openapi/execution-manager-models.openapi.json";
+    const METRICS = "/components/schemas/ManagerDataset/properties/items/items/properties/metrics";
+    const metric = loadCanonical<Record<string, any>>("execution-manager-dataset.rows.synthetic").value.items[0].metrics.net_pnl;
+
+    it("accepts a name inside the enum and refuses one outside it, naming the member", () => {
+      expect(validateAgainst(OPENAPI, METRICS, { net_pnl: metric })).toEqual([]);
+      const refused = validateAgainst(OPENAPI, METRICS, { net_pnl: metric, not_a_metric: metric });
+      expect(refused.join()).toMatch(/\$\.not_a_metric: property name refused/);
+      expect(refused.join()).not.toMatch(/net_pnl: property name/);
+    });
+
+    it("judges the NAME as a string instance, so type, pattern and length of the name apply too", () => {
+      // A name is not looked up in `properties`; it is validated against the subschema even when `additionalProperties` accepts the member.
+      expect(validateAgainst(OPENAPI, METRICS, { "": metric }).join()).toMatch(/property name refused/);
+      expect(validateAgainst(OPENAPI, METRICS, {})).toEqual([]);
+    });
+
+    it("does not read propertyNames on an array or a scalar", () => {
+      expect(validateAgainst(OPENAPI, METRICS, []).join()).toMatch(/expected object/);
+      expect(validateAgainst(OPENAPI, METRICS, "net_pnl").join()).toMatch(/expected object/);
+    });
+  });
+
+  describe("discriminator", () => {
+    it("is an annotation: a document that carries it is read, and the oneOf branches still decide", () => {
+      const OPENAPI = "../openapi/execution-access.openapi.json";
+      const selector = "/components/schemas/AccessSelector";
+      expect(() => validateAgainst(OPENAPI, selector, { kind: "no-such-kind" })).not.toThrow();
+      expect(validateAgainst(OPENAPI, selector, { kind: "no-such-kind" }).join()).toMatch(/matched 0 oneOf branches/);
+    });
+  });
+
+  it("still refuses a keyword it does not know, so a schema that grows one cannot pass everything", () => {
+    // `dependentRequired` is a real JSON Schema keyword the published documents do not use today.
+    const dir = mkdtempSync(join(tmpdir(), "testkit-unknown-keyword-"));
+    try {
+      const file = join(dir, "unknown.schema.json");
+      writeFileSync(file, JSON.stringify({ type: "object", dependentRequired: { a: ["b"] } }));
+      expect(() => validateAgainst(file, "", {})).toThrow(/schema keyword not supported by the testkit checker: dependentRequired/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

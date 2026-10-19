@@ -28,7 +28,7 @@
  */
 import type { Authority, PanelStatus } from "./contracts";
 import { v1Refusal } from "./api/schemaGuard";
-import { readPanelEnvelope, type LineageItem, type PanelEnvelope } from "./certification";
+import { readPanelEnvelope, readRowCollection, type LineageItem, type PanelEnvelope, type RowCollection } from "./certification";
 
 function obj(raw: unknown): Record<string, unknown> | null {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw)
@@ -163,6 +163,15 @@ export interface LiveFullOperations {
   realtimeBlockers: readonly string[];
   commandPolicy: LiveCommandPolicy | null;
   /**
+   * `positions` and `orders` as the response states them: the source envelope, the server's exact total
+   * and the rows (free objects, scalar cells only; see `RowCollection`). ADDITIVE: the V1 screen reads
+   * only `panels` and ignores these. A collection whose envelope is BROKER-authored while
+   * `broker_values_visible` is not `true` arrives here WITHOUT rows and WITHOUT a total, exactly like a
+   * suppressed KPI (the strip below), and is named in `suppressedBrokerFields`.
+   */
+  positionRows: RowCollection | null;
+  orderRows: RowCollection | null;
+  /**
    * Broker figures the reader refused to carry.
    *
    * Reported so the screen can say suppression happened rather than leaving a
@@ -215,6 +224,14 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
   for (const [key, value] of Object.entries(panelsRaw)) {
     panels[key] = readLivePanel(value, key);
   }
+
+  /** THE STRIP, for a row collection: a BROKER-authored one loses its rows and total while suppression is on. */
+  const rowCollection = (key: "positions" | "orders"): RowCollection | null => {
+    const read = readRowCollection(root[key], key);
+    if (read === null || !isBrokerDerived(read.envelope.authority) || brokerValuesVisible) return read;
+    suppressed.push(`${key}:rows`);
+    return { ...read, rows: [], exactTotal: null, returnedCount: null, rowsDropped: 0 };
+  };
 
   return {
     deploymentId: str(dep.deployment_id),
@@ -312,6 +329,8 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
           riskIncreasing: actionPolicy(policy.risk_increasing),
         }
       : null,
+    positionRows: rowCollection("positions"),
+    orderRows: rowCollection("orders"),
     suppressedBrokerFields: suppressed,
   };
 }

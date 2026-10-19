@@ -18,7 +18,7 @@ import { EnvelopeTab } from "./EnvelopeTab";
 import { PositionsOrdersTab } from "./PositionsOrdersTab";
 import { ReconciliationTab } from "./ReconGuardTabs";
 import { readCanaryView, type CanaryView, type OrderRow, type PositionRow } from "./readCanary";
-import { DEP, answering, canaryPort, parentBody, populatedV1, refusing, v1Body } from "./canary.testbase";
+import { DEP, answering, canaryPort, parentBody, populatedV1, populatedWithFacts, refusing, v1Body } from "./canary.testbase";
 
 afterEach(cleanup);
 
@@ -128,7 +128,7 @@ describe("dark V1 body: honest absence everywhere", () => {
     expect(panel.querySelector("svg")).toBeNull();
   });
 
-  it("Envelope: a draft is Proposed with the exact caps; Limit, Consumed and Used are Not published (FE-071); no gauge is drawn", async () => {
+  it("Envelope: a draft is Proposed with the exact caps; Limit is the compliance panel's own caps, Consumed and Used are Not published (FE-071); no gauge is drawn", async () => {
     mount(canaryPort(answering(v1Body())));
     await ready();
     const table = screen.getByRole("table", { name: "Canary envelope caps" });
@@ -137,6 +137,12 @@ describe("dark V1 body: honest absence everywhere", () => {
     expect(table.textContent).toContain("5,000.00");
     expect(table.textContent).toContain("10,000.00");
     expect(table.textContent).toContain("250.00");
+    // The published compliance limits fill the Limit column (the same four caps as the envelope's, printed twice); Duration has none.
+    const bodyRows = Array.from(table.querySelectorAll("tbody tr"));
+    const cell = (label: string) => bodyRows.map((row) => row.querySelector(`td[data-l="${label}"]`)?.textContent?.replace(/^Not published \(FE-071\).*$/, "NP"));
+    expect(cell("Limit")).toEqual(["5,000.00", "10,000.00", "250.00", "20", "NP"]);
+    expect(cell("Consumed")).toEqual(Array(5).fill("NP"));
+    expect(screen.getByText("Base risk profile: not verified.")).toBeTruthy();
     expect(table.textContent).toContain("Capital cap (USDT)");
     expect(table.textContent).toContain("Open orders (max)");
     expect(table.querySelector('[role="img"]')).toBeNull();
@@ -470,7 +476,7 @@ describe("components against typed rows and published ratios (FIXTURE_LAB, view-
 
   it("Positions & orders: 250 loaded rows draw 200 and say '200 of 5,000'; the hi-fi columns are all there", () => {
     const view = viewOf(v1Body());
-    withRouter(<PositionsOrdersTab view={{ ...view, positions: { panel: view.positions.panel, rows: positions(250), total: 5000 }, orders: { panel: view.orders.panel, rows: orders(1), total: 1 } }} />);
+    withRouter(<PositionsOrdersTab view={{ ...view, positions: { panel: view.positions.panel, rows: positions(250), total: 5000, published: null }, orders: { panel: view.orders.panel, rows: orders(1), total: 1, published: null } }} />);
     const table = screen.getByRole("table", { name: "Canary positions" });
     expect(within(table).getAllByRole("row")).toHaveLength(201);
     expect(screen.getByText("200 of 5,000")).toBeTruthy();
@@ -486,7 +492,7 @@ describe("components against typed rows and published ratios (FIXTURE_LAB, view-
 
   it("no exact total: the line says it is not published; an empty list says the source reported none", () => {
     const view = viewOf(v1Body());
-    withRouter(<PositionsOrdersTab view={{ ...view, positions: { panel: view.positions.panel, rows: positions(3), total: null }, orders: { panel: view.orders.panel, rows: [], total: 0 } }} />);
+    withRouter(<PositionsOrdersTab view={{ ...view, positions: { panel: view.positions.panel, rows: positions(3), total: null, published: null }, orders: { panel: view.orders.panel, rows: [], total: 0, published: null } }} />);
     expect(screen.getByText("3 shown · total not published")).toBeTruthy();
     expect(screen.getByText("The source reported none.")).toBeTruthy();
   });
@@ -494,7 +500,7 @@ describe("components against typed rows and published ratios (FIXTURE_LAB, view-
   it("an unreadable decimal in a typed row prints as unreadable, never as 0", () => {
     const view = viewOf(v1Body());
     const bad = positions(1).map((p) => ({ ...p, quantity: "1e5", entry: "01" }));
-    withRouter(<PositionsOrdersTab view={{ ...view, positions: { panel: view.positions.panel, rows: bad, total: 1 }, orders: view.orders }} />);
+    withRouter(<PositionsOrdersTab view={{ ...view, positions: { panel: view.positions.panel, rows: bad, total: 1, published: null }, orders: view.orders }} />);
     expect(screen.getByRole("table", { name: "Canary positions" }).textContent).toContain("Not available · unreadable value");
   });
 
@@ -513,6 +519,64 @@ describe("components against typed rows and published ratios (FIXTURE_LAB, view-
     const view = viewOf(populatedV1({ brokerState: "suppressed" }));
     withRouter(<ReconciliationTab view={view} />);
     expect(screen.getAllByText("Hidden while the figures disagree.")).toHaveLength(2);
+  });
+});
+
+describe("a lit V1 body: rows under the source's own names, compliance figures, a ready rollback (FIXTURE_LAB)", () => {
+  it("Positions & orders: the rows are drawn with the source's own field names and exact text; typed columns stay Not published (FE-072)", async () => {
+    mount(canaryPort(answering(populatedWithFacts())));
+    await ready();
+    await openTab("Positions & orders");
+    const table = screen.getByRole("table", { name: "Canary positions" });
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Symbol", "Side", "Qty", "Entry price", "Hedged", "Note"]);
+    const first = Array.from(table.querySelectorAll("tbody tr"))[0]!;
+    expect(Array.from(first.querySelectorAll("td")).map((td) => td.textContent)).toEqual(["BTCUSDT", "LONG", "0.0120", "64000.10", "No", "Not available"]);
+    expect(screen.getByText("2 of 2")).toBeTruthy();
+    expect(screen.getByText("1 of 1")).toBeTruthy();
+    expect(screen.getAllByText("Columns are the source's own field names.", { exact: false })).toHaveLength(2);
+    expect(table.closest("section")!.textContent).toContain("Not published (FE-072)");
+    expect(table.textContent).not.toMatch(NO_DASH);
+    expect(Array.from(table.querySelectorAll("tbody td")).every((td) => td.getAttribute("data-l"))).toBe(true);
+  });
+
+  it("rows of an unavailable panel are not drawn, even if the body carries some", async () => {
+    const body = populatedWithFacts();
+    body.positions.envelope.panel_state = "unavailable";
+    body.positions.envelope.data = null;
+    mount(canaryPort(answering(body)));
+    await ready();
+    await openTab("Positions & orders");
+    expect(screen.queryByRole("table", { name: "Canary positions" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Positions" }).closest("section")!.textContent).toContain("Source unavailable");
+  });
+
+  it("Envelope: the consumed figure sits on its cap, other keys and the headroom are listed with their names", async () => {
+    mount(canaryPort(answering(populatedWithFacts())));
+    await ready();
+    const table = screen.getByRole("table", { name: "Canary envelope caps" });
+    const cells = (label: string) => Array.from(table.querySelectorAll("tbody tr")).map((row) => row.querySelector(`td[data-l="${label}"]`)?.textContent?.replace(/^Not published \(FE-071\).*$/, "NP"));
+    expect(cells("Consumed")).toEqual(["3,820.00", "NP", "NP", "1", "NP"]);
+    const other = screen.getByRole("list", { name: "Other published figures" });
+    expect(other.textContent).toContain("Headroom, capital cap 1,180.00");
+    expect(other.textContent).toContain("Consumed, fees paid 4.25");
+    // No ratio is made from a consumed figure and a cap: the Used column stays Not published.
+    expect(table.querySelector('[role="img"]')).toBeNull();
+    expect(table.textContent).not.toMatch(/\d+(\.\d+)?%/);
+  });
+
+  it("Rollback readiness: Ready appears only for the server's true on a ready panel with nothing against it", async () => {
+    mount(canaryPort(answering(populatedWithFacts())));
+    await ready();
+    const panel = screen.getByRole("heading", { name: "Rollback readiness" }).closest("section")!;
+    expect(within(panel).getByText("Ready")).toBeTruthy();
+    cleanup();
+    const stale = populatedWithFacts();
+    stale.rollback_readiness.blocker_codes = ["ROLLBACK_DRILL_STALE"];
+    mount(canaryPort(answering(stale)));
+    await ready();
+    const contradicted = screen.getByRole("heading", { name: "Rollback readiness" }).closest("section")!;
+    expect(within(contradicted).queryByText("Ready")).toBeNull();
+    expect(within(contradicted).getByText("Not confirmed")).toBeTruthy();
   });
 });
 

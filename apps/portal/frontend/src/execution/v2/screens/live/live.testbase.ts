@@ -30,7 +30,8 @@ export interface PopulatedV1 {
   state: "UNAVAILABLE" | "MISMATCH" | "IN_SYNC";
   visible: boolean;
   gap: boolean | null;
-  freshness: "OK" | "AGING" | "STALE" | "PAUSED" | "UNKNOWN";
+  /** The reader's word for the freshness; the wire says `FRESH` for `OK` (see `wireFreshness`). */
+  freshness: "OK" | "AGING" | "STALE" | "UNKNOWN";
   sourceBacked: boolean;
   stage: string;
   brokerEquity: string | null;
@@ -41,6 +42,9 @@ export const POPULATED_DEFAULTS: PopulatedV1 = {
   state: "IN_SYNC", visible: true, gap: false, freshness: "OK", sourceBacked: true, stage: "LIVE_FULL", brokerEquity: "60118.40", runtimeState: null,
 };
 
+/** The published `freshness_state` word for a reader freshness: the schema says FRESH where the reader says OK. */
+export const wireFreshness = (freshness: PopulatedV1["freshness"]): string => (freshness === "OK" ? "FRESH" : freshness);
+
 const BROKER_EQUITY_FIGURE = "60118.40";
 export const BROKER_FIGURE = BROKER_EQUITY_FIGURE;
 
@@ -49,7 +53,7 @@ export function populatedV1(over: Partial<PopulatedV1> = {}): Draft {
   const o = { ...POPULATED_DEFAULTS, ...over };
   const raw = v1Raw();
   const panel = (id: string, authority: string, state: string): Draft => ({
-    panel_id: id, source_authority: authority, panel_state: state, freshness_state: o.freshness, delivery_profile: "LIVE_BINANCE_USDM",
+    panel_id: id, source_authority: authority, panel_state: state, freshness_state: wireFreshness(o.freshness), delivery_profile: "LIVE_BINANCE_USDM",
     source_verification_state: "VERIFIED", as_of: SOURCE_AS_OF, read_at: SOURCE_AS_OF, age_seconds: null, lag_ms: null, source_cursor: null,
     projection_epoch: null, projection_sequence: null, capability_snapshot_id: null, data: null, warnings: [],
   });
@@ -60,12 +64,12 @@ export function populatedV1(over: Partial<PopulatedV1> = {}): Draft {
   setPath(raw, ["lifecycle", "runtime_state"], o.runtimeState);
   const values: Record<string, string | null> = { capital: "60000.00", gross_notional: "41080.00", daily_pnl: "-240.00", open_orders: "2", broker_equity: o.brokerEquity };
   raw.kpis = raw.kpis.map((k: Draft) => ({
-    ...k, value: values[k.key] ?? null, envelope: panel(`kpi-${k.key}`, k.envelope.source_authority, "ok"),
+    ...k, value: values[k.key] ?? null, envelope: panel(`kpi-${k.key}`, k.envelope.source_authority, "ready"),
   }));
   raw.source_panels = {
-    internal: panel("internal", "EXECUTION", "ok"),
-    broker: panel("broker", "BROKER", o.visible ? "ok" : o.state === "MISMATCH" ? "suppressed" : "unavailable"),
-    difference: panel("difference", "DERIVED", o.visible ? "ok" : o.state === "MISMATCH" ? "suppressed" : "unavailable"),
+    internal: panel("internal", "EXECUTION", "ready"),
+    broker: panel("broker", "BROKER", o.visible ? "ready" : o.state === "MISMATCH" ? "suppressed" : "unavailable"),
+    difference: panel("difference", "DERIVED", o.visible ? "ready" : o.state === "MISMATCH" ? "suppressed" : "unavailable"),
   };
   raw.broker_consistency = { ...raw.broker_consistency, state: o.state, broker_values_visible: o.visible, finding_href: o.state === "MISMATCH" ? "/execution/operations/inc_TEST_ONLY_1" : null, blocker_codes: [] };
   raw.projection_continuity = {
@@ -73,6 +77,31 @@ export function populatedV1(over: Partial<PopulatedV1> = {}): Draft {
     affected_authorities: o.gap === true ? ["BROKER", "DERIVED"] : [], blocker_codes: [],
   };
   return raw;
+}
+
+/**
+ * The V1 body with rows in `positions` and `orders` (FIXTURE_LAB: the V1 schema pins both dark, and the member names are the
+ * test's own because the contract does not name them). `authority` is the collection envelope's `source_authority`.
+ */
+export function withV1Rows(raw: Draft, authority: "EXECUTION" | "BROKER" = "EXECUTION", state = "ready"): Draft {
+  const out = structuredClone(raw);
+  const envelope = (id: string): Draft => ({
+    panel_id: id, source_authority: authority, panel_state: state, freshness_state: "FRESH", delivery_profile: "LIVE_BINANCE_USDM",
+    source_verification_state: "VERIFIED", as_of: SOURCE_AS_OF, read_at: SOURCE_AS_OF, age_seconds: null, lag_ms: null, source_cursor: null,
+    projection_epoch: null, projection_sequence: null, capability_snapshot_id: null, data: { page: "first" }, warnings: [],
+  });
+  out.positions = {
+    envelope: envelope("positions"), exact_total: 2, returned_count: 2, next_cursor: null, previous_cursor: null,
+    rows: [
+      { instrument: "BTCUSDT", side: "LONG", qty: "0.0120", entry_px: "64000.10", reduce_only: false },
+      { instrument: "ETHUSDT", side: "SHORT", qty: "1.5000", entry_px: "3412.50", reduce_only: true },
+    ],
+  };
+  out.orders = {
+    envelope: envelope("orders"), exact_total: 1, returned_count: 1, next_cursor: null, previous_cursor: null,
+    rows: [{ order_id: "o-1", instrument: "BTCUSDT", price: "63990.00", state: "NEW" }],
+  };
+  return out;
 }
 
 export const v1Of = (raw: unknown): LiveFullOperations => {

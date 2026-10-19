@@ -201,6 +201,29 @@ describe("L1 · matrices", () => {
     }
   });
 
+  it("G · finding row: code, summary, blocking, opened and resolved are read; open is resolved_at null, an absent or unreadable key is unknown", () => {
+    const row = (over: Draft) => ({ finding_id: "fnd_TEST_ONLY_g", severity: "ERROR", source_authority: "DERIVED", finding_code: "FEE_DIFF", summary: "Fee total differs", blocking: true, evidence_hash: null, as_of: null, resolved_at: null, created_at: "2026-10-17T12:02:00.000Z", ...over });
+    const read = (r: Draft) => {
+      const body = v1Body();
+      body.findings = { total_count: 1, returned_count: 1, truncated: false, rows: [r] };
+      return viewOf(body).findings!.rows[0]!;
+    };
+    expect(read(row({}))).toEqual({ id: "fnd_TEST_ONLY_g", severity: "ERROR", code: "FEE_DIFF", summary: "Fee total differs", blocking: true, openedAt: Date.parse("2026-10-17T12:02:00.000Z"), resolvedAt: null, state: "open" });
+    expect(read(row({ blocking: false, resolved_at: "2026-10-17T13:00:00.000Z" }))).toMatchObject({ blocking: false, resolvedAt: Date.parse("2026-10-17T13:00:00.000Z"), state: "resolved" });
+    // The wire row without the key is not an open finding.
+    const absent = row({});
+    delete absent.resolved_at;
+    expect(read(absent)).toMatchObject({ state: "unknown", resolvedAt: null });
+    for (const bad of ["yesterday", "2026-10-17", 5, true, ""]) {
+      expect(read(row({ resolved_at: bad })), String(bad)).toMatchObject({ state: "unknown", resolvedAt: null });
+    }
+    // A non-boolean `blocking`, a missing summary and an unreadable clock are null, never a default.
+    expect(read(row({ blocking: "true", summary: undefined, created_at: "soon" }))).toMatchObject({ blocking: null, summary: null, openedAt: null });
+    // A summary past the bound is dropped whole, not cut.
+    expect(read(row({ summary: "s".repeat(2001) })).summary).toBeNull();
+    expect(read(row({ summary: "s".repeat(2000) })).summary).toHaveLength(2000);
+  });
+
   it("D · timestamps: only exact ISO-8601 UTC is an instant; every other spelling is null, never a guess", () => {
     expect(isoToMs("2026-10-17T12:02:00.000Z")).toBe(Date.UTC(2026, 9, 17, 12, 2, 0));
     expect(isoToMs("2026-10-17T12:02:00Z")).toBe(Date.UTC(2026, 9, 17, 12, 2, 0));

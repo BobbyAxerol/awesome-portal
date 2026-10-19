@@ -25,6 +25,8 @@ import type { LiveFullVersionRead } from "../../readers/dispatch";
 import type { LiveSourceOperationsV2, LiveSourcePanelName, LiveSourcePanelV2, LiveSourceRecordV2, LiveSourceValueV2 } from "../../readers/liveSourceOperations";
 import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
 import type { LiveFullOperations, LivePanel } from "../../../liveFull";
+import type { RowCollection } from "../../../certification";
+import { publishedRowsOf, type PublishedRows } from "../../readers/publishedRows";
 
 /* ── constants ────────────────────────────────────────────────────────────── */
 
@@ -152,6 +154,19 @@ export interface TriadModel {
   rowsPublished: boolean;
 }
 
+/**
+ * `positions` / `orders` of a V1 body. The rows are free objects whose field names the contract does not publish (FE-072), so a
+ * table is the source's own members under its own names (`readers/publishedRows.ts`); the typed hi-fi columns stay Not published.
+ */
+export type V1RowsPanel =
+  | { kind: "none" }
+  | { kind: "withheld"; text: string }
+  | { kind: "table"; table: PublishedRows; caption: string; line: string | null };
+export interface V1Rows {
+  positions: V1RowsPanel;
+  orders: V1RowsPanel;
+}
+
 export interface ContinuityRow {
   key: string;
   label: string;
@@ -215,6 +230,8 @@ export interface LiveModel {
   chart: ChartSlotModel;
   mismatch: boolean;
   triad: TriadModel | null;
+  /** V1 body: its positions and orders; `null` for a V2 body (its panels are in `coverage` and the retained tables). */
+  v1Rows: V1Rows | null;
   continuity: ContinuityModel;
   coverage: readonly CoverageRow[];
   predecessor: PredecessorModel;
@@ -318,7 +335,7 @@ function freshnessChip(panel: LivePanel | undefined): StageChipValue {
     case "OK": return { state: "dot", tone: "ok", text: `Fresh${suffix}` };
     case "AGING": return { state: "dot", tone: "warn", text: `Aging${suffix}` };
     case "STALE": return { state: "dot", tone: "warn", text: `Stale${suffix}` };
-    case "PAUSED": return { state: "dot", tone: "mute", text: `Paused${suffix}` };
+    default: return { state: "not-available", reason: "Freshness not published" };
   }
 }
 
@@ -485,6 +502,31 @@ function blockersV1(live: LiveFullOperations, mismatch: boolean, gap: boolean | 
   return { items, provenance };
 }
 
+/** "2 of 5,000", or what is loaded when the server published no exact total. A cut list says it is cut. */
+export function rowsCaption(shown: number, loaded: number, total: number | null): string {
+  if (total !== null) return `${shown.toLocaleString("en-US")} of ${total.toLocaleString("en-US")}`;
+  return loaded > shown ? `Top ${shown.toLocaleString("en-US")} of ${loaded.toLocaleString("en-US")} loaded · total not published` : `${shown.toLocaleString("en-US")} shown · total not published`;
+}
+
+function rowsPanelV1(live: LiveFullOperations, key: "positions" | "orders", collection: RowCollection | null, mismatch: boolean): V1RowsPanel {
+  if (collection === null) return { kind: "none" };
+  // The reader emptied a BROKER-authored collection while suppression is on; say why, in the same words as a suppressed KPI.
+  if (live.suppressedBrokerFields.includes(`${key}:rows`)) {
+    return { kind: "withheld", text: mismatch ? "Hidden while the figures disagree." : "Not available · broker state not available" };
+  }
+  const envelope = collection.envelope;
+  if (envelope.suppressed) return { kind: "withheld", text: "Withheld by the server." };
+  const table = publishedRowsOf(collection);
+  if (table === null) return { kind: "withheld", text: envelope.panelState === "terminal" ? "Not available · the source read failed" : "Not available · source unavailable" };
+  const line = envelope.panelState === "partial"
+    ? "Partial: the source reported only part of it."
+    : envelope.panelState === "stale"
+      ? "Stale: the source has not updated within its freshness budget."
+      : null;
+  const shown = Math.min(table.rows.length, ROW_CAP);
+  return { kind: "table", table, caption: rowsCaption(shown, table.rows.length, table.total), line };
+}
+
 function noticeV1(live: LiveFullOperations, mismatch: boolean): LiveNotice | null {
   if (live.sourceIntegrationState !== "SOURCE_BACKED") {
     return { kind: "unqualified", text: "Source not qualified. Figures stay unavailable until it is." };
@@ -549,6 +591,7 @@ export function liveModelV1(live: LiveFullOperations): LiveModel {
       suppressed,
       rowsPublished: false,
     },
+    v1Rows: { positions: rowsPanelV1(live, "positions", live.positionRows, mismatch), orders: rowsPanelV1(live, "orders", live.orderRows, mismatch) },
     continuity: continuityV1(live),
     coverage: [],
     predecessor: predecessorV1(live, id),
@@ -699,6 +742,7 @@ export function liveModelV2(v2: LiveSourceOperationsV2): LiveModel {
     chart: { kind: "unavailable" },
     mismatch: false,
     triad: null,
+    v1Rows: null,
     continuity: {
       flag: { kind: "na", label: "Not available" },
       rows: [

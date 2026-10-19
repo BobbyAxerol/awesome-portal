@@ -44,7 +44,7 @@ export const FE_REQUEST_LABEL = {
   "FE-035": "Map",
   // S3 stage screens (plan s8, 2026-10-19). OPEN requests recorded in the ledger by the integrator; not yet sent to Codex (D9).
   "FE-066": "Alpha and portfolio names on a deployment",
-  "FE-067": "Paper runtime state, reconciliation and sessions",
+  "FE-067": "Runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions",
   "FE-068": "Self-eligibility for stage actions",
   "FE-069": "New request: run list, alpha scope and lookup by request key",
   "FE-070": "VN market session calendar",

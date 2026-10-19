@@ -7,8 +7,8 @@
  * server said `visible: false`; V2 shows it disabled with its reason.
  *
  * Before scale-up is the published reason codes as sentences, the codes only under
- * Provenance. Rollback readiness never prints "Ready": the readiness bit is not
- * read (the shared V1 reader drops it), and the check dates are FE-071.
+ * Provenance. Rollback readiness prints "Ready" only for the server's boolean `true` that the same
+ * response does not contradict (model.ts `rollbackHead`); the check dates are FE-071.
  */
 import { Link, useSearchParams } from "react-router-dom";
 

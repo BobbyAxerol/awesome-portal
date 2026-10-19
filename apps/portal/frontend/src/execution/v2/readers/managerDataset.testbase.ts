@@ -3,18 +3,10 @@
  * any screen). It builds every payload from the canonical fixtures Codex publishes (`loadCanonical`), never by hand,
  * and judges payloads against the published OpenAPI schema through the testkit checker.
  *
- * The testkit checker (testkit/schema.ts) throws on OpenAPI/JSON-Schema keywords it does not know. The manager schema
- * uses two: `propertyNames` (the metric key enum of `items[].metrics`) and, in sibling files, `discriminator`. Both are
- * given to the checker removed, in a byte-for-byte copy of the published document written to a temp dir (the published
- * file is read, never written), and `propertyNames` is checked here instead (`propertyNameViolations`).
- * FINDING for the testkit owner: supporting `propertyNames` and ignoring `discriminator` in testkit/schema.ts makes
- * this copy unnecessary.
+ * The testkit checker (testkit/schema.ts) judges the published OpenAPI document itself: `propertyNames` (the metric key
+ * enum of `items[].metrics`), `maxProperties` and `discriminator` are understood, so no copy of the document is made.
  */
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import { canonicalDigest, loadCanonical, SCHEMA_DIR } from "../testkit/loadCanonical";
+import { canonicalDigest, loadCanonical } from "../testkit/loadCanonical";
 import { validateAgainst } from "../testkit/schema";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,58 +34,15 @@ export function fixturesDigest(): string {
 }
 
 /* ───────────── schema judgement ───────────── */
-const stripped = (node: unknown): unknown => {
-  if (Array.isArray(node)) return node.map(stripped);
-  if (typeof node !== "object" || node === null) return node;
-  return Object.fromEntries(
-    Object.entries(node).filter(([key]) => key !== "discriminator" && key !== "propertyNames").map(([key, child]) => [key, stripped(child)]),
-  );
-};
-
-const published = JSON.parse(readFileSync(join(SCHEMA_DIR, OPENAPI), "utf8")) as Draft;
-let copyDir: string | null = null;
-let copyPath = "";
-
-/** Writes the checker copy on first use. Call `removeSchemaCopy` in an `afterAll`. */
-function schemaCopy(): string {
-  if (copyDir === null) {
-    copyDir = mkdtempSync(join(tmpdir(), "manager-dataset-schema-"));
-    copyPath = join(copyDir, "execution-manager-models.openapi.json");
-    writeFileSync(copyPath, JSON.stringify(stripped(published)));
-  }
-  return copyPath;
-}
-
-export function removeSchemaCopy(): void {
-  if (copyDir !== null) rmSync(copyDir, { recursive: true, force: true });
-  copyDir = null;
-}
-
-/** `ManagerDataset.items[].metrics` propertyNames enum, read from the published document. */
-export const SCHEMA_ITEM_METRIC_KEYS: readonly string[] =
-  published.components.schemas.ManagerDataset.properties.items.items.properties.metrics.propertyNames.enum;
-
-/** The one `propertyNames` rule of the dataset that matters to a reader: row metric keys are the closed enum. */
-export function propertyNameViolations(value: Draft): string[] {
-  const out: string[] = [];
-  if (!Array.isArray(value?.items)) return out;
-  value.items.forEach((item: Draft, index: number) => {
-    if (typeof item?.metrics !== "object" || item.metrics === null) return;
-    for (const key of Object.keys(item.metrics)) {
-      if (!SCHEMA_ITEM_METRIC_KEYS.includes(key)) out.push(`$.items[${index}].metrics.${key}: property name not in enum`);
-    }
-  });
-  return out;
-}
 
 /** Violations of the published `ManagerDataset` schema; empty when the body conforms. */
 export function datasetViolations(value: unknown): string[] {
-  return [...validateAgainst(schemaCopy(), DATASET_POINTER, value), ...propertyNameViolations(value)];
+  return validateAgainst(OPENAPI, DATASET_POINTER, value);
 }
 
 /** Violations of the published `ManagerMetric` schema. */
 export function metricViolations(value: unknown): string[] {
-  return validateAgainst(schemaCopy(), METRIC_POINTER, value);
+  return validateAgainst(OPENAPI, METRIC_POINTER, value);
 }
 
 /* ───────────── builders ───────────── */

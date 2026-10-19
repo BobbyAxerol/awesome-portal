@@ -24,11 +24,11 @@
  *   exactly ISO-8601 UTC is `null`, not whatever `Date.parse` makes of it;
  * - an `unsupported` answer is a typed refusal with its sentence, never a partial view.
  *
- * What it will not do: compute. No gate, no open-findings count, no headroom, no
- * freshness: every figure here is the server's or absent (certification.ts, rules 1 and 2).
- * The V1 reader's `SandboxFinding` reads `status`, `identity`, `local_value` and
- * `broker_value`, which the published finding row does not carry, so a finding's status
- * is unknown on this path and the screen says so (see the report's reader gap).
+ * What it will not do: compute. No gate, no headroom, no freshness: every figure here is the
+ * server's or absent (certification.ts, rules 1 and 2). A finding is `open` only when its row
+ * carries `resolved_at: null` and `resolved` only when it carries an instant; a row without the
+ * key is `unknown`, never open. The counts built on that (model.ts `findingCounts`) exist only
+ * for a complete, untruncated list in which every state is known.
  */
 import type { FreshnessState, PanelStatus } from "../../../contracts";
 import { STEP_KEYS, type SandboxCertification, type StepKey } from "../../../certification";
@@ -78,10 +78,23 @@ export interface CollectionView<T> {
   rows: readonly T[];
 }
 
+export type FindingState = "open" | "resolved" | "unknown";
+
 export interface FindingView {
   id: string;
   /** `CRITICAL`, `ERROR`, `WARNING`, `INFO`; any other word is `null` (the screen words it Unknown). */
   severity: string | null;
+  /** The server's `finding_code`; provenance, never a sentence. */
+  code: string | null;
+  /** The server's sentence for the finding. */
+  summary: string | null;
+  /** `blocking` as published; `null` = not a boolean / absent. */
+  blocking: boolean | null;
+  /** `created_at`: when the finding was recorded (the hi-fi's Opened column). */
+  openedAt: UtcEpochMs | null;
+  resolvedAt: UtcEpochMs | null;
+  /** From `resolved_at` alone: `null` is open, an instant is resolved, an absent or unreadable key is unknown. */
+  state: FindingState;
 }
 
 export interface TimelineRowView {
@@ -267,7 +280,19 @@ function viewV1(cert: SandboxCertification, schemaVersion: string | null, steps:
       total: cert.findings.totalCount,
       returned: cert.findings.returnedCount,
       truncated: cert.findings.truncated,
-      rows: cert.findings.rows.map((row) => ({ id: row.findingId, severity: closed(row.severity, SEVERITIES) })),
+      rows: cert.findings.rows.map((row): FindingView => {
+        const resolvedAt = isoToMs(row.resolvedAt);
+        return {
+          id: row.findingId,
+          severity: closed(row.severity, SEVERITIES),
+          code: row.findingCode,
+          summary: row.summary,
+          blocking: row.blocking,
+          openedAt: isoToMs(row.createdAt),
+          resolvedAt,
+          state: row.resolution === "OPEN" ? "open" : row.resolution === "RESOLVED" && resolvedAt !== null ? "resolved" : "unknown",
+        };
+      }),
     },
     timeline: {
       total: cert.timeline.totalCount,

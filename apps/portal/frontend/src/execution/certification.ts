@@ -39,12 +39,64 @@ function pick<T extends string>(raw: unknown, allowed: readonly T[]): T | null {
 function codes(raw: unknown): readonly string[] {
   return Array.isArray(raw) ? raw.filter((c): c is string => typeof c === "string") : [];
 }
+/** A non-empty string no longer than `max` characters; a longer one is `null`, never cut. */
+function bounded(raw: unknown, max: number): string | null {
+  return typeof raw === "string" && raw.length > 0 && raw.length <= max ? raw : null;
+}
+function bool(raw: unknown): boolean | null {
+  return typeof raw === "boolean" ? raw : null;
+}
+function count(raw: unknown): number | null {
+  return typeof raw === "number" && Number.isSafeInteger(raw) && raw >= 0 ? raw : null;
+}
+/**
+ * An exact decimal as the wire writes it: a STRING, optional minus, no exponent, no leading zero, at
+ * most 57 characters (the published `PositiveDecimal` bound). A JS number is never a decimal here:
+ * `5000.10` would arrive as `5000.1` and the trailing zero is a claim about precision.
+ */
+const DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
+function decimalString(raw: unknown): string | null {
+  return typeof raw === "string" && raw.length <= 57 && DECIMAL.test(raw) && !/^-0+(?:\.0+)?$/.test(raw) ? raw : null;
+}
 
 const AUTHORITIES = ["PORTAL", "EXECUTION", "BROKER", "DERIVED", "RESEARCH"] as const;
-const PANEL_STATES: readonly PanelStatus[] = [
-  "loading", "ok", "empty", "partial", "stale", "denied", "unavailable", "insufficient_data", "terminal",
-];
-const FRESHNESS: readonly FreshnessState[] = ["OK", "AGING", "STALE", "PAUSED", "UNKNOWN"];
+/**
+ * The published `panel_state` vocabulary of the three promotion screens, mapped to the FE rendering
+ * vocabulary (`PanelStatus`).
+ *
+ *   sandbox  `ready | stale | error | unavailable`            (execution-sandbox-certification.v1)
+ *   canary   `ready | empty | partial | stale | unavailable | suppressed`
+ *   live     the same six as canary
+ *
+ * `ready` is the wire's word for the FE's `ok`; `error` is a source read that failed, which the FE
+ * words "Failed" (`terminal`). `suppressed` is not a rendering state: it is read as the `suppressed`
+ * flag and the panel renders `unavailable`. A word outside this table (including the FE's own `ok`,
+ * `loading`, `denied` or `insufficient_data`, none of which a promotion body publishes) is
+ * `unavailable`: deny by default, never `ok`.
+ */
+const PANEL_STATE_WIRE: Readonly<Record<string, PanelStatus>> = {
+  ready: "ok",
+  empty: "empty",
+  partial: "partial",
+  stale: "stale",
+  unavailable: "unavailable",
+  error: "terminal",
+};
+/**
+ * `freshness_state`: canary and live publish `FRESH | AGING | STALE | UNKNOWN`, sandbox publishes
+ * `OK | STALE | UNKNOWN`. `FRESH` and `OK` are the same claim and read as the FE's `OK`; any other
+ * word is `null` (not stated).
+ */
+const FRESHNESS_WIRE: Readonly<Record<string, FreshnessState>> = {
+  FRESH: "OK",
+  OK: "OK",
+  AGING: "AGING",
+  STALE: "STALE",
+  UNKNOWN: "UNKNOWN",
+};
+function wire<T>(table: Readonly<Record<string, T>>, raw: unknown): T | null {
+  return typeof raw === "string" && Object.hasOwn(table, raw) ? table[raw]! : null;
+}
 
 /**
  * The envelope every degradable panel carries on these two screens.
@@ -82,8 +134,8 @@ export function readPanelEnvelope(raw: unknown, fallbackId = ""): PanelEnvelope 
     authority: pick(o.source_authority, AUTHORITIES),
     // Deny-by-default: a state we cannot read is unavailable, never `ok` and
     // never `empty`.
-    panelState: pick(o.panel_state, PANEL_STATES) ?? "unavailable",
-    freshness: pick(o.freshness_state, FRESHNESS),
+    panelState: wire(PANEL_STATE_WIRE, o.panel_state) ?? "unavailable",
+    freshness: wire(FRESHNESS_WIRE, o.freshness_state),
     deliveryProfile: str(o.delivery_profile),
     sourceVerification: str(o.source_verification_state),
     suppressed: o.panel_state === "suppressed",
@@ -197,10 +249,30 @@ export interface PromotionPlan {
 export interface SandboxFinding {
   findingId: string;
   severity: string | null;
+  /**
+   * `status`, `identity`, `local_value` and `broker_value` are NOT on the published finding row
+   * (`execution-sandbox-certification.v1` FindingCollection). They are read only because the V1
+   * screen has always read them; on a published body they are `null`. Do not build on them.
+   */
   status: string | null;
   identity: string | null;
   localValue: string | null;
   brokerValue: string | null;
+  /** The published finding row: `finding_code` (<= 191 characters). */
+  findingCode: string | null;
+  /** The server's sentence (<= 2000 characters; a longer one is `null`, not cut). */
+  summary: string | null;
+  /** Whether the finding blocks the exit; `null` when the field is absent or not a boolean. */
+  blocking: boolean | null;
+  /** ISO instant as published; `null` = not resolved OR not published (see `resolution`). */
+  resolvedAt: string | null;
+  /**
+   * `OPEN` only when the row carries `resolved_at: null`; `RESOLVED` only when it carries an instant;
+   * `null` when the key is absent or unreadable. An absent key is not an open finding.
+   */
+  resolution: "OPEN" | "RESOLVED" | null;
+  /** ISO instant the finding was recorded (`created_at`). */
+  createdAt: string | null;
 }
 
 export interface SandboxCertification {
@@ -310,6 +382,18 @@ export function readSandboxCertification(raw: unknown): SandboxCertification | n
         identity: str(o!.identity),
         localValue: str(o!.local_value),
         brokerValue: str(o!.broker_value),
+        findingCode: bounded(o!.finding_code, 191),
+        summary: bounded(o!.summary, 2000),
+        blocking: bool(o!.blocking),
+        resolvedAt: str(o!.resolved_at),
+        resolution: !Object.hasOwn(o!, "resolved_at")
+          ? null
+          : o!.resolved_at === null
+            ? "OPEN"
+            : str(o!.resolved_at) !== null
+              ? "RESOLVED"
+              : null,
+        createdAt: str(o!.created_at),
       };
     }),
     timeline: collection(root.timeline, (r) => {
@@ -441,6 +525,122 @@ export interface CanaryCommandPolicy {
   scaleUp: CanaryActionPolicy | null;
 }
 
+/**
+ * One cell of a free-form row. The published collections declare their rows as `{type: object,
+ * maxProperties: 80}` and nothing more, so a cell can only be what JSON scalars are; this reader keeps
+ * strings (<= 256 characters, so decimals travel as the exact strings the server wrote), booleans and
+ * `null`. A JS number, array or object cell is NOT kept: a number has already lost its trailing zeros,
+ * and a decimal that arrives as one is not a decimal this build may print.
+ */
+export type RowCell = string | boolean | null;
+export type RowRecord = Readonly<Record<string, RowCell>>;
+
+export const MAX_ROW_RECORDS = 200;
+const MAX_ROW_CELLS = 80;
+const MAX_CELL_CHARS = 256;
+const CELL_KEY = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+/** Control characters, C1 controls, zero-width and bidirectional controls: text a row must not smuggle onto a screen. */
+const UNSAFE_TEXT = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]/;
+
+/** A bounded free row: the readable scalar cells, or `null` when the row is not an object or nothing in it is readable. */
+export function readRowRecord(raw: unknown): RowRecord | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const cells: Record<string, RowCell> = {};
+  let kept = 0;
+  for (const [key, value] of Object.entries(o)) {
+    if (kept >= MAX_ROW_CELLS) break;
+    if (!CELL_KEY.test(key)) continue;
+    if (value === null || typeof value === "boolean" || (typeof value === "string" && value.length <= MAX_CELL_CHARS && !UNSAFE_TEXT.test(value))) {
+      cells[key] = value;
+      kept += 1;
+    }
+  }
+  return kept === 0 ? null : cells;
+}
+
+/**
+ * A `UnavailableCollection` (`positions`, `blotter`, live `orders`): the source envelope, the server's
+ * exact total, and the rows it returned. `rows` is empty and says nothing about the source when the
+ * envelope is not `ok`; `rowsDropped` counts rows past the bound or unreadable, so a screen can say
+ * "N more" instead of looking complete.
+ */
+export interface RowCollection {
+  envelope: PanelEnvelope;
+  /** The server's `exact_total`; `null` = not published. */
+  exactTotal: number | null;
+  /** The server's `returned_count`; `null` = not published. */
+  returnedCount: number | null;
+  rows: readonly RowRecord[];
+  /** Rows the response carried that this reader did not keep (past 200, or with no readable cell). */
+  rowsDropped: number;
+}
+
+export function readRowCollection(raw: unknown, fallbackId = ""): RowCollection | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const source = Array.isArray(o.rows) ? o.rows : [];
+  const rows: RowRecord[] = [];
+  let dropped = 0;
+  for (const entry of source) {
+    const row = rows.length < MAX_ROW_RECORDS ? readRowRecord(entry) : null;
+    if (row === null) dropped += 1;
+    else rows.push(row);
+  }
+  return {
+    envelope: readPanelEnvelope(o.envelope, fallbackId),
+    exactTotal: count(o.exact_total),
+    returnedCount: count(o.returned_count),
+    rows,
+    rowsDropped: dropped,
+  };
+}
+
+/** `envelope_compliance.consumed` / `.headroom`: a free object of at most 8 members, kept as exact decimal strings only. */
+export type DecimalMap = Readonly<Record<string, string>>;
+
+function decimalMap(raw: unknown): DecimalMap | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(o).slice(0, 8)) {
+    const decimal = decimalString(value);
+    if (CELL_KEY.test(key) && decimal !== null) out[key] = decimal;
+  }
+  return out;
+}
+
+export interface CanaryCompliance {
+  envelope: PanelEnvelope;
+  /** The four caps the response states, as exact decimal strings (and the open-order count as an integer). */
+  limits: {
+    capitalCap: string | null;
+    grossNotionalCap: string | null;
+    dailyLossCap: string | null;
+    maxOpenOrders: number | null;
+  };
+  /** `null` = the response states none (it is `null` on every body published so far). */
+  consumed: DecimalMap | null;
+  headroom: DecimalMap | null;
+  /** The schema pins `false`; a body that says anything else reads `null`. */
+  baseRiskProfileVerified: boolean | null;
+}
+
+export interface CanaryRollback {
+  envelope: PanelEnvelope;
+  /** The schema's boolean, as published; `null` when the key is not a boolean. Never inferred. */
+  ready: boolean | null;
+  blockerCodes: readonly string[];
+  evidenceHash: string | null;
+}
+
+export interface CanarySeries {
+  envelope: PanelEnvelope;
+  /** The schema pins `null` (and `points` to zero items); read, not assumed. */
+  resolution: string | null;
+  points: readonly RowRecord[];
+}
+
 export interface CanaryControlRoom {
   deploymentId: string | null;
   portfolioId: string | null;
@@ -470,6 +670,15 @@ export interface CanaryControlRoom {
   series: PanelEnvelope | null;
   rollbackReadiness: PanelEnvelope | null;
   commandPolicy: CanaryCommandPolicy | null;
+  /*
+   * Additive fields. The V1 Canary screen ignores every one of them (it reads only the envelopes
+   * above); they exist for the V2 screen, which prints them only where the response states them.
+   */
+  compliance: CanaryCompliance | null;
+  positionRows: RowCollection | null;
+  blotterRows: RowCollection | null;
+  seriesDetail: CanarySeries | null;
+  rollbackDetail: CanaryRollback | null;
 }
 
 function actionPolicy(raw: unknown): CanaryActionPolicy | null {
@@ -498,6 +707,10 @@ export function readCanaryControlRoom(raw: unknown): CanaryControlRoom | null {
   const limits = obj(env?.limits);
   const policy = obj(root.command_policy);
   const actor = obj(root.actor);
+  const compliance = obj(root.envelope_compliance);
+  const complianceLimits = obj(compliance?.limits);
+  const series = obj(root.series);
+  const rollback = obj(root.rollback_readiness);
   const panel = (key: string) => {
     const o = obj(root[key]);
     return o ? readPanelEnvelope(o.envelope ?? o, key) : null;
@@ -574,6 +787,42 @@ export function readCanaryControlRoom(raw: unknown): CanaryControlRoom | null {
           guardSemantics: str(policy.guard_semantics),
           protective: actionPolicy(policy.protective),
           scaleUp: actionPolicy(policy.scale_up),
+        }
+      : null,
+    compliance: compliance
+      ? {
+          envelope: readPanelEnvelope(compliance.envelope, "envelope_compliance"),
+          limits: {
+            capitalCap: decimalString(complianceLimits?.capital_cap),
+            grossNotionalCap: decimalString(complianceLimits?.gross_notional_cap),
+            dailyLossCap: decimalString(complianceLimits?.daily_loss_cap),
+            maxOpenOrders: count(complianceLimits?.max_open_orders),
+          },
+          consumed: decimalMap(compliance.consumed),
+          headroom: decimalMap(compliance.headroom),
+          baseRiskProfileVerified: bool(compliance.base_risk_profile_verified),
+        }
+      : null,
+    positionRows: readRowCollection(root.positions, "positions"),
+    blotterRows: readRowCollection(root.blotter, "blotter"),
+    seriesDetail: series
+      ? {
+          envelope: readPanelEnvelope(series.envelope, "series"),
+          resolution: bounded(series.resolution, 32),
+          points: (Array.isArray(series.points) ? series.points : [])
+            .slice(0, MAX_ROW_RECORDS)
+            .flatMap((point) => {
+              const row = readRowRecord(point);
+              return row ? [row] : [];
+            }),
+        }
+      : null,
+    rollbackDetail: rollback
+      ? {
+          envelope: readPanelEnvelope(rollback.envelope, "rollback_readiness"),
+          ready: bool(rollback.ready),
+          blockerCodes: codes(rollback.blocker_codes).slice(0, 16),
+          evidenceHash: bounded(rollback.evidence_hash, 80),
         }
       : null,
   };

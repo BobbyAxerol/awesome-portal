@@ -86,7 +86,6 @@ import {
   metricViolations,
   moneyMetric,
   partition,
-  removeSchemaCopy,
   richDataset,
   type Draft,
 } from "./managerDataset.testbase";
@@ -108,7 +107,6 @@ const BUDGET_200_ROWS_MS = 400;
 const BUDGET_1_MIB_MS = 1500;
 const BUDGET_PAGES_MS = 600;
 
-afterAll(removeSchemaCopy);
 const digestBefore = fixturesDigest();
 afterAll(() => {
   expect(fixturesDigest()).toBe(digestBefore);

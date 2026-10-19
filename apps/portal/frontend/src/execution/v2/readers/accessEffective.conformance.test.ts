@@ -41,14 +41,11 @@
  *       - one named group is LOOSER on purpose: the open dotted `action` token
  *         (AE-3), see its test.
  */
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
 import { afterAll, describe, expect, it } from "vitest";
 
 import { ACCESS_DOUBLE_WORKSPACES, answerAccessEffective } from "../../../../e2e/bffDoubleAccess";
-import { canonicalDigest, listCanonical, loadCanonical, SCHEMA_DIR } from "../testkit/loadCanonical";
+import { canonicalDigest, listCanonical, loadCanonical } from "../testkit/loadCanonical";
 import { cartesian, coverage, describeCoverage, dimension, dimensionOf, getPath, pairwise, setPath, type Draft } from "../testkit/matrix";
 import {
   arrayCases, enumCases, integerCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases, stringCases,
@@ -78,24 +75,8 @@ const BUDGET_1_MIB_MS = 800;
 const FILE = "execution-access.synthetic";
 const OPENAPI = "../openapi/execution-access.openapi.json";
 const EFFECTIVE_SCHEMA_PTR = "/components/schemas/AccessEffective";
-/**
- * The testkit checker (testkit/schema.ts) throws on the OpenAPI keyword `discriminator`, which
- * `AccessSelector` carries. It is an annotation (the four `oneOf` branches already pin `kind` with a
- * const), so the checker is given a byte-for-byte copy of the published document with only that key
- * removed, written to a temp dir. The published file is read, never written. FINDING for the testkit
- * owner: adding "discriminator" to IGNORED in testkit/schema.ts makes this copy unnecessary.
- */
-const checkerDir = mkdtempSync(join(tmpdir(), "access-effective-schema-"));
-const withoutDiscriminator = (node: unknown): unknown => {
-  if (Array.isArray(node)) return node.map(withoutDiscriminator);
-  if (typeof node !== "object" || node === null) return node;
-  return Object.fromEntries(Object.entries(node).filter(([key]) => key !== "discriminator").map(([key, child]) => [key, withoutDiscriminator(child)]));
-};
-const OPENAPI_COPY = join(checkerDir, "execution-access.openapi.json");
-writeFileSync(OPENAPI_COPY, JSON.stringify(withoutDiscriminator(JSON.parse(readFileSync(join(SCHEMA_DIR, OPENAPI), "utf8")))));
-afterAll(() => rmSync(checkerDir, { recursive: true, force: true }));
 /** Violations of the published `AccessEffective` schema; empty when the body conforms. */
-const schemaViolations = (value: unknown): string[] => validateAgainst(OPENAPI_COPY, EFFECTIVE_SCHEMA_PTR, value);
+const schemaViolations = (value: unknown): string[] => validateAgainst(OPENAPI, EFFECTIVE_SCHEMA_PTR, value);
 const digestBefore = canonicalDigest(FILE);
 afterAll(() => {
   expect(canonicalDigest(FILE)).toBe(digestBefore);

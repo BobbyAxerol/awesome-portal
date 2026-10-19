@@ -4,15 +4,17 @@
  *
  * Pure: no React state, no clock, no network. Every sentence here is either the server's
  * (a step summary, a count) or a statement of a published fact (a step is failed because the
- * server's evaluation says FAIL). Nothing is recomputed: no passed count, no open-findings
- * count, no headroom. Where a fact is not in the body the cell says `Not published (FE-xxx)`
- * with the request that will publish it, or `Not available` with why.
+ * server's evaluation says FAIL). Nothing is recomputed: no passed count, no headroom. The one
+ * count made here, open and critical-open findings (`findingCounts`), exists only for a complete,
+ * untruncated list whose every row states `resolved_at`, and is `Not available` otherwise. Where a
+ * fact is not in the body the cell says `Not published (FE-xxx)` with the request that will publish
+ * it, or `Not available` with why.
  */
 import type { FlagKind } from "../../flagKinds";
 import type { BlockerItem, NotPublishedId, SpineStageFacts, SpineStageId, StageChipValue, StageChips, TriadRow } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import type { PanelStatus } from "../../../contracts";
-import type { PanelView, SandboxView, StepState, StepView } from "./readSandbox";
+import type { FindingView, PanelView, SandboxView, StepState, StepView } from "./readSandbox";
 
 /* ── words ────────────────────────────────────────────────────────────────── */
 
@@ -83,7 +85,7 @@ export const PANEL_STATE_WORD: Readonly<Record<PanelStatus, string>> = {
   terminal: "Failed",
 };
 
-const FRESHNESS_WORD: Readonly<Record<string, string>> = { OK: "Fresh", AGING: "Aging", STALE: "Stale", PAUSED: "Paused", UNKNOWN: "Freshness unknown" };
+const FRESHNESS_WORD: Readonly<Record<string, string>> = { OK: "Fresh", AGING: "Aging", STALE: "Stale", UNKNOWN: "Freshness unknown" };
 
 const joinWords = (items: readonly string[]): string =>
   items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
@@ -94,11 +96,51 @@ export type GateState = "blocked" | "eligible" | "unknown";
 
 const stepsAvailable = (view: SandboxView): readonly StepView[] | null => (view.steps.availability === "available" ? view.steps.items : null);
 
-/** Findings the server called CRITICAL, any status: the V1 rule keeps the exit shut while one is unresolved and status is not read here. */
-export function criticalFindings(view: SandboxView): number | null {
+/** The finding rows, only when the list is the whole list: published, not truncated, a known total, and every row in hand. */
+function completeFindings(view: SandboxView): readonly FindingView[] | null {
   const f = view.findings;
   if (f === null || f.truncated || f.total === null || f.rows.length !== f.total) return null;
-  return f.rows.filter((row) => row.severity === "CRITICAL").length;
+  return f.rows;
+}
+
+/**
+ * Findings the server called CRITICAL and that are not KNOWN to be resolved: the exit stays shut (the V1 rule) while one is
+ * unresolved, and a row whose resolution is unknown is treated as unresolved. `null` unless the list is complete.
+ */
+export function criticalFindings(view: SandboxView): number | null {
+  const rows = completeFindings(view);
+  return rows === null ? null : rows.filter((row) => row.severity === "CRITICAL" && row.state !== "resolved").length;
+}
+
+export interface FindingCounts {
+  /** Findings whose `resolved_at` is null. `null` = a state is unknown, so no honest count exists. */
+  open: number | null;
+  /** CRITICAL findings that are open. `null` = a CRITICAL finding's state, or an unreadable severity of an unresolved one, is unknown. */
+  criticalOpen: number | null;
+}
+
+/**
+ * The counts the hi-fi prints ("Open findings", "Critical open"). Built from the published rows and only when the list is complete
+ * (not truncated, total known, every row in hand); each is `null` when its inputs are not all known. Never the server's total
+ * relabelled: a total counts open and resolved alike.
+ */
+export function findingCounts(view: SandboxView): FindingCounts | null {
+  const rows = completeFindings(view);
+  if (rows === null) return null;
+  const open = rows.some((row) => row.state === "unknown") ? null : rows.filter((row) => row.state === "open").length;
+  let criticalOpen: number | null = 0;
+  for (const row of rows) {
+    if (row.state === "resolved") continue;
+    if (row.severity === "CRITICAL") {
+      if (row.state === "unknown") criticalOpen = null;
+      else if (criticalOpen !== null) criticalOpen += 1;
+    } else if (row.severity === null) {
+      // A severity this build cannot read could be CRITICAL.
+      criticalOpen = null;
+    }
+    if (criticalOpen === null) break;
+  }
+  return { open, criticalOpen };
 }
 
 /**
@@ -159,20 +201,33 @@ export function kpiCells(view: SandboxView): KpiCell[] {
         : { key: "steps", label: "Steps passed", absent: "The count was not published" };
 
   const f = view.findings;
+  const counts = findingCounts(view);
+  const incomplete = f !== null && counts === null;
+  // Zero findings against sources that did not report is an absence of evidence, not "none open" (the hi-fi's `Source did not report`).
+  const silent = f !== null && f.total === 0 && !view.panels.some((p) => p.state === "ok");
   const findings: KpiCell =
     f === null
-      ? { key: "findings", label: "Findings", np: "FE-072" }
+      ? { key: "findings", label: "Open findings", np: "FE-072" }
       : f.total === null
-        ? { key: "findings", label: "Findings", absent: "The count was not published" }
-        : { key: "findings", label: "Findings", value: count(f.total), basis: f.truncated ? `Showing ${f.returned ?? f.rows.length}` : "Recorded, open or resolved" };
+        ? { key: "findings", label: "Open findings", absent: "The count was not published" }
+        : silent
+          ? { key: "findings", label: "Open findings", absent: "Sources did not report" }
+          : incomplete
+          ? { key: "findings", label: "Open findings", absent: f.truncated ? `The finding list is incomplete: showing ${f.returned ?? f.rows.length} of ${f.total}` : "The finding list is incomplete" }
+          : counts!.open === null
+            ? { key: "findings", label: "Open findings", absent: `Which are open was not published · ${f.total} recorded` }
+            : { key: "findings", label: "Open findings", value: count(counts!.open), basis: `${f.total} recorded, open or resolved` };
 
-  const critical = criticalFindings(view);
   const crit: KpiCell =
     f === null
-      ? { key: "critical", label: "Critical", np: "FE-072" }
-      : critical === null
-        ? { key: "critical", label: "Critical", absent: "The finding list is incomplete" }
-        : { key: "critical", label: "Critical", value: count(critical), basis: critical === 0 ? "None recorded" : "Any status" };
+      ? { key: "critical", label: "Critical open", np: "FE-072" }
+      : silent
+        ? { key: "critical", label: "Critical open", absent: "Sources did not report" }
+        : counts === null
+        ? { key: "critical", label: "Critical open", absent: "The finding list is incomplete" }
+        : counts.criticalOpen === null
+          ? { key: "critical", label: "Critical open", absent: "Which are open was not published" }
+          : { key: "critical", label: "Critical open", value: count(counts.criticalOpen), basis: counts.criticalOpen === 0 ? "None open" : "Not resolved" };
 
   const plans: KpiCell =
     view.plans === null
@@ -236,7 +291,11 @@ export function blockers(view: SandboxView): Blockers {
   const { passed, total } = view.progress;
   if (passed !== null && total !== null && passed < total) items.push({ key: "count", text: `${passed} of ${total} steps have passed.` });
   const critical = criticalFindings(view);
-  if (critical !== null && critical > 0) items.push({ key: "critical", text: `${critical} critical ${critical === 1 ? "finding is" : "findings are"} recorded.` });
+  if (critical !== null && critical > 0) {
+    // "open" only when every critical finding's state is known; otherwise they are recorded and not known to be resolved.
+    const strict = findingCounts(view)?.criticalOpen ?? null;
+    items.push({ key: "critical", text: `${critical} critical ${critical === 1 ? "finding is" : "findings are"} ${strict === null ? "recorded" : "open"}.` });
+  }
   const codes = [...new Set([...view.progress.blockerCodes, ...stepCodes])];
   const unexplained = view.progress.blockerCodes.filter((code) => !stepCodes.has(code));
   if (unexplained.length > 0) {
@@ -253,7 +312,7 @@ export function submitReason(gate: GateState, notEnabled: string): string {
 
 /* ── the header ───────────────────────────────────────────────────────────── */
 
-const WORST_FRESHNESS: readonly string[] = ["STALE", "PAUSED", "AGING", "OK"];
+const WORST_FRESHNESS: readonly string[] = ["STALE", "AGING", "OK"];
 
 /** Display freshness from the three source panels: the worst state the server published, with its as-of. Nothing is aged here. */
 function freshnessChip(panels: readonly PanelView[]): StageChipValue {
@@ -269,7 +328,12 @@ function reconciliationChip(view: SandboxView): StageChipValue {
   const f = view.findings;
   if (f === null) return { state: "not-published", id: "FE-072" };
   if (f.total === null) return { state: "not-available", reason: "Finding count not published" };
-  if (f.total > 0) return { state: "flag", kind: "partial", label: `${f.total} recorded`, note: "open or resolved" };
+  if (f.total > 0) {
+    // With every state known the chip says how many are open; otherwise it says what was recorded, open or resolved.
+    const open = findingCounts(view)?.open ?? null;
+    if (open !== null) return open > 0 ? { state: "flag", kind: "partial", label: `${open} open`, note: `${f.total} recorded` } : { state: "flag", kind: "ok", label: "None open", note: `${f.total} recorded` };
+    return { state: "flag", kind: "partial", label: `${f.total} recorded`, note: "open or resolved" };
+  }
   // Zero findings against sources that did not report is an absence of evidence, not a clean result.
   const reported = view.panels.some((p) => p.state === "ok");
   return reported ? { state: "flag", kind: "ok", label: "None recorded" } : { state: "not-available", reason: "Sources did not report" };

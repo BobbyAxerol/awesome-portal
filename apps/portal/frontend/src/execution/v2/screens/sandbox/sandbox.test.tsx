@@ -124,8 +124,8 @@ describe("the V2 following-parent body", () => {
     mount(fakeApi());
     await ready();
     expect(kpi("Steps passed").textContent).toContain("Not published (FE-028)");
-    expect(kpi("Findings").textContent).toContain("Not published (FE-072)");
-    expect(kpi("Critical").textContent).toContain("Not published (FE-072)");
+    expect(kpi("Open findings").textContent).toContain("Not published (FE-072)");
+    expect(kpi("Critical open").textContent).toContain("Not published (FE-072)");
     expect(kpi("Promotion plans").textContent).toContain("Not published (FE-072)");
     expect(kpi("Gate").textContent).toContain("Not published (FE-028)");
     expect(screen.getByRole("group", { name: "Certification facts" }).querySelector(".exec-blk-num")).toBeNull();
@@ -181,8 +181,11 @@ describe("the V1 certification body", () => {
     await ready();
     expect(kpi("Steps passed").textContent).toContain("0 / 7");
     expect(kpi("Gate").textContent).toContain("Blocked");
-    expect(kpi("Findings").textContent).toContain("0");
-    expect(kpi("Critical").textContent).toContain("None recorded");
+    // Zero findings against sources that reported nothing is an absence of evidence: the counts are Not available, not 0.
+    expect(kpi("Open findings").textContent).toContain("Not available");
+    expect(kpi("Open findings").textContent).toContain("Sources did not report");
+    expect(kpi("Critical open").textContent).toContain("Sources did not report");
+    expect(kpi("Open findings").querySelector(".exec-blk-num")).toBeNull();
     expect(chip("freshness").textContent).toContain("Not available");
     // Zero findings against sources that reported nothing is NOT a clean result.
     expect(chip("reconciliation").textContent).toContain("Sources did not report");
@@ -229,17 +232,73 @@ describe("the V1 certification body", () => {
     expect(within(lineage).getByText(/sha256:a{64}/)).toBeTruthy();
   });
 
-  it("Reconciliation: the findings table keeps id and severity, and says Not available for what this build does not read", async () => {
+  it("Reconciliation: the findings table prints the server's sentence, severity, when it was opened and whether it is open", async () => {
     mount(fakeApi({ read: okRead(v1Rich()) }));
     await ready();
     const table = screen.getByRole("table", { name: "Reconciliation findings" });
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(2);
     expect(rows[0]!.textContent).toContain("fnd_TEST_ONLY_1");
+    expect(rows[0]!.textContent).toContain("Fee total differs between the two sources");
     expect(rows[0]!.textContent).toContain("Warning");
     expect(rows[1]!.textContent).toContain("Info");
-    expect(within(rows[0]!).getAllByText("Not available")).toHaveLength(2);
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Finding", "Severity", "Opened", "Status"]);
+    expect(rows[0]!.querySelector('td[data-l="Opened"]')!.textContent).toBe("17 Oct 12:02Z");
+    expect(rows[1]!.querySelector('td[data-l="Opened"]')!.textContent).toBe("17 Oct 11:15Z");
+    // Both rows carry `resolved_at: null`: open. Nothing in the row is `Not available`.
+    expect(rows[0]!.querySelector('td[data-l="Status"]')!.textContent).toContain("Open");
+    expect(within(rows[0]!).queryByText("Not available")).toBeNull();
+    expect(kpi("Open findings").textContent).toContain("2");
+    expect(kpi("Critical open").textContent).toContain("None open");
     expect(screen.getByRole("heading", { name: "Findings" }).closest("section")!.textContent).toContain("2 recorded");
+  });
+
+  it("findings: resolved and open rows, a blocking flag, and the counts that follow from them (open = resolved_at null)", async () => {
+    const body = v1Rich();
+    body.source_panels.forEach((p: Record<string, unknown>) => {
+      p.panel_state = "ready";
+      p.freshness_state = "OK";
+      p.source_verification_state = "VERIFIED";
+      p.as_of = "2026-10-17T12:04:00.000Z";
+      p.data = { note: "x" };
+      p.warnings = [];
+    });
+    body.findings = {
+      total_count: 3, returned_count: 3, truncated: false,
+      rows: [
+        { ...body.findings.rows[0], finding_id: "fnd_TEST_ONLY_c1", severity: "CRITICAL", blocking: true, resolved_at: null },
+        { ...body.findings.rows[0], finding_id: "fnd_TEST_ONLY_c2", severity: "CRITICAL", blocking: false, resolved_at: "2026-10-17T12:30:00.000Z" },
+        { ...body.findings.rows[1], finding_id: "fnd_TEST_ONLY_i1", severity: "INFO", resolved_at: null },
+      ],
+    };
+    mount(fakeApi({ read: okRead(body) }));
+    await ready();
+    expect(kpi("Open findings").textContent).toContain("2");
+    expect(kpi("Open findings").textContent).toContain("3 recorded, open or resolved");
+    expect(kpi("Critical open").textContent).toContain("1");
+    const rows = within(screen.getByRole("table", { name: "Reconciliation findings" })).getAllByRole("row").slice(1);
+    expect(rows[0]!.textContent).toContain("Blocking");
+    expect(rows[0]!.querySelector('td[data-l="Status"]')!.textContent).toContain("Open");
+    expect(rows[1]!.querySelector('td[data-l="Status"]')!.textContent).toContain("Resolved");
+    expect(rows[1]!.querySelector('td[data-l="Status"]')!.textContent).toContain("17 Oct 12:30Z");
+    expect(chip("reconciliation").textContent).toContain("2 open");
+    expect(chip("reconciliation").textContent).toContain("3 recorded");
+  });
+
+  it("a finding row that does not say whether it is resolved is Not available, never Open; the counts then say so", async () => {
+    const body = v1Rich();
+    delete body.findings.rows[0].resolved_at;
+    delete body.findings.rows[0].blocking;
+    mount(fakeApi({ read: okRead(body) }));
+    await ready();
+    const rows = within(screen.getByRole("table", { name: "Reconciliation findings" })).getAllByRole("row").slice(1);
+    expect(rows[0]!.querySelector('td[data-l="Status"]')!.textContent).toContain("Not available");
+    expect(rows[1]!.querySelector('td[data-l="Status"]')!.textContent).toContain("Open");
+    // An unreadable blocking bit is not waved through as "not blocking".
+    expect(rows[0]!.textContent).toContain("Blocking not stated");
+    expect(rows[1]!.textContent).not.toContain("Blocking");
+    expect(kpi("Open findings").textContent).toContain("Which are open was not published · 2 recorded");
+    expect(kpi("Open findings").querySelector(".exec-blk-num")).toBeNull();
   });
 
   it("Promotion plans: id, target, time, status; Envelope and Author are Not published (FE-072) and said once", async () => {

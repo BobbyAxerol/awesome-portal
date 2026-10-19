@@ -1,16 +1,18 @@
 /**
  * Positions and Orders tab (hi-fi: two tables, "Orders below").
  *
- * The contract's rows are free objects (FE-072) and no reader types them, so
- * today both panels say what the source stated about the panel and
- * `Not published (FE-072)` for the rows. When a reader does publish typed rows
- * the tables print at most 200 of them and say "N of total": the cap is stated,
- * never silent, and an unknown total is stated too.
+ * The contract's rows are free objects whose field names are not published (FE-072), so the hi-fi's typed
+ * columns (Entry, Mark, Unrealised PnL, Leverage, Ack latency) are `Not published (FE-072)`. A V1 body that
+ * does carry rows is drawn under the source's own field names (`readers/publishedRows.ts`): exact text, no
+ * unit, no sign colour, no sum. When a reader publishes typed rows the tables print at most 200 of them and
+ * say "N of total": the cap is stated, never silent, and an unknown total is stated too.
  */
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { SectionPanel } from "../../blocks";
 import { formatAsOf, readAsOf } from "../../boundary";
+import type { PublishedRow, PublishedRows } from "../../readers/publishedRows";
+import { cellText } from "../../readers/publishedRows";
 import type { CanaryView, OrderRow, PositionRow, RowsFact } from "./readCanary";
 import { ROW_CAP, panelLine } from "./model";
 import { ExactCell, RowsNotPublished, countLine } from "./parts";
@@ -46,6 +48,30 @@ const ORDER_COLUMNS: readonly CardsColumn<OrderRow>[] = [
   { key: "ack", label: "Ack latency", numeric: true, render: (r) => <ExactCell value={r.ackLatencyMs} unit="count" suffix=" ms" /> },
 ];
 
+/** The source's own members as columns. The cell is the exact text the server wrote; an absent member says so. */
+function publishedColumns(table: PublishedRows): readonly CardsColumn<PublishedRow>[] {
+  return table.columns.map((column, index) => ({
+    key: column.key,
+    label: column.label,
+    render: (row: PublishedRow) => {
+      const text = cellText(row.cells[index]);
+      return text === null ? null : <span className="exec-blk-num" title={text}>{text}</span>;
+    },
+  }));
+}
+
+function PublishedRowsTable({ table, label, rowsLabel }: { table: PublishedRows; label: string; rowsLabel: string }) {
+  return (
+    <>
+      <CardsTable columns={publishedColumns(table)} rows={table.rows} rowKey={(row) => row.key} label={label} empty="The source reported none." />
+      <p className="exec-cny-rowsnote">
+        Columns are the source's own field names.{table.hiddenColumns > 0 ? ` ${table.hiddenColumns} more field${table.hiddenColumns === 1 ? " is" : "s are"} not drawn.` : ""}{" "}
+        <RowsNotPublished what={`Typed ${rowsLabel.toLowerCase()}`} />
+      </p>
+    </>
+  );
+}
+
 function RowsPanel<R>({
   title,
   label,
@@ -64,9 +90,18 @@ function RowsPanel<R>({
   const rows = fact.rows;
   const visible = rows === null ? [] : rows.slice(0, ROW_CAP);
   const position = new Map(visible.map((row, index) => [row, index] as const));
+  const published = rows === null ? fact.published : null;
   return (
-    <SectionPanel title={title} aside={rows === null ? undefined : countLine(rows.length, fact.total, ROW_CAP)}>
-      {rows === null ? (
+    <SectionPanel
+      title={title}
+      aside={rows !== null ? countLine(rows.length, fact.total, ROW_CAP) : published !== null ? countLine(published.rows.length, published.total, ROW_CAP) : undefined}
+    >
+      {published !== null ? (
+        <>
+          <p className="exec-cny-rowsnote"><span className="exec-blk-na">{panelLine(fact.panel)}.</span></p>
+          <PublishedRowsTable table={published} label={label} rowsLabel={rowsLabel} />
+        </>
+      ) : rows === null ? (
         <p className="exec-cny-rowsnote">
           <span className="exec-blk-na">{panelLine(fact.panel)}.</span> <RowsNotPublished what={rowsLabel} />
         </p>

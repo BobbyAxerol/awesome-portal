@@ -6,10 +6,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  NOTE_MAX, NOTE_MIN, actionWord, blockers, chipsOf, criticalFindings, figuresSuppressed, gateOf, humanize, kpiCells, newNoteKey, noteBlock,
+  NOTE_MAX, NOTE_MIN, actionWord, blockers, chipsOf, criticalFindings, figuresSuppressed, findingCounts, gateOf, humanize, kpiCells, newNoteKey, noteBlock,
   noteFingerprint, noteLength, panelLine, severityFlag, spineFacts, stepTally, submitReason, subtitleOf, tabsOf, type KpiCell,
 } from "./model";
-import type { PanelView, SandboxView, StepState, StepView } from "./readSandbox";
+import type { FindingView, PanelView, SandboxView, StepState, StepView } from "./readSandbox";
 import { readUtcEpochMs } from "../../../screenDataContract";
 
 /** 17 Oct 2026 at hh:mm UTC, as the branded instant the views carry. */
@@ -23,6 +23,11 @@ function step(index: number, state: StepState, over: Partial<StepView> = {}): St
 }
 const steps = (states: StepState[]): StepView[] => states.map((s, i) => step(i, s, s === "pass" ? {} : { blockerCode: `SANDBOX_STEP_${STEP_KEYS[i]}_${s.toUpperCase()}` }));
 
+/** A finding row; its state is unknown unless the test says (the published row's `resolved_at` is what decides it). */
+function finding(id: string, severity: string | null, state: FindingView["state"] = "unknown", over: Partial<FindingView> = {}): FindingView {
+  return { id, severity, code: null, summary: null, blocking: null, openedAt: null, resolvedAt: state === "resolved" ? utc(12, 0) : null, state, ...over };
+}
+
 function panel(id: string, over: Partial<PanelView> = {}): PanelView {
   return { id, authority: "EXECUTION", state: "unavailable", freshness: "UNKNOWN", asOf: null, suppressed: false, verified: false, ...over };
 }
@@ -34,7 +39,7 @@ function v1(over: Partial<SandboxView> = {}): SandboxView {
     deliveryProfile: "fixture", sourceIntegrationState: "UNAVAILABLE", runtimeState: null, sourceActed: false,
     steps: { availability: "available", items: steps(["pass", "pass", "pass", "fail", "pass", "unavailable", "unavailable"]) },
     progress: { passed: 4, total: 7, eligible: false, blockerCodes: ["SANDBOX_STEP_RECONCILIATION_FAIL"], evidenceSetHash: null },
-    findings: { total: 2, returned: 2, truncated: false, rows: [{ id: "f1", severity: "CRITICAL" }, { id: "f2", severity: "INFO" }] },
+    findings: { total: 2, returned: 2, truncated: false, rows: [finding("f1", "CRITICAL"), finding("f2", "INFO")] },
     timeline: { total: 0, returned: 0, truncated: false, rows: [] },
     plans: [],
     panels: [panel("internal"), panel("broker"), panel("difference", { authority: "DERIVED" })],
@@ -61,10 +66,18 @@ describe("the gate is the server's", () => {
     expect(gateOf(view)).toBe(want);
   });
 
+  it("a CRITICAL finding keeps the gate shut until it is KNOWN resolved; an unknown state is unresolved", () => {
+    const eligible = { progress: { passed: 7, total: 7, eligible: true, blockerCodes: [], evidenceSetHash: null }, steps: { availability: "available" as const, items: steps(Array(7).fill("pass")) } };
+    const rows = (state: FindingView["state"]) => ({ findings: { total: 1, returned: 1, truncated: false, rows: [finding("f1", "CRITICAL", state)] } });
+    expect(gateOf(v1({ ...eligible, ...rows("open") }))).toBe("blocked");
+    expect(gateOf(v1({ ...eligible, ...rows("unknown") }))).toBe("blocked");
+    expect(gateOf(v1({ ...eligible, ...rows("resolved") }))).toBe("eligible");
+  });
+
   it("critical findings are counted only from a complete list", () => {
     expect(criticalFindings(v1())).toBe(1);
-    expect(criticalFindings(v1({ findings: { total: 2, returned: 1, truncated: false, rows: [{ id: "f1", severity: "CRITICAL" }] } }))).toBeNull();
-    expect(criticalFindings(v1({ findings: { total: 1, returned: 1, truncated: true, rows: [{ id: "f1", severity: "CRITICAL" }] } }))).toBeNull();
+    expect(criticalFindings(v1({ findings: { total: 2, returned: 1, truncated: false, rows: [finding("f1", "CRITICAL")] } }))).toBeNull();
+    expect(criticalFindings(v1({ findings: { total: 1, returned: 1, truncated: true, rows: [finding("f1", "CRITICAL")] } }))).toBeNull();
     expect(criticalFindings(v2())).toBeNull();
   });
 });
@@ -72,10 +85,12 @@ describe("the gate is the server's", () => {
 describe("the five facts", () => {
   it("V1: the server's count, findings, critical, plans and a blocked gate", () => {
     const cells = kpiCells(v1());
-    expect(cells.map((c) => c.label)).toEqual(["Steps passed", "Findings", "Critical", "Promotion plans", "Gate"]);
+    expect(cells.map((c) => c.label)).toEqual(["Steps passed", "Open findings", "Critical open", "Promotion plans", "Gate"]);
     expect(cell(cells, "steps")).toMatchObject({ value: "4 / 7", basis: "1 failed · 2 unavailable" });
-    expect(cell(cells, "findings")).toMatchObject({ value: "2" });
-    expect(cell(cells, "critical")).toMatchObject({ value: "1", basis: "Any status" });
+    // The default rows do not say whether they are open: the total is real, "open" is not known, and the cell says so.
+    expect(cell(cells, "findings")).toMatchObject({ absent: "Which are open was not published · 2 recorded" });
+    expect(cell(cells, "findings").value).toBeUndefined();
+    expect(cell(cells, "critical")).toMatchObject({ absent: "Which are open was not published" });
     expect(cell(cells, "plans")).toMatchObject({ value: "0", basis: "None recorded" });
     expect(cell(cells, "gate").flag).toEqual({ kind: "rejected", label: "Blocked" });
   });
@@ -83,8 +98,8 @@ describe("the five facts", () => {
   it("V2: every fact the body does not carry is Not published with its request, never a number", () => {
     const cells = kpiCells(v2());
     expect(cell(cells, "steps").np).toBe("FE-028");
-    expect(cell(cells, "findings").np).toBe("FE-072");
-    expect(cell(cells, "critical").np).toBe("FE-072");
+    expect(cell(cells, "findings")).toMatchObject({ label: "Open findings", np: "FE-072" });
+    expect(cell(cells, "critical")).toMatchObject({ label: "Critical open", np: "FE-072" });
     expect(cell(cells, "plans").np).toBe("FE-072");
     expect(cell(cells, "gate").np).toBe("FE-028");
     for (const c of cells) expect(c.value, c.key).toBeUndefined();
@@ -103,8 +118,41 @@ describe("the five facts", () => {
     expect(c.absent).toBeTruthy();
   });
 
-  it("findings: a truncated list says Showing N; plans: one status or Mixed statuses", () => {
-    expect(cell(kpiCells(v1({ findings: { total: 90, returned: 50, truncated: true, rows: [] } })), "findings")).toMatchObject({ value: "90", basis: "Showing 50" });
+  it("Open findings and Critical open: counted from the published resolved_at of a complete list, never from the total", () => {
+    const list = (rows: FindingView[]) => v1({ findings: { total: rows.length, returned: rows.length, truncated: false, rows } });
+    const mixed = kpiCells(list([finding("a", "CRITICAL", "open"), finding("b", "CRITICAL", "resolved"), finding("c", "WARNING", "open"), finding("d", "INFO", "resolved")]));
+    expect(cell(mixed, "findings")).toMatchObject({ value: "2", basis: "4 recorded, open or resolved" });
+    expect(cell(mixed, "critical")).toMatchObject({ value: "1", basis: "Not resolved" });
+    const none = kpiCells(list([finding("a", "CRITICAL", "resolved")]));
+    expect(cell(none, "findings")).toMatchObject({ value: "0" });
+    expect(cell(none, "critical")).toMatchObject({ value: "0", basis: "None open" });
+    // One unknown non-critical state: no open count, but the critical count is still known.
+    const partial = kpiCells(list([finding("a", "CRITICAL", "open"), finding("b", "INFO", "unknown")]));
+    expect(cell(partial, "findings").value).toBeUndefined();
+    expect(cell(partial, "critical")).toMatchObject({ value: "1" });
+    // An unknown CRITICAL state, or a severity this build cannot read on an unresolved row: no critical count.
+    expect(cell(kpiCells(list([finding("a", "CRITICAL", "unknown")])), "critical").value).toBeUndefined();
+    expect(cell(kpiCells(list([finding("a", null, "open")])), "critical").value).toBeUndefined();
+    expect(cell(kpiCells(list([finding("a", null, "resolved")])), "critical")).toMatchObject({ value: "0" });
+  });
+
+  it("zero findings against sources that did not report is Not available, not 0; against a reporting source it is 0", () => {
+    const none = { findings: { total: 0, returned: 0, truncated: false, rows: [] } };
+    expect(cell(kpiCells(v1(none)), "findings")).toMatchObject({ absent: "Sources did not report" });
+    expect(cell(kpiCells(v1(none)), "critical")).toMatchObject({ absent: "Sources did not report" });
+    const reported = v1({ ...none, panels: [panel("internal", { state: "ok", freshness: "OK", asOf: utc(12, 4) })] });
+    expect(cell(kpiCells(reported), "findings")).toMatchObject({ value: "0" });
+    expect(cell(kpiCells(reported), "critical")).toMatchObject({ value: "0", basis: "None open" });
+  });
+
+  it("an incomplete list gives no count: a truncated list says Showing N of M, a short one says incomplete", () => {
+    expect(cell(kpiCells(v1({ findings: { total: 90, returned: 50, truncated: true, rows: [] } })), "findings")).toMatchObject({ absent: "The finding list is incomplete: showing 50 of 90" });
+    expect(cell(kpiCells(v1({ findings: { total: 90, returned: 50, truncated: true, rows: [] } })), "critical")).toMatchObject({ absent: "The finding list is incomplete" });
+    expect(findingCounts(v1({ findings: { total: 3, returned: 1, truncated: false, rows: [finding("a", "INFO", "open")] } }))).toBeNull();
+    expect(findingCounts(v2())).toBeNull();
+  });
+
+  it("plans: one status or Mixed statuses", () => {
     const plan = (id: string, status: string | null) => ({ id, target: "CANARY", status, blockerCodes: [], createdAt: null });
     expect(cell(kpiCells(v1({ plans: [plan("a", "BLOCKED"), plan("b", "BLOCKED")] })), "plans")).toMatchObject({ value: "2", basis: "Blocked" });
     expect(cell(kpiCells(v1({ plans: [plan("a", "BLOCKED"), plan("b", null)] })), "plans")).toMatchObject({ value: "2", basis: "Mixed statuses" });
@@ -125,6 +173,9 @@ describe("the exit blockers read as sentences; codes stay out of them", () => {
       "4 of 7 steps have passed.",
       "1 critical finding is recorded.",
     ]);
+    // Once the finding's state is published the sentence says it is open.
+    const open = blockers(v1({ findings: { total: 1, returned: 1, truncated: false, rows: [finding("f1", "CRITICAL", "open")] } }));
+    expect(open.items.map((i) => i.text)).toContain("1 critical finding is open.");
     for (const item of items) expect(item.text).not.toMatch(/SANDBOX_|_FAIL|_UNAVAILABLE/);
     expect(codes).toEqual(["SANDBOX_STEP_RECONCILIATION_FAIL", "SANDBOX_STEP_CLEANUP_UNAVAILABLE", "SANDBOX_STEP_EXIT_REVIEW_UNAVAILABLE"]);
   });

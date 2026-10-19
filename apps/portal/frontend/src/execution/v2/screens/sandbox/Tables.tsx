@@ -7,9 +7,10 @@
  * lists, so each panel says `Not published (FE-072)` instead of an empty table (an empty table
  * would read as "none recorded", which is a claim the V2 body does not make).
  *
- * The finding row the published V1 schema carries is id, severity, code, summary, blocking,
- * evidence hash, as-of, resolved-at and created-at. The reader this build uses keeps only id and
- * severity, so Opened and Status are `Not available` here, not guessed from the id.
+ * The finding row the published V1 schema carries is id, severity, code, summary, blocking, evidence
+ * hash, as-of, resolved-at and created-at. Opened is `created_at`; Status is Open when `resolved_at` is
+ * null, Resolved when it is an instant, and `Not available` when the row does not say (an absent key is
+ * never read as open).
  */
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
@@ -33,10 +34,32 @@ function shown(c: CollectionView<unknown>): string {
 /* ── findings ─────────────────────────────────────────────────────────────── */
 
 const FINDING_COLUMNS: readonly CardsColumn<FindingView & { k: string }>[] = [
-  { key: "finding", label: "Finding", render: (r) => <span className="exec-sbx-id">{r.id}</span> },
+  {
+    key: "finding",
+    label: "Finding",
+    render: (r) => (
+      <>
+        {r.summary === null ? null : <span>{r.summary}</span>}
+        {r.summary === null ? null : " "}
+        <span className="exec-sbx-id" title={r.code ?? undefined}>{r.id}</span>
+        {/* A finding whose blocking bit cannot be read is not waved through: it says so (failClosed.test.ts). */}
+        {r.blocking === null ? <>{" "}<Flag kind="unknown" label="Blocking not stated" size="sm" /></> : r.blocking ? <>{" "}<Flag kind="attention" label="Blocking" size="sm" /></> : null}
+      </>
+    ),
+  },
   { key: "severity", label: "Severity", render: (r) => { const f = severityFlag(r.severity); return <Flag kind={f.kind} label={f.label} size="sm" />; } },
-  { key: "opened", label: "Opened", render: () => null },
-  { key: "status", label: "Status", render: () => null },
+  { key: "opened", label: "Opened", render: (r) => time(r.openedAt) },
+  {
+    key: "status",
+    label: "Status",
+    render: (r) =>
+      r.state === "unknown" ? null : r.state === "open" ? <Flag kind="pending" label="Open" size="sm" /> : (
+        <>
+          <Flag kind="ok" label="Resolved" size="sm" />
+          {r.resolvedAt === null ? null : <>{" "}{time(r.resolvedAt)}</>}
+        </>
+      ),
+  },
 ];
 
 export function FindingsPanel({ view }: { view: SandboxView }) {

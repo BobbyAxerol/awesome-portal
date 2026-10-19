@@ -16,6 +16,7 @@ import {
   bannersOf,
   blockerItems,
   chipsOf,
+  complianceNotes,
   decisionReason,
   envelopeColumn,
   freshnessChip,
@@ -31,7 +32,7 @@ import {
 } from "./model";
 import { countLine } from "./parts";
 import { readCanaryView, type CanaryView } from "./readCanary";
-import { parentBody, populatedV1, v1Body } from "./canary.testbase";
+import { parentBody, populatedV1, populatedWithFacts, v1Body } from "./canary.testbase";
 
 function viewOf(raw: unknown): CanaryView {
   const result = readCanaryView(readCanaryByVersion(raw));
@@ -181,12 +182,57 @@ describe("rollback readiness", () => {
     expect(rollbackItems(viewOf(v1Body()))[2]).toMatchObject({ status: { kind: "flag", flag: "na", label: "Not available" }, checked: null });
   });
 
-  it("the head never says Ready: dark is Not available, a reported panel is Not published, V2 is Not published", () => {
+  it("the head says Ready only for the server's boolean true on a ready panel with nothing against it", () => {
+    // Dark published body: the panel is unavailable, so that is what the head says, whatever `ready` is.
     expect(rollbackHead(viewOf(v1Body()))).toEqual({ kind: "flag", flag: "na", label: "Not available" });
-    const reported = populatedV1();
-    reported.rollback_readiness.envelope.panel_state = "ok";
-    expect(rollbackHead(viewOf(reported))).toEqual({ kind: "not-published" });
     expect(rollbackHead(viewOf(parentBody()))).toEqual({ kind: "not-published" });
+    // A reported panel with no `ready` boolean says nothing about readiness.
+    const silent = populatedWithFacts();
+    delete silent.rollback_readiness.ready;
+    expect(rollbackHead(viewOf(silent))).toEqual({ kind: "not-published" });
+    expect(rollbackHead(viewOf(populatedWithFacts()))).toEqual({ kind: "flag", flag: "ok", label: "Ready" });
+    const no = populatedWithFacts();
+    no.rollback_readiness.ready = false;
+    expect(rollbackHead(viewOf(no))).toEqual({ kind: "flag", flag: "attention", label: "Not ready" });
+    // `ready` is a boolean or nothing: the string "true" and the number 1 are not a yes.
+    for (const notBoolean of ["true", 1, "ready"]) {
+      const body = populatedWithFacts();
+      body.rollback_readiness.ready = notBoolean;
+      expect(rollbackHead(viewOf(body)), String(notBoolean)).toEqual({ kind: "not-published" });
+    }
+  });
+
+  it("a `true` the same response contradicts is Not confirmed, never Ready", () => {
+    const withCodes = populatedWithFacts();
+    withCodes.rollback_readiness.blocker_codes = ["ROLLBACK_DRILL_STALE"];
+    expect(rollbackHead(viewOf(withCodes))).toEqual({ kind: "flag", flag: "partial", label: "Not confirmed" });
+    const staleBroker = populatedWithFacts();
+    staleBroker.source_panels[1].freshness_state = "STALE";
+    expect(rollbackHead(viewOf(staleBroker))).toEqual({ kind: "flag", flag: "partial", label: "Not confirmed" });
+    const staleItself = populatedWithFacts();
+    staleItself.rollback_readiness.envelope.freshness_state = "STALE";
+    expect(rollbackHead(viewOf(staleItself))).toEqual({ kind: "flag", flag: "partial", label: "Not confirmed" });
+    // The panel's own state speaks first: a partial, stale or withheld panel is that, whatever `ready` says.
+    for (const [state, label] of [["partial", "Partial"], ["stale", "Stale"], ["suppressed", "Withheld"], ["unavailable", "Not available"]] as const) {
+      const body = populatedWithFacts();
+      body.rollback_readiness.envelope.panel_state = state;
+      expect(rollbackHead(viewOf(body)), state).toMatchObject({ kind: "flag", label });
+    }
+  });
+
+  it("limit rows carry the compliance panel's own limit and consumed figure; the headroom and unmatched keys are listed, not divided", () => {
+    const dark = limitRows(viewOf(v1Body()));
+    expect(dark.map((r) => r.limit?.kind)).toEqual(["value", "value", "value", "value", undefined]);
+    expect(dark.every((r) => r.consumed === null)).toBe(true);
+    const lit = limitRows(viewOf(populatedWithFacts()));
+    expect(lit[0]!.consumed).toMatchObject({ kind: "value", decimal: { full: "3820.00" } });
+    expect(lit[3]!.consumed).toMatchObject({ kind: "value", decimal: { display: "1" } });
+    expect(lit.every((r) => r.usedRatio === undefined)).toBe(true);
+    const notes = complianceNotes(viewOf(populatedWithFacts()));
+    expect(notes.headroom.map((h) => h.label)).toEqual(["Capital cap"]);
+    expect(notes.other).toEqual([{ group: "Consumed", name: "fees_paid", exact: "4.25" }]);
+    expect(notes.baseRiskProfile).toBe("not-verified");
+    expect(complianceNotes(viewOf(parentBody())).baseRiskProfile).toBeNull();
   });
 });
 

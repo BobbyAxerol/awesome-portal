@@ -70,6 +70,12 @@ describe("NotPublished and the one FE table", () => {
     expect(FE_REQUEST_LABEL["FE-035"]).toBe("Map");
     expect(FE_REQUEST_LABEL["FE-027, FE-028"]).toBe("Readiness");
   });
+
+  it("FE-067 is the runtime-state request of every stage screen, not Paper's alone", () => {
+    const label = FE_REQUEST_LABEL["FE-067"];
+    for (const stage of ["Paper", "Sandbox", "Canary", "Live"]) expect(label, stage).toContain(stage);
+    expect(label).toContain("Runtime state");
+  });
 });
 
 describe("Kpi", () => {

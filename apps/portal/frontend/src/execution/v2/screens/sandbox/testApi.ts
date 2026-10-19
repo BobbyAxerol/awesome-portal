@@ -53,7 +53,7 @@ export function v1Rich(): Draft {
     returned_count: 2,
     truncated: false,
     rows: [
-      { finding_id: "fnd_TEST_ONLY_1", severity: "WARNING", source_authority: "DERIVED", finding_code: "FEE_DIFF", summary: "Fee total differs by 0.01 USDT", blocking: false, evidence_hash: null, as_of: null, resolved_at: null, created_at: "2026-10-17T12:02:00.000Z" },
+      { finding_id: "fnd_TEST_ONLY_1", severity: "WARNING", source_authority: "DERIVED", finding_code: "FEE_DIFF", summary: "Fee total differs between the two sources", blocking: false, evidence_hash: null, as_of: null, resolved_at: null, created_at: "2026-10-17T12:02:00.000Z" },
       { finding_id: "fnd_TEST_ONLY_2", severity: "INFO", source_authority: "DERIVED", finding_code: "FILL_LATE", summary: "Fill 3 arrived 4 s late", blocking: false, evidence_hash: null, as_of: null, resolved_at: null, created_at: "2026-10-17T11:15:00.000Z" },
     ],
   };

@@ -16,10 +16,16 @@ import { SCHEMA_DIR } from "./loadCanonical";
 
 type Json = Record<string, unknown>;
 
-const IGNORED = new Set(["$schema", "$id", "$defs", "$comment", "title", "description", "default", "examples", "format"]);
+/**
+ * Keywords that annotate and never reject. `discriminator` is the OpenAPI hint for picking a `oneOf` branch;
+ * the branches the published documents carry already pin the tag with a `const`, so ignoring the hint
+ * accepts and refuses exactly what the branches do.
+ */
+const IGNORED = new Set(["$schema", "$id", "$defs", "$comment", "title", "description", "default", "examples", "format", "discriminator"]);
 const KNOWN = new Set([
   "type", "enum", "const", "required", "properties", "additionalProperties", "items", "minItems", "maxItems", "minimum",
   "maximum", "maxLength", "minLength", "pattern", "oneOf", "anyOf", "uniqueItems", "$ref", "prefixItems", "not", "allOf", "if", "then", "else", "contains", "minContains", "maxContains",
+  "maxProperties", "propertyNames",
 ]);
 
 const documents = new Map<string, Json>();
@@ -140,6 +146,19 @@ function check(schema: Json, value: unknown, at: string, scope: Scope, out: stri
   }
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     const record = value as Json;
+    // `maxProperties`: the object has at most that many own members (a count, whatever the members are).
+    if (typeof schema.maxProperties === "number" && Object.keys(record).length > schema.maxProperties) {
+      out.push(`${at}: more than ${schema.maxProperties} properties`);
+    }
+    // `propertyNames`: every member NAME, as a string instance, must satisfy the subschema (whether or not
+    // `properties` also names it). A name that fails is reported at `$.path.<name>`, like a member would be.
+    if (schema.propertyNames && typeof schema.propertyNames === "object") {
+      for (const name of Object.keys(record)) {
+        const nameOut: string[] = [];
+        check(schema.propertyNames as Json, name, `${at}.${name}`, scope, nameOut);
+        if (nameOut.length > 0) out.push(`${at}.${name}: property name refused (${nameOut.map((line) => line.replace(/^[^:]*: /, "")).join("; ")})`);
+      }
+    }
     const props = (schema.properties ?? {}) as Record<string, Json>;
     for (const name of (schema.required ?? []) as string[]) {
       if (!Object.prototype.hasOwnProperty.call(record, name)) out.push(`${at}.${name}: required`);

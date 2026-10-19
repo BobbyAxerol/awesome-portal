@@ -5,7 +5,7 @@
  * here; every negative case is a mutation of one, never a second copy. Breadth (matrices, scale, schema agreement)
  * is in `managerDataset.conformance.test.ts`.
  */
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { setPath } from "../testkit/matrix";
 import {
@@ -27,13 +27,11 @@ import {
   fixtureValue,
   moneyMetric,
   partition,
-  removeSchemaCopy,
   richDataset,
   type Draft,
 } from "./managerDataset.testbase";
 import { figuresByPartition, managerMetricDecimal, readManagerMetric, readPartitionedMetricsList } from "./managerMetric";
 
-afterAll(removeSchemaCopy);
 
 function datasetOf(raw: unknown): ManagerDataset {
   const read = readManagerDataset(raw);

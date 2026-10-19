@@ -143,6 +143,91 @@ describe("#4 — suppressed is not unavailable", () => {
   });
 });
 
+describe("positions and orders rows (additive; the V1 screen ignores them)", () => {
+  const meta = (id: string, authority: string, state = "ready") => ({
+    panel_id: id, source_authority: authority, panel_state: state, freshness_state: "FRESH", delivery_profile: "fixture",
+    source_verification_state: "VERIFIED", as_of: "2026-10-17T12:04:00.000Z", read_at: "2026-10-17T12:04:00.000Z", age_seconds: null, lag_ms: null,
+    source_cursor: null, projection_epoch: null, projection_sequence: null, capability_snapshot_id: null, data: { page: "first" }, warnings: [],
+  });
+  const collection = (id: string, authority: string, rows: unknown[], state = "ready") => ({
+    envelope: meta(id, authority, state), exact_total: rows.length, returned_count: rows.length, next_cursor: null, previous_cursor: null, rows,
+  });
+  const withRows = (authority: string, visible: boolean, rows: unknown[] = [{ instrument: "BTCUSDT", qty: "0.0120", reduce_only: false, size: 3 }]) =>
+    patched((raw) => {
+      raw.positions = collection("positions", authority, rows);
+      raw.orders = collection("orders", authority, [{ order_id: "o-1" }]);
+      (raw.broker_consistency as Record<string, unknown>).broker_values_visible = visible;
+    });
+
+  it("the published dark body: collections are read, empty, and unavailable", () => {
+    const r = live();
+    expect(r.positionRows).toMatchObject({ exactTotal: null, returnedCount: 0, rows: [], rowsDropped: 0 });
+    expect(r.positionRows?.envelope.panelState).toBe("unavailable");
+    expect(r.orderRows?.envelope.panelState).toBe("unavailable");
+  });
+
+  it("keeps scalar cells as the server wrote them; a number, array or object cell is dropped, never printed", () => {
+    const r = withRows("EXECUTION", false);
+    expect(r.positionRows?.rows).toEqual([{ instrument: "BTCUSDT", qty: "0.0120", reduce_only: false }]);
+    expect(r.positionRows?.exactTotal).toBe(1);
+    expect(r.suppressedBrokerFields).not.toContain("positions:rows");
+  });
+
+  it("strips a BROKER collection at the reader while broker figures are hidden, and names it", () => {
+    const hidden = withRows("BROKER", false);
+    expect(hidden.positionRows).toMatchObject({ rows: [], exactTotal: null, returnedCount: null });
+    expect(hidden.orderRows).toMatchObject({ rows: [], exactTotal: null });
+    expect(hidden.suppressedBrokerFields).toEqual(expect.arrayContaining(["positions:rows", "orders:rows"]));
+    expect(JSON.stringify(hidden)).not.toContain("BTCUSDT");
+    expect(JSON.stringify(hidden)).not.toContain("0.0120");
+    // An absent visibility flag is hidden too.
+    const absent = patched((raw) => {
+      raw.positions = collection("positions", "BROKER", [{ instrument: "BTCUSDT" }]);
+      delete (raw.broker_consistency as Record<string, unknown>).broker_values_visible;
+    });
+    expect(JSON.stringify(absent)).not.toContain("BTCUSDT");
+    const shown = withRows("BROKER", true);
+    expect(shown.positionRows?.rows).toHaveLength(1);
+    expect(shown.suppressedBrokerFields).not.toContain("positions:rows");
+  });
+
+  it("bounds a collection: 200 rows, at most 80 cells a row, 256 characters a cell, and counts what it did not keep", () => {
+    const wide = Object.fromEntries(Array.from({ length: 90 }, (_, i) => [`k${i}`, "v"]));
+    const r = withRows("EXECUTION", true, [...Array.from({ length: 205 }, () => wide), {}, "not a row", null]);
+    expect(r.positionRows?.rows).toHaveLength(200);
+    expect(Object.keys(r.positionRows!.rows[0]!)).toHaveLength(80);
+    expect(r.positionRows?.rowsDropped).toBe(8);
+    const long = withRows("EXECUTION", true, [{ a: "x".repeat(257), b: "x".repeat(256) }]);
+    expect(Object.keys(long.positionRows!.rows[0]!)).toEqual(["b"]);
+  });
+
+  it("the V1 screen renders identically with or without rows (it reads only the panels)", () => {
+    // React's generated ids count up per render; the markup is otherwise compared byte for byte.
+    const markup = (html: string) => html.replace(/:r[0-9a-z]+:/g, ":r:");
+    const plain = markup(render(<LiveFullOperationsScreen live={live()} />).container.innerHTML);
+    cleanup();
+    const raw = JSON.parse(JSON.stringify(LIVE_FULL_FIXTURE));
+    raw.positions = collection("positions", "EXECUTION", [{ instrument: "BTCUSDT" }]);
+    const rich = markup(render(<LiveFullOperationsScreen live={readLiveFullOperations(raw)!} />).container.innerHTML);
+    expect(rich).toBe(plain);
+  });
+});
+
+describe("panel vocabulary is the schema's", () => {
+  it("ready reads as ok, FRESH as OK; error is a failed read; a word outside the schema is unavailable", () => {
+    const state = (word: string, freshness: string) =>
+      patched((raw) => {
+        const internal = (raw.source_panels as Record<string, Record<string, unknown>>).internal!;
+        internal.panel_state = word;
+        internal.freshness_state = freshness;
+      }).panels.internal!.envelope;
+    expect(state("ready", "FRESH")).toMatchObject({ panelState: "ok", freshness: "OK" });
+    expect(state("error", "AGING")).toMatchObject({ panelState: "terminal", freshness: "AGING" });
+    expect(state("ok", "OK")).toMatchObject({ panelState: "unavailable", freshness: "OK" });
+    expect(state("loading", "PAUSED")).toMatchObject({ panelState: "unavailable", freshness: null });
+  });
+});
+
 describe("#5 — the two guard rules, stated separately", () => {
   it("splits the token into suppression and gap rules", () => {
     const rules = liveGuardRules(live());

@@ -9,7 +9,8 @@ import { readCanaryControlRoom } from "../../../certification";
 import { readCanaryByVersion, unsupportedText, type CanaryVersionRead } from "../../readers/dispatch";
 import { readCanaryParentV2 } from "../../readers/governanceParents";
 import { readCanaryView, type CanaryReadResult, type CanaryView } from "./readCanary";
-import { DEP, parentBody, populatedV1, v1Body } from "./canary.testbase";
+import { validateAgainst } from "../../testkit/schema";
+import { DEP, SCHEMA_V1, lit, parentBody, populatedV1, populatedWithFacts, v1Body } from "./canary.testbase";
 
 function viewOf(result: CanaryReadResult): CanaryView {
   if (result.kind !== "view") throw new Error(`expected a view, got unsupported: ${result.text}`);
@@ -124,13 +125,7 @@ describe("V1 control room body", () => {
     expect(fromBody(body).broker?.state).toBe("suppressed");
   });
 
-  /**
-   * KNOWN SHARED-READER DEFECT (certification.ts, not this folder): its vocabularies say `ok` and `OK` where the
-   * published schema says `ready` and `FRESH`. A schema-valid lit panel therefore reads as unavailable with no
-   * freshness, and the screen (honestly) says "not stated". When the shared reader maps them this test turns red
-   * and is rewritten to the lit expectation.
-   */
-  it("DEFECT pin: a schema-valid `ready` panel with `FRESH` freshness reads as unavailable / not stated", () => {
+  it("a schema-valid `ready` panel with `FRESH` freshness reads as ok / fresh, and that body conforms to the published envelope schema", () => {
     const body = v1Body();
     const broker = body.source_panels.find((p: { panel_id: string }) => p.panel_id === "broker");
     broker.panel_state = "ready";
@@ -138,7 +133,123 @@ describe("V1 control room body", () => {
     broker.as_of = "2026-10-17T12:04:00.000Z";
     broker.source_verification_state = "VERIFIED";
     broker.data = { equity: "5112.40" };
-    expect(fromBody(body).broker).toMatchObject({ state: "unavailable", freshness: null });
+    broker.warnings = [];
+    expect(validateAgainst(SCHEMA_V1, "/$defs/SourceEnvelope", broker)).toEqual([]);
+    expect(fromBody(body).broker).toMatchObject({ state: "ok", freshness: "OK", asOfMs: Date.UTC(2026, 9, 17, 12, 4) });
+  });
+
+  it("each published freshness word and each published panel word reads as itself; a word outside the schema is unavailable / not stated", () => {
+    for (const [wire, freshness] of [["FRESH", "OK"], ["AGING", "AGING"], ["STALE", "STALE"], ["UNKNOWN", "UNKNOWN"]] as const) {
+      const body = populatedV1();
+      body.source_panels[1].freshness_state = wire;
+      expect(fromBody(body).broker?.freshness, wire).toBe(freshness);
+    }
+    for (const [wire, state] of [["ready", "ok"], ["empty", "empty"], ["partial", "partial"], ["stale", "stale"], ["unavailable", "unavailable"], ["suppressed", "suppressed"]] as const) {
+      const body = populatedV1();
+      body.source_panels[1].panel_state = wire;
+      expect(fromBody(body).broker?.state, wire).toBe(state);
+    }
+    // The FE's own words, a made-up word and a freshness no schema publishes are refused, not repaired.
+    for (const word of ["ok", "OK", "error", "loading", "READY", "fine", ""]) {
+      const body = populatedV1();
+      body.source_panels[1].panel_state = word;
+      expect(fromBody(body).broker?.state, `state ${word}`).toBe(word === "error" ? "terminal" : "unavailable");
+    }
+    for (const word of ["PAUSED", "VERY_FRESH", "fresh", ""]) {
+      const body = populatedV1();
+      body.source_panels[1].freshness_state = word;
+      expect(fromBody(body).broker?.freshness, `freshness ${word}`).toBeNull();
+    }
+  });
+});
+
+describe("V1 body: what the shared reader used to drop (FIXTURE_LAB; the V1 schema pins these dark)", () => {
+  it("the dark published fixture: ready is the schema's false, its blockers are kept, the caps are the compliance panel's own", () => {
+    const view = fromBody(v1Body());
+    expect(view.rollbackReady).toBe(false);
+    expect(view.rollbackBlockerCodes.length).toBeGreaterThanOrEqual(1);
+    expect(view.complianceFacts?.baseRiskProfileVerified).toBe(false);
+    expect(view.complianceFacts?.consumed).toBeNull();
+    expect(view.complianceFacts?.headroom).toBeNull();
+    expect(view.complianceFacts?.limits.capital).toMatchObject({ kind: "value", decimal: { full: "5000" } });
+    expect(view.complianceFacts?.limits.openOrders).toMatchObject({ kind: "value", decimal: { display: "20" } });
+    // The dark panels carry no rows, and a panel that is unavailable holds none.
+    expect(view.positions.published).toBeNull();
+    expect(view.orders.published).toBeNull();
+  });
+
+  it("consumed and headroom: a key spelled like a cap belongs to that cap, others are listed under their own name, a number is refused", () => {
+    const view = fromBody(populatedWithFacts());
+    const consumed = view.complianceFacts!.consumed!;
+    expect(consumed.byLimit.capital).toMatchObject({ kind: "value", decimal: { full: "3820.00" } });
+    expect(consumed.byLimit.openOrders).toMatchObject({ kind: "value", decimal: { display: "1" } });
+    expect(consumed.other).toEqual([{ key: "fees_paid", exact: "4.25" }]);
+    expect(view.complianceFacts!.headroom!.byLimit.capital).toMatchObject({ decimal: { full: "1180.00" } });
+    const numeric = populatedWithFacts();
+    numeric.envelope_compliance.consumed = { capital_cap: 3820, fees_paid: 4.25 };
+    const refused = fromBody(numeric).complianceFacts!.consumed!;
+    expect(refused.byLimit).toEqual({});
+    expect(refused.other).toEqual([]);
+  });
+
+  it("rollback: the boolean is read as published, never inferred from the panel", () => {
+    expect(fromBody(populatedWithFacts()).rollbackReady).toBe(true);
+    const body = populatedWithFacts();
+    body.rollback_readiness.ready = "true";
+    expect(fromBody(body).rollbackReady).toBeNull();
+    body.rollback_readiness.ready = 1;
+    expect(fromBody(body).rollbackReady).toBeNull();
+    delete body.rollback_readiness.ready;
+    expect(fromBody(body).rollbackReady).toBeNull();
+    expect(fromBody(parentBody("canary")).rollbackReady).toBeNull();
+  });
+
+  it("rows: drawn under the source's own members, exact text, scalar cells only; a number cell is dropped, never printed", () => {
+    const view = fromBody(populatedWithFacts());
+    const table = view.positions.published!;
+    expect(table.columns.map((c) => c.label)).toEqual(["Symbol", "Side", "Qty", "Entry price", "Hedged", "Note"]);
+    expect(table.rows[0]!.cells).toEqual(["BTCUSDT", "LONG", "0.0120", "64000.10", false, null]);
+    expect(table.rows[1]!.cells).toEqual(["ETHUSDT", "SHORT", "1.5000", "3412.50", true, null]);
+    expect(table.total).toBe(2);
+    expect(view.positions.rows).toBeNull();
+    expect(view.orders.published!.columns.map((c) => c.key)).toEqual(["order_id", "price", "type"]);
+    const body = populatedWithFacts();
+    body.positions.rows = [{ symbol: "BTCUSDT", qty: 0.012, deep: { a: 1 }, list: [1] }];
+    const only = fromBody(body).positions.published!;
+    expect(only.columns.map((c) => c.key)).toEqual(["symbol"]);
+  });
+
+  it("rows are bounded: 200 rows, 12 columns, and a count of what was not kept", () => {
+    const body = populatedWithFacts();
+    body.positions.rows = Array.from({ length: 250 }, (_, i) => Object.fromEntries(Array.from({ length: 15 }, (_, j) => [`f${j}`, `${i}`])));
+    body.positions.returned_count = 200;
+    const table = fromBody(body).positions.published!;
+    expect(table.rows).toHaveLength(200);
+    expect(table.columns).toHaveLength(12);
+    expect(table.hiddenColumns).toBe(3);
+    expect(table.rowsDropped).toBe(50);
+  });
+
+  it("rows of a panel that is not holding rows are not shown: unavailable, suppressed and an unknown word", () => {
+    for (const state of ["unavailable", "suppressed", "fine"]) {
+      const body = populatedWithFacts();
+      lit(body.positions.envelope, state, "FRESH");
+      expect(fromBody(body).positions.published, state).toBeNull();
+    }
+    for (const state of ["partial", "stale", "empty", "ready"]) {
+      const body = populatedWithFacts();
+      lit(body.positions.envelope, state, "FRESH");
+      expect(fromBody(body).positions.published, state).not.toBeNull();
+    }
+  });
+
+  it("text a screen must not print is not a cell: control, bidi and zero-width characters", () => {
+    const body = populatedWithFacts();
+    const bidi = String.fromCharCode(0x202e);
+    const zero = String.fromCharCode(0x200b);
+    body.positions.rows = [{ symbol: `BTC${bidi}USDT`, note: `a${zero}b`, ok: "fine", tab: "a\tb" }];
+    const table = fromBody(body).positions.published!;
+    expect(table.columns.map((c) => c.key)).toEqual(["ok"]);
   });
 });
 

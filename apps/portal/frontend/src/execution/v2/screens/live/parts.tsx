@@ -10,6 +10,7 @@ import { MetricText, NO_VALUE_COPY, NotPublished, SectionPanel } from "../../blo
 import { withContext } from "../../urlState";
 import type { LiveSourcePanelV2, LiveSourceRecordV2 } from "../../readers/liveSourceOperations";
 import { PanelState } from "../../../components/states";
+import { cellText, type PublishedRow } from "../../readers/publishedRows";
 import {
   OPERATIONS_PATH,
   ROW_CAP,
@@ -23,6 +24,7 @@ import {
   type Cell,
   type ChartSlotModel,
   type PanelColumn,
+  type V1RowsPanel,
 } from "./model";
 import type { PanelPage } from "./useLiveReads";
 
@@ -134,6 +136,47 @@ function CellOf({ column, record }: { column: PanelColumn; record: LiveSourceRec
     case "instant":
       return <span className="exec-blk-id">{cell.label}</span>;
   }
+}
+
+/**
+ * `positions` / `orders` of a V1 body. A table is the source's own members under its own names with the exact text it wrote
+ * (no unit, no rounding, no sign colour); the typed hi-fi columns stay `Not published (FE-072)`. A panel that holds no rows says
+ * why, then names the request.
+ */
+export function V1RowsSection({ title, aside, rows, what }: { title: string; aside?: string; rows: V1RowsPanel; what: string }) {
+  if (rows.kind !== "table") {
+    return (
+      <SectionPanel title={title} aside={aside}>
+        {rows.kind === "withheld" ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.text}</span></p> : null}
+        <p className="exec-liv-line">
+          <NotPublished id="FE-072">{what}</NotPublished>
+        </p>
+      </SectionPanel>
+    );
+  }
+  const { table } = rows;
+  const shown = table.rows.slice(0, ROW_CAP);
+  const cols: CardsColumn<PublishedRow>[] = table.columns.map((column, index) => ({
+    key: column.key,
+    label: column.label,
+    render: (row) => {
+      const text = cellText(row.cells[index]);
+      return text === null ? null : <span className="exec-blk-num" title={text}>{text}</span>;
+    },
+  }));
+  return (
+    <SectionPanel title={title} aside={aside}>
+      {rows.line ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.line}</span></p> : null}
+      <CardsTable columns={cols} rows={shown} rowKey={(row) => row.key} label={title} empty="The source reported none." />
+      <div className="exec-liv-more">
+        <span className="exec-liv-cap">{rows.caption}</span>
+      </div>
+      <p className="exec-liv-line">
+        Columns are the source's own field names.{table.hiddenColumns > 0 ? ` ${table.hiddenColumns} more field${table.hiddenColumns === 1 ? " is" : "s are"} not drawn.` : ""}{" "}
+        <NotPublished id="FE-072">{`Typed ${what.toLowerCase()}`}</NotPublished>
+      </p>
+    </SectionPanel>
+  );
 }
 
 export interface PanelSectionProps {

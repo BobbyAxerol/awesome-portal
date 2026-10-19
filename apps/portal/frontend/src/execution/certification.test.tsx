@@ -305,6 +305,97 @@ describe("the container fetches through the port", () => {
   });
 });
 
+/** React's generated ids count up per render; the markup is otherwise compared byte for byte. */
+const markup = (html: string) => html.replace(/:r[0-9a-z]+:/g, ":r:");
+const FINDING_ROW = {
+  finding_id: "fnd_1", severity: "CRITICAL", source_authority: "DERIVED", finding_code: "FEE_DIFF", summary: "Fee total differs",
+  blocking: true, evidence_hash: null, as_of: null, resolved_at: null, created_at: "2026-10-17T12:02:00.000Z",
+};
+const withFindings = (rows: unknown[]) => {
+  const raw = JSON.parse(JSON.stringify(SANDBOX_CERTIFICATION_FIXTURE));
+  raw.findings = { total_count: rows.length, returned_count: rows.length, truncated: false, rows };
+  return raw;
+};
+
+describe("the panel vocabulary is the published one", () => {
+  const panel = (state: string, freshness: string) => {
+    const raw = JSON.parse(JSON.stringify(SANDBOX_CERTIFICATION_FIXTURE));
+    raw.source_panels[1].panel_state = state;
+    raw.source_panels[1].freshness_state = freshness;
+    return readSandboxCertification(raw)!.sourcePanels[1]!;
+  };
+
+  it("`ready` is ok and OK / FRESH are fresh: a source-backed panel no longer reads as unavailable", () => {
+    expect(panel("ready", "OK")).toMatchObject({ panelState: "ok", freshness: "OK" });
+    expect(panel("ready", "FRESH")).toMatchObject({ panelState: "ok", freshness: "OK" });
+    expect(panel("stale", "STALE")).toMatchObject({ panelState: "stale", freshness: "STALE" });
+    expect(panel("unavailable", "UNKNOWN")).toMatchObject({ panelState: "unavailable", freshness: "UNKNOWN" });
+  });
+
+  it("`error` is a failed read, not an absence; the FE's own words and unknown words stay unavailable / not stated", () => {
+    expect(panel("error", "UNKNOWN").panelState).toBe("terminal");
+    for (const word of ["ok", "loading", "denied", "insufficient_data", "terminal", "READY", ""]) {
+      expect(panel(word, "UNKNOWN").panelState, word).toBe("unavailable");
+    }
+    for (const word of ["PAUSED", "fresh", "VERY_FRESH", ""]) {
+      expect(panel("ready", word).freshness, word).toBeNull();
+    }
+  });
+
+  it("the V1 screen reflects it: a ready broker is a good source badge and states its freshness", () => {
+    const raw = JSON.parse(JSON.stringify(SANDBOX_CERTIFICATION_FIXTURE));
+    const { container } = render(<SandboxCertificationScreen certification={readSandboxCertification(raw)!} />);
+    expect(container.querySelector('[data-axis="broker-sync"]')!.getAttribute("data-tone")).toBe("warn");
+    cleanup();
+    raw.source_panels[1].panel_state = "ready";
+    raw.source_panels[1].freshness_state = "OK";
+    const lit = render(<SandboxCertificationScreen certification={readSandboxCertification(raw)!} />);
+    expect(lit.container.querySelector('[data-axis="broker-sync"]')!.getAttribute("data-tone")).toBe("good");
+    expect(lit.container.textContent).toContain("broker OK");
+  });
+});
+
+describe("the published finding row is read (additive)", () => {
+  it("reads finding_code, summary, blocking, resolved_at and created_at; status / identity / values stay null (the row has none)", () => {
+    const [row] = readSandboxCertification(withFindings([FINDING_ROW]))!.findings.rows;
+    expect(row).toEqual({
+      findingId: "fnd_1", severity: "CRITICAL", status: null, identity: null, localValue: null, brokerValue: null,
+      findingCode: "FEE_DIFF", summary: "Fee total differs", blocking: true, resolvedAt: null, resolution: "OPEN", createdAt: "2026-10-17T12:02:00.000Z",
+    });
+  });
+
+  it("is open only when the row says resolved_at: null; an absent or unreadable key is not open, an instant is resolved", () => {
+    const read = (over: Record<string, unknown>, drop: string[] = []) => {
+      const row: Record<string, unknown> = { ...FINDING_ROW, ...over };
+      for (const key of drop) delete row[key];
+      return readSandboxCertification(withFindings([row]))!.findings.rows[0]!;
+    };
+    expect(read({ resolved_at: "2026-10-17T13:00:00.000Z" })).toMatchObject({ resolution: "RESOLVED", resolvedAt: "2026-10-17T13:00:00.000Z" });
+    expect(read({}, ["resolved_at"])).toMatchObject({ resolution: null, resolvedAt: null });
+    for (const bad of [5, true, "", {}, []]) expect(read({ resolved_at: bad }), JSON.stringify(bad)).toMatchObject({ resolution: null, resolvedAt: null });
+  });
+
+  it("types and bounds: blocking is a boolean or null, a summary past 2000 characters and a code past 191 are null, nothing is invented", () => {
+    const read = (over: Record<string, unknown>) => readSandboxCertification(withFindings([{ ...FINDING_ROW, ...over }]))!.findings.rows[0]!;
+    expect(read({ blocking: "true" }).blocking).toBeNull();
+    expect(read({ blocking: 1 }).blocking).toBeNull();
+    expect(read({ blocking: false }).blocking).toBe(false);
+    expect(read({ summary: "s".repeat(2000) }).summary).toHaveLength(2000);
+    expect(read({ summary: "s".repeat(2001) }).summary).toBeNull();
+    expect(read({ finding_code: "c".repeat(192) }).findingCode).toBeNull();
+    expect(read({ summary: 5, finding_code: null, created_at: null })).toMatchObject({ summary: null, findingCode: null, createdAt: null });
+  });
+
+  it("the V1 screen is unchanged by them: the same markup with and without the five fields", () => {
+    const stripped = { finding_id: "fnd_1", severity: "CRITICAL" };
+    const withFields = render(<SandboxCertificationScreen certification={readSandboxCertification(withFindings([FINDING_ROW]))!} />).container.innerHTML;
+    cleanup();
+    const without = render(<SandboxCertificationScreen certification={readSandboxCertification(withFindings([stripped]))!} />).container.innerHTML;
+    expect(markup(withFields)).toBe(markup(without));
+    expect(certificationBlocked(readSandboxCertification(withFindings([FINDING_ROW]))!)).toEqual(certificationBlocked(readSandboxCertification(withFindings([stripped]))!));
+  });
+});
+
 describe("suppression survives the shared reader", () => {
   it("is a flag on the envelope, not collapsed into unavailable", () => {
     const raw = JSON.parse(JSON.stringify(SANDBOX_CERTIFICATION_FIXTURE));

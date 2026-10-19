@@ -43,6 +43,89 @@ describe("the inlined document has not drifted", () => {
   });
 });
 
+/** React's generated ids count up per render; the markup is otherwise compared byte for byte. */
+const markup = (html: string) => html.replace(/:r[0-9a-z]+:/g, ":r:");
+
+describe("the panel vocabulary is the published one", () => {
+  const broker = (state: string, freshness: string) =>
+    patched((raw) => {
+      const panels = raw.source_panels as Record<string, unknown>[];
+      panels[1]!.panel_state = state;
+      panels[1]!.freshness_state = freshness;
+    }).sourcePanels[1]!;
+
+  it("`ready` is ok, FRESH is OK; AGING, STALE and UNKNOWN stay themselves; `suppressed` is a flag on an unavailable panel", () => {
+    expect(broker("ready", "FRESH")).toMatchObject({ panelState: "ok", freshness: "OK", suppressed: false });
+    expect(broker("partial", "AGING")).toMatchObject({ panelState: "partial", freshness: "AGING" });
+    expect(broker("stale", "STALE")).toMatchObject({ panelState: "stale", freshness: "STALE" });
+    expect(broker("empty", "UNKNOWN")).toMatchObject({ panelState: "empty", freshness: "UNKNOWN" });
+    expect(broker("suppressed", "UNKNOWN")).toMatchObject({ panelState: "unavailable", suppressed: true });
+  });
+
+  it("the FE's own words, `error`-less unknown words and an unpublished freshness are not read as published", () => {
+    expect(broker("ok", "OK").panelState).toBe("unavailable");
+    expect(broker("ready", "PAUSED").freshness).toBeNull();
+    expect(broker("ready", "fresh").freshness).toBeNull();
+  });
+});
+
+describe("additive fields the V1 screen ignores", () => {
+  const FACTS = (raw: Record<string, any>) => {
+    raw.positions.rows = [{ symbol: "BTCUSDT", qty: "0.0120", hedged: false, n: 3 }];
+    raw.positions.exact_total = 1;
+    raw.blotter.rows = [{ order_id: "o-1" }];
+    raw.envelope_compliance.consumed = { capital_cap: "3820.00", fees_paid: "4.25", bad: 5 };
+    raw.envelope_compliance.headroom = { capital_cap: "1180.00" };
+    raw.rollback_readiness.ready = true;
+    raw.rollback_readiness.blocker_codes = ["ROLLBACK_DRILL_STALE"];
+    raw.series.resolution = "1h";
+    raw.series.points = [{ t: "2026-10-17T12:00:00Z", v: "1" }, 4];
+  };
+
+  it("reads rollback_readiness, envelope_compliance, positions, blotter and series as typed values", () => {
+    const r = patched(FACTS);
+    expect(r.rollbackDetail).toMatchObject({ ready: true, blockerCodes: ["ROLLBACK_DRILL_STALE"], evidenceHash: null });
+    expect(r.compliance).toMatchObject({
+      limits: { capitalCap: "5000", grossNotionalCap: "10000", dailyLossCap: "250", maxOpenOrders: 20 },
+      consumed: { capital_cap: "3820.00", fees_paid: "4.25" },
+      headroom: { capital_cap: "1180.00" },
+      baseRiskProfileVerified: false,
+    });
+    expect(r.positionRows?.rows).toEqual([{ symbol: "BTCUSDT", qty: "0.0120", hedged: false }]);
+    expect(r.positionRows?.exactTotal).toBe(1);
+    expect(r.blotterRows?.rows).toEqual([{ order_id: "o-1" }]);
+    expect(r.seriesDetail).toMatchObject({ resolution: "1h", points: [{ t: "2026-10-17T12:00:00Z", v: "1" }] });
+  });
+
+  it("the published dark body: ready is the schema's false, consumed and headroom are null, the collections are empty", () => {
+    const r = room();
+    expect(r.rollbackDetail).toMatchObject({ ready: false, evidenceHash: null });
+    expect(r.rollbackDetail!.blockerCodes.length).toBeGreaterThan(0);
+    expect(r.compliance).toMatchObject({ consumed: null, headroom: null, baseRiskProfileVerified: false });
+    expect(r.positionRows).toMatchObject({ exactTotal: null, returnedCount: 0, rows: [] });
+    expect(r.blotterRows).toMatchObject({ exactTotal: null, returnedCount: 0, rows: [] });
+    expect(r.seriesDetail).toMatchObject({ resolution: null, points: [] });
+  });
+
+  it("types are strict: `ready` is a boolean or null; a decimal that is a number is dropped; a wire word outside a cell's types is dropped", () => {
+    const r = patched((raw) => {
+      (raw.rollback_readiness as Record<string, unknown>).ready = "true";
+      (raw.envelope_compliance as Record<string, unknown>).consumed = { capital_cap: 3820, fees_paid: "01", ok: "4.25" };
+      (raw.envelope_compliance as Record<string, any>).limits.capital_cap = 5000;
+    });
+    expect(r.rollbackDetail!.ready).toBeNull();
+    expect(r.compliance!.consumed).toEqual({ ok: "4.25" });
+    expect(r.compliance!.limits.capitalCap).toBeNull();
+  });
+
+  it("the V1 screen renders byte for byte the same with or without them", () => {
+    const plain = markup(render(<CanaryControlRoomScreen room={room()} />).container.innerHTML);
+    cleanup();
+    const rich = markup(render(<CanaryControlRoomScreen room={patched(FACTS)} />).container.innerHTML);
+    expect(rich).toBe(plain);
+  });
+});
+
 describe("the guard cannot be missed, and is not a colour", () => {
   it("says LIVE · CANARY in text a screen reader reaches", () => {
     render(<CanaryControlRoomScreen room={room()} />);

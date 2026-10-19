@@ -26,17 +26,19 @@
  * - typed position, order and series rows (`positions.rows` is a free object,
  *   `series.points` has `maxItems 0`; FE-072, FE-029). `rows` stays `null`.
  *
- * Two defects of the shared V1 reader are visible here and are not repaired
- * (they live in `certification.ts`, which this screen must not edit): its panel
- * vocabulary has `ok` where the schema says `ready`, and its freshness list has
- * `OK` where the schema says `FRESH`, so a fresh or ready source reads as
- * `unavailable` / unknown. The view therefore says "not stated" for a freshness
- * it could not read, which is the safe error. It also drops
- * `rollback_readiness.ready` and `.blocker_codes`; no "Ready" is ever printed.
+ * The shared V1 reader (`certification.ts`) maps the schema's `ready` to the FE's `ok` and `FRESH` to `OK`,
+ * so a source-backed panel reads as it is published; a word outside the schema is `unavailable` / not stated.
+ * It also keeps `rollback_readiness.ready` / `.blocker_codes`, `envelope_compliance.{limits,consumed,headroom,
+ * base_risk_profile_verified}` and the `positions` / `blotter` rows, which this reader passes on:
+ * - "Ready" may be printed only when `rollback_readiness.ready` is the boolean `true` and nothing in the
+ *   same response contradicts it (`model.ts`, `rollbackHead`);
+ * - rows are drawn under the source's own field names (`readers/publishedRows.ts`), because the contract does
+ *   not name them (FE-072); the typed hi-fi columns stay `Not published (FE-072)`.
  */
 import type { Authority, FreshnessState, PanelStatus } from "../../../contracts";
 import type { CanaryActionPolicy, CanaryControlRoom, PanelEnvelope } from "../../../certification";
 import { readDecimal, type BoundaryDecimal } from "../../boundary";
+import { publishedRowsOf, type PublishedRows } from "../../readers/publishedRows";
 import { unsupportedText, type CanaryVersionRead } from "../../readers/dispatch";
 import type { CanaryParentV2 } from "../../readers/governanceParents";
 
@@ -147,8 +149,37 @@ export interface RowsFact<R> {
   panel: PanelFact | null;
   /** `null` = no typed rows are published (FE-072); an empty array means the source said "none". */
   rows: readonly R[] | null;
-  /** The server's exact total; `null` = not published. */
+  /** The server's exact total of the typed rows; `null` = not published. */
   total: number | null;
+  /**
+   * The rows the V1 body carries, under the source's own field names (the contract does not type them: FE-072).
+   * `null` = the body carries none, or its panel is not in a state that holds rows. Drawn only when `rows` is `null`.
+   */
+  published: PublishedRows | null;
+}
+
+/** An exact figure the compliance panel states under the source's own name. */
+export interface FigureFact {
+  key: string;
+  /** The decimal exactly as the server wrote it. */
+  exact: string;
+}
+
+export interface FigureSet {
+  /** A key spelled like a cap's published name belongs to that cap. */
+  byLimit: Readonly<Partial<Record<LimitKey, DecimalFact>>>;
+  /** Every other key, listed under its own name. */
+  other: readonly FigureFact[];
+}
+
+/** `envelope_compliance` as the response states it. Every field is the server's; nothing is divided or compared. */
+export interface ComplianceFact {
+  /** The caps the compliance panel states, per cap. A cap it does not state is absent. */
+  limits: Readonly<Partial<Record<LimitKey, DecimalFact>>>;
+  consumed: FigureSet | null;
+  headroom: FigureSet | null;
+  /** The boolean as published (`false` today); `null` = not a boolean. */
+  baseRiskProfileVerified: boolean | null;
 }
 
 export interface CanaryView {
@@ -180,6 +211,12 @@ export interface CanaryView {
   orders: RowsFact<OrderRow>;
   series: PanelFact | null;
   rollback: PanelFact | null;
+  /** `rollback_readiness.ready` as the boolean published; `null` = the response carries none (V2 body) or it is not a boolean. */
+  rollbackReady: boolean | null;
+  /** `rollback_readiness.blocker_codes` (at most 16). */
+  rollbackBlockerCodes: readonly string[];
+  /** `envelope_compliance`'s limits, consumed, headroom and base-risk-profile flag; `null` = not in this response (V2 body). */
+  complianceFacts: ComplianceFact | null;
   /** `null` = the response carries no command policy (V2 body). */
   protective: ActionGroupFact | null;
   scaleUp: ActionGroupFact | null;
@@ -205,7 +242,8 @@ const IDENT = /^[A-Za-z0-9._:-]{1,191}$/;
 const KNOWN_STATES: readonly PanelFactState[] = [
   "loading", "ok", "empty", "partial", "stale", "denied", "unavailable", "insufficient_data", "terminal", "suppressed",
 ];
-const KNOWN_FRESHNESS: readonly string[] = ["OK", "AGING", "STALE", "PAUSED", "UNKNOWN"];
+// The bodies publish FRESH | AGING | STALE | UNKNOWN (sandbox: OK | STALE | UNKNOWN); the V1 reader reads FRESH as OK.
+const KNOWN_FRESHNESS: readonly string[] = ["OK", "AGING", "STALE", "UNKNOWN"];
 
 function ident(value: unknown): string | null {
   return typeof value === "string" && IDENT.test(value) ? value : null;
@@ -285,7 +323,36 @@ function blockerFacts(
   return out;
 }
 
-const EMPTY_ROWS = { panel: null, rows: null, total: null } as const;
+const EMPTY_ROWS = { panel: null, rows: null, total: null, published: null } as const;
+
+/** Wire name of a cap, as `envelope_compliance.limits` spells it, to the screen's cap key. */
+const LIMIT_WIRE: Readonly<Record<string, LimitKey>> = {
+  capital_cap: "capital",
+  gross_notional_cap: "grossNotional",
+  daily_loss_cap: "dailyLoss",
+  max_open_orders: "openOrders",
+};
+
+function limitDecimal(key: LimitKey, value: unknown): DecimalFact | null {
+  return key === "openOrders" ? countFact(value) : moneyFact(value);
+}
+
+/** `consumed` / `headroom`: a key spelled like a cap belongs to that cap; any other key is listed under its own name. */
+function figureSet(map: Readonly<Record<string, string>> | null | undefined): FigureSet | null {
+  if (map === null || map === undefined || typeof map !== "object") return null;
+  const byLimit: Partial<Record<LimitKey, DecimalFact>> = {};
+  const other: FigureFact[] = [];
+  for (const [key, exact] of Object.entries(map)) {
+    const limit = Object.hasOwn(LIMIT_WIRE, key) ? LIMIT_WIRE[key]! : null;
+    if (limit !== null) {
+      const fact = limitDecimal(limit, exact);
+      if (fact !== null) byLimit[limit] = fact;
+    } else if (typeof exact === "string" && readDecimal(exact, { unit: "money" }) !== null && other.length < 8) {
+      other.push({ key, exact });
+    }
+  }
+  return { byLimit, other };
+}
 
 const LIMIT_ORDER: readonly LimitKey[] = LIMIT_KEYS;
 
@@ -356,6 +423,28 @@ function readV1(room: CanaryControlRoom, schemaVersion: string | null): CanaryVi
     : null;
 
   const policy = room.commandPolicy;
+  const compliance = room.compliance;
+  const complianceLimits: Partial<Record<LimitKey, DecimalFact>> = {};
+  if (compliance) {
+    for (const [key, value] of [
+      ["capital", compliance.limits.capitalCap],
+      ["grossNotional", compliance.limits.grossNotionalCap],
+      ["dailyLoss", compliance.limits.dailyLossCap],
+      ["openOrders", compliance.limits.maxOpenOrders],
+    ] as const) {
+      const fact = value === null ? null : limitDecimal(key, value);
+      if (fact !== null) complianceLimits[key] = fact;
+    }
+  }
+  const complianceFacts: ComplianceFact | null = compliance
+    ? {
+        limits: complianceLimits,
+        consumed: figureSet(compliance.consumed),
+        headroom: figureSet(compliance.headroom),
+        baseRiskProfileVerified: typeof compliance.baseRiskProfileVerified === "boolean" ? compliance.baseRiskProfileVerified : null,
+      }
+    : null;
+  const rollbackDetail = room.rollbackDetail;
   const blockers = blockerFacts([
     ["lifecycle", Array.isArray(room.lifecycleBlockers) ? room.lifecycleBlockers : []],
     ["envelope", Array.isArray(env?.blockerCodes) ? env.blockerCodes : []],
@@ -393,10 +482,15 @@ function readV1(room: CanaryControlRoom, schemaVersion: string | null): CanaryVi
     internal: sourceById.get("internal") ?? null,
     broker: sourceById.get("broker") ?? null,
     difference: sourceById.get("difference") ?? null,
-    positions: { ...EMPTY_ROWS, panel: panelFact(room.positions) },
-    orders: { ...EMPTY_ROWS, panel: panelFact(room.blotter) },
+    positions: { ...EMPTY_ROWS, panel: panelFact(room.positions), published: publishedRowsOf(room.positionRows) },
+    orders: { ...EMPTY_ROWS, panel: panelFact(room.blotter), published: publishedRowsOf(room.blotterRows) },
     series: panelFact(room.series),
     rollback: panelFact(room.rollbackReadiness),
+    rollbackReady: typeof rollbackDetail?.ready === "boolean" ? rollbackDetail.ready : null,
+    rollbackBlockerCodes: (Array.isArray(rollbackDetail?.blockerCodes) ? rollbackDetail.blockerCodes : [])
+      .filter((code): code is string => typeof code === "string" && code !== "" && code.length <= 191)
+      .slice(0, 16),
+    complianceFacts,
     protective: actionGroup(policy?.protective),
     scaleUp: actionGroup(policy?.scaleUp),
     productionCommandActive: policy === null || policy === undefined ? null : typeof policy.productionCommandActive === "boolean" ? policy.productionCommandActive : null,
@@ -480,6 +574,9 @@ function readV2(parent: CanaryParentV2, schemaVersion: string | null): CanaryVie
     orders: { ...EMPTY_ROWS },
     series: null,
     rollback: null,
+    rollbackReady: null,
+    rollbackBlockerCodes: [],
+    complianceFacts: null,
     protective: null,
     scaleUp: null,
     productionCommandActive: commandActive,
