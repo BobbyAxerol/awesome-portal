@@ -83,6 +83,14 @@
   font: var(--exec-font-meta);
   color: var(--ink-soft);
 }
+/* Request archive / Request gate review: disabled DockActions (the buttons and their reasons come from dock.css). */
+.exec-alp2-requests {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
 .exec-alp2-chip {
   padding: 2px var(--space-2);
   font: var(--exec-font-control);

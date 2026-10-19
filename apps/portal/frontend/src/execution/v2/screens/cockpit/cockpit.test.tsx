@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ExecutionApi, InboxResult } from "../../../api/ports";
@@ -996,3 +996,129 @@ describe("no dash stands in for a value", () => {
     expect(document.body.textContent).not.toMatch(/[—–]/);
   });
 });
+
+/* ── researcher opens one of their own requests (flow audit #3) ───────────── */
+
+describe("a researcher's own request, opened by path", () => {
+  const stanRows = () => ({ ...inbox(), ...{ rawRows: [wire("apr_a", "R1", "stan", "Alpha One"), wire("apr_b", "R2", "bobby", "Beta Two"), wire("apr_c", "PAPER_EXIT", "lan", "Gamma Exit"), wire("apr_d", "LIVE_GATE", "stan", "Delta Live")] } }) as InboxResult;
+  beforeEach(() => signIn({ userId: "usr_stan", username: "stan", capabilities: V2_ROLE_PRESETS.researcher }));
+
+  it("shows that request's evidence read-only, not the list, and reads only that gate", async () => {
+    const p = standardPort({}, stanRows());
+    await mount(p, "/governance/approvals/apr_a/r1", { pathSelection: { id: "apr_a", kind: "r1" } });
+    const evidence = screen.getByRole("region", { name: "Evidence" });
+    expect(within(evidence).getByRole("heading", { level: 2 })).toBeTruthy();
+    expect(within(evidence).getByText("apr_a")).toBeTruthy();
+    expect(screen.queryByRole("table", { name: "Your requests" })).toBeNull();
+    expect(p.called("getGateR1")).toHaveLength(1);
+    expect(p.called("getGateR2")).toHaveLength(0);
+    // no decision control of any kind, and no decision rail
+    expect(screen.queryByRole("complementary", { name: "Decision" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Approve|Reject|Deny|Other decisions|Extend/ })).toBeNull();
+    expect(screen.getByText(/Read only/)).toBeTruthy();
+  });
+
+  it("a request that is on the page but listed as someone else's is not opened and its evidence is never read", async () => {
+    const p = standardPort({}, stanRows());
+    await mount(p, "/governance/approvals/apr_b/r2", { pathSelection: { id: "apr_b", kind: "r2" } });
+    expect(screen.getByText("Not listed as yours")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Evidence" })).toBeNull();
+    expect(p.called("getGateR2")).toHaveLength(0);
+  });
+
+  it("a request off the loaded page is left to the server's read (its answer is the boundary)", async () => {
+    const p = standardPort({ getGateR1: () => ({ ok: false, status: "denied", reason: "Not yours." }) }, stanRows());
+    await mount(p, "/governance/approvals/apr_zz/r1", { pathSelection: { id: "apr_zz", kind: "r1" } });
+    expect(p.called("getGateR1")).toHaveLength(1);
+    expect(within(screen.getByRole("region", { name: "Evidence" })).getByText("Not yours.")).toBeTruthy();
+  });
+
+  it("the way back and Esc both call onClearPathSelection; without a selection the list is shown", async () => {
+    const clear = vi.fn();
+    const p = standardPort({}, stanRows());
+    const view = await mount(p, "/governance/approvals/apr_a/r1", { pathSelection: { id: "apr_a", kind: "r1" }, onClearPathSelection: clear });
+    fireEvent.click(screen.getByRole("button", { name: "← My requests" }));
+    expect(clear).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(clear).toHaveBeenCalledTimes(2);
+    view.unmount();
+    await mount(standardPort({}, stanRows()), "/governance/approvals", { onClearPathSelection: clear });
+    expect(screen.getByRole("table", { name: "Your requests" })).toBeTruthy();
+  });
+});
+
+/* ── lane, lens and waiver filter live in the URL (route audit M9) ────────── */
+
+describe("lane, lens and waiver filter are the URL's", () => {
+  const query = () => new URLSearchParams(where().split("?")[1] ?? "");
+
+  it("a lane chip writes view= with replace, All removes it, and nothing else in the query moves", async () => {
+    const p = standardPort();
+    await mount(p, "/governance/approvals?workspace_id=ws_x&sel=apr_a");
+    fireEvent.click(within(queue()).getByRole("button", { name: /^Exit/ }));
+    await settle();
+    expect(query().get("view")).toBe("exit-reviews");
+    expect(query().get("workspace_id")).toBe("ws_x");
+    expect(query().get("sel")).toBe("apr_a");
+    fireEvent.click(within(queue()).getByRole("button", { name: /^All gates/ }));
+    await settle();
+    expect(query().has("view")).toBe(false);
+  });
+
+  it("a reload on view=exit-reviews opens the Exit lane and asks the server for that view", async () => {
+    const p = standardPort();
+    await mount(p, "/governance/approvals?view=exit-reviews");
+    expect(within(queue()).getByRole("button", { name: /^Exit/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(p.called("listApprovals")[0]).toEqual([{ filter: "EXIT_REVIEWS", limit: 50 }]);
+  });
+
+  it("the lens is restored from lens= and the default stays out of the URL", async () => {
+    await mount(standardPort(), "/governance/approvals?lens=needs");
+    expect(within(queue()).getByRole("button", { name: /^Needs you/ }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(within(queue()).getByRole("button", { name: /^Open/ }));
+    await settle();
+    expect(query().has("lens")).toBe(false);
+  });
+
+  it("the waiver state is restored from waiver= (any case) and All stays out of the URL", async () => {
+    const w = standardPort();
+    await mount(w, "/governance/approvals?view=waiver&waiver=Expiring");
+    expect(w.called("getWaivers")).toEqual([[{ limit: 50, state: "EXPIRING" }]]);
+    expect(within(queue()).getByRole("button", { name: "Expiring" }).getAttribute("aria-pressed")).toBe("true");
+    expect(query().get("view")).toBe("waiver");
+    expect(query().get("waiver")).toBe("expiring");
+    fireEvent.click(within(queue()).getByRole("button", { name: "All" }));
+    await settle();
+    expect(query().has("waiver")).toBe(false);
+  });
+
+  it("an unknown view, lens or waiver reads as the default and is removed from the URL", async () => {
+    await mount(standardPort(), "/governance/approvals?view=nope&lens=zzz&waiver=qq&q=keep");
+    expect(within(queue()).getByRole("button", { name: /^All gates/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(query().get("q")).toBe("keep");
+    for (const key of ["view", "lens", "waiver"]) expect(query().has(key), key).toBe(false);
+  });
+
+  it("choosing a lane replaces the entry: one Back leaves the page", async () => {
+    const p = standardPort();
+    render(
+      <MemoryRouter initialEntries={["/prev", "/governance/approvals"]} initialIndex={1}>
+        <Cockpit api={p.api} />
+        <Where />
+        <BackButton />
+      </MemoryRouter>,
+    );
+    await settle();
+    fireEvent.click(within(queue().querySelector('[aria-label="Lane"]') as HTMLElement).getByRole("button", { name: /^R1/ }));
+    await settle();
+    expect(query().get("view")).toBe("r1");
+    fireEvent.click(screen.getByRole("button", { name: "History back" }));
+    await settle();
+    expect(where()).toBe("/prev");
+  });
+});
+
+function BackButton() {
+  const navigate = useNavigate();
+  return <button type="button" onClick={() => navigate(-1)}>History back</button>;
+}

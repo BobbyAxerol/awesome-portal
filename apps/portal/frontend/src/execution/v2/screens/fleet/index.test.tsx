@@ -582,7 +582,7 @@ describe("drawer", () => {
     expect(within(drawer).getAllByText("Main").length).toBeGreaterThan(0);
     expect(within(drawer).getAllByText("Satellite").length).toBeGreaterThan(0);
     const open = within(drawer).getByRole("link", { name: "Open Alpha 360" });
-    expect(open.getAttribute("href")).toBe("/deployments/alphas/alpha_b");
+    expect(open.getAttribute("href")).toBe("/deployments/alphas/alpha_b?from=fleet");
     expect(drawer.textContent).not.toMatch(/USDT/);
   });
 
@@ -640,7 +640,7 @@ describe("drawer", () => {
     mount(api, "/execution/fleet?sel=alpha_zzz");
     const drawer = await screen.findByRole("complementary", { name: "alpha_zzz" });
     await waitFor(() => expect(within(drawer).getByText("Not in the loaded page")).toBeTruthy());
-    expect(within(drawer).getByRole("link", { name: "Open Alpha 360" }).getAttribute("href")).toBe("/deployments/alphas/alpha_zzz");
+    expect(within(drawer).getByRole("link", { name: "Open Alpha 360" }).getAttribute("href")).toBe("/deployments/alphas/alpha_zzz?from=fleet");
   });
 
   it("a row with no owner says Not available in the drawer", async () => {
@@ -998,5 +998,72 @@ describe("board view", () => {
     expect(screen.queryByRole("group", { name: "Alpha fleet board" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     await board();
+  });
+});
+
+/* ── D7: a view the screen does not know is the table ─────────────────────── */
+
+describe("an unknown view is the table (D7 receiving side)", () => {
+  it.each(["foo", "Board", "TABLE"])("?view=%s still reads the fleet and shows the table", async (value) => {
+    const { api, calls } = makeApi();
+    mount(api, `/execution/fleet?view=${value}`);
+    await loaded();
+    expect(calls.length).toBeGreaterThan(0);
+    expect(names()).toEqual(["Carry A", "Basis B", "Momentum C", "Grid D", "Idea E"]);
+    expect(screen.queryByLabelText("Loading")).toBeNull();
+    expect(screen.getByRole("button", { name: "Table" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Board" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("view=board and view=table keep their meaning", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?view=board");
+    expect(await screen.findByRole("group", { name: "Alpha fleet board" })).toBeTruthy();
+    cleanup();
+    mount(makeApi().api, "/execution/fleet?view=table");
+    await loaded();
+  });
+});
+
+/* ── Back by source: what the Fleet writes on its links into Alpha 360 ────── */
+
+describe("links into Alpha 360 say where they came from (flow audit #8)", () => {
+  it("the drawer link carries from=fleet and the list state, not sel", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?q=a&stage=paper&owner=Bobby-001&sort=name%3Aasc&view=table&sel=alpha_a&workspace_id=ws_1");
+    const drawer = await screen.findByRole("complementary", { name: "Carry A" });
+    const href = within(drawer).getByRole("link", { name: "Open Alpha 360" }).getAttribute("href")!;
+    const url = new URL(href, "http://x");
+    expect(url.pathname).toBe("/deployments/alphas/alpha_a");
+    expect(url.searchParams.get("from")).toBe("fleet");
+    expect(url.searchParams.get("workspace_id")).toBe("ws_1");
+    expect(url.searchParams.has("sel")).toBe(false);
+    const back = new URLSearchParams(url.searchParams.get("back") ?? "");
+    expect(Object.fromEntries(back)).toEqual({ q: "a", stage: "paper", owner: "Bobby-001", sort: "name:asc", view: "table" });
+  });
+
+  it("with no list state the link carries from=fleet alone", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?sel=alpha_a");
+    const drawer = await screen.findByRole("complementary", { name: "Carry A" });
+    expect(within(drawer).getByRole("link", { name: "Open Alpha 360" }).getAttribute("href")).toBe("/deployments/alphas/alpha_a?from=fleet");
+  });
+
+  it("a board card link carries the same origin, including view=board", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?view=board&owner=Bobby-001");
+    const board = await screen.findByRole("group", { name: "Alpha fleet board" });
+    const link = within(board).getAllByRole("link")[0]!;
+    const url = new URL(link.getAttribute("href")!, "http://x");
+    expect(url.searchParams.get("from")).toBe("fleet");
+    expect(Object.fromEntries(new URLSearchParams(url.searchParams.get("back") ?? ""))).toEqual({ view: "board", owner: "Bobby-001" });
+  });
+
+  it("a list state too long to carry falls back to from=fleet alone", async () => {
+    const { api } = makeApi();
+    const long = "x".repeat(79);
+    mount(api, `/execution/fleet?q=${long}&owner=${long}&health=${long}&sort=${long}&sel=alpha_a`);
+    const drawer = await screen.findByRole("complementary", { name: "alpha_a" });
+    expect(within(drawer).getByRole("link", { name: "Open Alpha 360" }).getAttribute("href")).toBe("/deployments/alphas/alpha_a?from=fleet");
   });
 });

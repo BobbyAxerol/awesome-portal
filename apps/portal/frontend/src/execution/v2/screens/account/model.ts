@@ -459,7 +459,7 @@ export interface AccountView {
   /** Distinct currencies the account's own ledger rows name, sorted. */
   currencies: readonly string[];
   sleeves: readonly Sleeve[];
-  deployments: readonly { id: string; mode: string | null }[];
+  deployments: readonly { id: string; mode: string | null; stage: string | null }[];
   positions: readonly PositionFacts[];
   allocations: readonly AllocationFacts[];
   sync: readonly SyncEntry[];
@@ -582,7 +582,7 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
     sleeves,
     deployments: deployments.flatMap((row) => {
       const id = text(row.deployment_id);
-      return id ? [{ id, mode: text(row.mode) }] : [];
+      return id ? [{ id, mode: text(row.mode), stage: text(row.stage) }] : [];
     }).slice(0, ROW_CAP),
     positions,
     allocations,
@@ -921,10 +921,16 @@ export function stageWord(mode: string | null): string {
   }
 }
 
-/** The V1 route of a deployment, by the mode it runs in. */
-export function deploymentHref(deployment: string, mode: string | null): string {
+/**
+ * The V1 route of a deployment, by the mode it runs in. A Canary deployment has
+ * its own control room under the live route (`/live/:id/canary`); `stage` is
+ * read from the source when it publishes one, and a `canary` mode counts too.
+ */
+export function deploymentHref(deployment: string, mode: string | null, stage: string | null = null): string {
+  const id = encodeURIComponent(deployment);
+  if ((stage ?? "").toLowerCase() === "canary" || (mode ?? "").toLowerCase() === "canary") return `/deployments/live/${id}/canary`;
   const lane = mode === "paper" || mode === "sandbox" ? mode : "live";
-  return `/deployments/${lane}/${encodeURIComponent(deployment)}`;
+  return `/deployments/${lane}/${id}`;
 }
 export const alphaHref = (id: string): string => `/deployments/alphas/${encodeURIComponent(id)}`;
 export const portfolioHref = (id: string): string => `/deployments/portfolios/${encodeURIComponent(id)}`;

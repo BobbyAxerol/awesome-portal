@@ -1,6 +1,8 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { readUtcEpochMs, type UtcEpochMs } from "../../screenDataContract";
@@ -220,9 +222,20 @@ const ROWS: EventFeedRow[] = [
   { id: "e1", at: at(Date.UTC(2026, 9, 1, 0, 5)), kind: "incident", target: "Binance-02", outcome: "Broker sync diverged" },
 ];
 
+function Where() {
+  const { pathname } = useLocation();
+  return <output data-testid="where">{pathname}</output>;
+}
+const feedTree = (ui: ReactElement) => <MemoryRouter initialEntries={["/start"]}>{ui}<Where /></MemoryRouter>;
+/** EventFeed links are router links, so the feed is rendered inside a router. */
+function renderFeed(ui: ReactElement) {
+  const view = render(feedTree(ui));
+  return { ...view, rerender: (next: ReactElement) => view.rerender(feedTree(next)) };
+}
+
 describe("EventFeed", () => {
   it("renders UTC time, kind chip, target and outcome in source order, with a named table", () => {
-    render(<EventFeed scope="BTC-Trend v3" rows={ROWS} />);
+    renderFeed(<EventFeed scope="BTC-Trend v3" rows={ROWS} />);
     const table = screen.getByRole("table", { name: "Events for BTC-Trend v3" });
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(3);
@@ -236,29 +249,29 @@ describe("EventFeed", () => {
   });
 
   it("adds Actor and Receipt only when some row has them, and says Not available for a gap", () => {
-    render(<EventFeed scope="X" rows={[{ ...ROWS[0], actor: "bjones" }, ROWS[1]]} />);
+    renderFeed(<EventFeed scope="X" rows={[{ ...ROWS[0], actor: "bjones" }, ROWS[1]]} />);
     expect(screen.getByRole("columnheader", { name: "Actor" })).toBeTruthy();
     expect(screen.getAllByText("Not available").length).toBeGreaterThan(0);
   });
 
   it("empty ok-with-no-rows reads as empty, not as a blank table", () => {
-    render(<EventFeed scope="BTC-Trend v3" rows={[]} />);
+    renderFeed(<EventFeed scope="BTC-Trend v3" rows={[]} />);
     expect(screen.getByText("Nothing to show")).toBeTruthy();
     expect(screen.getByText(/No events recorded for BTC-Trend v3/)).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
   });
 
   it("unavailable and denied carry their reason; a missing reason is said, not hidden", () => {
-    const { unmount } = render(<EventFeed scope="X" rows={[]} status="unavailable" reason="Journal read timed out" />);
+    const { unmount } = renderFeed(<EventFeed scope="X" rows={[]} status="unavailable" reason="Journal read timed out" />);
     expect(screen.getByText("Unavailable")).toBeTruthy();
     expect(screen.getByText("Journal read timed out")).toBeTruthy();
     unmount();
-    render(<EventFeed scope="X" rows={[]} status="denied" />);
+    renderFeed(<EventFeed scope="X" rows={[]} status="denied" />);
     expect(screen.getByText("No reason was published.")).toBeTruthy();
   });
 
   it("a feed with no source is Not published (FE-031)", () => {
-    render(<EventFeed scope="INC-44" rows={ROWS} notPublished="FE-031" />);
+    renderFeed(<EventFeed scope="INC-44" rows={ROWS} notPublished="FE-031" />);
     expect(document.body.textContent).toContain("Not published");
     expect(document.body.textContent).toContain("(FE-031)");
     expect(screen.queryByRole("table")).toBeNull();
@@ -266,7 +279,7 @@ describe("EventFeed", () => {
 
   it("Load more follows the keyset contract: shown while hasMore, calls once, busy ignores clicks", () => {
     const onLoadMore = vi.fn();
-    const { rerender } = render(<EventFeed scope="X" rows={ROWS} cursor={{ hasMore: true, onLoadMore }} />);
+    const { rerender } = renderFeed(<EventFeed scope="X" rows={ROWS} cursor={{ hasMore: true, onLoadMore }} />);
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     expect(onLoadMore).toHaveBeenCalledTimes(1);
     rerender(<EventFeed scope="X" rows={ROWS} cursor={{ hasMore: true, loadingMore: true, onLoadMore }} />);
@@ -282,15 +295,29 @@ describe("EventFeed", () => {
 
   it("a failed page is announced, keeps the rows, and offers Try again", () => {
     const onLoadMore = vi.fn();
-    render(<EventFeed scope="X" rows={ROWS} cursor={{ hasMore: true, error: "Timed out", onLoadMore }} />);
+    renderFeed(<EventFeed scope="X" rows={ROWS} cursor={{ hasMore: true, error: "Timed out", onLoadMore }} />);
     expect(screen.getByRole("alert").textContent).toContain("Could not load more events");
     expect(screen.getAllByRole("row")).toHaveLength(4);
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(onLoadMore).toHaveBeenCalledTimes(1);
   });
 
+  it("an internal row link is handled by the router: the click is prevented (no page load) and the location changes", () => {
+    renderFeed(<EventFeed scope="X" rows={ROWS} />);
+    const link = screen.getByRole("link", { name: "BTC-Trend v3" });
+    const notPrevented = fireEvent.click(link);
+    expect(notPrevented).toBe(false);
+    expect(screen.getByTestId("where").textContent).toBe("/alphas/btc");
+  });
+
+  it("an href with a scheme stays a plain anchor", () => {
+    renderFeed(<EventFeed scope="X" rows={[{ ...ROWS[1], href: "https://example.test/x" }]} />);
+    const link = screen.getByRole("link", { name: "BTC-Trend v3" });
+    expect(link.getAttribute("href")).toBe("https://example.test/x");
+  });
+
   it("bare drops the panel chrome", () => {
-    render(<EventFeed scope="X" rows={ROWS} bare />);
+    renderFeed(<EventFeed scope="X" rows={ROWS} bare />);
     expect(screen.queryByRole("region")).toBeNull();
     expect(screen.getByRole("table")).toBeTruthy();
   });

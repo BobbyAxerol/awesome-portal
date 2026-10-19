@@ -16,6 +16,7 @@ import type { ProfileEnvelope } from "../../../api/profileRead";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { KpiStrip, Kpi, SectionPanel, Triad } from "../../blocks";
+import { withoutOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import {
   FE, SYNC_SHOWN, alphaHref, balanceFacts, brokerFacts, coverageFlag, deploymentHref, diffFacts, headroomFacts,
@@ -79,7 +80,7 @@ export function SleevesPanel({ ctx }: { ctx: PanelContext }) {
       label: "Sleeve",
       render: (row) => row.current
         ? <span className="exec-acct-name">{row.label}</span>
-        : <Link className="exec-acct-link" to={withContext(`/deployments/accounts/${encodeURIComponent(row.accountId)}`, params)}>{row.label}</Link>,
+        : <Link className="exec-acct-link" to={withContext(`/deployments/accounts/${encodeURIComponent(row.accountId)}`, withoutOrigin(params))}>{row.label}</Link>,
     },
     { key: "portfolio", label: "Portfolio", render: (row) => (row.portfolio === null ? <Na /> : row.portfolio) },
     { key: "internal", label: "Internal balance", numeric: true, render: (row) => <Value metric={row.internal} suffix={ctx.currency ?? undefined} /> },
@@ -181,18 +182,18 @@ export function AllocationsPanel({ ctx }: { ctx: PanelContext }) {
     {
       key: "alpha",
       label: "Alpha",
-      render: (row) => row.alpha === null ? <Na /> : <Link className="exec-acct-link" to={withContext(alphaHref(row.alpha), params)}>{row.alpha}</Link>,
+      render: (row) => row.alpha === null ? <Na /> : <Link className="exec-acct-link" to={withContext(alphaHref(row.alpha), withoutOrigin(params))}>{row.alpha}</Link>,
     },
     {
       key: "deployment",
       label: "Deployment",
-      render: (row) => row.deployment === null ? <Na /> : <Link className="exec-acct-link" to={withContext(deploymentHref(row.deployment, row.mode), params)}>{row.deployment}</Link>,
+      render: (row) => row.deployment === null ? <Na /> : <Link className="exec-acct-link" to={withContext(deploymentHref(row.deployment, row.mode), withoutOrigin(params))}>{row.deployment}</Link>,
     },
     { key: "stage", label: "Stage", render: (row) => stageWord(row.mode) },
     {
       key: "portfolio",
       label: "Portfolio",
-      render: (row) => row.portfolio === null ? <Na /> : <Link className="exec-acct-link" to={withContext(portfolioHref(row.portfolio), params)}>{row.portfolio}</Link>,
+      render: (row) => row.portfolio === null ? <Na /> : <Link className="exec-acct-link" to={withContext(portfolioHref(row.portfolio), withoutOrigin(params))}>{row.portfolio}</Link>,
     },
     { key: "allocation", label: "Allocation", numeric: true, render: (row) => <Value metric={row.allocation} suffix={row.currency ?? undefined} /> },
   ];

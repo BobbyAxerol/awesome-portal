@@ -8,6 +8,8 @@
  * and never a zero. A table shows at most `ROW_CAP` rows and says "top N of
  * total" when it cuts.
  */
+import { Link } from "react-router-dom";
+
 import type { AlphaFleetItem } from "../../../api/profileRead";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
@@ -28,13 +30,13 @@ export function DeploymentsTab({ rows, canSeeAccounts, linkTo }: { rows: readonl
   const shown = rows.slice(0, ROW_CAP);
   const columns: CardsColumn<DeploymentRow>[] = [
     { key: "stage", label: "Stage", render: (r) => <span className="exec-alp2-stage" data-stage={r.stage ?? "unknown"}><i aria-hidden="true" />{r.stageLabel}</span> },
-    { key: "deployment", label: "Deployment", render: (r) => <a className="exec-blk-link" href={linkTo(r.href)}>{r.id}</a> },
+    { key: "deployment", label: "Deployment", render: (r) => <Link className="exec-blk-link" to={linkTo(r.href)}>{r.id}</Link> },
     {
       key: "account",
       label: "Account · portfolio",
       render: (r) => (
         <>
-          {canSeeAccounts ? <a className="exec-blk-link" href={linkTo(`/deployments/accounts/${encodeURIComponent(r.accountId)}`)}>{r.accountId}</a> : <Na />}
+          {canSeeAccounts ? <Link className="exec-blk-link" to={linkTo(`/deployments/accounts/${encodeURIComponent(r.accountId)}`)}>{r.accountId}</Link> : <Na />}
           {r.portfolio ? <span className="exec-alp2-dim"> · {r.portfolio}</span> : null}
         </>
       ),
@@ -133,7 +135,7 @@ export function PositionsTab({ rows, canSeeAccounts, linkTo }: { rows: readonly 
     {
       key: "account",
       label: "Account",
-      render: (r) => (canSeeAccounts && r.accountId ? <a className="exec-blk-link" href={linkTo(`/deployments/accounts/${encodeURIComponent(r.accountId)}`)}>{r.accountId}</a> : <Na />),
+      render: (r) => (canSeeAccounts && r.accountId ? <Link className="exec-blk-link" to={linkTo(`/deployments/accounts/${encodeURIComponent(r.accountId)}`)}>{r.accountId}</Link> : <Na />),
     },
     { key: "qty", label: "Quantity", numeric: true, render: (r) => <Dec value={r.quantity} unit="qty" /> },
     { key: "entry", label: "Entry", numeric: true, render: (r) => <Dec value={r.entry} /> },

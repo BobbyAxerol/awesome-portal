@@ -9,6 +9,7 @@
  * about a stage, the deployments it runs there, is listed beneath.
  */
 import { useId } from "react";
+import { Link } from "react-router-dom";
 
 import { Flag } from "../../Flag";
 import { JourneySpine, SectionPanel, SPINE_STAGES, type SpineStageId } from "../../blocks";
@@ -55,7 +56,7 @@ function StageDetail({ stage, current, rows, linkTo }: { stage: SpineStageId; cu
           <ul className="exec-alp2-stage-deps" aria-label={`Deployments in ${spec.label}`}>
             {here.map((row) => (
               <li key={row.id}>
-                <a className="exec-blk-link" href={linkTo(row.href)}>{row.id}</a>
+                <Link className="exec-blk-link" to={linkTo(row.href)}>{row.id}</Link>
                 <Flag kind={row.runtime.kind} label={row.runtime.label} size="sm" />
                 <span className="exec-alp2-dim">{row.venue}</span>
                 {row.allocation !== null ? (

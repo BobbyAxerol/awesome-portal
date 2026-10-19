@@ -10,6 +10,7 @@
  * footer. `focus=order:<id>` (or `fill:<id>`) opens the replay at that order.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 
 import type { MarketCandleInterval } from "../../../../api/marketCandles";
 import type { ExecutionApi } from "../../../../api/ports";
@@ -33,9 +34,11 @@ export interface ReplayViewProps {
   canSeeAccounts: boolean;
   /** Where the Orders & Fills tab lives, for the banner's way back. */
   ordersHref: string;
+  /** The list the reader came from (the Blotter with `from=blotter`); absent means the Orders & Fills tab. */
+  back?: { label: string; to: string };
 }
 
-export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, canSeeAccounts, ordersHref }: ReplayViewProps) {
+export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, canSeeAccounts, ordersHref, back }: ReplayViewProps) {
   const target = focusTarget(focus);
   const symbols = useMemo(() => symbolsOf(book.orders, book.fills), [book.orders, book.fills]);
   const focusSymbol = useMemo(() => {
@@ -142,7 +145,7 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
               Opened at {target.kind} <span className="exec-blk-id">{target.id}</span>. The matching rows and markers are highlighted.
             </>
           )}{" "}
-          <a className="exec-blk-link" href={ordersHref}>Back to Orders &amp; Fills</a>
+          <Link className="exec-blk-link" to={back?.to ?? ordersHref}>Back to {back?.label ?? "Orders & Fills"}</Link>
         </div>
       ) : null}
       {shortfalls.length > 0 || pagerOnly ? (

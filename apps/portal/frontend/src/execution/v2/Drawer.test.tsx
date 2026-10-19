@@ -1,6 +1,6 @@
 import { StrictMode, type ReactNode } from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { Link, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { Link, MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DockAction, Drawer, useDockMode, useDockSelection, type DockMode } from "./Drawer";
@@ -17,6 +17,7 @@ function Screen({ mode = "dock" }: { mode?: DockMode }) {
   return (
     <>
       <button type="button" onClick={() => select("dep_1")}>Open row</button>
+      <button type="button" onClick={() => select("dep_2")}>Open other row</button>
       <button type="button">Elsewhere</button>
       <Drawer
         open={selection !== null}
@@ -61,6 +62,86 @@ describe("sel opens and closes the drawer", () => {
   it("an invalid sel reads as closed", () => {
     mount(`/fleet?sel=${"x".repeat(300)}`);
     expect(screen.queryByRole("complementary")).toBeNull();
+  });
+});
+
+function Nav() {
+  const navigate = useNavigate();
+  return (
+    <>
+      <button type="button" onClick={() => navigate(-1)}>Go back</button>
+      <button type="button" onClick={() => navigate({ search: "?q=btc&sel=dep_1" }, { replace: true })}>Filter while open</button>
+    </>
+  );
+}
+
+function mountWithHistory(entries: string[], index?: number) {
+  return render(
+    <MemoryRouter initialEntries={entries} initialIndex={index}>
+      <Screen />
+      <Nav />
+    </MemoryRouter>,
+  );
+}
+const where = () => screen.getByTestId("where").textContent;
+
+describe("close leaves no duplicate history entry (M8)", () => {
+  it("an open pushed in this session is closed with Back: one Back more reaches the page before, not the same page again", () => {
+    mountWithHistory(["/prev", "/fleet"]);
+    fireEvent.click(screen.getByText("Open row"));
+    expect(where()).toBe("/fleet?sel=dep_1");
+    fireEvent.click(screen.getByText("Close"));
+    expect(where()).toBe("/fleet");
+    expect(screen.queryByRole("complementary")).toBeNull();
+    fireEvent.click(screen.getByText("Go back"));
+    expect(where()).toBe("/prev");
+  });
+
+  it("Esc takes the same path as the Close button", () => {
+    mountWithHistory(["/prev", "/fleet?env=paper"]);
+    fireEvent.click(screen.getByText("Open row"));
+    fireEvent.keyDown(screen.getByRole("complementary"), { key: "Escape" });
+    expect(where()).toBe("/fleet?env=paper");
+    fireEvent.click(screen.getByText("Go back"));
+    expect(where()).toBe("/prev");
+  });
+
+  it("a deep link (sel in the first URL) is replaced away: nothing was pushed, Back still leaves the page", () => {
+    mountWithHistory(["/prev", "/fleet?sel=dep_1"]);
+    fireEvent.click(screen.getByText("Close"));
+    expect(where()).toBe("/fleet");
+    fireEvent.click(screen.getByText("Go back"));
+    expect(where()).toBe("/prev");
+  });
+
+  it("closing after switching rows replaces sel (the entry before still carries a sel) and keeps the page", () => {
+    mountWithHistory(["/prev", "/fleet"]);
+    fireEvent.click(screen.getByText("Open row"));
+    fireEvent.click(screen.getByText("Open other row"));
+    expect(where()).toBe("/fleet?sel=dep_2");
+    fireEvent.click(screen.getByText("Close"));
+    expect(where()).toBe("/fleet");
+    fireEvent.click(screen.getByText("Go back"));
+    expect(where()).toBe("/fleet?sel=dep_1");
+  });
+
+  it("a filter changed while the panel is open is kept: close replaces instead of going back over it", () => {
+    mountWithHistory(["/prev", "/fleet"]);
+    fireEvent.click(screen.getByText("Open row"));
+    fireEvent.click(screen.getByText("Filter while open"));
+    expect(where()).toBe("/fleet?q=btc&sel=dep_1");
+    fireEvent.click(screen.getByText("Close"));
+    expect(where()).toBe("/fleet?q=btc");
+  });
+
+  it("an open after other navigation is not mistaken for the earlier one", () => {
+    mountWithHistory(["/fleet"]);
+    fireEvent.click(screen.getByText("Open row"));
+    fireEvent.click(screen.getByText("Go back"));
+    expect(where()).toBe("/fleet");
+    fireEvent.click(screen.getByText("Open row"));
+    fireEvent.click(screen.getByText("Close"));
+    expect(where()).toBe("/fleet");
   });
 });
 
@@ -187,6 +268,11 @@ describe("DockAction", () => {
     wrap(<DockAction label="Recall" reason="Your role does not include this." accessHref="/profile/access" />);
     const link = screen.getByRole("link", { name: "My access: Recall" });
     expect(link.getAttribute("href")).toBe("/profile/access?env=paper");
+  });
+
+  it("does not hand the page's own Back (from, back) to My access", () => {
+    render(<MemoryRouter initialEntries={["/x?env=paper&from=fleet&back=q%3Da"]}><DockAction label="Recall" reason="r" accessHref="/profile/access" /></MemoryRouter>);
+    expect(screen.getByRole("link", { name: "My access: Recall" }).getAttribute("href")).toBe("/profile/access?env=paper");
   });
 
   it("takes a custom link label and has no link without an href", () => {

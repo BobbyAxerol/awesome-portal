@@ -12,6 +12,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { DockAction, Drawer, type DockMode } from "../../Drawer";
 import { JourneySpine } from "../../blocks";
 import { Flag } from "../../Flag";
+import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import { utcStamp } from "../../../time";
 import { alphaHref, FE, notPublished, type FleetRow } from "./fleetModel";
@@ -39,7 +40,8 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 
 export function FleetDrawer({ alphaId, row, loading, mode, onClose }: FleetDrawerProps) {
   const [params] = useSearchParams();
-  const link = withContext(alphaHref(alphaId), params);
+  // Back on Alpha 360 returns to this list as it is now (q, lens, sort, view, owner, health), `sel` excluded.
+  const link = withContext(withOrigin(alphaHref(alphaId), { kind: "fleet" }, params), params);
   const open = (
     <Link className="exec-dock-btn exec-fleet-open" data-variant="primary" to={link}>Open Alpha 360</Link>
   );

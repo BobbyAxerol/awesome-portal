@@ -22,9 +22,10 @@
  * Not `.exec-drawer*`: that namespace belongs to CommandPlanDrawer.
  */
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import "./css/dock.css";
+import { withoutOrigin } from "./backTo";
 import { useExecUrlState, withContext } from "./urlState";
 
 export type DockMode = "dock" | "overlay";
@@ -52,14 +53,68 @@ export interface DockSelection {
   selection: string | null;
   /** Pushes, so Back closes the panel. */
   select(id: string): void;
-  /** Replaces, so closing leaves no extra history entry that would reopen it. */
+  /**
+   * Closes without leaving a duplicate entry. When the open pushed this entry in
+   * this session and the entry before it is the same page without `sel`, Back is
+   * taken (history goes [A] rather than [A, A]); otherwise (a deep link, a switch
+   * from one row to another, a filter changed while open) `sel` is replaced away.
+   */
   close(): void;
+}
+
+const withoutSel = (search: string): string => {
+  const next = new URLSearchParams(search);
+  next.delete("sel");
+  return next.toString();
+};
+
+interface PushedEntry {
+  /** The history entry the open created. */
+  key: string;
+  /** What the entry before it showed: same page, same query, no `sel`. */
+  pathname: string;
+  search: string;
 }
 
 export function useDockSelection(): DockSelection {
   const { value, set } = useExecUrlState();
-  const select = useCallback((id: string) => set({ sel: id }), [set]);
-  const close = useCallback(() => set({ sel: null }, { replace: true }), [set]);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const here = useRef(location);
+  here.current = location;
+  // `select` notes the entry it leaves; the render that follows names the entry it made.
+  const pending = useRef<{ fromKey: string; pathname: string; search: string } | null>(null);
+  const pushed = useRef<PushedEntry | null>(null);
+
+  useEffect(() => {
+    const waiting = pending.current;
+    if (waiting === null || location.key === waiting.fromKey) return;
+    pending.current = null;
+    pushed.current = { key: location.key, pathname: waiting.pathname, search: waiting.search };
+  }, [location.key]);
+
+  const select = useCallback(
+    (id: string) => {
+      const at = here.current;
+      const current = new URLSearchParams(at.search).get("sel");
+      if (current === id) return;
+      pushed.current = null;
+      // Only an open from "nothing selected" can be undone by Back; switching rows leaves a `sel` behind.
+      pending.current = current === null ? { fromKey: at.key, pathname: at.pathname, search: withoutSel(at.search) } : null;
+      set({ sel: id });
+    },
+    [set],
+  );
+  const close = useCallback(() => {
+    const at = here.current;
+    const entry = pushed.current;
+    if (entry !== null && entry.key === at.key && entry.pathname === at.pathname && entry.search === withoutSel(at.search)) {
+      pushed.current = null;
+      navigate(-1);
+      return;
+    }
+    set({ sel: null }, { replace: true });
+  }, [set, navigate]);
   return { selection: value.sel, select, close };
 }
 
@@ -237,7 +292,7 @@ export function DockAction({ label, onAction, reason, accessHref, accessLabel = 
       {blocked ? (
         <div className="exec-dock-why" data-l={label}>
           <p id={reasonId} className="exec-dock-reason" title={text}>{text}</p>
-          {accessHref ? <Link className="exec-dock-access" to={withContext(accessHref, params)} aria-label={`${accessLabel}: ${label}`}>{accessLabel}</Link> : null}
+          {accessHref ? <Link className="exec-dock-access" to={withContext(accessHref, withoutOrigin(params))} aria-label={`${accessLabel}: ${label}`}>{accessLabel}</Link> : null}
         </div>
       ) : null}
     </div>

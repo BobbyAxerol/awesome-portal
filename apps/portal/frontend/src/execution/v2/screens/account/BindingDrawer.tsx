@@ -21,6 +21,7 @@ import type { BindingDetailRead } from "../../../api/profileRead";
 import { PanelState } from "../../../components/states";
 import { DockAction, Drawer, type DockMode } from "../../Drawer";
 import { Flag } from "../../Flag";
+import { withOrigin } from "../../backTo";
 import { ENV_LABEL, withContext } from "../../urlState";
 import { useBindingDetail, useBindingExposure } from "./reads";
 import {
@@ -119,8 +120,8 @@ export function BindingDrawer({ api, bindingId, row, environment, mode, capabili
     <>
       {accountId !== null ? (
         <>
-          <Link className="exec-dock-btn exec-acct-open" data-variant="primary" to={withContext(accountHref(accountId), params)}>Open account</Link>
-          <Link className="exec-dock-btn exec-acct-open" to={withContext(`${accountHref(accountId)}?view=physical`, params)}>Physical binding</Link>
+          <Link className="exec-dock-btn exec-acct-open" data-variant="primary" to={withContext(withOrigin(accountHref(accountId), { kind: "accounts" }, params), params)}>Open account</Link>
+          <Link className="exec-dock-btn exec-acct-open" to={withContext(withOrigin(`${accountHref(accountId)}?view=physical`, { kind: "accounts" }, params), params)}>Physical binding</Link>
         </>
       ) : null}
       <DockAction label="Rotate credential" reason={rotateReason} accessHref={canManage ? undefined : ACCESS_PATH} />

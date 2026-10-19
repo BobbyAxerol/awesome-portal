@@ -23,6 +23,7 @@ import { useDockMode, useDockSelection } from "../../Drawer";
 import { Kpi, KpiStrip } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
+import { withOrigin } from "../../backTo";
 import { serializeUrlParams, useExecUrlState, withContext } from "../../urlState";
 import { ColumnsMenu, FilterChips, type FilterChip } from "./fleetControls";
 import { FleetBoard } from "./FleetBoard";
@@ -76,8 +77,11 @@ export default function FleetScreen({ api }: FleetScreenProps) {
   const health = params.get("health")?.trim() || null;
   const archived = tab === ARCHIVED_TAB;
   const lens: FleetLens | null = archived ? "archived" : lensForStages(stage);
-  const tableView = view === null || view === "table";
+  // D7: a `view` the screen does not know is the table. The read is enabled by the view being table or board, so a stray
+  // value (`?view=foo`, `?view=Board`) must never switch it off and leave the page on a skeleton.
+  const mapView = view === "map";
   const boardView = view === "board";
+  const tableView = !boardView && !mapView;
   const hiddenColumns = useMemo(() => parseHiddenColumns(params.get(HIDDEN_COLUMNS_PARAM)), [params]);
 
   const filters: FleetFilters = useMemo(
@@ -216,7 +220,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
           <span className="exec-fleet-seg" role="group" aria-label="View">
             <button type="button" className="exec-fleet-segbtn" aria-pressed={tableView} onClick={() => url.set({ view: null })}>Table</button>
             <button type="button" className="exec-fleet-segbtn" aria-pressed={boardView} onClick={() => url.set({ view: "board" })}>Board</button>
-            <button type="button" className="exec-fleet-segbtn" aria-pressed={view === "map"} disabled title={notPublished(FE.map)} aria-describedby={reasonId}>Map</button>
+            <button type="button" className="exec-fleet-segbtn" aria-pressed={mapView} disabled title={notPublished(FE.map)} aria-describedby={reasonId}>Map</button>
           </span>
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {envelope ? (
@@ -341,7 +345,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
                 <strong>Archived alphas</strong>
                 <p>{notPublished(FE.archived)}. This lens makes no request until the backend publishes the list.</p>
               </div>
-            ) : view === "map" ? (
+            ) : mapView ? (
               <>
                 {unpublishedView(FE.map)}
                 <button type="button" className="exec-fleet-btn" onClick={() => url.set({ view: null })}>Back to Table</button>
@@ -363,7 +367,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
                         rows={visible}
                         summary={read.summary}
                         selectedKey={selection}
-                        hrefFor={(row) => withContext(alphaHref(row.alphaId), params)}
+                        hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
                         onOpen={(row) => select(row.alphaId)}
                       />
                     )}

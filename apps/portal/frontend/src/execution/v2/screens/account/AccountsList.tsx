@@ -22,6 +22,7 @@ import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { formatAsOf } from "../../boundary";
 import { useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
+import { withOrigin } from "../../backTo";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
 import { BindingDrawer } from "./BindingDrawer";
 import { Na, StateFlag, CredentialFlag, Updated } from "./parts";
@@ -148,7 +149,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
       key: "account",
       label: "Account",
       render: (row) => (
-        <Link className="exec-acct-link" to={withContext(accountHref(row.accountId), params)} onClick={(event) => event.stopPropagation()}>{row.accountId}</Link>
+        <Link className="exec-acct-link" to={withContext(withOrigin(accountHref(row.accountId), { kind: "accounts" }, params), params)} onClick={(event) => event.stopPropagation()}>{row.accountId}</Link>
       ),
     },
     { key: "state", label: "State", render: (row) => <StateFlag word={row.stateWord} /> },

@@ -8,6 +8,8 @@
  * status the screen does not know prints as Unknown with the source's word,
  * never as a guess. Each order links to its place in Trade Replay.
  */
+import { Link } from "react-router-dom";
+
 import type { AlphaActivity } from "../../../api/derivations";
 import { PanelState } from "../../../components/states";
 import type { ReplayFill, ReplayOrder } from "../../../components/tradeReplayModel";
@@ -83,7 +85,7 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
         );
       },
     },
-    { key: "replay", label: "Replay", render: (o) => <a className="exec-blk-link" href={linkTo(replayHref(alphaId, `order:${o.orderId}`))}>Open</a> },
+    { key: "replay", label: "Replay", render: (o) => <Link className="exec-blk-link" to={linkTo(replayHref(alphaId, `order:${o.orderId}`))}>Open</Link> },
   ];
   const fillColumns: CardsColumn<ReplayFill>[] = [
     { key: "at", label: "Time (UTC)", render: (f) => <At iso={f.tradeTime} /> },

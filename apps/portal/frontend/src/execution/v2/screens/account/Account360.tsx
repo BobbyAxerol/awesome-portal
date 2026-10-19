@@ -10,7 +10,7 @@
  * sleeve. A shared binding's native figures are never attributed to a sleeve
  * (`Not computed`, R10), and a difference is only ever the source's own.
  */
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
@@ -20,6 +20,7 @@ import { SectionPanel, StateBoundary } from "../../blocks";
 import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
+import { backLinkFor, withoutOrigin } from "../../backTo";
 import { ENV_LABEL, useExecUrlState, withContext } from "../../urlState";
 import { holds } from "../../shell/roleNav";
 import { PhysicalBinding } from "./PhysicalBinding";
@@ -28,7 +29,7 @@ import { AllocationsPanel, AuthorityKpis, FeesPanel, MarginPanel, PositionsPanel
 import { Fact, Na, Np, StateFlag, WITHHELD } from "./parts";
 import { useAccountResource, useBindingDetail, useBindingExposure } from "./reads";
 import {
-  ACCOUNTS_PATH, ACCOUNT_NEEDS, FE, RELATION_LABEL, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
+  ACCOUNT_NEEDS, FE, RELATION_LABEL, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
   populationOf, portfolioHref, readAccountView, readTab, readViewMode, resourceReason, resourceStatus, timeOf, type TabId,
 } from "./model";
 
@@ -53,11 +54,16 @@ function boundaryReason(status: string, asOf: UtcEpochMs | null): string | undef
   return undefined;
 }
 
+/** The lists that link into Account 360 and whose state Back restores. */
+const ACCOUNT_BACK_SOURCES = ["accounts", "portfolio", "cockpit", "blotter"] as const;
+
 export function Account360({ api, accountId, capabilities }: Account360Props) {
   const [params] = useSearchParams();
   const resource = useAccountResource(api, accountId);
+  // Back by source: the Accounts list as the reader left it, a Portfolio, or the Approvals cockpit (audit #8).
+  const origin = backLinkFor(params, { kind: "accounts" }, ACCOUNT_BACK_SOURCES);
   const back = (
-    <Link className="exec-acct-back" to={withContext(ACCOUNTS_PATH, params)}>← Accounts</Link>
+    <Link className="exec-acct-back" to={origin.to}>← {origin.label}</Link>
   );
   const state = resource.state;
   if (state.phase === "loading" || state.phase === "idle") {
@@ -124,13 +130,13 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, capa
   const [positionScope, setPositionScope] = useState<"sleeve" | "account">("sleeve");
   const canManage = holds(capabilities, ACCOUNT_NEEDS.manage);
 
-  // A tab the screen does not have is explained once and the URL is made canonical.
-  const told = useRef(false);
+  // A tab the screen does not have is explained and the URL is made canonical. The URL then no longer holds the
+  // unknown value, so the sentence is kept in state: it must outlive the rewrite, and it goes when the reader picks a tab.
+  const [tabNotice, setTabNotice] = useState<string | null>(null);
   useEffect(() => {
-    if (resolved.notice !== null && !told.current) {
-      told.current = true;
-      url.set({ tab: null }, { replace: true });
-    }
+    if (resolved.notice === null) return;
+    setTabNotice(resolved.notice);
+    url.set({ tab: null }, { replace: true });
   }, [resolved.notice, url]);
 
   const status = resourceStatus(profile);
@@ -150,7 +156,10 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, capa
     : `${population.published} ${population.published === 1 ? "sleeve" : "sleeves"} · 1 physical binding`;
 
   const setMode = (next: "sleeve" | "physical") => url.set({ view: next === "sleeve" ? null : next });
-  const setTab = (next: TabId) => url.set({ tab: next === "ov" ? null : next });
+  const setTab = (next: TabId) => {
+    setTabNotice(null);
+    url.set({ tab: next === "ov" ? null : next });
+  };
   const tabKeys = (event: KeyboardEvent<HTMLDivElement>) => {
     const at = TABS.findIndex((entry) => entry.id === tab);
     const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
@@ -170,13 +179,13 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, capa
               <Fact label="Name">{identity.label}</Fact>
               <Fact label="Portfolio">
                 {identity.portfolios.length === 0 ? <Na /> : identity.portfolios.map((pf, index) => (
-                  <span key={pf}>{index > 0 ? ", " : ""}<Link className="exec-acct-link" to={withContext(portfolioHref(pf), params)}>{pf}</Link></span>
+                  <span key={pf}>{index > 0 ? ", " : ""}<Link className="exec-acct-link" to={withContext(portfolioHref(pf), withoutOrigin(params))}>{pf}</Link></span>
                 ))}
               </Fact>
               <Fact label="Domain">{[environment ? ENV_LABEL[environment] : null, identity.baseCurrency].filter((part): part is string => part !== null).join(" · ") || <Na />}</Fact>
               <Fact label="Deployments">
                 {view.deployments.length === 0 ? <Na /> : view.deployments.map((dep, index) => (
-                  <span key={dep.id}>{index > 0 ? ", " : ""}<Link className="exec-acct-link" to={withContext(deploymentHref(dep.id, dep.mode), params)}>{dep.id}</Link></span>
+                  <span key={dep.id}>{index > 0 ? ", " : ""}<Link className="exec-acct-link" to={withContext(deploymentHref(dep.id, dep.mode, dep.stage), withoutOrigin(params))}>{dep.id}</Link></span>
                 ))}
               </Fact>
             </dl>
@@ -297,7 +306,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, capa
           </span>
         </div>
       ) : null}
-      {resolved.notice !== null ? <p className="exec-acct-note" role="status">{resolved.notice}</p> : null}
+      {tabNotice !== null ? <p className="exec-acct-note" role="status">{tabNotice}</p> : null}
       {view.gaps.length > 0 ? (
         <p className="exec-acct-note" role="status">
           Not available from the source: {view.gaps.map((gap) => `${RELATION_LABEL[gap.relation] ?? gap.relation} (${gap.code})`).join(", ")}.

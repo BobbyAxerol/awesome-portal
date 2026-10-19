@@ -17,6 +17,11 @@
  * review URLs (`/governance/approvals/:id/{r1,r2,live}`,
  * `/governance/exit-reviews/:id`) can mount this same component with
  * `pathSelection` set from the route; the evidence frame links back to them.
+ *
+ * URL: `sel` (the open request), `view` (lane: r1, r2, exit-reviews, live, waiver; All is the default),
+ * `lens` (needs, yours, closed; Open is the default) and `waiver` (the register's state filter). Lane, lens
+ * and filter are written with replace, so a reload restores them and Back leaves the page (`viewUrl.ts`).
+ * A researcher who opens `/governance/approvals/:id/r1` sees that one request read-only, not the list.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -56,6 +61,7 @@ import {
   type QueueItem,
 } from "./laneModel";
 import { KeysHelp } from "./KeysHelp";
+import { laneFromView, lensFromUrl, waiverFromUrl, writeView, type CockpitView } from "./viewUrl";
 import { Queue, MAX_QUEUE_DOM, type WaiverFilter } from "./Queue";
 import { Rail, type RailTarget } from "./Rail";
 
@@ -265,10 +271,53 @@ function Denied({ accessHref }: { accessHref?: string }) {
 
 /* ── researcher: own requests only ────────────────────────────────────────── */
 
-function OwnRequests({ api, workspaceId, principal }: { api: ExecutionApi; workspaceId?: string; principal: Principal }) {
+function OwnRequests({
+  api,
+  workspaceId,
+  principal,
+  pathSelection,
+  onClearPathSelection,
+}: {
+  api: ExecutionApi;
+  workspaceId?: string;
+  principal: Principal;
+  pathSelection?: CockpitProps["pathSelection"];
+  onClearPathSelection?: () => void;
+}) {
   const [params] = useSearchParams();
   const inbox = useInbox(api, "ALL", workspaceId);
   const { own, unknownOwner } = useMemo(() => ownRequests(inbox.rows, principal), [inbox.rows, principal]);
+
+  // A request named by the path (`/governance/approvals/:id/r1`) is shown read-only, in place of the list. The page the
+  // server returned says whether it is the reader's: a row on that page that is not listed as theirs is not opened. A
+  // request off the page cannot be told apart here, so the evidence read (the server's own boundary) decides.
+  const wanted = pathSelection ?? null;
+  const onPage = wanted === null ? undefined : inbox.rows.find((row) => row.id === wanted.id);
+  const isOwn = wanted !== null && own.some((row) => row.id === wanted.id);
+  const settled = inbox.status === "ready" || inbox.status === "failed";
+  const refused = wanted !== null && inbox.status === "ready" && onPage !== undefined && !isOwn;
+  const evidenceTarget: EvidenceTarget | null = wanted !== null && settled && !refused ? { kind: wanted.kind, id: wanted.id } : null;
+  const evidence = useEvidenceRead(api, evidenceTarget, workspaceId);
+  const header: EvidenceHeader | null =
+    wanted === null || evidenceTarget === null
+      ? null
+      : onPage
+        ? itemHeader({ kind: "gate", key: onPage.id, row: onPage })
+        : { id: wanted.id, title: null, context: null, gate: null };
+
+  const clearRef = useRef(onClearPathSelection);
+  clearRef.current = onClearPathSelection;
+  useEffect(() => {
+    if (wanted === null) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
+      clearRef.current?.();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [wanted]);
 
   const columns: CardsColumn<InboxRowV2>[] = [
     {
@@ -291,6 +340,31 @@ function OwnRequests({ api, workspaceId, principal }: { api: ExecutionApi; works
     { key: "approvers", label: "Approvers", numeric: true, render: (row) => quorumText(row.quorumMet, row.quorumRequired) ?? <span className="exec-ck-np">{NOT_PUBLISHED.approvers}</span> },
     { key: "clock", label: "Clock", render: (row) => slaView(row.sla)?.phrase ?? <span className="exec-ck-np">{NOT_PUBLISHED.clock}</span> },
   ];
+
+  if (wanted !== null) {
+    return (
+      <div className="exec-ck-page" data-screen="own-request">
+        <div className="exec-ck-mast">
+          <div>
+            {onClearPathSelection ? (
+              <button type="button" className="exec-ck-btn" onClick={onClearPathSelection}>← My requests</button>
+            ) : null}
+            <h1 className="exec-ck-h">My request</h1>
+            <p className="exec-ck-sub">Read only · decisions are made by reviewers</p>
+          </div>
+        </div>
+        {!settled ? <PanelSkeleton label="Loading your request" /> : null}
+        {refused ? (
+          <PanelState status="denied" title="Not listed as yours" reason={`${wanted.id} is on the page the server returned, but it is not listed as created by you, so it is not opened here.`} />
+        ) : null}
+        {evidenceTarget !== null ? (
+          <section className="exec-ck-main" aria-label="Evidence">
+            <EvidenceFrame kind={evidenceTarget.kind} header={header} evidence={evidence} />
+          </section>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="exec-ck-page">
@@ -332,9 +406,19 @@ function itemHeader(item: QueueItem): EvidenceHeader | null {
 
 function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection, principal }: CockpitProps & { principal: Principal }) {
   const url = useExecUrlState();
-  const [lane, setLane] = useState<Lane>("all");
-  const [lens, setLens] = useState<Lens>("open");
-  const [waiverFilter, setWaiverFilter] = useState<WaiverFilter>("ALL");
+  const [params, setParams] = useSearchParams();
+  // Lane, lens and waiver filter are the URL's (M9): a reload and Back restore them; a bad value reads as the default.
+  const lane: Lane = laneFromView(url.value.view);
+  const lens: Lens = lensFromUrl(params.get("lens"));
+  const waiverFilter: WaiverFilter = waiverFromUrl(params.get("waiver"));
+  const setView = useCallback((patch: CockpitView) => setParams(writeView(params, patch), { replace: true }), [params, setParams]);
+  const setLane = useCallback((next: Lane) => setView({ lane: next }), [setView]);
+  const setLens = useCallback((next: Lens) => setView({ lens: next }), [setView]);
+  const setWaiverFilter = useCallback((next: WaiverFilter) => setView({ waiver: next }), [setView]);
+  useEffect(() => {
+    const canonical = writeView(params, { lane, lens, waiver: waiverFilter });
+    if (canonical.toString() !== params.toString()) setParams(canonical, { replace: true });
+  }, [params, setParams, lane, lens, waiverFilter]);
   const [announcement, setAnnouncement] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -569,6 +653,16 @@ export default function ApprovalsCockpit(props: CockpitProps) {
   }
   const mode = deriveAccess(capabilities).mode;
   if (mode === "denied") return <div className="exec-ck-page"><Denied accessHref={props.accessHref} /></div>;
-  if (mode === "own") return <OwnRequests api={props.api} workspaceId={props.workspaceId} principal={who} />;
+  if (mode === "own") {
+    return (
+      <OwnRequests
+        api={props.api}
+        workspaceId={props.workspaceId}
+        principal={who}
+        pathSelection={props.pathSelection}
+        onClearPathSelection={props.onClearPathSelection}
+      />
+    );
+  }
   return <DecisionCockpit {...props} principal={who} />;
 }

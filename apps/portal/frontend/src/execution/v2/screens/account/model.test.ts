@@ -389,6 +389,12 @@ describe("tabs, views, links, copy", () => {
     expect(deploymentHref("d1", "paper")).toBe("/deployments/paper/d1");
     expect(deploymentHref("d1", "live")).toBe("/deployments/live/d1");
     expect(deploymentHref("d1", null)).toBe("/deployments/live/d1");
+    // M4: a Canary deployment opens its control room under the live route
+    expect(deploymentHref("d1", "live", "CANARY")).toBe("/deployments/live/d1/canary");
+    expect(deploymentHref("d1", "live", "canary")).toBe("/deployments/live/d1/canary");
+    expect(deploymentHref("d 1", "canary")).toBe("/deployments/live/d%201/canary");
+    expect(deploymentHref("d1", "live", "LIVE")).toBe("/deployments/live/d1");
+    expect(deploymentHref("d1", "paper", "PAPER")).toBe("/deployments/paper/d1");
   });
 
   it("every Not published sentence carries its request id", () => {

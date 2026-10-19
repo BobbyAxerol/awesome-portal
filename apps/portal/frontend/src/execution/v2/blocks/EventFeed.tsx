@@ -11,6 +11,7 @@
  * dropping the rows already read.
  */
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 import type { PanelStatus } from "../../contracts";
 import { CardsTable, type CardsColumn } from "../cardsTable";
@@ -84,6 +85,12 @@ function isoOf(at: UtcEpochMs): string | undefined {
   }
 }
 
+/** An internal path is routed (no page reload); a scheme or protocol-relative href stays a plain anchor. */
+function EventLink({ href, children }: { href: string; children: ReactNode }) {
+  if (/^([a-z][a-z0-9+.-]*:|\/\/)/i.test(href)) return <a className="exec-blk-link" href={href}>{children}</a>;
+  return <Link className="exec-blk-link" to={href}>{children}</Link>;
+}
+
 function columns(withActor: boolean): CardsColumn<EventFeedRow>[] {
   const base: CardsColumn<EventFeedRow>[] = [
     {
@@ -95,7 +102,7 @@ function columns(withActor: boolean): CardsColumn<EventFeedRow>[] {
     {
       key: "target",
       label: "Target",
-      render: (r) => (r.href ? <a className="exec-blk-link" href={r.href}>{r.target}</a> : r.target),
+      render: (r) => (r.href ? <EventLink href={r.href}>{r.target}</EventLink> : r.target),
     },
     { key: "outcome", label: "Outcome", render: (r) => r.outcome },
   ];

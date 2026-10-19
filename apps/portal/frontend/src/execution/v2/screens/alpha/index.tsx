@@ -32,18 +32,21 @@
  * | 1 alpha, 4 stages, tens of deployments; orders and fills unbounded (no retention policy); timeline pages of 100; equity up to 2,048 points | over 200 rows in a table, or 5,000 chart points | tables show 200 and say "Top 200 of N"; keyset `Load more` for orders, fills and the timeline; charts keep min and max per bucket and print the envelope caption | resource + subject BFF cursors, `equity-chart` viewport_px with sampling metadata, observed-timeline `next_cursor`; FE-027/028 lifecycle, FE-031 event feed, FE-006/025 windows are requests | no figure is computed, summed across currencies or inferred; absent = `Not published (FE-xxx)` or `Not available`; partial and stale stay worded | resource and drift on open; every other read only when its tab opens; at most 200 table rows, under 150 chart nodes |
  */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useSession } from "../../../../auth/session";
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
 import { utcStamp } from "../../../time";
-import { useDockMode, useDockSelection } from "../../Drawer";
+import { DockAction, useDockMode, useDockSelection } from "../../Drawer";
+import { withoutOrigin } from "../../backTo";
+import { notPublishedReason } from "../../blocks";
 import { Flag } from "../../Flag";
 import { useContextFacts } from "../../shell/contextFacts";
 import { V2_CAPABILITY, holds } from "../../shell/roleNav";
 import { applyTab, resolveTab } from "../../tabAliases";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
+import { alphaBack, replayBack } from "./backLinks";
 import { Dec, Na } from "./cells";
 import { ActivityTab } from "./ActivityTab";
 import { LifecyclePanel } from "./Lifecycle";
@@ -84,6 +87,9 @@ import "../../css/alpha.css";
 
 export const ALPHA_SCREEN_KEY = "alpha" as const;
 
+/** D9: where a reader sees which grant a disabled action lacks. */
+const ACCESS_PATH = "/administration/profile-access";
+
 export interface AlphaScreenProps {
   api: ExecutionApi;
   alphaId: string;
@@ -106,6 +112,8 @@ function Fig({ label, children, basis }: { label: string; children: ReactNode; b
 export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { selection, select, close } = useDockSelection();
   const mode = useDockMode();
   const uid = useId();
@@ -115,16 +123,20 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
   const sliceOnly = !canSeeAccounts && !holds(capabilities, { allOf: [V2_CAPABILITY.portfoliosRead] });
   // Only a READY session is narrowed; while access loads (empty set) the screen's banner shows, but the bar states nothing.
   useContextFacts({ scope: sliceOnly && access.kind === "ready" ? "Scope: Your slice" : undefined });
-  const linkTo = (href: string) => withContext(href, params);
+  // `from` and `back` belong to this page's own Back; onward links must not inherit them (Account 360 opened from here is not "from the Fleet").
+  const linkTo = (href: string) => withContext(href, withoutOrigin(params));
+  const back = alphaBack(params);
 
   /* ── tab, from the URL, with the V1 labels mapped ───────────────────── */
   const resolution = useMemo(() => resolveTab("alpha", url.value.tab), [url.value.tab]);
   const tab: AlphaTabKey = isAlphaTab(resolution.target.tab) ? resolution.target.tab : "performance";
   useEffect(() => {
     if (!resolution.legacy) return;
-    const { search } = applyTab("alpha", params, resolution);
-    setParams(search, { replace: true });
-  }, [resolution, params, setParams]);
+    // The alias's anchor (`#charts`, `#risk`, `#costs`) stays in the address, as on Portfolio 360.
+    const next = applyTab("alpha", params, resolution);
+    const query = next.search.toString();
+    navigate({ pathname: location.pathname, search: query === "" ? "" : `?${query}`, hash: next.hash }, { replace: true });
+  }, [resolution, params, navigate, location.pathname]);
 
   /* ── reads ───────────────────────────────────────────────────────────── */
   const resource = useAlphaResource(api, alphaId);
@@ -200,7 +212,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
     <div className="exec-alp2-v2" data-screen="alpha-360-v2">
       <header className="exec-alp2-head">
         <div>
-          <Link className="exec-alp2-back" to={linkTo("/deployments/alphas")}>← Alpha Fleet results</Link>
+          <Link className="exec-alp2-back" to={back.to}>← {back.label}</Link>
           <h1 className="exec-alp2-title">
             {item ? item.alphaLabel : alphaId}
             {item ? <span className="exec-alp2-version">v{item.version}</span> : null}
@@ -220,6 +232,12 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
           ) : null}
         </div>
         <div className="exec-alp2-fresh">
+          {item ? (
+            <div className="exec-alp2-requests" role="group" aria-label="Requests">
+              <DockAction label="Request archive" reason={notPublishedReason("FE-034", "Archive requests cannot be recorded yet.")} accessHref={ACCESS_PATH} />
+              <DockAction label="Request gate review" reason={notPublishedReason("FE-020", "Gate-review requests cannot be recorded yet.")} accessHref={ACCESS_PATH} />
+            </div>
+          ) : null}
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {envelope?.asOfMs ? <span>As of {utcStamp(new Date(envelope.asOfMs).toISOString())}</span> : envelope ? <span>Source time not published</span> : null}
         </div>
@@ -320,6 +338,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                   focus={focus}
                   canSeeAccounts={canSeeAccounts}
                   ordersHref={linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`)}
+                  back={replayBack(params, linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`))}
                 />
               ) : null}
               {tab === "positions" ? <PositionsTab rows={positionRows(envelope?.data.positions)} canSeeAccounts={canSeeAccounts} linkTo={linkTo} /> : null}

@@ -261,7 +261,7 @@ describe("Accounts list", () => {
     mount("/deployments/accounts");
     const row = bodyRows(await loadedList())[0]!;
     const link = within(row).getByRole("link", { name: "acc_bnc_core" });
-    expect(link.getAttribute("href")).toBe("/deployments/accounts/acc_bnc_core");
+    expect(link.getAttribute("href")).toBe("/deployments/accounts/acc_bnc_core?from=accounts");
     fireEvent.click(link);
     expect(search().get("sel")).toBeNull();
   });
@@ -362,8 +362,8 @@ describe("binding peek (Binding Detail, merged)", () => {
     mount("/deployments/accounts?sel=bnc_main%40BINANCE");
     const drawer = await screen.findByRole("complementary");
     await within(drawer).findByRole("link", { name: "Open account" });
-    expect(within(drawer).getByRole("link", { name: "Open account" }).getAttribute("href")).toBe("/deployments/accounts/acc_bnc_core");
-    expect(within(drawer).getByRole("link", { name: "Physical binding" }).getAttribute("href")).toBe("/deployments/accounts/acc_bnc_core?view=physical");
+    expect(within(drawer).getByRole("link", { name: "Open account" }).getAttribute("href")).toBe("/deployments/accounts/acc_bnc_core?from=accounts");
+    expect(within(drawer).getByRole("link", { name: "Physical binding" }).getAttribute("href")).toBe("/deployments/accounts/acc_bnc_core?view=physical&from=accounts");
     const rotate = within(drawer).getByRole("button", { name: "Rotate credential" }) as HTMLButtonElement;
     expect(rotate.disabled).toBe(true);
     expect(drawer.textContent).toContain("Not allowed. Your access does not include managing accounts.");
@@ -707,12 +707,30 @@ describe("Account 360: tabs", () => {
     expect(screen.getByRole("tab", { name: "Positions" }).getAttribute("aria-selected")).toBe("true");
   });
 
-  it("an unknown tab is explained once and falls back to Overview", async () => {
+  it("an unknown tab is explained and falls back to Overview; the sentence survives the URL being made canonical (M1)", async () => {
     stubFetch();
     account("acc_bnc_core", "?tab=risk");
     await loaded360();
     await screen.findByText('Tab "risk" is not available. Showing Overview.');
     await waitFor(() => expect(search().get("tab")).toBeNull());
+    // after the rewrite, and after further renders, the notice is still there
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    expect(screen.getByText('Tab "risk" is not available. Showing Overview.')).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Overview" }).getAttribute("aria-selected")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Physical binding" }));
+    await waitFor(() => expect(search().get("view")).toBe("physical"));
+    expect(screen.getByText('Tab "risk" is not available. Showing Overview.')).toBeTruthy();
+  });
+
+  it("picking a tab clears the unknown-tab sentence", async () => {
+    stubFetch();
+    account("acc_bnc_core", "?tab=risk");
+    await loaded360();
+    await screen.findByText('Tab "risk" is not available. Showing Overview.');
+    await waitFor(() => expect(search().has("tab")).toBe(false));
+    fireEvent.click(screen.getByRole("tab", { name: "Positions" }));
+    await waitFor(() => expect(search().get("tab")).toBe("pos"));
+    expect(screen.queryByText('Tab "risk" is not available. Showing Overview.')).toBeNull();
   });
 
   it("Positions: as published, with long, short and gross totals Not published (A360-1)", async () => {
@@ -1002,5 +1020,79 @@ describe("Accounts list: the environment tablist is keyboard-operable", () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("tab", { name: /^Real-funded/ })));
     fireEvent.keyDown(list, { key: "ArrowLeft" });
     await waitFor(() => expect(search().get("env")).toBe("sandbox"));
+  });
+});
+
+/* ═══ Back by source and the canary route (flow audit #8, M4) ═════════════ */
+
+describe("Account 360: Back by source", () => {
+  const backLink = () => screen.getByRole("link", { name: /^←/ });
+
+  it("with no origin it is 'Accounts'", async () => {
+    stubFetch();
+    account("acc_bnc_core");
+    await loaded360();
+    expect(backLink().textContent).toBe("← Accounts");
+    expect(backLink().getAttribute("href")).toBe("/deployments/accounts");
+  });
+
+  it("from the Accounts list it restores the list's filters", async () => {
+    stubFetch();
+    account("acc_bnc_core", `?from=accounts&back=${encodeURIComponent("q=bnc&issues=1&venue=BINANCE&sel=zzz")}`);
+    await loaded360();
+    expect(backLink().textContent).toBe("← Accounts");
+    const url = new URL(backLink().getAttribute("href")!, "http://x");
+    expect(url.pathname).toBe("/deployments/accounts");
+    expect(Object.fromEntries(url.searchParams)).toEqual({ q: "bnc", issues: "1", venue: "BINANCE" });
+  });
+
+  it("from a portfolio it goes back to that portfolio", async () => {
+    stubFetch();
+    account("acc_bnc_core", `?from=${encodeURIComponent("portfolio:pf_core")}`);
+    await loaded360();
+    expect(backLink().textContent).toBe("← Portfolio pf_core");
+    expect(backLink().getAttribute("href")).toBe("/deployments/portfolios/pf_core");
+  });
+
+  it("from the cockpit it goes back to Approvals", async () => {
+    stubFetch();
+    account("acc_bnc_core", `?from=cockpit&back=${encodeURIComponent("view=live")}`);
+    await loaded360();
+    expect(backLink().textContent).toBe("← Approvals");
+    expect(backLink().getAttribute("href")).toBe("/governance/approvals?view=live");
+  });
+
+  it("a source this screen does not honour, or a hostile one, is ignored and not echoed", async () => {
+    for (const from of ["fleet", "https://evil.example/", "//evil.example", "nonsense"]) {
+      stubFetch();
+      const view = account("acc_bnc_core", `?from=${encodeURIComponent(from)}&back=q%3Dx`);
+      await loaded360();
+      expect(backLink().getAttribute("href"), from).toBe("/deployments/accounts");
+      expect([...document.querySelectorAll("a")].map((a) => a.getAttribute("href")).join(" ")).not.toContain("evil.example");
+      view.unmount();
+      cleanup();
+    }
+  });
+
+  it("onward links (portfolio, deployment) do not inherit the origin", async () => {
+    stubFetch();
+    account("acc_bnc_core", `?from=accounts&back=${encodeURIComponent("q=bnc")}`);
+    await loaded360();
+    const links = [...document.querySelectorAll<HTMLAnchorElement>("a.exec-acct-link")].map((a) => a.getAttribute("href") ?? "");
+    expect(links.length).toBeGreaterThan(0);
+    for (const href of links) {
+      expect(href, href).not.toContain("from=");
+      expect(href, href).not.toContain("back=");
+    }
+  });
+
+  it("the Accounts list writes from=accounts and its filters on the account link", async () => {
+    stubFetch();
+    mount("/deployments/accounts?q=bnc&issues=1");
+    const row = bodyRows(await loadedList())[0]!;
+    const url = new URL(within(row).getByRole("link").getAttribute("href")!, "http://x");
+    expect(url.pathname.startsWith("/deployments/accounts/")).toBe(true);
+    expect(url.searchParams.get("from")).toBe("accounts");
+    expect(Object.fromEntries(new URLSearchParams(url.searchParams.get("back") ?? ""))).toEqual({ q: "bnc", issues: "1" });
   });
 });

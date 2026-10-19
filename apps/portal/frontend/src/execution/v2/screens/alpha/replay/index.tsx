@@ -15,14 +15,16 @@
  * |---|---|---|---|---|---|
  * | up to 200 orders and 200 fills per page, keyset `Load more` | thousands of markers: unreadable chart | the V1 log shows 200 rows at a time, newest first; the chart still draws every loaded trade | `/resources/alphas/{id}/orders|fills` cursor, `maximum_page_rows` | every price and quantity is the server's string; candles only when the venue says READY | first paint on the log, candles after; chart code loads lazily |
  */
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { PanelState } from "../../../../components/states";
 import type { ExecutionApi } from "../../../../api/ports";
 import { useSession } from "../../../../../auth/session";
 import { Flag } from "../../../Flag";
 import { V2_CAPABILITY, holds } from "../../../shell/roleNav";
+import { withoutOrigin } from "../../../backTo";
 import { ENV_LABEL, useExecUrlState, withContext } from "../../../urlState";
+import { replayBack } from "../backLinks";
 import { chooseEnv, deploymentRows, deployedEnvs, freshnessFlag } from "../model";
 import { useAlphaResource, useSubjectBook } from "../useAlphaReads";
 import { ReplayView } from "./ReplayView";
@@ -47,7 +49,10 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
   const { access } = useSession();
   const capabilities = new Set(access.kind === "ready" ? access.access.capabilities : []);
   const canSeeAccounts = holds(capabilities, { allOf: [V2_CAPABILITY.accountsRead] });
-  const linkTo = (href: string) => withContext(href, params);
+  // The page's own `from` is its Back; the chips onward start fresh.
+  const linkTo = (href: string) => withContext(href, withoutOrigin(params));
+  const ordersHref = linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`);
+  const back = replayBack(params, ordersHref);
 
   const resource = useAlphaResource(api, alphaId);
   const item = resource.phase === "ready" ? resource.value.item : null;
@@ -63,13 +68,14 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
     <div className="exec-alp2-v2" data-screen="trade-replay-v2">
       <header className="exec-alp2-head">
         <div>
+          <Link className="exec-alp2-back" to={back.to}>← {back.label}</Link>
           <h1 className="exec-alp2-title">Trade Replay</h1>
           <p className="exec-alp2-sub">Fills on candles · {label}</p>
         </div>
         <div className="exec-alp2-chips">
-          <a className="exec-alp2-chip" href={linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}`)}>{label}</a>
-          {deployment ? <a className="exec-alp2-chip" href={linkTo(deployment.href)}>Deployment {deployment.id}</a> : null}
-          {accountId ? <a className="exec-alp2-chip" href={linkTo(`/deployments/accounts/${encodeURIComponent(accountId)}`)}>{accountId}</a> : null}
+          <Link className="exec-alp2-chip" to={linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}`)}>{label}</Link>
+          {deployment ? <Link className="exec-alp2-chip" to={linkTo(deployment.href)}>Deployment {deployment.id}</Link> : null}
+          {accountId ? <Link className="exec-alp2-chip" to={linkTo(`/deployments/accounts/${encodeURIComponent(accountId)}`)}>{accountId}</Link> : null}
           <Flag kind="display" label={ENV_LABEL[env]} size="sm" />
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
         </div>
@@ -86,7 +92,8 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
           book={book}
           focus={focus ?? params.get("focus")}
           canSeeAccounts={canSeeAccounts}
-          ordersHref={linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`)}
+          ordersHref={ordersHref}
+          back={back}
         />
       )}
     </div>
