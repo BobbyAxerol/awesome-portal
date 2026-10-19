@@ -22576,6 +22576,166 @@ stable-session reuse, blanket current migration bootstrap or whole stable
 rollout. Once exact integration input is present, bind/test in this same08
 without asking generic approval again; retain ambiguity/recovery on rollback.
 
+### Original08 owner target correction — 2026-10-19 Asia/Saigon
+
+**Status/scope before this slice:** Original08 IN_PROGRESS / connected NOT_MET;
+09connected NOT_STARTED. Bobby explicitly corrects the target topology:
+main/stable `portal.primusspark.com` is the genuine Cloudflare/Zero Trust
+security target; `dev-portal.primusspark.com` is only the dev preview;
+Execution v2's consumer is `research-portal.primusspark.com` from
+`/home/bobby/portal-research`, `docs/research-loop-plan`. The earlier selection
+of `/home/bobby/portal-integration`/DB7675320204448350242 as the intended native
+consumer was OUR TARGET-SELECTION ERROR, not a missing owner provision. The
+previous observations remain historical evidence, but their proposed dev
+commissioning/Access action is SUPERSEDED. Do not ask Bobby to provision Access
+on dev, retarget stable credentials, or deploy there to complete this08.
+
+**Goal/guide/invariants:** apply the existing08 detailed guide §EPG10-08 and
+[current-Core packet](integration/execution-native-read-v1/current-core-reconciliation/README.md).
+Confirm live hostname -> tunnel/nginx -> immutable image/config -> physical
+DB -> actual identity before any install. Keep main security and Research
+native-consumer evidence separate. No deployment, restart, schema/grant/auth
+change, invitation activation, session fabrication, or public native exposure
+is authorized by this diagnostic correction. Preserve parallel Core WIP.
+
+**Runnable now/test gates:** inspect only selected route/config fields, exact
+DB metadata/three named identity records in bounded READ ONLY transactions;
+perform TLS-verified, no-cookie, no-login GET front-door negative checks on
+main. Never call Research preview auto-login context just to inspect auth:
+that handler can create a session. Record status/redirect/code only, no
+response payloads, cookies, assertions or private config. Reconcile indices
+and receipt, run JSON/diff/link/scope checks and normal unmodified commit
+hook; inventory and clean only its new disposable resources under host guard.
+
+**Rollback/decision boundary:** diagnostics have no product rollback because
+they do not mutate product state; retain actual source/release/runtime/DB and
+named rollback artifacts. A later real Research binding must use its own
+reviewed image, schema, stable identity mapping and source READ/STREAM policy,
+not a stable-DB ID substitution. Main's Access checks do not certify unmounted
+new native routes; Research dev-auth/preview evidence is never main security
+or genuine-human authority evidence. Shared/public rollout remains bounded
+by the exact reviewed package; do not overwrite the Core owner's live source.
+
+**Actual read-only evidence,13:14–13:17Asia/Saigon (06:14–06:17UTC):**
+
+| Purpose | Public route -> live origin | Actual runtime / DB |
+| --- | --- | --- |
+| Genuine security | portal.primusspark.com -> TLS-verified tunnel443 -> nginx18081 | stable Core image d2c23ad668fc/config26c0d954, AUTH_MODE=cloudflare_access_local_password; DB system7675333655652302882/39 |
+| Execution v2 consumer | research-portal.primusspark.com -> tunnel80 -> nginx8095 | portal-research-preview Core image d13cef069471/config42a9f3ad, AUTH_MODE=dev; DB system7688673963308855330/127 |
+| Dev preview only | dev-portal.primusspark.com -> tunnel80 -> nginx8080 | old portal-control-api image8400439b/config963a3d84; NOT selected for this native consumer |
+
+Live cloudflared main rule has originServerName/httpHostHeader=portal hostname
+and noTLSVerify=false; Research rule has its own exact hostname/upstream. Both
+selected Core containers restart0 and no native config reference. Research
+compose working dir is /home/bobby/portal-research with research-progress,
+research-preview, execution-store and retained-review overlays. Its actual
+Control API PORTAL_BUILD_COMMIT is5ca9d167179e0c8469a804edf415766e14ea463c,
+created15Oct07:59:58UTC, NOT d078. The external identity.json says045788b1;
+that stale metadata is not substituted for actual image/build provenance.
+No image rebuild or service replacement was performed.
+
+Exact physical DBs/volumes revalidated in READ ONLY transactions,1000ms
+statement/500ms lock timeouts, explicit rollback. Research uses
+portal-research-preview_portal-postgres-data; stable uses
+portal-stable-v1-0-1_portal-postgres-data. Research Bobby ACTIVE has ID
+usr_5a38d5dfb08b44748f5776fbe04a1434 and2workspace memberships (including
+ws_06G19F61YB8CFR7TEWMS7HQ660); Stan/Thanh absent from the exact3username
+lookup. Stable Bobby/Stan/Thanh ACTIVE keep their existing distinct IDs and
+one workspace each. Binding counts only recorded; no issuer/subject/session
+or credential values read into the packet. Same username/workspace text is
+not permission to reuse a different physical DB's user mapping.
+
+An initial public-schema name filter was insufficient to assert native schema
+absence; it is NOT used as installation proof. The subsequent exact16relation
+to_regclass check uses the independent schema golden across both schemas:
+Research has1/16 (public.execution_retained_review_access), stable0/16; the
+four public.portal_access_* relations and all11elp210_candidate relations are
+absent on both. Presence alone would not prove full schema/grant parity.
+No schema install, policies/grants, identity rows or test data were written.
+
+Main negative checks: GET /, /api/auth/context and the selected Execution
+front-door URL, each without auth and with obviously invalid Access + forged
+email/dev headers,6/6 return302to official
+primussparkquant.cloudflareaccess.com. TLS verified; redirect not followed,
+body not read, cookies not saved. This is FRONT_DOOR_NEGATIVE_ONLY: it does
+not prove route existence behind Access, real Portal login, positive business
+scope, token expiry/rotation, revoke latency or new native SSE correctness.
+Earlier diagnostic /api/v1/auth/me404s on dev/Research were wrong API paths,
+not auth failures or acceptance; actual auth controller is /api/auth. Research
+/api/auth/context was intentionally not called because preview auto-login
+can create a session. No real login/token/cache/session was created.
+
+Core's tracked Research runbook already documents Bobby's10Oct public-preview
+exception (auto-login/no Access, external Execution source/streams/commands
+disabled). This audit confirms preview auto-login is configured; it is NOT
+a new permission to bind HK credentials or genuine human authority publicly.
+Current Core d078 source/1118+8102gate is available; subsequent23peer WIP paths
+are preserved and not claimed qualified. Existing source-owned work in Core's
+c7-closeout-followthrough is explicit: native deployment overlay, deliberate
+writer mode, reviewed schema adoption and source-specific runtime assembly.
+Those are Core release-composition work, not Edge work to duplicate or a file
+Bobby must write. Return the exact reviewed release/runtime/policy when ready;
+Edge binds/tests it in original08 without a new phase or generic approval.
+
+**Publication/cleanup delta already completed:** tracking commit
+ee664f2e6986bc19b29e1bfeeec3355c7eb32fb8,5paths/+1485/-0, author/committer
+BobbyAxerol. Its unchanged normal hook completed13:07:03Asia/Saigon:
+130contract PASS/1file,717API PASS/72files,0FAIL/SKIP, build/scoped PG restore
+PASS. This older HK worktree gate is NOT an extra d078 qualification or new
+authored business behavior. Actual gate log SHA256
+02be2634557b422d0448b6384d5b67d8d13957bc12ea7180b6aa347c630555a6;
+receipt /tmp/epg10-08-core-stable39-JezaG4cB/journal-20261019T055931Z/receipt.json.
+41runtime tuples unchanged, new cache IDs0, own lease removed. Exact cleanup
+13:07:40 removed only new test image77e8d991337cf42624d545c73e71a1e98b9e88765398468c35b47bdc3974dc7d;
+0cache records,41tuples unchanged, own lease removed. Shared free
+214257336320 ->214253072384B; not exclusive reclaimed-byte evidence. Prior
+HK source and SGP2cache cleanups remain closed; operational/rollback/private
+resources retained. HTTPS push failed before remote write (missing interactive
+credential); ordinary SSH push to the SAME canonical awesome-portal feature
+succeeded, remote ee664f2e verified, normal pre-push enabled. No force, dev/main
+or peer ref change, no configured remote rewrite. This target-correction slice
+will use its own normal gate/receipt and exact cleanup, not inherit this gate.
+
+**Actual next permitted action:** Core assembles the reviewed native consumer
+on the Research release line and returns exact schema/image/identity/read+stream
+policy, with the public-preview authority decision explicit. Edge's already
+qualified provider/client/coordinator binds only that reviewed input, then
+runs genuine revoke/cache/cursor/SSE; main/stable remains the distinct genuine
+Access/Portal-security target. Do not claim that main's front-door checks
+qualify unmounted d078, or that Research dev-auto-login is Bobby/Stan security.
+No remaining independent test-copy/image/cache teardown is deferred behind
+that dependency.07command/03publication/01+06coexistence remain their separate
+producer inputs, not reasons to commission an unrelated dev service.08still
+NOT_MET and09connected NOT_STARTED; no production cutover is implied.
+
+**Source/runtime custody for this correction:** canonical HK checkout remains
+/home/bobby/.worktrees/portal-execution-manager-v2,
+feat/manager-v2-paper-read@54c6f5f3. Owned upgrade feature/worktree remains
+feat/execution-edge-upgrade-v1_2 under /home/bobby/.worktrees at entryee664f2e;
+only5tracking/receipt paths modified,3unrelated untracked entries retained.
+All7preexisting active worktrees retained: manager-v2-paper-read, eds-current-bff,
+eds09-owner-return-handoff, portal-elp210-edge-provider-candidate,
+execution-data-activation, execution-edge-upgrade-v1_2, r4r5-activation.
+No merged/abandoned worktree disposal was in scope. Stable release remains
+/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose;
+HK release /srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy.
+HK native producer image28ea3958/configd18c5557 and existing3Edge/3SourceProxy/
+Manager/issuer/projection services plus named rollback images/containers and
+TSr59@9150385e/r49@b4e7a6c0 retained; no runtime restart by this work.
+Public Core source candidate b87f73db remains a clean documented active
+feature on SGP, not a deployment. Stable/main security still uses released
+e4fd, not canonical Portal's live fix branch87d9 or Research d078. Exact selected
+SGP image/config pins are in the corrected receipt above.
+
+**Own verification before publication:** JSON parse and target invariants PASS;
+git diff --check PASS;5path diff reviewed (+324/-28 before this custody note).
+Only documentation/evidence, no product code. At13:18–13:20Asia/Saigon HK's
+foreign PM financial-profile lease/test pair is active until13:23:54; no hook,
+build, test or cleanup was started under it. Prepare the bounded normal-hook
+transaction; execute only once the full host guard, not merely the clock,
+is quiet. This temporary measurement-window dependency does not defer any
+other owned independent source/census/target-correction work.
+
 
 
 

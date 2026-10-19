@@ -650,6 +650,23 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 owner target correction,19Oct Asia/Saigon — CURRENT:** main/stable
+`portal.primusspark.com` is the genuine Cloudflare/Zero Trust security target;
+`dev-portal` is preview, NOT the native consumer. Execution v2 consumes from
+`research-portal` -> live nginx8095 -> `portal-research-preview`, source
+`/home/bobby/portal-research`, `docs/research-loop-plan@d0789674`. Our earlier
+c43/dev target selection was wrong and is superseded, not an owner setup gap.
+Research has its own127-ledger DB7688673963308855330 and different Bobby ID;
+Stan/Thanh absent from exact lookup. Its public auto-login/dev-auth exception
+does not certify genuine native authority. Main6no-cookie/forged-header checks
+all redirect to Access; this is front-door-only proof, not revoke/SSE acceptance.
+[Corrected target and next action](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-owner-target-correction--2026-10-19-asiasaigon).
+No deploy/migration/auth/session/grant changes. Source adoption is DONE; actual
+Research release/schema/identity/policy assembly remains, not a dev Access ask.
+ee664f2e tracking publication normal gate130contract/717API PASS/build/restore,
+exact new test image removed/0new cache/41runtime tuples unchanged. Full08
+NOT_MET,09connected not started. Dated older entries below are history.
+
 **Original08 resumed19Oct12:54Asia/Saigon:** exact HK1175file/20.63MB specimen
 and SGP2source-cache IDs/16KiB teardown COMPLETE,41HK/51SGP runtime tuples
 unchanged; active/rollback/private artifacts retained. Core independently

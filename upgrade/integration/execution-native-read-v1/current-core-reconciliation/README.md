@@ -1,4 +1,4 @@
-# Original08 — current Core e19 read/SSE reconciliation
+# Original08 — Core read/SSE reconciliation and actual consumer targets
 
 Status: **SOURCE_QUALIFIED**, not installed or connected acceptance.
 This is a delta against committed Core
@@ -8,6 +8,42 @@ The [original08 journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.
 is authoritative for approval, actual attempts, runtime and remaining work.
 
 ## Current owner direction — integration first
+
+**Owner target correction,19Oct Asia/Saigon — CURRENT, supersedes the dev
+target selection below:** `portal.primusspark.com` is main/stable and the
+genuine Cloudflare/Zero Trust security target. `dev-portal.primusspark.com`
+is dev preview, NOT the Execution v2 consumer. The actual consumer is
+`research-portal.primusspark.com` -> live tunnel/nginx ->127.0.0.1:8095 ->
+`portal-research-preview`, source `/home/bobby/portal-research`, branch
+`docs/research-loop-plan`, currently d0789674. The earlier c43/dev DB choice
+was our target-selection error, not a missing Bobby-provided Access setup.
+Do not commission Access or native authority on dev to satisfy this packet.
+Historical observations below remain dated provenance, not current actions.
+
+Actual Research Control API still runs image d13cef069471/config42a9f3ad,
+AUTH_MODE=dev, no native config pair; separate DB system7688673963308855330,
+volumeportal-research-preview_portal-postgres-data, ledger127. Bobby is ACTIVE
+as usr_5a38d5dfb08b44748f5776fbe04a1434 (different from stable); exact Stan/
+Thanhvuong lookup has no rows. Stable system7675333655652302882/ledger39 has
+all three ACTIVE. Same workspace string does not make those systems/IDs or
+trust interchangeable. Exact READ ONLY metadata and live route fields support
+this map; no private subjects/credentials or product rows are published.
+
+The current Research runbook records Bobby's10Oct exception: public review
+preview, no Cloudflare Access, preview auto-login; external Execution sources,
+streaming and commands disabled. Preserve that exception, not claim it as
+production security. The source auth/context GET can mint a preview session,
+so this audit deliberately does NOT call it. Main received6TLS-verified,
+no-cookie front-door checks (3paths x missing/forged headers), all302to the
+official Access issuer; this proves only front-door refusal, not login,
+JWT revocation or the unmounted new native HTTP/SSE path.
+
+See the [corrected target/action journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-owner-target-correction--2026-10-19-asiasaigon)
+and [bounded receipt](stable39-qualification.json). No rollout, migration,
+identity/grant/password/session or auth change occurred. Do not reuse stable's
+expired DB-pinned commissioning artifact for Research or treat a main Access
+PASS as Research native acceptance. The next package belongs on the reviewed
+Research/Core consumer source; main security checks remain separately scoped.
 
 **Latest19Oct12:54Asia/Saigon:** Core independently adopted/requalified its
 actual successor d0789674,64paths/+6018/-190. Its actual terminal on SGP at
@@ -28,7 +64,9 @@ the [latest original08 journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND
 and focused receipt for disk/cleanup evidence and publication scope. Older
 entries below are time-specific history, not current pending-cleanup claims.
 
-Bobby's latest19Oct reply chooses the Core integration release first, **not**
+### Earlier integration selection — SUPERSEDED by the owner target correction
+
+The earlier19Oct reply was interpreted as the Core integration release first, **not**
 the earlier stable-rollout option. Stable production must remain unchanged.
 The qualified source base is still e19+this22-file delta. Actual integration
 service8400439b/config963a3d84 points at /home/bobby/portal-integration,
@@ -133,32 +171,31 @@ or proof of a successful session.
 
 ### Core-owner adoption action and return
 
-1. Read this packet and the actual commissioning packet linked below. Adopt
-   the prepared exact e19+22delta candidate in the Core owner's integration release; verify patch,
-   reconcile the six changed359dependencies and qualify the actual combined
-   revision, not a blind apply to c43 or silent old-pin refresh. Keep current policy,
-   scalar-only journal, writer/pool/coordinator and owned recovery unchanged.
-2. Pin the integration image digest/config and DB7675320204448350242/39, then
-   review the minimal132/134/Candidate adoption and independent schema golden.
-   Do not run all current migrations or start a second unguarded authority.
-3. Supply the integration's private runtime/workload/trust/key/owner-intake
-   references with correct serving UID/modes; no stable grant/key copying and
-   no root maintenance credential in serving mounts. Loader env pair is
-   CONTROL_API_NATIVE_CORE_CONFIG_FILE and CONTROL_API_NATIVE_CORE_CONFIG_SHA256.
-4. Commission the matching protected integration origin and real auth before
-   asking Bobby to complete IdP + normal Portal login. Changing shared dev
-   Access/auth affects other consumers and requires its exact coordinated
-   window; this packet does not silently perform that change. Stan uses normal
-   invitation/workspace acceptance, never direct status/identity SQL.
-5. Return source commit, immutable image/config, exact DB/schema/identity pins,
-   private reference paths only, protected origin, change window and rollback/
-   revocation owner. Record consumer ACK from actual review; file publication
-   alone is not acceptance. Edge then runs connected revoke/cache/cursor/SSE
-   through the same real coordinator, distinguishing integration and stable.
+1. Source adoption/current-dependency qualification is already DONE at d078;
+   do not reapply the old22patch or rerun its unchanged source just for a new
+   tracking date. Preserve subsequent Core backend/contract/frontend WIP.
+2. Assemble the native consumer on the actual Research/Core release line,
+   not old c43/dev. Review only its native schema/install delta, explicit
+   loader mounts/env pair and selected read/stream writer mode; prevent a
+   second legacy projection writer. A source commit is not a running image.
+3. Match Research DB7688673963308855330 and its actual user/workspace identity
+   to a fresh reviewed source READ/STREAM acceptance and private serving refs.
+   Stable-only ID/key/grant/window artifacts are not a retargetable template.
+   Do not create users, promote invitations or seed grants/sessions by SQL.
+4. Keep genuine security acceptance on main/stable. A public auto-login
+   Research preview must not acquire a genuine-person/native read grant by
+   treating its dev header/session as verified human authority. Resolve the
+   exact authenticated consumer/publication scope with the owning Core release;
+   do not ask Bobby for an irrelevant dev Cloudflare management reference.
+5. Return the actual immutable image/config, exact DB/schema/identity and
+   private ref paths, read/stream scope, activation window, drain/recovery and
+   rollback owner. Bind and run revoke/cache/cursor/SSE in original08 as soon
+   as those real inputs are valid; no new phase or generic repeat approval.
+   Main front-door evidence and Research consumer evidence stay separate.
 
-Rollback stops new integration admission while retaining ambiguous operations,
-physical work and recovery custody. Never fall back to the old unguarded image/
-config, delete unknown outcomes, or touch stable production/data/rollback.
+Rollback stops only new candidate admission, drains physical work and retains
+ambiguous outcomes/recovery custody before removing candidate mounts. No
+audit deletion, permissive fallback, stable replacement or dev migration.
 
 ## Current e19 against stable39 — 2026-10-19
 

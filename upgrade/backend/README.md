@@ -7,6 +7,20 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 owner target correction,19Oct Asia/Saigon — CURRENT:** security
+  on main/stable `portal.primusspark.com`; dev is preview, not the Execution v2
+  consumer. Actual consumer `research-portal` -> nginx8095 -> Research stack,
+  source `/home/bobby/portal-research`, `docs/research-loop-plan@d0789674`.
+  Earlier c43/dev selection is superseded, not a missing Access setup from
+  Bobby. [Actual route/DB/identity and action](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-owner-target-correction--2026-10-19-asiasaigon).
+  Research DB7688673963308855330/127 and IDs differ from stable; public preview
+  auto-login is not genuine-human security. Main6front-door negatives redirect
+  to Access, not native revoke/SSE qualification. No deploy/schema/auth/session
+  or grant mutation. ee664f2e published; normal hook130contract/717API PASS,
+  build/restore PASS; exact new test image cleaned,0new cache,41tuples unchanged.
+  Source adoption closed, consumer runtime/authority assembly still original08
+  NOT_MET;09connected not started. Older dated entries are historical.
+
 - **Original08 resumed19Oct12:54Asia/Saigon:** both pending cleanups closed:
   HK1175files/20.63MB and SGP2exact cache IDs/16KiB;41HK/51SGP tuples unchanged.
   Core adopted native read/runtime in d0789674 and its actual terminal records
