@@ -1,6 +1,6 @@
 {
   "phase": "UXM-07",
-  "updated": "2026-10-18",
+  "updated": "2026-10-19",
   "open": [
     {
       "id": "DEBT-UXM07-004",
@@ -31,6 +31,13 @@
       "where": "e2e/execution-surface-audit.spec.ts (clipped paragraphs and type-scale on lab pages gate-r1-review, live-full-operations, sandbox-certification, incident-detail at 5 widths = 10 tests), e2e/execution-journeys.spec.ts EL-V2-05 (locator 'Exit reviews'), e2e/_preview-governance-c06.spec.ts (needs GOV_WORKSPACE of a real stack)",
       "evidence": "same failures on a pristine detached checkout of 5291a80f under the pinned image (17 failed / 105 passed); not caused by UXM-07",
       "owner": "Codex (V1 lab copy and governance inbox) / Bobby (the c06 probe is real-stack only; it is not excluded from the chromium project's testIgnore)"
+    },
+    {
+      "id": "DEBT-UXM07-008",
+      "title": "HIFI fidelity rows not fixed (class B, MINOR/uncertain)",
+      "where": "hifi-comparison-2026-10-18.md section 'Chua lam'; per-row ids in hifi-review-A/B/C",
+      "consequence": "visual polish only; no data or authority effect",
+      "owner": "Claude (rows without a Codex/owner dependency); owner/Codex for P-B7, Compare Partitions panel, EquityPanel Y labels (exact-decimal display rule)"
     }
   ],
   "closed": [

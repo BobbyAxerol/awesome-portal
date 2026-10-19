@@ -197,6 +197,7 @@ Tất cả `OPEN`; chưa gửi cho Codex ngoài việc ghi ở đây (Codex đ�
 | FE-041 | P3 | Tham số `window` (gắn FE-025) | `ContextBar` `windowLock` | Portal | Trả lời FE-025 |
 | FE-042 | P2 | Operations queue item V2 có `incident_id` (nullable) hoặc quan hệ operation→incident | Incident drawer mở từ hàng hàng đợi | Portal | Contract |
 | FE-043 | P3 | `status_counts` cho KPI Operations (server-counted) hoặc quyết định không có | 4 ô KPI theo trạng thái trong hi-fi | Portal | Contract hoặc "no" |
+| FE-056 | P3 | `/operator-tasks`: `description`, `display_name`, `scope_label` (hiện `meta` là tham chiếu nguồn) | HIFI Admin sub-line | Portal | Contract |
 | FE-044…055 | P2/P3 | Yêu cầu từ lát S2/S1e: `/portfolios` cursor+q+theo env; approvals theo portfolio; ledger seq/command_id/receipt_ref; stage_counts zero; schema Decimal maxLength/unique id/enum/MetricState; bindings & sleeves; account long/short/margin ratio; blotter relation + lọc; users last sign-in; stage-drift decimal + timeline outcome; stream schema | Từng dòng: [evidence/UXM-07/backend-requests.md](evidence/UXM-07/backend-requests.md) mục "S2 và S1e" | Portal | Contract/quyết định |
 (Chi tiết, locator, fallback FE: [evidence/UXM-07/backend-requests.md](evidence/UXM-07/backend-requests.md).)
 

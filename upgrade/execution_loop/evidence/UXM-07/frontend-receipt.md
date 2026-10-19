@@ -112,3 +112,6 @@ Compare đặt ở `?view=compare` trên route Portfolios; Users chỉ đọc (g
 - Visual (pinned image `mcr.microsoft.com/playwright:v1.62.1-noble`, toàn bộ): lần đầu 375 pass / 17 fail. 15 trong 17 lỗi (surface-audit ×10, EL-V2-05, c06 ×4) **cũng đỏ trên bản sạch của tip Codex** (ghi DEBT-UXM07-007); riêng 5 test WCAG-AA đỏ trên tip Codex nay **xanh** nhờ DEBT-UXM07-001. Hai lỗi do nhánh này (command-center, account cao hơn vì double V2 làm giàu fleet) đã sửa: dữ liệu giàu chỉ với `screensV2`.
 - Một baseline được ghi lại có chủ đích: `el-v2-08-account-acct-live-grid-v21` (ảnh cũ in `UDB_CONTEXT_HTTP_501` do double chưa trả retained-review — DEBT-UXM07-003). Đã xem ảnh mới.
 - Chi tiết: [test-results.json](test-results.json) mục `r2`.
+
+## So sánh HIFI và sửa độ trung thực (2026-10-18/19)
+Chi tiết: [hifi-comparison-2026-10-18.md](hifi-comparison-2026-10-18.md) và ba bảng review A/B/C. Kết quả: 17 sai khác MAJOR (16 đã sửa, 1 là dữ liệu vắng → FE-056), ~70/104 MINOR đã sửa, 84 dòng dữ liệu vắng đều có mã FE, 54 dòng có chủ ý. Sau sửa: vitest 17.547 pass/0 đỏ, trình duyệt V2 34/34, visual pinned-image 377 pass và 15 lỗi **đúng bằng** tập đã đỏ trên bản sạch của Codex (DEBT-UXM07-007). Commit: `5748ccdb` (lớp dùng chung), `18744bc4` (A), `1b17d791` (B), `1b0417bc` (C).

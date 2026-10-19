@@ -153,5 +153,23 @@
     },
     "browser_v2": "34/34 on the port-4176 V2 build (17 routes x 1440/390)",
     "flag_off_dist": "0 files contain any V2 class; class-collision gate added in v2Hygiene.test.ts"
+  },
+  "hifi": {
+    "date": "2026-10-18/19",
+    "method": "HIFI v2 pages (manager, nq/ok, 1440) vs browser shots of 17 routes x 1440/390; 3 independent read-only reviewers; 4 fix packages + 1 follow-up; re-check after",
+    "classes": {
+      "A_DATA_ABSENT": 84,
+      "B_MAJOR": 17,
+      "B_MINOR": 104,
+      "C_INTENTIONAL": 54
+    },
+    "major_fixed": 16,
+    "major_reclassified_data_absent": 1,
+    "doc": "hifi-comparison-2026-10-18.md"
+  },
+  "r2_after_fidelity": {
+    "vitest": "213 files / 17,547 pass / 2 expected-fail / 0 red",
+    "browser_v2": "34/34",
+    "pinned_image_visual": "377 passed / 15 failed / 16 skipped; the 15 are exactly the set already red on pristine Codex 5291a80f (DEBT-UXM07-007: surface-audit x10, EL-V2-05, c06 probe x4); no baseline differs because of this branch"
   }
 }

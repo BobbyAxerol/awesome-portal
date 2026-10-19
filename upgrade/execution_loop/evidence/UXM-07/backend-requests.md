@@ -26,6 +26,7 @@ Mã FE-044…055 tiếp ledger gốc; mỗi dòng nêu locator, hiện trạng, 
 | FE-052 | P2 | Blotter: `deployment_id`, filled qty, giá TB, slippage, fee từng đơn; lọc stage/deployment/account/alpha trong `BlotterQuery`; bracket legs có `order_id` | relation orders thiếu; scope chips chỉ lọc "loaded pages" | thêm field + lọc server | caption "loaded pages" | OPEN |
 | FE-053 | P3 | Users: last sign-in; `accountApi.roster` trả rỗng khi body sai dạng | không publish | field + lỗi có kiểu | "Not published (chưa có id)" | OPEN |
 | FE-054 | P2 | Alpha: `getStageDrift` trả decimal string (hiện JSON number); observed timeline thiếu status/outcome; route riêng cho replay | tab `?tab=replay` thay route | decimal string, thêm outcome, chốt route | stage-drift chỉ là fallback "Daily close" partial | OPEN |
+| FE-056 | P3 | Operator tasks: mô tả một câu, tên hiển thị và nhãn scope cho `GET /operator-tasks` | `task.meta` hiện là tham chiếu nguồn (`cli/__main__.py:1570`) hoặc 'Portal-curated task; source operation not published'; HIFI Admin cần câu mô tả | thêm `description`, `display_name`, `scope_label` | Admin giữ catalogue key và hàng 'Not published' | OPEN |
 | FE-055 | P3 | Command-center stream: double trả `profile-realtime.v1`, stream CC cần `manager-realtime-snapshot.v2` | không khớp | chốt schema | biến thể `stream:"published"` trong double | OPEN |
 
 Ghi chú không phải yêu cầu: `--f-attention` chọn hue cam (#ffa51f); đây là quyết định thiết kế chờ Bobby xác nhận, không cần Codex.
