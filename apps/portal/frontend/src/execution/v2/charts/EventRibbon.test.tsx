@@ -156,3 +156,41 @@ describe("EventKindChips", () => {
     expect(onToggle).toHaveBeenCalledWith("incident");
   });
 });
+
+describe("EventRibbon unpublished lanes", () => {
+  const NP = "Not published (FE-031, FE-032)";
+  const unpublished = { stage: NP, decision: NP, incident: NP, recall: NP } as const;
+
+  it("keeps the lane, prints the sentence on it instead of an axis, and draws nothing there", () => {
+    render(<EventRibbon label="Events" events={EVENTS} domain={domain} unpublished={unpublished} />);
+    for (const kind of ["stage", "decision", "incident", "recall"]) {
+      const lane = document.querySelector(`.exec-ribbon-lane[data-kind='${kind}']`)!;
+      expect(lane.getAttribute("data-unpublished")).toBe("true");
+      expect(lane.textContent).toContain(NP);
+      expect(lane.querySelector(".exec-ribbon-lane-axis")).toBeNull();
+    }
+    const flow = document.querySelector(".exec-ribbon-lane[data-kind='flow']")!;
+    expect(flow.getAttribute("data-unpublished")).toBeNull();
+    expect(flow.querySelector(".exec-ribbon-lane-axis")).not.toBeNull();
+    // Only the flow event is drawn; events handed in for an unpublished lane are neither drawn nor counted as outside.
+    expect(screen.getAllByTestId("ribbon-event")).toHaveLength(1);
+    expect(screen.queryByTestId("ribbon-outside")).toBeNull();
+  });
+
+  it("is not the empty state when every lane is unpublished and there are no events", () => {
+    render(<EventRibbon label="Events" events={[]} domain={domain} unpublished={unpublished} />);
+    expect(screen.queryByTestId("ribbon-empty")).toBeNull();
+    expect(screen.getAllByTestId("ribbon-lane-np")).toHaveLength(4);
+  });
+
+  it("chips of an unpublished kind are off and print the sentence, never a count of 0", () => {
+    render(<EventKindChips events={EVENTS} enabled={{}} onToggle={() => {}} unpublished={unpublished} />);
+    const stage = screen.getByRole("button", { name: /Stage/ }) as HTMLButtonElement;
+    expect(stage.disabled).toBe(true);
+    expect(stage.textContent).toContain(NP);
+    expect(stage.textContent).not.toMatch(/\b0\b/);
+    const flow = screen.getByRole("button", { name: /Flow/ }) as HTMLButtonElement;
+    expect(flow.disabled).toBe(false);
+    expect(flow.textContent).toContain("1");
+  });
+});

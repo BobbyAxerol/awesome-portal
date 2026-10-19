@@ -24,9 +24,9 @@ import { compareAbsDecimal, correlationAt } from "../../../../analytics";
 import type { CurrencyValue, ProfileEnvelope } from "../../../../api/profileRead";
 import type { CurrencyBucket, DerivationEnvelope, PortfolioCapitalData } from "../../../../api/derivations";
 import type { FinancialChartPayload } from "../../../../api/financialChart";
-import { readUtcEpochMs } from "../../../../screenDataContract";
+import { readUtcEpochMs, type UtcEpochMs } from "../../../../screenDataContract";
 import { readDecimal } from "../../../boundary";
-import type { ChartState, SeriesPoint, ServerEnvelope } from "../../../charts";
+import type { ChartEvent, ChartState, SeriesPoint, ServerEnvelope } from "../../../charts";
 import type { FlagKind } from "../../../flagKinds";
 import { domainOf, humanize, type Domain } from "../format";
 
@@ -398,6 +398,73 @@ export function unreadEntries(ledger: CapitalLedger): number | null {
 
 export function ledgerIsEmpty(ledger: CapitalLedger): boolean {
   return ledger.buckets.every((bucket) => bucket.entries.length === 0);
+}
+
+/* ── capital flow ribbon (concept C3): the ledger on the equity's time axis ── */
+
+/** The ribbon's own words for a lane with no published source: one sentence, said on the lane. */
+export const RIBBON_LANE_NP = "Not published (FE-031, FE-032)";
+
+/** Lanes the capital ledger cannot place anything on. Recall is here too: no ledger movement word says an entry is a recall. */
+export const RIBBON_UNPUBLISHED = { stage: RIBBON_LANE_NP, decision: RIBBON_LANE_NP, incident: RIBBON_LANE_NP, recall: RIBBON_LANE_NP } as const;
+
+export interface LedgerFlowModel {
+  /** Flow-lane events, newest first; one per ledger entry that moved allocated capital and has a readable instant. */
+  events: readonly ChartEvent[];
+  /** The table alternative of the ribbon: the same entries, same order. */
+  rows: readonly LedgerRowView[];
+  /** Entries read that carry no readable instant, so no place on a time axis. */
+  undated: number;
+  /** Entries read whose direction is UNCHANGED (a rebalance or adjustment that moved nothing): not a flow. */
+  unchanged: number;
+  /** Entries the reader kept; `bounded` says how many the server holds. */
+  read: number;
+}
+
+const ISO_WITH_ZONE = /(?:Z|[+-]\d{2}:\d{2})$/;
+
+function instantOf(iso: string | null): UtcEpochMs | null {
+  if (iso === null || !ISO_WITH_ZONE.test(iso)) return null;
+  return readUtcEpochMs(Date.parse(iso));
+}
+
+/**
+ * The flow lane from the published capital ledger and nothing else. One event
+ * per entry, titled with the published movement word and the exact amount in
+ * ITS OWN currency; no amount is added to another, within or across buckets.
+ * The ledger is an allocation ledger (capital allocated to accounts), so the
+ * lane is called an allocation flow, not "added funds": the funding statements
+ * are FE-017.
+ */
+export function ledgerFlow(ledger: CapitalLedger): LedgerFlowModel {
+  const all = ledgerRows(ledger);
+  const events: ChartEvent[] = [];
+  const rows: LedgerRowView[] = [];
+  let undated = 0;
+  let unchanged = 0;
+  for (const row of all) {
+    if (row.entry.direction === "UNCHANGED") {
+      unchanged += 1;
+      continue;
+    }
+    const t = instantOf(row.entry.occurredAt);
+    if (t === null) {
+      undated += 1;
+      continue;
+    }
+    const amount = readDecimal(row.entry.amount, { unit: "money" });
+    const before = readDecimal(row.entry.beforeAllocated, { unit: "money" });
+    const after = readDecimal(row.entry.afterAllocated, { unit: "money" });
+    events.push({
+      id: row.key,
+      t,
+      kind: "flow",
+      title: `${row.movement}, ${row.direction.toLowerCase()}: ${amount?.display ?? "unreadable amount"} ${row.currency}`,
+      detail: `Account ${row.entry.accountId}${before && after ? ` · allocated ${before.display} to ${after.display} ${row.currency}` : ""}`,
+    });
+    rows.push(row);
+  }
+  return { events, rows, undated, unchanged, read: all.length };
 }
 
 /* ── equity chart (EDS-07) ─────────────────────────────────────────────── */

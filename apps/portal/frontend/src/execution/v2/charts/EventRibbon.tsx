@@ -40,6 +40,12 @@ export interface EventRibbonProps {
   stages?: readonly StageBand[];
   /** Lanes that are on. Absent keys mean on. */
   enabled?: Partial<Record<EventKind, boolean>>;
+  /**
+   * Lanes whose source is not published, with the sentence to print on the lane
+   * (`Not published (FE-031, FE-032)`). The lane stays visible and says so; it is
+   * not an empty lane, and any event passed for it is not drawn or counted.
+   */
+  unpublished?: Partial<Record<EventKind, string>>;
   /** `unavailable` prints the caller's copy; `partial` and `stale` wear a Flag. */
   state?: ChartState;
   /** Marks closer than domain/buckets share one counted mark. Default 80. */
@@ -61,7 +67,7 @@ interface Cluster {
   readonly events: readonly ChartEvent[];
 }
 
-export function EventRibbon({ label, events, domain, stages = [], enabled = {}, state = { kind: "ready" }, buckets = 80 }: EventRibbonProps) {
+export function EventRibbon({ label, events, domain, stages = [], enabled = {}, unpublished = {}, state = { kind: "ready" }, buckets = 80 }: EventRibbonProps) {
   const [focus, setFocus] = useState<string | null>(null);
   const from = domain.from as number;
   const to = domain.to as number;
@@ -72,6 +78,7 @@ export function EventRibbon({ label, events, domain, stages = [], enabled = {}, 
     let outside = 0;
     const lanes = new Map<EventKind, Map<number, ChartEvent[]>>();
     for (const e of events) {
+      if (unpublished[e.kind] !== undefined) continue;
       if (e.t < from || e.t > to) {
         outside += 1;
         continue;
@@ -95,12 +102,14 @@ export function EventRibbon({ label, events, domain, stages = [], enabled = {}, 
       }
     }
     return { clusters: out, outside };
-  }, [events, from, to, span, buckets, enabled]);
+  }, [events, from, to, span, buckets, enabled, unpublished]);
 
   if (state.kind === "unavailable") return <ChartUnavailable label={label} copy={state.copy} reason={state.reason} height={72} />;
 
   const stageBands = stages.filter((s) => s.to > from && s.from < to && span > 0);
-  const empty = events.length === 0 && stageBands.length === 0;
+  const counted = events.filter((e) => unpublished[e.kind] === undefined);
+  const hasLaneNotes = EVENT_KINDS.some((k) => unpublished[k] !== undefined);
+  const empty = counted.length === 0 && stageBands.length === 0 && !hasLaneNotes;
   const active = clusters.find((c) => c.key === focus) ?? null;
 
   return (
@@ -112,9 +121,13 @@ export function EventRibbon({ label, events, domain, stages = [], enabled = {}, 
         <>
           <div className="exec-ribbon-lanes" style={{ height: EVENT_KINDS.length * 18 + 8 }}>
             {EVENT_KINDS.map((kind, row) => (
-              <div key={kind} className="exec-ribbon-lane" data-kind={kind} data-off={on(kind) ? "false" : "true"} style={{ top: 4 + row * 18 }}>
+              <div key={kind} className="exec-ribbon-lane" data-kind={kind} data-off={on(kind) ? "false" : "true"} data-unpublished={unpublished[kind] !== undefined ? "true" : undefined} style={{ top: 4 + row * 18 }}>
                 <span className="exec-ribbon-lane-name">{EVENT_KIND_TABLE[kind].label}</span>
-                <span className="exec-ribbon-lane-axis" />
+                {unpublished[kind] !== undefined ? (
+                  <span className="exec-ribbon-lane-np" data-testid="ribbon-lane-np" title={unpublished[kind]}>{unpublished[kind]}</span>
+                ) : (
+                  <span className="exec-ribbon-lane-axis" />
+                )}
               </div>
             ))}
             {clusters.map((c) => {
@@ -193,15 +206,26 @@ export interface EventKindChipsProps {
   enabled: Partial<Record<EventKind, boolean>>;
   /** Called with the kind the user toggled; the caller owns the state. */
   onToggle: (kind: EventKind) => void;
+  /** Kinds with no published source: the chip is off and says so instead of printing a count. */
+  unpublished?: Partial<Record<EventKind, string>>;
 }
 
 /** The lane filter: one toggle per kind, each with its count and its glyph. */
-export function EventKindChips({ events, domain, enabled, onToggle }: EventKindChipsProps) {
+export function EventKindChips({ events, domain, enabled, onToggle, unpublished = {} }: EventKindChipsProps) {
   return (
     <div className="exec-ribbon-chips" role="group" aria-label="Event kinds">
       {EVENT_KINDS.map((kind) => {
-        const count = events.filter((e) => e.kind === kind && (domain === undefined || (e.t >= domain.from && e.t <= domain.to))).length;
         const pressed = enabled[kind] !== false;
+        if (unpublished[kind] !== undefined) {
+          return (
+            <button key={kind} type="button" className="exec-ribbon-chip" aria-pressed={false} disabled data-kind={kind} title={unpublished[kind]}>
+              <span aria-hidden="true" className="exec-ribbon-chip-glyph">{EVENT_KIND_TABLE[kind].glyph}</span>
+              {EVENT_KIND_TABLE[kind].label}
+              <span className="exec-ribbon-chip-count">{unpublished[kind]}</span>
+            </button>
+          );
+        }
+        const count = events.filter((e) => e.kind === kind && (domain === undefined || (e.t >= domain.from && e.t <= domain.to))).length;
         return (
           <button key={kind} type="button" className="exec-ribbon-chip" aria-pressed={pressed} data-kind={kind} onClick={() => onToggle(kind)}>
             <span aria-hidden="true" className="exec-ribbon-chip-glyph">{EVENT_KIND_TABLE[kind].glyph}</span>

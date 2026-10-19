@@ -487,6 +487,18 @@
   top: 13px;
   border-top: 1px solid var(--line);
 }
+.exec-ribbon-lane-np {
+  position: absolute;
+  left: var(--exec-chart-ml);
+  right: var(--exec-chart-mr);
+  top: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-ribbon-chip:disabled { color: var(--ink-faint); border-style: dashed; cursor: not-allowed; }
 .exec-ribbon-ev {
   position: absolute;
   min-width: 13px;

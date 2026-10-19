@@ -268,11 +268,12 @@ describe("Allocations", () => {
     expect(paper.textContent).toContain("not a zero balance");
   });
 
-  it("reads each ledger once, only for an environment the portfolio has a book in, and only when the tab opens", async () => {
+  it("reads each ledger once, only for an environment the portfolio has a book in; the selected one from the start (the Overview ribbon), the others when the tab opens", async () => {
     const { api, calls } = makeApi();
     mount(api);
     await ready();
-    expect(calls.some((c) => c.includes("capital-ledger"))).toBe(false);
+    await screen.findByRole("group", { name: "Capital flow events, Live" });
+    expect(calls.filter((c) => c.includes("capital-ledger"))).toEqual([`GET /portfolios/${PF.core}/capital-ledger?environment=live`]);
     await goto("Allocations");
     await screen.findByRole("table", { name: "Capital ledger in Live" });
     const ledgers = calls.filter((c) => c.includes("capital-ledger"));

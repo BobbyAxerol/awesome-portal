@@ -10,7 +10,7 @@
  */
 import { useState } from "react";
 
-import { EquityPanel } from "../../../charts";
+import { EquityPanel, domainOfSeries, type ChartDomain } from "../../../charts";
 import { SectionPanel } from "../../../blocks";
 import { Flag } from "../../../Flag";
 import { formatAsOf } from "../../../boundary";
@@ -18,6 +18,7 @@ import { readUtcEpochMs } from "../../../../screenDataContract";
 import { EXPORT_REASON, PF_FE, npReason, npText, type Unpublished } from "../fe";
 import { Absent, MoneyList, Np, envWord } from "../format";
 import type { TabCtx } from "./ctx";
+import { FlowRibbonChips, FlowRibbonLanes, FlowRibbonNotes, useRibbonLanes } from "./FlowRibbon";
 import { chartState, equitySeries, serverEnvelope } from "./model";
 import { InternalLink, PfKpi, PfKpiStrip, ReadGate } from "./parts";
 
@@ -31,6 +32,7 @@ const SEGMENTS = [
 
 function EquityCard({ ctx }: { ctx: TabCtx }) {
   const [picked, setPicked] = useState<string | null>(null);
+  const [lanes, toggleLane] = useRibbonLanes();
   return (
     <SectionPanel
       title="Equity"
@@ -68,6 +70,9 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
           const to = readUtcEpochMs(payload.coverage.toMs);
           const state = chartState(payload);
           const label = shown ? `${shown.label}${shown.currency ? ` · ${shown.currency}` : ""}` : "Portfolio equity";
+          // One window for the equity and the ribbon: the chart's own coverage, else the drawn series' extent.
+          const axis: ChartDomain | null = from !== null && to !== null ? { from, to } : shown ? domainOfSeries(shown.points) : null;
+          const ribbon = <FlowRibbonLanes ctx={ctx} domain={axis} lanes={lanes} />;
           return (
             <div className="exec-pf-chart" data-stale={stale ? "true" : undefined}>
               {series.length > 1 ? (
@@ -83,11 +88,13 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
                   {series.length} series are published, in {[...new Set(series.map((s) => s.currency ?? "no currency"))].join(", ")}. Each is drawn on its own and none is combined with another.
                 </p>
               ) : null}
+              <FlowRibbonChips ctx={ctx} domain={axis} lanes={lanes} onToggle={toggleLane} />
               {shown === undefined ? (
                 <EquityPanel
                   label="Portfolio equity"
                   points={[]}
                   state={state.kind === "unavailable" ? state : { kind: "unavailable", copy: "Not available", reason: "The chart read published no series." }}
+                  ribbon={ribbon}
                 />
               ) : (
                 <EquityPanel
@@ -96,12 +103,14 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
                   points={shown.points}
                   currency={shown.currency ?? undefined}
                   state={state}
-                  domain={from !== null && to !== null ? { from, to } : undefined}
+                  domain={axis ?? undefined}
+                  ribbon={ribbon}
                   serverEnvelope={envelope ?? undefined}
                   drawdown={{ kind: "absent", copy: npText(PF_FE.drawdown), reason: "Drawdown needs the NAV series" }}
                 />
               )}
               {shown && shown.unreadable > 0 ? <p className="exec-pf-note">{shown.unreadable} points could not be read and were not drawn.</p> : null}
+              <FlowRibbonNotes ctx={ctx} />
               <div className="exec-pf-caption">
                 <Flag kind="neutral" label="Retained snapshots" size="sm" />
                 <span>{ctx.window === "ALL" ? "Whole retained range" : `Last ${ctx.window}`}</span>

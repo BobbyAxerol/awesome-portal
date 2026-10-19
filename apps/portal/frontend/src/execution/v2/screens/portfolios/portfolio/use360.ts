@@ -7,7 +7,7 @@
  * | the portfolio resource | `getPortfolio360Resource` | always |
  * | capital, per environment | `getPortfolioCapital` x3 | always (a separate book per environment, never folded) |
  * | equity series | `getFinancialChart` (portfolio, equity) | once the resource names its environment |
- * | capital ledger, per environment | `getCapitalLedger` | the Allocations tab has been opened |
+ * | capital ledger, per environment | `getCapitalLedger` | the Allocations tab has been opened; the selected environment's also from the start (the Overview's event ribbon sits on the equity) |
  * | correlation | `getCorrelation` | the Risk tab has been opened |
  * | operations on this portfolio | `listOperationalQueueV2` | the People tab has been opened |
  *
@@ -67,9 +67,9 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
   );
 
   const ledgers = {
-    live: useRead(api, enabled && visited.allocations && present.includes("live"), `ledger|${portfolioId}|live`, (scoped) => scoped.getCapitalLedger(portfolioId, "live")),
-    paper: useRead(api, enabled && visited.allocations && present.includes("paper"), `ledger|${portfolioId}|paper`, (scoped) => scoped.getCapitalLedger(portfolioId, "paper")),
-    sandbox: useRead(api, enabled && visited.allocations && present.includes("sandbox"), `ledger|${portfolioId}|sandbox`, (scoped) => scoped.getCapitalLedger(portfolioId, "sandbox")),
+    live: useRead(api, enabled && (visited.allocations || selected === "live") && present.includes("live"), `ledger|${portfolioId}|live`, (scoped) => scoped.getCapitalLedger(portfolioId, "live")),
+    paper: useRead(api, enabled && (visited.allocations || selected === "paper") && present.includes("paper"), `ledger|${portfolioId}|paper`, (scoped) => scoped.getCapitalLedger(portfolioId, "paper")),
+    sandbox: useRead(api, enabled && (visited.allocations || selected === "sandbox") && present.includes("sandbox"), `ledger|${portfolioId}|sandbox`, (scoped) => scoped.getCapitalLedger(portfolioId, "sandbox")),
   } satisfies Record<Environment, unknown>;
 
   const correlation = useRead(
