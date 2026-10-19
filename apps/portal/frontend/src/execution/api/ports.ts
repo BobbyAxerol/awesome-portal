@@ -217,7 +217,7 @@ export interface ApprovalCreateInput {
  * The four states the entry screen binds (N29 §4). `duplicate` carries the
  * existing approval so the UI can link it instead of apologizing; `failed`
  * carries the typed problem. A thrown fetch becomes `failed` with
- * `offline: true` — the request key survives for a retry of the SAME payload.
+ * `offline: true` — the outcome is unknown (network drop, 408, 5xx, or a 2xx whose body could not be read): the request key survives for a retry of the SAME payload.
  */
 export type ApprovalCreateOutcome =
   | {
