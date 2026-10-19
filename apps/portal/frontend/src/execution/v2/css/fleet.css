@@ -492,21 +492,45 @@ a.exec-fleet-open {
 .exec-fleet-board-note {
   margin: 0;
 }
+/* Lanes share the row: 192px floor (the kit's 220px does not fit five lanes beside two slim gate strips at 1440), growing
+ * with the room. Only when they still do not fit does the board scroll, inside itself. */
 .exec-fleet-board {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 1fr);
+  display: flex;
   gap: var(--space-3);
-  align-items: start;
+  align-items: flex-start;
+  min-width: 0;
   overflow-x: auto;
   padding-bottom: var(--space-2);
 }
 .exec-fleet-lane {
   display: flex;
+  flex: 1 1 192px;
   flex-direction: column;
-  min-width: 0;
+  min-width: 192px;
   background: var(--paper-raised);
   border: 1px solid var(--line-strong);
+}
+/* Empty gate lane: a slim strip, title and the "not published" word set vertically. */
+.exec-fleet-lane[data-collapsed="true"] {
+  flex: 0 0 auto;
+  min-width: 0;
+  align-self: stretch;
+  background: var(--paper-sunken);
+  border-style: dashed;
+}
+.exec-fleet-lane[data-collapsed="true"] > .exec-fleet-lane-head {
+  padding: var(--space-2);
+  border-bottom: 0;
+}
+.exec-fleet-lane-strip {
+  margin: 0;
+  padding: 0 var(--space-2) var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-fleet-lane[data-collapsed="true"] .exec-fleet-lane-title,
+.exec-fleet-lane[data-collapsed="true"] .exec-fleet-lane-strip {
+  writing-mode: vertical-rl;
 }
 .exec-fleet-lane-head {
   display: flex;
@@ -608,8 +632,26 @@ a.exec-fleet-open {
 /* Below 660px (the table's own breakpoint) the lanes stack, one under another. */
 @media (max-width: 660px) {
   .exec-fleet-board {
-    grid-auto-flow: row;
-    grid-auto-columns: minmax(0, 1fr);
+    flex-direction: column;
+    align-items: stretch;
     overflow-x: visible;
+  }
+  .exec-fleet-lane {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+  /* Stacked, a gate strip is one horizontal line. */
+  .exec-fleet-lane[data-collapsed="true"] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    align-self: auto;
+  }
+  .exec-fleet-lane[data-collapsed="true"] .exec-fleet-lane-title,
+  .exec-fleet-lane[data-collapsed="true"] .exec-fleet-lane-strip {
+    writing-mode: horizontal-tb;
+  }
+  .exec-fleet-lane-strip {
+    padding: var(--space-2);
   }
 }

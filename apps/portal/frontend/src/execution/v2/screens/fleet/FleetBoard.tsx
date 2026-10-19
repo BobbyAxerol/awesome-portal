@@ -22,7 +22,7 @@ import { Link } from "react-router-dom";
 import { JourneySpine } from "../../blocks";
 import { Flag } from "../../Flag";
 import {
-  BOARD_READINESS, boardColumns, notPublished,
+  BOARD_READINESS, COUNT_NOT_AVAILABLE, boardColumns, notPublished,
   type BoardColumn, type FleetRow,
 } from "./fleetModel";
 import { spineStage } from "./FleetTable";
@@ -79,6 +79,24 @@ function Column({ column, headingId, selectedKey, hrefFor, onOpen }: {
   column: BoardColumn; headingId: string; selectedKey?: string | null; hrefFor(row: FleetRow): string; onOpen(row: FleetRow): void;
 }) {
   const n = column.rows.length;
+  const gateWords = `No alpha is placed here: the fleet read does not publish a gate position (${BOARD_READINESS.fe}).`;
+  // A gate lane with nothing in it and no count the summary states is a slim labelled strip, not a 220px empty box. The
+  // words stay in the DOM for assistive tech and in the tooltip; nothing is counted that was not published.
+  if (column.gate && n === 0 && column.published === COUNT_NOT_AVAILABLE) {
+    return (
+      <section className="exec-fleet-lane" data-stage={column.code} data-collapsed="true" aria-labelledby={headingId} title={gateWords}>
+        <header className="exec-fleet-lane-head">
+          <h3 id={headingId} className="exec-fleet-lane-title">{column.label}</h3>
+          <span className="exec-fleet-sr">{n} loaded</span>
+          <span className="exec-fleet-sr">In your scope: {column.published}</span>
+        </header>
+        <p className="exec-fleet-lane-strip">
+          <span className="exec-fleet-sr">{gateWords}</span>
+          <span aria-hidden="true">Not published ({BOARD_READINESS.fe})</span>
+        </p>
+      </section>
+    );
+  }
   return (
     <section className="exec-fleet-lane" data-stage={column.code} aria-labelledby={headingId}>
       <header className="exec-fleet-lane-head">
@@ -88,7 +106,7 @@ function Column({ column, headingId, selectedKey, hrefFor, onOpen }: {
       </header>
       {n === 0 ? (
         <p className="exec-fleet-lane-empty">
-          {column.gate ? `No alpha is placed here: the fleet read does not publish a gate position (${BOARD_READINESS.fe}).` : "No loaded alpha is in this stage."}
+          {column.gate ? gateWords : "No loaded alpha is in this stage."}
         </p>
       ) : (
         <ul className="exec-fleet-lane-cards" aria-label={`${column.label}, ${n} loaded`}>

@@ -811,6 +811,21 @@ describe("board view", () => {
     expect(screen.getByText(/Loaded rows only: 5 alphas placed by highest published stage/)).toBeTruthy();
   });
 
+  it("an empty gate lane is a slim labelled strip: the words are in the tooltip and for assistive tech, no count is invented", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?view=board");
+    await board();
+    for (const name of ["R1 gate", "R2 gate"]) {
+      const strip = lane(name);
+      expect(strip.getAttribute("data-collapsed")).toBe("true");
+      expect(strip.getAttribute("title")).toBe("No alpha is placed here: the fleet read does not publish a gate position (FE-027).");
+      expect(strip.querySelector(".exec-fleet-lane-cards")).toBeNull();
+      expect(screen.getByRole("region", { name })).toBe(strip);
+    }
+    // A stage lane is never collapsed, empty or not.
+    expect(lane("Paper").getAttribute("data-collapsed")).toBeNull();
+  });
+
   it("a card is identity, published health, the mini spine and the readiness gap; nothing is derived", async () => {
     const { api } = makeApi();
     mount(api, "/execution/fleet?view=board");
