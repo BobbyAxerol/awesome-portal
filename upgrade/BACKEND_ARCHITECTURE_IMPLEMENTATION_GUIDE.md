@@ -650,6 +650,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 exact Research identity prerequisite,19Oct — CURRENT:**
+[private operator packet](integration/execution-native-read-v1/research-identity-intake/README.md)
+reuses the official PM SDK;14wrapper tests and18fresh-PG15 cases PASS.
+Actual source-role READ ONLY lookup on TS system7674585245102796834 returned
+NO_ACTIVE_EXACT_MAPPING, not permission to seed/reactivate a TS user.
+Bobby approved exactly one immutable receipt schema + isolated identity role;
+actual preparation COMMITTED14:13Asia/Saigon: NOLOGIN/no-grants,0receipt rows;
+preserve original native hash and transaction-before/after registry ACLs, and
+provider28445. Registry preservation is NOT authority. Real Core reverse/session+
+finite ACL window still precede actual
+identity creation; no preview/fake grant. [Main journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-intake-preparation--2026-10-19-asiasaigon)
+records install outcome/cleanup separately. Full08NOT_MET;09connected not started.
+
 **Original08 owner target correction,19Oct Asia/Saigon — CURRENT:** main/stable
 `portal.primusspark.com` is the genuine Cloudflare/Zero Trust security target;
 `dev-portal` is preview, NOT the native consumer. Execution v2 consumes from

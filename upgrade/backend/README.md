@@ -7,6 +7,17 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 Research identity prerequisite,19Oct — CURRENT:**
+  [official SDK/operator packet](../integration/execution-native-read-v1/research-identity-intake/README.md),
+  14wrapper+18real-disposable-PG15 cases PASS. Actual pinned TS read-only lookup:
+  NO_ACTIVE_EXACT_MAPPING; never auto-reactivate or seed a user. Owner approved
+  one receipt schema + isolated role; actual dormant NOLOGIN/no-grants preparation
+  COMMITTED14:13Asia/Saigon/0receipt rows, original native hash and registry
+  ACLs preserved, old provider28445 unchanged. Preservation is not authority. Actual Core
+  reverse/session, bounded ACL window and connected revoke/cache/cursor/SSE
+  remain original08. [Install/outcome journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-intake-preparation--2026-10-19-asiasaigon).
+  Full08NOT_MET,09connected not started; no command/capacity/runtime claim.
+
 - **Original08 owner target correction,19Oct Asia/Saigon — CURRENT:** security
   on main/stable `portal.primusspark.com`; dev is preview, not the Execution v2
   consumer. Actual consumer `research-portal` -> nginx8095 -> Research stack,

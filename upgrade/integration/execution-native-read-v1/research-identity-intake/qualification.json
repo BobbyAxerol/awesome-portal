@@ -1,0 +1,76 @@
+{
+  "schema_version": "edge.research-identity-prerequisite-qualification.v1",
+  "phase": "EPG10-08",
+  "connected_acceptance": "NOT_MET",
+  "consumer": "research-portal.primusspark.com",
+  "source_database": "live_data_executor",
+  "source_system_identifier": "7674585245102796834",
+  "owner_approved_delta": {
+    "receipt_schema": "elp210_human_candidate",
+    "identity_role": "ts_portal_research_identity",
+    "existing_native_roles_or_provider_changed": false
+  },
+  "isolated_wrapper_gate": {
+    "pass": 14,
+    "fail": 0,
+    "skip": 0,
+    "positive_control": "TEST_ONLY_LIFECYCLE_DOUBLE_NOT_REAL_IDENTITY",
+    "negative_verifier": "REAL_PM_ED25519_VERIFIER",
+    "log_sha256": "94ae292f3d0b118faded0117dbd7859db826c86252f8a63a217eeaef37e6e0b4",
+    "earlier_setup_error_cases_retained": 14
+  },
+  "isolated_pg15_gate": {
+    "pass": 18,
+    "fail": 0,
+    "skip": 0,
+    "postgres_version_num": 150018,
+    "receipt_sql_sha256": "305ba23619578935696bbcb6ce434b031746280101034f98accee9271d7ae370",
+    "independent_receipt_catalogue_sha256": "4c38d6ebf0ac9ff2b0e274082b6b6ea895346245ba577114047d8e25668adc63",
+    "log_sha256": "2a7f8332fdfee7f52e26406595f2c7f683f935f375bfe8929da0379ccb428c2a",
+    "identity_or_business_rows_seeded": false,
+    "connected_or_capacity_evidence": false
+  },
+  "actual_mapping_observation": {
+    "adapter": "ExistingIdentityMappingSource.lookup",
+    "transaction_read_only": true,
+    "result": "NO_ACTIVE_EXACT_MAPPING",
+    "inactive_status_not_reactivated": true,
+    "observation_ended_utc": "2026-10-19T06:58:53.045029+00:00",
+    "log_sha256": "221cb0d32b7b0f369f57899459a3dc415c7aef0e5c2c62d15cee7770188b2e6b"
+  },
+  "actual_source_preparation": {
+    "state": "RECEIPT_AND_DORMANT_ROLE_PREPARED",
+    "committed_at_utc": "2026-10-19T07:13:08.126232+00:00",
+    "role_can_login": false,
+    "role_connection_limit": 1,
+    "receipt_rows_after_install": 0,
+    "native_original_installation_verified_before_and_after": true,
+    "registry_evidence": "PRESERVATION_ONLY_NOT_AUTHORITY",
+    "registry_before_sha256": "16d2ce989b5f5f93d81b2948381edf601d5370ff92d5319eec629282b98ba0b3",
+    "registry_after_sha256": "16d2ce989b5f5f93d81b2948381edf601d5370ff92d5319eec629282b98ba0b3",
+    "log_sha256": "29eab1fb41cdffcebb40b6172d16ae192b4bd36f04b71341b083e967c48d7323",
+    "identity_operation_started": false,
+    "identity_writer_activated": false,
+    "human_mapping_created": false
+  },
+  "cleanup": {
+    "own_test_containers_remaining": 0,
+    "own_test_networks_remaining": 0,
+    "own_leases_remaining": 0,
+    "new_images": 0,
+    "new_build_cache_ids": 0,
+    "protected_runtime_tuples": 41,
+    "protected_runtime_unchanged": true,
+    "shared_pg_test_free_before_bytes": 214414528512,
+    "shared_pg_test_free_after_bytes": 214394884096,
+    "exclusive_reclaimed_bytes_claimed": false
+  },
+  "not_claimed": [
+    "REAL_CORE_HUMAN_AUTHENTICATION",
+    "CONNECTED_REVOCATION_CACHE_CURSOR_SSE",
+    "COMMAND_AUTHORITY",
+    "N03_NATIVE_PUBLICATION",
+    "PRODUCTION_CAPACITY",
+    "CUTOVER_OR_PHASE_09_CONNECTED_ACCEPTANCE"
+  ]
+}

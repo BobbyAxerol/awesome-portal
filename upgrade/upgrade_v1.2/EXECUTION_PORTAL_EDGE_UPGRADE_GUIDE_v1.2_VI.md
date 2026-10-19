@@ -1017,6 +1017,14 @@ Fixture sử dụng dữ liệu giả/deterministic đã redact; không copy pro
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Original08 Research prerequisite (19Oct):** [main journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-intake-preparation--2026-10-19-asiasaigon)
+and [official-SDK intake/receipt packet](../integration/execution-native-read-v1/research-identity-intake/README.md):
+14helper+18PG15 cases PASS; approved one receipt schema + isolated NOLOGIN/
+no-grants role actually prepared on the exact TS physical target. No identity
+or business authority is inferred; full connected08NOT_MET,09not started.
+Core's genuine reverse/session composition still precedes finite identity ACL
+activation and connected revoke/cache/cursor/SSE. Stable/provider28445 unchanged.
+
 **Mục tiêu:** quyền thu hồi có hiệu lực xuyên cache/queue/socket và TS commit; transport fail closed. **Dependencies:** read-scope tests từ 02/05 và trust decisions, không cần 07 command hoàn tất. Command-scope revoke/commit tests cần 07 + TS authority. Security changes cần riêng approval theo loại.
 
 **Deliverables:** revocation propagation contract, security test report, certificate/auth rotation plan, least-privilege access map và safe logging policy.

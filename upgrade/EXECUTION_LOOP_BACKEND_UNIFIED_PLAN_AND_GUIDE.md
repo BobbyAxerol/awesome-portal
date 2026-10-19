@@ -22736,6 +22736,229 @@ transaction; execute only once the full host guard, not merely the clock,
 is quiet. This temporary measurement-window dependency does not defer any
 other owned independent source/census/target-correction work.
 
+### Original08 Research identity intake preparation — 2026-10-19 Asia/Saigon
+
+**Entry/authority:** previous goal turn made progress: target correction and
+public source a41f1b0d are verified, not a completed08. Current goal is ACTIVE.
+Core's owning c7-closeout-followthrough now records Bobby's13:13Research-only
+installation approval: existing exact Bobby identity/workspace, Paper READ and
+independent STREAM, genuine password/current-authority flow; no stable/dev/main,
+commands/Live, account reset or inherited production certification. Preserve
+Core's current native installer/overlay/mode WIP instead of duplicating it.
+Original08 IN_PROGRESS/connected NOT_MET;09connected NOT_STARTED. Same08 guide
+and native/current-Core packets above govern.
+
+**Fresh facts, not stale assumptions:** PM advanced toaf52fab9 with qualified
+isolated compensation/profile concurrency work; not a mounted command transport.
+TS-next remains40437453/source-dark. Core remainsd078 plus active installation
+WIP. Real Core focus controller PID3555893 is live, exact script
+research-commission/gate.py; its actual receipt directory is
+/home/bobby/.local/state/portal-execution-elp210/20261019/research-commission/research-native-focus-063653.
+No duplicate of that job is started here. Its result is not yet terminal.
+
+Bounded TS READ ONLY verification now confirms system7674585245102796834,
+PG150018/DBlive_data_executor, original source/control/maintenance role caps
+2/2/1 and0connections each at observation. None can INSERT ts_users; source/
+maintenance have SELECT, control does not. elp210_human_candidate and its
+source_receipts are absent. Both pm_core_authority_rows/truncate are enabled
+ALWAYS, identity-preservation trigger enabled. Candidate port28446 has no
+listener at observation, not reserved or approved as capacity. First diagnostic
+used a guessed trader role and failed before SQL (role absent); actual nonsecret
+container metadata resolved userbobby, then the successful transaction explicitly
+rolled back. No DDL/grant/identity/role/runtime change occurred.
+
+**Owned runnable slice before code:** prepare a SMALL private identity intake
+helper, reusing the existing real PortalHumanCandidate/HumanIdentityService,
+not an authenticator, new public route, SQL user insert or generic URL adapter.
+Freeze one closed request/path; recompute its byte digest locally; enforce one
+owner-selected Research issuer/subject/workspace/workload and Paper ceiling.
+Expose only TS UUID/mapping revision and the committed receipt AFTER the real
+SDK context exits with durable COMMITTED + terminal ACK. Wrong body/token/scope,
+UNKNOWN, failed ACK and cancellation must never return a usable mapping.
+Code belongs only to the owned Edge integration packet; Core/PM source WIP,
+installed provider28445/config/roles and private stable bundles remain untouched.
+
+**Verification/exit for this source slice:** strict request parsing/bounds,
+real SDK signature/digest/scope negative checks, explicitly TEST_ONLY wrapper
+lifecycle ordering/ACK/cancellation tests; source pins before/after, no-network
+isolated process using existing image if dependencies require it. No fabricated
+human/provider/runtime credit. Reuse the qualified SDK, do not reimplement it.
+Validate diff/JSON/three tracking indices and normal hook at coherent landing;
+inventory/reap exact test resources and retain only bounded evidence. This
+closes only the missing private wrapper source, not operational identity trust.
+
+**Installation decision boundary:** separately requested the exact TS delta:
+one isolated identity role + immutable receipt schema, not changed existing
+native roles or a restart of28445. No source DB installation while that exact
+scope is unapproved. New-role ACLs affect registry preservation validation even
+when the native relation digest is unchanged: prove/publish pre/post registry,
+function/trigger/role pins and recovery before serving. Core needs its reviewed
+reverse current-human composition and genuine current password session; dev
+headers, auto-login or identity-by-name are not substitutes. Rollback retains
+UNKNOWN/custody/receipts, drains source work, then revokes only scoped candidate
+access; never deletes identity/audit/history or resurrects grants.
+
+**Exact delta approved (owner reply, 2026-10-19):** Bobby approved the one
+`elp210_human_candidate` receipt schema plus one isolated identity role on
+live_data_executor/system7674585245102796834, as described in the private
+question. No further generic08 approval is required. Approval is not a reason
+to create a redundant mapping: first use the official bounded owner-side
+ExistingIdentityMappingSource lookup for the genuine issuer and exact Research
+subject; reuse an ACTIVE mapping if present. The candidate-only installer must
+prove independent PG15 schema/ACL/guard compatibility before actual DDL, leave
+all3 native roles/provider28445 untouched, and preserve recovery for UNKNOWN.
+No user/business/grant row is manually seeded. Credential remains private.
+
+**First helper gate, failure retained:** no-network existing-image unit run
+06:49:39UTC ran14cases; all14 setup ERROR because the TEST_ONLY public JWK
+lacked the real verifier's mandatory alg=EdDSA. No application check bypass or
+DB access occurred. Fix the test key metadata, not the verifier. Receipt
+/tmp/epg10-08-research-identity-l688lWRi/unit-064939.json,
+logSHA19ee2f81e1c82fbe682b9ce4cc95b73265d422114660e3e7c130c26c04de3487.
+Exact cell removed,0new images/cache,41runtime tuples unchanged, own lease
+removed. Core's separate focus job also terminated with284PASS/1FAIL: expected
+error name differs for a same-DB isolation denial; preserve its failed result
+and leave that fix to its owning source, not a second duplicate gate here.
+
+**Tested helper + actual mapping observation:** corrected helper14/14PASS,
+logSHA94ae292f3d0b118faded0117dbd7859db826c86252f8a63a217eeaef37e6e0b4.
+Official ExistingIdentityMappingSource lookup now completed on the pinned
+physical TS target/source role in a READ ONLY transaction: NO_ACTIVE_EXACT_MAPPING.
+This does not distinguish absence from inactive status and is NOT permission
+to seed/reactivate an identity. Recovery/resolve must use the genuine SDK.
+Actual observer receipt observation-065849.json/logSHA
+221cb0d32b7b0f369f57899459a3dc415c7aef0e5c2c62d15cee7770188b2e6b
+under /tmp/epg10-08-research-identity-l688lWRi. Earlier observer layout failures
+(installed entrypoint is release-root, and pinned SQL requires its original
+absolute readonly mount) were closed/unavailable, NEVER NOT_FOUND; retained
+receipts065646/065750/065821. No DB mutation, no new images/cache,41tuples
+unchanged, all own cells/leases removed after every attempt.
+
+**Runnable approved install preparation before code:** qualify one minimal
+ReceiptPreparation operator using original pinned candidate SQL, independent
+PG15 receipt golden, exact physical target/window, atomic/advisory-locked
+idempotent install and native+registry preservation. Prepare the receipt schema
+and ONE dormant NOLOGIN identity role; it receives NO writer grants/password
+yet, so this independent preparation cannot disturb the registry ACL pin while
+Core assembles its genuine reverse listener. Actual identity ACL/login window
+belongs immediately before the real Core-backed operation, not an indefinitely
+open account. Test wrong target/window/partial/drift, immutable receipt and
+expiry behavior; then install only if all checks pass. This is preparation
+inside approved08/delta, not a new auth gate, source API or completed mapping.
+No operational rows/old role privileges/provider28445 are modified; keep schema
+and immutable history on rollback, no broad DROP or force-clear of UNKNOWN.
+
+**Independent PG15 gate PASS; exact prepared-only install window:** real
+PG150018 disposable cell passed15/15cases at07:03:21UTC: target/window/pins/
+partial/role/trigger drift denials, all-DDL rollback on wrong receipt pin,
+idempotency, real deferred COMMIT expiry and UPDATE/DELETE/TRUNCATE immutability.
+Independent receipt catalogue4c38d6ebf0ac9ff2b0e274082b6b6ea895346245ba577114047d8e25668adc63;
+original candidate SQL305ba236...ae370. Receipt receipt-pg-070315.json/logSHA
+4a5c8a0c090a6653005741917811a035f29f1b5b2c3ec7a92602f354ab158240.
+No identity/grants seeded,2own cells+internal network removed,0newimages/cache,
+41runtime tuples unchanged, own lease removed; shared free214749999104→
+214729453568B, not exclusive reclaimed bytes.
+
+Apply approved prepared-only delta in window **2026-10-19 07:04–07:15UTC
+(14:04–14:15Asia/Saigon)**, after a fresh full host guard. Actual source/owner
+checked via original pinned private loader, full original installer _verify
+(NOT schema-prepare) before/after, then original receipt SQL + exact dormant
+role in one bounded transaction. No grants/password, no new source listener,
+no provider28445/runtime/old-role change. On lost ACK report UNCONFIRMED and
+read back the same state; never assume rollback or delete persistent history.
+This stage needs no human session and does not consume an identity operation.
+Core's latest owning journal now confirms its own earlier official lookup also
+NO_ACTIVE_MAPPING and its test-expectation correction, without a runtime claim.
+Its selected real Research session path is still pending there. Do not repeat
+that owner question or create an owner/preview session; stage only the safe
+independent TS prerequisite while Core owns its schema/runtime composition.
+
+**Apply diagnostic, not an authority failure:** first source-preparation receipt
+070659 was UNCONFIRMED. Fresh bounded READ ONLY readback proved schema/table/
+role all ABSENT, on the same physical system. Instrumented retry070811 proves
+failure before CONNECT_OWNER: operator assumed the existing manifest carried a
+`registry` key. It is the already-reviewed FRESH-native manifest, not the later
+existing-registry variant. This is an OWNED operator defect, not external debt
+or a reason to weaken checks. Derive/export the separate registry preservation
+hash from the SAME fresh independent PG15 source (public owner
+pg_database_owner, policy ownerbobby verified); never adopt a live hash.
+Do not run original schema-prepare or change either schema owner to fit a pin.
+Both failed cells/leases removed;41tuples unchanged, no newimages/cache or
+writer/mapping activation. Full install outcome remains explicitly absent.
+
+**Second refusal fixed without source changes:** diagnostic070921 reached
+VERIFY_EXISTING_INSTALLATION and refused FENCE_NATIVE_CATALOGUE_DRIFT before
+any new DDL. The operator had explicitly put public before pg_catalog; the
+source's existing pgcrypto same-name UUID function changes deparsed defaults
+under that lookup order. Restore normal catalogue-first resolution in the
+operator only. Fresh independent PG15+pgcrypto reproduces this difference;
+original independent receipt and registry pins remain exactly unchanged,
+4c38d6eb...adc63 and dec259e647d65a2950366a119b25ed7921750cdcf369575fd9c71d99b585f582.
+No live hash accepted or DB/function/default modified to silence a mismatch.
+
+**Registry preservation correction:** source full original FRESH-native
+verification now passes. Additive preparation refused its fresh-reference
+registry comparison BEFORE DDL: source correctly retains old read_only/
+ts_portal_manager_read grants and peer-owned public schema ACLs; an empty-cell
+registry is not this existing installation. Do NOT remove those grants, clone
+peer roles into a supposed authority golden, or adopt the source hash as new
+authority. For an original FRESH manifest (no registry authority pin), this
+NOLOGIN/no-grants preparation requires identical transaction-before/after
+registry metadata plus the ORIGINAL independently pinned full native catalogue,
+guards/functions/roles/identities. This is PRESERVATION_ONLY_NOT_AUTHORITY.
+Existing-registry manifests still require their original independent pin;
+they never fall back to an observation. No activation, grant or identity can
+use this comparison as authorization. Add focused real-PG cases for both
+branches, then resume the same bounded prepared-only window. Peer old ACLs/
+default privileges remain unchanged; no new scope is requested or inferred.
+
+**Actual approved preparation COMMITTED — 19Oct14:13:08Asia/Saigon:**
+[source/intake packet](integration/execution-native-read-v1/research-identity-intake/README.md)
+and [bounded return](integration/execution-native-read-v1/research-identity-intake/qualification.json).
+Final independent PG15+pgcrypto gate18/18PASS (includes both registry modes),
+logSHA2a7f8332fdfee7f52e26406595f2c7f683f935f375bfe8929da0379ccb428c2a.
+Actual prepare source-prepare-071304.json returned CREATED, independent receipt
+pin4c38d6eb...adc63, original full native installation verification before/after
+PASS. Source registry before/after16d2ce989b5f5f93d81b2948381edf601d5370ff92d5319eec629282b98ba0b3
+is exactly equal and explicitly PRESERVATION_ONLY_NOT_AUTHORITY, not an approved
+registry admission hash. Source logSHA29eab1fb41cdffcebb40b6172d16ae192b4bd36f04b71341b083e967c48d7323.
+
+Fresh independent READ ONLY post-COMMIT verification confirms exact physical
+target, schema present/receipt rows0, role ts_portal_research_identity NOLOGIN,
+connlimit1/non-super/non-createrole/non-bypass; no table or column INSERT on
+ts_users. Original source/control/maintenance ceilings2/2/1 remain and identity
+guards ALWAYS/ALWAYS/O unchanged. No credentials generated, real identity,
+business policy, row mutation, listener or installed provider28445 restart.
+This preparation closes its actual DB prerequisite, not the full approved
+identity/connected08 operation. Do not ask Bobby to create the same schema/role.
+
+**Cleanup/custody:** final PG test shared free214414528512→214394884096B;
+actual preparation214374539264→214363205632B, shared not exclusive reclaimed
+bytes. Every own cell/network/lease removed;0newimages/cache,41operational
+image/config/start/restart tuples unchanged. No source/test payload transferred
+to SGP during this slice, so no new remote disposable stack/copy to clean.
+Retain this approved persistent schema/dormant role and bounded local receipts,
+not as disposable test data; never drop audit/custody or old rollback artifacts.
+Canonical HK checkout remains manager-v2-paper-read@54c6f5f3; active owned
+feature/worktree feat/execution-edge-upgrade-v1_2 at entrya41f1b0d. All7active
+worktrees retained. Stable releasee4fd under /srv/portal/releases and HK
+releasea9b10385 under /srv/primus/portal/releases, existing native image28ea3958/
+configd18c5557 and explicitly retained active/rollback sets unchanged.
+
+**Runnable/blocked split and recommendation:** owned helper + actual dormant
+DB preparation are tested; normal coherent commit/publication/its exact hook
+cleanup are runnable now. Identity activation must wait ONLY for Core's genuine
+reviewed reverse/session/listener composition and its finite ACL window. Latest
+owning c7 journal selects an existing real Research Bobby session via private
+file (path pending there), not a preview credential. Core native config root is
+still absent; no provider return or consumer mount is invented. Reuse its owning
+release WIP and session intake, do not duplicate source or ask the same question.
+Once available, implement/bind the exact new-role ACL+credential/recovery window,
+settle official identity COMMIT/ACK, then READ+independentSTREAM and connected
+revoke/cache/cursor/SSE in original08. This remaining binding is IN_PROGRESS,
+not independent code falsely declared complete/debt. Full08NOT_MET,09connected
+NOT_STARTED;07command/03publisher/01+06capacity remain their distinct inputs.
+
 
 
 
