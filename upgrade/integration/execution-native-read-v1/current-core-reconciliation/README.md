@@ -1,7 +1,14 @@
 # Original08 — Core read/SSE reconciliation and actual consumer targets
 
-Status: **SOURCE_QUALIFIED**, not installed or connected acceptance.
-This is a delta against committed Core
+Current source adoption: **DONE at Core`d0789674`**, full connected08 **NOT_MET**.
+Read the [current packet entrypoint](../README.md#current-entrypoint--19oct-asiasaigon)
+and [identity/ACL window return](../research-identity-intake/qualification.json).
+Do not reapply the historical22-file delta or recreate the installed receipt
+schema/dormant role. Real Research composition/session and connected tests
+remain in original08. No stable/dev retarget or new authority is implied.
+
+Historical patch status: **SOURCE_QUALIFIED**, not runtime acceptance.
+The preserved delta below targets committed Core
 `e19ad906d713d59688390ca24affdf626e22e16f`, not a replacement for the
 [historical 5291 profile](../current-core-runtime-profile/README.md).
 The [original08 journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23207-original08--actual-provider-owning-boundary-and-connected-acceptance)

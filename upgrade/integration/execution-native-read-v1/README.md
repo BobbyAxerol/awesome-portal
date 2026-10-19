@@ -1,5 +1,44 @@
 # Original EPG10-08 — qualified Core source publication
 
+## Current entrypoint — 19Oct Asia/Saigon
+
+**Core source adoption is DONE at`d0789674`. Do not apply an old patch below
+over the adopted native files or subsequent Core WIP.** Runtime commissioning
+is separate and full connected08 remains **NOT_MET**;09connected NOT_STARTED.
+
+Read in this order:
+
+1. [Current target/adoption map](current-core-reconciliation/README.md#current-owner-direction--integration-first):
+   actual Execution v2 consumer is Research, `/home/bobby/portal-research`,
+   `docs/research-loop-plan`; stable/main is the separate genuine security
+   target, dev is preview. Do not substitute stable/dev IDs, sessions or DBs.
+2. [Identity/finite-ACL operator packet](research-identity-intake/README.md):
+   source`44ee6c186de9e0822f587c37069738a8f410ae58` on
+   `BobbyAxerol/awesome-portal:feat/execution-edge-upgrade-v1_2`.
+   Actual receipt schema + dormant role are installed on exact TS system
+   `7674585245102796834`; do NOT create them again. One-shot ACL/credential/
+   recovery/retirement implementation has40PG15+18baseline+14regression PASS;
+   no actual identity writer or Research human mapping has been activated.
+3. [Bounded source/publication return](research-identity-intake/qualification.json):
+   exact source pins, normal-hook scope and cleanup, independent versus actual
+   preparation, and precise Core input still required. TEST_ONLY Core ACKs are
+   not genuine current-human acceptance. Do not replay unchanged qualification.
+4. [Original08 current handoff journal](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-current-handoff-entrypoint-reconciliation--2026-10-19-asiasaigon):
+   Core owns its reviewed Research release/schema134/reverse listener/trust and
+   selected real Bobby private session file. Edge binds the already tested
+   source window, settles physical COMMIT/ACK, then separate READ/STREAM policy
+   and connected revoke/cache/cursor/SSE. No repeated generic approval.
+
+The native producer28445 is already installed/commissioning-only and remains
+unchanged. Commands07, publisher03 and capacity01/06 need their own exact
+returns; this entrypoint does not claim they are active or qualified.
+
+## Historical profiles and immutable qualification provenance
+
+Everything below is dated source history, not current patch/installation
+instructions. In particular, e19/5291 deltas must NOT be reapplied after d078
+adoption. Preserve their receipts; they do not certify later source/runtime.
+
 **Latest source reconciliation2026-10-18,23:35UTC:** use the
 [22-file delta against current Core e19](current-core-reconciliation/README.md)
 instead of applying the5291 profile over later Core source. Final affected

@@ -7,6 +7,15 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 current handoff entrypoint,19Oct — CURRENT:**
+  [start here](../integration/execution-native-read-v1/README.md#current-entrypoint--19oct-asiasaigon).
+  Core adopted atd0789674; old e19/5291 patch instructions are historical, not
+  a new install action. Source44ee6c18 exact pins/130contract+717API normal gate/
+  cleanup are in the bounded identity return. Reuse72unchanged focused cases;
+  do not recreate schema/role/provider. [Current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-current-handoff-entrypoint-reconciliation--2026-10-19-asiasaigon)
+  names Core's real Research composition/private session as remaining input.
+  Full08NOT_MET/09connected NOT_STARTED; no new runtime authority or approval ask.
+
 - **Original08 finite identity-role window,19Oct14:40Asia/Saigon — CURRENT:**
   [one-shot official SDK/ACL packet](../integration/execution-native-read-v1/research-identity-intake/README.md#finite-identity-role-window--independently-implemented19oct),
   40new actual-PG15/SCRAM +18baseline +14regression PASS; explicit TEST_ONLY

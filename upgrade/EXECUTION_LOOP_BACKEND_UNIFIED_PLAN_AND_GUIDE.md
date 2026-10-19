@@ -23093,6 +23093,74 @@ revoke/cache/cursor/SSE. Full08NOT_MET/09connectedNOT_STARTED; no new phase or
 generic approval. Source/plan/qualification/guide/two backend indices must ship
 together through normal hooks; exact hook image/cache cleanup follows terminal.
 
+### Original08 current handoff entrypoint reconciliation — 2026-10-19 Asia/Saigon
+
+**Previous turn = PROGRESS:** finite identity-role source and qualification
+published/remote-verified as44ee6c186de9e0822f587c37069738a8f410ae58 on the
+same awesome-portal feature,10files/+773/-14, Bobby identity, normal hooks.
+Actual terminal07:50:54UTC/14:50Asia/Saigon:130contract+717API PASS,0FAIL/SKIP,
+build/security/query/governance and scoped PostgreSQL restore PASS. This is
+the Edge feature's publication gate, NOT current Core's release qualification.
+Exact log SHA781e026530b4e192df6c2ce84166ea5d7c003e48f1664f9219016d339469272b;
+local receipt /tmp/epg10-08-core-stable39-JezaG4cB/research-identity-acl-journal-20261019T074322Z/receipt.json.
+Source outputs unchanged;41protected runtime tuples unchanged,0newcache,
+own lease gone. Exact cleanup07:51:07UTC removed only new hook testimage
+0216f92b25f8a7296e656549a5d94d34292df923141b48076a90ba2d6504a68f,
+cache0; shared free213275004928→213271875584B, not exclusive reclaimed bytes.
+All old active/rollback/volume/data/private/peer resources retained. No new
+SGP test payload/cells existed. Actual approved persistent schema/dormant role
+are NOT disposable artifacts. Source READ ONLY effective-privilege census also
+finds0callable application SECURITY DEFINER functions after the proposed exact
+schema USAGE; the first64-row diagnostic was bounded/incomplete and is NOT
+used as an absence proof. Complete aggregate + bounded accessible list give0.
+
+**Fresh parallel cut:** Core stilld078 with its registered134/install/overlay
+WIP, owning c7 unchanged/private native bundle absent; selected genuine Bobby
+private-file session path remains pending in that owning session. PM advanced
+to0980438d7a82505c2f58b05d86d5a90e278ca16c (d29cbe13 SSE fixtures plus final
+followthrough witnesses); the eight relevant identity/transport/installer/
+catalogue/SQL files have0diff from53222a70. Its new offline evidence does not
+commission authority or an authenticated command port. TS-nextc928b898 and
+canonical DL5bf5cd5 unchanged; native N03 return/capacity are not inferred from
+DL's certified writer publication. No owner-return permitting connected08,
+07command,03publisher or01/06 matched capacity was found.
+
+**Owned defect and approved scope BEFORE edits:** the packet root README still
+labels e19/old patch as latest; the single08security-return opening lacks the
+actual installed producer/identity prerequisite and still leads with historical
+status. This can cause duplicate patch/schema work even though source adoption
+and dormant preparation are done. Correct only current entrypoints and the
+existing bounded qualification/three tracking markdowns. Preserve immutable old
+patches, receipts and history; mark old install instructions HISTORICAL. No new
+phase, source implementation, peer edit, role activation, runtime/auth change,
+new session/secret or generic approval. Keep current guide08 acceptance intact.
+
+**Test/rollback boundary:** verify every current source file against published
+44ee pins and existing receipt/log digests; reuse72focused cases without rerun.
+Check current relative links and JSON, staged scope/diff and normal publication
+hook. Runtime/cleanup inventory protects the same41tuples and old SGP targets;
+clean only new hook resources after its actual terminal. Rollback is the owned
+documentation change, never old source patch application or history rewrite.
+Full08IN_PROGRESS/connectedNOT_MET,09connectedNOT_STARTED. Continue actual
+binding immediately when Core's reviewed composition/private references arrive;
+do not ask Bobby for the same session choice or recreate the approved role.
+
+**Entrypoint repair actual:** root integration README now opens with current
+adoption/target/identity return; old profiles are explicitly historical. The
+current-Core reconciliation opening and single08security owner return lead to
+the same current packet, not duplicate old patch/schema instructions. Existing
+qualification now carries published44ee source pins, actual normal-hook/cleanup
+provenance and exact missing Core input. Both backend indices agree. No source
+or immutable old receipt changed. Read-only inline Python check PASS:4published
+source files match Git44ee and SHA256,11current relative links/anchors resolve,
+normal-hook log/receipt and exact cleanup metadata match actual receipts.
+72focused cases are reused, not rerun or counted as new connected cases.
+`git diff --check` PASS;8owned documentation/qualification paths only, same3
+unrelated untracked entries preserved. Runtime/secret/DB mutations0. Normal
+publication hook remains mandatory for this coherent documentation transaction;
+it is not another qualification of changed Core WIP. No connected progress is
+claimed from entrypoint repair; genuine composition input remains pending.
+
 
 
 

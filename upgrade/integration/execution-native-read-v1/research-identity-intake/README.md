@@ -8,6 +8,14 @@ owns acceptance. [Bounded qualification](qualification.json) separates isolated
 tests, actual read-only observation and operational preparation. Full connected08
 is **NOT_MET**;09connected has not started.
 
+**Published source,19Oct:** use`44ee6c186de9e0822f587c37069738a8f410ae58`
+on`BobbyAxerol/awesome-portal:feat/execution-edge-upgrade-v1_2`. The bounded
+qualification pins all four changed source/test files,130contract/717API normal
+publication gate and exact hook cleanup. This is not the current Core release
+gate. Core already adopted the earlier native runtime in`d0789674`: do NOT
+reapply an e19/5291 patch. [Current entrypoint](../README.md#current-entrypoint--19oct-asiasaigon)
+separates completed prerequisites from the exact genuine composition still due.
+
 **Actual committed preparation,19Oct14:13Asia/Saigon:** receipt schema + exact
 NOLOGIN/no-grants role installed and independently read back;0receipt rows,
 one connection ceiling. Native guards/old3role caps2/2/1 and provider28445 remain

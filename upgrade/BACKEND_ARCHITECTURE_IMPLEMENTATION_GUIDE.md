@@ -650,6 +650,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 authoritative handoff entrypoint,19Oct — CURRENT:**
+[start here](integration/execution-native-read-v1/README.md#current-entrypoint--19oct-asiasaigon),
+not the historical e19 patch instructions. Core source adoption DONEd0789674;
+identity/ACL source44ee6c18 published and its bounded return now records exact
+source pins,130contract/717API normal gate and completed hook cleanup. No need
+to rerun unchanged72focused cases or recreate receipt schema/role/provider.
+Core's genuine Research composition/private session is still pending, not
+another generic approval; full08NOT_MET/09connected NOT_STARTED. [Journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-current-handoff-entrypoint-reconciliation--2026-10-19-asiasaigon).
+Old packet/owner-return openings are now explicitly historical, never active
+instructions to retarget dev/stable or overwrite current Core WIP.
+
 **Original08 finite identity-role window,19Oct14:40Asia/Saigon — CURRENT:**
 [operator/SDK packet](integration/execution-native-read-v1/research-identity-intake/README.md#finite-identity-role-window--independently-implemented19oct)
 now includes one-shot exact ACL/SCRAM/pool lifecycle,40real-PG15 cases +18baseline

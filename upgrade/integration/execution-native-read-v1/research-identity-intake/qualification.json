@@ -5,6 +5,54 @@
   "consumer": "research-portal.primusspark.com",
   "source_database": "live_data_executor",
   "source_system_identifier": "7674585245102796834",
+  "qualified_source_publication": {
+    "repository": "BobbyAxerol/awesome-portal",
+    "branch": "feat/execution-edge-upgrade-v1_2",
+    "commit": "44ee6c186de9e0822f587c37069738a8f410ae58",
+    "remote_verified": true,
+    "scope": "EDGE_OPERATOR_SOURCE_NOT_ACTUAL_CORE_RELEASE_OR_RUNTIME",
+    "source_sha256": {
+      "identity_intake.py": "375b3305124113087b6d7231d8037274feda8c972f229141078d294b5dddfc27",
+      "receipt_installation.py": "7d03ef66085446dee55637fabeb52ccb607897c88a7bc7ea85d2efc544cf4975",
+      "identity_role_window.py": "2d6c7df277f1cd7be85a21eff4550c2c077d0c399d8baeb09b5a91661afe008e",
+      "test_identity_role_window.py": "6e5bc464fef58f676347155f0fda88c57c06b8a54715b63da61a1564a7e708d2"
+    },
+    "normal_hook": {
+      "ended_utc": "2026-10-19T07:50:54.274362+00:00",
+      "contracts_pass": 130,
+      "api_pass": 717,
+      "fail": 0,
+      "skip": 0,
+      "build_and_scoped_pg_restore": "PASS",
+      "log_sha256": "781e026530b4e192df6c2ce84166ea5d7c003e48f1664f9219016d339469272b",
+      "source_outputs_unchanged": true,
+      "connected_acceptance": false
+    },
+    "exact_hook_cleanup": {
+      "ended_utc": "2026-10-19T07:51:07.854651+00:00",
+      "removed_test_image": "sha256:0216f92b25f8a7296e656549a5d94d34292df923141b48076a90ba2d6504a68f",
+      "new_cache_ids": 0,
+      "protected_runtime_tuples_unchanged": 41,
+      "shared_free_before_bytes": 213275004928,
+      "shared_free_after_bytes": 213271875584,
+      "exclusive_reclaimed_bytes_claimed": false,
+      "own_lease_removed": true,
+      "old_runtime_source_data_private_rollback_retained": true
+    }
+  },
+  "current_connected_input_boundary": {
+    "core_source_adoption": "DONE_D0789674_DO_NOT_REAPPLY_OLD_PATCH",
+    "consumer_source": "/home/bobby/portal-research",
+    "consumer_branch": "docs/research-loop-plan",
+    "core_owner_journal": "upgrade/execution_loop/evidence/ELP2-10/c7-closeout-followthrough-2026-10-19.md",
+    "required_input": "REVIEWED_RESEARCH_SCHEMA134_REVERSE_LISTENER_TRUST_AND_GENUINE_SELECTED_PRIVATE_SESSION_REFERENCE",
+    "source_acl_implementation": "ISOLATED_QUALIFIED_NOT_ACTIVATED",
+    "research_private_native_bundle_observed": "ABSENT",
+    "selected_real_session_private_reference": "PENDING_IN_OWNING_CORE_SESSION",
+    "do_not_recreate": ["RECEIPT_SCHEMA", "DORMANT_IDENTITY_ROLE", "EXISTING_NATIVE_PRODUCER"],
+    "no_repeated_generic_approval": true,
+    "next_connected_scope": "ORIGINAL_EPG10_08_NOT_09"
+  },
   "owner_approved_delta": {
     "receipt_schema": "elp210_human_candidate",
     "identity_role": "ts_portal_research_identity",

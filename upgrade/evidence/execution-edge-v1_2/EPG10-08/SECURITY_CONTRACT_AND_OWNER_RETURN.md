@@ -1,5 +1,34 @@
 # EPG10-08 — current scope, revocation and TLS
 
+## Current owner return — 19Oct Asia/Saigon
+
+**Full connected08 NOT_MET;09connected NOT_STARTED.** Use the
+[current packet entrypoint](../../../integration/execution-native-read-v1/README.md#current-entrypoint--19oct-asiasaigon)
+and [bounded identity/ACL return](../../../integration/execution-native-read-v1/research-identity-intake/qualification.json).
+Core adopted native read/runtime in`d0789674`; do NOT reapply an older patch.
+Actual native producer28445 and the approved TS receipt schema/dormant identity
+role already exist; do NOT request/create those prerequisites again. The old
+source-only/relations-not-installed statements below are dated history.
+
+Finite identity-role ACL/credential/recovery/retirement source`44ee6c18` is
+published with72focused PASS; actual role remains NOLOGIN/no-writer/0receipts.
+TEST_ONLY Core ACK fixtures are not genuine current-human acceptance. Core's
+reviewed Research schema134/reverse/listener/trust/private-session composition
+is the exact remaining input before actual identity operation, separate READ/
+STREAM policy and connected revoke/cache/cursor/SSE. Preserve Core WIP and use
+its already-selected genuine Bobby session; no duplicate session-choice ask.
+
+Actual Execution consumer is`research-portal.primusspark.com`; main/stable is
+the genuine Cloudflare security target and dev is preview, not that consumer.
+Never substitute DB/IDs/credentials by username. Command07, publisher03 and
+matched capacity01/06 remain separate actual inputs, not cleared by TLS health.
+[Current journal and exact evidence](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-current-handoff-entrypoint-reconciliation--2026-10-19-asiasaigon).
+
+## Dated original and round2 provenance
+
+Preserve the historical source/fixture/TLS receipts below. They do not override
+the current return above or qualify a changed release/consumer/provider.
+
 Authority: [main journal §23.17](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#2317-epg10-08-execution-journal--2026-10-16),
 [phase checklist](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-plan),
 EDGE08 and BE§§3–5/9.2/14.2/ELP2-02/03/04/09. This is the single08
