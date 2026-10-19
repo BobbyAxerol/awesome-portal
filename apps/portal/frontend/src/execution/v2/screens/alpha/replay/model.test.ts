@@ -9,7 +9,7 @@ import type { MarketContextCandles } from "../../../../api/marketContext";
 import type { ReplayFill, ReplayOrder } from "../../../../components/tradeReplayModel";
 import { cartesian, dimension } from "../../../testkit/matrix";
 import type { Read } from "../useAlphaReads";
-import { candleVerdict, candleWindow, preferredInterval, replayRange, replayState, symbolsOf, venueOf } from "./model";
+import { MAX_LOADED_RECORDS, auditBook, auditSentences, candleVerdict, candleWindow, canLoadMore, countUntimed, partialRelations, preferredInterval, replayRange, replayState, symbolsOf, venueOf } from "./model";
 
 const HOUR = 3_600_000;
 
@@ -117,5 +117,67 @@ describe("replayState", () => {
     ["both read, rows", { ordersState: page, fillsState: page, orders: [{}], fills: [{}] }, "ok"],
   ] as const)("%s is %s", (_name, book, status) => {
     expect(replayState(book as never).status).toBe(status);
+  });
+});
+
+describe("replayState: a PARTIAL page is partial, never ok", () => {
+  const pageOf = (state: string, count = 1): Read<never> => ({ phase: "ready", value: [{ state, records: Array.from({ length: count }, () => ({})), page: { returnedCount: count } }] } as never);
+  const done = pageOf("AVAILABLE");
+
+  it("names the relation the source marked partial and keeps the rows", () => {
+    const state = replayState({ ordersState: done, fillsState: pageOf("PARTIAL"), orders: [{}], fills: [{}] } as never);
+    expect(state.status).toBe("partial");
+    expect(state.reason).toContain("The source marked the fills read partial");
+    expect(replayState({ ordersState: pageOf("partial"), fillsState: pageOf("PARTIAL"), orders: [{}], fills: [{}] } as never).reason).toContain("orders and fills read partial");
+  });
+
+  it("AVAILABLE and AUTHORITATIVE_EMPTY stay ok / empty", () => {
+    expect(replayState({ ordersState: done, fillsState: done, orders: [{}], fills: [] } as never).status).toBe("ok");
+    expect(replayState({ ordersState: pageOf("AUTHORITATIVE_EMPTY", 0), fillsState: pageOf("AUTHORITATIVE_EMPTY", 0), orders: [], fills: [] } as never)).toEqual({ status: "empty", reason: "No order or fill of this alpha is present in the retained window of this book." });
+  });
+
+  it("a partial page with no record is empty but does not claim proof", () => {
+    const state = replayState({ ordersState: done, fillsState: pageOf("PARTIAL", 0), orders: [], fills: [] } as never);
+    expect(state.status).toBe("empty");
+    expect(state.reason).toContain("does not prove that none exist");
+  });
+
+  it("partialRelations ignores a relation that is loading or failed", () => {
+    expect(partialRelations({ ordersState: { phase: "loading" }, fillsState: { phase: "error", status: "unavailable", reason: "x" } } as never)).toEqual([]);
+  });
+});
+
+describe("the ceiling and the audit", () => {
+  const more = (hasMore: boolean, moreError: string | null = null) => ({ hasMore, loadingMore: false, moreError, loadMore: () => undefined });
+  const pages = (records: number): Read<never> => ({ phase: "ready", value: Array.from({ length: Math.ceil(records / 200) }, (_, i) => ({ state: "AVAILABLE", records: Array.from({ length: Math.min(200, records - i * 200) }, () => ({})), page: { returnedCount: Math.min(200, records - i * 200) } })) } as never);
+  const book = (records: number, hasMore: boolean, moreError: string | null = null) => ({
+    orders: [], fills: Array.from({ length: records }, () => ({})), ordersState: pages(0), fillsState: pages(records), ordersMore: more(false), fillsMore: more(hasMore, moreError),
+  }) as never;
+
+  it("is 2,000 records per relation", () => expect(MAX_LOADED_RECORDS).toBe(2_000));
+
+  it("offers Load more below the ceiling and not at it, whatever the Portal still holds", () => {
+    expect(canLoadMore(auditBook(book(1_800, true), 0).fills)).toBe(true);
+    expect(auditBook(book(1_800, true), 0).fills.capped).toBe(false);
+    const at = auditBook(book(2_000, true), 0).fills;
+    expect(at.capped).toBe(true);
+    expect(canLoadMore(at)).toBe(false);
+    // Exactly the ceiling with nothing more held is a whole book, not a truncation.
+    expect(auditBook(book(2_000, false), 0).fills.capped).toBe(false);
+    expect(auditSentences(auditBook(book(2_000, false), 0))).toEqual([]);
+  });
+
+  it("states the count and the stop, and drops the try-again sentence a capped relation cannot act on", () => {
+    expect(auditSentences(auditBook(book(2_000, true, "boom"), 0))).toEqual([
+      "2,000 fills loaded; the Portal holds more. Loading stops at 2,000 fills: narrow the replay window to see the rest. The log and chart show only what is loaded.",
+    ]);
+    expect(canLoadMore(auditBook(book(400, true, "boom"), 0).fills)).toBe(true);
+  });
+
+  it("takes the untimed count from the caller instead of building the log again", () => {
+    const orders = [{ orderId: "o", submittedAt: "2026-10-01T00:00:00Z", updatedAt: null }, { orderId: "p", submittedAt: null, updatedAt: null }];
+    const counted = countUntimed(orders as never, []);
+    expect(counted).toBeGreaterThanOrEqual(0);
+    expect(auditBook({ ...(book(0, false) as object), orders } as never, 7).untimed).toBe(7);
   });
 });

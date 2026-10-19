@@ -331,3 +331,120 @@ describe("L3 · hostile text stays text", () => {
     expect(row.textContent).not.toMatch(/Entry filled|Filled|Cancelled/);
   });
 });
+
+/* ═════════════════════════ paging: deep link, unreadable first page, focus, PARTIAL, ceiling ═════════════════════════ */
+describe("deep link into a page that is not loaded yet", () => {
+  const banner = () => screen.getAllByRole("status").find((el) => !el.hasAttribute("aria-label") && /^(Order|Fill|Opened)/.test(el.textContent ?? ""))?.textContent ?? "";
+
+  it("an order on page 2 is 'not among the 200 loaded orders; the Portal holds more', not 'not in the retained window'; Load more finds it", async () => {
+    mount({ orders: Array.from({ length: 300 }, (_, i) => order(i)), fills: [] }, "/replay?focus=order:ord_00250");
+    await ready();
+    const text = banner();
+    expect(text).toContain("is not among the 200 loaded orders; the Portal holds more. Load more orders below to look further.");
+    expect(text).not.toContain("retained window");
+    await press("Load more orders");
+    expect(screen.getByText(/Opened at order/)).toBeTruthy();
+    expect(screen.queryByText(/is not among the/)).toBeNull();
+  });
+
+  it("a fill on page 3 stays 'not among the loaded fills' after page 2, and is 'not in the retained window' once no page is left", async () => {
+    mount({ fills: fills(450), orders: [] }, "/replay?focus=fill:fill_99999");
+    await ready();
+    expect(banner()).toContain("is not among the 200 loaded fills");
+    await press("Load more fills");
+    expect(banner()).toContain("is not among the 400 loaded fills");
+    await press("Load more fills");
+    expect(banner()).toContain("is not in the retained window of this book.");
+    expect(banner()).not.toContain("is not among");
+  });
+
+  it("a page that failed to load says so, with the way to try again", async () => {
+    const served = relations({ fills: fills(300), orders: [] });
+    serveAlphaDouble((path, query) => (path.endsWith("/fills") && query.get("after") !== null ? { status: 503, body: { error: { code: "UPSTREAM_UNAVAILABLE", message: "page down" } } } : served(path, query)));
+    render(<MemoryRouter initialEntries={["/replay?focus=fill:fill_00250"]}><AlphaReplay api={alphaHttpApi()} alphaId={ALPHA_DOUBLE_ID} /></MemoryRouter>);
+    await ready();
+    await press("Load more fills");
+    expect(banner()).toContain("the next page of fills could not be read (");
+    expect(banner()).toContain("Try again below.");
+  });
+});
+
+describe("a first page of nothing but unreadable records", () => {
+  const unreadableFirstPage = (body: Body) => { if (body.page.next_cursor === "k:200") { body.records = Array.from({ length: 200 }, () => null); body.page.returned_count = 200; } };
+
+  it("is Unavailable, says the Portal holds more, and still offers Load more; the next page reads and focus lands on the notice", async () => {
+    mount({ fills: fills(300), orders: [], fillsBody: unreadableFirstPage });
+    await screen.findByText(/200 of 200 fill records could not be read/, undefined, { timeout: 15_000 });
+    expect(screen.queryByRole("region", { name: "Trade log" })).toBeNull();
+    const button = screen.getByRole("button", { name: "Load more fills" });
+    button.focus();
+    await press("Load more fills");
+    expect(logRows().length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: /more fills/ })).toBeNull();
+    // The 200 unreadable records are still counted, so the notice stays, and it takes focus from the button that went away.
+    expect(shortfall()!.textContent).toContain("200 of 300 fill records could not be read");
+    expect(document.activeElement).toBe(shortfall());
+  });
+});
+
+describe("focus after the last page", () => {
+  it("moves from the Load more button that unmounts to a status line that says everything is loaded", async () => {
+    mount({ fills: fills(201), orders: [] });
+    await ready();
+    screen.getByRole("button", { name: "Load more fills" }).focus();
+    await press("Load more fills");
+    expect(shortfall()).toBeNull();
+    const done = screen.getByTestId("replay-loaded");
+    expect(done.textContent).toContain("Every page the Portal holds is loaded: 0 orders and 201 fills.");
+    expect(document.activeElement).toBe(done);
+  });
+
+  it("does not steal focus when it is already somewhere else", async () => {
+    mount({ fills: fills(201), orders: [] });
+    await ready();
+    const other = document.createElement("input");
+    document.body.appendChild(other);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Load more fills" })); other.focus(); await new Promise((r) => setTimeout(r, 30)); });
+    expect(document.activeElement).toBe(other);
+    other.remove();
+  });
+});
+
+describe("a page the source marked PARTIAL is not 'ok'", () => {
+  it("shows the log and says in the panel's own state that the window is not known to be the whole book", async () => {
+    mount({ fills: fills(3), orders: [], fillsBody: (body) => { body.state = "PARTIAL"; } });
+    await ready();
+    expect(logWords()).toBe("3 events");
+    expect(screen.getByText(/The source marked the fills read partial/)).toBeTruthy();
+  });
+
+  it("an AVAILABLE page carries no such sentence", async () => {
+    mount({ fills: fills(3), orders: [], fillsBody: (body) => { body.state = "AVAILABLE"; } });
+    await ready();
+    expect(screen.queryByText(/marked the fills read partial/)).toBeNull();
+  });
+
+  it("a PARTIAL page with no record is not proof of an empty book", async () => {
+    mount({ fills: [], orders: [], fillsBody: (body) => { body.state = "PARTIAL"; } });
+    expect(await screen.findByText(/does not prove that none exist/, undefined, { timeout: 15_000 })).toBeTruthy();
+  });
+});
+
+describe("the ceiling on loaded records", () => {
+  it("2,100 fills: Load more is offered nine times, then stops at 2,000 with a stated reason and no button", async () => {
+    mount({ fills: fills(2_100), orders: [] });
+    await ready();
+    for (let page = 1; page < 10; page += 1) await press("Load more fills");
+    const note = shortfall()!;
+    expect(note.textContent).toContain("2,000 fills loaded; the Portal holds more. Loading stops at 2,000 fills: narrow the replay window to see the rest.");
+    expect(screen.queryByRole("button", { name: /more fills/ })).toBeNull();
+    expect(logHead()?.textContent).toContain("of 2000 events shown");
+  }, 60_000);
+
+  it("a deep link past the ceiling says loading stops, not that more can be loaded", async () => {
+    mount({ fills: fills(2_100), orders: [] }, "/replay?focus=fill:fill_02050");
+    await ready();
+    for (let page = 1; page < 10; page += 1) await press("Load more fills");
+    expect(screen.getByText(/is not among the 2,000 loaded fills; the Portal holds more, and loading stops at 2,000 fills\. Narrow the replay window to look further\./)).toBeTruthy();
+  }, 60_000);
+});

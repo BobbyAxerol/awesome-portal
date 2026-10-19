@@ -94,8 +94,25 @@ export function replayState(book: Pick<SubjectBook, "ordersState" | "fillsState"
   if (ordersState.phase === "error" && fillsState.phase === "error") return { status: ordersState.status, reason: `Orders: ${ordersState.reason}. Fills: ${fillsState.reason}` };
   if (ordersState.phase === "error") return { status: "partial", reason: `Orders could not be read (${ordersState.reason}). The fills below are all that was published.` };
   if (fillsState.phase === "error") return { status: "partial", reason: `Fills could not be read (${fillsState.reason}). Orders below carry no fill.` };
-  if (book.orders.length === 0 && book.fills.length === 0) return { status: "empty", reason: "No order or fill of this alpha is present in the retained window of this book." };
+  const partial = partialRelations(book);
+  if (book.orders.length === 0 && book.fills.length === 0) {
+    return {
+      status: "empty",
+      reason: `No order or fill of this alpha is present in the retained window of this book.${partial.length > 0 ? ` The source marked the ${partial.join(" and ")} read partial, so this does not prove that none exist.` : ""}`,
+    };
+  }
+  // PARTIAL is the source saying the window it served is not the whole of what it holds (a retained window, not total history): never "ok".
+  if (partial.length > 0) return { status: "partial", reason: `The source marked the ${partial.join(" and ")} read partial: what is shown is the retained window, not known to be the whole of this book.` };
   return { status: "ok" };
+}
+
+/** The relations (`orders`, `fills`) any loaded page of which the source marked PARTIAL. */
+export function partialRelations(book: Pick<SubjectBook, "ordersState" | "fillsState">): string[] {
+  const out: string[] = [];
+  for (const [word, state] of [["orders", book.ordersState], ["fills", book.fillsState]] as const) {
+    if (state.phase === "ready" && state.value.some((page) => page.state.toUpperCase() === "PARTIAL")) out.push(word);
+  }
+  return out;
 }
 
 export interface CandleVerdict {
@@ -145,6 +162,10 @@ export interface RelationAudit {
   lost: number;
   /** A page state that says the source did not answer (UNAVAILABLE, or a word this reader does not know); null when every page is AVAILABLE, PARTIAL or empty. */
   badState: string | null;
+  /** Some loaded page was marked PARTIAL by the source. */
+  partial: boolean;
+  /** The records in hand reached `MAX_LOADED_RECORDS` while the Portal still holds more: no further page is offered. */
+  capped: boolean;
   hasMore: boolean;
   loadingMore: boolean;
   moreError: string | null;
@@ -161,15 +182,26 @@ export interface BookAudit {
 
 type PagedBook = Pick<SubjectBook, "orders" | "fills" | "ordersState" | "fillsState" | "ordersMore" | "fillsMore">;
 
-/** The page states the Portal publishes for subject records: a window with rows, a partial window, and a proven empty one. */
+/**
+ * The page states the Portal publishes for subject records: a window with rows, a partial window, and a proven empty one.
+ * Any other word means the source did not answer (`badState`). PARTIAL is served but is never read as whole: see `replayState`.
+ */
 const SERVED_STATES: readonly string[] = ["AVAILABLE", "PARTIAL", "AUTHORITATIVE_EMPTY", "EMPTY"];
+
+/** Records kept per relation across `Load more` pages (the Cockpit's `MAX_LOADED_ROWS` is the same idea): past this the chart and log stop growing. */
+export const MAX_LOADED_RECORDS = 2_000;
+
+/** Whether `Load more` is still on offer for a relation: the Portal holds more (or the last page failed) and the ceiling is not reached. */
+export const canLoadMore = (rel: Pick<RelationAudit, "hasMore" | "moreError" | "capped">): boolean => (rel.hasMore || rel.moreError !== null) && !rel.capped;
 
 function auditRelation(state: Read<readonly { state: string; records: readonly unknown[]; page: { returnedCount: number | null } }[]>, read: number, more: SubjectBook["ordersMore"]): RelationAudit {
   const pages = state.phase === "ready" ? state.value : [];
   const received = pages.reduce((sum, page) => sum + page.records.length, 0);
   const declared = pages.reduce((sum, page) => sum + (page.page.returnedCount ?? page.records.length), 0);
   const badState = pages.find((page) => !SERVED_STATES.includes(page.state.toUpperCase()))?.state ?? null;
-  return { declared, received, read, lost: Math.max(0, Math.max(declared, received) - read), badState, hasMore: more.hasMore, loadingMore: more.loadingMore, moreError: more.moreError };
+  const partial = pages.some((page) => page.state.toUpperCase() === "PARTIAL");
+  const capped = more.hasMore && received >= MAX_LOADED_RECORDS;
+  return { declared, received, read, lost: Math.max(0, Math.max(declared, received) - read), badState, partial, capped, hasMore: more.hasMore, loadingMore: more.loadingMore, moreError: more.moreError };
 }
 
 /**
@@ -177,11 +209,20 @@ function auditRelation(state: Read<readonly { state: string; records: readonly u
  * The replay draws what it could read; this says how much that is short of the
  * whole, so a partly read book never looks like a whole one.
  */
-export function auditBook(book: PagedBook): BookAudit {
+export function auditBook(book: PagedBook, untimedCount?: number): BookAudit {
   const orders = auditRelation(book.ordersState, book.orders.length, book.ordersMore);
   const fills = auditRelation(book.fillsState, book.fills.length, book.fillsMore);
-  const untimed = Math.max(0, book.orders.length + book.fills.length - buildLog(book.orders, book.fills, []).length);
-  return { orders, fills, untimed, incomplete: orders.lost > 0 || fills.lost > 0 || orders.badState !== null || fills.badState !== null || untimed > 0 || orders.hasMore || fills.hasMore || orders.moreError !== null || fills.moreError !== null };
+  const untimed = untimedCount ?? countUntimed(book.orders, book.fills);
+  return { orders, fills, untimed, incomplete: orders.lost > 0 || fills.lost > 0 || orders.badState !== null || fills.badState !== null || orders.partial || fills.partial || untimed > 0 || orders.hasMore || fills.hasMore || orders.moreError !== null || fills.moreError !== null };
+}
+
+/**
+ * Orders and fills that were read but carry no time that parses (on neither the log nor the chart).
+ * It builds the whole log, so callers on a render path memoise it on the two arrays and pass it to `auditBook`.
+ * (The panel's own log is per symbol and carries round trips, so the two logs are not interchangeable.)
+ */
+export function countUntimed(orders: readonly ReplayOrder[], fills: readonly ReplayFill[]): number {
+  return Math.max(0, orders.length + fills.length - buildLog(orders, fills, []).length);
 }
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
@@ -195,8 +236,9 @@ export function auditSentences(audit: BookAudit): string[] {
       out.push(`${rel.lost} of ${total} ${word} ${plural(total, "record", "records")} could not be read (no id, price or time, a repeat, or not a record) and ${plural(rel.lost, "is", "are")} left out of the log and chart.`);
     }
     if (rel.badState !== null) out.push(`The Portal reported the ${word} read as ${rel.badState.replace(/_/g, " ").toLowerCase()}, so what is shown is not known to be the whole of it.`);
-    if (rel.hasMore) out.push(`${rel.read} ${plural(rel.read, word, `${word}s`)} loaded; the Portal holds more. The log and chart show only what is loaded.`);
-    if (rel.moreError !== null) out.push(`The next page of ${word}s could not be read (${rel.moreError}).`);
+    if (rel.hasMore && rel.capped) out.push(`${rel.received.toLocaleString("en-US")} ${word}s loaded; the Portal holds more. Loading stops at ${MAX_LOADED_RECORDS.toLocaleString("en-US")} ${word}s: narrow the replay window to see the rest. The log and chart show only what is loaded.`);
+    else if (rel.hasMore) out.push(`${rel.read} ${plural(rel.read, word, `${word}s`)} loaded; the Portal holds more. The log and chart show only what is loaded.`);
+    if (rel.moreError !== null && !rel.capped) out.push(`The next page of ${word}s could not be read (${rel.moreError}).`);
   }
   if (audit.untimed > 0) out.push(`${audit.untimed} ${plural(audit.untimed, "record has", "records have")} no time that can be read, so ${plural(audit.untimed, "it is", "they are")} on neither the log nor the chart.`);
   return out;

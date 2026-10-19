@@ -9,7 +9,7 @@
  * beside the venue ones and never merged; their state is named in the panel's
  * footer. `focus=order:<id>` (or `fill:<id>`) opens the replay at that order.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { MarketCandleInterval } from "../../../../api/marketCandles";
 import type { ExecutionApi } from "../../../../api/ports";
@@ -19,7 +19,7 @@ import { ReplayPanel, type ReplayChip } from "../../../blocks";
 import { ENV_LABEL, type ExecEnv } from "../../../urlState";
 import { focusTarget } from "../model";
 import { useReplayCandles, type SubjectBook } from "../useAlphaReads";
-import { auditBook, auditSentences, candleVerdict, candleWindow, preferredInterval, replayRange, replayState, symbolsOf, venueOf } from "./model";
+import { MAX_LOADED_RECORDS, auditBook, auditSentences, candleVerdict, candleWindow, canLoadMore, countUntimed, preferredInterval, replayRange, replayState, symbolsOf, venueOf, type RelationAudit } from "./model";
 
 export interface ReplayViewProps {
   api: ExecutionApi;
@@ -58,7 +58,13 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
   const candles = useReplayCandles(api, query);
   const verdict = candleVerdict(symbol, query === null && symbol !== null ? { phase: "error", status: "unavailable", reason: venue === null ? "The Portal reads no public klines for this alpha's venue" : "No timed trade to place candles around" } : candles.venue, candles.context);
 
-  const audit = auditBook(book);
+  // Building the log to count untimed records is the costly part; it moves only when the records do.
+  const untimed = useMemo(() => countUntimed(book.orders, book.fills), [book.orders, book.fills]);
+  const audit = useMemo(
+    () => auditBook(book, untimed),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `book` is a new object every render; these are the parts the audit reads.
+    [book.orders, book.fills, book.ordersState, book.fillsState, book.ordersMore.hasMore, book.ordersMore.loadingMore, book.ordersMore.moreError, book.fillsMore.hasMore, book.fillsMore.loadingMore, book.fillsMore.moreError, untimed],
+  );
   // Nothing read is not "nothing there" when records arrived and failed, or the source said it did not answer.
   const base = replayState(book);
   const state = base.status === "empty" && (audit.orders.lost > 0 || audit.fills.lost > 0 || audit.orders.badState !== null || audit.fills.badState !== null)
@@ -92,19 +98,44 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
   };
 
   // The log and chart hold what was loaded and read. Say how far that is from what the Portal holds, in exact counts.
-  const shortfalls = state.status === "ok" || state.status === "partial" ? auditSentences(audit) : [];
-  const pagers = ([["orders", audit.orders, book.ordersMore], ["fills", audit.fills, book.fillsMore]] as const).filter(([, rel]) => rel.hasMore || rel.moreError !== null);
+  const shown = state.status === "ok" || state.status === "partial";
+  const shortfalls = shown ? auditSentences(audit) : [];
+  const pagers = ([["orders", audit.orders, book.ordersMore], ["fills", audit.fills, book.fillsMore]] as const).filter(([, rel]) => canLoadMore(rel));
+  // When every record of page 1 was unreadable the panel is Unavailable and already carries the sentences, but the way to the next page must stay.
+  const pagerOnly = !shown && state.status === "unavailable" && pagers.length > 0;
+
+  // The button that was pressed unmounts with the last page; focus would fall to the body. It goes to a stable status element instead.
+  const noticeRef = useRef<HTMLDivElement>(null);
+  const doneRef = useRef<HTMLParagraphElement>(null);
+  const pressed = useRef<"orders" | "fills" | null>(null);
+  const [paged, setPaged] = useState(false);
+  const stillOffered = pressed.current !== null && pagers.some(([relation]) => relation === pressed.current);
+  useEffect(() => {
+    if (pressed.current === null || stillOffered) return;
+    const active = document.activeElement;
+    if (active === null || active === document.body) (noticeRef.current ?? doneRef.current)?.focus({ preventScroll: true });
+    pressed.current = null;
+  });
 
   const missing =
-    target !== null && state.status === "ok" && !(target.kind === "order" ? book.orders.some((o) => o.orderId === target.id) : book.fills.some((f) => f.fillId === target.id));
+    target !== null && shown && !(target.kind === "order" ? book.orders.some((o) => o.orderId === target.id) : book.fills.some((f) => f.fillId === target.id));
+  const wordsFor = (relation: "orders" | "fills", rel: RelationAudit, readState: typeof book.ordersState): string => {
+    if (readState.phase === "error") return `cannot be looked up: the ${relation} could not be read (${readState.reason}).`;
+    const loaded = `is not among the ${rel.read.toLocaleString("en-US")} loaded ${relation}`;
+    if (rel.capped) return `${loaded}; the Portal holds more, and loading stops at ${MAX_LOADED_RECORDS.toLocaleString("en-US")} ${relation}. Narrow the replay window to look further.`;
+    if (rel.moreError !== null) return `${loaded}; the next page of ${relation} could not be read (${rel.moreError}). Try again below.`;
+    if (rel.hasMore) return `${loaded}; the Portal holds more. Load more ${relation} below to look further.`;
+    return "is not in the retained window of this book.";
+  };
 
   return (
     <div className="exec-alp2-replay">
-      {target !== null && state.status === "ok" ? (
+      {target !== null && shown ? (
         <div className="exec-blk-banner" role="status">
           {missing ? (
             <>
-              {target.kind === "order" ? "Order" : "Fill"} <span className="exec-blk-id">{target.id}</span> is not in the retained window of this book.
+              {target.kind === "order" ? "Order" : "Fill"} <span className="exec-blk-id">{target.id}</span>{" "}
+              {target.kind === "order" ? wordsFor("orders", audit.orders, book.ordersState) : wordsFor("fills", audit.fills, book.fillsState)}
             </>
           ) : (
             <>
@@ -114,15 +145,19 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
           <a className="exec-blk-link" href={ordersHref}>Back to Orders &amp; Fills</a>
         </div>
       ) : null}
-      {shortfalls.length > 0 ? (
-        <div className="exec-blk-banner" role="status" aria-label="What this replay holds" data-testid="replay-shortfall">
+      {shortfalls.length > 0 || pagerOnly ? (
+        <div ref={noticeRef} tabIndex={-1} className="exec-blk-banner" role="status" aria-label="What this replay holds" data-testid="replay-shortfall">
           {shortfalls.map((line) => <p key={line}>{line}</p>)}
           {pagers.map(([relation, rel, more]) => (
-            <button key={relation} type="button" className="exec-blk-btn" aria-busy={rel.loadingMore ? "true" : undefined} onClick={() => { if (!rel.loadingMore) more.loadMore(); }}>
+            <button key={relation} type="button" className="exec-blk-btn" aria-busy={rel.loadingMore ? "true" : undefined} onClick={() => { if (!rel.loadingMore) { pressed.current = relation; setPaged(true); more.loadMore(); } }}>
               {rel.loadingMore ? `Loading more ${relation}` : rel.moreError ? `Try again: ${relation}` : `Load more ${relation}`}
             </button>
           ))}
         </div>
+      ) : paged && shown ? (
+        <p ref={doneRef} tabIndex={-1} className="exec-blk-banner" role="status" data-testid="replay-loaded">
+          Every page the Portal holds is loaded: {audit.orders.read.toLocaleString("en-US")} orders and {audit.fills.read.toLocaleString("en-US")} fills.
+        </p>
       ) : null}
       <ReplayPanel
         subject={alphaLabel}

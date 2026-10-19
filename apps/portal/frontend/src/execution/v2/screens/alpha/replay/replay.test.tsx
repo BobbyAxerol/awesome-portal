@@ -152,8 +152,17 @@ describe("deep link", () => {
     expect(within(banner).getByRole("link", { name: /Back to Orders/ }).getAttribute("href")).toBe(`/deployments/alphas/${ALPHA_DOUBLE_ID}?tab=orders`);
   });
 
-  it("an order that is not in the window is said so, and the replay still opens", async () => {
+  it("an order that is not among the loaded ones, while the double still holds a second page, is said so with the way to the next page", async () => {
     mount("/replay?focus=order:ord_999");
+    await settled();
+    expect(screen.getByText(/is not among the 6 loaded orders; the Portal holds more\. Load more orders below to look further\./)).toBeTruthy();
+    expect(screen.queryByText(/retained window of this book/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Load more orders" })).toBeTruthy();
+    expect(props().symbol).toBe("BTCUSDT");
+  });
+
+  it("a fill that is not in the window, with no page left to load, is not in the retained window, and the replay still opens", async () => {
+    mount("/replay?focus=fill:fill_999");
     await settled();
     expect(screen.getByText(/is not in the retained window of this book/)).toBeTruthy();
     expect(props().symbol).toBe("BTCUSDT");
