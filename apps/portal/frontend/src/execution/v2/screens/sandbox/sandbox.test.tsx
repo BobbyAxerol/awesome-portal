@@ -355,6 +355,30 @@ describe("the V1 certification body", () => {
     expect(chip("reconciliation").textContent).toContain("3 recorded");
   });
 
+  it("tables draw at most 250 rows and say 'Showing 250 of N'; the counts still come from every row", async () => {
+    const body = v1Rich();
+    const row = body.findings.rows[0];
+    body.findings = {
+      total_count: 300, returned_count: 300, truncated: false,
+      rows: Array.from({ length: 300 }, (_, i) => ({ ...row, finding_id: `fnd_TEST_ONLY_${i}`, resolved_at: null })),
+    };
+    body.timeline = {
+      total_count: 260, returned_count: 260, truncated: false,
+      rows: Array.from({ length: 260 }, (_, i) => ({ ...body.timeline.rows[0], event_id: `evt_TEST_ONLY_${i}` })),
+    };
+    mount(fakeApi({ read: okRead(body) }), `${ENTRY}?tab=reconciliation`);
+    await ready();
+    const table = screen.getByRole("table", { name: "Reconciliation findings" });
+    expect(within(table).getAllByRole("row")).toHaveLength(251);
+    expect(screen.getByRole("heading", { name: "Findings" }).closest("section")!.textContent).toContain("Showing 250 of 300");
+    expect(kpi("Open findings").textContent).toContain("300");
+    cleanup();
+    mount(fakeApi({ read: okRead(body) }), `${ENTRY}?tab=timeline`);
+    await ready();
+    expect(within(screen.getByRole("table", { name: "Certification timeline" })).getAllByRole("row")).toHaveLength(251);
+    expect(screen.getByRole("heading", { name: "Timeline" }).closest("section")!.textContent).toContain("Showing 250 of 260");
+  });
+
   it("a finding row that does not say whether it is resolved is Not available, never Open; the counts then say so", async () => {
     const body = v1Rich();
     delete body.findings.rows[0].resolved_at;

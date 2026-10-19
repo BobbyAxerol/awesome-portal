@@ -25,6 +25,7 @@ import type { DeploymentQuality } from "../../../api/derivations";
 import type { ProfileEnvelope } from "../../../api/profileRead";
 import type { ExactUnit } from "../../../formatExact";
 import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
+import { unsafeText } from "../../../unsafeText";
 import { readDecimal, type BoundaryDecimal } from "../../boundary";
 import type { StageTab } from "../../blocks";
 import type { ChartSegment, ChartState, SeriesPoint, ServerEnvelope } from "../../charts";
@@ -53,14 +54,13 @@ type Row = Record<string, unknown>;
 
 /* ── primitives ───────────────────────────────────────────────────────────── */
 
-// Control characters and the bidi overrides: an id that carries them can reorder what is printed beside it.
-const UNSAFE_TEXT = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
+// Control characters and the bidi overrides: an id that carries them can reorder what is printed beside it (one shared set: unsafeText.ts).
 
 /** A non-empty, bounded, printable string; a safe integer is a legal id (order ids arrive as numbers). */
 export function text(value: unknown): string | null {
   if (typeof value === "number") return Number.isSafeInteger(value) ? String(value) : null;
   if (typeof value !== "string") return null;
-  if (value.trim() === "" || value.length > MAX_TEXT || UNSAFE_TEXT.test(value)) return null;
+  if (value.trim() === "" || value.length > MAX_TEXT || unsafeText(value)) return null;
   return value;
 }
 
@@ -249,7 +249,7 @@ export function freshnessOf(envelope: ProfileEnvelope): FreshnessFacts {
 
 /* ── observation gate (the verdict is the server's) ───────────────────────── */
 
-export type GateVerdict = "met" | "partial" | "blocked" | "not-met" | "unknown" | "none";
+export type GateVerdict = "met" | "available" | "partial" | "blocked" | "not-met" | "unknown" | "none";
 
 export interface GateFacts {
   verdict: GateVerdict;
@@ -270,7 +270,9 @@ export function readGate(envelope: ProfileEnvelope): GateFacts {
     return { verdict: "none", observedDays: null, minimumDays: null, trades: null, minimumTrades: null, sessions: null, windowBounded: null, reasonCode: null, policy: null };
   }
   const state = typeof raw.state === "string" ? raw.state : "";
-  const verdict: GateVerdict = state === "MET" || state === "AVAILABLE" ? "met"
+  // The server's enum is MET | NOT_MET | PARTIAL (| BLOCKED). AVAILABLE is not a verdict the gate publishes: it is shown, neutral, as what it says.
+  const verdict: GateVerdict = state === "MET" ? "met"
+    : state === "AVAILABLE" ? "available"
     : state === "PARTIAL" ? "partial"
       : state === "BLOCKED" ? "blocked"
         : state === "NOT_MET" ? "not-met"
@@ -293,6 +295,7 @@ export function readGate(envelope: ProfileEnvelope): GateFacts {
 /** The flag for the server's verdict. The words are the server's states; nothing is judged here. */
 export const GATE_FLAG: Readonly<Record<GateVerdict, { kind: FlagKind; label: string }>> = {
   met: { kind: "ok", label: "Met" },
+  available: { kind: "neutral", label: "Available" },
   partial: { kind: "partial", label: "Partial" },
   blocked: { kind: "attention", label: "Blocked" },
   "not-met": { kind: "na", label: "Not met" },
@@ -302,7 +305,7 @@ export const GATE_FLAG: Readonly<Record<GateVerdict, { kind: FlagKind; label: st
 
 /** The one-line reason the "Request exit review" action is not offered. */
 export function exitReviewReason(gate: GateFacts): string {
-  if (gate.verdict === "none" || gate.verdict === "met") {
+  if (gate.verdict === "none" || gate.verdict === "met" || gate.verdict === "available") {
     return "Not published (FE-028). Exit review requests are not offered from this screen yet.";
   }
   return `Blocked: the observation gate is ${GATE_FLAG[gate.verdict].label.toLowerCase()}.`;

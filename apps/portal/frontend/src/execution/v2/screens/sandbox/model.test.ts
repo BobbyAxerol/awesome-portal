@@ -220,8 +220,20 @@ describe("the three chips never invent a state", () => {
     expect(chipsOf(v2()).freshness).toMatchObject({ state: "not-available", reason: "No source panel in this response" });
     const ok = chipsOf(v1({ panels: [panel("internal", { state: "ok", freshness: "OK", asOf: utc(12, 4) }), panel("broker", { freshness: "UNKNOWN" })] })).freshness;
     expect(ok).toEqual({ state: "dot", tone: "ok", text: "Fresh · 17 Oct 12:04Z" });
-    const stale = chipsOf(v1({ panels: [panel("internal", { freshness: "OK", asOf: utc(1, 0) }), panel("broker", { freshness: "STALE", asOf: utc(11, 40) })] })).freshness;
+    const stale = chipsOf(v1({ panels: [panel("internal", { state: "ok", freshness: "OK", asOf: utc(1, 0) }), panel("broker", { state: "stale", freshness: "STALE", asOf: utc(11, 40) })] })).freshness;
     expect(stale).toEqual({ state: "dot", tone: "warn", text: "Stale · 17 Oct 11:40Z" });
+  });
+
+  it("freshness: a withheld or failed panel makes no claim, whatever freshness word it carries (Canary's rule)", () => {
+    const fresh = (over: Partial<PanelView>) => chipsOf(v1({ panels: [panel("broker", { freshness: "OK", asOf: utc(12, 4), ...over })] })).freshness;
+    expect(fresh({ state: "unavailable" })).toEqual({ state: "not-available", reason: "Source unavailable" });
+    expect(fresh({ state: "denied" })).toEqual({ state: "not-available", reason: "Source unavailable" });
+    expect(fresh({ state: "terminal" })).toEqual({ state: "not-available", reason: "Source unavailable" });
+    expect(fresh({ state: "ok", suppressed: true })).toEqual({ state: "not-available", reason: "Withheld by the server" });
+    expect(fresh({ state: "ok" })).toEqual({ state: "dot", tone: "ok", text: "Fresh · 17 Oct 12:04Z" });
+    // One good panel still speaks; a failed one beside it does not drag the chip to OK or hide a stale one.
+    const mixed = chipsOf(v1({ panels: [panel("internal", { state: "unavailable", freshness: "OK", asOf: utc(1, 0) }), panel("broker", { state: "stale", freshness: "STALE", asOf: utc(11, 40) })] })).freshness;
+    expect(mixed).toEqual({ state: "dot", tone: "warn", text: "Stale · 17 Oct 11:40Z" });
   });
 
   it("reconciliation: V2 is Not published; findings recorded are counted as recorded, not open; zero against dark sources is not a clean result", () => {
@@ -299,6 +311,19 @@ describe("the review note follows the server's bounds (D8), not the hi-fi's 24",
     const block = noteBlock(input);
     expect(block?.code ?? null).toBe(code);
     if (text !== null) expect(block?.text).toBe(text);
+  });
+
+  it("a note with a control or direction character is refused before any length rule; a line break is a person's own and is fine", () => {
+    const bidi = String.fromCodePoint(0x202e);
+    const zero = String.fromCodePoint(0x200b);
+    const nul = String.fromCodePoint(0);
+    for (const hostile of [bidi, zero, nul]) {
+      const block = noteBlock({ ...ok, summary: `A real note ${hostile} here.` });
+      expect(block?.code).toBe("hostile");
+      expect(block?.text).toContain("control or direction character");
+    }
+    expect(noteBlock({ ...ok, summary: `${bidi}x` })?.code).toBe("hostile");
+    expect(noteBlock({ ...ok, summary: "First line.\nSecond line.\tTabbed." })).toBeNull();
   });
 
   it("counts code points the way the schema does: an emoji is one character, not two", () => {

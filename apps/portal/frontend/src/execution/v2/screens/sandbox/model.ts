@@ -13,6 +13,7 @@
 import type { FlagKind } from "../../flagKinds";
 import type { BlockerItem, NotPublishedId, SpineStageFacts, SpineStageId, StageChipValue, StageChips, TriadRow } from "../../blocks";
 import { formatAsOf } from "../../boundary";
+import { unsafeText } from "../../../unsafeText";
 import type { PanelStatus } from "../../../contracts";
 import type { FindingView, PanelView, SandboxView, StepState, StepView } from "./readSandbox";
 
@@ -316,8 +317,13 @@ const WORST_FRESHNESS: readonly string[] = ["STALE", "AGING", "OK"];
 
 /** Display freshness from the three source panels: the worst state the server published, with its as-of. Nothing is aged here. */
 function freshnessChip(panels: readonly PanelView[]): StageChipValue {
-  const known = panels.filter((p) => p.freshness !== null && p.freshness !== "UNKNOWN");
-  if (known.length === 0) return { state: "not-available", reason: panels.length === 0 ? "No source panel in this response" : "No source panel reported" };
+  // A withheld or failed panel makes no claim about its data, whatever freshness word it carries (Canary's rule).
+  const speaks = (p: PanelView) => !p.suppressed && p.state !== "unavailable" && p.state !== "denied" && p.state !== "terminal";
+  const known = panels.filter((p) => speaks(p) && p.freshness !== null && p.freshness !== "UNKNOWN");
+  if (known.length === 0) {
+    if (panels.length === 0) return { state: "not-available", reason: "No source panel in this response" };
+    return { state: "not-available", reason: panels.some((p) => p.suppressed) ? "Withheld by the server" : panels.some((p) => !speaks(p)) ? "Source unavailable" : "No source panel reported" };
+  }
   const worst = WORST_FRESHNESS.find((word) => known.some((p) => p.freshness === word)) ?? "OK";
   const at = known.find((p) => p.freshness === worst)?.asOf ?? null;
   const tone = worst === "OK" ? "ok" : "warn";
@@ -424,12 +430,14 @@ export interface NoteInputs {
   workflowVersion: number | null;
 }
 
-export type NoteBlock = { code: "workspace" | "version" | "short" | "long"; text: string };
+export type NoteBlock = { code: "workspace" | "version" | "hostile" | "short" | "long"; text: string };
 
 /** Why the Record button is off, or `null` when it may be pressed. */
 export function noteBlock(input: NoteInputs): NoteBlock | null {
   if (input.workspaceId === null) return { code: "workspace", text: "The workspace was not published for this read, so a note cannot be bound to it." };
   if (input.workflowVersion === null) return { code: "version", text: "The workflow version was not published, and a note is bound to it." };
+  // A note a person types may have line breaks; it may not carry control or direction characters that reorder or hide text.
+  if (unsafeText(input.summary, { allowLayout: true })) return { code: "hostile", text: "The note has a control or direction character, which cannot be recorded. Remove it." };
   const n = noteLength(input.summary);
   if (n < NOTE_MIN) return { code: "short", text: `Needs at least ${NOTE_MIN} characters (${n} so far)` };
   if (n > NOTE_MAX) return { code: "long", text: `At most ${NOTE_MAX} characters (${n} so far)` };

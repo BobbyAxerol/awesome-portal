@@ -26,7 +26,17 @@ const time = (at: UtcEpochMs | null) => (at === null ? null : <time dateTime={ne
 /** A key per row that survives a repeated id (a malformed body must not make two rows share one). */
 const keyed = <R extends { id: string }>(rows: readonly R[]): (R & { k: string })[] => rows.map((r, i) => ({ ...r, k: `${i}:${r.id}` }));
 
+/** The most rows a table draws. A body can carry more; the rest are counted, not drawn. */
+export const SANDBOX_ROW_CAP = 250;
+
+/** `Showing 250 of N` when the table is cut at the cap, else `null`. */
+function capLabel(loaded: number, total: number | null): string | null {
+  return loaded > SANDBOX_ROW_CAP ? `Showing ${SANDBOX_ROW_CAP} of ${Math.max(loaded, total ?? 0)}` : null;
+}
+
 function shown(c: CollectionView<unknown>): string {
+  const cut = capLabel(c.rows.length, c.total);
+  if (cut !== null) return cut;
   if (c.total === null) return "Count not published";
   return c.truncated ? `Showing ${c.returned ?? c.rows.length} of ${c.total}` : `${c.total} recorded`;
 }
@@ -80,7 +90,7 @@ export function FindingsPanel({ view }: { view: SandboxView }) {
           reason={sourcesReported ? "No findings were recorded." : "No findings were returned. With the sources unavailable this is an absence of evidence, not a clean result."}
         />
       ) : (
-        <CardsTable columns={FINDING_COLUMNS} rows={keyed(f.rows)} rowKey={(r) => r.k} label="Reconciliation findings" />
+        <CardsTable columns={FINDING_COLUMNS} rows={keyed(f.rows).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Reconciliation findings" />
       )}
     </SectionPanel>
   );
@@ -121,12 +131,12 @@ export function PlansPanel({ view }: { view: SandboxView }) {
     );
   }
   return (
-    <SectionPanel level={2} title="Promotion plans" aside={`${view.plans.length} recorded`} flush>
+    <SectionPanel level={2} title="Promotion plans" aside={capLabel(view.plans.length, null) ?? `${view.plans.length} recorded`} flush>
       {view.plans.length === 0 ? (
         <PanelState status="empty" reason="No promotion plan has been recorded for this certification." />
       ) : (
         <>
-          <CardsTable columns={PLAN_COLUMNS} rows={keyed(view.plans)} rowKey={(r) => r.k} label="Promotion plans" />
+          <CardsTable columns={PLAN_COLUMNS} rows={keyed(view.plans).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Promotion plans" />
           <p className="exec-sbx-note">
             A plan records a refusal to promote; it does not start Canary. Envelope and Author are{" "}
             <NotPublished id="FE-072">Typed plan fields</NotPublished>.
@@ -159,7 +169,7 @@ export function TimelinePanel({ view }: { view: SandboxView }) {
       {t.rows.length === 0 ? (
         <PanelState status="empty" reason="No event has been recorded for this certification." />
       ) : (
-        <CardsTable columns={TIMELINE_COLUMNS} rows={keyed(t.rows)} rowKey={(r) => r.k} label="Certification timeline" />
+        <CardsTable columns={TIMELINE_COLUMNS} rows={keyed(t.rows).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Certification timeline" />
       )}
     </SectionPanel>
   );

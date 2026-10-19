@@ -213,7 +213,7 @@ describe("freshness is the source's word, never an age", () => {
 
 describe("the observation gate: the verdict is the server's", () => {
   it.each([
-    ["MET", "met"], ["AVAILABLE", "met"], ["PARTIAL", "partial"], ["BLOCKED", "blocked"], ["NOT_MET", "not-met"], ["met", "unknown"], ["", "unknown"], ["WHATEVER", "unknown"],
+    ["MET", "met"], ["AVAILABLE", "available"], ["PARTIAL", "partial"], ["BLOCKED", "blocked"], ["NOT_MET", "not-met"], ["met", "unknown"], ["", "unknown"], ["WHATEVER", "unknown"],
   ])("%s is %s", (word, verdict) => {
     const wire = paperWire();
     setPath(wire, ["data", "observation_gate", "state"], word);
@@ -238,8 +238,11 @@ describe("the observation gate: the verdict is the server's", () => {
   });
 
   it("each verdict has a flag, an unknown one is never a success", () => {
-    expect(Object.keys(GATE_FLAG).sort()).toEqual(["blocked", "met", "none", "not-met", "partial", "unknown"]);
+    expect(Object.keys(GATE_FLAG).sort()).toEqual(["available", "blocked", "met", "none", "not-met", "partial", "unknown"]);
     expect(GATE_FLAG.unknown.kind).toBe("unknown");
+    // AVAILABLE is not MET: it is neutral and worded as what it says, never the green "Met".
+    expect(GATE_FLAG.available).toEqual({ kind: "neutral", label: "Available" });
+    expect(GATE_FLAG.met).toEqual({ kind: "ok", label: "Met" });
     expect(GATE_FLAG.none.kind).toBe("unknown");
   });
 
@@ -249,6 +252,7 @@ describe("the observation gate: the verdict is the server's", () => {
     expect(exitReviewReason(gate("blocked"))).toBe("Blocked: the observation gate is blocked.");
     expect(exitReviewReason(gate("not-met"))).toBe("Blocked: the observation gate is not met.");
     expect(exitReviewReason(gate("met"))).toMatch(/^Not published \(FE-028\)\./);
+    expect(exitReviewReason(gate("available"))).toMatch(/^Not published \(FE-028\)\./);
     expect(exitReviewReason(gate("none"))).toMatch(/^Not published \(FE-028\)\./);
     for (const v of ["partial", "met", "none", "unknown"]) expect(exitReviewReason(gate(v)).includes("\n")).toBe(false);
   });
