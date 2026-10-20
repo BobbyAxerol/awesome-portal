@@ -147,6 +147,16 @@ describe("ChartTools · Expand", () => {
     expect(document.activeElement).toBe(expandBtn());
   });
 
+  it("Expand gives the equity plot height as well as width, and Reduce returns it to its own height", () => {
+    mount();
+    const plotHeight = () => Number(document.querySelector<SVGSVGElement>(".exec-c2-plot svg, svg[viewBox]")?.getAttribute("height") ?? "0");
+    const before = plotHeight();
+    fireEvent.click(expandBtn());
+    expect(plotHeight()).toBeGreaterThan(before);
+    fireEvent.click(expandBtn());
+    expect(plotHeight()).toBe(before);
+  });
+
   it("Esc closes it and focus returns to the trigger, also when the key is pressed in the plot", () => {
     mount();
     fireEvent.click(expandBtn());

@@ -238,8 +238,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
     <>
       <section className="exec-rp-panel" aria-label="Trade replay">
         <header className="exec-rp-head">
-          <span className="exec-rp-title">Trade replay — trade logs on candles</span>
-          {accounts.length > 0 ? <span className="exec-rp-chip" title="Deployment account in scope">{accounts[0]}{accounts.length > 1 ? ` +${accounts.length - 1}` : ""}</span> : null}
+          {plain ? null : <span className="exec-rp-title">Trade replay — trade logs on candles</span>}
+          {accounts.length > 0 && !plain ? <span className="exec-rp-chip" title="Deployment account in scope">{accounts[0]}{accounts.length > 1 ? ` +${accounts.length - 1}` : ""}</span> : null}
           {symbols.length > 1 ? (
             <select className="exec-rp-chip" aria-label="Symbol" value={activeSymbol ?? ""} onChange={(e) => setSymbol(e.target.value)}>
               {symbols.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -266,7 +266,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             <button type="button" className="exec-rp-chip" disabled={bars.length === 0} title={bars.length === 0 ? "No candle window is available to fit." : undefined} onClick={() => chart.current?.fit()}>Fit</button>
             <button type="button" className="exec-rp-chip" onClick={() => { setTall(!tall); writeTall(!tall); }} aria-pressed={tall} aria-label={tall ? "Compact chart" : "Expand chart"}>{tall ? "Compact" : "Expand"}</button>
           </span>
-          <span className="exec-rp-win">{paging ? `loading ${paging === "left" ? "earlier" : "later"} candles · ` : ""}{bars.length > 0 ? `${bars.length} bars · ${market?.interval ?? interval} · ` : ""}{scopedFills.length} fills · {legs.length} legs · {trips.length} round trips · {brackets} position box{brackets === 1 ? "" : "es"} · crosshair · drag · wheel zoom · drag the price axis · ← → step fills</span>
+          <span className="exec-rp-win">{paging ? `loading ${paging === "left" ? "earlier" : "later"} candles · ` : ""}{bars.length > 0 ? `${bars.length} bars · ${market?.interval ?? interval} · ` : ""}{scopedFills.length} fills · {legs.length} legs · {trips.length} round trips · {brackets} position box{brackets === 1 ? "" : "es"}{plain ? "" : " · crosshair · drag · wheel zoom · drag the price axis · ← → step fills"}</span>
         </header>
         <div className="exec-rp-canvas" style={{ height }} data-tall={tall}>
           <ReplayCandleChart
@@ -312,7 +312,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
         ) : footerNode}
       </section>
       <section className="exec-rp-panel" aria-label="Trade log">
-        <header className="exec-rp-head"><span className="exec-rp-title">Trade log — events behind the markers</span><span className="exec-rp-spacer" /><span className="exec-rp-win" data-log-shown={Math.min(logShown, log.length)} data-log-total={log.length}>{log.length > logShown ? `${logShown} of ${log.length} events shown · newest first` : `${log.length} events`}{activeSymbol ? ` · ${activeSymbol}` : ""} · row ↔ marker share order_id / fill id</span></header>
+        <header className="exec-rp-head"><span className="exec-rp-title">Trade log — events behind the markers</span><span className="exec-rp-spacer" /><span className="exec-rp-win" data-log-shown={Math.min(logShown, log.length)} data-log-total={log.length}>{log.length > logShown ? `${logShown} of ${log.length} events shown · newest first` : `${log.length} events`}{activeSymbol ? ` · ${activeSymbol}` : ""}{plain ? "" : " · row ↔ marker share order_id / fill id"}</span></header>
         <div className="exec-scroll-x">
           <table className="exec-rp-table" data-plain={plain ? "true" : undefined}>
             {plain ? (

@@ -458,10 +458,10 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
             </span>
           ) : null}
           <div className="exec-blt2-tools">
-            <span className="exec-blt2-menuwrap">
+            <span className="exec-blt2-menuwrap" onKeyDown={(event) => { if (event.key === "Escape" && chooserOpen) setChooserOpen(false); }}>
               <button type="button" className="exec-blt2-btn" aria-expanded={chooserOpen} aria-controls={colMenuId} onClick={() => setChooserOpen((v) => !v)}>Columns</button>
               {chooserOpen ? (
-                <div className="exec-blt2-menu" id={colMenuId} role="group" aria-label="Choose columns" onKeyDown={(event) => { if (event.key === "Escape") setChooserOpen(false); }}>
+                <div className="exec-blt2-menu" id={colMenuId} role="group" aria-label="Choose columns">
                   {COLUMNS.filter((c) => !(c.id === "account" && !accountsVisible)).map((c) => (
                     <label key={c.id} className="exec-blt2-check">
                       <input
@@ -602,7 +602,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
             columns={[
               { key: "group", label: "Group", render: (group) => <span className="exec-blt2-ordercell"><button type="button" className="exec-blt2-x" aria-pressed={groupRead.phase !== "idle" && groupRead.groupId === group.groupId} aria-label={`Read structure of group ${group.groupId}`} onClick={() => pickGroup(group.groupId)}>Read</button> <span className="exec-blt2-id">{group.groupId}</span></span> },
               { key: "symbol", label: "Symbol", render: (group) => group.symbol ?? <span className="exec-blt2-na">Not available</span> },
-              { key: "type", label: "Type", render: (group) => (group.contingencyType ? humanize(group.contingencyType) : <span className="exec-blt2-na">Not stated</span>) },
+              { key: "type", label: "Type", render: (group) => (group.contingencyType ? (/^[A-Z]{3}$/.test(group.contingencyType) ? group.contingencyType : humanize(group.contingencyType)) : <span className="exec-blt2-na">Not stated</span>) },
               { key: "state", label: "State", render: (group) => (group.state ? humanize(group.state) : <span className="exec-blt2-na">Not stated</span>) },
               { key: "target", label: "Target", numeric: true, render: (group) => <ExactText value={group.targetQuantity} /> },
               { key: "filled", label: "Filled", numeric: true, render: (group) => <ExactText value={group.filledQuantity} /> },

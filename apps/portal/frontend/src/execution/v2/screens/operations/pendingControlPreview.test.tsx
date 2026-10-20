@@ -79,7 +79,7 @@ describe("open: the versions are shown, not typed", () => {
     expect(screen.getAllByRole("textbox")).toHaveLength(1);
     expect(screen.queryByRole("spinbutton")).toBeNull();
     expect(within(versions).queryByRole("textbox")).toBeNull();
-    expect(screen.getByText(/cannot be edited here/)).toBeTruthy();
+    expect(screen.queryByText(/cannot be edited here/)).toBeNull();
   });
 
   it("Preview stays off until there is a reason, and says why", () => {
@@ -88,7 +88,7 @@ describe("open: the versions are shown, not typed", () => {
     expect(screen.getByText("A reason is required.")).toBeTruthy();
     type("Release the remainder");
     expect(button().disabled).toBe(false);
-    expect(screen.getByText("Ready to preview")).toBeTruthy();
+    expect(screen.queryByText("A reason is required.")).toBeNull();
     type("bad‮text");
     expect(button().disabled).toBe(true);
     expect(screen.getByText(/control or direction character/)).toBeTruthy();

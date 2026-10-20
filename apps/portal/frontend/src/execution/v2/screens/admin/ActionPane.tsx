@@ -219,7 +219,6 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
       {row.kind === "capital" ? (
         <div className="exec-adm-block">
           <h4 className="exec-adm-h4">Start in Portfolios</h4>
-          <p>Capital actions begin with a preview in the portfolio. Nothing is started from this page.</p>
           <Link className="exec-adm-link" to={withContext(portfoliosHref, params)}>Open Portfolios</Link>
         </div>
       ) : row.kind === "read" ? (

@@ -339,12 +339,6 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                     ))}
                   </select>
                 </label>
-                <label className="exec-usr-field">
-                  <span className="exec-usr-sr">Role preset</span>
-                  <select className="exec-usr-select" value="" disabled aria-describedby={reasonId}>
-                    <option value="">Role preset: not published</option>
-                  </select>
-                </label>
                 <button type="button" className="exec-usr-btn" disabled aria-describedby={reasonId}>Invite account</button>
                 {filtered ? <button type="button" className="exec-usr-btn" onClick={clearFilters}>Clear filters</button> : null}
               </div>
@@ -407,7 +401,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                 {selected ? (
                   <dl className="exec-usr-facts">
                     <dt>Role</dt>
-                    <dd>{ROLE_LABEL[selected.role]} <span className="exec-usr-meta">{selected.role}</span></dd>
+                    <dd>{ROLE_LABEL[selected.role]}</dd>
                     <dt>State</dt>
                     <dd>{flagsOf(selected)}</dd>
                     <dt>Revision</dt>

@@ -538,6 +538,26 @@ describe("funnel and groups panels", () => {
   });
 });
 
+describe("small UX receipts (UXM-07 audit B)", () => {
+  it("a three-letter contingency code is written as the code, not as a word (OUO, never Ouo)", async () => {
+    mount();
+    await loaded();
+    const groups = screen.getByRole("table", { name: "Conditional groups" });
+    expect(groups.textContent).toContain("OUO");
+    expect(groups.textContent).not.toContain("Ouo");
+  });
+
+  it("Escape closes the Columns menu from its button as well as from inside it", async () => {
+    mount();
+    await loaded();
+    const trigger = screen.getByRole("button", { name: "Columns" });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("group", { name: "Choose columns" })).toBeTruthy();
+    fireEvent.keyDown(trigger, { key: "Escape" });
+    expect(screen.queryByRole("group", { name: "Choose columns" })).toBeNull();
+  });
+});
+
 describe("states", () => {
   it("denied: the server's 403 is a denial with a link, not an outage", async () => {
     setOverviewDoubleVariants({ blotter: "denied" });
