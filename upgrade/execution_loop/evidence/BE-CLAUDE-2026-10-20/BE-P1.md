@@ -15,7 +15,7 @@ Vocabulary: `CONTRACT_DELIVERED_AT_COMMIT` = schema/OpenAPI/types/fixtures/produ
 | MD-2 currency of a metric in a partition | a metric that names a currency names its partition's currency, in `capital_statements`, row partitions and group partitions | same (`MANAGER_PARTITION_CURRENCY_MISMATCH`); source admission already refused MONEY-unit mismatches before storage | `description` (JSON Schema cannot compare two fields) | negative `MD-2/*`, positive partitions example | CONTRACT_DELIVERED_AT_COMMIT (producer-only), PENDING_GATE |
 | MD-3 partition duplicates | a partition appears once per list; identity = domain, currency, basis, native_profile_ref (`domain_proof_ref` is evidence) | same (`MANAGER_PARTITION_DUPLICATE`) | `uniqueItems` on the three lists (exact repeat) + `description` | negative `MD-3/*` (2 cases) | CONTRACT_DELIVERED_AT_COMMIT (exact repeat in schema; identity repeat producer-only), PENDING_GATE |
 | MD-4 NOT_PUBLISHED preset with a window | an unpublished preset carries no window. **This was a real producer behaviour**: `managerQueryOptions` emitted the would-be `resolved` window for an unpublished 7D/30D/90D whenever `as_of` was past the epoch; fixtures hid it because their `as_of` is tiny | producer helper now emits `resolved: null` unless the preset is `METRIC_SPECIFIC`; Zod `managerP1Options` refuses a violating body (`MANAGER_WINDOW_OPTION_INVALID`) | `resolved: null` in the NOT_PUBLISHED branch (finite conditional) | negative `MD-4/*`; actual-read test with `as_of = 1.8e12` | CONTRACT_DELIVERED_AT_COMMIT, PENDING_GATE; **behaviour change, needs Codex ACCEPTED** |
-| MD-5 `-0` | **no rule implemented** (owner decision) | n/a | unchanged (admits `-0`) | none; a contract test pins "both validators still admit -0" | OWNER_DECISION_PENDING (options below) |
+| MD-5 `-0` | **canonical zero on emit** (owner decision C, Bobby 2026-10-20), limited to the Manager dataset and series responses: a zero with a minus sign is emitted with the same scale and no sign (`-0` -> `0`, `-0.00` -> `0.00`); the response decimal refuses the signed form. Exact text in "MD-5 as delivered" below | emit step in `manager-model.ts` / `manager-series.ts` (`canonicalizeManagerDatasetZero` / `canonicalizeManagerSeriesZero`, once, before the response parse) + `managerResponseDecimal` (`MANAGER_DECIMAL_NEGATIVE_ZERO`) | canonical-zero `pattern` + rule `description` on every response decimal (the finite form JSON Schema can say) | negative `MD-5/*` (5 dataset cases, 2 series cases) + `emit_examples` | CONTRACT_DELIVERED_AT_COMMIT 2aeb444d (the ledger commit follows it), PENDING_GATE; **Codex ACCEPTED / CHANGES_REQUESTED requested** |
 | MD-6 duplicate rows/groups | `row_key` unique within a body; a group appears once (identity = key) | same (`MANAGER_ROW_KEY_DUPLICATE`, `MANAGER_GROUP_DUPLICATE`) | `uniqueItems` on `items` and `groups` (exact repeat) + `description` | negative `MD-6/*` (3 cases) | CONTRACT_DELIVERED_AT_COMMIT (exact repeat in schema; shared key producer-only), PENDING_GATE |
 | MD-7 group membership | a group key names a field once, a field the options offer (`query_options.group_fields`), and `unique_row_count <= authorized_filtered_count` | same (`MANAGER_GROUP_*`); the group key field is now `managerGroupField` (shared with the query's `group_by`) | `field` is the eight-value enum (was any text) and "a field twice in one key" as eight finite `not/contains/minContains:2` clauses | negative `MD-7/*` (3 cases) | CONTRACT_DELIVERED_AT_COMMIT (enum + once-per-key in schema; offered/count producer-only), PENDING_GATE |
 | MD-8 headline currency | a row-level money figure that names a currency is the figure of exactly **one** partition listed on that row (the same metric), never a total | same (`MANAGER_HEADLINE_NOT_A_PARTITION_FIGURE`) | `description` | negative `MD-8/*`, positive partitions example | CONTRACT_DELIVERED_AT_COMMIT (producer-only), PENDING_GATE; **deliberately not the reader's wording**, see "Reader and producer disagree" |
@@ -98,16 +98,48 @@ now reports that as a violation (no testkit edit).
 
 ## Open decisions
 
-### MD-5 negative zero (`-0`, `-0.00`) — Bobby
-Facts: `exactDecimal` admits `-0*`; the reducer's `sumExactDecimals` already prints `0` for any zero sum, so `-0` can only reach a body by
-pass-through (a score or composition `value`, a `denominator`) or from a stored source value; `compareManagerDecimals` treats `-0 == 0`;
-the reader refuses it (24 corpus cases).
-- A. Leave it: both validators admit `-0`, readers normalise. Zero change; string equality, digests and sort ties can disagree between `-0` and `0`.
-- B. Forbid on input and output: a canonical-zero pattern on the manager decimals (`^(?!-0(?:\.0+)?$)...`), fail closed on a `-0` source value.
-  Strictest; one bad source representation becomes a 503 for the whole dataset.
-- C. Canonical zero on emit: normalise `-0*` to `0*` where a metric is built (one function), forbid `-0` in the published schema for these keys.
-  Numerically identical, no financial fact changed, no 503.
-**Recommendation: C**, limited to the manager decimals (not the shared `exactDecimal`, which other families use). I did not implement it.
+### MD-5 as delivered (was: open decision; Bobby chose option C on 2026-10-20)
+**The rule (Codex's guidance, binding).** When the Manager dataset or series producer emits an exact decimal string whose value is zero
+with a minus sign (`-0`, `-0.00`, `-0.000000000000000000`, ...), it emits the same scale with no sign (`0`, `0.00`, ...). It never turns a
+non-zero into zero, never changes a scale, never rounds. The canonicalisation happens once, in the emit step right before the response
+parse, and is idempotent (an unchanged metric is returned as the same object). The response schema/validator then refuse a signed zero, so a
+body carrying `-0` is never emitted (failure mode as every other rule: parse error -> existing `EXECUTION_READ_AUTHORITY_UNAVAILABLE` 503; the
+refusal's issue message is `MANAGER_DECIMAL_NEGATIVE_ZERO`, a Zod issue label like the MD-n ones, **not** a new problem code).
+
+**Fields covered (all the decimals the two responses carry that the producer builds).**
+- Dataset: `value` and `denominator` of every metric in `items[].metrics`, `items[].economic_partitions[].metrics`,
+  `groups[].economic_partitions[].metrics`, `capital_statements[].metrics`; `scores.raw.value`, `scores.composition.value`,
+  `scores.direct_nav.value`.
+- Series: `series[].points[].value`. The `comparison` block carries no decimal.
+
+**Deliberately not covered (and why).**
+- `score_details`, `composition_details`, `regime_details`: sealed publications passed through verbatim (their `input_digest` /
+  `policy_hash` bind their content); rewriting a decimal inside would change a sealed body. The FE reader does not read them.
+  If Codex wants them covered it is a separate decision about the publications' own contract, not an emit rule.
+- The shared `exactDecimal` and every other family; what a SOURCE document may contain (`managerMetric`, `seriesPoint` and the stored
+  `managerSeriesPublication` still admit `-0`; source admission and stored facts/digests are untouched); `snapshot_id` is still derived
+  from the pre-emit rows (it identifies the snapshot, not the form); a query filter value (`net_pnl EQ -0`) is still the plain exact decimal
+  in the published query schema. No migration, no `schema_version` bump (the change only refuses bodies the FE reader already refuses).
+
+**Where.** `manager-dataset-invariants.ts` (`canonicalManagerZero`, the two emit functions, `managerResponseDecimal`,
+`MANAGER_CANONICAL_DECIMAL_PATTERN`), `manager-model.contract.ts` (`managerResponseMetric` beside the unchanged source `managerMetric`; the
+dataset row/partition/score summaries use the response forms), `manager-series.contract.ts` (`managerSeriesResponsePoint`),
+`manager-model.ts` and `manager-series.ts` (one call each, right before `.parse`). Schema: the canonical pattern
+`^(?:(?:0|[1-9][0-9]*)(?:\.[0-9]+)?|-(?:[1-9][0-9]*(?:\.[0-9]+)?|0\.[0-9]*[1-9][0-9]*))$` (lookahead-free: a negative value has a non-zero
+integer part or a non-zero fraction digit) with the rule text as `description`. Generators: `describeCanonicalDecimals`,
+`queryDecimal` (keeps the query on the plain decimal); each generator proves every negative case is refused with
+`MANAGER_DECIMAL_NEGATIVE_ZERO` and every `emit_examples` pair before writing. Fixtures: `execution-manager-dataset.invariants.synthetic.negative.json`
+(+5 `MD-5/*` cases, `emit_rule`, `emit_examples`), new `execution-manager-series.negative-zero.synthetic.negative.json`.
+
+**FE follow-up (not done here: no FE edit by instruction).** The reader rule MD-S2 (refuses `-0`) stays correct and unchanged. The conformance
+*oracle* needs a flip, measured by running `readers/managerDataset*` and `readers/managerSeries*` against the regenerated schema (3,667 passed,
+5 expected-fail, **7 failed**): the `-0` cases are no longer "schema-valid but reader-refused", they are schema-invalid.
+1. `managerDataset.conformance.test.ts`: the `MD-S2 negative zero` entry of the pinned reader-stricter-than-schema counts (24) disappears;
+   the two hand-pinned cases `MD-S2 negative zero value` and `... with decimals` leave the "stricter on purpose" list (become ordinary
+   "schema refuses AND reader refuses"); the `MD-5 (negative zero) is not a rule yet` test must flip to "schema refuses and the producer refuses".
+2. `managerSeries.conformance.test.ts`: same for `MS-S2` (8 corpus cases; two hand-pinned cases).
+3. The testbase's schema-valid corpus builder may keep generating `-0` as a negative; nothing in `managerDataset.ts` / `managerSeries.ts` changes.
+4. The FE decimal pattern in any hand-written type guard is not affected (the d.ts type is `string`).
 
 ### Behaviour change MD-4
 Consumers lose the *would-be* window of an unpublished preset (they still get it in `selected_window` when they request the preset).
@@ -115,7 +147,8 @@ That matches "typed absence with a reason, no invented window". Needs Codex ACCE
 
 ## Producer-receipt request to Codex
 
-1. ACCEPTED / CHANGES_REQUESTED on: the eight rules, the MD-4 behaviour change, no `schema_version` bump, MD-5 left open.
+1. ACCEPTED / CHANGES_REQUESTED on: the eight rules, the MD-4 behaviour change, no `schema_version` bump, and **MD-5 as delivered**
+   (canonical zero on emit, exact text above; the sealed `*_details` publications left as they are).
 2. Run the PostgreSQL-backed specs I cannot (`elp206-manager-store`, `manager-lists.spec`, `elp2-manager-reads` DB cases) and the ordinary R3 hook
    on the merged tree; regenerate `contracts-snapshot.json` and the EDS-12/N29 ledgers (not committed here by instruction).
 3. Confirm the headline rule is identity (MD-8), not "same currency as every partition" (see FE follow-up 1).
