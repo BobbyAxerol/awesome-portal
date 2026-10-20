@@ -15,7 +15,7 @@ import type { BindingExposure } from "../../../analytics";
 import type { ProfileEnvelope } from "../../../api/profileRead";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { KpiStrip, Kpi, SectionPanel, Triad } from "../../blocks";
+import { KpiStrip, Kpi, NotAvailableLine, SectionPanel, Triad } from "../../blocks";
 import { withoutOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import {
@@ -23,7 +23,7 @@ import {
   ledgerPnl, marginFacts, portfolioHref, positionCount, sleeveRows, stageWord, triadModel,
   type AccountView, type AllocationFacts, type PositionFacts, type Population, type SleeveRow, type SyncEntry,
 } from "./model";
-import { Fact, Na, NotComputed, Np, Value, When } from "./parts";
+import { Fact, Na, Np, Value, When } from "./parts";
 
 export interface PanelContext {
   profile: ProfileEnvelope;
@@ -36,7 +36,7 @@ export interface PanelContext {
 /* ── three authorities ──────────────────────────────────────────────────── */
 
 export function AuthorityKpis({ ctx, physicalOnly }: { ctx: PanelContext; physicalOnly: boolean }) {
-  const { profile, accountId, currency, population } = ctx;
+  const { profile, accountId, currency } = ctx;
   const bal = balanceFacts(profile, accountId, currency);
   const pnl = ledgerPnl(profile, accountId, currency);
   const broker = brokerFacts(profile, currency);
@@ -50,7 +50,6 @@ export function AuthorityKpis({ ctx, physicalOnly }: { ctx: PanelContext; physic
       )}
       <Kpi label="Native custody · whole account" metric={broker?.buyingPower} suffix={currency ?? undefined} basis={broker ? "Buying power reported by the venue" : undefined}>
         {broker ? <>Venue report as of <When at={broker.asOf} /></> : undefined}
-        {population.shared ? <span className="exec-acct-sub2">Shared by {population.expected ?? population.published} sleeves</span> : null}
         <span className="exec-acct-sub2">Native equity: <Na why="Venue field not reported" /></span>
       </Kpi>
       {physicalOnly ? null : (
@@ -84,14 +83,13 @@ export function SleevesPanel({ ctx }: { ctx: PanelContext }) {
     },
     { key: "portfolio", label: "Portfolio", render: (row) => (row.portfolio === null ? <Na /> : row.portfolio) },
     { key: "internal", label: "Internal balance", numeric: true, render: (row) => <Value metric={row.internal} suffix={ctx.currency ?? undefined} /> },
-    { key: "native", label: "Native attribution", numeric: true, render: () => <NotComputed why="Native balance spans all sleeves" /> },
   ];
   return (
     <SectionPanel title="Sleeves on this binding" aside="Physical" flush>
       <CardsTable columns={columns} rows={rows} rowKey={(row) => row.accountId} label="Sleeves on this binding" selectedKey={ctx.accountId} />
-      <p className="exec-acct-cap">
-        Not totalled. Native balance is not split among sleeves.
-        {population.partial ? ` ${population.published} of ${population.expected} sleeves are published here.` : ""}
+      <p className="exec-acct-cap" title="The native balance spans all sleeves; no source attributes it to one.">
+        Not totalled: native balance is not split among sleeves
+        {population.partial ? `. ${population.published} of ${population.expected} sleeves are published here` : ""}
       </p>
     </SectionPanel>
   );
@@ -155,11 +153,7 @@ export function PositionsPanel({ ctx, scope, onScope }: { ctx: PanelContext; sco
         <div className="exec-acct-pad"><Na why="No source attributes native positions to sleeves" /></div>
       ) : (
         <>
-          <dl className="exec-acct-sidebar">
-            <Fact label="Long notional"><Np fact={FE.gross} /></Fact>
-            <Fact label="Short notional"><Np fact={FE.gross} /></Fact>
-            <Fact label="Gross notional"><Np fact={FE.gross} /></Fact>
-          </dl>
+          <NotAvailableLine className="exec-acct-cap" facts={[{ label: "Long, short and gross notional", id: null, why: `${FE.gross.what} (${FE.gross.fe}); totals by side are not added up here` }]} />
           <CardsTable
             columns={columns}
             rows={rows}
@@ -167,7 +161,6 @@ export function PositionsPanel({ ctx, scope, onScope }: { ctx: PanelContext; sco
             label="Positions of this sleeve"
             empty={<span className="exec-acct-note">No position rows are published for this sleeve.</span>}
           />
-          <p className="exec-acct-cap">Notional per position is as published. Totals by side are not published and are not added up here.</p>
         </>
       )}
     </SectionPanel>
@@ -198,7 +191,7 @@ export function AllocationsPanel({ ctx }: { ctx: PanelContext }) {
     { key: "allocation", label: "Allocation", numeric: true, render: (row) => <Value metric={row.allocation} suffix={row.currency ?? undefined} /> },
   ];
   return (
-    <SectionPanel title="Allocations" aside="Logical" flush>
+    <SectionPanel title="Allocations" flush>
       <CardsTable
         columns={columns}
         rows={ctx.view.allocations}
@@ -206,7 +199,7 @@ export function AllocationsPanel({ ctx }: { ctx: PanelContext }) {
         label="Allocations on this account"
         empty={<span className="exec-acct-note">No allocation row is published for this account.</span>}
       />
-      <p className="exec-acct-cap">Logical allocations. They are no claim on the native balance.</p>
+      <p className="exec-acct-cap" title="Logical allocations are no claim on the native balance.">No claim on the native balance</p>
     </SectionPanel>
   );
 }
@@ -217,18 +210,13 @@ export function FeesPanel({ ctx }: { ctx: PanelContext }) {
   const pnl = ledgerPnl(ctx.profile, ctx.accountId, ctx.currency);
   return (
     <SectionPanel title="Fees & funding" aside="This sleeve">
-      <dl className="exec-acct-facts">
-        <Fact label="Fees, over a window"><Np fact={FE.window} /></Fact>
-        <Fact label="Funding, over a window"><Np fact={FE.window} /></Fact>
-        <Fact label="Borrow, over a window"><Np fact={FE.window} /></Fact>
-      </dl>
-      <h3 className="exec-acct-h">Current source row</h3>
+      <NotAvailableLine className="exec-acct-cap" facts={[{ label: "Fees, funding and borrow over a window", id: "FE-025" }]} />
+      <h3 className="exec-acct-h" title="What the latest ledger row states. Not a window, and not summed.">Current</h3>
       <dl className="exec-acct-facts">
         <Fact label="Fees, current"><Value metric={pnl?.fees} suffix={ctx.currency ?? undefined} /></Fact>
         <Fact label="Funding, current"><Value metric={pnl?.funding} suffix={ctx.currency ?? undefined} signed /></Fact>
         <Fact label="As of"><When at={pnl?.asOf} /></Fact>
       </dl>
-      <p className="exec-acct-cap">Current figures are what the latest ledger row states. They are not a window and are not summed.</p>
     </SectionPanel>
   );
 }
@@ -246,14 +234,14 @@ export function ReconciliationPanel({ ctx, exposure }: { ctx: PanelContext; expo
   const diff = diffFacts(profile, currency);
   return (
     <>
-      <SectionPanel title="Internal · Broker · Difference" aside="Difference only where scopes match">
+      <SectionPanel title="Internal · Broker · Difference">
         <Triad rows={model.rows} internal={model.internal} broker={model.broker} />
         <p className="exec-acct-line">
           <span className="exec-acct-k">Published verdict{currency ? ` (${currency})` : ""}</span> {inSyncFlag(diff ? diff.inSync : null)}
           {diff === null && population.shared ? <span className="exec-acct-note"> Shared binding: the balance difference is not computed.</span> : null}
         </p>
         {exposure && exposure.completeness !== "COMPLETE" ? (
-          <p className="exec-acct-note" role="status"><Flag kind="partial" size="sm" /> The binding population is {exposure.completeness.toLowerCase()}; read these differences as part of the picture.</p>
+          <p className="exec-acct-note" role="status"><Flag kind="partial" size="sm" /> <span title="Read these differences as part of the picture.">Binding population {exposure.completeness.toLowerCase()}</span></p>
         ) : null}
       </SectionPanel>
       <SyncHistory entries={ctx.view.sync} />
@@ -278,7 +266,7 @@ export function SyncHistory({ entries }: { entries: readonly SyncEntry[] }) {
         label="Sync history"
         empty={<span className="exec-acct-note">No sync row is published for this account.</span>}
       />
-      {entries.length > shown.length ? <p className="exec-acct-cap">Showing the newest {shown.length} of {entries.length} published rows. Rows are listed as the source gave them; gaps in time are not filled.</p> : null}
+      {entries.length > shown.length ? <p className="exec-acct-cap" title="Rows are listed as the source gave them; gaps in time are not filled.">Showing the newest {shown.length} of {entries.length}</p> : null}
     </SectionPanel>
   );
 }

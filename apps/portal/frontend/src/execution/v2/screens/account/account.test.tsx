@@ -120,14 +120,12 @@ describe("Accounts list", () => {
     expect(flags).toEqual(["ok", "stale", "attention"]);
   });
 
-  it("says Not available, with the reason, for equity, headroom and check; never a dash or a zero", async () => {
+  it("does not draw three columns of 'Not available' for equity, headroom and check; never a dash or a zero", async () => {
     stubFetch();
     const { container } = mount("/deployments/accounts");
     const rows = bodyRows(await loadedList());
     for (const row of rows) {
-      expect(cell(row, "Physical equity")).toContain("Not available");
-      expect(cell(row, "Σ Virtual · Headroom")).toContain("Not available");
-      expect(cell(row, "Check")).toContain("Not available");
+      for (const label of ["Physical equity", "Σ Virtual · Headroom", "Check"]) expect(row.querySelector(`td[data-l="${label}"]`), label).toBeNull();
     }
     expect(container.textContent).not.toMatch(/—|N\/A/);
     for (const td of Array.from(container.querySelectorAll("td"))) expect(td.textContent?.trim()).not.toMatch(/^(-|–|0)$/);
@@ -138,7 +136,8 @@ describe("Accounts list", () => {
     mount("/deployments/accounts");
     await loadedList();
     expect(screen.getByText("3 of 3 bindings")).toBeTruthy();
-    expect(screen.getByText(/Live environment/)).toBeTruthy();
+    // The environment is the selected tab, not repeated in the as-of line.
+    expect(screen.queryByText(/Live environment/)).toBeNull();
     expect(screen.getByText(/As of 17 Oct 09:00Z/)).toBeTruthy();
   });
 
@@ -283,7 +282,7 @@ describe("Accounts list", () => {
     const { container } = mount("/deployments/accounts");
     await loadedList();
     const labels = Array.from(container.querySelectorAll("tbody tr:first-child td")).map((td) => td.getAttribute("data-l"));
-    expect(labels).toEqual(["Binding · Venue", "Account", "State", "Credential", "Physical equity", "Σ Virtual · Headroom", "Check", "Updated"]);
+    expect(labels).toEqual(["Binding · Venue", "Account", "State", "Credential", "Updated"]);
     expect(container.querySelector("table.exec-cards")).not.toBeNull();
   });
 
@@ -513,7 +512,7 @@ describe("Account 360: the shared sleeve", () => {
     stubFetch();
     account("acc_bnc_core");
     await loaded360();
-    expect(screen.getByText(/Shared by 3 sleeves\. Native figures cover the whole account, not one sleeve\./)).toBeTruthy();
+    expect(screen.getByText("Shared by 3 sleeves").getAttribute("title")).toBe("Native figures cover the whole account, not one sleeve.");
     expect(screen.getByText("Stale 14 min")).toBeTruthy();
     expect(screen.getByText("As of 17 Oct 09:00Z")).toBeTruthy();
     expect(screen.getByText("Broker sync: Synced")).toBeTruthy();
@@ -530,10 +529,11 @@ describe("Account 360: the shared sleeve", () => {
     expect(strip.textContent).toContain("301,100.00");
     expect(strip.textContent).toContain("Not published (FE-017)");
     expect(strip.textContent).toContain("Native equity: Not available");
-    expect(strip.textContent).toContain("Shared by 3 sleeves");
+    // "Shared by 3 sleeves" is the banner's, once; the strip does not repeat it.
+    expect(strip.textContent).not.toContain("Shared by 3 sleeves");
   });
 
-  it("the sleeves table never attributes native balance to a sleeve: Not computed, and not totalled", async () => {
+  it("the sleeves table never attributes native balance to a sleeve: no attribution column, and not totalled", async () => {
     stubFetch();
     account("acc_bnc_core");
     await loaded360();
@@ -541,8 +541,8 @@ describe("Account 360: the shared sleeve", () => {
     const rows = bodyRows(table);
     expect(rows).toHaveLength(3);
     expect(rows.map((r) => cell(r, "Internal balance"))).toEqual(["88,200.00 USDT", "61,400.00 USDT", "47,900.00 USDT"]);
-    for (const row of rows) expect(cell(row, "Native attribution")).toContain("Not computed");
-    expect(within(table.closest("section")!).getByText(/Not totalled\. Native balance is not split among sleeves\./)).toBeTruthy();
+    for (const row of rows) expect(row.querySelector('td[data-l="Native attribution"]'), "no sleeve gets a native figure").toBeNull();
+    expect(within(table.closest("section")!).getByText(/Not totalled: native balance is not split among sleeves/)).toBeTruthy();
     expect(within(rows[1]!).getByRole("link", { name: "Binance-02b sleeve" }).getAttribute("href")).toBe("/deployments/accounts/acc_bnc_sat");
     expect(within(rows[0]!).queryByRole("link")).toBeNull();
   });
@@ -604,7 +604,8 @@ describe("Account 360: the physical binding view", () => {
     const panel = await screen.findByRole("region", { name: "Physical binding" });
     await within(panel).findByText("LIVE_BINANCE_USDM");
     expect(panel.textContent).toContain("bnc_main@BINANCE");
-    expect(panel.textContent).toContain("Withheld. The portal never shows the broker account reference.");
+    expect(panel.textContent).toContain("Withheld");
+    expect(within(panel).getByText("Withheld").getAttribute("title")).toBe("Withheld. The portal never shows the broker account reference.");
     expect(panel.textContent).toContain("Not published (A360-4)");
     expect(panel.textContent).toContain("Not published (A360-3)");
     expect(panel.textContent).toContain("Real-funded");
@@ -707,7 +708,7 @@ describe("Account 360: states", () => {
     account("acc_okx_main");
     await loaded360("OKX main");
     expect((await screen.findAllByText(/BROKER_SYNC_UNAVAILABLE/)).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Not available from the source: Broker sync \(BROKER_SYNC_UNAVAILABLE\)/)).toBeTruthy();
+    expect(screen.getByText("Not available: Broker sync").getAttribute("title")).toContain("Broker sync: BROKER_SYNC_UNAVAILABLE");
     expect(screen.getByRole("tablist", { name: "Account sections" })).toBeTruthy();
     expect(screen.getByText("Broker sync not available")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Authorities" }).textContent).toContain("Not available");
@@ -728,7 +729,7 @@ describe("Account 360: states", () => {
     await loaded360("Binance sub account");
     fail = true;
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    await screen.findByText(/The last refresh failed \(ACCOUNT_RESOURCE_UNAVAILABLE/);
+    expect((await screen.findByText("Showing the last good read")).getAttribute("title")).toMatch(/The last refresh failed \(ACCOUNT_RESOURCE_UNAVAILABLE/);
     expect(screen.getByRole("heading", { level: 1, name: "Binance sub account" })).toBeTruthy();
   });
 
@@ -736,7 +737,7 @@ describe("Account 360: states", () => {
     stubFetch();
     account("acc_bnc_sub");
     await loaded360("Binance sub account");
-    expect(screen.getByText(/Not available from the source: Margin \(MARGIN_SOURCE_GAP\)/)).toBeTruthy();
+    expect(screen.getByText("Not available: Margin").getAttribute("title")).toContain("Margin: MARGIN_SOURCE_GAP");
     const margin = screen.getByRole("region", { name: "Margin" });
     expect(margin.textContent).toContain("Initial marginNot available");
     expect(margin.textContent).toContain("MaintenanceNot available");
@@ -798,7 +799,7 @@ describe("Account 360: tabs", () => {
     expect(screen.queryByText('Tab "risk" is not available. Showing Overview.')).toBeNull();
   });
 
-  it("Positions: as published, with long, short and gross totals Not published (A360-1)", async () => {
+  it("Positions: as published, with long, short and gross totals named once as not available (A360-1)", async () => {
     stubFetch();
     account("acc_bnc_core");
     await loaded360();
@@ -810,7 +811,9 @@ describe("Account 360: tabs", () => {
       ["ETHUSDT", "SHORT", "35,100.00 USDT"],
     ]);
     expect(cell(rows[1]!, "Unrealized PnL")).toContain("120.50");
-    expect(within(panel).getAllByText("Not published (A360-1)")).toHaveLength(3);
+    const gap = within(panel).getByTestId("not-available-line");
+    expect(gap.textContent).toContain("Not available: Long, short and gross notional");
+    expect(gap.getAttribute("title")).toContain("A360-1");
     fireEvent.click(within(panel).getByRole("button", { name: "Whole account" }));
     expect(within(panel).getByText("No source attributes native positions to sleeves")).toBeTruthy();
     expect(within(panel).queryByRole("table")).toBeNull();
@@ -826,19 +829,21 @@ describe("Account 360: tabs", () => {
     expect(within(row).getByRole("link", { name: "btc_trend" }).getAttribute("href")).toBe("/deployments/alphas/btc_trend");
     expect(within(row).getByRole("link", { name: "dep_btc_live" }).getAttribute("href")).toBe("/deployments/live/dep_btc_live");
     expect(cell(row, "Stage")).toBe("Real-funded");
-    expect(panel.textContent).toContain("no claim on the native balance");
+    expect(within(panel).getByText("No claim on the native balance").getAttribute("title")).toBe("Logical allocations are no claim on the native balance.");
   });
 
-  it("Fees & funding: windowed figures are Not published (FE-025); current ones are labelled current", async () => {
+  it("Fees & funding: windowed figures are one 'Not available' line (FE-025); current ones are labelled current", async () => {
     stubFetch();
     account("acc_bnc_core");
     await loaded360();
     const panel = await openTab("Fees & funding");
-    expect(within(panel).getAllByText("Not published (FE-025)")).toHaveLength(3);
+    const gap = within(panel).getByTestId("not-available-line");
+    expect(gap.textContent).toContain("Not available: Fees, funding and borrow over a window");
+    expect(gap.getAttribute("title")).toContain("Not published (FE-025)");
     expect(panel.textContent).toContain("Fees, current");
     expect(panel.textContent).toContain("388.20");
     expect(panel.textContent).toContain("224.20");
-    expect(panel.textContent).toContain("They are not a window");
+    expect(within(panel).getByRole("heading", { name: "Current" }).getAttribute("title")).toContain("Not a window");
   });
 
   it("Reconciliation: the Triad on a shared binding says Not computed · SHARED_BINDING and never a zero difference", async () => {
@@ -968,7 +973,7 @@ describe("Account 360: copy and scale", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Reconciliation" }));
     const history = await screen.findByRole("table", { name: "Sync history" });
     expect(bodyRows(history)).toHaveLength(10);
-    expect(screen.getByText(/Showing the newest 10 of 200 published rows/)).toBeTruthy();
+    expect(screen.getByText("Showing the newest 10 of 200")).toBeTruthy();
   });
 });
 
@@ -1018,7 +1023,7 @@ describe("Accounts list: when it was read, and how old a row is", () => {
     stubFetch();
     mount("/deployments/accounts");
     await loadedList();
-    expect(screen.getByText(/As of 17 Oct 09:00Z · Read 17 Oct 09:14Z · Live environment/)).toBeTruthy();
+    expect(screen.getByText(/As of 17 Oct 09:00Z · Read 17 Oct 09:14Z$/)).toBeTruthy();
     const head = within(bindingsTable()).getByRole("columnheader", { name: "Updated" });
     expect(head.getAttribute("title")).toContain("17 Oct 09:14Z");
     expect(head.getAttribute("title")).toContain("not the browser clock");

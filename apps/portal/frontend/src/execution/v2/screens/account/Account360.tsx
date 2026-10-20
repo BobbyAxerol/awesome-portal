@@ -193,7 +193,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
           <SectionPanel title="Physical binding" aside="Native">
             <dl className="exec-acct-facts">
               <Fact label="Venue">{identity.venue ?? <Na />}</Fact>
-              <Fact label="Native account"><span className="exec-acct-withheld">{WITHHELD}</span></Fact>
+              <Fact label="Native account"><span className="exec-acct-withheld" title={WITHHELD}>Withheld</span></Fact>
               <Fact label="Product"><Np fact={FE.product} /></Fact>
               <Fact label="Margin mode">{identity.marginMode ?? <Na />}</Fact>
               <Fact label="Environment">{environment ? ENV_LABEL[environment] : <Na />}</Fact>
@@ -272,7 +272,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
             </label>
           ) : null}
           <span className="exec-acct-fresh">
-            <Flag kind={fresh.kind} label={age !== null && fresh.kind !== "ok" ? `${fresh.label} ${age}` : fresh.label} size="sm" />
+            {fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={age !== null ? `${fresh.label} ${age}` : fresh.label} size="sm" /> : null}
             <span>{asOf !== null ? `As of ${formatAsOf(asOf)}` : "Source time not published"}</span>
           </span>
           {brokerSync ? <Flag kind={brokerSync.status.kind} label={`Broker sync: ${brokerSync.status.label}`} size="sm" /> : <Flag kind="na" label="Broker sync not available" size="sm" />}
@@ -286,13 +286,13 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
       {staleReason !== null ? (
         <div className="exec-acct-banner" role="status">
           <Flag kind="stale" size="sm" />
-          <span>The last refresh failed ({staleReason}). The last good read is shown.</span>
+          <span title={`The last refresh failed (${staleReason}).`}>Showing the last good read</span>
         </div>
       ) : null}
       {population.shared ? (
         <div className="exec-acct-banner" role="note" data-tone="shared">
-          Shared by {population.expected ?? population.published} sleeves. Native figures cover the whole account, not one sleeve.
-          {population.partial ? ` ${population.published} of ${population.expected} are published here.` : ""}
+          <span title="Native figures cover the whole account, not one sleeve.">Shared by {population.expected ?? population.published} sleeves</span>
+          {population.partial ? `. ${population.published} of ${population.expected} are published here` : ""}
         </div>
       ) : null}
       {credential !== null && (credential.kind === "attention" || credential.kind === "stale") ? (
@@ -308,7 +308,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
       {tabNotice !== null ? <p className="exec-acct-note" role="status">{tabNotice}</p> : null}
       {view.gaps.length > 0 ? (
         <p className="exec-acct-note" role="status">
-          Not available from the source: {view.gaps.map((gap) => `${RELATION_LABEL[gap.relation] ?? gap.relation} (${gap.code})`).join(", ")}.
+          <span title={view.gaps.map((gap) => `${RELATION_LABEL[gap.relation] ?? gap.relation}: ${gap.code}`).join("\n")}>Not available: {view.gaps.map((gap) => RELATION_LABEL[gap.relation] ?? gap.relation).join(", ")}</span>
         </p>
       ) : null}
       {reason !== undefined && status !== "ok" ? <p className="exec-acct-note">Source reasons: {reason}</p> : null}
