@@ -17,7 +17,7 @@ import { managerModelDocument, managerModelQuery, managerDatasetResponse, MANAGE
 export type ManagerSurface = "FUND" | "FLEET" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
 const fail = (code: ConstructorParameters<typeof ExecutionReadScopeError>[0], status = 503): never => { throw new ExecutionReadScopeError(code, status); };
 export const managerRowKey = (m: ManagerMember) => JSON.stringify([m.tuple.alpha_id, m.tuple.alpha_version_id, m.tuple.portfolio_id]);
-const tupleKey = (m: ManagerMember["tuple"]) => JSON.stringify([m.alpha_id, m.alpha_version_id, m.portfolio_id, m.deployment_id, m.account_id]);
+export const managerTupleKey = (m: ManagerMember["tuple"]) => JSON.stringify([m.alpha_id, m.alpha_version_id, m.portfolio_id, m.deployment_id, m.account_id]);
 export const managerPartitionKey = (p: ManagerFact["partition"]) => JSON.stringify([p.economic_domain, p.currency, p.basis, p.native_profile_ref]);
 /** Exact numeric ordering; null ordering belongs to the query, not to decimal coercion. */
 export function compareManagerDecimals(a: string, b: string): number {
@@ -105,7 +105,7 @@ function sumMetric(facts: ManagerFact[]): ManagerMetric {
 /** Valuation/balance snapshots of shared ownership count once, not once per
  * deployment/stage clone. Conflicting attribution cannot be repaired by SUM.
  * Budget and allocation receipts remain their distinct authority fact grain. */
-function economicFacts(facts: ManagerFact[]) {
+export function economicFacts(facts: ManagerFact[]) {
   const snapshots = new Set(["current_nav", "balance_total", "equity_30d_end_value"]);
   const seen = new Map<string, ManagerFact>(), output: ManagerFact[] = [];
   for (const f of facts) {
@@ -119,12 +119,12 @@ function economicFacts(facts: ManagerFact[]) {
   }
   return output;
 }
-function partitions(facts: ManagerFact[], keys: readonly string[], expectedTuples: Set<string>) {
+export function managerPartitionTotals(facts: ManagerFact[], keys: readonly string[], expectedTuples: Set<string>) {
   const groups = new Map<string, ManagerFact[]>(), rawGroups = new Map<string, ManagerFact[]>();
   const knownTuples = new Set<string>();
   for (const f of facts.filter(f => f.classification !== "CUSTODY")) {
     const key = managerPartitionKey(f.partition), rows = rawGroups.get(key) ?? [];
-    rows.push(f); rawGroups.set(key, rows); knownTuples.add(tupleKey(f.tuple));
+    rows.push(f); rawGroups.set(key, rows); knownTuples.add(managerTupleKey(f.tuple));
   }
   for (const f of economicFacts(facts)) {
     const key = managerPartitionKey(f.partition); const rows = groups.get(key) ?? []; rows.push(f); groups.set(key, rows);
@@ -135,10 +135,10 @@ function partitions(facts: ManagerFact[], keys: readonly string[], expectedTuple
   const unknownTuples = [...expectedTuples].filter(key => !knownTuples.has(key));
   return [...groups].sort(([a], [b]) => lexical(a, b)).map(([partitionKey, rows]) => {
     const raw = rawGroups.get(partitionKey)!;
-    const expected = new Set([...unknownTuples, ...raw.map(f => tupleKey(f.tuple))]);
+    const expected = new Set([...unknownTuples, ...raw.map(f => managerTupleKey(f.tuple))]);
     const metricValues = Object.fromEntries(keys.map(key => {
       const value = sumMetric(rows.filter(f => f.kind === key));
-      const covered = new Set(raw.filter(f => f.kind === key).map(f => tupleKey(f.tuple)));
+      const covered = new Set(raw.filter(f => f.kind === key).map(f => managerTupleKey(f.tuple)));
       return [key, value.value !== null && [...expected].some(tuple => !covered.has(tuple))
         ? absent("SOURCE_FACT_CENSUS_INCOMPLETE", value) : value];
     }));
@@ -151,12 +151,12 @@ function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerM
   lifecycleStages: ReadonlyMap<string, ManagerMember["stage"][]>) {
   const groups = new Map<string, ManagerMember[]>();
   const byTuple = new Map<string, ManagerFact[]>();
-  for (const fact of facts) { const key = tupleKey(fact.tuple), rows = byTuple.get(key) ?? []; rows.push(fact); byTuple.set(key, rows); }
+  for (const fact of facts) { const key = managerTupleKey(fact.tuple), rows = byTuple.get(key) ?? []; rows.push(fact); byTuple.set(key, rows); }
   for (const member of members) { const key = managerRowKey(member), rows = groups.get(key) ?? []; rows.push(member); groups.set(key, rows); }
   return [...groups].map(([row_key, group]): ManagerDatasetRow => {
-    const keys = new Set(group.map(m => tupleKey(m.tuple)));
+    const keys = new Set(group.map(m => managerTupleKey(m.tuple)));
     const ownFacts = [...keys].flatMap(key => byTuple.get(key) ?? []);
-    const economic_partitions = partitions(ownFacts, DEFAULT_METRICS.filter(f => scopeAllowsField(scope, fieldPolicy(f))), keys);
+    const economic_partitions = managerPartitionTotals(ownFacts, DEFAULT_METRICS.filter(f => scopeAllowsField(scope, fieldPolicy(f))), keys);
     const selected = query.economic_partition ? economic_partitions.find(p => managerPartitionKey(p.partition) === managerPartitionKey(query.economic_partition!)) :
       economic_partitions.length === 1 ? economic_partitions[0] : undefined;
     const metricValues = Object.fromEntries(DEFAULT_METRICS.filter(f => scopeAllowsField(scope, fieldPolicy(f))).map(key => [key,
@@ -240,8 +240,8 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
   // authorized active members BEFORE that filter, or "filter to Canary" would crown Canary the only stage.
   const lifecycleStages = new Map<string, ManagerMember["stage"][]>();
   for (const m of active) { const key = managerRowKey(m), set = lifecycleStages.get(key) ?? []; if (!set.includes(m.stage)) set.push(m.stage); lifecycleStages.set(key, set); }
-  const memberKeys = new Set(members.map(m => tupleKey(m.tuple)));
-  const facts = dedupeManagerFacts(doc.facts.filter(f => memberKeys.has(tupleKey(f.tuple)) && projectionRowVisible(scope, f.tuple) &&
+  const memberKeys = new Set(members.map(m => managerTupleKey(m.tuple)));
+  const facts = dedupeManagerFacts(doc.facts.filter(f => memberKeys.has(managerTupleKey(f.tuple)) && projectionRowVisible(scope, f.tuple) &&
     scopeAllowsField(scope, fieldPolicy(f.kind))));
   if (facts.length && ["currency", "profile_id", "provenance_ref"].some(field => !scopeAllowsField(scope, field)))
     fail("EXECUTION_READ_FIELD_POLICY_PENDING");
@@ -342,12 +342,12 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
   if (groupMap.size > 200) fail("EXECUTION_READ_SCOPE_LIMIT");
   const groupOutput = [...groupMap].sort(([a], [b]) => lexical(a, b)).map(([, group]) => {
     const keys = new Set(group.rows.map(r => r.row_key));
-    const tuples = new Set(members.filter(m => keys.has(managerRowKey(m))).map(m => tupleKey(m.tuple)));
+    const tuples = new Set(members.filter(m => keys.has(managerRowKey(m))).map(m => managerTupleKey(m.tuple)));
     return { key: group.key, unique_row_count: group.rows.length, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY" as const,
-      economic_partitions: partitions(selectedFacts.filter(f => tuples.has(tupleKey(f.tuple))), managerMoneyFields.filter(f => scopeAllowsField(scope, f)), tuples) };
+      economic_partitions: managerPartitionTotals(selectedFacts.filter(f => tuples.has(managerTupleKey(f.tuple))), managerMoneyFields.filter(f => scopeAllowsField(scope, f)), tuples) };
   });
   const statementFacts = rootFlows(facts, surface);
-  const statement = partitions(statementFacts, managerStatementFields.filter(f => scopeAllowsField(scope, f)), memberKeys);
+  const statement = managerPartitionTotals(statementFacts, managerStatementFields.filter(f => scopeAllowsField(scope, f)), memberKeys);
   const response = { schema_version: "portal.execution.manager-dataset.v1" as const, surface, workspace_id: scope.workspaceId,
     stage_lifecycle: MANAGER_STAGE_LIFECYCLE_POLICY,
     selected_window: selectedWindow,
