@@ -24,7 +24,7 @@ import { createFakeCommandPort, type FakeCommandPort, type FakePortOptions } fro
 import CommandStoryPage, { COMMAND_SCREEN_KEY } from "./index";
 import { CERTIFICATION_FLOWS, CERTIFICATION_PHRASE } from "./model";
 import { DISABLED_PORT, READ_DISABLED_REASON, SEND_DISABLED_REASON, type CommandPort } from "./port";
-import { DISCARD_WARNING } from "./ReceiptPanel";
+import { DISCARD_WARNING, FAKE_PORT_NOTE } from "./ReceiptPanel";
 import { StatusLookup } from "./StatusLookup";
 import {
   CAPITAL_INTENT,
@@ -478,6 +478,26 @@ describe("ACCESS_STOPPED (revoked)", () => {
   });
 });
 
+describe("a receipt from the scripted port says so", () => {
+  const CASES: readonly [ScenarioId, string][] = [
+    ["f0-denied", "Denied by the relay"],
+    ["accepted", "Accepted"],
+    ["rejected-preview-changed", "Rejected"],
+    ["timeout-then-landed", "Outcome unknown"],
+    ["delivery-unknown", "Outcome unknown"],
+    ["revoked", "Access changed"],
+    ["f0-revoked", "Access changed"],
+  ];
+  it.each(CASES)("%s: the receipt (%s) names the fake port, in the receipt itself", async (scenario, label) => {
+    const { fake } = await planAndFill(scenario);
+    await send(fake, 1);
+    const panel = await screen.findByLabelText(label);
+    const note = within(panel).getByText(FAKE_PORT_NOTE);
+    expect(note.getAttribute("data-notice")).toBe("fake-port");
+    expect(panel.textContent).toMatch(/fake port/);
+  });
+});
+
 /* ═════════════════════════ the real send path stays disabled ═════════════════════════ */
 describe("the disabled port", () => {
   it("is never called: reading a plan is blocked with its exact reason, and no Submit can open", async () => {
@@ -661,6 +681,7 @@ describe("the story page", () => {
   it("says it is a fixture, keeps the real send path disabled with the exact reason, and reaches no network", async () => {
     story();
     expect(screen.getByRole("note").textContent).toMatch(/Fixture only.*Nothing here reaches a network or a source/);
+    expect(screen.getByRole("note").textContent).toContain("Fixture story: not connected to a source; fake port");
     const real = screen.getByRole("button", { name: "Send to the Trading System" }) as HTMLButtonElement;
     expect(real.disabled).toBe(true);
     expect(document.getElementById(real.getAttribute("aria-describedby")!)!.textContent).toBe(SEND_DISABLED_REASON);
@@ -718,13 +739,14 @@ describe("the story page", () => {
 
 /* ═════════════════════════ the flag and the source ═════════════════════════ */
 describe("flag-gated off by default", () => {
-  it("the key exists, a manifest may name it, and it still turns nothing on while it is pending", () => {
+  it("the key exists, is no longer pending (PortalRoutes mounts the story), and is on only when a manifest names it under the umbrella", () => {
     expect(COMMAND_SCREEN_KEY).toBe("command");
     expect((EXEC_V2_SCREEN_KEYS as readonly string[]).includes("command")).toBe(true);
-    expect((EXEC_V2_PENDING_KEYS as readonly string[]).includes("command")).toBe(true);
+    expect((EXEC_V2_PENDING_KEYS as readonly string[]).includes("command")).toBe(false);
     const set = parseV2Manifest("fleet,command");
     expect(set.has("command")).toBe(true);
-    expect(isV2Screen("command", set, true)).toBe(false);
+    expect(isV2Screen("command", set, true)).toBe(true);
+    expect(isV2Screen("command", set, false)).toBe(false);
     expect(isV2Screen("command", parseV2Manifest(""), true)).toBe(false);
   });
 });

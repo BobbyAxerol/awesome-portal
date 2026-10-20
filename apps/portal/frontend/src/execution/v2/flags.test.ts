@@ -52,10 +52,16 @@ describe("reserved keys", () => {
   const reserved: readonly string[] = EXEC_V2_RESERVED_KEYS;
   const mounting = EXEC_V2_SCREEN_KEYS.filter((key) => !reserved.includes(key));
 
-  it("names the two permanent keys and one pending key, `command` (UXM-09 fixture story, not mounted); the five S3 keys are wired", () => {
+  it("names the two permanent keys and no pending key (`command`, the UXM-09 fixture story, is mounted by PortalRoutes); the five S3 keys are wired", () => {
     expect([...EXEC_V2_PERMANENT_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
-    expect([...EXEC_V2_PENDING_KEYS]).toEqual(["command"]);
-    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "command", "replay"]);
+    expect([...EXEC_V2_PENDING_KEYS]).toEqual([]);
+    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
+  });
+
+  it("`command` mounts: it is read by isV2Screen, answers true from the manifest under the umbrella, and not without it", () => {
+    expect(isV2Screen("command", parseV2Manifest("command"), true)).toBe(true);
+    expect(isV2Screen("command", parseV2Manifest("command"), false)).toBe(false);
+    expect(isV2Screen("command", parseV2Manifest("scoped,fleet"), true)).toBe(false);
   });
 
   it("D2: every S3 stage screen has its own key (no shared `stages` key), the Paper key stays `workbench`, and each one mounts", () => {

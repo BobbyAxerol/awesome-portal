@@ -5,8 +5,9 @@
  * disabled with its reason (`Command sends are not connected to a source: UXM-09 fixture`); no capability, grant or source is read or
  * changed. A passing story is composition evidence for the screen states, not proof that a command was ever accepted by anything.
  *
- * Mount contract (the integrator wires it; nothing in this lane does): default export, rendered inside the Router, behind
- * the `command` flag key, which answers false while it is pending (`EXEC_V2_PENDING_KEYS`). Props are all optional:
+ * Mounted (UXM-09 closing step) at `EXECUTION_COMMAND_ROUTE` by `PortalRoutes`, through `storyRoute.tsx` (this page plus the published
+ * catalogue), behind the `command` flag key and a raw-env lazy import, so a build without the flag carries no chunk. Props of this
+ * default export are all optional:
  *   - `catalogue`: an already-read `CommandCatalogue` (tests pass the canonical file); or
  *   - `api`: an `ExecutionApi` whose `getCommandCatalogue()` is read once, on mount (a read, never a write);
  *   - `port`: a command port; the default is the scripted fake.
@@ -54,6 +55,9 @@ import {
 import "../../css/command.css";
 
 export const COMMAND_SCREEN_KEY = "command" as const;
+
+/** The words the page wears at the top. Held by a test and by the browser receipt (e2e/execution-v2-command.spec.ts). */
+export const STORY_LABEL = "Fixture story: not connected to a source; fake port";
 
 export interface CommandStoryProps {
   /** Reads the command catalogue once, on mount. Ignored when `catalogue` is given. */
@@ -110,7 +114,9 @@ export default function CommandStoryPage({ api, catalogue, port, initialScenario
         <p className="exec-cf-sub">UXM-09 fixture · plan, typed confirmation, receipt and status</p>
         <p className="exec-cf-banner" role="note">
           <Flag kind="display" label="Fixture only" />
-          <span>Nothing here reaches a network or a source. The answers are scripted, and no command is ever sent.</span>
+          <span>
+            <strong>{STORY_LABEL}.</strong> Nothing here reaches a network or a source. The answers are scripted, and no command is ever sent.
+          </span>
         </p>
       </header>
 

@@ -65,6 +65,10 @@ const V2Users = import.meta.env.VITE_EXECUTION_V2_SCREENS
 const V2Slice = import.meta.env.VITE_EXECUTION_V2_SCREENS
   ? lazy(() => import("../execution/v2/screens/slice"))
   : null;
+// UXM-09: the fixture-only command story. Same raw-env gate, so a flag-off build emits no chunk for it.
+const V2Command = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/screens/command/storyRoute"))
+  : null;
 const ExecutionFixtures = lazy(() => import("../execution/Fixtures"));
 const ResearchFixtures = lazy(() => import("../research/ResearchFixtures"));
 const ExecutionPreviewRoute = lazy(() =>
@@ -164,6 +168,13 @@ export const EXECUTION_FIXTURES_ROUTE = "/execution/_fixtures";
  * scan (linkTargets) does not take it for a path every build mounts.
  */
 export const EXECUTION_SLICE_ROUTE = "/execution/slice";
+
+/**
+ * UXM-09 command story (`EXECUTION_COMMAND_ROUTE`): plan, typed confirmation, receipt and status over a scripted fake port.
+ * FIXTURE ONLY, mounted only when the V2 manifest names `command`; not a registry feature, in no navigation, and it sends
+ * nothing. Defined here for the same reason as `EXECUTION_SLICE_ROUTE`.
+ */
+export const EXECUTION_COMMAND_ROUTE = "/execution/command";
 
 /**
  * Research Loop component fixtures (`RESEARCH_FIXTURES_ROUTE`).
@@ -273,6 +284,9 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
 
         {/* UXM-08 fixture-only scoped slice: flag-gated, off by default. */}
         {V2Slice !== null && isV2Screen("scoped") ? <Route path={EXECUTION_SLICE_ROUTE} element={<V2Slice />} /> : null}
+
+        {/* UXM-09 fixture-only command story: flag-gated, off by default. */}
+        {V2Command !== null && isV2Screen("command") ? <Route path={EXECUTION_COMMAND_ROUTE} element={<V2Command />} /> : null}
 
         {/* Research Loop composition fixtures: components, not a screen. */}
         <Route path={RESEARCH_FIXTURES_ROUTE} element={<ResearchFixtures />} />

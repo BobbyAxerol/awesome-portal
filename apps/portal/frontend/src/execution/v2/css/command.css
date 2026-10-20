@@ -543,6 +543,28 @@ textarea.exec-cf-control {
 
 /* ---- disabled operations and certification ------------------------------------- */
 
+/*
+ * The dock's blocked-action line was drawn for a wide drawer footer: the action name (::before), the reason (one clipped line) and
+ * the access link side by side, with the name and link not allowed to shrink. At 660 px a long command name + link pushed the page
+ * 98 px sideways (browser receipt, e2e/execution-v2-command.spec.ts). On this page the line wraps and the reason is printed in
+ * full: the reason is the content, and a touch screen has no hover to reveal a clipped one.
+ */
+.exec-cf-page .exec-dock-why {
+  flex-wrap: wrap;
+}
+.exec-cf-page .exec-dock-why[data-l]::before {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.exec-cf-page .exec-dock-reason {
+  flex: 1 1 12rem;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .exec-cf-group {
   font: var(--exec-font-meta);
   color: var(--ink-soft);
