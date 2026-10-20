@@ -135,8 +135,10 @@ describe("V1 body, matched", () => {
     expect(document.querySelector("svg[role='img']")).toBeNull();
   });
 
-  it("exposure & orders: the Triad prints Not available for every cell (no figure keys are published) and names FE-072; positions are Not published (FE-072)", async () => {
-    mount(() => ok(v1Read(populatedV1())));
+  it("exposure & orders (a body WITHOUT source_figures): the Triad prints Not available for every cell and names FE-072; positions are Not published (FE-072)", async () => {
+    const raw = populatedV1();
+    delete raw.source_figures;
+    mount(() => ok(v1Read(raw)));
     await loaded();
     const triad = screen.getByRole("group", { name: "Reconciliation" });
     expect(within(triad).getAllByText("Not available").length).toBeGreaterThanOrEqual(12);
@@ -145,6 +147,21 @@ describe("V1 body, matched", () => {
     expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("Not published (FE-072)");
     expect(screen.getByRole("region", { name: "Orders" }).textContent).toContain("Not published (FE-072)");
     expect(screen.getByRole("link", { name: "Open the full blotter for this deployment" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEPLOYMENT_ID}`);
+  });
+
+  it("exposure & orders: the Triad rows are the server's source_figures (FE-072); every side the dark body leaves out is Not published (FE-072) with its reason in the title, and nothing is subtracted", async () => {
+    mount(() => ok(v1Read(populatedV1())));
+    await loaded();
+    const triad = screen.getByRole("group", { name: "Reconciliation" });
+    expect(within(triad).getAllByText("Equity").length).toBeGreaterThan(0);
+    for (const label of ["Equity", "Gross notional", "Positions", "Open orders", "Fees"]) expect(within(triad).getAllByText(label).length).toBe(3);
+    const gaps = Array.from(triad.querySelectorAll(".exec-blk-np"));
+    expect(gaps.length).toBe(15);
+    expect(gaps.every((g) => (g.getAttribute("title") ?? "").includes("Not published (FE-072)"))).toBe(true);
+    expect(gaps.map((g) => g.getAttribute("title") ?? "").some((t) => t.includes("DIFFERENCE_REQUIRES_BOTH_SIDES"))).toBe(true);
+    expect(gaps.map((g) => g.getAttribute("title") ?? "").some((t) => t.includes("BROKER_EQUITY_FIELD_NOT_PUBLISHED"))).toBe(true);
+    expect(within(triad).queryByText("0.00")).toBeNull();
+    expect(screen.getByText(/The Difference is the server's and is never worked out here\./)).toBeTruthy();
   });
 
   it("a V1 body that carries rows draws positions and orders under the source's own names; the typed columns stay Not published (FE-072)", async () => {
@@ -272,10 +289,13 @@ describe("V1 body, mismatch (the broker figure never reaches the DOM)", () => {
 });
 
 describe("V1 body, broker not verified (UNAVAILABLE) is not a mismatch", () => {
-  it("the published dark body: Not checked, Source not qualified, Not published (FE-072) in every KPI but the withheld broker one, no number anywhere", async () => {
+  it("the published dark body: Not published (FE-067), Source not qualified, Not published (FE-072) in every KPI but the withheld broker one, no number anywhere", async () => {
     mount(() => ok(v1Read(v1Raw())));
     const strip = await loaded();
-    expect(chip("reconciliation")).toContain("Not checked");
+    // The published stage facts speak for Runtime and Reconciliation: Not published (FE-067), the reason in the title.
+    expect(chip("reconciliation")).toContain("Not published (FE-067)");
+    expect(chip("runtime")).toContain("Not published (FE-067)");
+    expect(document.querySelector('[data-chip="runtime"] .exec-blk-np')!.getAttribute("title")).toContain("LIVE_SOURCE_UNAVAILABLE");
     expect(chip("freshness")).toContain("Not available");
     expect(screen.getByText("Source not qualified. Figures stay unavailable until it is.")).toBeTruthy();
     expect(strip.querySelectorAll(".exec-blk-np")).toHaveLength(4);

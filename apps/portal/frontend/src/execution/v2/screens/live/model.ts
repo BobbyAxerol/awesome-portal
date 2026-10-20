@@ -28,6 +28,11 @@ import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
 import type { LiveFullOperations, LivePanel } from "../../../liveFull";
 import type { RowCollection } from "../../../certification";
 import { publishedRowsOf, type PublishedRows } from "../../readers/publishedRows";
+import { figureRowsOf, reconciliationFactOf, runtimeFactOf } from "../../readers/stageFactViews";
+import type { GapRange, TypedOrderRow, TypedPositionRow, TypedRows } from "../../../stageFacts";
+import { reconciliationChipFrom, runtimeChipFrom } from "../stage/factChips";
+import { stageIdentity, type StageIdentity } from "../stage/identity";
+import { triadRowsOf } from "../stage/triadRows";
 
 /* ── constants ────────────────────────────────────────────────────────────── */
 
@@ -52,12 +57,12 @@ export const OPERATIONS_PATH = "/execution/operations";
 export type Cell =
   | { t: "text"; text: string }
   | { t: "na"; reason?: string }
-  | { t: "np"; fe: NotPublishedId; what?: string }
+  | { t: "np"; fe: NotPublishedId; what?: string; reason?: string }
   | { t: "flag"; kind: FlagKind; label: string }
   | { t: "list"; items: readonly string[] };
 
 const na = (reason?: string): Cell => ({ t: "na", ...(reason === undefined ? {} : { reason }) });
-const np = (fe: NotPublishedId, what?: string): Cell => ({ t: "np", fe, ...(what === undefined ? {} : { what }) });
+const np = (fe: NotPublishedId, what?: string, reason?: string): Cell => ({ t: "np", fe, ...(what === undefined ? {} : { what }), ...(reason === undefined ? {} : { reason }) });
 const text = (value: string): Cell => ({ t: "text", text: value });
 const flag = (kind: FlagKind, label: string): Cell => ({ t: "flag", kind, label });
 
@@ -129,7 +134,10 @@ export interface KpiCell {
 
 export type ChartSlotModel =
   | { kind: "mismatch"; findingHref: string | null; reconcileHref: string | null }
-  | { kind: "gap" }
+  /** `window` is the server's gap window (`projection_continuity.gap_ranges`), or `Not published (FE-072)` with its reason. */
+  | { kind: "gap"; window: Cell }
+  /** The deployment series the server published (FE-072): exact points, its own methodology and unit. */
+  | { kind: "series"; points: readonly { t: string; value: string }[]; unit: string | null; methodologyRef: string | null }
   | { kind: "unavailable" };
 
 export interface TriadFigure {
@@ -158,7 +166,10 @@ export interface TriadModel {
 export type V1RowsPanel =
   | { kind: "none" }
   | { kind: "withheld"; text: string }
-  | { kind: "table"; table: PublishedRows; caption: string; line: string | null };
+  | { kind: "table"; table: PublishedRows; caption: string; line: string | null }
+  /** FE-072: the server's typed rows (AVAILABLE only). `reasons` are the unpublished columns (leverage, ack latency) with the server's reason. */
+  | { kind: "typed-positions"; rows: readonly TypedPositionRow[]; reasons: Readonly<Record<string, string>>; caption: string; line: string | null }
+  | { kind: "typed-orders"; rows: readonly TypedOrderRow[]; reasons: Readonly<Record<string, string>>; caption: string; line: string | null };
 export interface V1Rows {
   positions: V1RowsPanel;
   orders: V1RowsPanel;
@@ -210,6 +221,8 @@ export interface LadderRung {
 
 export interface LiveModel {
   version: "v1" | "v2";
+  /** FE-066: the five identity keys of the `deployment` block; absent (all null, `published: false`) for a V2 body or an older producer. */
+  identity: StageIdentity;
   deploymentId: string | null;
   portfolioId: string | null;
   accountId: string | null;
@@ -352,6 +365,29 @@ function freshnessChip(panel: LivePanel | undefined): StageChipValue {
   }
 }
 
+/**
+ * Runtime from `stage_facts.runtime` (FE-067): RUNNING | PAUSED | HALTED | STOPPED, or `Not published (FE-067)` with the server's
+ * reason in the title. `active` is never "Running". A body without stage facts keeps the legacy member's chip.
+ */
+function runtimeChipV1(live: LiveFullOperations): StageChipValue {
+  return live.stageFacts !== null ? runtimeChipFrom(runtimeFactOf(live.stageFacts)) : runtimeChip(live.runtimeState);
+}
+
+/**
+ * Reconciliation. A broker MISMATCH is the louder statement and stays; otherwise the server's findings-relation statement
+ * (`stage_facts.reconciliation`, FE-067) when it published one; a broker verdict of IN_SYNC with visible figures reads "Matched"
+ * when the findings are not published; and with neither, the stage facts' reason (or the legacy "Not checked").
+ */
+function reconciliationChipV1(live: LiveFullOperations): StageChipValue {
+  const c = live.brokerConsistency;
+  const legacy = reconciliationChip(live);
+  if (c !== null && c.state === "MISMATCH") return legacy;
+  const facts = reconciliationFactOf(live.stageFacts);
+  if (facts !== null && facts.verdict.kind === "value") return reconciliationChipFrom(facts);
+  if (c !== null && c.state === "IN_SYNC" && c.brokerValuesVisible) return legacy;
+  return facts !== null ? reconciliationChipFrom(facts) : legacy;
+}
+
 function reconciliationChip(live: LiveFullOperations): StageChipValue {
   const c = live.brokerConsistency;
   if (c === null) return { state: "not-available", reason: "No broker verdict published" };
@@ -392,6 +428,16 @@ function sideOf(panel: LivePanel | undefined): TriadSide | null {
   return { asOf: instantOf(panel.envelope.asOf) };
 }
 
+/** The server's gap window (`gap_ranges`, FE-072): the published wall-clock ranges, or `Not published (FE-072)` with its reason code. */
+export function gapWindowCell(live: LiveFullOperations): Cell {
+  const ranges = live.gapRanges;
+  if (ranges === null) return np("FE-072", "Gap window");
+  if (ranges.availability === "NOT_PUBLISHED") return np("FE-072", "Gap window", ranges.reasonCode);
+  if (ranges.value.length === 0) return na("The server published no gap range");
+  const when = (iso: string) => whenText(iso) ?? "unreadable instant";
+  return { t: "list", items: ranges.value.map((range: GapRange) => `${when(range.from)} to ${when(range.to)}`) };
+}
+
 function continuityV1(live: LiveFullOperations): ContinuityModel {
   const c = live.projectionContinuity;
   const gap = c?.gapDetected ?? null;
@@ -415,7 +461,7 @@ function continuityV1(live: LiveFullOperations): ContinuityModel {
     {
       key: "window",
       label: "Gap window",
-      value: gap === true ? np("FE-072", "Gap window") : gap === false ? text("None") : na(),
+      value: gap === true ? gapWindowCell(live) : gap === false ? text("None") : na(),
     },
     { key: "last", label: "Last update", value: lastUpdate === null ? na("No source clock published") : text(lastUpdate) },
     {
@@ -543,6 +589,18 @@ function rowsPanelV1(live: LiveFullOperations, key: "positions" | "orders", coll
   }
   const envelope = collection.envelope;
   if (envelope.suppressed) return { kind: "withheld", text: "Withheld by the server." };
+  const typed = key === "positions" ? live.typedPositions : live.typedOrders;
+  const holdsRows = envelope.panelState === "ok" || envelope.panelState === "empty" || envelope.panelState === "partial" || envelope.panelState === "stale";
+  // The server's typed rows (FE-072) replace the free rows only when it says AVAILABLE and the collection's own panel holds rows.
+  if (typed !== null && typed.availability === "AVAILABLE" && holdsRows) {
+    const shownRows = Math.min(typed.rows.length, ROW_CAP);
+    const reasons = Object.fromEntries(typed.notPublishedColumns.map((c) => [c.column, c.reasonCode]));
+    const caption = rowsCaption(shownRows, typed.rows.length, collection.exactTotal);
+    const line = envelope.panelState === "partial" ? "Partial: the source reported only part of it." : envelope.panelState === "stale" ? "Stale: the source has not updated within its freshness budget." : null;
+    return key === "positions"
+      ? { kind: "typed-positions", rows: (typed as TypedRows<TypedPositionRow>).rows, reasons, caption, line }
+      : { kind: "typed-orders", rows: (typed as TypedRows<TypedOrderRow>).rows, reasons, caption, line };
+  }
   const table = publishedRowsOf(collection);
   if (table === null) return { kind: "withheld", text: envelope.panelState === "terminal" ? "Not available · the source read failed" : "Not available · source unavailable" };
   const line = envelope.panelState === "partial"
@@ -597,8 +655,11 @@ export function liveModelV1(live: LiveFullOperations): LiveModel {
   }
   const guard = guardRulesV1(live);
   const blockers = blockersV1(live, mismatch, gap);
+  const figures = figureRowsOf(live.sourceFigures);
+  const series = live.seriesMembers;
   return {
     version: "v1",
+    identity: stageIdentity(live.identity),
     deploymentId: id,
     portfolioId: live.portfolioId,
     accountId: live.accountId,
@@ -607,19 +668,24 @@ export function liveModelV1(live: LiveFullOperations): LiveModel {
     inCanary: stage === "canary",
     spineTargets: targets,
     spineBlocked: mismatch || gap === true,
-    chips: { runtime: runtimeChip(live.runtimeState), freshness: freshnessChip(live.panels.internal ?? live.panels.broker), reconciliation: reconciliationChip(live) },
+    chips: { runtime: runtimeChipV1(live), freshness: freshnessChip(live.panels.internal ?? live.panels.broker), reconciliation: reconciliationChipV1(live) },
     notice: noticeV1(live, mismatch),
     kpis: KPI_SLOTS.map((slot) => kpiCellV1(slot, live, mismatch)),
     chart: mismatch
       ? { kind: "mismatch", findingHref: safeInternalHref(c?.findingHref), reconcileHref: safeInternalHref(c?.dryRunReconcileHref) }
-      : gap === true ? { kind: "gap" } : { kind: "unavailable" },
+      : gap === true
+        ? { kind: "gap", window: gapWindowCell(live) }
+        : series !== null && series.points.length > 0
+          ? { kind: "series", points: series.points, unit: series.unit, methodologyRef: series.methodologyRef }
+          : { kind: "unavailable" },
     mismatch,
     triad: {
-      rows: buildTriadRows(null, brokerVisible, readCurrency(live.kpis)),
+      // The server's figures (FE-072) when the body carries them; the strip has already emptied Broker and Difference while the broker is not visible.
+      rows: figures !== null ? triadRowsOf(figures) : buildTriadRows(null, brokerVisible, readCurrency(live.kpis)),
       internal: sideOf(live.panels.internal),
       broker: brokerVisible ? sideOf(brokerPanel) : null,
       suppressed,
-      rowsPublished: false,
+      rowsPublished: figures !== null,
     },
     v1Rows: { positions: rowsPanelV1(live, "positions", live.positionRows, mismatch), orders: rowsPanelV1(live, "orders", live.orderRows, mismatch) },
     continuity: continuityV1(live),
@@ -754,6 +820,8 @@ export function liveModelV2(v2: LiveSourceOperationsV2): LiveModel {
   ];
   return {
     version: "v2",
+    // The sealed live-source-operations v2 body carries no identity keys (typed absence; the receipt asks for a parent-field purpose).
+    identity: stageIdentity(null),
     deploymentId: v2.deploymentId,
     portfolioId: null,
     accountId: null,

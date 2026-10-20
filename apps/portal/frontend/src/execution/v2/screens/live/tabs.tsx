@@ -71,7 +71,9 @@ export function ExposureTab({ model, v2, paging }: TabProps) {
       {model.triad !== null ? (
         <>
           <Triad rows={model.triad.rows} internal={model.triad.internal} broker={model.triad.broker} suppressed={model.triad.suppressed} />
-          {model.triad.rowsPublished ? null : (
+          {model.triad.rowsPublished ? (
+            <p className="exec-liv-line">The Difference is the server's and is never worked out here.</p>
+          ) : (
             <p className="exec-liv-line">
               Reconciliation figures: <NotPublished id="FE-072">Internal, Broker and Difference rows</NotPublished>
             </p>

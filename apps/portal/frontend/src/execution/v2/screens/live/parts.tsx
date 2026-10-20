@@ -7,8 +7,14 @@ import { Link, useSearchParams } from "react-router-dom";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { MetricText, NO_VALUE_COPY, NotPublished, SectionPanel } from "../../blocks";
+import { EquityPanel } from "../../charts";
+import type { SeriesPoint as ChartPoint } from "../../charts/types";
+import { readAsOf } from "../../boundary";
+import { ExactCell } from "../canary/parts";
+import { formatAsOf } from "../../boundary";
 import { withContext } from "../../urlState";
 import type { LiveSourcePanelV2, LiveSourceRecordV2 } from "../../readers/liveSourceOperations";
+import type { TypedOrderRow, TypedPositionRow } from "../../../stageFacts";
 import { PanelState } from "../../../components/states";
 import { cellText, lossNote, lossText, type PublishedRow } from "../../readers/publishedRows";
 import {
@@ -44,7 +50,11 @@ export function CellView({ cell }: { cell: Cell }) {
         </span>
       );
     case "np":
-      return <NotPublished id={cell.fe}>{cell.what}</NotPublished>;
+      return (
+        <NotPublished id={cell.fe} titleReason={cell.reason}>
+          {cell.what}
+        </NotPublished>
+      );
     case "na":
       return <span className="exec-blk-na">{cell.reason ? `${NO_VALUE_COPY} · ${cell.reason}` : NO_VALUE_COPY}</span>;
   }
@@ -85,13 +95,25 @@ export function ChartSlot({ slot }: { slot: ChartSlotModel }) {
           <Flag kind="partial" label="Gap" />
           <p className="exec-liv-slot-text">Updates are missing. Chart hidden until the gap is filled.</p>
           <p className="exec-liv-slot-meta">
-            The gap window is <NotPublished id="FE-072">Gap window</NotPublished>.
+            The gap window is <CellView cell={slot.window} />.
           </p>
           <p className="exec-liv-slot-links">
             <ContextLink to={OPERATIONS_PATH}>Open operation</ContextLink>
           </p>
         </section>
       );
+    case "series": {
+      const points: ChartPoint[] = [];
+      for (const p of slot.points) {
+        const at = readAsOf(Date.parse(p.t));
+        if (at !== null) points.push({ t: at, v: p.value });
+      }
+      return (
+        <SectionPanel level={2} title="Deployment series" aside={slot.methodologyRef ?? undefined}>
+          <EquityPanel label="Deployment series" points={points} unit="money" currency={slot.unit ?? undefined} signed height={200} />
+        </SectionPanel>
+      );
+    }
     case "unavailable":
       return (
         <SectionPanel level={2} title="Live net PnL" aside="Since activation">
@@ -143,7 +165,56 @@ function CellOf({ column, record }: { column: PanelColumn; record: LiveSourceRec
  * (no unit, no rounding, no sign colour); the typed hi-fi columns stay `Not published (FE-072)`. A panel that holds no rows says
  * why, then names the request.
  */
+function unpublishedColumn<R>(key: string, label: string, reasons: Readonly<Record<string, string>>): CardsColumn<R> {
+  return { key, label, numeric: true, render: () => <NotPublished id="FE-072" titleReason={reasons[key] ?? null} compact /> };
+}
+
+const POSITION_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly CardsColumn<TypedPositionRow>[] => [
+  { key: "symbol", label: "Symbol", render: (r) => r.symbol },
+  { key: "side", label: "Side", render: (r) => (r.side === null ? null : <Flag kind={r.side === "long" ? "ok" : "attention"} label={r.side === "long" ? "Long" : "Short"} size="sm" />) },
+  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <ExactCell value={r.quantity} unit="qty" /> },
+  { key: "entry", label: "Entry", numeric: true, render: (r) => <ExactCell value={r.entry} unit="money" /> },
+  { key: "mark", label: "Mark", numeric: true, render: (r) => <ExactCell value={r.mark} unit="money" /> },
+  { key: "unrealised", label: "Unrealised PnL", numeric: true, render: (r) => <ExactCell value={r.unrealised} unit="money" signed /> },
+  unpublishedColumn("leverage", "Leverage", reasons),
+];
+
+const ORDER_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly CardsColumn<TypedOrderRow>[] => [
+  { key: "symbol", label: "Symbol", render: (r) => r.symbol },
+  { key: "type", label: "Type", render: (r) => r.type },
+  { key: "side", label: "Side", render: (r) => (r.side === null ? null : r.side === "buy" ? "Buy" : "Sell") },
+  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <ExactCell value={r.quantity} unit="qty" /> },
+  { key: "price", label: "Price", numeric: true, render: (r) => <ExactCell value={r.price} unit="money" /> },
+  { key: "status", label: "Status", render: (r) => r.status },
+  {
+    key: "since",
+    label: "Since",
+    render: (r) => {
+      const at = r.since === null ? null : readAsOf(Date.parse(r.since));
+      return at === null ? null : formatAsOf(at);
+    },
+  },
+  unpublishedColumn("ack_latency_ms", "Ack latency", reasons),
+];
+
 export function V1RowsSection({ title, aside, rows, what }: { title: string; aside?: string; rows: V1RowsPanel; what: string }) {
+  if (rows.kind === "typed-positions" || rows.kind === "typed-orders") {
+    // The server's typed rows (FE-072): exact text, no sum; the two columns the source relation lacks say so with the server's reason.
+    const shown = rows.rows.slice(0, ROW_CAP);
+    return (
+      <SectionPanel level={2} title={title} aside={aside}>
+        {rows.line ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.line}</span></p> : null}
+        {rows.kind === "typed-positions" ? (
+          <CardsTable columns={POSITION_COLUMNS(rows.reasons)} rows={shown as TypedPositionRow[]} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
+        ) : (
+          <CardsTable columns={ORDER_COLUMNS(rows.reasons)} rows={shown as TypedOrderRow[]} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
+        )}
+        <div className="exec-liv-more">
+          <span className="exec-liv-cap">{rows.caption}</span>
+        </div>
+      </SectionPanel>
+    );
+  }
   if (rows.kind !== "table") {
     return (
       <SectionPanel level={2} title={title} aside={aside}>
