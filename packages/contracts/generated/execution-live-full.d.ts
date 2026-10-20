@@ -900,6 +900,47 @@ export interface components {
                 /** @constant */
                 reason_code: "READ_NOT_COMMAND_AUTHORITY";
             };
+            /** @description BE-P12, present only when the request asks for include=identity. Names of the deployment's own alpha and portfolio from the retained projection under THIS viewer's alpha.read row and field policy (alpha_id from the qualified deployment-to-alpha tuple publication only, never from a strategy id; portfolio_name from the deployment's own portfolio row, hidden when that portfolio is shared with an alpha the viewer cannot read). A hidden or unpublished member is null with its reason, never a guess. alpha_name is the constant null: no source publishes an alpha display name. It is not a field of the Portal record it travels beside and belongs to no parent-field purpose. */
+            identity?: {
+                /** @constant */
+                basis: "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY";
+                alpha_id: string | null;
+                alpha_name: null;
+                portfolio_name: string | null;
+                /** @enum {string} */
+                alpha_reason_code: "ALPHA_MEMBERSHIP_NOT_QUALIFIED" | "ALPHA_MEMBERSHIP_NOT_PUBLISHED" | "ALPHA_MEMBERSHIP_AMBIGUOUS" | "ALPHA_IDENTITY_NOT_AUTHORIZED" | "ALPHA_NAME_NOT_PUBLISHED" | "DEPLOYMENT_IDENTITY_NOT_READ";
+                portfolio_name_reason_code: ("PORTFOLIO_NOT_ASSIGNED" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_AMBIGUOUS" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "DEPLOYMENT_IDENTITY_NOT_READ") | null;
+            } & (unknown & unknown);
+            /** @description BE-P12, present only when the request asks for include=stage_facts. The V1 fact vocabulary over the AUTHORIZED population only: OPEN_FINDINGS is stated when an authorized open finding exists; NO_OPEN_FINDINGS and exact counts are never stated (a resource-bound scope cannot prove it holds the whole population: AUTHORIZED_POPULATION_ONLY / AUTHORIZED_POPULATION_COUNT_NOT_EXACT). runtime and sessions are NOT_PUBLISHED because runtime_state and a session's id/started/completed instants are not in the reviewed read-field vocabulary. */
+            stage_facts?: components["schemas"]["StageFacts"] & {
+                runtime?: {
+                    runtime_state?: {
+                        /** @constant */
+                        availability?: "NOT_PUBLISHED";
+                    };
+                    since?: {
+                        /** @constant */
+                        availability?: "NOT_PUBLISHED";
+                    };
+                };
+                reconciliation?: {
+                    verdict?: {
+                        value?: unknown;
+                    };
+                    open_finding_count?: {
+                        /** @constant */
+                        availability?: "NOT_PUBLISHED";
+                    };
+                    unknown_order_count?: {
+                        /** @constant */
+                        availability?: "NOT_PUBLISHED";
+                    };
+                };
+                sessions?: {
+                    /** @constant */
+                    availability?: "NOT_PUBLISHED";
+                };
+            };
         };
         /** Format: date-time */
         Timestamp: string;
@@ -1416,6 +1457,8 @@ export interface operations {
                 panel?: "deployments" | "positions" | "sessions" | "orders" | "fills" | "accounts" | "account_balances" | "margin_balances" | "account_sync" | "reconciliation";
                 /** @description Opaque Portal lps2 continuation from this exact panel under the SAME deployment/workspace/profile/session/current scope and immutable retained snapshot. Requires panel. Never a source cursor; no source or authority selection. Expired/changed-view cursor is refused; restart this panel from its first page. */
                 cursor?: string;
+                /** @description SCOPED_V2 only; the legacy body already carries identity and stage facts and ignores it. A comma list of distinct fixed tokens: identity (the closed `identity` block) and/or stage_facts (the V1 fact vocabulary over the authorized population). Any other value, a duplicate or an empty token is refused (400 EXECUTION_READ_QUERY_INVALID), never ignored. Omitted: the body is byte-identical to before. Both members are derived from rows this reader already authorized, under the same scopes and final fence; no legacy composer or extra source read. */
+                include?: "identity" | "stage_facts" | "identity,stage_facts" | "stage_facts,identity";
             };
             header?: never;
             path: {

@@ -57,6 +57,21 @@
               "minLength": 1
             },
             "description": "Opaque Portal lps2 continuation from this exact panel under the SAME deployment/workspace/profile/session/current scope and immutable retained snapshot. Requires panel. Never a source cursor; no source or authority selection. Expired/changed-view cursor is refused; restart this panel from its first page."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "identity",
+                "stage_facts",
+                "identity,stage_facts",
+                "stage_facts,identity"
+              ]
+            },
+            "description": "SCOPED_V2 only; the legacy body already carries identity and stage facts and ignores it. A comma list of distinct fixed tokens: identity (the closed `identity` block) and/or stage_facts (the V1 fact vocabulary over the authorized population). Any other value, a duplicate or an empty token is refused (400 EXECUTION_READ_QUERY_INVALID), never ignored. Omitted: the body is byte-identical to before. Both members are derived from rows this reader already authorized, under the same scopes and final fence; no legacy composer or extra source read."
           }
         ],
         "responses": {

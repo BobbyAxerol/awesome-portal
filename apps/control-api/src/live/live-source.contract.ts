@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {scopedIdentity,scopedStageFacts} from "../execution/scoped-stage-wire.contract";
+import {scopedIdentity,liveScopedStageFacts} from "../execution/scoped-stage-wire.contract";
 const text=z.string().min(1).max(4096).refine(v=>!/[\u0000-\u001f\u007f]/u.test(v));
 // `$` alone accepts a final newline in JS regexes. Exact public scalars
 // must end at the actual string boundary, not before a trailing line break.
@@ -71,7 +71,7 @@ export const liveSourceOperationsRead=z.object({
     margin_balances:liveSourcePanel,account_sync:liveSourcePanel,reconciliation:liveSourcePanel,broker_sync:liveSourcePanel}).strict(),
   runtime:z.object({state:z.null(),reason_code:z.literal("SOURCE_RUNTIME_ACTIVATION_NOT_ASSERTED")}).strict(),
   // BE-P12: optional and opt-in (`include=`). Present only when asked for; a hidden fact inside is a typed absence.
-  identity:scopedIdentity.optional(),stage_facts:scopedStageFacts.optional(),
+  identity:scopedIdentity.optional(),stage_facts:liveScopedStageFacts.optional(),
   realtime:z.object({active:z.literal(false),reason_code:z.literal("FINITE_SCOPED_READ_NOT_STREAM_AUTHORITY")}).strict(),
   commands:z.object({enabled:z.literal(false),reason_code:z.literal("READ_NOT_COMMAND_AUTHORITY")}).strict(),
 }).strict().superRefine((view,c)=>{

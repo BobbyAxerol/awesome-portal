@@ -16,6 +16,12 @@ import { CanaryService } from "../src/canary/canary.service";
 import { SandboxCertificationService } from "../src/sandbox/sandbox-certification.service";
 import { followingParentRead } from "../src/governance/following-parent.contract";
 import { IDENTITY_NOT_AUTHORIZED, IDENTITY_NOT_READ } from "../src/execution/deployment-identity";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { assertPublishedSchema } from "./stage-contract-validator";
+
+const OPERATIONS = "execution-operations.v1.schema.json";
+const contractFixture = (name: string) => JSON.parse(readFileSync(resolve(__dirname, "../../../packages/contracts/fixtures", name), "utf8"));
 
 type Fixture = ReturnType<typeof liveFixture>;
 const LIVE_FIELDS = [...FIELDS, "price", "position_id", "fill_id", "balance_free", "balance_locked"];
@@ -67,7 +73,11 @@ function liveFixture(options: { deployment?: typeof PRIVATE; fields?: string[]; 
     created_at: "2026-10-01T00:00:00.000Z", ...extra }, lineage: lineage() } as never);
   return { ...f, legacy, service, read, reconciliation, finding, deployment };
 }
-const parse = (body: unknown) => liveSourceOperationsRead.parse(body);
+/** Every real body is also judged against the PUBLISHED JSON Schema, not only the producer's own Zod. */
+const parse = (body: unknown) => {
+  assertPublishedSchema(OPERATIONS, "LiveSourceOperationsReadV2", body);
+  return liveSourceOperationsRead.parse(body);
+};
 const noFallback = (f: Fixture) => { expect(f.legacy).not.toHaveBeenCalled(); expect(f.named.relationPage).not.toHaveBeenCalled(); };
 
 describe("BE-P12 Live SCOPED_V2 identity", () => {
@@ -249,25 +259,8 @@ describe("BE-P12 Live SCOPED_V2 stage facts", () => {
 });
 
 describe("BE-P12 Sandbox / Canary SCOPED_V2 identity", () => {
-  const parentBody = (family: "SANDBOX" | "CANARY") => ({
-    schema_version: "portal.execution.following-parent.v2", workspace_id: "TEST_ONLY-ws", record_authority: "PORTAL",
-    provenance_basis: "CURRENT_CORE_BASELINE", field_contract_revision: "portal.execution.parent-fields.v1", observed_at_ms: 1_800_000_000_000,
-    source: { authority: "PORTAL", source_verdict: "NOT_ASSERTED", source_side_effect_requested: false, runtime_activation_requested: false, promotion_execution_requested: false },
-    accepted_manager_facts: { availability: "NOT_PUBLISHED", reason_code: "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION" },
-    family, anchors: { deployment_id: "dep-private", portfolio_id: "own-portfolio", environment: family === "SANDBOX" ? "SANDBOX" : "LIVE",
-      association_basis: "CURRENT_NATIVE_TARGET_CORRESPONDENCE", captured_environment_attested: false },
-    ...(family === "SANDBOX" ? {
-      certification: { certification_id: "cert-1", workflow_state: "DRAFT", workflow_version: 1, policy_version: "p1", formula_version: "f1",
-        created_at_ms: 1, updated_at_ms: 1, submitted_at_ms: null, decided_at_ms: null, source_integration_state: "UNAVAILABLE", delivery_profile: "fixture" },
-      steps: { availability: "NOT_PUBLISHED", reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" },
-      lineage: { availability: "NOT_PUBLISHED", reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" },
-    } : {
-      envelope: { envelope_id: "env-1", revision: 1, previous_envelope_id: null, status: "DRAFT", expected_certification_version: 1,
-        created_at_ms: 1, source_integration_state: "UNAVAILABLE", delivery_profile: "fixture", production_command_active: false },
-      proposal: { availability: "NOT_PUBLISHED", reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" },
-      lineage: { availability: "NOT_PUBLISHED", reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" },
-    }),
-  });
+  // The sealed parents are the published canonical fixtures, so the attached result is judged against the real schema.
+  const parentBody = (family: "SANDBOX" | "CANARY") => structuredClone(contractFixture("execution-positive-parent.synthetic.valid.json")[family === "SANDBOX" ? "sandbox" : "canary"]);
   function services() {
     const forbidden = vi.fn(async () => { throw Error("TEST_ONLY-legacy-composer-must-not-run"); });
     const identity = vi.fn(async () => ({ alpha_id: "own", alpha_name: null, portfolio_name: "Own Book",
@@ -297,6 +290,7 @@ describe("BE-P12 Sandbox / Canary SCOPED_V2 identity", () => {
     expect(body.identity).toEqual({ basis: "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY", alpha_id: "own", alpha_name: null,
       portfolio_name: "Own Book", alpha_reason_code: "ALPHA_NAME_NOT_PUBLISHED", portfolio_name_reason_code: null });
     expect({ ...body, identity: undefined }).toEqual({ ...followingParentRead.parse(parentBody(family)), identity: undefined });
+    assertPublishedSchema(OPERATIONS, family === "SANDBOX" ? "SandboxParentReadV2" : "CanaryParentReadV2", body);
     expect(s.identity).toHaveBeenCalledExactlyOnceWith(expect.anything(), environment, "dep-private");
     expect(s.forbidden).not.toHaveBeenCalled();
   });

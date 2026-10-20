@@ -1845,6 +1845,17 @@ export interface components {
                 /** @constant */
                 reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
             };
+            /** @description BE-P12, present only when the request asks for include=identity. Names of the deployment's own alpha and portfolio from the retained projection under THIS viewer's alpha.read row and field policy (alpha_id from the qualified deployment-to-alpha tuple publication only, never from a strategy id; portfolio_name from the deployment's own portfolio row, hidden when that portfolio is shared with an alpha the viewer cannot read). A hidden or unpublished member is null with its reason, never a guess. alpha_name is the constant null: no source publishes an alpha display name. It is not a field of the Portal record it travels beside and belongs to no parent-field purpose. */
+            identity?: {
+                /** @constant */
+                basis: "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY";
+                alpha_id: string | null;
+                alpha_name: null;
+                portfolio_name: string | null;
+                /** @enum {string} */
+                alpha_reason_code: "ALPHA_MEMBERSHIP_NOT_QUALIFIED" | "ALPHA_MEMBERSHIP_NOT_PUBLISHED" | "ALPHA_MEMBERSHIP_AMBIGUOUS" | "ALPHA_IDENTITY_NOT_AUTHORIZED" | "ALPHA_NAME_NOT_PUBLISHED" | "DEPLOYMENT_IDENTITY_NOT_READ";
+                portfolio_name_reason_code: ("PORTFOLIO_NOT_ASSIGNED" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_AMBIGUOUS" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "DEPLOYMENT_IDENTITY_NOT_READ") | null;
+            } & (unknown & unknown);
         };
         /** @description Finite immutable Portal Canary DRAFT under exact current LIVE deployment+portfolio audit, independent governance.canary.read and CANARY_ROOT fields. LIVE is requested current association, NOT an attested historical native environment or active Canary. Proposal amounts are positive exact decimal strings, at most20 integer/18 fractional digits, never JS Number, economic backing/budget or effective exposure. Optional proposal/lineage each require their own reviewed purpose. Source verdict NOT_ASSERTED; production_command_active and every side-effect flag remain false. Captured certification version is historical metadata, not current eligibility. */
         CanaryParentReadV2: {
@@ -1937,6 +1948,17 @@ export interface components {
                 /** @constant */
                 reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
             };
+            /** @description BE-P12, present only when the request asks for include=identity. Names of the deployment's own alpha and portfolio from the retained projection under THIS viewer's alpha.read row and field policy (alpha_id from the qualified deployment-to-alpha tuple publication only, never from a strategy id; portfolio_name from the deployment's own portfolio row, hidden when that portfolio is shared with an alpha the viewer cannot read). A hidden or unpublished member is null with its reason, never a guess. alpha_name is the constant null: no source publishes an alpha display name. It is not a field of the Portal record it travels beside and belongs to no parent-field purpose. */
+            identity?: {
+                /** @constant */
+                basis: "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY";
+                alpha_id: string | null;
+                alpha_name: null;
+                portfolio_name: string | null;
+                /** @enum {string} */
+                alpha_reason_code: "ALPHA_MEMBERSHIP_NOT_QUALIFIED" | "ALPHA_MEMBERSHIP_NOT_PUBLISHED" | "ALPHA_MEMBERSHIP_AMBIGUOUS" | "ALPHA_IDENTITY_NOT_AUTHORIZED" | "ALPHA_NAME_NOT_PUBLISHED" | "DEPLOYMENT_IDENTITY_NOT_READ";
+                portfolio_name_reason_code: ("PORTFOLIO_NOT_ASSIGNED" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_AMBIGUOUS" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "DEPLOYMENT_IDENTITY_NOT_READ") | null;
+            } & (unknown & unknown);
         };
         /** @description Finite stored Portal LIVE_GATE under current exact DEPLOYMENT/LIVE audit, independent governance.live.read and reviewed LIVE_ROOT purpose. No Portfolio or R1/R2 predecessor was captured or fabricated. Historical expiry is metadata, not current read authority. Manifest integrity is local stored-byte verification, not TS acceptance, broker state or runtime commissioning; source facts stay separately unavailable. Runtime additionally verifies timestamp ordering, exact workspace/parent/target and original manifest. No private actor/prose/hash preimage. */
         LiveParentReadV2: {
@@ -4312,6 +4334,8 @@ export interface operations {
         parameters: {
             query?: {
                 workspace_id?: components["parameters"]["WorkspaceId"];
+                /** @description SCOPED_V2 only; the legacy body ignores it. include=identity attaches the closed `identity` block from a separate fenced retained-projection read under the viewer's own alpha.read row and field policy. Any other value is refused (400 EXECUTION_READ_QUERY_INVALID). Omitted: the body is byte-identical to before. It is not a parent record field and not a parent-field purpose. */
+                include?: "identity";
             };
             header?: never;
             path: {

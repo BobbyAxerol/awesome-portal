@@ -2004,6 +2004,314 @@
       "r2_approval_id": "apr_TEST_ONLY_r2"
     }
   },
+  "sandbox_identity": {
+    "schema_version": "portal.execution.following-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "promotion_execution_requested": false
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "family": "SANDBOX",
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "SANDBOX",
+      "association_basis": "CURRENT_NATIVE_TARGET_CORRESPONDENCE",
+      "captured_environment_attested": false
+    },
+    "certification": {
+      "certification_id": "cert_TEST_ONLY_parent",
+      "workflow_state": "APPROVED",
+      "workflow_version": 3,
+      "policy_version": "TEST_ONLY:sandbox-policy",
+      "formula_version": "TEST_ONLY:sandbox-formula",
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812802000,
+      "submitted_at_ms": 1790812801000,
+      "decided_at_ms": 1790812802000,
+      "source_integration_state": "UNAVAILABLE",
+      "delivery_profile": "fixture"
+    },
+    "steps": {
+      "availability": "AVAILABLE",
+      "basis": "CURRENT_LATEST_STORED",
+      "items": [
+        {
+          "step_key": "CONNECT",
+          "availability": "AVAILABLE",
+          "evidence_id": "evidence_TEST_ONLY_0",
+          "stored_evaluation_state": "PASS",
+          "source_authority": "PORTAL",
+          "source_verification_state": "VERIFIED",
+          "as_of_ms": 1790812800000,
+          "expires_at_ms": 1790812801000
+        },
+        {
+          "step_key": "SYNC",
+          "availability": "AVAILABLE",
+          "evidence_id": "evidence_TEST_ONLY_1",
+          "stored_evaluation_state": "FAIL",
+          "source_authority": "EXECUTION",
+          "source_verification_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "expires_at_ms": null
+        },
+        {
+          "step_key": "ORDER_TYPES",
+          "availability": "AVAILABLE",
+          "evidence_id": "evidence_TEST_ONLY_2",
+          "stored_evaluation_state": "STALE",
+          "source_authority": "BROKER",
+          "source_verification_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "expires_at_ms": null
+        },
+        {
+          "step_key": "RECONCILIATION",
+          "availability": "AVAILABLE",
+          "evidence_id": "evidence_TEST_ONLY_3",
+          "stored_evaluation_state": "UNAVAILABLE",
+          "source_authority": "DERIVED",
+          "source_verification_state": "UNAVAILABLE",
+          "as_of_ms": null,
+          "expires_at_ms": null
+        },
+        {
+          "step_key": "TIMEBOXED_RUN",
+          "availability": "NOT_RECORDED",
+          "evidence_id": null,
+          "stored_evaluation_state": null,
+          "source_authority": null,
+          "source_verification_state": null,
+          "as_of_ms": null,
+          "expires_at_ms": null
+        },
+        {
+          "step_key": "CLEANUP",
+          "availability": "NOT_RECORDED",
+          "evidence_id": null,
+          "stored_evaluation_state": null,
+          "source_authority": null,
+          "source_verification_state": null,
+          "as_of_ms": null,
+          "expires_at_ms": null
+        },
+        {
+          "step_key": "EXIT_REVIEW",
+          "availability": "NOT_RECORDED",
+          "evidence_id": null,
+          "stored_evaluation_state": null,
+          "source_authority": null,
+          "source_verification_state": null,
+          "as_of_ms": null,
+          "expires_at_ms": null
+        }
+      ]
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_PORTAL_REFERENCE",
+      "promotion_grant_id": "grant_TEST_ONLY_parent",
+      "paper_exit_review_id": "apr_TEST_ONLY_exit",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "r2_approval_id": "apr_TEST_ONLY_r2"
+    },
+    "identity": {
+      "basis": "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY",
+      "alpha_id": "alpha_TEST_ONLY_identity",
+      "alpha_name": null,
+      "portfolio_name": "TEST_ONLY portfolio name",
+      "alpha_reason_code": "ALPHA_NAME_NOT_PUBLISHED",
+      "portfolio_name_reason_code": null
+    }
+  },
+  "sandbox_identity_hidden": {
+    "schema_version": "portal.execution.following-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "promotion_execution_requested": false
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "family": "SANDBOX",
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "SANDBOX",
+      "association_basis": "CURRENT_NATIVE_TARGET_CORRESPONDENCE",
+      "captured_environment_attested": false
+    },
+    "certification": {
+      "certification_id": "cert_TEST_ONLY_parent",
+      "workflow_state": "APPROVED",
+      "workflow_version": 3,
+      "policy_version": "TEST_ONLY:sandbox-policy",
+      "formula_version": "TEST_ONLY:sandbox-formula",
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812802000,
+      "submitted_at_ms": 1790812801000,
+      "decided_at_ms": 1790812802000,
+      "source_integration_state": "UNAVAILABLE",
+      "delivery_profile": "fixture"
+    },
+    "steps": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "lineage": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "identity": {
+      "basis": "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY",
+      "alpha_id": null,
+      "alpha_name": null,
+      "portfolio_name": null,
+      "alpha_reason_code": "ALPHA_IDENTITY_NOT_AUTHORIZED",
+      "portfolio_name_reason_code": "PORTFOLIO_NAME_NOT_AUTHORIZED"
+    }
+  },
+  "canary_identity": {
+    "schema_version": "portal.execution.following-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "promotion_execution_requested": false
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "family": "CANARY",
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "LIVE",
+      "association_basis": "CURRENT_NATIVE_TARGET_CORRESPONDENCE",
+      "captured_environment_attested": false
+    },
+    "envelope": {
+      "envelope_id": "env_TEST_ONLY_parent",
+      "revision": 1,
+      "previous_envelope_id": null,
+      "status": "DRAFT",
+      "expected_certification_version": 3,
+      "created_at_ms": 1790812800000,
+      "source_integration_state": "UNAVAILABLE",
+      "delivery_profile": "fixture",
+      "production_command_active": false
+    },
+    "proposal": {
+      "availability": "AVAILABLE",
+      "basis": "PROPOSED_NOT_EFFECTIVE",
+      "base_risk_profile_revision": "TEST_ONLY:risk-proposal",
+      "currency": "USDT",
+      "capital_cap": "9007199254740993.123456789123456789",
+      "gross_notional_cap": "9007199254740994.000000000000000001",
+      "daily_loss_cap": "0.000000000000000001",
+      "max_open_orders": 10,
+      "duration_days": 7
+    },
+    "lineage": {
+      "availability": "AVAILABLE",
+      "basis": "STORED_PORTAL_REFERENCE",
+      "certification_id": "cert_TEST_ONLY_parent",
+      "promotion_plan_id": "plan_TEST_ONLY_parent",
+      "paper_exit_review_id": "apr_TEST_ONLY_exit",
+      "r1_approval_id": "apr_TEST_ONLY_r1",
+      "r2_approval_id": "apr_TEST_ONLY_r2"
+    },
+    "identity": {
+      "basis": "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY",
+      "alpha_id": "alpha_TEST_ONLY_identity",
+      "alpha_name": null,
+      "portfolio_name": "TEST_ONLY portfolio name",
+      "alpha_reason_code": "ALPHA_NAME_NOT_PUBLISHED",
+      "portfolio_name_reason_code": null
+    }
+  },
+  "canary_identity_hidden": {
+    "schema_version": "portal.execution.following-parent.v2",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false,
+      "promotion_execution_requested": false
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "family": "CANARY",
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "portfolio_id": "pf_TEST_ONLY_parent",
+      "environment": "LIVE",
+      "association_basis": "CURRENT_NATIVE_TARGET_CORRESPONDENCE",
+      "captured_environment_attested": false
+    },
+    "envelope": {
+      "envelope_id": "env_TEST_ONLY_parent",
+      "revision": 1,
+      "previous_envelope_id": null,
+      "status": "DRAFT",
+      "expected_certification_version": 3,
+      "created_at_ms": 1790812800000,
+      "source_integration_state": "UNAVAILABLE",
+      "delivery_profile": "fixture",
+      "production_command_active": false
+    },
+    "proposal": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "lineage": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_FIELD_PURPOSE_NOT_QUALIFIED"
+    },
+    "identity": {
+      "basis": "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY",
+      "alpha_id": null,
+      "alpha_name": null,
+      "portfolio_name": null,
+      "alpha_reason_code": "ALPHA_IDENTITY_NOT_AUTHORIZED",
+      "portfolio_name_reason_code": "PORTFOLIO_NAME_NOT_AUTHORIZED"
+    }
+  },
   "live": {
     "schema_version": "portal.execution.live-parent.v2",
     "family": "LIVE_GATE",
