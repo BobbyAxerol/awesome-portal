@@ -15,6 +15,7 @@ import { answerAccount } from "../../../../../e2e/bffDoubleAccount";
 import { createHttpApi } from "../../../api/httpApi";
 import type { ExecutionApi } from "../../../api/ports";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
+import { loadCanonical } from "../../testkit/loadCanonical";
 import AccountScreen, { ACCOUNT_SCREEN_KEY } from "./index";
 
 /* ── the session, standing in for useSession ─────────────────────────────── */
@@ -69,6 +70,17 @@ function mount(entry: string, props: { accountId?: string; binding?: string | nu
       <Where />
     </MemoryRouter>,
   );
+}
+
+/** `GET /self-context` as the Portal publishes it (BE-P7): the canonical fixture, with the clock moved to now. */
+const CONTEXT_PATH = "/api/admin/profile-access/v2/self-context";
+const contextFile = loadCanonical<{ self_context_cases: { case_name: string; value: Record<string, unknown> }[] }>("execution-access.synthetic");
+function contextAnswer(patch: Record<string, unknown> = {}): (url: URL) => { status: number; body: unknown } | null {
+  return (url) => {
+    if (url.pathname !== CONTEXT_PATH) return null;
+    const body = contextFile.self_context_cases.find((entry) => entry.case_name === "RESOLVED_SOLE_MEMBERSHIP")!.value;
+    return { status: 200, body: { ...body, observed_at_ms: Date.now(), valid_until_ms: Date.now() + 60_000, ...patch } };
+  };
 }
 
 const where = () => screen.getByTestId("where").textContent ?? "";
@@ -370,13 +382,53 @@ describe("binding peek (Binding Detail, merged)", () => {
     expect(rotate.getAttribute("aria-describedby")).toBeTruthy();
   });
 
-  it("with the management capability the reason changes but the action is still off (no command is offered)", async () => {
+  it("the old management token no longer exists: holding it changes nothing (the control is off for everyone, with the same reason)", async () => {
     stubFetch();
     mount("/deployments/accounts?sel=bnc_main%40BINANCE", { capabilities: new Set([...MANAGER, "execution.accounts.manage"]) });
     const drawer = await screen.findByRole("complementary");
     await within(drawer).findByRole("link", { name: "Open account" });
     expect((within(drawer).getByRole("button", { name: "Rotate credential" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(drawer.textContent).toContain("Not published (FE-015)");
+    expect(drawer.textContent).toContain("Not allowed. Your access does not include managing accounts.");
+    expect(drawer.textContent).not.toContain("Not published (FE-015)");
+  });
+
+  it("when the Portal published the typed absence, the reason is 'Not offered in the portal yet', for a holder of every read too", async () => {
+    stubFetch({ answer: contextAnswer() });
+    mount("/deployments/accounts?sel=bnc_main%40BINANCE", { capabilities: new Set([...MANAGER, "execution.accounts.manage", "governance.r2.decide"]) });
+    const drawer = await screen.findByRole("complementary");
+    await within(drawer).findByRole("link", { name: "Open account" });
+    await waitFor(() => expect(drawer.textContent).toContain("Not offered in the portal yet"));
+    const rotate = within(drawer).getByRole("button", { name: "Rotate credential" }) as HTMLButtonElement;
+    expect(rotate.disabled).toBe(true);
+    expect(document.getElementById(rotate.getAttribute("aria-describedby")!)?.textContent).toContain("Not offered in the portal yet");
+    expect(drawer.textContent).not.toContain("Your access does not include managing accounts");
+    // A refusal that holds for everyone is not "go and ask for access": no My access link goes with it.
+    expect(within(drawer).queryByRole("link", { name: "My access" })).toBeNull();
+  });
+
+  it("a context read that failed, or whose ceiling has passed, leaves the control's earlier reason (and still off)", async () => {
+    stubFetch({ answer: (url) => (url.pathname === CONTEXT_PATH ? { status: 503, body: { error: { code: "ACCESS_UNAVAILABLE", message: "x" } } } : null) });
+    mount("/deployments/accounts?sel=bnc_main%40BINANCE");
+    const drawer = await screen.findByRole("complementary");
+    await within(drawer).findByRole("link", { name: "Open account" });
+    expect(drawer.textContent).toContain("Not allowed. Your access does not include managing accounts.");
+    cleanup();
+    stubFetch({ answer: contextAnswer({ observed_at_ms: 1, valid_until_ms: 2 }) });
+    mount("/deployments/accounts?sel=bnc_main%40BINANCE");
+    const later = await screen.findByRole("complementary");
+    await within(later).findByRole("link", { name: "Open account" });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(later.textContent).toContain("Not allowed. Your access does not include managing accounts.");
+    expect((within(later).getByRole("button", { name: "Rotate credential" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("the context is asked once per drawer, with no query and no polling", async () => {
+    const stub = stubFetch({ answer: contextAnswer() });
+    mount("/deployments/accounts?sel=bnc_main%40BINANCE");
+    const drawer = await screen.findByRole("complementary");
+    await waitFor(() => expect(drawer.textContent).toContain("Not offered in the portal yet"));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(stub.paths(CONTEXT_PATH)).toEqual([CONTEXT_PATH]);
   });
 
   it("keyboard: Enter on a row opens the peek, Escape closes it", async () => {
@@ -579,6 +631,19 @@ describe("Account 360: the physical binding view", () => {
       expect(button.disabled).toBe(true);
       expect(document.getElementById(button.getAttribute("aria-describedby")!)?.textContent).toContain(reason);
     }
+  });
+
+  it("with the Portal's typed absence published, Rotate credential reads 'Not offered in the portal yet' (still off, the others unchanged)", async () => {
+    stubFetch({ answer: contextAnswer() });
+    account("acc_bnc_core", "?view=physical");
+    await screen.findByRole("heading", { level: 1, name: "Binance account" });
+    await waitFor(() => {
+      const rotate = screen.getByRole("button", { name: "Rotate credential" }) as HTMLButtonElement;
+      expect(document.getElementById(rotate.getAttribute("aria-describedby")!)?.textContent).toContain("Not offered in the portal yet");
+    });
+    expect((screen.getByRole("button", { name: "Rotate credential" }) as HTMLButtonElement).disabled).toBe(true);
+    const sync = screen.getByRole("button", { name: "Sync now" }) as HTMLButtonElement;
+    expect(document.getElementById(sync.getAttribute("aria-describedby")!)?.textContent).toContain("Not published (FE-020)");
   });
 
   it("a bad credential is its own alarm, an expired word on the physical panel and a banner above everything", async () => {

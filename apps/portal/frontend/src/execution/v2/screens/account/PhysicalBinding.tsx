@@ -19,14 +19,15 @@ import { DockAction } from "../../Drawer";
 import { ENV_LABEL } from "../../urlState";
 import type { ReadState } from "./reads";
 import { CapitalInvariant } from "./BindingDrawer";
-import { ACCESS_PATH, FE, humanize, notPublishedReason, timeOf, type AccountView } from "./model";
+import { FE, humanize, notPublishedReason, timeOf, type AccountView, type RotateCredential } from "./model";
 import { CredentialFlag, Fact, Na, Np, StateFlag, When, WITHHELD } from "./parts";
 
 export interface PhysicalBindingProps {
   view: AccountView;
   detail: ReadState<BindingDetailRead>;
   exposure: ReadState<BindingExposure>;
-  canManage: boolean;
+  /** Why "Rotate credential" is off (it is off for everyone; see `rotateCredential`). */
+  rotate: RotateCredential;
 }
 
 function envWord(word: string | null): string | null {
@@ -35,14 +36,11 @@ function envWord(word: string | null): string | null {
   return lower === "live" || lower === "paper" || lower === "sandbox" ? ENV_LABEL[lower] : humanize(word);
 }
 
-export function PhysicalBinding({ view, detail, exposure, canManage }: PhysicalBindingProps) {
+export function PhysicalBinding({ view, detail, exposure, rotate }: PhysicalBindingProps) {
   const { identity } = view;
   const read = detail.phase === "ready" ? detail.value : null;
   const item = read?.item ?? null;
   const environment = envWord(read?.environment ?? identity.environment);
-  const rotateReason = canManage
-    ? notPublishedReason(FE.eligibility, "Rotating a credential is an admin action and none is offered from this page yet.")
-    : "Not allowed. Your access does not include managing accounts.";
 
   return (
     <>
@@ -75,7 +73,7 @@ export function PhysicalBinding({ view, detail, exposure, canManage }: PhysicalB
           </dl>
         </details>
         <div className="exec-acct-actions">
-          <DockAction label="Rotate credential" reason={rotateReason} accessHref={canManage ? undefined : ACCESS_PATH} />
+          <DockAction label="Rotate credential" reason={rotate.reason} accessHref={rotate.accessHref} />
           <DockAction label="Sync now" reason={notPublishedReason(FE.command, "No sync command is offered from this page yet.")} />
           <DockAction label="Dry-run reconcile" reason={notPublishedReason(FE.command, "No dry-run command is offered from this page yet.")} />
         </div>

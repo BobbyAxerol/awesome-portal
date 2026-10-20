@@ -18,12 +18,13 @@ import { ABSENT, cartesian, dimension, dimensionOf, pairwise } from "../../testk
 import { decimalCases, leaked, pollutionCases, requiredCases } from "../../testkit/negative";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import {
-  ACCOUNT_NEEDS, FE, PAGE_LIMIT, ROW_CAP, absentCodeFor, accountHref, activityRows, ageAtRead, updatedAgo, balanceFacts, bindingQuery, branchOf, brokerFacts,
+  ACCOUNT_CAPABILITY, ACCOUNT_NEEDS, FE, PAGE_LIMIT, ROW_CAP, absentCodeFor, accountHref, activityRows, ageAtRead, updatedAgo, balanceFacts, bindingQuery, branchOf, brokerFacts,
   capitalRows, chooseCurrency, countMetric, coverageFlag, credentialView, deploymentHref, diffFacts, equityModel, freshnessFlag, headroomFacts,
   isNegative, ledgerPnl, marginFacts, matchesCredential, mergeBindings, metricOf, notPublished, notPublishedReason, populationOf, readAccountView,
   readCredentialFilter, readTab, readViewMode, resourceReason, resourceStatus, sleeveRows, stateView, syncView, timeOf, toBindingRow, triadModel,
-  inScope, type AccountView,
+  inScope, ROTATE_FALLBACK_REASON, rotateCredential, type AccountView,
 } from "./model";
+import { NOT_COMMISSIONED_WHY } from "../stage/reasons";
 
 const ask = (path: string, query: Record<string, string> = {}) => answerAccount("GET", path, new URLSearchParams(query))!.body;
 const profile = (id: string) => readProfileEnvelope(ask(`/resources/accounts/${id}`))!;
@@ -439,7 +440,7 @@ describe("tabs, views, links, copy", () => {
 });
 
 describe("capabilities (role variants through holds())", () => {
-  const can = (preset: keyof typeof V2_ROLE_PRESETS, need: "read" | "manage") => holds(V2_ROLE_PRESETS[preset], ACCOUNT_NEEDS[need]);
+  const can = (preset: keyof typeof V2_ROLE_PRESETS, need: "read") => holds(V2_ROLE_PRESETS[preset], ACCOUNT_NEEDS[need]);
 
   it("manager and operator read Accounts; researcher and reviewer do not", () => {
     expect(can("manager", "read")).toBe(true);
@@ -448,8 +449,35 @@ describe("capabilities (role variants through holds())", () => {
     expect(can("reviewer", "read")).toBe(false);
   });
 
-  it("nobody holds the binding-action capability today", () => {
-    for (const preset of ["manager", "operator", "researcher", "reviewer"] as const) expect(can(preset, "manage")).toBe(false);
+  it("there is no 'manage' capability at all: the token execution.accounts.manage is gone (FE-037/058, BE-P7)", () => {
+    expect(Object.keys(ACCOUNT_CAPABILITY)).toEqual(["read"]);
+    expect(Object.keys(ACCOUNT_NEEDS)).toEqual(["read"]);
+    expect(JSON.stringify([ACCOUNT_CAPABILITY, ACCOUNT_NEEDS])).not.toContain("accounts.manage");
+  });
+});
+
+describe("rotateCredential · always off, with the Portal's own reason when it published one", () => {
+  const typed = {
+    operation: "REVISE_BINDING", scope: "CREDENTIAL_ONLY", targetKind: "BINDING", availability: "NOT_COMMISSIONED",
+    reasonClass: "COMMAND_FAMILY_NOT_COMMISSIONED", basis: "NONE_PUBLISHED", stepUpRequired: null,
+  } as const;
+
+  it("the typed REVISE_BINDING / COMMAND_FAMILY_NOT_COMMISSIONED branch reads 'Not offered in the portal yet', with no access link", () => {
+    expect(rotateCredential([typed])).toEqual({ reason: NOT_COMMISSIONED_WHY, accessHref: undefined, published: true });
+    expect(NOT_COMMISSIONED_WHY).toBe("Not offered in the portal yet");
+  });
+
+  it("nothing published (null, an empty list, another operation) keeps the reason the control carried before, with its My access link", () => {
+    for (const published of [null, [], [{ ...typed, operation: "OTHER" }]] as never[]) {
+      expect(rotateCredential(published)).toEqual({ reason: ROTATE_FALLBACK_REASON, accessHref: "/administration/profile-access", published: false });
+    }
+    expect(ROTATE_FALLBACK_REASON).toBe("Not allowed. Your access does not include managing accounts.");
+  });
+
+  it("an entry that is anything but exactly that refusal is ignored: it can never read as an offer", () => {
+    for (const patch of [{ availability: "AVAILABLE" }, { reasonClass: "OK" }] as const) {
+      expect(rotateCredential([{ ...typed, ...patch } as never])).toMatchObject({ published: false, reason: ROTATE_FALLBACK_REASON });
+    }
   });
 });
 
