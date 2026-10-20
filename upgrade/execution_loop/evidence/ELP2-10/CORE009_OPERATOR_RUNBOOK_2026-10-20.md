@@ -21,6 +21,7 @@ Companion analysis: [CORE009_PREPARATION_2026-10-20.md](CORE009_PREPARATION_2026
 | Acceptance session | open decision | `execution-native-session issue|revoke` (actual AuthService, <= 2 h, token only into a root-owned 0600 file, one active at a time) |
 | ACK labels | derived since commit `2062fcdc` | unchanged rule + Plan B detail (`plan`, `grants[]`); an image **built from this package** is required, the installed `7b2c7f34` image predates all of it |
 | Image | reuse or rebuild | **rebuild required** (Plan B caps, revoke and session CLIs live only in the new `dist/`); R3 on the final bytes first |
+| Edge corrections (BE-P10 Revision 3, 20Oct) | token cleanup by path; unchecked write count; `--dry-run` after DB composition | cleanup bound to the exact session/file (section 8.2); complete, verified token write (section 7); `--dry-run` fully offline (section 2) |
 
 ## 0. What must be true before ANY restart (all rows, else STOP)
 
@@ -78,8 +79,12 @@ Plan B refusal codes (path only, never a value): `TRUST_END_REQUIRED_FOR_PLAN_B`
 `GRANT_WINDOW_PIN_OUTLIVES_TRUST`, `PLAN_B_GRANT_SET_INVALID` (not exactly one READ ALLOW + one STREAM ALLOW), `PLAN_B_GRANT_ID_NOT_DISTINCT`,
 `PLAN_B_GRANTS_NOT_SAME_SCOPE`, `GRANT_EXCEEDS_PLAN_B_WINDOW` (> 2 h or > pin), `GRANT_OUTLIVES_TRUST`; plus the existing `*_PLACEHOLDER_UNRESOLVED`,
 `*_SCHEMA_*`, `OWNER_ARTIFACT_SHA256_PIN_MISMATCH`, `OWNER_TARGET_PIN_MISMATCH`, `INSTALLATION_*`, `GRANT_*` window codes, `*_OWNER_MISMATCH`.
-The three new artifacts support `--dry-run` (reads and verifies the file, touches no database): `node dist/cli/execution-native-revoke.js --artifact ... --dry-run` and
-`node dist/cli/execution-native-session.js issue|revoke ... --dry-run`.
+The three new artifacts support `--dry-run`: `node dist/cli/execution-native-revoke.js --artifact ... --dry-run` (reads and verifies the file, touches no database) and
+`node dist/cli/execution-native-session.js issue|revoke ... --dry-run`. The session dry-run is **fully offline** (BE-P10 Revision 3): it reads only the hash-pinned manifest target, and
+runs **before** any pool, schema read, native composition, `AuthService` or credential service, so it cannot connect, mutate, create the token file or issue a session. It validates the artifact completely
+(root-owned 0600, SHA-256, shape, target against the manifest pin, owner, TTL, window) and the database-free token-path rules: `issue` needs a root-owned, not group/world-writable directory and **nothing** at the
+path (it never overwrites); `revoke` needs nothing at the path or a root-owned regular non-symlink file. It prints only `{"operation":...,"dry_run":true,"verified":true}`; a violation is the typed
+`ACCEPTANCE_ARTIFACT_REFUSED` / `ACCEPTANCE_TOKEN_FILE_REFUSED` (exit 1). A green dry-run is not proof that a later real run succeeds (the target database and the session state are checked only then).
 
 ## 3. Read-only readback — OPERATOR
 
@@ -140,12 +145,12 @@ Not a login, not Cloudflare, not a password, not a PREVIEW claim and not a copy 
 
 1. Fill and compact `private-owner-acceptance-session-issue.v1` (`SESSION_TTL_SECONDS` 60..7200 **and no longer than the READ grant has left**; `user_id` is fixed to the protected owner), hash it.
 2. `node dist/cli/execution-native-session.js issue --artifact <path> --sha256 <hash> --not-before-ms <N> --not-after-ms <N>` (window <= 24 h; same environment/manifest as section 5; `--dry-run` first).
-3. The tool creates the token file **exclusively** (root-owned, 0600, in a root-owned non-writable directory), issues the session through `AuthService` and the SAME coordinator, writes the token **only** into that file and prints:
+3. The tool creates the token file **exclusively** (root-owned, 0600, in a root-owned non-writable directory), issues the session through `AuthService` and the SAME coordinator, writes the token **only** into that file and prints (an acknowledgement is printed only after the **whole** token document was written, fsynced and read back byte-for-byte from the same descriptor; short writes are completed within a bounded number of attempts and a write that makes no progress fails):
    `{"schema_version":"portal.native-research-acceptance-session.v1","operation":"issue","receipt":{"session_id":"ses_...","user_id":"usr_5a38...","workspace_id":"ws_...","ttl_seconds":N,"idle_expires_at":"...","absolute_expires_at":"...","token_file":{"path_sha256":"...","owner_uid":0,"mode":"0600","bytes":N},"credential_class":"RESEARCH_APPLICATION_SESSION","evidence_class":"..."}}`
    The token is **never** printed, logged, audited or put in a receipt. The private reference handed to Edge is the **token file path + `session_id`** over the approved channel (never the token).
 4. A second `issue` while one acceptance session is ACTIVE is **refused** (`ACCEPTANCE_ALREADY_ACTIVE`); it never replaces. Revoke first. Other sessions of the owner (Bobby's normal ones) neither block nor are touched.
 5. Typed refusals (stderr `{"code":...}`): `ACCEPTANCE_ARTIFACT_REFUSED`, `ACCEPTANCE_TARGET_MISMATCH` (wrong DB/system/login, anchor is not the pinned owner, owner not a member), `ACCEPTANCE_UNAVAILABLE` (not dev/local, owner not ACTIVE, must-change, archived),
-   `ACCEPTANCE_ALREADY_ACTIVE`, `ACCEPTANCE_TOKEN_FILE_REFUSED`, `ACCEPTANCE_TOKEN_WRITE_FAILED_SESSION_REVOKED` (the secret could not be stored; the exact session was revoked at once), `ACCEPTANCE_TOKEN_WRITE_FAILED_REVOKE_UNCONFIRMED`
+   `ACCEPTANCE_ALREADY_ACTIVE`, `ACCEPTANCE_TOKEN_FILE_REFUSED`, `ACCEPTANCE_TOKEN_WRITE_FAILED_SESSION_REVOKED` (the secret could not be stored completely: a short or zero write, a write error, an fsync failure or a failed read-back verification; the partial file was emptied and removed, the exact session was revoked at once, no acknowledgement and no receipt), `ACCEPTANCE_TOKEN_WRITE_FAILED_REVOKE_UNCONFIRMED`
    (**read block F and revoke by id before anything else**), `ACCEPTANCE_DRAIN_PENDING` / `ACCEPTANCE_RETRY_REQUIRED` (exit 75: retry the SAME command later).
 
 ## 8. Revoke and rollback
@@ -173,7 +178,12 @@ Not a login, not Cloudflare, not a password, not a PREVIEW claim and not a copy 
 
 `node dist/cli/execution-native-session.js revoke ...` with `private-owner-acceptance-session-revoke.v1` (`session_id` from the issue receipt). Revokes **exactly that session** (state `REVOKED`, reason `research_acceptance_revoked`,
 the same effect as a logout: the owner's lease check fails at once), refuses a session that is not a Research acceptance session of the pinned owner (`ACCEPTANCE_SESSION_NOT_ACCEPTANCE`; the owner's normal sessions are never touched),
-is idempotent (`ALREADY_REVOKED_BY_THIS_OPERATION` / `ALREADY_TERMINAL`), and only **after** the session is provably terminal wipes and removes the token file (`token_file: REMOVED|ABSENT|REMOVE_FAILED`).
+is idempotent (`ALREADY_REVOKED_BY_THIS_OPERATION` / `ALREADY_TERMINAL`), and only **after** the session is provably terminal wipes and removes the token file **if that file is the token file of exactly this session**
+(`token_file: REMOVED|ABSENT|REMOVE_FAILED|RETAINED_NOT_BOUND_TO_SESSION`). The cleanup is bound to the exact session (BE-P10 Revision 3): the file at the path must be a root-owned regular file whose six-field document
+carries this `session_id`, this `user_id` and a token that hashes to this session's stored hash; the wipe goes through the verified descriptor and the unlink happens only if the path still names that inode. Anything else —
+a newer session's token at a reused path, a replaced, oversized, empty or torn file — is **retained untouched** and reported as `RETAINED_NOT_BOUND_TO_SESSION` (the session is revoked regardless; remove such a file
+by hand only after confirming whose it is). A replayed revoke of an old session is therefore a typed terminal no-op that can never remove the token of a newer, still ACTIVE session. `ABSENT` means nothing was at the path;
+`REMOVE_FAILED` means a non-root or non-regular file or an I/O error (the file is left as found).
 
 ### 8.3 Rollback matrix
 
