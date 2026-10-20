@@ -403,7 +403,8 @@ export function ledgerIsEmpty(ledger: CapitalLedger): boolean {
 /* ── capital flow ribbon (concept C3): the ledger on the equity's time axis ── */
 
 /** The ribbon's own words for a lane with no published source: one sentence, said on the lane. */
-export const RIBBON_LANE_NP = "Not published (FE-031, FE-032)";
+/** The lane word; the request ids (FE-031, FE-032) are said once, in the title of the "Not available" line under the chart. */
+export const RIBBON_LANE_NP = "Not published";
 
 /** Lanes the capital ledger cannot place anything on. Recall is here too: no ledger movement word says an entry is a recall. */
 export const RIBBON_UNPUBLISHED = { stage: RIBBON_LANE_NP, decision: RIBBON_LANE_NP, incident: RIBBON_LANE_NP, recall: RIBBON_LANE_NP } as const;

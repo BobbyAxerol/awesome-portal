@@ -47,7 +47,11 @@ export const OPTIONAL_COLUMNS: readonly ColumnSpec[] = [
   { id: "hhi", label: "Concentration", numeric: true },
 ];
 
-const UNPUBLISHED: Readonly<Partial<Record<ColumnId, Unpublished>>> = {
+/**
+ * Measures the read does not publish. They are not drawn as five columns of "Not published": the screen names them once
+ * ("Not available: NAV, Net PnL, ..."). The day a fact is published, delete it from this table and add its `cell` case.
+ */
+export const UNPUBLISHED: Readonly<Partial<Record<ColumnId, Unpublished>>> = {
   nav: PF_FE.nav,
   pnl: PF_FE.netPnl,
   ret: PF_FE.ret,
@@ -146,7 +150,7 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
         </span>
       ),
     },
-    ...OPTIONAL_COLUMNS.filter((c) => !hidden.has(c.id)).map<CardsColumn<PortfolioRow>>((c) => ({
+    ...OPTIONAL_COLUMNS.filter((c) => !hidden.has(c.id) && UNPUBLISHED[c.id] === undefined).map<CardsColumn<PortfolioRow>>((c) => ({
       key: c.id,
       label: c.label,
       numeric: c.numeric,

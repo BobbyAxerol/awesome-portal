@@ -252,7 +252,7 @@ div.exec-pf-banner {
     white-space: normal;
   }
   .exec-pf-panel .exec-cards .exec-pf-name {
-    max-width: 150px;
+    max-width: 280px; /* five unpublished measure columns are gone: the name has the room */
   }
   .exec-pf-panel .exec-cards .exec-pf-id {
     white-space: normal;

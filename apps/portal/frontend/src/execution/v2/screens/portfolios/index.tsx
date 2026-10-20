@@ -31,17 +31,18 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
+import { NotAvailableLine, type UnavailableFact } from "../../blocks";
 import { utcStamp } from "../../../time";
 import { Flag } from "../../Flag";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
-import { ENV_LABEL, useExecUrlState, withContext } from "../../urlState";
-import { EXPORT_REASON, PF_FE, npText } from "./fe";
-import { DOMAIN_LABEL, freshnessFlag, humanize } from "./format";
+import { useExecUrlState, withContext } from "../../urlState";
+import { EXPORT_REASON } from "./fe";
+import { freshnessFlag, humanize } from "./format";
 import {
   ROW_CAP, SORT_KEYS, branchReasonText, countLine, currenciesOf, degradedBranches, filterRows, parseSort, readDomainFilter, sortRows, toRows, writeSort,
   type DomainFilter, type SortKey,
 } from "./listModel";
-import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId } from "./PortfolioTable";
+import { OPTIONAL_COLUMNS, PortfolioTable, UNPUBLISHED, readHidden, writeHidden, type ColumnId } from "./PortfolioTable";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_LIST, joinQuery, type PortfolioRoutes } from "./routes";
 import { COMPARE_MAX, COMPARE_MIN, IN_PARAM, partitionByCurrency, selectionFrom, withSelection } from "./selection";
 import { useRead } from "./useRead";
@@ -73,12 +74,20 @@ const SORT_LABEL: Readonly<Record<SortKey, string>> = {
   updated: "Last updated",
 };
 
-const LOAD_MORE_REASON = "The portfolio read publishes no cursor, so the rest cannot be asked for yet.";
+const LOAD_MORE_REASON = "The read publishes no cursor.";
+/** What the register does not carry, said once (the ids and reasons are in the line's title). */
+const UNPUBLISHED_MEASURES: readonly UnavailableFact[] = [
+  { label: "NAV", id: "FE-013" },
+  { label: "Net PnL", id: "FE-005", why: "Windowed; needs FE-025" },
+  { label: "Return", id: "FE-006", why: "Windowed; methodology is per source" },
+  { label: "Drawdown", id: "FE-013", why: "Needs the NAV series" },
+  { label: "Concentration", id: "FE-005" },
+  { label: "Score", id: "FE-011" },
+];
 const SORT_RULES: readonly (readonly [string, string])[] = [
   ["Money", "Sorts inside one currency; pick the currency first"],
   ["Rows with no value", "Sort last in both directions"],
   ["Unallocated", "Always last, and not comparable"],
-  ["Return", "Not published; methodology is per source (FE-006)"],
 ];
 
 export function DeniedPortfolios({ routes }: { routes: PortfolioRoutes }) {
@@ -220,24 +229,21 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
         <div>
           <h1 className="exec-pf-h1">Portfolios</h1>
           <p className="exec-pf-sub" id={`${searchId}-sub`}>
-            {envelope ? `${subCount} · Context: ${ENV_LABEL[url.value.env]} · ${domain === null ? "showing all domains" : `domain: ${DOMAIN_LABEL[domain]}`}` : "Reading the portfolio register"}
+            {envelope ? subCount : "Reading the portfolio register"}
           </p>
         </div>
         <div className="exec-pf-fresh">
-          <span className="exec-pf-score" title={PF_FE.score.what}>Score: {npText(PF_FE.score)}</span>
-          {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {envelope ? <span>{envelope.sourceAsOf ? `As of ${utcStamp(envelope.sourceAsOf)}` : "Source time not published"}</span> : null}
         </div>
       </header>
 
-      <p className="exec-pf-banner" data-tone="info">
-        Names and allocation only. NAV, Net PnL, Return, Drawdown, Concentration and Score are not published yet; each column says which request will publish it.
-      </p>
+      <NotAvailableLine facts={UNPUBLISHED_MEASURES} className="exec-pf-na-line" />
       {(incomplete && envelope) || degraded.length > 0 ? (
         <div className="exec-pf-banner" role="status">
           {incomplete && envelope ? (
             <p className="exec-pf-banner-line">
-              <Flag kind="partial" label="Partial" size="sm" /> The read is {humanize(envelope.completeness).toLowerCase()}: some portfolios or figures may be missing.
+              <Flag kind="partial" label="Partial" size="sm" /> <span title={`The read is ${humanize(envelope.completeness).toLowerCase()}`}>Some portfolios or figures may be missing</span>
             </p>
           ) : null}
           {degraded.length > 0 ? (
@@ -302,7 +308,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
               <summary className="exec-pf-btn">Columns</summary>
               <div className="exec-pf-menu" role="group" aria-label="Columns">
                 <label className="exec-pf-menuitem"><input type="checkbox" checked disabled title="Portfolio is always shown" /> Portfolio</label>
-                {OPTIONAL_COLUMNS.map((c) => (
+                {OPTIONAL_COLUMNS.filter((c) => UNPUBLISHED[c.id] === undefined).map((c) => (
                   <label key={c.id} className="exec-pf-menuitem">
                     <input type="checkbox" checked={!hidden.has(c.id)} onChange={(event) => toggleColumn(c.id, event.target.checked)} /> {c.label}
                   </label>
@@ -318,7 +324,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
           </div>
 
           {sortFallsBack ? (
-            <p className="exec-pf-note" role="status" data-testid="sort-fallback">Sorted by name: allocated capital sorts only inside one currency. Pick a currency to sort by it.</p>
+            <p className="exec-pf-note" role="status" data-testid="sort-fallback">Sorted by name. Pick a currency to sort by allocated capital.</p>
           ) : null}
 
           <div className="exec-pf-selbar" role="status" aria-live="polite">
@@ -355,10 +361,9 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             ) : null}
             {envelope.truncated ? <span className="exec-pf-note">{LOAD_MORE_REASON}</span> : null}
             {capped ? <span className="exec-pf-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span> : null}
-            <span className="exec-pf-note">Total NAV, this set: {npText(PF_FE.nav)}</span>
           </div>
           {filtered || envelope.truncated ? (
-            <p className="exec-pf-note">Search, domain and sort apply to the {loaded.length} loaded {loaded.length === 1 ? "portfolio" : "portfolios"}; the read has no server filter.</p>
+            <p className="exec-pf-note" title="The read has no server filter: search, domain and sort apply to the loaded portfolios.">Filters cover the {loaded.length} loaded {loaded.length === 1 ? "portfolio" : "portfolios"} only.</p>
           ) : null}
 
           <details className="exec-pf-rules">

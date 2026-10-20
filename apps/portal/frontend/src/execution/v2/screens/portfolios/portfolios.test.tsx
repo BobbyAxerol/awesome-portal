@@ -89,17 +89,16 @@ describe("register", () => {
     expect(cell(pilot, "Allocations")).toBe("0");
   });
 
-  it("names the request for NAV, Net PnL, Return, Drawdown and Concentration, in every row", async () => {
+  it("names NAV, Net PnL, Return, Drawdown, Concentration and Score ONCE, with their requests in the title, and draws no column for them", async () => {
     mount(makeApi().api);
     await loaded();
-    for (const row of bodyRows()) {
-      expect(cell(row, "NAV")).toBe("Not published (FE-013)");
-      expect(cell(row, "Net PnL")).toBe("Not published (FE-005, FE-025)");
-      expect(cell(row, "Return")).toBe("Not published (FE-006, FE-025)");
-      expect(cell(row, "Drawdown")).toBe("Not published (FE-013, FE-025)");
-      expect(cell(row, "Concentration")).toBe("Not published (FE-005)");
-    }
-    expect(screen.getByText(/Score: Not published \(FE-011\)/)).toBeTruthy();
+    for (const row of bodyRows()) for (const label of ["NAV", "Net PnL", "Return", "Drawdown", "Concentration"]) expect(row.querySelector(`td[data-l="${label}"]`), label).toBeNull();
+    const line = screen.getByTestId("not-available-line");
+    expect(screen.getAllByTestId("not-available-line")).toHaveLength(1);
+    expect(line.textContent).toContain("Not available: NAV, Net PnL, Return, Drawdown, Concentration, Score");
+    const title = line.getAttribute("title") ?? "";
+    for (const id of ["FE-013", "FE-005", "FE-006", "FE-011"]) expect(title, id).toContain(`Not published (${id})`);
+    expect(document.body.textContent).not.toMatch(/Not published \(FE-005, FE-025\)/);
   });
 
   it("treats Unallocated as a bucket: not linked, not selectable, every figure Not published", async () => {
@@ -130,7 +129,7 @@ describe("register", () => {
     await loaded();
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
-        "Compare", "Portfolio", "Owner", "State", "Allocations", "Deployments", "Allocated capital", "NAV", "Net PnL", "Return", "Drawdown", "Concentration",
+        "Compare", "Portfolio", "Owner", "State", "Allocations", "Deployments", "Allocated capital",
       ]);
     }
     expect(search().has("hide")).toBe(false);
@@ -148,7 +147,7 @@ describe("register", () => {
     await loaded();
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
-        "Compare", "Portfolio", "Owner", "State", "Domain", "Allocations", "Deployments", "Allocated capital", "NAV", "Net PnL", "Return", "Drawdown", "Concentration",
+        "Compare", "Portfolio", "Owner", "State", "Domain", "Allocations", "Deployments", "Allocated capital",
       ]);
     }
     expect(table().className).toBe("exec-cards");
@@ -169,14 +168,15 @@ describe("header, banners and footer", () => {
   it("states freshness, the read's clock, the partial read and the branch that is not whole", async () => {
     mount(makeApi().api);
     await loaded();
-    expect(screen.getByText("Fresh")).toBeTruthy();
+    // FRESH prints no chip: the as-of line says it. A tier that is not fresh keeps its chip (conformance matrix).
+    expect(screen.queryByText("Fresh")).toBeNull();
     expect(screen.getByText(/As of 2026-10-17/)).toBeTruthy();
-    expect(screen.getByText(/The read is partial/)).toBeTruthy();
+    expect(screen.getByText("Some portfolios or figures may be missing").getAttribute("title")).toBe("The read is partial");
     const branch = screen.getByText(/Paper: Partial \(the data feed is running behind\)/);
     expect(branch).toBeTruthy();
     expect(branch.textContent).not.toMatch(/N31_|_LAGGING/);
     expect(branch.getAttribute("title")).toBe("Reason code: N31_PROJECTION_LAGGING");
-    expect(screen.getByText(/Names and allocation only/)).toBeTruthy();
+    expect(screen.queryByText(/Names and allocation only/)).toBeNull();
   });
 
   it("says top N / total when the read is truncated and turns Load more off with the reason", async () => {
@@ -198,13 +198,14 @@ describe("header, banners and footer", () => {
     mount(makeApi(whole).api);
     await loaded();
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
-    expect(screen.getByText("6 portfolios")).toBeTruthy();
+    expect(screen.getAllByText("6 portfolios").length).toBeGreaterThan(0);
   });
 
-  it("says the total NAV of the set is not published, instead of adding rows", async () => {
+  it("never adds a total NAV for the set: NAV is on the one 'Not available' line", async () => {
     mount(makeApi().api);
     await loaded();
-    expect(screen.getByText("Total NAV, this set: Not published (FE-013)")).toBeTruthy();
+    expect(screen.queryByText(/Total NAV/)).toBeNull();
+    expect(screen.getByTestId("not-available-line").textContent).toContain("NAV");
   });
 
   it("switches to a compact table from the toolbar and the URL", async () => {
@@ -235,7 +236,7 @@ describe("search, domain, currency and sort", () => {
     await waitFor(() => expect(search().get("q")).toBe("nguyen"));
     expect(names()).toEqual(["Canary", "Satellite"]);
     expect(screen.getAllByText("2 of the top 6 / 9 portfolios").length).toBeGreaterThan(0);
-    expect(screen.getByText(/apply to the 6 loaded portfolios/)).toBeTruthy();
+    expect(screen.getByText("Filters cover the 6 loaded portfolios only.").getAttribute("title")).toContain("The read has no server filter");
   });
 
   it("filters by domain; a mixed portfolio belongs to both", async () => {
@@ -282,14 +283,14 @@ describe("search, domain, currency and sort", () => {
     // Money sorts inside one currency: with none chosen the head is not a control and says why.
     expect(within(head("Allocated capital")).queryByRole("button")).toBeNull();
     expect(head("Allocated capital").getAttribute("title")).toBe("Money sorts inside one currency; pick the currency first");
-    // The five unpublished measures never sort.
-    expect(within(head("NAV")).queryByRole("button")).toBeNull();
+    // The unpublished measures are not columns at all.
+    expect(within(table()).queryByRole("columnheader", { name: "NAV" })).toBeNull();
   });
 
-  it("says the Context and that the rows are not filtered by it (owner decision)", async () => {
+  it("does not repeat the Context or the domain under the title: the bar and the Domain control already say them", async () => {
     mount(makeApi().api);
     await loaded();
-    expect(screen.getByText(/Context: Real-funded · showing all domains/)).toBeTruthy();
+    expect(document.querySelector(".exec-pf-sub")!.textContent).toBe("Top 6 / 9 portfolios");
   });
 
   const whole: Override = (_m, path) => {
@@ -303,7 +304,7 @@ describe("search, domain, currency and sort", () => {
     mount(makeApi(whole).api, "/deployments/portfolios?domain=simulated");
     await loaded();
     expect(sub()).not.toContain("showing all domains");
-    expect(sub()).toContain("domain: Simulated");
+    expect(screen.getByRole("button", { name: /^Simulated/ }).getAttribute("aria-pressed")).toBe("true");
     expect(sub()).toContain(`${names().length} of 6 loaded portfolios`);
     expect(names().length).toBeLessThan(6);
   });
@@ -312,7 +313,7 @@ describe("search, domain, currency and sort", () => {
     mount(makeApi(whole).api, "/deployments/portfolios?q=core");
     await loaded();
     expect(sub()).toContain("1 of 6 loaded portfolios");
-    expect(sub()).toContain("showing all domains");
+    expect(screen.getByRole("button", { name: /^All\s*\d/ }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("on a truncated read a narrowing filter says N of the top M / total, and the unfiltered line is unchanged", async () => {
@@ -322,7 +323,7 @@ describe("search, domain, currency and sort", () => {
     cleanup();
     mount(makeApi().api);
     await loaded();
-    expect(sub()).toContain("Top 6 / 9 portfolios · Context: Real-funded · showing all domains");
+    expect(sub()).toBe("Top 6 / 9 portfolios");
   });
 
   it("says the order is by name when sort=allocated has no currency, and drops the note once a currency is chosen", async () => {
@@ -358,15 +359,17 @@ describe("columns", () => {
     await loaded();
     const menu = screen.getByRole("group", { name: "Columns" });
     expect((within(menu).getByRole("checkbox", { name: "Portfolio" }) as HTMLInputElement).disabled).toBe(true);
-    fireEvent.click(within(menu).getByRole("checkbox", { name: "NAV" }));
-    fireEvent.click(within(menu).getByRole("checkbox", { name: "Concentration" }));
-    expect(search().get("hide")).toBe("domain,nav,hhi");
+    // The unpublished measures are not in the chooser: there is no column to bring back.
+    expect(within(menu).queryByRole("checkbox", { name: "NAV" })).toBeNull();
+    fireEvent.click(within(menu).getByRole("checkbox", { name: "Deployments" }));
+    fireEvent.click(within(menu).getByRole("checkbox", { name: "Allocations" }));
+    expect(search().get("hide")).toBe("domain,allocations,deployments");
     const headers = [...table().querySelectorAll("th")].map((th) => th.textContent);
-    expect(headers).not.toContain("NAV");
-    expect(headers).not.toContain("Concentration");
-    expect(headers).toContain("Net PnL");
-    fireEvent.click(within(menu).getByRole("checkbox", { name: "NAV" }));
-    expect(search().get("hide")).toBe("domain,hhi");
+    expect(headers).not.toContain("Deployments");
+    expect(headers).not.toContain("Allocations");
+    expect(headers).toContain("Owner");
+    fireEvent.click(within(menu).getByRole("checkbox", { name: "Deployments" }));
+    expect(search().get("hide")).toBe("domain,allocations");
   });
 
   it("honours a hide list in the address and ignores a name it does not know", async () => {

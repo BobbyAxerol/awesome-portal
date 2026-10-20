@@ -177,13 +177,19 @@ describe("L1 · matrix A · envelope states", () => {
     it("maps the state to the documented UI state", async () => {
       const { container } = mount(makeApi((_m, path) => (path === "/portfolios" ? { status: 200, body: input } : undefined)).api);
       const started = performance.now();
-      await waitFor(() => expect(container.querySelector(".exec-pf-fresh .exec-flag")).not.toBeNull(), { timeout: 10_000 });
+      await waitFor(() => expect(container.querySelector(".exec-pf-fresh")).not.toBeNull(), { timeout: 10_000 });
+      await waitFor(() => expect(container.querySelector(".exec-pf-fresh")!.textContent).not.toBe(""), { timeout: 10_000 });
       expect(performance.now() - started).toBeLessThan(BUDGET_STATE_MS);
-      const flag = container.querySelector(".exec-pf-fresh .exec-flag")!;
-      expect(flag.getAttribute("data-k")).toBe(d.freshness === "FRESH" ? "ok" : "stale");
-      expect(flag.textContent).toContain(d.freshness === "FRESH" ? "Fresh" : d.freshness === "STALE" ? "Stale" : "Aging");
-      const banners = [...container.querySelectorAll(".exec-pf-banner[role='status']")].map((b) => b.textContent ?? "");
-      if (d.completeness === "COMPLETE") expect(banners.some((b) => /^.*The read is/.test(b))).toBe(false);
+      // A FRESH read prints no chip (the as-of line says it); every other tier keeps its chip, because it changes what the reader trusts.
+      const flag = container.querySelector(".exec-pf-fresh .exec-flag");
+      if (d.freshness === "FRESH") expect(flag).toBeNull();
+      else {
+        expect(flag!.getAttribute("data-k")).toBe("stale");
+        expect(flag!.textContent).toContain(d.freshness === "STALE" ? "Stale" : "Aging");
+      }
+      // The completeness sentence is the banner's title; the visible line is one short clause.
+      const banners = [...container.querySelectorAll(".exec-pf-banner[role='status']")].map((b) => `${b.textContent ?? ""} ${[...b.querySelectorAll("[title]")].map((t) => t.getAttribute("title")).join(" ")}`);
+      if (d.completeness === "COMPLETE") expect(banners.some((b) => /The read is/.test(b))).toBe(false);
       else expect(banners.find((b) => b.includes("The read is"))?.toLowerCase()).toContain(d.completeness.toLowerCase());
       const notWhole = Object.entries<Draft>(d.environments).filter(([, b]) => b.state === "UNAVAILABLE" || b.state === "PARTIAL");
       expect(banners.filter((b) => b.includes("Branch not whole"))).toHaveLength(notWhole.length > 0 ? 1 : 0);
